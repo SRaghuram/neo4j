@@ -5,43 +5,31 @@
  */
 package org.neo4j.cypher.internal.spi.codegen
 
+
 import java.util
 
 import org.eclipse.collections.api.iterator.LongIterator
 import org.eclipse.collections.impl.map.mutable.primitive.LongIntHashMap
 import org.neo4j.codegen.MethodReference
-import org.neo4j.cypher.internal.codegen.CompiledConversionUtils
 import org.neo4j.cypher.internal.codegen.CompiledConversionUtils.CompositeKey
-import org.neo4j.cypher.internal.codegen.CompiledMathHelper
+import org.neo4j.cypher.internal.codegen.{CompiledConversionUtils, CompiledMathHelper}
 import org.neo4j.cypher.internal.javacompat.ResultRecord
-import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.profiling.QueryProfiler
+import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
 import org.neo4j.cypher.internal.runtime.RelationshipIterator
-import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure.method
-import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure.typeRef
+import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure.{method, typeRef}
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
-import org.neo4j.cypher.result.QueryResult.Record
-import org.neo4j.graphdb.Node
-import org.neo4j.graphdb.Relationship
+import org.neo4j.cypher.result.QueryResult.{QueryResultVisitor, Record}
+import org.neo4j.graphdb.{Node, Relationship}
 import org.neo4j.internal.helpers.collection.MapUtil
-import org.neo4j.internal.kernel.api.CursorFactory
-import org.neo4j.internal.kernel.api.NodeCursor
-import org.neo4j.internal.kernel.api.Read
-import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
-import org.neo4j.internal.kernel.api.TokenRead
+import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.kernel.api.helpers.CachingExpandInto
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
 import org.neo4j.kernel.impl.api.RelationshipDataExtractor
 import org.neo4j.kernel.impl.core.TransactionalEntityFactory
 import org.neo4j.storageengine.api.RelationshipVisitor
 import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.Value
-import org.neo4j.values.storable.Values
-import org.neo4j.values.virtual.NodeValue
-import org.neo4j.values.virtual.RelationshipValue
-import org.neo4j.values.virtual.VirtualNodeValue
-import org.neo4j.values.virtual.VirtualRelationshipValue
+import org.neo4j.values.storable.{Value, Values}
+import org.neo4j.values.virtual.{NodeValue, RelationshipValue, VirtualNodeValue, VirtualRelationshipValue}
 
 object Methods {
 

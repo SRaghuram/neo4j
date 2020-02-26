@@ -4,34 +4,10 @@
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
-
 import java.util.function.ToLongFunction
 
-import org.neo4j.codegen.api.Field
-import org.neo4j.codegen.api.IntermediateRepresentation
-import org.neo4j.codegen.api.IntermediateRepresentation.and
-import org.neo4j.codegen.api.IntermediateRepresentation.arrayOf
-import org.neo4j.codegen.api.IntermediateRepresentation.assign
-import org.neo4j.codegen.api.IntermediateRepresentation.block
-import org.neo4j.codegen.api.IntermediateRepresentation.condition
-import org.neo4j.codegen.api.IntermediateRepresentation.constant
-import org.neo4j.codegen.api.IntermediateRepresentation.constructor
-import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
-import org.neo4j.codegen.api.IntermediateRepresentation.field
-import org.neo4j.codegen.api.IntermediateRepresentation.invoke
-import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
-import org.neo4j.codegen.api.IntermediateRepresentation.isNotNull
-import org.neo4j.codegen.api.IntermediateRepresentation.isNull
-import org.neo4j.codegen.api.IntermediateRepresentation.load
-import org.neo4j.codegen.api.IntermediateRepresentation.loadField
-import org.neo4j.codegen.api.IntermediateRepresentation.loop
-import org.neo4j.codegen.api.IntermediateRepresentation.method
-import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
-import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
-import org.neo4j.codegen.api.IntermediateRepresentation.setField
-import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
-import org.neo4j.codegen.api.LocalVariable
-import org.neo4j.codegen.api.Method
+import org.neo4j.codegen.api.IntermediateRepresentation.{and, arrayOf, assign, block, condition, constant, constructor, declareAndAssign, field, invoke, invokeSideEffect, isNotNull, isNull, load, loadField, loop, method, newInstance, notEqual, setField, typeRefOf}
+import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable, Method}
 import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
@@ -54,26 +30,16 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.getNodeIdFromSlot
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.loadTypes
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandIntoOperatorTaskTemplate.CONNECTING_RELATIONSHIPS
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_NODE_CURSOR
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_TRAVERSAL_CURSOR
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NodeCursorPool
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.TraversalCursorPool
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.allocateAndTraceCursor
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.directionRepresentation
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.freeCursor
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates._
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.pipelined.{OperatorExpressionCompiler, RelationshipCursorRepresentation}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.graphdb.Direction
-import org.neo4j.internal.kernel.api.KernelReadTracer
-import org.neo4j.internal.kernel.api.NodeCursor
-import org.neo4j.internal.kernel.api.Read
-import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
+import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.kernel.api.helpers.CachingExpandInto
 
 import scala.collection.mutable.ArrayBuffer
