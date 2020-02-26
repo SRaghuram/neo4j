@@ -46,7 +46,7 @@ public class Neo4jLongQuery14EmbeddedCypher extends Neo4jQuery14<Neo4jConnection
                 {
                     return new LdbcQuery14Result(
                             (Collection<Long>) row.get( "pathNodeIds" ),
-                            (double) row.get( "weight" ) );
+                            ((Number) row.get( "weight" )).doubleValue() );
                 }
             };
 
