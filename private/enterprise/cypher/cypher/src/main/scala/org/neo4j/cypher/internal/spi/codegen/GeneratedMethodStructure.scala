@@ -7,40 +7,163 @@ package org.neo4j.cypher.internal.spi.codegen
 
 import java.util
 import java.util.PrimitiveIterator
-import java.util.stream.{DoubleStream, IntStream, LongStream}
+import java.util.stream.DoubleStream
+import java.util.stream.IntStream
+import java.util.stream.LongStream
 
-import org.eclipse.collections.api.iterator.{LongIterator, MutableLongIterator}
-import org.eclipse.collections.impl.map.mutable.primitive.{LongIntHashMap, LongObjectHashMap}
+import org.eclipse.collections.api.iterator.LongIterator
+import org.eclipse.collections.api.iterator.MutableLongIterator
+import org.eclipse.collections.impl.map.mutable.primitive.LongIntHashMap
+import org.eclipse.collections.impl.map.mutable.primitive.LongObjectHashMap
 import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet
-import org.neo4j.codegen.Expression.{add, and, cast, constant, constantInt, constantLong, equal, get, getStatic, gt, gte, invoke, lt, lte, multiply, newInitializedArray, newInstance, not, or, pop, subtract, ternary, toDouble}
+import org.neo4j.codegen.CodeBlock
+import org.neo4j.codegen.Expression
+import org.neo4j.codegen.Expression.add
+import org.neo4j.codegen.Expression.and
+import org.neo4j.codegen.Expression.cast
+import org.neo4j.codegen.Expression.constant
+import org.neo4j.codegen.Expression.constantInt
+import org.neo4j.codegen.Expression.constantLong
+import org.neo4j.codegen.Expression.equal
+import org.neo4j.codegen.Expression.get
+import org.neo4j.codegen.Expression.getStatic
+import org.neo4j.codegen.Expression.gt
+import org.neo4j.codegen.Expression.gte
+import org.neo4j.codegen.Expression.invoke
+import org.neo4j.codegen.Expression.lt
+import org.neo4j.codegen.Expression.lte
+import org.neo4j.codegen.Expression.multiply
+import org.neo4j.codegen.Expression.newInitializedArray
+import org.neo4j.codegen.Expression.newInstance
+import org.neo4j.codegen.Expression.not
+import org.neo4j.codegen.Expression.or
+import org.neo4j.codegen.Expression.pop
+import org.neo4j.codegen.Expression.subtract
+import org.neo4j.codegen.Expression.ternary
+import org.neo4j.codegen.Expression.toDouble
+import org.neo4j.codegen.FieldReference
+import org.neo4j.codegen.LocalVariable
+import org.neo4j.codegen.MethodReference
 import org.neo4j.codegen.MethodReference.methodReference
+import org.neo4j.codegen.Parameter
+import org.neo4j.codegen.TypeReference
 import org.neo4j.codegen.TypeReference.parameterizedType
-import org.neo4j.codegen._
+import org.neo4j.cypher.internal.codegen.CompiledConversionUtils
 import org.neo4j.cypher.internal.codegen.CompiledConversionUtils.CompositeKey
-import org.neo4j.cypher.internal.codegen._
+import org.neo4j.cypher.internal.codegen.CompiledEquivalenceUtils
+import org.neo4j.cypher.internal.codegen.CompiledIndexUtils
+import org.neo4j.cypher.internal.codegen.DefaultFullSortTable
+import org.neo4j.cypher.internal.codegen.DefaultTopTable
+import org.neo4j.cypher.internal.codegen.PrimitiveNodeStream
+import org.neo4j.cypher.internal.codegen.PrimitiveRelationshipStream
 import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.frontend.helpers.using
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
-import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.{Parameter => _, _}
-import org.neo4j.cypher.internal.runtime.compiled.codegen.spi._
-import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure._
-import org.neo4j.cypher.internal.spi.codegen.Methods._
-import org.neo4j.cypher.internal.spi.codegen.Templates._
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.AnyValueType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.BoolType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CodeGenType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CypherCodeGenType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.FloatType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.ListReferenceType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.LongType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.ReferenceType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.RepresentationType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.Comparator
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CountingJoinTableType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.Equal
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.FullSortTableDescriptor
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.GreaterThan
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.GreaterThanEqual
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.HashableTupleDescriptor
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.JoinTableType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.LessThan
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.LessThanEqual
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.LongToCountTable
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.LongToListTable
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.LongsToCountTable
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.LongsToListTable
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.RecordingJoinTableType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.SortTableDescriptor
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.TopTableDescriptor
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.TupleDescriptor
+import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure.lowerType
+import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure.lowerTypeScalarSubset
+import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure.method
+import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure.nullValue
+import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure.param
+import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure.typeRef
+import org.neo4j.cypher.internal.spi.codegen.Methods.coerceToPredicate
+import org.neo4j.cypher.internal.spi.codegen.Methods.compositeKey
+import org.neo4j.cypher.internal.spi.codegen.Methods.countingTableCompositeKeyGet
+import org.neo4j.cypher.internal.spi.codegen.Methods.countingTableCompositeKeyPut
+import org.neo4j.cypher.internal.spi.codegen.Methods.countingTableGet
+import org.neo4j.cypher.internal.spi.codegen.Methods.countingTableIncrement
+import org.neo4j.cypher.internal.spi.codegen.Methods.countsForNode
+import org.neo4j.cypher.internal.spi.codegen.Methods.executeOperator
+import org.neo4j.cypher.internal.spi.codegen.Methods.labelGetForName
+import org.neo4j.cypher.internal.spi.codegen.Methods.materializeAnyResult
+import org.neo4j.cypher.internal.spi.codegen.Methods.materializeAnyValueResult
+import org.neo4j.cypher.internal.spi.codegen.Methods.materializeNodeValue
+import org.neo4j.cypher.internal.spi.codegen.Methods.materializeRelationshipValue
+import org.neo4j.cypher.internal.spi.codegen.Methods.mathCastToLongOrFail
+import org.neo4j.cypher.internal.spi.codegen.Methods.newNodeEntityById
+import org.neo4j.cypher.internal.spi.codegen.Methods.newRelationshipEntityById
+import org.neo4j.cypher.internal.spi.codegen.Methods.nodeExists
+import org.neo4j.cypher.internal.spi.codegen.Methods.nodeId
+import org.neo4j.cypher.internal.spi.codegen.Methods.propertyKeyGetForName
+import org.neo4j.cypher.internal.spi.codegen.Methods.relId
+import org.neo4j.cypher.internal.spi.codegen.Methods.relationshipTypeGetForName
+import org.neo4j.cypher.internal.spi.codegen.Methods.relationshipTypeGetName
+import org.neo4j.cypher.internal.spi.codegen.Methods.set
+import org.neo4j.cypher.internal.spi.codegen.Methods.unboxInteger
+import org.neo4j.cypher.internal.spi.codegen.Methods.visit
+import org.neo4j.cypher.internal.spi.codegen.Templates.createNewInstance
+import org.neo4j.cypher.internal.spi.codegen.Templates.createNewNodeReference
+import org.neo4j.cypher.internal.spi.codegen.Templates.createNewNodeValueFromPrimitive
+import org.neo4j.cypher.internal.spi.codegen.Templates.createNewRelationshipReference
+import org.neo4j.cypher.internal.spi.codegen.Templates.createNewRelationshipValueFromPrimitive
+import org.neo4j.cypher.internal.spi.codegen.Templates.handleEntityNotFound
+import org.neo4j.cypher.internal.spi.codegen.Templates.handleKernelExceptions
+import org.neo4j.cypher.internal.spi.codegen.Templates.tryCatch
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols
-import org.neo4j.cypher.internal.util.symbols.{CTInteger, CTNode, CTRelationship, ListType}
+import org.neo4j.cypher.internal.util.symbols.CTInteger
+import org.neo4j.cypher.internal.util.symbols.CTNode
+import org.neo4j.cypher.internal.util.symbols.CTRelationship
+import org.neo4j.cypher.internal.util.symbols.ListType
 import org.neo4j.cypher.operations.CursorUtils
 import org.neo4j.exceptions.ParameterNotFoundException
 import org.neo4j.graphdb.Direction
-import org.neo4j.internal.kernel.api._
+import org.neo4j.internal.kernel.api.CursorFactory
+import org.neo4j.internal.kernel.api.NodeCursor
+import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
+import org.neo4j.internal.kernel.api.NodeValueIndexCursor
+import org.neo4j.internal.kernel.api.PropertyCursor
+import org.neo4j.internal.kernel.api.Read
+import org.neo4j.internal.kernel.api.RelationshipScanCursor
+import org.neo4j.internal.kernel.api.SchemaRead
+import org.neo4j.internal.kernel.api.TokenRead
 import org.neo4j.internal.kernel.api.helpers.CachingExpandInto
+import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.internal.schema.IndexDescriptor
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.AnyValue
-import org.neo4j.values.storable._
-import org.neo4j.values.virtual._
+import org.neo4j.values.storable.BooleanValue
+import org.neo4j.values.storable.DoubleValue
+import org.neo4j.values.storable.LongValue
+import org.neo4j.values.storable.NumberValue
+import org.neo4j.values.storable.TextValue
+import org.neo4j.values.storable.Value
+import org.neo4j.values.storable.Values
+import org.neo4j.values.virtual.MapValue
+import org.neo4j.values.virtual.NodeValue
+import org.neo4j.values.virtual.RelationshipValue
+import org.neo4j.values.virtual.VirtualNodeValue
+import org.neo4j.values.virtual.VirtualRelationshipValue
+import org.neo4j.values.virtual.VirtualValues
 
 import scala.collection.mutable
 
@@ -107,15 +230,15 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
                                        relVar: String): Unit = {
     val cursor = relCursor(relVar)
     generator.assign(typeRef[Long], toNodeVar, invoke(generator.load(cursor),
-      method[RelationshipTraversalCursor, Long]("otherNodeReference")))
+      method[RelationshipSelectionCursor, Long]("otherNodeReference")))
     generator.assign(typeRef[Long], relVar, invoke(generator.load(cursor),
-      method[RelationshipTraversalCursor, Long]("relationshipReference")))
+      method[RelationshipSelectionCursor, Long]("relationshipReference")))
   }
   private def relCursor(relVar: String) = s"${relVar}Iter"
 
   override def nextRelationship(cursorName: String, ignored: SemanticDirection, relVar: String): Unit = {
     generator.assign(typeRef[Long], relVar, invoke(generator.load(relCursor(relVar)),
-      method[RelationshipTraversalCursor, Long]("relationshipReference")))
+      method[RelationshipSelectionCursor, Long]("relationshipReference")))
   }
 
   override def allNodesScan(cursorName: String): Unit = {
@@ -158,10 +281,10 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
     generator.expression(invoke(generator.load(cursorName), method[NodeLabelIndexCursor, Unit]("close")))
 
   override def advanceRelationshipSelectionCursor(cursorName: String): Expression =
-    invoke(generator.load(cursorName), method[RelationshipTraversalCursor, Boolean]("next"))
+    invoke(generator.load(cursorName), method[RelationshipSelectionCursor, Boolean]("next"))
 
   override def closeRelationshipSelectionCursor(cursorName: String): Unit =
-    generator.expression(invoke(generator.load(cursorName), method[RelationshipTraversalCursor, Unit]("close")))
+    generator.expression(invoke(generator.load(cursorName), method[RelationshipSelectionCursor, Unit]("close")))
 
   override def advanceNodeValueIndexCursor(cursorName: String): Expression =
     invoke(generator.load(cursorName), method[NodeValueIndexCursor, Boolean]("next"))
@@ -556,9 +679,9 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
   override def toFloat(expression: Expression): Expression = toDouble(expression)
 
   override def nodeGetRelationshipsWithDirection(iterVar: String, nodeVar: String, nodeVarType: CodeGenType, direction: SemanticDirection): Unit = {
-    generator.assign(typeRef[RelationshipTraversalCursor], iterVar,
+    generator.assign(typeRef[RelationshipSelectionCursor], iterVar,
       invoke(
-        methodReference(typeRef[CursorUtils], typeRef[RelationshipTraversalCursor],
+        methodReference(typeRef[CursorUtils], typeRef[RelationshipSelectionCursor],
           "nodeGetRelationships", typeRef[Read], typeRef[CursorFactory],
           typeRef[NodeCursor], typeRef[Long], typeRef[Direction], typeRef[PageCursorTracer]),
         dataRead, cursors, nodeCursor, forceLong(nodeVar, nodeVarType), dir(direction), get(generator.self(), fields.cursorTracer))
@@ -570,9 +693,9 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
                                                          direction: SemanticDirection,
 
                                                          typeVars: Seq[String]): Unit = {
-    generator.assign(typeRef[RelationshipTraversalCursor], iterVar,
+    generator.assign(typeRef[RelationshipSelectionCursor], iterVar,
       invoke(
-        methodReference(typeRef[CursorUtils], typeRef[RelationshipTraversalCursor],
+        methodReference(typeRef[CursorUtils], typeRef[RelationshipSelectionCursor],
           "nodeGetRelationships", typeRef[Read], typeRef[CursorFactory],
           typeRef[NodeCursor], typeRef[Long], typeRef[Direction], typeRef[Array[Int]], typeRef[PageCursorTracer]),
         dataRead, cursors, nodeCursor, forceLong(nodeVar, nodeVarType), dir(direction),
@@ -603,7 +726,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
     val typesRep =
       if (types.isEmpty) constant(null)
       else newInitializedArray(typeRef[Int], types.map(generator.load): _*)
-    generator.assign(typeRef[RelationshipTraversalCursor], iterVar,
+    generator.assign(typeRef[RelationshipSelectionCursor], iterVar,
       invoke(generator.load(expandIntoVar),
         Methods.connectingRelationships,
         cursors,
@@ -1403,7 +1526,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
 
   override def relType(relVar: String, typeVar: String): Unit = {
     val variable = locals(typeVar)
-    val typeOfRel = invoke(generator.load(relCursor(relVar)),  method[RelationshipTraversalCursor, Int]("type"))
+    val typeOfRel = invoke(generator.load(relCursor(relVar)),  method[RelationshipSelectionCursor, Int]("type"))
     handleKernelExceptions(generator, fields, context.namer) { inner =>
       val res = invoke(tokenRead, relationshipTypeGetName, typeOfRel)
       inner.assign(variable, res)

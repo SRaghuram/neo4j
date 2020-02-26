@@ -5,8 +5,28 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api.{Field, IntermediateRepresentation}
+import org.neo4j.codegen.api.Field
+import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.and
+import org.neo4j.codegen.api.IntermediateRepresentation.assign
+import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.condition
+import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
+import org.neo4j.codegen.api.IntermediateRepresentation.equal
+import org.neo4j.codegen.api.IntermediateRepresentation.field
+import org.neo4j.codegen.api.IntermediateRepresentation.getStatic
+import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
+import org.neo4j.codegen.api.IntermediateRepresentation.load
+import org.neo4j.codegen.api.IntermediateRepresentation.loadField
+import org.neo4j.codegen.api.IntermediateRepresentation.loop
+import org.neo4j.codegen.api.IntermediateRepresentation.noop
+import org.neo4j.codegen.api.IntermediateRepresentation.not
+import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
+import org.neo4j.codegen.api.IntermediateRepresentation.or
+import org.neo4j.codegen.api.IntermediateRepresentation.setField
+import org.neo4j.codegen.api.IntermediateRepresentation.trueValue
+import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.runtime.CypherRow
@@ -25,16 +45,17 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.getNodeIdFromSlot
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.{cursorNext, profileRow}
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.cursorNext
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.internal.kernel.api.helpers.CachingExpandInto
-import org.neo4j.internal.kernel.api.{IndexReadSession, RelationshipTraversalCursor}
+import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.values.storable.Values
 
 class OptionalExpandIntoOperator(val workIdentity: WorkIdentity,
@@ -88,7 +109,7 @@ class OptionalExpandIntoOperator(val workIdentity: WorkIdentity,
       val toNode = getToNodeFunction.applyAsLong(inputCursor)
       hasWritten = false
       if (entityIsNull(fromNode) || entityIsNull(toNode)) {
-        traversalCursor = RelationshipTraversalCursor.EMPTY
+        relationships = RelationshipSelectionCursor.EMPTY
       } else {
         setUp(context, state, resources)
         setupCursors(context, resources, fromNode, toNode)
@@ -98,9 +119,9 @@ class OptionalExpandIntoOperator(val workIdentity: WorkIdentity,
 
     override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
 
-      while (outputRow.onValidRow && traversalCursor.next()) {
+      while (outputRow.onValidRow && relationships.next()) {
         hasWritten = writeRow(outputRow,
-          traversalCursor.relationshipReference())
+          relationships.relationshipReference())
       }
       if (outputRow.onValidRow && !hasWritten) {
         writeNullRow(outputRow)
@@ -215,11 +236,11 @@ class OptionalExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
       ifElse(and(notEqual(load(fromNode), constant(-1L)), notEqual(load(toNode), constant(-1L)))) {
         block(
           setUpCursors(fromNode,toNode),
-          setField(canContinue, cursorNext[RelationshipTraversalCursor](loadField(relationshipsField))),
+          setField(canContinue, cursorNext[RelationshipSelectionCursor](loadField(relationshipsField))),
         )
       }{//else
         setField(relationshipsField,
-          getStatic[RelationshipTraversalCursor, RelationshipTraversalCursor]("EMPTY"))
+          getStatic[RelationshipSelectionCursor, RelationshipSelectionCursor]("EMPTY"))
       },
       constant(true))
   }
@@ -272,7 +293,7 @@ class OptionalExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
           doIfPredicateOrElse(condition(load(shouldWriteRow))(innerBlock))(innerBlock),
           doIfInnerCantContinue(
             setField(canContinue, and(loadField(canContinue),
-              cursorNext[RelationshipTraversalCursor](loadField(relationshipsField))))),
+              cursorNext[RelationshipSelectionCursor](loadField(relationshipsField))))),
           endInnerLoop
         )))
   }

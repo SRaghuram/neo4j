@@ -6,14 +6,22 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.collection.RawIterator
-import org.neo4j.cypher.internal.runtime.{Counter, CreateTempFileTestSupport}
-import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.QueryStatisticsTestSupport
+import org.neo4j.cypher.internal.runtime.Counter
+import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.graphdb.Node
-import org.neo4j.internal.cypher.acceptance.comparisonsupport._
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.PlanComparisonStrategy
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.TestConfiguration
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException
+import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections
-import org.neo4j.internal.kernel.api.procs.{Neo4jTypes, ProcedureSignature}
-import org.neo4j.internal.kernel.api.{RelationshipTraversalCursor, procs}
+import org.neo4j.internal.kernel.api.procs
+import org.neo4j.internal.kernel.api.procs.Neo4jTypes
+import org.neo4j.internal.kernel.api.procs.ProcedureSignature
 import org.neo4j.kernel.api.ResourceTracker
 import org.neo4j.kernel.api.procedure.CallableProcedure.BasicProcedure
 import org.neo4j.kernel.api.procedure.Context
@@ -258,7 +266,7 @@ class EagerizationAcceptanceTest
           val transaction = ctx.internalTransaction().kernelTransaction()
           val cursors = transaction.cursors()
           val nodeCursor = cursors.allocateNodeCursor( transaction.pageCursorTracer() )
-          var relCursor: RelationshipTraversalCursor = null
+          var relCursor: RelationshipSelectionCursor = null
           try {
             val idX = input(0).asInstanceOf[NodeValue].id()
             val idY = input(1).asInstanceOf[NodeValue].id()
@@ -312,7 +320,7 @@ class EagerizationAcceptanceTest
           val transaction = ctx.internalTransaction().kernelTransaction()
           val cursors = transaction.cursors()
           val nodeCursor = cursors.allocateNodeCursor( transaction.pageCursorTracer() )
-          var relCursor: RelationshipTraversalCursor = null
+          var relCursor: RelationshipSelectionCursor = null
 
           try {
             val idX = input(0).asInstanceOf[NodeValue].id()
