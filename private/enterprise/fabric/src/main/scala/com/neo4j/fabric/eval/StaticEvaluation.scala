@@ -151,6 +151,8 @@ object StaticEvaluation {
 
     override def nodeCursor(): NodeCursor = notAvailable()
 
+    override def groupCursor(): RelationshipGroupCursor = notAvailable()
+
     override def traversalCursor(): RelationshipTraversalCursor = notAvailable()
 
     override def getRelationshipsForIdsPrimitive(node: Long, dir: SemanticDirection, types: Array[Int]): RelationshipIterator = notAvailable()

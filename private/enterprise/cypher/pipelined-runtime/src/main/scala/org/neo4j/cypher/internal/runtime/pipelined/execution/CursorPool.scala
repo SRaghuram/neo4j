@@ -26,6 +26,8 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
 
   val nodeCursorPool: CursorPool[NodeCursor] = CursorPool[NodeCursor](
     () => cursorFactory.allocateNodeCursor(pageCursorTracer))
+  val relationshipGroupCursorPool: CursorPool[RelationshipGroupCursor] = CursorPool[RelationshipGroupCursor](
+    () => cursorFactory.allocateRelationshipGroupCursor(pageCursorTracer))
   val relationshipTraversalCursorPool: CursorPool[RelationshipTraversalCursor] = CursorPool[RelationshipTraversalCursor](
     () => cursorFactory.allocateRelationshipTraversalCursor(pageCursorTracer))
   val relationshipScanCursorPool: CursorPool[RelationshipScanCursor] = CursorPool[RelationshipScanCursor](
@@ -37,6 +39,7 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
 
   def setKernelTracer(tracer: KernelReadTracer): Unit = {
     nodeCursorPool.setKernelTracer(tracer)
+    relationshipGroupCursorPool.setKernelTracer(tracer)
     relationshipTraversalCursorPool.setKernelTracer(tracer)
     relationshipScanCursorPool.setKernelTracer(tracer)
     nodeValueIndexCursorPool.setKernelTracer(tracer)
@@ -45,6 +48,7 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
 
   override def close(): Unit = {
     IOUtils.closeAll(nodeCursorPool,
+      relationshipGroupCursorPool,
       relationshipTraversalCursorPool,
       relationshipScanCursorPool,
       nodeValueIndexCursorPool,
@@ -53,6 +57,7 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
 
   def collectLiveCounts(liveCounts: LiveCounts): Unit = {
     liveCounts.nodeCursorPool += nodeCursorPool.getLiveCount
+    liveCounts.relationshipGroupCursorPool += relationshipGroupCursorPool.getLiveCount
     liveCounts.relationshipTraversalCursorPool += relationshipTraversalCursorPool.getLiveCount
     liveCounts.relationshipScanCursorPool += relationshipScanCursorPool.getLiveCount
     liveCounts.nodeValueIndexCursorPool += nodeValueIndexCursorPool.getLiveCount
@@ -72,6 +77,8 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
   override def allocatePropertyCursor(cursorTracer: PageCursorTracer): PropertyCursor = fail("PropertyCursor")
 
   override def allocateFullAccessPropertyCursor(cursorTracer: PageCursorTracer): PropertyCursor = fail("FullAccessPropertyCursor")
+
+  override def allocateRelationshipGroupCursor(cursorTracer: PageCursorTracer): RelationshipGroupCursor = relationshipGroupCursorPool.allocate()
 
   override def allocateNodeValueIndexCursor(): NodeValueIndexCursor = nodeValueIndexCursorPool.allocate()
 

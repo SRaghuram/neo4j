@@ -18,8 +18,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
-import org.neo4j.cypher.internal.runtime.ExecutionContext
-import org.neo4j.cypher.internal.runtime.PrimitiveLongHelper
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.graphdb.Direction
 import org.neo4j.internal.kernel.api.helpers.CachingExpandInto
@@ -70,6 +68,7 @@ case class ExpandIntoSlottedPipe(source: Pipe,
         if (entityIsNull(fromNode) || entityIsNull(toNode))
           Iterator.empty
         else {
+          val groupCursor = query.groupCursor()
           val traversalCursor = query.traversalCursor()
           val nodeCursor = query.nodeCursor()
           try {
