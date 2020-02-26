@@ -59,6 +59,7 @@ import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.ast.RuntimeProperty
 import org.neo4j.cypher.internal.runtime.ast.RuntimeVariable
 import org.neo4j.cypher.internal.expressions
+import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckReference
 import org.neo4j.cypher.internal.util.Rewriter
 import org.neo4j.cypher.internal.util.attribution.SameId
 import org.neo4j.cypher.internal.util.symbols.CTNode

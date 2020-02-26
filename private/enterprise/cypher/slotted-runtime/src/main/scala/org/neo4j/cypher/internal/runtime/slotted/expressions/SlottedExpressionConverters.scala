@@ -144,7 +144,7 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
         Some(slotted.expressions.NullCheck(offset, a))
       case physicalplanning.ast.NullCheckReference(offset, inner) =>
         val a = self.toCommandExpression(id, inner)
-        Some(physicalplanning.ast.NullCheckReference(offset, a))
+        Some(slotted.expressions.NullCheckReference(offset, a))
       case e: expressions.PathExpression =>
         Some(toCommandProjectedPath(id, e, self))
       case physicalplanning.ast.IsPrimitiveNull(offset) =>

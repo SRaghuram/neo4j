@@ -148,6 +148,7 @@ import org.neo4j.cypher.internal.physicalplanning.ast.NodePropertyExistsLate
 import org.neo4j.cypher.internal.physicalplanning.ast.NodePropertyLate
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheck
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckProperty
+import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckReference
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckVariable
 import org.neo4j.cypher.internal.physicalplanning.ast.PrimitiveEquals
 import org.neo4j.cypher.internal.physicalplanning.ast.ReferenceFromSlot
