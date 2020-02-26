@@ -27,7 +27,6 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.util.SplittableRandom;
 import java.util.stream.Stream;
 
-import org.neo4j.graphdb.Direction;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
 
@@ -36,9 +35,8 @@ import static com.neo4j.bench.micro.benchmarks.core.Expand.NODE_COUNT;
 import static com.neo4j.bench.micro.benchmarks.core.Expand.RELATIONSHIP_DEFINITIONS;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
-import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.storageengine.api.RelationshipSelection.ALL_RELATIONSHIPS;
-import static org.neo4j.storageengine.api.RelationshipSelection.selection;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 @BenchmarkEnabled( true )
 @OutputTimeUnit( MICROSECONDS )
@@ -170,13 +168,16 @@ public class Expand extends AbstractKernelBenchmark
         int type = txState.randomRelationshipType( rngState.rng );
 
         txState.node.next();
-        txState.node.relationships( txState.edge, selection( type, Direction.BOTH ) );
+        txState.node.relationships( txState.edge, ALL_RELATIONSHIPS );
 
         while ( txState.edge.next() )
         {
-            txState.edge.otherNode( txState.node );
-            txState.node.next();
-            bh.consume( txState.node.propertiesReference() );
+            if ( txState.edge.type() == type )
+            {
+                txState.edge.otherNode( txState.node );
+                txState.node.next();
+                bh.consume( txState.node.propertiesReference() );
+            }
         }
     }
 
