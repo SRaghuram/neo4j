@@ -84,19 +84,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     result.toSet should be(defaultRoles ++ Set(role("foo").map))
   }
 
-  test("should not create role with reserved name") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
-    // WHEN
-    val exception = the[SyntaxException] thrownBy execute("CREATE ROLE PUBLIC")
-    exception.getMessage should startWith("Failed to create the specified role 'PUBLIC': 'PUBLIC' is a reserved role name and cannot be created.")
-
-    // THEN
-    val result = execute("SHOW ROLES")
-    result.toSet should be(defaultRoles)
-  }
-
   test("should show populated roles") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -200,6 +187,19 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE ROLE foo IF NOT EXISTS")
 
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
+  }
+
+  test("should not create role with reserved name") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy execute("CREATE ROLE PUBLIC")
+    exception.getMessage should startWith("Failed to create the specified role 'PUBLIC': 'PUBLIC' is a reserved role name and cannot be created.")
+
+    // THEN
+    val result = execute("SHOW ROLES")
+    result.toSet should be(defaultRoles)
   }
 
   test("should fail when creating already existing role") {
