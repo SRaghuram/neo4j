@@ -65,6 +65,7 @@ abstract class OptionalExpandIntoSlottedPipe(source: Pipe,
           val nodeCursor = query.nodeCursor()
           try {
             val selectionCursor = expandInto.connectingRelationships(nodeCursor,
+                                                                     groupCursor,
                                                                      traversalCursor,
                                                                      fromNode,
                                                                      lazyTypes.types(query),

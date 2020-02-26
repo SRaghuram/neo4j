@@ -160,8 +160,8 @@ class ExpandIntoTask(inputMorsel: Morsel,
 
   override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
 
-    while (outputRow.onValidRow && traversalCursor.next()) {
-      val relId = traversalCursor.relationshipReference()
+    while (outputRow.onValidRow && relationships.next()) {
+      val relId = relationships.relationshipReference()
 
       // Now we have everything needed to create a row.
       outputRow.copyFrom(inputCursor)

@@ -49,7 +49,6 @@ import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.DbAccess
-import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -63,7 +62,19 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.getNodeIdFromSlot
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.loadTypes
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DB_ACCESS
+import OperatorCodeGenHelperTemplates.ALLOCATE_NODE_CURSOR
+import OperatorCodeGenHelperTemplates.ALLOCATE_GROUP_CURSOR
+import OperatorCodeGenHelperTemplates.ALLOCATE_TRAVERSAL_CURSOR
+import OperatorCodeGenHelperTemplates.CURSOR_POOL_V
+import OperatorCodeGenHelperTemplates.DB_ACCESS
+import OperatorCodeGenHelperTemplates.GroupCursorPool
+import OperatorCodeGenHelperTemplates.NodeCursorPool
+import OperatorCodeGenHelperTemplates.TraversalCursorPool
+import OperatorCodeGenHelperTemplates.allocateAndTraceCursor
+import OperatorCodeGenHelperTemplates.cursorNext
+import OperatorCodeGenHelperTemplates.freeCursor
+import OperatorCodeGenHelperTemplates.profilingCursorNext
+import OperatorCodeGenHelperTemplates.singleNode
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -87,21 +98,9 @@ import org.neo4j.values.AnyValue
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-import OperatorCodeGenHelperTemplates.CURSOR_POOL_V
-import OperatorCodeGenHelperTemplates.profilingCursorNext
-import OperatorCodeGenHelperTemplates.freeCursor
-import OperatorCodeGenHelperTemplates.TraversalCursorPool
-import OperatorCodeGenHelperTemplates.allocateAndTraceCursor
-import OperatorCodeGenHelperTemplates.singleNode
-import OperatorCodeGenHelperTemplates.NodeCursorPool
-import OperatorCodeGenHelperTemplates.ALLOCATE_NODE_CURSOR
-import OperatorCodeGenHelperTemplates.ALLOCATE_TRAVERSAL_CURSOR
-import OperatorCodeGenHelperTemplates.cursorNext
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 
 class ExpandAllOperator(val workIdentity: WorkIdentity,
                         fromSlot: Slot,
@@ -168,9 +167,9 @@ class ExpandAllTask(inputMorsel: Morsel,
 
   override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
 
-    while (outputRow.onValidRow && traversalCursor.next()) {
-      val relId = traversalCursor.relationshipReference()
-      val otherSide = traversalCursor.otherNodeReference()
+    while (outputRow.onValidRow && relationships.next()) {
+      val relId = relationships.relationshipReference()
+      val otherSide = relationships.otherNodeReference()
 
       // Now we have everything needed to create a row.
       outputRow.copyFrom(inputCursor)
