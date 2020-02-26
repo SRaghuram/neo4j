@@ -74,6 +74,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultStressTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipCountFromCountStoreTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SemiApplyTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.SemiApplyWithRhsAggregationTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RightOuterHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ShortestPathTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SortTestBase
@@ -167,3 +168,4 @@ class SlottedProcedureCallTest extends ProcedureCallTestBase(ENTERPRISE.DEFAULT,
 class SlottedShortestPathTest extends ShortestPathTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedUnionTest extends UnionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedSemiApplyTest extends SemiApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+                           with SemiApplyWithRhsAggregationTestBase[EnterpriseRuntimeContext]
