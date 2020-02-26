@@ -43,7 +43,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.internal.helpers.collection.Iterables.single;
 
 class StoreCopyCommandIT extends AbstractCommandIT
 {
@@ -132,7 +131,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
             assertEquals( "Uno", tx.getNodeById( 0 ).getProperty( "name" ) );
             assertEquals( "Dos", tx.getNodeById( 1 ).getProperty( "name" ) );
             assertEquals( "Tres", tx.getNodeById( 2 ).getProperty( "name" ) );
-            assertEquals( RelationshipType.withName( "KNOWS" ), single( tx.getNodeById( 1 ).getRelationships() ).getType() );
+            assertEquals( RelationshipType.withName("KNOWS"), tx.getNodeById( 1 ).getRelationships().iterator().next().getType() );
             assertThrows( NotFoundException.class, () -> tx.getNodeById( 3 ) );
             tx.commit();
         }
@@ -176,7 +175,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
             assertEquals( "On", tx.getNodeById( 0 ).getProperty( "name" ) );
             assertEquals( "Those", tx.getNodeById( 1 ).getProperty( "name" ) );
             assertEquals( "Trays", tx.getNodeById( 2 ).getProperty( "name" ) );
-            assertEquals( RelationshipType.withName( "KNOWS" ), single( tx.getNodeById( 1 ).getRelationships() ).getType() );
+            assertEquals( RelationshipType.withName("KNOWS"), tx.getNodeById( 1 ).getRelationships().iterator().next().getType() );
             assertThrows( NotFoundException.class, () -> tx.getNodeById( 3 ) );
             tx.commit();
         }
@@ -341,7 +340,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
         {
             assertEquals( "Anna", tx.getNodeById( 0 ).getProperty( "name" ) );
             assertEquals( "Bob", tx.getNodeById( 1 ).getProperty( "name" ) );
-            assertEquals( KNOWS_RELATIONSHIP_TYPE, single( tx.getNodeById( 0 ).getRelationships() ).getType() );
+            assertEquals( KNOWS_RELATIONSHIP_TYPE, tx.getNodeById( 0 ).getRelationships().iterator().next().getType() );
             assertThrows( NotFoundException.class, () -> tx.getNodeById( 2 ) );
             assertThrows( NotFoundException.class, () -> tx.getRelationshipById( 1 ) );
             tx.commit();
