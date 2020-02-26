@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -17,7 +18,8 @@ import org.neo4j.values.AnyValue
  */
 class AggregatingAccumulator(override val argumentRowId: Long,
                              reducers: Array[Reducer],
-                             override val argumentRowIdsForReducers: Array[Long]) extends MorselAccumulator[Array[Updater]] {
+                             override val argumentRowIdsForReducers: Array[Long],
+                             val argumentRow: MorselRow) extends MorselAccumulator[Array[Updater]] {
 
   override def update(data: Array[Updater]): Unit = {
     var i = 0
@@ -37,10 +39,10 @@ object AggregatingAccumulator {
 
   class Factory(aggregators: Array[Aggregator], memoryTracker: QueryMemoryTracker, operatorId: Id) extends ArgumentStateFactory[AggregatingAccumulator] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
-      new AggregatingAccumulator(argumentRowId, aggregators.map(_.newStandardReducer(memoryTracker, operatorId)), argumentRowIdsForReducers)
+      new AggregatingAccumulator(argumentRowId, aggregators.map(_.newStandardReducer(memoryTracker, operatorId)), argumentRowIdsForReducers, argumentMorsel.snapshot())
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
-      new AggregatingAccumulator(argumentRowId, aggregators.map(_.newConcurrentReducer), argumentRowIdsForReducers)
+      new AggregatingAccumulator(argumentRowId, aggregators.map(_.newConcurrentReducer), argumentRowIdsForReducers, argumentMorsel.snapshot())
   }
 }
 

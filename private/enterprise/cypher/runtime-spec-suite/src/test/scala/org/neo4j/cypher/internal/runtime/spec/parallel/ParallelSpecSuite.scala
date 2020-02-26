@@ -9,6 +9,7 @@ import java.lang.System.lineSeparator
 
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.PipelinedRuntime.PARALLEL
+import org.neo4j.cypher.internal.PipelinedRuntime.PIPELINED
 import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.MORSEL_SIZE
@@ -45,6 +46,7 @@ import org.neo4j.cypher.internal.runtime.spec.stress.WorkloadTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AggregationTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AllNodeScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AllNodeScanWithOtherOperatorsTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArgumentTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArrayIndexSupport
 import org.neo4j.cypher.internal.runtime.spec.tests.CachePropertiesTestBase
@@ -300,6 +302,10 @@ class ParallelRuntimeOptionalNoFusingTest extends OptionalTestBase(NO_FUSING, PA
 // CARTESIAN PRODUCT
 class ParallelRuntimeCartesianProductTest extends CartesianProductTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 class ParallelRuntimeCartesianProductNoFusingTest extends CartesianProductTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+
+// APPLY
+class ParallelRuntimeApplyTest extends ApplyTestBase(ENTERPRISE.FUSING, PIPELINED, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeApplyNoFusingTest extends ApplyTestBase(ENTERPRISE.NO_FUSING, PIPELINED, SIZE_HINT) with ParallelRuntimeSpecSuite
 
 // SHORTEST PATH
 class ParallelRuntimeShortestPathTest extends ShortestPathTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite

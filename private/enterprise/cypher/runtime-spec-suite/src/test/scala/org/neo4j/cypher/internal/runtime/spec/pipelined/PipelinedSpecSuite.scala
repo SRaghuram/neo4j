@@ -23,6 +23,7 @@ import org.neo4j.cypher.internal.runtime.spec.stress.WorkloadTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AggregationTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AllNodeScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AllNodeScanWithOtherOperatorsTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArgumentTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArrayIndexSupport
 import org.neo4j.cypher.internal.runtime.spec.tests.CachePropertiesTestBase
@@ -272,6 +273,10 @@ class PipelinedOptionalNoFusingTest extends OptionalTestBase(NO_FUSING, PIPELINE
 // CARTESIAN PRODUCT
 class PipelinedCartesianProductTest extends CartesianProductTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedCartesianProductNoFusingTest extends CartesianProductTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
+// APPLY
+class PipelinedApplyTest extends ApplyTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedApplyNoFusingTest extends ApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // PROCEDURE CALL
 class PipelinedProcedureCallTest extends ProcedureCallTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite

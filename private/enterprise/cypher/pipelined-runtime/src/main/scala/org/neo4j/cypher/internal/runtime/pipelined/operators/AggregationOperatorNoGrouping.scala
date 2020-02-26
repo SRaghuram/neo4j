@@ -176,6 +176,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
 
         var i = 0
         val outputCursor = outputMorsel.writeCursor(onFirstRow = true)
+        outputCursor.copyFrom(accumulator.argumentRow)
         while (i < aggregations.length) {
           outputCursor.setRefAt(reducerOutputSlots(i), accumulator.result(i))
           i += 1

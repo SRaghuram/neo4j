@@ -24,7 +24,6 @@ import org.neo4j.cypher.internal.logical.plans.Argument
 import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
 import org.neo4j.cypher.internal.logical.plans.Create
-import org.neo4j.cypher.internal.logical.plans.CrossApply
 import org.neo4j.cypher.internal.logical.plans.Distinct
 import org.neo4j.cypher.internal.logical.plans.DoNotGetValue
 import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
@@ -533,7 +532,6 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
         NodeHashJoin(Set("x"), lhs, rhs),
         LeftOuterHashJoin(Set("x"), lhs, rhs),
         ValueHashJoin(lhs, rhs, equals(varFor("x"), varFor("x"))),
-        CrossApply(lhs, rhs)
       )
 
     for (join <- joins) {
