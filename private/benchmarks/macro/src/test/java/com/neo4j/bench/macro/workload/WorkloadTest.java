@@ -225,24 +225,6 @@ class WorkloadTest
         }
     }
 
-    // This test can be removed once procedure support is added
-    @Test
-    void queriesShouldNotCallProcedures()
-    {
-        try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
-        {
-            Workload.allWorkloads( resources, Deployment.embedded() ).stream()
-                    .flatMap( workload -> workload.queries().stream() )
-                    .forEach( query ->
-                              {
-                                  assertFalse( query.queryString().value().contains( "CALL " ) );
-                                  assertFalse( query.warmupQueryString()
-                                                    .map( q -> q.value().contains( "CALL " ) )
-                                                    .orElse( false ) );
-                              } );
-        }
-    }
-
     @Test
     void shouldParseAllParameterFiles()
     {
