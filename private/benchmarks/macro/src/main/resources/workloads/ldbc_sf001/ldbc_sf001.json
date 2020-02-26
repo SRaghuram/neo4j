@@ -73,14 +73,6 @@
       }
     },
     {
-      "name": "Read 10 -- Sub Query",
-      "description": "Read 10, modified with correlated sub-queries",
-      "queryFile": "queries/query_10_subquery.cypher",
-      "parameters": {
-        "file": "parameters/query_10.txt"
-      }
-    },
-    {
       "name": "Read 11",
       "queryFile": "queries/query_11.cypher",
       "parameters": {
@@ -104,14 +96,6 @@
     {
       "name": "Read 14",
       "queryFile": "queries/query_14.cypher",
-      "parameters": {
-        "file": "parameters/query_14.txt"
-      }
-    },
-    {
-      "name": "Read 14 -- Sub Query",
-      "description": "Read 14, modified with correlated sub-queries",
-      "queryFile": "queries/query_14_subquery.cypher",
       "parameters": {
         "file": "parameters/query_14.txt"
       }

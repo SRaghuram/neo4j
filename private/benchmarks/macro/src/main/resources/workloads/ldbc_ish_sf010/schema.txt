@@ -1,0 +1,14 @@
+CONSTRAINT ON (tag:Tag) ASSERT tag.name IS UNIQUE
+CONSTRAINT ON (tagclass:TagClass) ASSERT tagclass.name IS UNIQUE
+CONSTRAINT ON (message:Message) ASSERT message.id IS UNIQUE
+CONSTRAINT ON (person:Person) ASSERT person.id IS UNIQUE
+CONSTRAINT ON (country:Country) ASSERT country.id IS UNIQUE
+CONSTRAINT ON (country:Country) ASSERT country.name IS UNIQUE
+CONSTRAINT ON (city:City) ASSERT city.name IS UNIQUE
+CONSTRAINT ON (tag:Tag) ASSERT tag.id IS UNIQUE
+CONSTRAINT ON (forum:Forum) ASSERT forum.id IS UNIQUE
+INDEX ON :Person(firstName)
+INDEX ON :Person(lastName)
+INDEX ON :Person(birthday_month)
+INDEX ON :Person(birthday_day)
+INDEX ON :Message(creationDate)

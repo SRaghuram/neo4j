@@ -1,0 +1,22 @@
+{
+  "name": "ldbc_ish_sf010",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Read 10 -- Sub Query",
+      "description": "Read 10, modified with correlated sub-queries",
+      "queryFile": "queries/query_10_subquery.cypher",
+      "parameters": {
+        "file": "parameters/query_10.txt"
+      }
+    },
+    {
+      "name": "Read 14 -- Sub Query",
+      "description": "Read 14, modified with correlated sub-queries",
+      "queryFile": "queries/query_14_subquery.cypher",
+      "parameters": {
+        "file": "parameters/query_14.txt"
+      }
+    }
+  ]
+}
