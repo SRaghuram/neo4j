@@ -11,9 +11,17 @@
       }
     },
     {
-      "name": "Q1 -- Sub Query",
+      "name": "Q1 -- Correlated Sub Query",
       "description": "Q1, modified with correlated sub-queries",
-      "queryFile": "queries/Q1_subquery.cypher",
+      "queryFile": "queries/Q1_correlated_subquery.cypher",
+      "parameters": {
+        "file": "parameters/administrators.txt"
+      }
+    },
+    {
+      "name": "Q1 -- Uncorrelated Sub Query",
+      "description": "Q1, modified with uncorrelated sub-queries",
+      "queryFile": "queries/Q1_uncorrelated_subquery.cypher",
       "parameters": {
         "file": "parameters/administrators.txt"
       }

@@ -19,6 +19,14 @@
       }
     },
     {
+      "name": "Q2 -- Uncorrelated Sub Query",
+      "description": "Friend-of-a-friend with multiple interests (dependant on rand), modified with uncorrelated sub-queries",
+      "queryFile": "queries/Q2-uncorrelated_subquery.cypher",
+      "parameters": {
+        "file": "parameters/users_multi_topics.txt"
+      }
+    },
+    {
       "name": "Q3",
       "description": "Friend worked with friend with interests (dependant on rand)",
       "queryFile": "queries/Q3.cypher",
