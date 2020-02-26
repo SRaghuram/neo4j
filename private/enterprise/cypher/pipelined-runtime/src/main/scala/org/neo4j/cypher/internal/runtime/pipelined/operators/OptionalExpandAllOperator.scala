@@ -231,10 +231,10 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       ifElse(notEqual(load(fromNode), constant(-1L))) {
         block(
           setUpCursors(fromNode),
-          setField(canContinue, cursorNext[RelationshipTraversalCursor](loadField(traversalCursorField))),
+          setField(canContinue, cursorNext[RelationshipTraversalCursor](loadField(relationshipsField))),
         )
       }{//else
-        setField(traversalCursorField,
+        setField(relationshipsField,
           getStatic[RelationshipTraversalCursor, RelationshipTraversalCursor]("EMPTY"))
       },
       constant(true))
@@ -288,7 +288,7 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
           doIfPredicateOrElse(condition(load(shouldWriteRow))(innerBlock))(innerBlock),
           doIfInnerCantContinue(
             setField(canContinue, and(loadField(canContinue),
-              cursorNext[RelationshipTraversalCursor](loadField(traversalCursorField))))),
+              cursorNext[RelationshipTraversalCursor](loadField(relationshipsField))))),
           endInnerLoop
         )))
   }
