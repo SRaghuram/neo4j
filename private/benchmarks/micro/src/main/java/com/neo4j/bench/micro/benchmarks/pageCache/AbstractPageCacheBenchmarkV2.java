@@ -131,7 +131,7 @@ public abstract class AbstractPageCacheBenchmarkV2 extends BaseDatabaseBenchmark
 
         long pageCacheMemory = (long) (getFileSize() * getPercentageCached());
         Config config = Config.defaults( GraphDatabaseSettings.pagecache_memory, pageCacheMemory + "" );
-        PageCacheTracer tracer = DefaultPageCacheTracer.TRACER;
+        PageCacheTracer tracer = new DefaultPageCacheTracer();
         Log log = NullLog.getInstance();
         ConfiguringPageCacheFactory factory = new ConfiguringPageCacheFactory(
                 fs,

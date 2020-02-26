@@ -37,7 +37,7 @@ class PageCacheStressTesting
 
         File workingDirectory = new File( baseDir,  "working" );
 
-        DefaultPageCacheTracer monitor = DefaultPageCacheTracer.TRACER;
+        DefaultPageCacheTracer monitor = new DefaultPageCacheTracer();
         PageCacheStressTest runner = new PageCacheStressTest.Builder()
                 .with( timePeriod( durationInMinutes, MINUTES ) )
                 .withNumberOfPages( numberOfPages )

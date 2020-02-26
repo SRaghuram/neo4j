@@ -162,7 +162,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
         FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
         fs.mkdirs( indexFile.getParentFile() );
         Config config = Config.defaults();
-        PageCacheTracer tracer = DefaultPageCacheTracer.TRACER;
+        PageCacheTracer tracer = new DefaultPageCacheTracer();
         Log log = NullLog.getInstance();
         ConfiguringPageCacheFactory factory = new ConfiguringPageCacheFactory(
                 fs,
