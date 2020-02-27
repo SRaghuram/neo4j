@@ -343,14 +343,16 @@ class Morsel(private[execution] final val longs: Array[Long],
 
       for (col <- 0 until longsPerRow) {
         val width = longWidths(col)
-        sb ++= ("%" + width + "s").format(longStrings(row * longsPerRow + col))
+        if (width > 0)
+          sb ++= ("%" + width + "s").format(longStrings(row * longsPerRow + col))
         sb += ' '
       }
       sb += ' '
       sb += ' '
       for (col <- 0 until refsPerRow) {
         val width = refWidths(col)
-        sb ++= ("%" + width + "s").format(refStrings(row * refsPerRow + col))
+        if (width > 0)
+          sb ++= ("%" + width + "s").format(refStrings(row * refsPerRow + col))
         sb += ' '
       }
       addPrettyRowMarker(sb, startRow + row)
