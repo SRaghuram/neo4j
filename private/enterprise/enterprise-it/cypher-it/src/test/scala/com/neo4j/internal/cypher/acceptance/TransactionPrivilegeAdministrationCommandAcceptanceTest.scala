@@ -53,7 +53,7 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
     execute("CREATE ROLE role")
 
     // WHEN
-    execute("GRANT SHOW TRANSACTION (*) ON DATABASE foo TO role")
+    execute("GRANT SHOW TRANSACTION ON DATABASE foo TO role")
     execute("GRANT SHOW TRANSACTION (user1,user2) ON DEFAULT DATABASE TO role")
 
     // THEN
@@ -123,7 +123,7 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
     execute("CREATE ROLE role")
 
     // WHEN
-    execute("DENY TERMINATE TRANSACTION (*) ON DATABASE foo TO role")
+    execute("DENY TERMINATE TRANSACTION ON DATABASE foo TO role")
     execute("DENY TERMINATE TRANSACTION (user1,user2) ON DEFAULT DATABASE TO role")
 
     // THEN
@@ -201,7 +201,7 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
     execute("DENY TRANSACTION (user1) ON DATABASE * TO role")
 
     // WHEN
-    execute("REVOKE TRANSACTION (*) ON DATABASE foo FROM role")
+    execute("REVOKE TRANSACTION ON DATABASE foo FROM role")
     execute("REVOKE TRANSACTION ON DEFAULT DATABASE FROM role")
     execute("REVOKE TRANSACTION (user1,user2) ON DATABASE * FROM role")
 

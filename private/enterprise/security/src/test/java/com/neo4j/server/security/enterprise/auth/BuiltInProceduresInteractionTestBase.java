@@ -412,7 +412,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         authDisabledAdminstrationCommand( "CREATE ROLE custom" );
         authDisabledAdminstrationCommand( "GRANT ACCESS ON DATABASE * TO custom" );
         authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
-        authDisabledAdminstrationCommand( "GRANT SHOW TRANSACTION (*) ON DATABASE foo TO custom" );
+        authDisabledAdminstrationCommand( "GRANT SHOW TRANSACTION ON DATABASE foo TO custom" );
         S subject = neo.login( "alice", "foo" );
 
         DoubleLatch latch = new DoubleLatch( 3, true );
@@ -1295,7 +1295,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
         authDisabledAdminstrationCommand( "GRANT ACCESS ON DATABASE * TO custom" );
         authDisabledAdminstrationCommand( "CREATE DATABASE foo" );
-        authDisabledAdminstrationCommand( "GRANT TERMINATE TRANSACTION (*) ON DATABASE foo TO custom" );
+        authDisabledAdminstrationCommand( "GRANT TERMINATE TRANSACTION ON DATABASE foo TO custom" );
         S subject = neo.login( "alice", "foo" );
         DoubleLatch latch = new DoubleLatch( 3 );
         ThreadedTransaction<S> tx1 = new ThreadedTransaction<>( neo, latch );
