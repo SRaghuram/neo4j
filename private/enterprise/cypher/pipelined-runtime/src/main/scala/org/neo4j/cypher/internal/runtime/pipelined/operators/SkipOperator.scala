@@ -40,16 +40,18 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 
 object SkipOperator {
+
+  trait NonCancellableState {
+    self: CountingState =>
+    def isCancelled: Boolean = false
+  }
+
   class SkipStateFactory(count: Long) extends ArgumentStateFactory[CountingState] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): CountingState =
-      new StandardCountingState(argumentRowId, count, argumentRowIdsForReducers) {
-        override def isCancelled: Boolean = false
-      }
+      new StandardCountingState(argumentRowId, count, argumentRowIdsForReducers) with NonCancellableState
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): CountingState =
-      new ConcurrentCountingState(argumentRowId, count, argumentRowIdsForReducers) {
-        override def isCancelled: Boolean = false
-      }
+      new ConcurrentCountingState(argumentRowId, count, argumentRowIdsForReducers) with NonCancellableState
   }
 }
 

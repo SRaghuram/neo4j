@@ -935,14 +935,14 @@ class FuseOperators(operatorFactory: OperatorFactory,
               argumentStates = (argumentStateMapId, SerialTopLevelLimitStateFactory) :: acc.argumentStates
             )
 
-          // Special case for limit when not nested under an apply and with serial execution
+          // Special case for skip when not nested under an apply and with serial execution
           case plan@Skip(_, countExpression) if hasNoNestedArguments(plan) && serialExecutionOnly =>
             val argumentStateMapId = operatorFactory.executionGraphDefinition.findArgumentStateMapForPlan(plan.id)
             val newTemplate = new SerialTopLevelSkipOperatorTaskTemplate(acc.template,
-                                                                          plan.id,
-                                                                          innermostTemplate,
-                                                                          argumentStateMapId,
-                                                                          compileExpression(countExpression))(expressionCompiler)
+                                                                         plan.id,
+                                                                         innermostTemplate,
+                                                                         argumentStateMapId,
+                                                                         compileExpression(countExpression))(expressionCompiler)
             acc.copy(
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans,

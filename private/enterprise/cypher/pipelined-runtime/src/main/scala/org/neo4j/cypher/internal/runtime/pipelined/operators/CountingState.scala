@@ -192,21 +192,20 @@ abstract class SerialTopLevelCountingOperatorTaskTemplate(val inner: OperatorTas
   private var countExpression: IntermediateExpression = _
   protected val countLeftVar: LocalVariable = variable[Long](codeGen.namer.nextVariableName("countLeft"), constant(0L))
   protected val reservedVar: LocalVariable = variable[Long](codeGen.namer.nextVariableName("reserved"), constant(0L))
-  protected val countingStateField: InstanceField = field[SerialTopLevelCountingState](codeGen.namer.nextVariableName("countState"),
-                                                                                       // Get the skip operator state from the ArgumentStateMaps that is passed to the constructor
-                                                                                       // We do not generate any checks or error handling code, so the runtime compiler is responsible for this fitting together perfectly
-                                                                                       cast[SerialTopLevelCountingState](
-                                                                    invoke(
-                                                                      invoke(load(
-                                                                        ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name),
-                                                                             method[ArgumentStateMaps, ArgumentStateMap[_ <: ArgumentState], Int](
-                                                                               "applyByIntId"),
-                                                                             constant(argumentStateMapId.x)),
-                                                                      method[ArgumentStateMap[_ <: ArgumentState], ArgumentState, Long](
-                                                                        "peek"),
-                                                                      constant(TopLevelArgument.VALUE)
-                                                                      )
-                                                                    ))
+  protected val countingStateField: InstanceField = field[SerialTopLevelCountingState](
+    codeGen.namer.nextVariableName("countState"),
+    // Get the skip operator state from the ArgumentStateMaps that is passed to the constructor
+    // We do not generate any checks or error handling code, so the runtime compiler is responsible for this fitting together perfectly
+    cast[SerialTopLevelCountingState](
+      invoke(
+        invoke(load(
+          ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name),
+               method[ArgumentStateMaps, ArgumentStateMap[_ <: ArgumentState], Int]("applyByIntId"),
+               constant(argumentStateMapId.x)),
+        method[ArgumentStateMap[_ <: ArgumentState], ArgumentState, Long]("peek"),
+        constant(TopLevelArgument.VALUE)
+        )
+      ))
 
   override def genInit: IntermediateRepresentation = inner.genInit
 

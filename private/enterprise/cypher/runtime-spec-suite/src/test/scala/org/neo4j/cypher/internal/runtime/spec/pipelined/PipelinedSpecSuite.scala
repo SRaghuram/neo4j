@@ -222,7 +222,7 @@ class PipelinedFilterNoFusingTest extends FilterTestBase(NO_FUSING, PIPELINED, S
 class PipelinedLimitTest extends LimitTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedLimitNoFusingTest extends LimitTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
-// LIMIT
+// SKIP
 class PipelinedSkipTest extends SkipTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedSkipNoFusingTest extends SkipTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 

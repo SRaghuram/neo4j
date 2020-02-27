@@ -45,16 +45,17 @@ import org.neo4j.cypher.internal.util.attribution.Id
 
 object LimitOperator {
 
+  trait CancellableState {
+    self: CountingState =>
+    def isCancelled: Boolean = getCount <= 0
+  }
+
   class LimitStateFactory(count: Long) extends ArgumentStateFactory[CountingState] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): CountingState =
-      new StandardCountingState(argumentRowId, count, argumentRowIdsForReducers) {
-        override def isCancelled: Boolean =  getCount == 0
-      }
+      new StandardCountingState(argumentRowId, count, argumentRowIdsForReducers) with CancellableState
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): CountingState =
-      new ConcurrentCountingState(argumentRowId, count, argumentRowIdsForReducers) {
-        override def isCancelled: Boolean = getCount <= 0
-      }
+      new ConcurrentCountingState(argumentRowId, count, argumentRowIdsForReducers) with CancellableState
   }
 }
 

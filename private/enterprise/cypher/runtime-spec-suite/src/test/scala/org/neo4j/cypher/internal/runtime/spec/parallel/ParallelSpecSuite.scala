@@ -250,8 +250,8 @@ class ParallelRuntimeLimitTest extends LimitTestBase(FUSING, PARALLEL, SIZE_HINT
 class ParallelRuntimeLimitNoFusingTest extends LimitTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 
 // SKIP
-class ParallelRuntimeSkipTest extends SkipTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
-class ParallelRuntimeSkipNoFusingTest extends SkipTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeSkipTest extends SkipTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeSkipNoFusingTest extends SkipTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 
 // DISTINCT
 class ParallelRuntimeDistinctTest extends DistinctTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite

@@ -297,8 +297,8 @@ object ArgumentStateMap {
               morsel: Morsel,
               reserve: (Long, Long) => Long): Unit = {
     val filteringMorsel = morsel.asInstanceOf[FilteringMorsel]
-   if (filteringMorsel.hasCancelledRows) skipSlow(argumentSlotOffset, filteringMorsel, reserve)
-   else skipFast(argumentSlotOffset, filteringMorsel, reserve)
+    if (filteringMorsel.hasCancelledRows) skipSlow(argumentSlotOffset, filteringMorsel, reserve)
+    else skipFast(argumentSlotOffset, filteringMorsel, reserve)
   }
 
   /**
