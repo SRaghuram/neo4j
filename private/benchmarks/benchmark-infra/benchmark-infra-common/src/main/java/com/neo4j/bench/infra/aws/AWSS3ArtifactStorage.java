@@ -14,10 +14,12 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectResult;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.transfer.TransferManager;
+import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
+import com.amazonaws.services.s3.transfer.Upload;
 import com.neo4j.bench.infra.ArtifactStorage;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.Dataset;
@@ -33,6 +35,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.List;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.appendIfMissing;
@@ -106,25 +110,33 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
         }
         try
         {
+            TransferManager tm = TransferManagerBuilder.standard()
+                                                       .withS3Client( amazonS3 )
+                                                       .build();
+            List<Upload> uploads = new ArrayList<>();
+
             for ( Path artifact : workspace.allArtifacts() )
             {
-                ObjectMetadata objectMetadata = new ObjectMetadata();
                 String s3key = Paths.get( s3Path, workspace.baseDir().relativize( artifact ).toString() ).toString();
-                // don't you ever dare to touch it,
-                // otherwise you will run out of memory
-                // as AWS S3 client tries to cache whole stream in memory
-                // if size is unknown
-                objectMetadata.setContentLength( Files.size( artifact ) );
                 LOG.info( "upload artifact {} to path {}",
                           artifact.toString(),
                           new URI( artifactBaseURI.getScheme(), artifactBaseURI.getHost(), prependIfMissing( s3key, "/" ), null ) );
-                PutObjectResult result = amazonS3.putObject( bucketName, s3key,
-                                                             Files.newInputStream( artifact ), objectMetadata );
-                // TODO this fails under tests, and works with real implementation
-                // Objects.requireNonNull( result.getExpirationTime(), "build artifacts should have expiration time set" );
+                // TransferManager processes all transfers asynchronously,
+                // so this call returns immediately.
+                PutObjectRequest putObjectRequest = new PutObjectRequest( bucketName, s3key, artifact.toFile() );
+                uploads.add( tm.upload( putObjectRequest ) );
+                LOG.info( "Object upload started" );
             }
+            // TODO this fails under tests, and works with real implementation
+            // Objects.requireNonNull( result.getExpirationTime(), "build artifacts should have expiration time set" );
+            for ( Upload upload : uploads )
+            {
+                upload.waitForCompletion();
+            }
+            LOG.info( "All object upload complete" );
+            tm.shutdownNow( false );
         }
-        catch ( IOException | URISyntaxException e )
+        catch ( URISyntaxException | InterruptedException e )
         {
             throw new ArtifactStoreException( e );
         }
