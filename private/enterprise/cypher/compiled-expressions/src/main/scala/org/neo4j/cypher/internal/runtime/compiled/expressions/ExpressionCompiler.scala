@@ -6,8 +6,8 @@
 package org.neo4j.cypher.internal.runtime.compiled.expressions
 
 import java.util
-import java.util.concurrent.atomic.AtomicLong
 import java.util.Optional
+import java.util.concurrent.atomic.AtomicLong
 import java.util.regex
 
 import org.neo4j.codegen.api.ClassDeclaration
@@ -160,6 +160,12 @@ import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipTypeFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedPropertyWithPropertyToken
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedPropertyWithoutPropertyToken
+import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.DbAccess
+import org.neo4j.cypher.internal.runtime.ExpressionCursors
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
+import org.neo4j.cypher.internal.runtime.ReadableRow
+import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.ast.ParameterFromSlot
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.ASSERT_PREDICATE
@@ -185,12 +191,6 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.vPROPERTY_CURSOR
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.vRELATIONSHIP_CURSOR
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
-import org.neo4j.cypher.internal.runtime.DbAccess
-import org.neo4j.cypher.internal.runtime.CypherRow
-import org.neo4j.cypher.internal.runtime.ExpressionCursors
-import org.neo4j.cypher.internal.runtime.ReadWriteRow
-import org.neo4j.cypher.internal.runtime.ReadableRow
-import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.symbols.CTBoolean
 import org.neo4j.cypher.internal.util.symbols.CTDate
@@ -218,11 +218,11 @@ import org.neo4j.cypher.operations.CypherMath
 import org.neo4j.cypher.operations.PathValueBuilder
 import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.exceptions.InternalException
-import org.neo4j.internal.kernel.api.procs.Neo4jTypes
-import org.neo4j.internal.kernel.api.procs.Neo4jTypes.AnyType
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.PropertyCursor
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
+import org.neo4j.internal.kernel.api.procs.Neo4jTypes
+import org.neo4j.internal.kernel.api.procs.Neo4jTypes.AnyType
 import org.neo4j.kernel.api.StatementConstants
 import org.neo4j.kernel.api.StatementConstants.NO_SUCH_NODE
 import org.neo4j.kernel.impl.util.ValueUtils
@@ -538,6 +538,10 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
       val compiled = (for {(k, v) <- items
                            c <- intermediateCompileExpression(v)} yield k -> c).toMap
       if (compiled.size < items.size) None
+      else if (compiled.isEmpty) {
+        Some(IntermediateExpression(
+            getStatic[VirtualValues, MapValue]("EMPTY_MAP"), Seq.empty, Seq.empty, Set.empty, requireNullCheck = false) )
+      }
       else {
         val tempVariable = namer.nextVariableName()
         val ops = Seq(

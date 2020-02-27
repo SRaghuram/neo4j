@@ -32,8 +32,8 @@ import java.util.stream.IntStream;
 
 import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.cypher.internal.CypherQueryObfuscator;
-import org.neo4j.exceptions.InvalidSemanticsException;
 import org.neo4j.cypher.internal.ast.UseGraph;
+import org.neo4j.exceptions.InvalidSemanticsException;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -43,6 +43,7 @@ import org.neo4j.values.virtual.MapValueBuilder;
 import org.neo4j.values.virtual.PathValue;
 import org.neo4j.values.virtual.VirtualNodeValue;
 import org.neo4j.values.virtual.VirtualRelationshipValue;
+import org.neo4j.values.virtual.VirtualValues;
 
 import static scala.collection.JavaConverters.asJavaIterable;
 import static scala.collection.JavaConverters.mapAsJavaMap;
@@ -267,7 +268,12 @@ public class FabricExecutor
 
         private MapValue addImportParams( Map<String,AnyValue> record, Map<String,String> bindings )
         {
-            MapValueBuilder builder = new MapValueBuilder( params.size() + bindings.size() );
+            int resultSize = params.size() + bindings.size();
+            if ( resultSize == 0 )
+            {
+                return VirtualValues.EMPTY_MAP;
+            }
+            MapValueBuilder builder = new MapValueBuilder( resultSize );
             params.foreach( builder::add );
             bindings.forEach( ( var, par ) -> builder.add( par, validateValue( record.get( var ) ) ) );
             return builder.build();

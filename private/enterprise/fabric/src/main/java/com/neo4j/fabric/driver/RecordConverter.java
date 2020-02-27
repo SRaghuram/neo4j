@@ -40,7 +40,9 @@ import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.TimeValue;
 import org.neo4j.values.storable.Values;
 import org.neo4j.values.virtual.ListValue;
+import org.neo4j.values.virtual.ListValueBuilder;
 import org.neo4j.values.virtual.MapValue;
+import org.neo4j.values.virtual.MapValueBuilder;
 import org.neo4j.values.virtual.NodeValue;
 import org.neo4j.values.virtual.PathValue;
 import org.neo4j.values.virtual.RelationshipValue;
@@ -237,18 +239,17 @@ class RecordConverter
 
     private MapValue convertMap( MapAccessor driverValue )
     {
-        String[] keys = new String[driverValue.size()];
-        AnyValue[] values = new AnyValue[driverValue.size()];
-
-        int i = 0;
+        if ( driverValue.size() == 0 )
+        {
+            return VirtualValues.EMPTY_MAP;
+        }
+        MapValueBuilder builder = new MapValueBuilder( driverValue.size() );
         for ( String key : driverValue.keys() )
         {
-            keys[i] = key;
-            values[i] = convertValue( driverValue.get( key ) );
-            i++;
+            builder.add( key, convertValue( driverValue.get( key ) ) );
         }
 
-        return VirtualValues.map( keys, values );
+        return builder.build();
     }
 
     private PathValue convertPath( Path driverValue )
@@ -294,29 +295,24 @@ class RecordConverter
 
     private MapValue convertMap( Map<String,Object> driverValue )
     {
-        String[] keys = new String[driverValue.size()];
-        AnyValue[] values = new AnyValue[driverValue.size()];
-
-        int i = 0;
-        for ( Map.Entry<String,Object> e : driverValue.entrySet() )
+        if ( driverValue.size() == 0 )
         {
-            keys[i] = e.getKey();
-            values[i] = convertValue( e.getValue() );
-            i++;
+            return VirtualValues.EMPTY_MAP;
         }
-
-        return VirtualValues.map( keys, values );
+        MapValueBuilder builder = new MapValueBuilder( driverValue.size() );
+        driverValue.forEach( ( key, value ) -> builder.add( key, convertValue( value ) ) );
+        return builder.build();
     }
 
     private ListValue convertList( List<Object> driverValue )
     {
-        AnyValue[] listValues = new AnyValue[driverValue.size()];
-        for ( int i = 0; i < driverValue.size(); i++ )
+        ListValueBuilder builder = ListValueBuilder.newListBuilder( driverValue.size() );
+        for ( Object o : driverValue )
         {
-            listValues[i] = convertValue( driverValue.get( i ) );
+            builder.add( convertValue( o ) );
         }
 
-        return VirtualValues.list( listValues );
+        return builder.build();
     }
 
     private DateValue convertDate( LocalDate driverValue )

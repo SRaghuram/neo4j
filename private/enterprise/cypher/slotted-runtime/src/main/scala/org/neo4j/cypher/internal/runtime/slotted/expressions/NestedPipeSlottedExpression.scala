@@ -5,8 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.expressions
 
-import java.util
-
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
@@ -16,7 +14,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.values.AnyValue
-import org.neo4j.values.virtual.VirtualValues
+import org.neo4j.values.virtual.ListValueBuilder
 
 /**
  * Slotted variant of [[org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.NestedPipeExpression]]
@@ -33,11 +31,11 @@ case class NestedPipeSlottedExpression(pipe: Pipe,
     val innerState = state.withInitialContext(initialContext).withDecorator(state.decorator.innerDecorator(owningPipe))
 
     val results = pipe.createResults(innerState)
-    val all = new util.ArrayList[AnyValue]()
+    val all = ListValueBuilder.newListBuilder()
     while (results.hasNext) {
       all.add(inner(results.next(), state))
     }
-    VirtualValues.fromList(all)
+    all.build()
   }
 
   private def createInitialContext(ctx: ReadableRow, state: QueryState): SlottedRow = {

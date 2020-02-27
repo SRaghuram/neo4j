@@ -18,6 +18,7 @@ import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.NodeValue
 import org.neo4j.values.virtual.VirtualValues
+
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 
 class ExecutionEngineInputDataStreamTest
@@ -199,7 +200,7 @@ class ExecutionEngineInputDataStreamTest
     VirtualValues.nodeValue(id, Values.stringArray(labels: _*), ValueUtils.asMapValue(props))
 
   private def relationship(id: Long, start: NodeValue, end: NodeValue, label: String, props: util.Map[String, Any]) =
-    VirtualValues.relationshipValue(id, start, end, ValueUtils.asTextValue(label), ValueUtils.asMapValue(props))
+    VirtualValues.relationshipValue(id, start, end, Values.stringValue(label), ValueUtils.asMapValue(props))
 
   private val materializedEntities = QueryOptions.default.copy(
     runtime = CypherRuntimeOption.slotted,

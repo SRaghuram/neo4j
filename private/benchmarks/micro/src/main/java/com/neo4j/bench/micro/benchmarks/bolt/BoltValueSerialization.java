@@ -25,9 +25,6 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.ThreadParams;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.SplittableRandom;
 import java.util.concurrent.TimeUnit;
 
@@ -41,7 +38,9 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.Values;
+import org.neo4j.values.virtual.ListValueBuilder;
 import org.neo4j.values.virtual.MapValue;
+import org.neo4j.values.virtual.MapValueBuilder;
 import org.neo4j.values.virtual.VirtualValues;
 
 import static com.neo4j.bench.micro.Main.run;
@@ -136,29 +135,28 @@ public class BoltValueSerialization extends AbstractBoltBenchmark
 
         private void setupList( ValueGeneratorFun... generators )
         {
-            HashMap<String,AnyValue> listParamMap = new HashMap<>();
             int size = 100;
-            ArrayList<AnyValue> list = new ArrayList<>( size );
+            ListValueBuilder list = ListValueBuilder.newListBuilder();
             for ( int i = 0; i < size; i++ )
             {
                 list.add( Values.of( generators[i % generators.length].next( random ) ) );
             }
-            listParamMap.put( "p", VirtualValues.fromList( list ) );
-            listParam = VirtualValues.map( new String[]{"p"}, new AnyValue[]{VirtualValues.fromList( list )} );
+            MapValueBuilder listParamMap = new MapValueBuilder();
+            listParamMap.add( "p", list.build() );
+            listParam = listParamMap.build();
         }
 
         private void setupMap( ValueGeneratorFun... generators )
         {
             int size = 100;
-            String[] key = new String[size];
-            AnyValue[] values = new AnyValue[size];
-            Map<String,AnyValue> map = new HashMap<>( size );
+            MapValueBuilder mapValues = new MapValueBuilder( size );
             for ( int i = 0; i < size; i++ )
             {
-                key[i] = "k" + i;
-                values[i] = Values.of( generators[i % generators.length].next( random ) );
+                mapValues.add( "k" + i, Values.of( generators[i % generators.length].next( random ) ) );
             }
-            mapParam = VirtualValues.map( new String[]{"p"}, new AnyValue[]{VirtualValues.map( key, values )} );
+            MapValueBuilder map = new MapValueBuilder( size );
+            map.add( "p", mapValues.build() );
+            mapParam = map.build();
         }
 
         @TearDown

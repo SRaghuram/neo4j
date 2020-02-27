@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
-import java.util
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
@@ -13,6 +12,7 @@ import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.ListValue
+import org.neo4j.values.virtual.ListValueBuilder
 import org.neo4j.values.virtual.VirtualValues
 
 import scala.collection.mutable.ArrayBuffer
@@ -28,7 +28,7 @@ case object CollectAggregator extends Aggregator {
 }
 
 class CollectUpdater() extends Updater {
-  private[aggregators] val collection = new util.ArrayList[AnyValue]()
+  private[aggregators] val collection = ListValueBuilder.newListBuilder()
   override def update(value: AnyValue): Unit =
     if (!(value eq Values.NO_VALUE)) {
       collection.add(value)
@@ -40,7 +40,7 @@ class CollectStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id) 
   override def update(updater: Updater): Unit = {
     updater match {
       case u: CollectUpdater =>
-        val value = VirtualValues.fromList(u.collection)
+        val value = u.collection.build();
         collections += value
         // Note: this allocation is currently never de-allocated
         memoryTracker.allocated(value, operatorId.x)
@@ -56,7 +56,7 @@ class CollectConcurrentReducer() extends Reducer {
   override def update(updater: Updater): Unit =
     updater match {
       case u: CollectUpdater =>
-        collections.add(VirtualValues.fromList(u.collection))
+        collections.add(u.collection.build())
     }
 
   override def result: AnyValue = VirtualValues.concat(collections.toArray(new Array[ListValue](0)):_*)

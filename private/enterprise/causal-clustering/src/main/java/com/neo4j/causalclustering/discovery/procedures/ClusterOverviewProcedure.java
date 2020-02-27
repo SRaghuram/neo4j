@@ -15,7 +15,6 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -32,16 +31,14 @@ import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.Values;
+import org.neo4j.values.virtual.ListValueBuilder;
 import org.neo4j.values.virtual.MapValueBuilder;
 
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.neo4j.internal.helpers.collection.Iterators.asRawIterator;
 import static org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureSignature;
-import static org.neo4j.values.storable.Values.stringValue;
 import static org.neo4j.values.storable.Values.utf8Value;
-import static org.neo4j.values.virtual.VirtualValues.fromList;
 
 /**
  * Overview procedure with added support for server groups.
@@ -124,13 +121,11 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
 
     private static AnyValue formatAddresses( ResultRow row )
     {
-        List<AnyValue> stringValues = row.addresses.uriList()
+        return row.addresses.uriList()
                 .stream()
                 .map( URI::toString )
                 .map( Values::utf8Value )
-                .collect( toList() );
-
-        return fromList( stringValues );
+                .collect( ListValueBuilder.collector() );
     }
 
     private static AnyValue formatDatabases( ResultRow row )
@@ -147,12 +142,10 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
 
     private static AnyValue formatGroups( ResultRow row )
     {
-        List<AnyValue> stringValues = row.groups.stream()
+        return row.groups.stream()
                 .sorted()
                 .map( Values::utf8Value )
-                .collect( toList() );
-
-        return fromList( stringValues );
+                .collect( ListValueBuilder.collector() );
     }
 
     static class ResultRow implements Comparable<ResultRow>
