@@ -49,6 +49,7 @@ import org.neo4j.values.virtual.VirtualNodeValue;
 import org.neo4j.values.virtual.VirtualRelationshipValue;
 import org.neo4j.values.virtual.VirtualValues;
 
+import static com.neo4j.fabric.stream.StatementResults.withErrorMapping;
 import static scala.collection.JavaConverters.asJavaIterable;
 import static scala.collection.JavaConverters.mapAsJavaMap;
 import static scala.collection.JavaConverters.seqAsJavaList;
@@ -97,7 +98,7 @@ public class FabricExecutor
         {
             log.debug( String.format( "Fabric plan: %s", Fragment.pretty().asString( query ) ) );
         }
-        return fabricTransaction.execute(
+        var statementResult = fabricTransaction.execute(
                 ctx ->
                 {
                     FabricStatementExecution execution;
@@ -115,6 +116,8 @@ public class FabricExecutor
                     }
                     return execution.run();
                 } );
+
+        return withErrorMapping( statementResult, FabricSecondaryException.class, FabricSecondaryException::getPrimaryException );
     }
 
     private class FabricStatementExecution

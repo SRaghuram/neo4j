@@ -6,6 +6,7 @@
 package com.neo4j.fabric.driver;
 
 import com.neo4j.fabric.executor.FabricException;
+import com.neo4j.fabric.executor.FabricSecondaryException;
 import com.neo4j.fabric.stream.Record;
 import com.neo4j.fabric.stream.Records;
 import com.neo4j.fabric.stream.StatementResult;
@@ -13,6 +14,7 @@ import com.neo4j.fabric.stream.summary.Summary;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.neo4j.driver.exceptions.ClientException;
@@ -27,41 +29,49 @@ abstract class AbstractRemoteStatementResult implements StatementResult
     private final Mono<ResultSummary> summary;
     private final RecordConverter recordConverter;
     private final Runnable completionListener;
+    private final AtomicReference<FabricException> primaryException;
     private boolean completionInvoked;
 
-    AbstractRemoteStatementResult( Flux<String> columns, Mono<ResultSummary> summary, long sourceTag )
+    AbstractRemoteStatementResult( Flux<String> columns, Mono<ResultSummary> summary, long sourceTag, AtomicReference<FabricException> primaryException )
     {
-        this( columns, summary, sourceTag, () ->
+        this( columns, summary, sourceTag, primaryException, () ->
         {
         } );
     }
 
     AbstractRemoteStatementResult( Flux<String> columns, Mono<ResultSummary> summary, long sourceTag, Runnable completionListener )
     {
+        this( columns, summary, sourceTag, new AtomicReference<>(), completionListener );
+    }
+
+    private AbstractRemoteStatementResult( Flux<String> columns, Mono<ResultSummary> summary, long sourceTag, AtomicReference<FabricException> primaryException,
+            Runnable completionListener )
+    {
         this.columns = columns;
         this.summary = summary;
         recordConverter = new RecordConverter( sourceTag );
         this.completionListener = completionListener;
+        this.primaryException = primaryException;
     }
 
     @Override
     public Flux<String> columns()
     {
-        return columns.onErrorMap( Neo4jException.class, this::translateError ).doOnError( ignored -> invokeCompletionListener() );
+        return columns.onErrorMap( Neo4jException.class, this::handleError ).doOnError( ignored -> invokeCompletionListener() );
     }
 
     @Override
     public Flux<Record> records()
     {
         return doGetRecords()
-                .onErrorMap( Neo4jException.class, this::translateError )
+                .onErrorMap( Neo4jException.class, this::handleError )
                 .doFinally( signalType -> invokeCompletionListener() );
     }
 
     @Override
     public Mono<Summary> summary()
     {
-        return summary.onErrorMap( Neo4jException.class, this::translateError )
+        return summary.onErrorMap( Neo4jException.class, this::handleError )
             .map( ResultSummaryWrapper::new );
     }
 
@@ -81,6 +91,19 @@ abstract class AbstractRemoteStatementResult implements StatementResult
             completionListener.run();
             completionInvoked = true;
         }
+    }
+
+    private FabricException handleError( Neo4jException driverException )
+    {
+        FabricException translatedException = translateError( driverException );
+
+        if ( primaryException.compareAndSet( null, translatedException ) )
+        {
+            return translatedException;
+        }
+
+        return new FabricSecondaryException( translatedException.status(), translatedException.getMessage(), translatedException.getCause(),
+                primaryException.get() );
     }
 
     private FabricException translateError( Neo4jException driverException )
@@ -104,7 +127,7 @@ abstract class AbstractRemoteStatementResult implements StatementResult
 
     private FabricException genericRemoteFailure( Neo4jException driverException )
     {
-        throw new FabricException( Status.Fabric.RemoteExecutionFailed,
+        return new FabricException( Status.Fabric.RemoteExecutionFailed,
                 String.format( "Remote execution failed with code %s and message '%s'", driverException.code(), driverException.getMessage() ),
                 driverException );
     }

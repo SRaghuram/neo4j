@@ -62,6 +62,16 @@ public final class StatementResults
         return new BasicStatementResult( columns, records, summary );
     }
 
+    public static <E extends Throwable> StatementResult withErrorMapping( StatementResult statementResult, Class<E> type,
+            Function<? super E,? extends Throwable> mapper )
+    {
+        var columns = statementResult.columns().onErrorMap( type, mapper );
+        var records = statementResult.records().onErrorMap( type, mapper );
+        var summary = statementResult.summary().onErrorMap( type, mapper );
+
+        return create( columns, records, summary );
+    }
+
     public static StatementResult error( Throwable err )
     {
         return new BasicStatementResult( Flux.error( err ), Flux.error( err ), Mono.error( err ) );
