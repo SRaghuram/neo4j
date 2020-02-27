@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.core;
+package com.neo4j.causalclustering.core.batching;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages.InboundRaftMessageContainer;
 import com.neo4j.causalclustering.core.consensus.ReplicatedString;
@@ -25,7 +25,6 @@ import org.mockito.Mockito;
 
 import java.time.Instant;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -44,6 +43,7 @@ import static com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -55,7 +55,7 @@ import static org.neo4j.logging.LogAssertions.assertThat;
 class BatchingMessageHandlerTest
 {
     private static final BoundedPriorityQueue.Config IN_QUEUE_CONFIG = new BoundedPriorityQueue.Config( 64, 1024 );
-    private static final BatchingMessageHandler.Config BATCH_CONFIG = new BatchingMessageHandler.Config( 16, 256 );
+    private static final BatchingConfig BATCH_CONFIG = new BatchingConfig( 16, 256 );
     private final Instant now = Instant.now();
     @SuppressWarnings( "unchecked" )
     private LifecycleMessageHandler<InboundRaftMessageContainer<?>> downstreamHandler = mock( LifecycleMessageHandler.class );
@@ -372,7 +372,6 @@ class BatchingMessageHandlerTest
     }
 
     @Test
-    @Timeout( 5_000 )
     void shouldGiveUpAddingMessagesInTheQueueIfTheHandlerHasBeenStopped() throws Throwable
     {
         // given
@@ -380,25 +379,22 @@ class BatchingMessageHandlerTest
                                                                           new BoundedPriorityQueue.Config( 1, 1, 1024 ), BATCH_CONFIG, jobScheduler,
                                                                           NullLogProvider.getInstance() );
         NewEntry.Request message = new NewEntry.Request( null, new ReplicatedString( "dummy" ) );
-        batchHandler.handle( wrap( message ) ); // fill the queue
-
-        CountDownLatch latch = new CountDownLatch( 1 );
+        var inOrder = inOrder( jobScheduler );
 
         // when
-        Thread thread = new Thread( () -> {
-            latch.countDown();
-            batchHandler.handle( wrap( message ) );
-        } );
+        batchHandler.handle( wrap( message ) ); // add to queue
 
-        thread.start();
+        // then - offered
+        inOrder.verify( jobScheduler ).offerJob( any( Runnable.class ) );
 
-        latch.await();
-
+        // when
         batchHandler.stop();
+        batchHandler.handle( wrap( message ) );
 
-        thread.join();
-
-        // then we are not stuck and we terminate
+        // then
+        inOrder.verify( jobScheduler ).abort();
+        // and - not offered because we are stopped
+        inOrder.verifyNoMoreInteractions();
     }
 
     @Test

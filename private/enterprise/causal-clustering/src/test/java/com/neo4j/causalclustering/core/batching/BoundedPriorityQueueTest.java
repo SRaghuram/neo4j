@@ -3,9 +3,9 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.core;
+package com.neo4j.causalclustering.core.batching;
 
-import com.neo4j.causalclustering.core.BoundedPriorityQueue.Config;
+import com.neo4j.causalclustering.core.batching.BoundedPriorityQueue.Config;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -17,12 +17,12 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static com.neo4j.causalclustering.core.BoundedPriorityQueue.Result.E_COUNT_EXCEEDED;
-import static com.neo4j.causalclustering.core.BoundedPriorityQueue.Result.E_SIZE_EXCEEDED;
-import static com.neo4j.causalclustering.core.BoundedPriorityQueue.Result.OK;
+import static com.neo4j.causalclustering.core.batching.BoundedPriorityQueue.Result.E_COUNT_EXCEEDED;
+import static com.neo4j.causalclustering.core.batching.BoundedPriorityQueue.Result.E_SIZE_EXCEEDED;
+import static com.neo4j.causalclustering.core.batching.BoundedPriorityQueue.Result.OK;
 import static java.util.Comparator.comparingInt;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BoundedPriorityQueueTest
 {
@@ -205,7 +205,7 @@ class BoundedPriorityQueueTest
         }
     }
 
-    class Element
+    static class Element
     {
         int priority;
 

@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.core;
+package com.neo4j.causalclustering.core.batching;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -13,9 +13,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import static com.neo4j.causalclustering.core.BoundedPriorityQueue.Result.E_COUNT_EXCEEDED;
-import static com.neo4j.causalclustering.core.BoundedPriorityQueue.Result.E_SIZE_EXCEEDED;
-import static com.neo4j.causalclustering.core.BoundedPriorityQueue.Result.OK;
+import static com.neo4j.causalclustering.core.batching.BoundedPriorityQueue.Result.E_COUNT_EXCEEDED;
+import static com.neo4j.causalclustering.core.batching.BoundedPriorityQueue.Result.E_SIZE_EXCEEDED;
+import static com.neo4j.causalclustering.core.batching.BoundedPriorityQueue.Result.OK;
 
 /**
  * A bounded queue which is bounded both by the count of elements and by the total
@@ -136,7 +136,7 @@ public class BoundedPriorityQueue<E>
 
     synchronized Optional<E> pollIf( Predicate<E> predicate )
     {
-        StableElement nextElement = queue.peek();
+        var nextElement = queue.peek();
         if ( nextElement != null && predicate.test( nextElement.element ) )
         {
             return poll();
@@ -172,7 +172,7 @@ public class BoundedPriorityQueue<E>
                 return false;
             }
             //noinspection unchecked
-            StableElement that = (StableElement) o;
+            var that = (StableElement) o;
             return seqNo == that.seqNo;
         }
 
