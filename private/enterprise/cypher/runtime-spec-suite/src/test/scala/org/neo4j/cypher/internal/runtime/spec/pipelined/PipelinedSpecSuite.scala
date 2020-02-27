@@ -79,6 +79,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.SubscriberErrorTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ThreadUnsafeExpressionTests
 import org.neo4j.cypher.internal.runtime.spec.tests.TopTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UndirectedRelationshipByIdSeekTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.UnionTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.UnwindTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.VarLengthExpandTestBase
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -279,6 +280,10 @@ class PipelinedProcedureCallNoFusingTest extends ProcedureCallTestBase(NO_FUSING
 // SHORTEST PATH
 class PipelinedShortestPathTest extends ShortestPathTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedShortestPathNoFusingTest extends ShortestPathTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
+// UNION
+class PipelinedUnionTest extends UnionTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedUnionNoFusingTest extends UnionTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // GENERAL
 class PipelinedMiscTest extends MiscTestBase(FUSING, PIPELINED) with PipelinedSpecSuite

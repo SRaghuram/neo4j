@@ -95,11 +95,13 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.SortMergeOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SortPreOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.TopOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedRelationshipByIdSeekOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.UnionOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnwindOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.VarExpandOperator
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityMutableDescription
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityMutableDescriptionImpl
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionsForResult
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColumnOrder
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -153,7 +155,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           LazyLabel(label)(semanticTable),
           argumentSize)
 
-      case plans.NodeIndexSeek(column, label, properties, valueExpr, _,  indexOrder) =>
+      case plans.NodeIndexSeek(column, label, properties, valueExpr, _, indexOrder) =>
         val argumentSize = physicalPlan.argumentSizes(id)
         val indexSeekMode = IndexSeekModeFactory(unique = false, readOnly = readOnly).fromQueryExpression(valueExpr)
         if (indexSeekMode == LockingUniqueIndexSeek) {
@@ -354,7 +356,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
         new OptionalOperator(WorkIdentity.fromPlan(plan), argumentStateMapId, argumentSlotOffset, nullableSlots, slots, argumentSize)(plan.id)
 
-      case joinPlan:plans.NodeHashJoin =>
+      case joinPlan: plans.NodeHashJoin =>
 
         val slotConfigs = physicalPlan.slotConfigurations
         val argumentSize = physicalPlan.argumentSizes(plan.id)
@@ -487,6 +489,17 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       case _: plans.Argument =>
         new ArgumentOperator(WorkIdentity.fromPlan(plan),
           physicalPlan.argumentSizes(id))
+
+      case plans.Union(lhs, rhs) =>
+        val lhsSlots = physicalPlan.slotConfigurations(lhs.id)
+        val rhsSlots = physicalPlan.slotConfigurations(rhs.id)
+        new UnionOperator(
+          WorkIdentity.fromPlan(plan),
+          lhsSlots,
+          rhsSlots,
+          SlottedPipeMapper.computeUnionMapping(lhsSlots, slots),
+          SlottedPipeMapper.computeUnionMapping(rhsSlots, slots)
+        )
 
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException otherwise)
