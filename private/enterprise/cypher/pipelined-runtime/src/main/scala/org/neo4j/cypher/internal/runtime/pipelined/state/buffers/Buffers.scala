@@ -108,9 +108,9 @@ class Buffers(numBuffers: Int,
     if (buffers(i) != null)
       return
 
-    val reducers = findRHSAccumulatingStateBuffers(i, bufferDefinition.reducers)
-    val workCancellers = bufferDefinition.workCancellers
-    val downstreamStates = bufferDefinition.downstreamStates
+    val reducers = findRHSAccumulatingStateBuffers(i, bufferDefinition.reducers.toArray)
+    val workCancellers = bufferDefinition.workCancellers.toArray
+    val downstreamStates = bufferDefinition.downstreamStates.toArray
 
     buffers(i) =
       bufferDefinition.variant match {
@@ -130,7 +130,7 @@ class Buffers(numBuffers: Int,
 
         case x: ApplyBufferVariant =>
           val argumentStatesToInitiate = concatWithoutCopy(workCancellers, downstreamStates)
-          val reducersOnRHS = findRHSAccumulatingStateBuffersWithInitialization(i, x.reducersOnRHSReversed)
+          val reducersOnRHS = findRHSAccumulatingStateBuffersWithInitialization(i, x.reducersOnRHSReversed.toArray)
           new MorselApplyBuffer(bufferDefinition.id,
             argumentStatesToInitiate,
             reducersOnRHS,
@@ -138,7 +138,7 @@ class Buffers(numBuffers: Int,
             argumentStateMaps,
             x.argumentSlotOffset,
             stateFactory.newIdAllocator(),
-            morselBuffers(x.delegates))
+            morselBuffers(x.delegates.toArray))
 
         case x: ArgumentStateBufferVariant =>
           new MorselArgumentStateBuffer(tracker,

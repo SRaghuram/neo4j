@@ -72,33 +72,15 @@ case class BufferDefinition(id: BufferId,
                             // We need multiple reducers because a buffer might need to
                             // reference count for multiple downstream reduce operators,
                             // at potentially different argument depths
-                            reducers: Array[ArgumentStateMapId],
-                            workCancellers: Array[ArgumentStateMapId],
-                            downstreamStates: Array[ArgumentStateMapId],
+                            reducers: IndexedSeq[ArgumentStateMapId],
+                            workCancellers: IndexedSeq[ArgumentStateMapId],
+                            downstreamStates: IndexedSeq[ArgumentStateMapId],
                             variant: BufferVariant)(val bufferSlotConfiguration: SlotConfiguration) {
   def withReducers(reducers: IndexedSeq[ArgumentStateMapId]): BufferDefinition =
-    copy(reducers = reducers.toArray)(bufferSlotConfiguration)
+    copy(reducers = reducers)(bufferSlotConfiguration)
 
   def withWorkCancellers(workCancellers: IndexedSeq[ArgumentStateMapId]): BufferDefinition =
-    copy(workCancellers = workCancellers.toArray)(bufferSlotConfiguration)
-
-  // Override equality for correct array handling. Only used in tests so not performant.
-
-  override def canEqual(that: Any): Boolean = that.isInstanceOf[BufferDefinition]
-
-  override def equals(obj: Any): Boolean = {
-    obj.isInstanceOf[BufferDefinition] && {
-      val other = obj.asInstanceOf[BufferDefinition]
-      asTuple.equals(other.asTuple)
-    }
-  }
-
-  override def hashCode(): Int = asTuple.hashCode()
-
-  private def asTuple: (BufferId, Id, Seq[ArgumentStateMapId], Seq[ArgumentStateMapId], Seq[ArgumentStateMapId], BufferVariant) =
-    (id, operatorId, reducers.toList, workCancellers.toList, downstreamStates.toList, variant)
-
-  override def toString: String = s"BufferDefinition${asTuple}"
+    copy(workCancellers = workCancellers)(bufferSlotConfiguration)
 }
 
 /**
@@ -130,27 +112,8 @@ case class Initialization[T](receiver: T, initialCount: Int)
  *                              their downstreams, which have to be initialized first in order to do that.
  */
 case class ApplyBufferVariant(argumentSlotOffset: Int,
-                              reducersOnRHSReversed: Array[Initialization[ArgumentStateMapId]],
-                              delegates: Array[BufferId]) extends BufferVariant {
-
-  // Override equality for correct array handling. Only used in tests so not performant.
-
-  override def canEqual(that: Any): Boolean = that.isInstanceOf[ApplyBufferVariant]
-
-  override def equals(obj: Any): Boolean = {
-    obj.isInstanceOf[ApplyBufferVariant] && {
-      val other = obj.asInstanceOf[ApplyBufferVariant]
-      asTuple.equals(other.asTuple)
-    }
-  }
-
-  override def hashCode(): Int = asTuple.hashCode()
-
-  private def asTuple =
-    (argumentSlotOffset, reducersOnRHSReversed.toList, delegates.toList)
-
-  override def toString: String = s"ApplyBufferVariant${asTuple}"
-}
+                              reducersOnRHSReversed: IndexedSeq[Initialization[ArgumentStateMapId]],
+                              delegates: IndexedSeq[BufferId]) extends BufferVariant
 
 case class AttachBufferVariant(applyBuffer: BufferDefinition,
                                outputSlots: SlotConfiguration,

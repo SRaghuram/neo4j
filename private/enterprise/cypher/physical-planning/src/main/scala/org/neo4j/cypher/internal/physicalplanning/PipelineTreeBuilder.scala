@@ -42,6 +42,7 @@ import org.neo4j.cypher.internal.util.attribution.Id
 
 import scala.annotation.tailrec
 import scala.collection.mutable
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -89,9 +90,9 @@ object PipelineTreeBuilder {
 
       BufferDefinition(id,
                        operatorId,
-                       downstreamReducers.toArray,
-                       workCancellerIDs.toArray,
-                       downstreamStateIDs.toArray,
+                       downstreamReducers.toArray[ArgumentStateMapId],
+                       workCancellerIDs.toArray[ArgumentStateMapId],
+                       downstreamStateIDs.toArray[ArgumentStateMapId],
                        variant
                      )(bufferConfiguration)
     }
@@ -138,7 +139,7 @@ object PipelineTreeBuilder {
                           ) extends MorselBufferDefiner(id, operatorId, producingPipelineId, bufferSlotConfiguration) {
     // Map from the ArgumentStates of reducers on the RHS to the initial count they should be initialized with
     private val reducersOnRHSMap: MutableObjectIntMap[ArgumentStateDefinition] = new ObjectIntHashMap[ArgumentStateDefinition]()
-    val delegates: ArrayBuffer[BufferId] = new ArrayBuffer[BufferId]()
+    val delegates: mutable.ArrayBuilder[BufferId] = mutable.ArrayBuilder.make[BufferId]()
 
     def registerReducerOnRHS(reducer: ArgumentStateDefinition): Unit = {
       reducersOnRHSMap.addToValue(reducer, 1)
@@ -155,7 +156,7 @@ object PipelineTreeBuilder {
 
       ApplyBufferVariant(argumentSlotOffset,
                          reducersOnRHSReversed,
-                         delegates.toArray)
+                         delegates.result())
     }
   }
 
