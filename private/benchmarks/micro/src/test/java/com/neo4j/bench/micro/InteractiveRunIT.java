@@ -162,8 +162,8 @@ class InteractiveRunIT extends AnnotationsFixture
             int measurementForks,
             String... methods ) throws Exception
     {
-        File storesDir = temporaryFolder.cleanDirectory( "store" );
-        Path profilerRecordingDirectory = temporaryFolder.cleanDirectory( "recordings" ).toPath();
+        File storesDir = temporaryFolder.directory( "store" );
+        Path profilerRecordingDirectory = temporaryFolder.directory( "recordings" ).toPath();
         int iterationCount = 1;
         TimeValue iterationDuration = TimeValue.seconds( 1 );
         Main.run(
