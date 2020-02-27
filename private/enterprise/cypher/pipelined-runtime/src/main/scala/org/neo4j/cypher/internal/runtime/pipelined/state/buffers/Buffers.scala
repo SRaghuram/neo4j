@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.AttachBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
 import org.neo4j.cypher.internal.physicalplanning.BufferId
+import org.neo4j.cypher.internal.physicalplanning.Initialization
 import org.neo4j.cypher.internal.physicalplanning.LHSAccumulatingBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.RHSStreamingBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.LHSAccumulatingRHSStreamingBufferVariant
@@ -47,10 +48,23 @@ class Buffers(numBuffers: Int,
   private def findRHSAccumulatingStateBuffers(initialIndex: Int, argumentStateMapIds: Array[ArgumentStateMapId]): Array[AccumulatingBuffer] = {
     var j = 0
     val reducersBuilder = Array.newBuilder[AccumulatingBuffer]
+    reducersBuilder.sizeHint(argumentStateMapIds.length)
     while (j < argumentStateMapIds.length) {
       val asmId = argumentStateMapIds(j)
       val accumulatingBuffer = findRHSAccumulatingStateBuffer(initialIndex, asmId)
       reducersBuilder += accumulatingBuffer
+      j += 1
+    }
+    reducersBuilder.result()
+  }
+  private def findRHSAccumulatingStateBuffersWithInitialization(initialIndex: Int, argumentStateMapInitializations: Array[Initialization[ArgumentStateMapId]]): Array[Initialization[AccumulatingBuffer]] = {
+    var j = 0
+    val reducersBuilder = Array.newBuilder[Initialization[AccumulatingBuffer]]
+    reducersBuilder.sizeHint(argumentStateMapInitializations.length)
+    while (j < argumentStateMapInitializations.length) {
+      val Initialization(asmId, initialCount) = argumentStateMapInitializations(j)
+      val accumulatingBuffer = findRHSAccumulatingStateBuffer(initialIndex, asmId)
+      reducersBuilder += Initialization(accumulatingBuffer, initialCount)
       j += 1
     }
     reducersBuilder.result()
@@ -116,7 +130,7 @@ class Buffers(numBuffers: Int,
 
         case x: ApplyBufferVariant =>
           val argumentStatesToInitiate = concatWithoutCopy(workCancellers, downstreamStates)
-          val reducersOnRHS = findRHSAccumulatingStateBuffers(i, x.reducersOnRHSReversed)
+          val reducersOnRHS = findRHSAccumulatingStateBuffersWithInitialization(i, x.reducersOnRHSReversed)
           new MorselApplyBuffer(bufferDefinition.id,
             argumentStatesToInitiate,
             reducersOnRHS,
@@ -164,7 +178,12 @@ class Buffers(numBuffers: Int,
             x.argumentStateMapId)
 
         case RegularBufferVariant =>
-          new MorselBuffer(bufferDefinition.id, tracker, reducers, workCancellers, argumentStateMaps, stateFactory.newBuffer[Morsel](bufferDefinition.operatorId))
+          new MorselBuffer(bufferDefinition.id,
+            tracker,
+            reducers,
+            workCancellers,
+            argumentStateMaps,
+            stateFactory.newBuffer[Morsel](bufferDefinition.operatorId))
       }
   }
 
@@ -311,10 +330,11 @@ object Buffers {
 
     /**
      * Initiate the accumulator relevant to the given argument ID.
-     * If the accumulator is already initiated, this will increment the count.
      * Will be called when upstream apply buffers receive new morsels.
+     *
+     * @param initialCount the initial count for the argument row id
      */
-    def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor): Unit
+    def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor, initialCount: Int): Unit
 
     /**
      * Increment counts for the accumulator relevant to the given argument ID.

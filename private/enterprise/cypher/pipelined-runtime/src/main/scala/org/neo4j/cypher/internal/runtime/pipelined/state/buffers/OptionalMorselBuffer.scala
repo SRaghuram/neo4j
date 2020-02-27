@@ -123,12 +123,12 @@ class OptionalMorselBuffer(id: BufferId,
     argumentStateMap.nextArgumentStateIsCompletedOr(state => state.hasData)
   }
 
-  override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor): Unit = {
+  override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor, initialCount: Int): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
-      DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
+      DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel with initial count $initialCount")
     }
     val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, _.increment(_))
-    argumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers)
+    argumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers, initialCount)
     tracker.increment()
   }
 

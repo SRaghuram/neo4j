@@ -181,12 +181,12 @@ class LHSAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[DATA]](va
 
   override def canPut: Boolean = true
 
-  override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor): Unit = {
+  override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor, initialCount: Int): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
-      DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
+      DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel with initial count $initialCount")
     }
     val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, (_, _) => Unit)
-    argumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers)
+    argumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers, initialCount)
   }
 
   override def increment(argumentRowId: Long): Unit = {
@@ -231,13 +231,13 @@ class RHSStreamingSink(val argumentStateMapId: ArgumentStateMapId,
 
   override def canPut: Boolean = true
 
-  override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor): Unit = {
+  override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor, initialCount: Int): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
-      DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
+      DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel with initial count $initialCount")
     }
     // Increment for an ArgumentID in RHS's accumulator
     val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, _.increment(_))
-    argumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers)
+    argumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers, initialCount)
     tracker.increment()
   }
 

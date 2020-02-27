@@ -26,11 +26,12 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: A
 
   override protected def newStateController(argument: Long,
                                             argumentMorsel: MorselReadCursor,
-                                            argumentRowIdsForReducers: Array[Long]): AbstractArgumentStateMap.StateController[STATE] = {
+                                            argumentRowIdsForReducers: Array[Long],
+                                            initialCount: Int): AbstractArgumentStateMap.StateController[STATE] = {
     if (factory.completeOnConstruction) {
       new ImmutableStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
     } else {
-      new StandardStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
+      new StandardStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers), initialCount)
     }
   }
 }
@@ -40,10 +41,10 @@ object StandardArgumentStateMap {
   /**
    * Controller which knows when an [[ArgumentState]] is complete.
    */
-  private[state] class StandardStateController[STATE <: ArgumentState](override val state: STATE)
+  private[state] class StandardStateController[STATE <: ArgumentState](override val state: STATE, initialCount: Int)
     extends AbstractArgumentStateMap.StateController[STATE] {
 
-    private var _count: Long = 1
+    private var _count: Long = initialCount
 
     override def isZero: Boolean = _count == 0
 

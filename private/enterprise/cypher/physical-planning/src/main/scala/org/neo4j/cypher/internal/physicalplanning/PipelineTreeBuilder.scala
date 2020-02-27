@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
+import org.eclipse.collections.api.map.primitive.MutableObjectIntMap
+import org.eclipse.collections.impl.map.mutable.primitive.ObjectIntHashMap
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.Aggregation
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
@@ -35,6 +37,7 @@ import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.MorselBuff
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.NO_PIPELINE_BUILD
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.OptionalMorselBufferDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.PipelineDefiner
+import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.UnionBufferDefiner
 import org.neo4j.cypher.internal.util.attribution.Id
 
 import scala.annotation.tailrec
@@ -125,14 +128,27 @@ object PipelineTreeBuilder {
                            val argumentSlotOffset: Int,
                            bufferSlotConfiguration: SlotConfiguration
                           ) extends MorselBufferDefiner(id, operatorId, producingPipelineId, bufferSlotConfiguration) {
-    // These are ArgumentStates of reducers on the RHS
-    val reducersOnRHS = new ArrayBuffer[ArgumentStateDefinition]
+    // Map from the ArgumentStates of reducers on the RHS to the initial count they should be initialized with
+    private val reducersOnRHSMap: MutableObjectIntMap[ArgumentStateDefinition] = new ObjectIntHashMap[ArgumentStateDefinition]()
     val delegates: ArrayBuffer[BufferId] = new ArrayBuffer[BufferId]()
 
-    override protected def variant: BufferVariant =
+    def registerReducerOnRHS(reducer: ArgumentStateDefinition): Unit = {
+      reducersOnRHSMap.addToValue(reducer, 1)
+    }
+
+    override protected def variant: BufferVariant = {
+      val reducersOnRHS = mutable.ArrayBuilder.make[Initialization[ArgumentStateMapId]]()
+      reducersOnRHS.sizeHint(reducersOnRHSMap.size())
+      reducersOnRHSMap.forEachKeyValue( (argStateBuild, initialCount) => reducersOnRHS += Initialization(argStateBuild.id, initialCount) )
+
+      // Argument state maps IDs are given in upstream -> downstream order.
+      // By ordering the reducers by ID descending, we get them in downstream -> upstream order.
+      val reducersOnRHSReversed = reducersOnRHS.result().sortBy(_.receiver.x * -1)
+
       ApplyBufferVariant(argumentSlotOffset,
-                         reducersOnRHS.map(argStateBuild => argStateBuild.id).reverse.toArray,
+                         reducersOnRHSReversed,
                          delegates.toArray)
+    }
   }
 
   class AttachBufferDefiner(id: BufferId,
@@ -386,7 +402,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     } else {
       // The LHS argument state map has to be initiated by the apply even if there is no pipeline
       // connecting them. Otherwise the LhsAccumulatingRhsStreamingBuffer can never output anything.
-      applyBuffer.reducersOnRHS += lhsAsm
+      applyBuffer.registerReducerOnRHS(lhsAsm)
     }
     rhs.outputDefinition = MorselArgumentStateBufferOutput(output.rhsSink.id, argumentSlotOffset, planId)
     markReducerInUpstreamBuffers(rhs.inputBuffer, applyBuffer, rhsAsm)
@@ -607,7 +623,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
       },
       lastDelegateBuffer => {
         val b = lastDelegateBuffer.applyBuffer
-        b.reducersOnRHS += argumentStateDefinition
+        b.registerReducerOnRHS(argumentStateDefinition)
         lastDelegateBuffer.downstreamStates += downstreamReduce
       }
     )

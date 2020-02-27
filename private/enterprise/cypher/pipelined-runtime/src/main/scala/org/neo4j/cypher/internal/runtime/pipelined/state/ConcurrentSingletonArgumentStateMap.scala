@@ -30,11 +30,12 @@ class ConcurrentSingletonArgumentStateMap[STATE <: ArgumentState](val argumentSt
 
   override protected def newStateController(argument: Long,
                                             argumentMorsel: MorselReadCursor,
-                                            argumentRowIdsForReducers: Array[Long]): AbstractArgumentStateMap.StateController[STATE] = {
+                                            argumentRowIdsForReducers: Array[Long],
+                                            initialCount: Int): AbstractArgumentStateMap.StateController[STATE] = {
     if (factory.completeOnConstruction) {
       new ImmutableStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
     } else {
-      new ConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
+      new ConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers), initialCount)
     }
   }
 }

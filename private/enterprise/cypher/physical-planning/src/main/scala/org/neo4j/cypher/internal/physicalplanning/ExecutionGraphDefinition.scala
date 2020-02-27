@@ -117,15 +117,20 @@ case object RegularBufferVariant extends BufferVariant
 case class OptionalBufferVariant(argumentStateMapId: ArgumentStateMapId) extends BufferVariant
 
 /**
+ * The information representing the initialization of a receiver with a certain initial count.
+ */
+case class Initialization[T](receiver: T, initialCount: Int)
+
+/**
  * Sits between the LHS and RHS of an apply.
  * This acts as a multiplexer. It receives input and copies it into
  *
- * @param reducersOnRHSReversed ArgumentStates of reducers on the RHS of this Apply, in downstream -> upstream order.
+ * @param reducersOnRHSReversed Initializations of ArgumentStates of reducers on the RHS of this Apply, in downstream -> upstream order.
  *                              This order is convenient since upstream reducers possibly need to increment counts on
  *                              their downstreams, which have to be initialized first in order to do that.
  */
 case class ApplyBufferVariant(argumentSlotOffset: Int,
-                              reducersOnRHSReversed: Array[ArgumentStateMapId],
+                              reducersOnRHSReversed: Array[Initialization[ArgumentStateMapId]],
                               delegates: Array[BufferId]) extends BufferVariant {
 
   // Override equality for correct array handling. Only used in tests so not performant.
@@ -141,7 +146,7 @@ case class ApplyBufferVariant(argumentSlotOffset: Int,
 
   override def hashCode(): Int = asTuple.hashCode()
 
-  private def asTuple: (Int, Seq[ArgumentStateMapId], Seq[BufferId]) =
+  private def asTuple =
     (argumentSlotOffset, reducersOnRHSReversed.toList, delegates.toList)
 
   override def toString: String = s"ApplyBufferVariant${asTuple}"
@@ -199,5 +204,6 @@ case class ExecutionGraphDefinition(physicalPlan: PhysicalPlan,
 
 object ExecutionGraphDefinition {
   val NO_ARGUMENT_STATE_MAPS = new Array[ArgumentStateMapId](0)
+  val NO_ARGUMENT_STATE_MAP_INITIALIZATIONS = new Array[Initialization[ArgumentStateMapId]](0)
   val NO_BUFFERS = new Array[BufferId](0)
 }

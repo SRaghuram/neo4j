@@ -34,8 +34,10 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
 
   /**
    * Create a new state controller
+   *
+   * @param initialCount the initial count for the controller
    */
-  protected def newStateController(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): CONTROLLER
+  protected def newStateController(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int): CONTROLLER
 
   override def update(argumentRowId: Long, onState: STATE => Unit): Unit = {
     DebugSupport.ASM.log("ASM %s update %03d", argumentStateMapId, argumentRowId)
@@ -144,9 +146,9 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     controllers.remove(argument) != null
   }
 
-  override def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): Unit = {
+  override def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int): Unit = {
     DebugSupport.ASM.log("ASM %s init %03d", argumentStateMapId, argument)
-    val newController = newStateController(argument, argumentMorsel, argumentRowIdsForReducers)
+    val newController = newStateController(argument, argumentMorsel, argumentRowIdsForReducers, initialCount)
     val previousValue = controllers.put(argument, newController)
     Preconditions.checkState(previousValue == null, "ArgumentStateMap cannot re-initiate the same argument (argument: %d)", Long.box(argument))
   }

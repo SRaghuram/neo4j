@@ -431,7 +431,7 @@ class MorselBufferTest extends MorselUnitTest {
 
   private def initiate(asm: ArgumentStateMap[_], argumentRowIds: Range): Unit = {
     for (argId <- argumentRowIds) {
-      asm.initiate(argId, null, Array.empty)
+      asm.initiate(argId, null, Array.empty, 1)
     }
   }
 
@@ -460,7 +460,7 @@ class MorselBufferTest extends MorselUnitTest {
       decrements.clear()
     }
 
-    override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor): Unit =
+    override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor, initialCount: Int): Unit =
       initiates(argumentRowId) = initiates.getOrElseUpdate(argumentRowId, 0) + 1
 
     override def increment(argumentRowId: Long): Unit =

@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.logical.plans.AllNodesScan
 import org.neo4j.cypher.internal.logical.plans.Argument
 import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
+import org.neo4j.cypher.internal.logical.plans.Expand
 import org.neo4j.cypher.internal.logical.plans.Limit
 import org.neo4j.cypher.internal.logical.plans.NodeByLabelScan
 import org.neo4j.cypher.internal.logical.plans.NodeHashJoin
@@ -33,6 +34,22 @@ class PipelineBuilderTest extends CypherFunSuite {
         .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 1)
         .delegateToMorselBuffer(1, 1)
         .pipeline(0, Seq(classOf[AllNodesScan], classOf[ProduceResult]), serial = true)
+        .end
+    }
+  }
+
+  test("should plan expand") {
+    new ExecutionGraphDefinitionBuilder()
+      .produceResults("n")
+      .expand("(n)-[r]->(m)").withBreak()
+      .allNodeScan("n").withBreak()
+      .build() should plan {
+      start(newGraph)
+        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 2)
+        .delegateToMorselBuffer(1, 2)
+        .pipeline(0, Seq(classOf[AllNodesScan]))
+        .morselBuffer(2, 1)
+        .pipeline(1, Seq(classOf[Expand], classOf[ProduceResult]), serial = true)
         .end
     }
   }

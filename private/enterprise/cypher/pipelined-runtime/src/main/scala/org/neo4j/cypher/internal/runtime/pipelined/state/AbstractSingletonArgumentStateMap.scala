@@ -39,8 +39,10 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
 
   /**
    * Create a new state controller
+   *
+   * @param initialCount the initial count for the argument row id
    */
-  protected def newStateController(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): CONTROLLER
+  protected def newStateController(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int): CONTROLLER
 
   // ARGUMENT STATE MAP FUNCTIONALITY
 
@@ -133,10 +135,10 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
     }
   }
 
-  override def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): Unit = {
+  override def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int): Unit = {
     TopLevelArgument.assertTopLevelArgument(argument)
     DebugSupport.ASM.log("ASM %s init %03d", argumentStateMapId, argument)
-    controller = newStateController(argument, argumentMorsel, argumentRowIdsForReducers)
+    controller = newStateController(argument, argumentMorsel, argumentRowIdsForReducers, initialCount)
   }
 
   override def increment(argument: Long): Unit = {

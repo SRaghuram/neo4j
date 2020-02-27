@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.state
 import java.util
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.Initialization
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ArgumentSlots
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
@@ -48,16 +49,6 @@ abstract class ArgumentCountUpdater {
     }
   }
 
-  private def downstreamLoop[T](downstreamAccumulatingBuffers: IndexedSeq[T],
-                                operation: T => Unit): Unit = {
-    var i = 0
-    while (i < downstreamAccumulatingBuffers.length) {
-      val buffer = downstreamAccumulatingBuffers(i)
-      operation(buffer)
-      i += 1
-    }
-  }
-
   private def argumentCountLoop(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
                                 argumentRowIds: IndexedSeq[Long],
                                 operation: (AccumulatingBuffer, Long) => Unit): Unit = {
@@ -85,7 +76,12 @@ abstract class ArgumentCountUpdater {
   protected def initiateArgumentStatesHere(argumentStates: IndexedSeq[ArgumentStateMapId],
                                            argumentRowId: Long,
                                            morsel: MorselReadCursor): Unit = {
-    downstreamLoop[ArgumentStateMapId](argumentStates, id => argumentStateMaps(id).initiate(argumentRowId, morsel, null))
+    argumentStates.foreach {
+      // We pass in an initialCount of 1, but it actually does not matter at all what we pass in since
+      // argument states use `ImmutableStateController`s which don't keep a current count since
+      // the count would never be updated or queried.
+      id => argumentStateMaps(id).initiate(argumentRowId, morsel, null, 1)
+    }
   }
 
   /**
@@ -95,10 +91,12 @@ abstract class ArgumentCountUpdater {
    * @param argumentRowId argument row at the same apply nesting level as the argument states expect
    * @param morsel must point at the row of `argumentRowId`
    */
-  protected def initiateArgumentReducersHere(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
+  protected def initiateArgumentReducersHere(accumulatingBuffers: IndexedSeq[Initialization[AccumulatingBuffer]],
                                              argumentRowId: Long,
                                              morsel: MorselReadCursor): Unit = {
-    downstreamLoop[AccumulatingBuffer](accumulatingBuffers, _.initiate(argumentRowId, morsel))
+    accumulatingBuffers.foreach {
+      case Initialization(buffer, initialCount) => buffer.initiate(argumentRowId, morsel, initialCount)
+    }
   }
 
   /**

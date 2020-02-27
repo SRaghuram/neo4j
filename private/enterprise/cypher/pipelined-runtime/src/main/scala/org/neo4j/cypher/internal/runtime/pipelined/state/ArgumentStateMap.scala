@@ -88,8 +88,9 @@ trait ArgumentStateMap[S <: ArgumentState] {
    *                                  we close an argument state. This is allowed to be null if these argument
    *                                  states are not closed or are not involved in a buffer with downstream
    *                                  reducers.
+   * @param initialCount              the initial count for the argument row id
    */
-  def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): Unit
+  def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long], initialCount: Int): Unit
 
   /**
    * Increment the argument counter for `argument`.
