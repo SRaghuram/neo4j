@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.logical.plans.NodeHashJoin
 import org.neo4j.cypher.internal.logical.plans.Optional
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.logical.plans.Sort
+import org.neo4j.cypher.internal.logical.plans.Union
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinitionMatcher.newGraph
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinitionMatcher.plan
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinitionMatcher.start
@@ -193,6 +194,67 @@ class PipelineBuilderTest extends CypherFunSuite {
       start(graph).applyBuffer(3).reducerOnRHS(0, 1, 0)
       start(graph).applyBuffer(3).reducerOnRHS(1, 1, 0)
       start(graph).morselBuffer(4).reducer(1)
+    }
+  }
+
+  test("should plan union") {
+    new ExecutionGraphDefinitionBuilder()
+      .produceResults("n")
+      .union().withBreak()
+      .|.nodeByLabelScan("n", "N").withBreak()
+      .allNodeScan("n").withBreak()
+      .build() should plan {
+      val graph = newGraph
+      start(graph)
+        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 3)
+        .delegateToMorselBuffer(1, 3)
+        .pipeline(0, Seq(classOf[AllNodesScan]))
+        .morselBuffer(3, 1)
+
+      start(graph)
+        .applyBuffer(0)
+        .delegateToMorselBuffer(2, 2)
+        .pipeline(1, Seq(classOf[NodeByLabelScan]))
+        .morselBuffer(3)
+        .pipeline(2, Seq(classOf[Union], classOf[ProduceResult]), serial = true)
+        .end
+    }
+  }
+
+  test("should plan union with reducers on RHS of apply with correct initialCount") {
+    new ExecutionGraphDefinitionBuilder()
+      .produceResults("n")
+      .apply().withBreak()
+      .|.sort(Seq(Ascending("n"))).withBreak()
+      .|.union().withBreak()
+      .|.|.nodeByLabelScan("n", "N").withBreak()
+      .|.argument("n").withBreak()
+      .allNodeScan("n").withBreak()
+      .build() should plan {
+      val graph = newGraph
+      start(graph)
+        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 6)
+        .delegateToMorselBuffer(1, 6)
+        .pipeline(0, Seq(classOf[AllNodesScan]))
+        .applyBuffer(2, 1, 1)
+        .delegateToMorselBuffer(3, 5)
+        .pipeline(1, Seq(classOf[Argument]))
+          .morselBuffer(5, 3)
+
+      start(graph)
+        .applyBuffer(2)
+        .delegateToMorselBuffer(4, 4)
+        .pipeline(2, Seq(classOf[NodeByLabelScan]))
+        .morselBuffer(5)
+        .pipeline(3, Seq(classOf[Union]))
+        .argumentStateBuffer(6, 0, 2)
+        .pipeline(4, Seq(classOf[Sort], classOf[ProduceResult]), serial = true)
+        .end
+
+      start(graph).applyBuffer(2).reducerOnRHS(0, 2, 1, 2)
+      start(graph).morselBuffer(3).reducer(0)
+      start(graph).morselBuffer(4).reducer(0)
+      start(graph).morselBuffer(5).reducer(0)
     }
   }
 }

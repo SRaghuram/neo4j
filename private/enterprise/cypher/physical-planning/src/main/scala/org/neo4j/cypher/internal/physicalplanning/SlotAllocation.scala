@@ -104,8 +104,8 @@ import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.SlotMetaData
 import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.SlotsAndArgument
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotWithKeyAndAliases
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotWithKeyAndAliases
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.util.Foldable
@@ -757,7 +757,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         // The result slot configuration should only contain the variables we join on.
         // If both lhs and rhs has a long slot with the same type the result should
         // also use a long slot, otherwise we use a ref slot.
-        val result = lhs.emptyUnderSameApply()
+        val result = SlotConfiguration.empty
         def addVariableToResult(key: String, slot: Slot): Unit = slot match {
             case lhsSlot: LongSlot =>
               //find all shared variables and look for other long slots with same type
@@ -777,21 +777,26 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
               }
           }
 
+        // First, add original variable names, cached properties and apply plan slots in order
         lhs.foreachSlotAndAliasesOrdered({
           case SlotWithKeyAndAliases(VariableSlotKey(key), slot, _) => addVariableToResult(key, slot)
-          case _ => // ignore on the first pass
-        })
-
-        lhs.foreachSlotAndAliasesOrdered({
-          case SlotWithKeyAndAliases(VariableSlotKey(_), slot, aliases) =>
-            aliases.foreach(addVariableToResult(_, slot))
-
-          // Cached properties that exist on both sides are retained
           case SlotWithKeyAndAliases(CachedPropertySlotKey(key), _, _) =>
             if (rhs.hasCachedPropertySlot(key)) {
               result.newCachedProperty(key)
             }
-          case SlotWithKeyAndAliases(_: ApplyPlanSlotKey, _, _) => throw new SlotAllocationFailed("SlotAllocation of Union together with Apply is not implemented.")
+          case SlotWithKeyAndAliases(ApplyPlanSlotKey(id), _, _) =>
+            // apply plan slots need to be copied if both sides have them,
+            // i.e. if the union sits _under_ the apply with this id
+            if (rhs.hasArgumentSlot(id)) {
+              result.newArgument(id)
+            }
+        })
+
+        // Second, add aliases in order. Aliases get their own slots after a union.
+        lhs.foreachSlotAndAliasesOrdered({
+          case SlotWithKeyAndAliases(VariableSlotKey(_), slot, aliases) =>
+            aliases.foreach(addVariableToResult(_, slot))
+          case _ =>
         })
         result
 

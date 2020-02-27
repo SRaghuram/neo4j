@@ -106,6 +106,14 @@ object PipelineTreeBuilder {
     override protected def variant: BufferVariant = RegularBufferVariant
   }
 
+  class UnionBufferDefiner(id: BufferId,
+                           operatorId: Id,
+                           val lhsProducingPipelineId: PipelineId,
+                           val rhsProducingPipelineId: PipelineId,
+                           bufferConfiguration: SlotConfiguration) extends BufferDefiner(id, operatorId, bufferConfiguration) {
+    override protected def variant: BufferVariant = RegularBufferVariant
+  }
+
   class OptionalMorselBufferDefiner(id: BufferId,
                                     operatorId: Id,
                                     val producingPipelineId: PipelineId,
@@ -220,6 +228,16 @@ object PipelineTreeBuilder {
                   bufferSlotConfiguration: SlotConfiguration): MorselBufferDefiner = {
       val x = buffers.size
       val buffer = new MorselBufferDefiner(BufferId(x), operatorId, producingPipelineId, bufferSlotConfiguration)
+      buffers += buffer
+      buffer
+    }
+
+    def newUnionBuffer(lhsProducingPipelineId: PipelineId,
+                       rhsProducingPipelineId: PipelineId,
+                       operatorId: Id,
+                       bufferSlotConfiguration: SlotConfiguration): UnionBufferDefiner = {
+      val x = buffers.size
+      val buffer = new UnionBufferDefiner(BufferId(x), operatorId, lhsProducingPipelineId, rhsProducingPipelineId, bufferSlotConfiguration)
       buffers += buffer
       buffer
     }
@@ -344,6 +362,16 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
   private def outputToBuffer(pipeline: PipelineDefiner, nextPipelineHeadPlan: LogicalPlan): MorselBufferDefiner = {
     val output = stateDefiner.newBuffer(pipeline.id, nextPipelineHeadPlan.id, slotConfigurations(pipeline.headPlan.id))
     pipeline.outputDefinition = MorselBufferOutput(output.id, nextPipelineHeadPlan.id)
+    output
+  }
+
+  private def outputToUnionBuffer(lhs: PipelineDefiner, rhs: PipelineDefiner, planId: Id): UnionBufferDefiner = {
+    // The Buffer doesn't really have a slot configuration, since it can store Morsels from both LHS and RHS with different slot configs.
+    // Does it work to use the configuration of the Union plan?
+    // TODO test Unwind on top of Union fused!
+    val output = stateDefiner.newUnionBuffer(lhs.id, rhs.id, planId, slotConfigurations(planId))
+    lhs.outputDefinition = MorselBufferOutput(output.id, planId)
+    rhs.outputDefinition = MorselBufferOutput(output.id, planId)
     output
   }
 
@@ -575,6 +603,18 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         } else {
           throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
         }
+
+      case _: plans.Union =>
+        if (breakingPolicy.breakOn(plan)) {
+          val pipeline = newPipeline(plan)
+          val buffer = outputToUnionBuffer(lhs, rhs, plan.id)
+          pipeline.inputBuffer = buffer
+          pipeline.lhs = lhs.id
+          pipeline.rhs = rhs.id
+          pipeline
+        } else {
+          throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
+        }
     }
   }
 
@@ -687,6 +727,10 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         case b: MorselBufferDefiner =>
           onInputBuffer(b)
           upstreams += pipelines(b.producingPipelineId.x).inputBuffer
+        case b: UnionBufferDefiner =>
+          onInputBuffer(b)
+          upstreams += pipelines(b.lhsProducingPipelineId.x).inputBuffer
+          upstreams += pipelines(b.rhsProducingPipelineId.x).inputBuffer
         case b: OptionalMorselBufferDefiner =>
           onInputBuffer(b)
           upstreams += pipelines(b.producingPipelineId.x).inputBuffer

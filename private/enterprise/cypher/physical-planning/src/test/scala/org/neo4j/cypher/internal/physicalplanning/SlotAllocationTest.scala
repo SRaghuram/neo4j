@@ -955,6 +955,27 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
       SlotConfiguration.empty.newLong("x", nullable = false, CTNode))
   }
 
+  test("should handle UNION of primitive node with alias under apply") {
+    // given
+    val lhs = Projection(Argument(Set("x")), Map("y" -> varFor("x")))
+    val rhs = Projection(Argument(Set("x")), Map("y" -> varFor("x")))
+    val union = Union(lhs, rhs)
+    val ans = AllNodesScan("x", Set.empty)
+    val apply = Apply(ans, union)
+
+    // when
+    val allocations = SlotAllocation.allocateSlots(apply, semanticTable, BREAK_FOR_LEAFS, NO_EXPR_VARS, allocateArgumentSlots = true).slotConfigurations
+
+    // then
+    allocations should have size 7
+    allocations(union.id) should equal(
+      SlotConfiguration.empty
+        .newLong("x", nullable = false, CTNode)
+        .newArgument(apply.id)
+        .newLong("y", nullable = false, CTNode)
+    )
+  }
+
   test("should handle UNION of one primitive relationship and one node") {
     // given MATCH (y)<-[x]-(z) UNION MATCH (x) (sort of)
     val allNodesScan = AllNodesScan("y", Set.empty)

@@ -871,7 +871,15 @@ object SlottedPipeMapper {
             // Otherwise do nothing
             (_, _, _) => ()
         }
-      case (_: ApplyPlanSlotKey, _) => throw new InternalException("computeUnionMapping does not support ApplyPlanSlots yet")
+      case (ApplyPlanSlotKey(id), slot) =>
+        out.getArgumentSlot(id) match {
+          case Some(outArgumentSlot) =>
+            val fromOffset = slot.offset
+            (in, out, _) => out.setLongAt(outArgumentSlot.offset, in.getLongAt(fromOffset))
+          case None =>
+            // Otherwise do nothing
+            (_, _, _) => ()
+        }
     }
     //Apply all transformations
     (incoming: CypherRow, outgoing: CypherRow, state: QueryState) => {

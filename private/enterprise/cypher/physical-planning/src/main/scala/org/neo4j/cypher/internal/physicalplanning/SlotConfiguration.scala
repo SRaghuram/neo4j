@@ -112,12 +112,6 @@ class SlotConfiguration private(private val slots: mutable.Map[SlotConfiguration
     newPipeline
   }
 
-  def emptyUnderSameApply(): SlotConfiguration = {
-    val applyPlanSlots = mutable.Map.empty[SlotKey, Slot]
-    applyPlanSlots ++= slots.iterator.filter(kv => kv._1.isInstanceOf[ApplyPlanSlotKey])
-    new SlotConfiguration(applyPlanSlots, 0, 0)
-  }
-
   @scala.annotation.tailrec
   private def replaceExistingSlot(key: String, existingSlot: Slot, modifiedSlot: Slot): Unit = {
     if (slotAliases.contains(key)) {
@@ -182,7 +176,7 @@ class SlotConfiguration private(private val slots: mutable.Map[SlotConfiguration
       throw new IllegalStateException(s"Should only add argument once per plan, got plan with $applyPlanId twice")
     }
     if (applyPlanId != Id.INVALID_ID) { // Top level argument is not allocated
-      slots.put(ApplyPlanSlotKey(applyPlanId), LongSlot(numberOfLongs, false, CTAny))
+      slots.put(ApplyPlanSlotKey(applyPlanId), LongSlot(numberOfLongs, nullable = false, CTAny))
       numberOfLongs = numberOfLongs + 1
     }
     this
@@ -411,4 +405,8 @@ class SlotConfiguration private(private val slots: mutable.Map[SlotConfiguration
   def hasCachedPropertySlot(key: ASTCachedProperty): Boolean = slots.contains(CachedPropertySlotKey(key))
 
   def getCachedPropertySlot(key: ASTCachedProperty): Option[RefSlot] = slots.get(CachedPropertySlotKey(key)).asInstanceOf[Option[RefSlot]]
+
+  def hasArgumentSlot(applyPlanId: Id): Boolean = slots.contains(ApplyPlanSlotKey(applyPlanId))
+
+  def getArgumentSlot(applyPlanId: Id): Option[LongSlot] = slots.get(ApplyPlanSlotKey(applyPlanId)).asInstanceOf[Option[LongSlot]]
 }
