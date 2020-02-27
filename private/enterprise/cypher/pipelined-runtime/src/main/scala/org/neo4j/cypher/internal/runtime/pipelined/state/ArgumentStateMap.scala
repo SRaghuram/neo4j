@@ -37,7 +37,7 @@ trait ArgumentStateMap[S <: ArgumentState] {
     * @param morsel the morsel in question
     * @param reserve called to get a number of items to skip, called once per argumentRowId
     */
-  def skip(morsel: Morsel, reserve: (S, Long) => Long): Unit
+  def skip(morsel: Morsel, reserve: (S, Int) => Int): Unit
 
   /**
    * Filter the input morsel using the [[ArgumentState]] related to `argument`.
@@ -46,7 +46,7 @@ trait ArgumentStateMap[S <: ArgumentState] {
    * @param onRow      is called once per row, and given the filter state of the current argumentRowId
    */
   def filterWithSideEffect[FILTER_STATE](morsel: Morsel,
-                                         onArgument: (S, Long) => FILTER_STATE,
+                                         onArgument: (S, Int) => FILTER_STATE,
                                          onRow: (FILTER_STATE, ReadWriteRow) => Boolean): Unit
 
   /**
@@ -295,7 +295,7 @@ object ArgumentStateMap {
 
   def skip(argumentSlotOffset: Int,
               morsel: Morsel,
-              reserve: (Long, Long) => Long): Unit = {
+              reserve: (Long, Int) => Int): Unit = {
     val filteringMorsel = morsel.asInstanceOf[FilteringMorsel]
     if (filteringMorsel.hasCancelledRows) skipSlow(argumentSlotOffset, filteringMorsel, reserve)
     else skipFast(argumentSlotOffset, filteringMorsel, reserve)
@@ -308,7 +308,7 @@ object ArgumentStateMap {
     */
   private def skipFast(argumentSlotOffset: Int,
                        filteringMorsel: FilteringMorsel,
-                       reserve: (Long, Long) => Long): Unit = {
+                       reserve: (Long, Int) => Int): Unit = {
     val cursor = filteringMorsel.fullCursor(onFirstRow = true)
     var last = -1
     while (cursor.onValidRow() && last != 0) {
@@ -318,7 +318,7 @@ object ArgumentStateMap {
         cursor.next()
       }
       val end: Int = cursor.row
-      last = reserve(arg, end - start).asInstanceOf[Int]
+      last = reserve(arg, end - start)
       filteringMorsel.cancelRows(start, start + last)
       cursor.next()
     }
@@ -327,7 +327,7 @@ object ArgumentStateMap {
 
   private def skipSlow(argumentSlotOffset: Int,
                        filteringMorsel: FilteringMorsel,
-                       reserve: (Long, Long) => Long): Unit = {
+                       reserve: (Long, Int) => Int): Unit = {
     val cursor = filteringMorsel.fullCursor(onFirstRow = true)
 
     while (cursor.onValidRow()) {
@@ -365,7 +365,7 @@ object ArgumentStateMap {
    */
   def filter[FILTER_STATE](argumentSlotOffset: Int,
                            morsel: Morsel,
-                           onArgument: (Long, Long) => FILTER_STATE,
+                           onArgument: (Long, Int) => FILTER_STATE,
                            onRow: (FILTER_STATE, ReadWriteRow) => Boolean): Unit = {
     val filteringMorsel = morsel.asInstanceOf[FilteringMorsel]
 

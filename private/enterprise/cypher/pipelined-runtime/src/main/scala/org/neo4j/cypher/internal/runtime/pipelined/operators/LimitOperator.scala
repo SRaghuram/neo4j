@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
-import org.neo4j.codegen.api.IntermediateRepresentation.cast
 import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.equal
@@ -119,14 +118,14 @@ class SerialTopLevelLimitOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genOperate: IntermediateRepresentation = {
     block(
-      condition(greaterThan(load(countLeftVar), constant(0L))) (
+      condition(greaterThan(load(countLeftVar), constant(0))) (
         block(
           inner.genOperateWithExpressions,
           doIfInnerCantContinue(
-              assign(countLeftVar, subtract(load(countLeftVar), constant(1L)))))
+              assign(countLeftVar, subtract(load(countLeftVar), constant(1)))))
         ),
       doIfInnerCantContinue(
-        condition(equal(load(countLeftVar), constant(0L)))(
+        condition(equal(load(countLeftVar), constant(0)))(
           setField(SHOULD_BREAK, constant(true)))
         )
       )
@@ -135,10 +134,10 @@ class SerialTopLevelLimitOperatorTaskTemplate(inner: OperatorTaskTemplate,
   override def genOperateExit: IntermediateRepresentation = {
     block(
       invoke(loadField(countingStateField),
-             method[SerialTopLevelCountingState, Unit, Long]("update"),
+             method[SerialTopLevelCountingState, Unit, Int]("update"),
              subtract(load(reservedVar), load(countLeftVar))),
-      profileRows(id, cast[Int](subtract(load(reservedVar), load(countLeftVar)))),
-      condition(greaterThan(load(reservedVar), constant(0L)))(
+      profileRows(id, subtract(load(reservedVar), load(countLeftVar))),
+      condition(greaterThan(load(reservedVar), constant(0)))(
         setField(SHOULD_BREAK, constant(false))
         ),
       inner.genOperateExit
@@ -148,14 +147,14 @@ class SerialTopLevelLimitOperatorTaskTemplate(inner: OperatorTaskTemplate,
   override protected def howMuchToReserve: IntermediateRepresentation = {
     if (innermost.shouldWriteToContext) {
       // Use the available output morsel rows to determine our maximum chunk of the total limit
-      cast[Long](invoke(OUTPUT_MORSEL, method[Morsel, Int]("numberOfRows")))
+      invoke(OUTPUT_MORSEL, method[Morsel, Int]("numberOfRows"))
     } else if (innermost.shouldCheckOutputCounter) {
       // Use the output counter to determine our maximum chunk of the total limit
-      cast[Long](load(OUTPUT_COUNTER))
+      load(OUTPUT_COUNTER)
     } else {
       // We do not seem to have any bound on the output of this task (i.e. we are the final produce result pipeline task)
       // Reserve as much as we can get
-      constant(Long.MaxValue)
+      constant(Int.MaxValue)
     }
   }
 }

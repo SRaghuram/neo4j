@@ -116,7 +116,7 @@ class ArgumentStateMapTest extends MorselUnitTest {
   //                                                               onRow: (FILTER_STATE, MorselExecutionContext) => Boolean)
   type FILTER_STATE = Long
 
-  def onArgumentFilterPredicate(predicate: Long => Boolean): (Long, Long) => FILTER_STATE =
+  def onArgumentFilterPredicate(predicate: Long => Boolean): (Long, Int) => FILTER_STATE =
     (argumentRowId, nRows) =>
       if (predicate(argumentRowId))
         argumentRowId

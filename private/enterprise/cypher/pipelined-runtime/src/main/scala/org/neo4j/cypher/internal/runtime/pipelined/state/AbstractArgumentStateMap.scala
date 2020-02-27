@@ -53,7 +53,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   }
 
   override def skip(morsel: Morsel,
-                    reserve: (STATE, Long) => Long): Unit = {
+                    reserve: (STATE, Int) => Int): Unit = {
     ArgumentStateMap.skip(
       argumentSlotOffset,
       morsel,
@@ -61,7 +61,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   }
 
   override def filterWithSideEffect[U](morsel: Morsel,
-                                       onArgument: (STATE, Long) => U,
+                                       onArgument: (STATE, Int) => U,
                                        onRow: (U, ReadWriteRow) => Boolean): Unit = {
     ArgumentStateMap.filter(
       argumentSlotOffset,

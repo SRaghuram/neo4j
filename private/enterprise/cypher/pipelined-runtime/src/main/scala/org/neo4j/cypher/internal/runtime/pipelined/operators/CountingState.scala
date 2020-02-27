@@ -28,6 +28,7 @@ import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.NumericHelper
@@ -84,10 +85,10 @@ object CountingState {
                                        override val argumentRowIdsForReducers: Array[Long]) extends CountingState {
     protected var countLeft: Long = countTotal
 
-    override def reserve(wanted: Long): Long = {
+    override def reserve(wanted: Int): Int = {
       val got = math.min(countLeft, wanted)
       countLeft -= got
-      got
+      got.asInstanceOf[Int]//safe since got is always < wanted
     }
     override def getCount: Long = countLeft
     override def toString: String = s"StandardCountingState($argumentRowId, countLeft=$countLeft)"
@@ -98,15 +99,15 @@ object CountingState {
                                          override val argumentRowIdsForReducers: Array[Long]) extends CountingState {
     private val countLeft = new AtomicLong(countTotal)
 
-    def reserve(wanted: Long): Long = {
+    def reserve(wanted: Int): Int = {
       if (countLeft.get() <= 0) {
-        0L
+        0
       } else {
         val newCountLeft = countLeft.addAndGet(-wanted)
         if (newCountLeft >= 0) {
           wanted
         } else {
-          math.max(0L, wanted + newCountLeft)
+          math.max(0, wanted + newCountLeft).asInstanceOf[Int]//always safe cast since result is always in [0, wanted)
         }
       }
     }
@@ -152,17 +153,17 @@ abstract class SerialTopLevelCountingState extends CountingState {
   }
 
   // Update this state with the number of rows that passed the limit.
-  def update(usedCount: Long): Unit = {
+  def update(usedCount: Int): Unit = {
     Preconditions.checkState(usedCount >= 0, "Can not have used a negative number of rows")
     val newCount = getCount - usedCount
     Preconditions.checkState(newCount >= 0, "Used more rows than had count left")
     setCount(newCount)
   }
 
-  override def reserve(wanted: Long): Long = {
+  override def reserve(wanted: Int): Int = {
     val count = getCount
     Preconditions.checkState(count != -1, "SerialTopLevelLimitState has not been initialized")
-    math.min(count, wanted)
+    math.min(count, wanted).asInstanceOf[Int]//safe cast since result is <= wanted
   }
 }
 
@@ -170,7 +171,7 @@ abstract class SerialTopLevelCountingState extends CountingState {
   * Query-wide row count for the rows from one argumentRowId.
   */
 abstract class CountingState extends WorkCanceller {
-  def reserve(wanted: Long): Long
+  def reserve(wanted: Int): Int
 
   protected def getCount: Long
 }
@@ -190,8 +191,8 @@ abstract class SerialTopLevelCountingOperatorTaskTemplate(val inner: OperatorTas
 
 
   private var countExpression: IntermediateExpression = _
-  protected val countLeftVar: LocalVariable = variable[Long](codeGen.namer.nextVariableName("countLeft"), constant(0L))
-  protected val reservedVar: LocalVariable = variable[Long](codeGen.namer.nextVariableName("reserved"), constant(0L))
+  protected val countLeftVar: LocalVariable = variable[Int](codeGen.namer.nextVariableName("countLeft"), constant(0))
+  protected val reservedVar: LocalVariable = variable[Int](codeGen.namer.nextVariableName("reserved"), constant(0))
   protected val countingStateField: InstanceField = field[SerialTopLevelCountingState](
     codeGen.namer.nextVariableName("countState"),
     // Get the skip operator state from the ArgumentStateMaps that is passed to the constructor
@@ -222,9 +223,9 @@ abstract class SerialTopLevelCountingOperatorTaskTemplate(val inner: OperatorTas
     block(
       condition(invoke(loadField(countingStateField), method[SerialTopLevelCountingState, Boolean]("isUninitialized")))(
         invoke(loadField(countingStateField), method[SerialTopLevelCountingState, Unit, Long]("initialize"),
-               invokeStatic(method[CountingState, Long, AnyValue]("evaluateCountValue"), countExpression.ir))
+               invokeStatic(method[CountingState, Long, AnyValue]("evaluateCountValue"), nullCheckIfRequired(countExpression)))
         ),
-      assign(reservedVar, invoke(loadField(countingStateField), method[CountingState, Long, Long]("reserve"), howMuchToReserve)),
+      assign(reservedVar, invoke(loadField(countingStateField), method[CountingState, Int, Int]("reserve"), howMuchToReserve)),
       assign(countLeftVar, load(reservedVar)),
       inner.genOperateEnter
       )

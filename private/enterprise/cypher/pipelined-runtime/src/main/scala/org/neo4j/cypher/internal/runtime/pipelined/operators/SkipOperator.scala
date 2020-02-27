@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
-import org.neo4j.codegen.api.IntermediateRepresentation.cast
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.equal
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
@@ -95,14 +94,14 @@ class SerialTopLevelSkipOperatorTaskTemplate(inner: OperatorTaskTemplate,
   extends SerialTopLevelCountingOperatorTaskTemplate(inner, id, innermost, argumentStateMapId, generateCountExpression, codeGen) {
 
 
-  override protected def howMuchToReserve: IntermediateRepresentation =  constant(Long.MaxValue)
+  override protected def howMuchToReserve: IntermediateRepresentation = constant(Int.MaxValue)
 
   override def genOperate: IntermediateRepresentation = {
-      IntermediateRepresentation.ifElse(equal(load(countLeftVar), constant(0L)))(inner.genOperateWithExpressions)(
+      IntermediateRepresentation.ifElse(equal(load(countLeftVar), constant(0)))(inner.genOperateWithExpressions)(
         doIfInnerCantContinue(
           block(
             if (innermost.shouldCheckOutputCounter) OperatorCodeGenHelperTemplates.UPDATE_OUTPUT_COUNTER else noop(),
-            assign(countLeftVar, subtract(load(countLeftVar), constant(1L))),
+            assign(countLeftVar, subtract(load(countLeftVar), constant(1))),
             )
         )
       )
@@ -110,9 +109,9 @@ class SerialTopLevelSkipOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genOperateExit: IntermediateRepresentation = {
     block(
-      invoke(loadField(countingStateField), method[SerialTopLevelCountingState, Unit, Long]("update"),
+      invoke(loadField(countingStateField), method[SerialTopLevelCountingState, Unit, Int]("update"),
              subtract(load(reservedVar), load(countLeftVar))),
-      profileRows(id, cast[Int](subtract(load(reservedVar), load(countLeftVar)))),
+      profileRows(id,subtract(load(reservedVar), load(countLeftVar))),
       inner.genOperateExit)
   }
 }

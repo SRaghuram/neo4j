@@ -59,14 +59,14 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
 
 
   override def skip(morsel: Morsel,
-                    reserve: (STATE, Long) => Long): Unit = {
-    val end = reserve(controller.state, morsel.numberOfRows).asInstanceOf[Int]
+                    reserve: (STATE, Int) => Int): Unit = {
+    val end = reserve(controller.state, morsel.numberOfRows)
 
     ArgumentStateMap.skip(morsel, end)
   }
 
   override def filterWithSideEffect[U](morsel: Morsel,
-                                       onArgument: (STATE, Long) => U,
+                                       onArgument: (STATE, Int) => U,
                                        onRow: (U, ReadWriteRow) => Boolean): Unit = {
     val filterState = onArgument(controller.state, morsel.numberOfRows)
     ArgumentStateMap.filter(morsel,
