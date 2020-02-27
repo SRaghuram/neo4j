@@ -55,6 +55,8 @@ object LimitOperator {
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): CountingState =
       new ConcurrentCountingState(argumentRowId, count, argumentRowIdsForReducers) with CancellableState
+
+    override def completeOnConstruction: Boolean = true
   }
 }
 
@@ -169,6 +171,8 @@ object SerialTopLevelLimitOperatorTaskTemplate {
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): SerialTopLevelCountingState =
     // NOTE: This is actually _not_ threadsafe and only safe to use in a serial pipeline!
       new VolatileSerialTopLevelLimitState(argumentRowId, argumentRowIdsForReducers)
+
+    override def completeOnConstruction: Boolean = true
   }
 
   class StandardSerialTopLevelLimitState(override val argumentRowId: Long,

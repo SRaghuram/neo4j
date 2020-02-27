@@ -88,6 +88,8 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): DistinctState =
       new DistinctState(argumentRowId, ConcurrentHashMap.newKeySet[groupings.KeyType](), argumentRowIdsForReducers, memoryTracker)
+
+    override def completeOnConstruction: Boolean = true
   }
 
   class DistinctState(override val argumentRowId: Long,
