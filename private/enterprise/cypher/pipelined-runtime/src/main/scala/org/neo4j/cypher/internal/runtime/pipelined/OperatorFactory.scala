@@ -507,8 +507,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           WorkIdentity.fromPlan(plan),
           lhsSlots,
           rhsSlots,
-          SlottedPipeMapper.computeUnionMapping(lhsSlots, slots),
-          SlottedPipeMapper.computeUnionMapping(rhsSlots, slots)
+          SlottedPipeMapper.computeUnionRowMapping(lhsSlots, slots),
+          SlottedPipeMapper.computeUnionRowMapping(rhsSlots, slots)
         )
 
       case _ if slottedPipeBuilder.isDefined =>

@@ -9,8 +9,8 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.RowMapping
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
-import org.neo4j.cypher.internal.runtime.slotted.pipes.UnionSlottedPipe.RowMapping
 import org.neo4j.cypher.internal.util.attribution.Id
 
 case class UnionSlottedPipe(lhs: Pipe,
@@ -39,11 +39,5 @@ case class UnionSlottedPipe(lhs: Pipe,
         outgoing
       }
     }
-  }
-}
-
-object UnionSlottedPipe {
-  trait RowMapping {
-    def mapRows(incoming: CypherRow, outgoing: CypherRow, state: QueryState): Unit
   }
 }

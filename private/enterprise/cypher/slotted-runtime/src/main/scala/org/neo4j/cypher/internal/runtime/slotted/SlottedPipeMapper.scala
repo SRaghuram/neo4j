@@ -156,7 +156,6 @@ import org.neo4j.cypher.internal.runtime.slotted.pipes.OrderedDistinctSlottedSin
 import org.neo4j.cypher.internal.runtime.slotted.pipes.ProduceResultSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.RollUpApplySlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.UnionSlottedPipe
-import org.neo4j.cypher.internal.runtime.slotted.pipes.UnionSlottedPipe.RowMapping
 import org.neo4j.cypher.internal.runtime.slotted.pipes.UnwindSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.ValueHashJoinSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.VarLengthExpandSlottedPipe
@@ -573,8 +572,8 @@ class SlottedPipeMapper(fallback: PipeMapper,
         UnionSlottedPipe(lhs,
           rhs,
           slots,
-          SlottedPipeMapper.computeUnionMapping(lhsSlots, slots),
-          SlottedPipeMapper.computeUnionMapping(rhsSlots, slots))(id = id)
+          SlottedPipeMapper.computeUnionRowMapping(lhsSlots, slots),
+          SlottedPipeMapper.computeUnionRowMapping(rhsSlots, slots))(id = id)
 
       case _: AssertSameNode =>
         fallback.onTwoChildPlan(plan, lhs, rhs)
@@ -828,55 +827,71 @@ object SlottedPipeMapper {
       throw new InternalException(s"Do not know how to project $slot")
   }
 
-  //compute mapping from incoming to outgoing pipe line, the slot order may differ
-  //between the output and the input (lhs and rhs) and it may be the case that
-  //we have a reference slot in the output but a long slot on one of the inputs,
-  //e.g. MATCH (n) RETURN n UNION RETURN 42 AS n
-  def computeUnionMapping(in: SlotConfiguration, out: SlotConfiguration): RowMapping = {
-    val mapSlots: Iterable[(CypherRow, CypherRow, QueryState) => Unit] = in.mapSlotsDoNotSkipAliases {
-      case (VariableSlotKey(k), inSlot: LongSlot) =>
-        out.get(k) match {
-          // The output does not have a slot for this, so we don't need to copy
-          case None => (_, _, _) => ()
-          case Some(l: LongSlot) =>
-            (in, out, _) => out.setLongAt(l.offset, in.getLongAt(inSlot.offset))
-          case Some(r: RefSlot) =>
-            //here we must map the long slot to a reference slot
-            val projectionExpression = projectSlotExpression(inSlot) // Pre-compute projection expression
-            (in, out, state) => out.setRefAt(r.offset, projectionExpression(in, state))
+  /**
+   * A mapping from one input slot configuration to the output slot configuration that dictates what to copy in a Union.
+   */
+  sealed trait UnionSlotMapping
+  case class CopyLongSlot(sourceOffset: Int, targetOffset: Int) extends UnionSlotMapping
+  case class CopyRefSlot(sourceOffset: Int, targetOffset: Int) extends UnionSlotMapping
+  case class CopyCachedProperty(sourceOffset: Int, targetOffset: Int) extends UnionSlotMapping
+  case class ProjectLongToRefSlot(sourceSlot: LongSlot, targetOffset: Int) extends UnionSlotMapping
+
+  /**
+   * A [[UnionSlotMapping]] as a function that actually performs the copying.
+   */
+  trait RowMapping extends {
+    def mapRows(incoming: CypherRow, outgoing: CypherRow, state: QueryState): Unit
+  }
+
+  /**
+   * compute mapping from incoming to outgoing pipe line, the slot order may differ
+   * between the output and the input (lhs and rhs) and it may be the case that
+   * we have a reference slot in the output but a long slot on one of the inputs,
+   * e.g. MATCH (n) RETURN n UNION RETURN 42 AS n
+   */
+  def computeUnionSlotMappings(in: SlotConfiguration, out: SlotConfiguration): Iterable[UnionSlotMapping] = {
+    in.mapSlotsDoNotSkipAliases {
+      case (VariableSlotKey(k), inLongSlot: LongSlot) =>
+        out.get(k).map {
+          case l: LongSlot => CopyLongSlot(inLongSlot.offset, l.offset)
+          case r: RefSlot => ProjectLongToRefSlot(inLongSlot, r.offset)
         }
       case (VariableSlotKey(k), inSlot: RefSlot) =>
         // This means out must be a ref slot as well, if it exists, otherwise slot allocation was wrong
-        out.get(k) match {
-          // The output does not have a slot for this, so we don't need to copy
-          case None => (_, _, _) => ()
-          case Some(l: LongSlot) =>
-            throw new IllegalStateException(s"Expected Union output slot to be a refslot but was: $l")
-          case Some(r: RefSlot) =>
-            (in, out, _) => out.setRefAt(r.offset, in.getRefAt(inSlot.offset))
+        out.get(k).map {
+          case l: LongSlot => throw new IllegalStateException(s"Expected Union output slot to be a refslot but was: $l")
+          case r: RefSlot => CopyRefSlot(inSlot.offset, r.offset)
         }
       case (CachedPropertySlotKey(cachedProp), inRefSlot) =>
-        out.getCachedPropertySlot(cachedProp) match {
-          case Some(outRefSlot) =>
-            // Copy the cached property if the output has it as well
-            (in, out, _) => out.setCachedPropertyAt(outRefSlot.offset, in.getCachedPropertyAt(inRefSlot.offset))
-          case None =>
-            // Otherwise do nothing
-            (_, _, _) => ()
+        out.getCachedPropertySlot(cachedProp).map {
+          outRefSlot => CopyCachedProperty(inRefSlot.offset, outRefSlot.offset)
         }
       case (ApplyPlanSlotKey(id), slot) =>
-        out.getArgumentSlot(id) match {
-          case Some(outArgumentSlot) =>
-            val fromOffset = slot.offset
-            (in, out, _) => out.setLongAt(outArgumentSlot.offset, in.getLongAt(fromOffset))
-          case None =>
-            // Otherwise do nothing
-            (_, _, _) => ()
+        out.getArgumentSlot(id).map {
+          outArgumentSlot => CopyLongSlot(slot.offset, outArgumentSlot.offset)
         }
+    }.flatten
+  }
+
+  /**
+   * Compute the [[RowMapping]] from [[UnionSlotMapping]]s, which can be then applied to Rows at runtime.
+   */
+  def computeUnionRowMapping(in: SlotConfiguration, out: SlotConfiguration): RowMapping = {
+    val mapSlots: Iterable[RowMapping] = computeUnionSlotMappings(in, out).map {
+      case CopyLongSlot(sourceOffset, targetOffset) =>
+        ((in, out, _) => out.setLongAt(targetOffset, in.getLongAt(sourceOffset))): RowMapping
+      case CopyRefSlot(sourceOffset, targetOffset) =>
+        ((in, out, _) => out.setRefAt(targetOffset, in.getRefAt(sourceOffset))): RowMapping
+      case CopyCachedProperty(sourceOffset, targetOffset) =>
+        ((in, out, _) => out.setCachedPropertyAt(targetOffset, in.getCachedPropertyAt(sourceOffset))): RowMapping
+      case ProjectLongToRefSlot(sourceSlot, targetOffset) =>
+        //here we must map the long slot to a reference slot
+        val projectionExpression = projectSlotExpression(sourceSlot) // Pre-compute projection expression
+        ((in, out, state) => out.setRefAt(targetOffset, projectionExpression(in, state))): RowMapping
     }
     //Apply all transformations
-    (incoming: CypherRow, outgoing: CypherRow, state: QueryState) => {
-      mapSlots.foreach(f => f(incoming, outgoing, state))
+    (incoming, outgoing, state) => {
+      mapSlots.foreach(f => f.mapRows(incoming, outgoing, state))
     }
   }
 

@@ -816,7 +816,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       .newReference("b", true, CTAny)
       .newCachedProperty(aProp)
 
-    val mapping = SlottedPipeMapper.computeUnionMapping(in, out)
+    val mapping = SlottedPipeMapper.computeUnionRowMapping(in, out)
 
     // when
     val outRow = SlottedRow(out)
@@ -846,7 +846,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       .newReference("b", true, CTAny)
       .newReference("bb", true, CTAny)
 
-    val mapping = SlottedPipeMapper.computeUnionMapping(in, out)
+    val mapping = SlottedPipeMapper.computeUnionRowMapping(in, out)
 
     // when
     val outRow = SlottedRow(out)
@@ -881,7 +881,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       .newReference("bb", true, CTAny)
       .newCachedProperty(aaProp)
 
-    val mapping = SlottedPipeMapper.computeUnionMapping(in, out)
+    val mapping = SlottedPipeMapper.computeUnionRowMapping(in, out)
 
     // when
     val outRow = SlottedRow(out)
@@ -926,7 +926,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       .newReference("a", false, CTNode)
       .newReference("b", false, CTRelationship)
 
-    val mapping = SlottedPipeMapper.computeUnionMapping(in, out)
+    val mapping = SlottedPipeMapper.computeUnionRowMapping(in, out)
 
     // when
     val outRow = SlottedRow(out)
