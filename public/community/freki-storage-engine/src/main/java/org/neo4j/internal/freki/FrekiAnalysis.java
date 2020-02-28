@@ -61,9 +61,29 @@ public class FrekiAnalysis
 
     public void dumpNodes( String nodeIdSpec )
     {
-        // TODO add more capabilities here like range?
-        var nodeId = Long.parseLong( nodeIdSpec );
-        dumpNode( nodeId );
+        if ( nodeIdSpec.equals( "*" ) )
+        {
+            dumpAllNodes();
+        }
+        else
+        {
+            var nodeId = Long.parseLong( nodeIdSpec );
+            dumpNode( nodeId );
+        }
+    }
+
+    private void dumpAllNodes()
+    {
+        try ( var nodeCursor = new FrekiNodeCursor( stores, PageCursorTracer.NULL );
+              var propertyCursor = new FrekiPropertyCursor( stores, PageCursorTracer.NULL );
+              var relationshipCursor = new FrekiRelationshipTraversalCursor( stores, PageCursorTracer.NULL ) )
+        {
+            nodeCursor.scan();
+            while ( nodeCursor.next() )
+            {
+                dumpNode( nodeCursor, propertyCursor, relationshipCursor );
+            }
+        }
     }
 
     public void dumpNode( long nodeId )
@@ -78,19 +98,23 @@ public class FrekiAnalysis
                 System.out.println( "Node " + nodeId + " not in use" );
                 return;
             }
-            System.out.printf( "Node[%d] %s%n", nodeId, nodeCursor );
-            dumpLogicalRepresentation( nodeCursor, propertyCursor, relationshipCursor );
+            dumpNode( nodeCursor, propertyCursor, relationshipCursor );
+        }
+    }
 
-            // More physical
-            System.out.println( "x1: " + nodeCursor.smallRecord.dataForReading() );
-            if ( nodeCursor.headerState.isDense )
-            {
-                System.out.println( "DENSE" );
-            }
-            else if ( nodeCursor.headerState.containsForwardPointer )
-            {
-                System.out.printf( "x%d: %s%n", recordXFactor( nodeCursor.record.sizeExp() ), nodeCursor.smallRecord.dataForReading() );
-            }
+    private void dumpNode( FrekiNodeCursor nodeCursor, FrekiPropertyCursor propertyCursor, FrekiRelationshipTraversalCursor relationshipCursor )
+    {
+        dumpLogicalRepresentation( nodeCursor, propertyCursor, relationshipCursor );
+
+        // More physical
+        System.out.println( "x1: " + nodeCursor.smallRecord.dataForReading() );
+        if ( nodeCursor.headerState.isDense )
+        {
+            System.out.println( "DENSE" );
+        }
+        else if ( nodeCursor.headerState.containsForwardPointer )
+        {
+            System.out.printf( "x%d: %s%n", recordXFactor( nodeCursor.record.sizeExp() ), nodeCursor.smallRecord.dataForReading() );
         }
     }
 
