@@ -222,8 +222,7 @@ class FrekiStorageReader implements StorageReader
     @Override
     public long relationshipsGetCount()
     {
-        // TODO
-        return 0;
+        throw new UnsupportedOperationException( "Not implemented yet" );
     }
 
     @Override
@@ -263,7 +262,11 @@ class FrekiStorageReader implements StorageReader
     @Override
     public boolean relationshipExists( long id, PageCursorTracer cursorTracer )
     {
-        return false;
+        try ( StorageRelationshipScanCursor relationshipCursor = allocateRelationshipScanCursor( cursorTracer ) )
+        {
+            relationshipCursor.single( id );
+            return relationshipCursor.next();
+        }
     }
 
     @Override
@@ -275,13 +278,13 @@ class FrekiStorageReader implements StorageReader
     @Override
     public AllNodeScan allNodeScan()
     {
-        return null;
+        throw new UnsupportedOperationException( "Not implemented yet" );
     }
 
     @Override
     public AllRelationshipsScan allRelationshipScan()
     {
-        return null;
+        throw new UnsupportedOperationException( "Not implemented yet" );
     }
 
     @Override
@@ -311,12 +314,12 @@ class FrekiStorageReader implements StorageReader
     @Override
     public StorageSchemaReader schemaSnapshot()
     {
-        return null;
+        throw new UnsupportedOperationException( "Not implemented yet" );
     }
 
     @Override
     public TokenNameLookup tokenNameLookup()
     {
-        return null;
+        throw new UnsupportedOperationException( "Not implemented yet" );
     }
 }
