@@ -10,6 +10,7 @@ import com.neo4j.dbms.database.MultiDatabaseManager;
 import java.util.stream.Stream;
 
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
+import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
@@ -61,7 +62,7 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
     }
 
     @Override
-    public void start()
+    public void start() throws Exception
     {
         registerWithListenerService( globalModule, systemOperator );
         var connector = new OperatorConnector( reconciler );
@@ -73,10 +74,10 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
      * Blocking call. Just syntactic sugar around a trigger. Used to transition default databases to
      * desired initial states at DatabaseManager startup
      */
-    private void startInitialDatabases()
+    private void startInitialDatabases() throws DatabaseManagementException
     {
         // Initially trigger system operator to start system db, it always desires the system db to be STARTED
-        systemOperator.trigger( ReconcilerRequest.simple() ).await( NAMED_SYSTEM_DATABASE_ID );
+        systemOperator.trigger( ReconcilerRequest.simple() ).join( NAMED_SYSTEM_DATABASE_ID );
 
         var systemDatabase = getSystemDatabase( databaseManager );
         long lastClosedTxId = getLastClosedTransactionId( systemDatabase );

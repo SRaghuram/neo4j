@@ -13,9 +13,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -41,6 +44,7 @@ import static java.util.Collections.singletonMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
@@ -73,7 +77,7 @@ class DbmsReconcilerModuleTest
     }
 
     @Test
-    void shouldStartInitialDatabases()
+    void shouldStartInitialDatabases() throws Exception
     {
         // given
         when( dbmsModel.getDatabaseStates() ).thenReturn(
@@ -94,7 +98,42 @@ class DbmsReconcilerModuleTest
     }
 
     @Test
-    void shouldStopAllDatabases()
+    void shouldThrowOnStartIfSystemDbFails()
+    {
+        // given
+        var mockSystemDb = databaseManager.createDatabase( NAMED_SYSTEM_DATABASE_ID );
+        var mockKernelSystemDb = mockSystemDb.database();
+        doThrow( new RuntimeException() ).when( mockKernelSystemDb ).start();
+
+        var reconcilerModule = new StandaloneDbmsReconcilerModule( databaseManager.globalModule(), databaseManager,
+                mock( ReconciledTransactionTracker.class ), dbmsModel );
+
+        // when / then
+        assertThrows( Exception.class, reconcilerModule::start );
+    }
+
+    @Test
+    void emptyReconciliationRequestsShouldCompleteImmediately() throws InterruptedException
+    {
+        // given
+        var operator = new LocalDbmsOperator( idRepository );
+        var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), NullLogProvider.getInstance(), jobScheduler );
+        var waitingFinished = new CountDownLatch( 1 );
+        var result = reconciler.reconcile( List.of( operator ), ReconcilerRequest.simple() );
+
+        // when
+        CompletableFuture.runAsync( () ->
+        {
+            result.awaitAll();
+            waitingFinished.countDown();
+        } );
+
+        // then
+        waitingFinished.await( 10, SECONDS );
+    }
+
+    @Test
+    void shouldStopAllDatabases() throws Exception
     {
         // given
         var fooId = idRepository.getRaw( "foo" );
