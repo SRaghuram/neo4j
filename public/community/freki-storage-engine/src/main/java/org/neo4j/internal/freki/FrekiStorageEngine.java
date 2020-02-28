@@ -247,6 +247,11 @@ public class FrekiStorageEngine implements StorageEngine
         stores.schemaCache.load( stores.schemaStore.loadRules( cursorTracer ) );
     }
 
+    public FrekiAnalysis analysis()
+    {
+        return new FrekiAnalysis( stores );
+    }
+
     @Override
     public TransactionIdStore transactionIdStore()
     {

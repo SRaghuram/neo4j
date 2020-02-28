@@ -137,7 +137,7 @@ class CommandCreator implements TxStateVisitor
     @Override
     public void visitRelPropertyChanges( long id, Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
     {
-        //TODO!
+        throw new UnsupportedOperationException( "Not implemented yet" );
     }
 
     @Override
