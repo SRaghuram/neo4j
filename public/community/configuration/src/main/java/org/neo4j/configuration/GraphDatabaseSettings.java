@@ -1194,6 +1194,10 @@ public class GraphDatabaseSettings implements SettingsDeclaration
     public static final Setting<Boolean> consistency_check_on_apply =
             newBuilder( "unsupported.dbms.storage.consistency_check_on_apply", BOOL, Boolean.FALSE ).build();
 
+    @Internal
+    public static final Setting<Boolean> force_freki =
+            newBuilder( "unsupported.dbms.force_freki_storage_engine", BOOL, Boolean.FALSE ).build();
+
     /**
      * Default settings for connectors. The default values are assumes to be default for embedded deployments through the code.
      * This map contains default connector settings that you can pass to the builders.

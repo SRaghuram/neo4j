@@ -195,8 +195,8 @@ public interface StorageEngineFactory
     static StorageEngineFactory selectStorageEngine( String nameish )
     {
         Collection<StorageEngineFactory> storageEngineFactories = allAvailableStorageEngines();
-        Optional<StorageEngineFactory> first =
-                storageEngineFactories.stream().filter( engine -> engine.getClass().getSimpleName().toLowerCase().contains( nameish ) ).findFirst();
+        Optional<StorageEngineFactory> first = storageEngineFactories.stream().filter(
+                engine -> engine.getClass().getSimpleName().toLowerCase().contains( nameish.toLowerCase() ) ).findFirst();
         return first.orElseThrow( () -> new IllegalArgumentException( "No storage engine w/ name similar to '" + nameish + "' found" ) );
     }
 }
