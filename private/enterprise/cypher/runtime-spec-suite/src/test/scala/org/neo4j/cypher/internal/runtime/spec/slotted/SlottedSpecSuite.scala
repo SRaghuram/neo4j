@@ -16,6 +16,8 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ProfileMemoryTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileMemoryTrackingDisabledTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SkipTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AggregationTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.AntiSemiApplyTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.AntiSemiApplyWithRhsAggregationTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AllNodeScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AllNodeScanWithOtherOperatorsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArgumentTestBase
@@ -169,3 +171,5 @@ class SlottedShortestPathTest extends ShortestPathTestBase(ENTERPRISE.DEFAULT, S
 class SlottedUnionTest extends UnionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedSemiApplyTest extends SemiApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
                            with SemiApplyWithRhsAggregationTestBase[EnterpriseRuntimeContext]
+class SlottedAntiSemiApplyTest extends AntiSemiApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+                               with AntiSemiApplyWithRhsAggregationTestBase[EnterpriseRuntimeContext]
