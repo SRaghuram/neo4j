@@ -57,7 +57,7 @@ public class ActiveDirectoryAuthenticationIT
 
     private void restartNeo4jServerWithOverriddenSettings( Consumer<Map<Setting<?>,Object>> overrideSettingsFunction )
     {
-        server.shutdownManagementService();
+        server.shutdownDatabase();
         server.ensureDatabase( asSettings( overrideSettingsFunction ) );
     }
 

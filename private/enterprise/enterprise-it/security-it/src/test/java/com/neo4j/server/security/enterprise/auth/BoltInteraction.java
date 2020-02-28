@@ -110,7 +110,7 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
     @Override
     public void shutdown()
     {
-        server.shutdownManagementService();
+        server.shutdownDatabase();
     }
 
     @Override
