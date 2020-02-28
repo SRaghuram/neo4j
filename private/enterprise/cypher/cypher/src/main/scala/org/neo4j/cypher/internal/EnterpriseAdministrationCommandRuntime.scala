@@ -447,15 +447,15 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // GRANT/DENY/REVOKE WRITE ON GRAPH foo NODES * (*) TO role
     case GrantWrite(source, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.WRITE.toString, AllResource()(InputPosition.NONE), database, qualifier, roleName,
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.WRITE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), GRANT, s"Failed to grant write privilege to role '$roleName'")
 
     case DenyWrite(source, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.WRITE.toString, AllResource()(InputPosition.NONE), database, qualifier, roleName,
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.WRITE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), DENY, s"Failed to deny write privilege to role '$roleName'")
 
     case RevokeWrite(source, database, qualifier, roleName, revokeType) => (context, parameterMapping, currentUser) =>
-      makeRevokeExecutionPlan(PrivilegeAction.WRITE.toString, AllResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
+      makeRevokeExecutionPlan(PrivilegeAction.WRITE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), s"Failed to revoke write privilege from role '$roleName'")
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES

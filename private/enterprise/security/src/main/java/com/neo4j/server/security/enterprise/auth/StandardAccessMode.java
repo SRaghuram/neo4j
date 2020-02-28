@@ -582,15 +582,7 @@ class StandardAccessMode implements AccessMode
                 break;
 
             case WRITE:
-                switch ( resource.type() )
-                {
-                case GRAPH:
-                case PROPERTY:
-                case ALL_PROPERTIES:
-                    anyWrite.put( privilegeType, true );
-                    break;
-                default:
-                }
+                anyWrite.put( privilegeType, true );
                 break;
 
             default:

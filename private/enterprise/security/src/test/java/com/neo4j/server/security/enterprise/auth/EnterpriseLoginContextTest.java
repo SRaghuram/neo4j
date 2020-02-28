@@ -86,8 +86,8 @@ class EnterpriseLoginContextTest
         traverseRelPrivilege = new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
         readNodePrivilege = new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), LabelSegment.ALL, SpecialDatabase.ALL );
         readRelPrivilege = new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
-        writeNodePrivilege = new ResourcePrivilege( GRANT, WRITE, new Resource.AllPropertiesResource(), LabelSegment.ALL, SpecialDatabase.ALL );
-        writeRelPrivilege = new ResourcePrivilege( GRANT, WRITE, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
+        writeNodePrivilege = new ResourcePrivilege( GRANT, WRITE, new Resource.GraphResource(), LabelSegment.ALL, SpecialDatabase.ALL );
+        writeRelPrivilege = new ResourcePrivilege( GRANT, WRITE, new Resource.GraphResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
         tokenPrivilege = new ResourcePrivilege( GRANT, TOKEN, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
         indexPrivilege = new ResourcePrivilege( GRANT, INDEX, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
         constraintPrivilege = new ResourcePrivilege( GRANT, CONSTRAINT, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );

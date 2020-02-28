@@ -64,8 +64,6 @@ class ResourcePrivilegeTest
                 else if ( WRITE.satisfies( action ) )
                 {
                     assertOk( privilegeType, action, new GraphResource() );
-                    assertOk( privilegeType, action, new AllPropertiesResource() );
-                    assertOk( privilegeType, action, new PropertyResource( "foo" ) );
                 }
                 else if ( ADMIN.satisfies( action ) )
                 {
@@ -137,6 +135,8 @@ class ResourcePrivilegeTest
                 else if ( WRITE.satisfies( action ) )
                 {
                     assertFail( privilegeType, action, new ProcedureResource( "", "" ) );
+                    assertFail( privilegeType, action, new PropertyResource( "foo" ) );
+                    assertFail( privilegeType, action, new AllPropertiesResource() );
                     assertFail( privilegeType, action, new DatabaseResource() );
                 }
                 else if ( ADMIN.satisfies( action ) )

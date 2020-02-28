@@ -1318,8 +1318,8 @@ class StandardAccessModeTest
     {
         // WHEN
         // GRANT WRITE ON GRAPH neo4j ELEMENTS *
-        var privilege1 = new ResourcePrivilege( GRANT, WRITE, new Resource.AllPropertiesResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
-        var privilege2 = new ResourcePrivilege( GRANT, WRITE, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege1 = new ResourcePrivilege( GRANT, WRITE, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 = new ResourcePrivilege( GRANT, WRITE, new Resource.GraphResource(), RelTypeSegment.ALL, DEFAULT_DATABASE_NAME );
         var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
 
         // THEN

@@ -117,7 +117,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
             // default predefined roles and user and make sure we have an admin user
             ensureDefaultUserAndRoles( tx );
 
-            // migrate schema privilege to index + constraint privileges
+            // migrate schema privilege to index + constraint privileges and write to have graph resource
             migrateSystemGraph( tx );
 
             tx.commit();
@@ -328,8 +328,8 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         setupPrivilegeNode( traverseRelPriv, PrivilegeAction.TRAVERSE, relSegement, graphResource );
         setupPrivilegeNode( readNodePriv, PrivilegeAction.READ, labelSegement, allPropResource );
         setupPrivilegeNode( readRelPriv, PrivilegeAction.READ, relSegement, allPropResource );
-        setupPrivilegeNode( writeNodePriv, PrivilegeAction.WRITE, labelSegement, allPropResource );
-        setupPrivilegeNode( writeRelPriv, PrivilegeAction.WRITE, relSegement, allPropResource );
+        setupPrivilegeNode( writeNodePriv, PrivilegeAction.WRITE, labelSegement, graphResource );
+        setupPrivilegeNode( writeRelPriv, PrivilegeAction.WRITE, relSegement, graphResource );
         setupPrivilegeNode( defaultAccessPriv, PrivilegeAction.ACCESS, defaultDbSegement, dbResource );
         setupPrivilegeNode( accessPriv, PrivilegeAction.ACCESS, dbSegement, dbResource );
         setupPrivilegeNode( tokenPriv, PrivilegeAction.TOKEN, dbSegement, dbResource );
@@ -345,8 +345,29 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         privNode.createRelationshipTo( resourceNode, APPLIES_TO );
     }
 
+    private void migrateWriteFromAllPropertiesToGraphResource( Transaction tx )
+    {
+        Node graphResource = tx.findNode( Label.label( "Resource" ), "type", Resource.Type.GRAPH.toString() );
+        ResourceIterator<Node> writeNodes = tx.findNodes( PRIVILEGE_LABEL, "action", PrivilegeAction.WRITE.toString() );
+        while ( writeNodes.hasNext() )
+        {
+            Node writeNode = writeNodes.next();
+            Relationship writeResourceRel = writeNode.getSingleRelationship( APPLIES_TO, Direction.OUTGOING );
+            Node oldResource = writeResourceRel.getEndNode();
+            if ( !oldResource.getProperty( "type" ).equals( Resource.Type.GRAPH.toString() ) )
+            {
+                writeNode.createRelationshipTo( graphResource, APPLIES_TO );
+                writeResourceRel.delete();
+            }
+        }
+        writeNodes.close();
+    }
+
     private void migrateSystemGraph( Transaction tx )
     {
+        migrateWriteFromAllPropertiesToGraphResource( tx );
+
+        // migrate schema privilege to index + constraint privileges
         Node schemaNode = tx.findNode( PRIVILEGE_LABEL, "action", "schema" );
         if ( schemaNode == null )
         {

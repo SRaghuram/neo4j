@@ -347,9 +347,9 @@ class SystemGraphRealmIT
         ResourcePrivilege findRelPrivilege =
                 new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
         ResourcePrivilege writeNodePrivilege =
-                new ResourcePrivilege( GRANT, WRITE, new Resource.AllPropertiesResource(), LabelSegment.ALL, SpecialDatabase.ALL );
+                new ResourcePrivilege( GRANT, WRITE, new Resource.GraphResource(), LabelSegment.ALL, SpecialDatabase.ALL );
         ResourcePrivilege writeRelPrivilege =
-                new ResourcePrivilege( GRANT, WRITE, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
+                new ResourcePrivilege( GRANT, WRITE, new Resource.GraphResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
         ResourcePrivilege tokenNodePrivilege =
                 new ResourcePrivilege( GRANT, TOKEN, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
         ResourcePrivilege indexNodePrivilege =
