@@ -35,7 +35,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -53,7 +53,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -73,7 +73,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -92,7 +92,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -112,7 +112,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -132,7 +132,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -153,7 +153,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -174,7 +174,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -195,7 +195,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -216,7 +216,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -237,7 +237,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -260,7 +260,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -284,7 +284,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.nTimes(2, aPlan("SemiApply"))
@@ -309,7 +309,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.nTimes(2, aPlan("SemiApply"))
@@ -333,7 +333,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.nTimes(2, aPlan("SemiApply"))
@@ -358,7 +358,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.nTimes(2, aPlan("SemiApply"))
@@ -381,7 +381,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -402,7 +402,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -422,7 +422,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -443,7 +443,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN dog.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -464,7 +464,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -485,7 +485,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -506,7 +506,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -527,7 +527,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -548,7 +548,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -569,7 +569,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN alice.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -589,7 +589,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -610,7 +610,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -631,7 +631,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -653,7 +653,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -675,7 +675,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -697,7 +697,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -719,7 +719,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -741,7 +741,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -764,7 +764,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -784,7 +784,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -806,7 +806,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN adog.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -828,7 +828,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -864,7 +864,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -885,7 +885,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
 
     val plan = result.executionPlanDescription()
@@ -907,7 +907,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -929,7 +929,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -949,7 +949,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -969,7 +969,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -994,7 +994,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -1017,7 +1017,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -1043,7 +1043,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -1153,7 +1153,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     result.toList should equal(List())
   }
 
@@ -1168,7 +1168,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     result.toList should equal(List(Map("person.name" -> "Bosse")))
   }
 
@@ -1182,7 +1182,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     result.toList should equal(List(Map("person.name" -> "Alice"), Map("person.name" -> "Bosse"), Map("person.name" -> "Chris")))
   }
 
@@ -1197,7 +1197,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN dog.name
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     result.toList should equal(List(Map("dog.name" -> "Fido"), Map("dog.name" -> "Ozzy")))
   }
 
