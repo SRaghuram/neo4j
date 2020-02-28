@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ArgumentSlots
 import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
@@ -294,8 +295,8 @@ object ArgumentStateMap {
   }
 
   def skip(argumentSlotOffset: Int,
-              morsel: Morsel,
-              reserve: (Long, Int) => Int): Unit = {
+           morsel: Morsel,
+           reserve: (Long, Int) => Int): Unit = {
     val filteringMorsel = morsel.asInstanceOf[FilteringMorsel]
     if (filteringMorsel.hasCancelledRows) skipSlow(argumentSlotOffset, filteringMorsel, reserve)
     else skipFast(argumentSlotOffset, filteringMorsel, reserve)
@@ -310,17 +311,17 @@ object ArgumentStateMap {
                        filteringMorsel: FilteringMorsel,
                        reserve: (Long, Int) => Int): Unit = {
     val cursor = filteringMorsel.fullCursor(onFirstRow = true)
-    var last = -1
-    while (cursor.onValidRow() && last != 0) {
+    while (cursor.onValidRow()) {
       val arg = ArgumentSlots.getArgumentAt(cursor, argumentSlotOffset)
       val start: Int = cursor.row
-      while (cursor.onValidRow() && ArgumentSlots.getArgumentAt(cursor, argumentSlotOffset) == arg) {
+      moveToEnd(argumentSlotOffset, cursor, arg)
+      val end: Int = cursor.row
+      val last = reserve(arg, end - start)
+      filteringMorsel.cancelRows(start, start + last)
+      //if moveToEnd didn't move use we now must move one step forwards
+      if (end - start == 0) {
         cursor.next()
       }
-      val end: Int = cursor.row
-      last = reserve(arg, end - start)
-      filteringMorsel.cancelRows(start, start + last)
-      cursor.next()
     }
 
   }
@@ -333,23 +334,23 @@ object ArgumentStateMap {
     while (cursor.onValidRow()) {
       val arg = ArgumentSlots.getArgumentAt(cursor, argumentSlotOffset)
       val start: Int = cursor.row
+      var maxToSkip = 0
       while (cursor.onValidRow() && ArgumentSlots.getArgumentAt(cursor, argumentSlotOffset) == arg) {
         cursor.next()
+        maxToSkip += 1
       }
-      val end: Int = cursor.row
+      val end = cursor.row
       cursor.setRow(start)
 
-      val last = reserve(arg, end - start)
-      while (cursor.row < last) {
-        if (cursor.onValidRow()) {
-          filteringMorsel.cancelRow(cursor.row)
-        }
+      val actualToSkip = reserve(arg, maxToSkip)
+      var i = 0
+      while (i < actualToSkip) {
+        filteringMorsel.cancelRow(cursor.row)
         cursor.next()
+        i += 1
       }
 
-      if (last == 0) {
-        cursor.next()
-      }
+      cursor.setRow(end)
     }
   }
 
@@ -374,9 +375,7 @@ object ArgumentStateMap {
     while (cursor.onValidRow()) {
       val arg = ArgumentSlots.getArgumentAt(cursor, argumentSlotOffset)
       val start: Int = cursor.row
-      while (cursor.onValidRow() && ArgumentSlots.getArgumentAt(cursor, argumentSlotOffset) == arg) {
-        cursor.next()
-      }
+      moveToEnd(argumentSlotOffset, cursor, arg)
       val end: Int = cursor.row
       cursor.setRow(start)
 
@@ -419,6 +418,14 @@ object ArgumentStateMap {
 
       val view = morsel.view(start, end)
       f(arg, view)
+    }
+  }
+
+  private def moveToEnd(argumentSlotOffset: Int,
+                        cursor: MorselFullCursor,
+                        arg: Long): Unit = {
+    while (cursor.onValidRow() && ArgumentSlots.getArgumentAt(cursor, argumentSlotOffset) == arg) {
+      cursor.next()
     }
   }
 }

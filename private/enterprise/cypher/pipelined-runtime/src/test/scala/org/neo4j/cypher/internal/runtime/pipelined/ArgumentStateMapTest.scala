@@ -6,8 +6,12 @@
 package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselUnitTest
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
+
+import scala.collection.mutable.ArrayBuffer
 
 class ArgumentStateMapTest extends MorselUnitTest {
   Seq(0, 1, 2, 3, 5, 8, 13, 21).foreach { numberOfRows => {
@@ -77,30 +81,277 @@ class ArgumentStateMapTest extends MorselUnitTest {
     }
   }
 
-  for (inputPos <- Seq(0, 2, 4, 5, 6, 7)) {
-
-    test(s"filter should work with current row $inputPos") {
-      val row = new FilteringInput()
-        .addRow(Longs(1, 10))
-        .addRow(Longs(1, 11))
-        .addRow(Longs(1, 12))
-        .addRow(Longs(2, 20))
-        .addRow(Longs(3, 30))
-        .addRow(Longs(5, 50))
-        .addRow(Longs(5, 51))
-        .build()
-
-      ArgumentStateMap.filter[SumUntil32](0, row,
-        (_, _) => new SumUntil32(),
-        (state, currentRow) => state.sumAndCheckIfPast32(currentRow.getLongAt(1)))
-
-      new ThenOutput(row, 2, 0)
-        .shouldReturnRow(Longs(1, 10))
-        .shouldReturnRow(Longs(1, 11))
-        .shouldReturnRow(Longs(2, 20))
-        .shouldReturnRow(Longs(3, 30))
-        .shouldBeDone()
+  Seq(0, 1, 2, 3, 5, 8, 13, 21).foreach { numberOfRows => {
+    test(s"skip once - $numberOfRows rows") {
+      // Given
+      val morsel = buildSequentialInput(numberOfRows)
+      // When
+      ArgumentStateMap.skip(morsel, 2)
+      // Then
+      asList(morsel) should equal((0 until numberOfRows).drop(2))
     }
+
+    test(s"skip twice - $numberOfRows rows") {
+      // Given
+      val morsel = buildSequentialInput(numberOfRows)
+      // When
+      ArgumentStateMap.skip(morsel, 2)
+      ArgumentStateMap.skip(morsel, 3)
+      // Then
+      asList(morsel) should equal((0 until numberOfRows).drop(5))
+    }
+
+    test(s"filter + skip - $numberOfRows rows") {
+      // Given
+      val morsel = buildSequentialInput(numberOfRows)
+      // When
+      ArgumentStateMap.filter(morsel, morselFilterPredicate(moduloPredicate(2)))
+      ArgumentStateMap.skip(morsel, 1)
+      // Then
+      asList(morsel) should equal((0 until numberOfRows).filter(_ % 2 == 0).drop(1))
+    }
+
+    test(s"skip + filter - $numberOfRows rows") {
+      // Given
+      val morsel = buildSequentialInput(numberOfRows)
+      // When
+      ArgumentStateMap.skip(morsel, 1)
+      ArgumentStateMap.filter(morsel, morselFilterPredicate(moduloPredicate(2)))
+      // Then
+      asList(morsel) should equal((0 until numberOfRows).drop(1).filter(_ % 2 == 0))
+    }
+  }}
+
+  private def asList(morsel: Morsel): Seq[Long] = {
+    val cursor: MorselReadCursor = morsel.readCursor()
+    val list = ArrayBuffer.empty[Long]
+    while (cursor.next()) list += cursor.getLongAt(0)
+    list
+  }
+
+  test(s"filter should work with current row") {
+    val row = new FilteringInput()
+      .addRow(Longs(1, 10))
+      .addRow(Longs(1, 11))
+      .addRow(Longs(1, 12))
+      .addRow(Longs(2, 20))
+      .addRow(Longs(3, 30))
+      .addRow(Longs(5, 50))
+      .addRow(Longs(5, 51))
+      .build()
+
+    ArgumentStateMap.filter[SumUntil32](0, row,
+                                        (_, _) => new SumUntil32(),
+                                        (state, currentRow) => state.sumAndCheckIfPast32(currentRow.getLongAt(1)))
+
+    new ThenOutput(row, 2, 0)
+      .shouldReturnRow(Longs(1, 10))
+      .shouldReturnRow(Longs(1, 11))
+      .shouldReturnRow(Longs(2, 20))
+      .shouldReturnRow(Longs(3, 30))
+      .shouldBeDone()
+  }
+
+  test("skip should work with current row") {
+    val row = new FilteringInput()
+      .addRow(Longs(1, 10))
+      .addRow(Longs(1, 11))
+      .addRow(Longs(1, 12))
+      .addRow(Longs(2, 20))
+      .addRow(Longs(3, 30))
+      .addRow(Longs(5, 50))
+      .addRow(Longs(5, 51))
+      .build()
+
+    //give back one less than asked for
+    ArgumentStateMap.skip(0, row, (_, askingFor) => askingFor - 1)
+
+    new ThenOutput(row, 2, 0)
+      .shouldReturnRow(Longs(1, 12))
+      .shouldReturnRow(Longs(2, 20))
+      .shouldReturnRow(Longs(3, 30))
+      .shouldReturnRow(Longs(5, 51))
+      .shouldBeDone()
+  }
+
+  test("filter out even with current row") {
+    val row = new FilteringInput()
+      .addRow(Longs(1, 1))
+      .addRow(Longs(1, 2))
+      .addRow(Longs(1, 3))
+      .addRow(Longs(1, 4))
+      .addRow(Longs(1, 5))
+      .addRow(Longs(1, 6))
+      .addRow(Longs(1, 7))
+      .addRow(Longs(1, 8))
+      .addRow(Longs(2, 2))
+      .addRow(Longs(2, 4))
+      .addRow(Longs(2, 6))
+      .addRow(Longs(2, 8))
+      .addRow(Longs(2, 10))
+      .addRow(Longs(3, 1))
+      .addRow(Longs(3, 3))
+      .addRow(Longs(3, 5))
+      .addRow(Longs(3, 7))
+      .addRow(Longs(5, 1))
+      .addRow(Longs(5, 2))
+      .addRow(Longs(5, 3))
+      .build()
+
+    ArgumentStateMap.filter[FilterEven](0, row,
+                                        (_, _) => new FilterEven(),
+                                        (state, currentRow) => state.isEven(currentRow.getLongAt(1)))
+
+    new ThenOutput(row, 2, 0)
+      .shouldReturnRow(Longs(1, 2))
+      .shouldReturnRow(Longs(1, 4))
+      .shouldReturnRow(Longs(1, 6))
+      .shouldReturnRow(Longs(1, 8))
+      .shouldReturnRow(Longs(2, 2))
+      .shouldReturnRow(Longs(2, 4))
+      .shouldReturnRow(Longs(2, 6))
+      .shouldReturnRow(Longs(2, 8))
+      .shouldReturnRow(Longs(2, 10))
+      .shouldReturnRow(Longs(5, 2))
+      .shouldBeDone()
+  }
+
+  test("filter out even twice with current row") {
+    val row = new FilteringInput()
+      .addRow(Longs(1, 1))
+      .addRow(Longs(1, 2))
+      .addRow(Longs(1, 3))
+      .addRow(Longs(1, 4))
+      .addRow(Longs(1, 5))
+      .addRow(Longs(1, 6))
+      .addRow(Longs(1, 7))
+      .addRow(Longs(1, 8))
+      .addRow(Longs(2, 2))
+      .addRow(Longs(2, 4))
+      .addRow(Longs(2, 6))
+      .addRow(Longs(2, 8))
+      .addRow(Longs(2, 10))
+      .addRow(Longs(3, 1))
+      .addRow(Longs(3, 3))
+      .addRow(Longs(3, 5))
+      .addRow(Longs(3, 7))
+      .addRow(Longs(5, 1))
+      .addRow(Longs(5, 2))
+      .addRow(Longs(5, 3))
+      .build()
+
+    ArgumentStateMap.filter[FilterEven](0, row,
+                                        (_, _) => new FilterEven(),
+                                        (state, currentRow) => state.isEven(currentRow.getLongAt(1)))
+    ArgumentStateMap.filter[FilterEven](0, row,
+                                        (_, _) => new FilterEven(),
+                                        (state, currentRow) => state.isEven(currentRow.getLongAt(1)))
+
+    new ThenOutput(row, 2, 0)
+      .shouldReturnRow(Longs(1, 2))
+      .shouldReturnRow(Longs(1, 4))
+      .shouldReturnRow(Longs(1, 6))
+      .shouldReturnRow(Longs(1, 8))
+      .shouldReturnRow(Longs(2, 2))
+      .shouldReturnRow(Longs(2, 4))
+      .shouldReturnRow(Longs(2, 6))
+      .shouldReturnRow(Longs(2, 8))
+      .shouldReturnRow(Longs(2, 10))
+      .shouldReturnRow(Longs(5, 2))
+      .shouldBeDone()
+  }
+
+  test("filter out even then odd with current row") {
+    val row = new FilteringInput()
+      .addRow(Longs(1, 1))
+      .addRow(Longs(1, 2))
+      .addRow(Longs(1, 3))
+      .addRow(Longs(1, 4))
+      .addRow(Longs(1, 5))
+      .addRow(Longs(1, 6))
+      .addRow(Longs(1, 7))
+      .addRow(Longs(1, 8))
+      .addRow(Longs(2, 2))
+      .addRow(Longs(2, 4))
+      .addRow(Longs(2, 6))
+      .addRow(Longs(2, 8))
+      .addRow(Longs(2, 10))
+      .addRow(Longs(3, 1))
+      .addRow(Longs(3, 3))
+      .addRow(Longs(3, 5))
+      .addRow(Longs(3, 7))
+      .addRow(Longs(5, 1))
+      .addRow(Longs(5, 2))
+      .addRow(Longs(5, 3))
+      .build()
+
+    ArgumentStateMap.filter[FilterEven](0, row,
+                                        (_, _) => new FilterEven(),
+                                        (state, currentRow) => state.isEven(currentRow.getLongAt(1)))
+    ArgumentStateMap.filter[FilterEven](0, row,
+                                        (_, _) => new FilterEven(),
+                                        (state, currentRow) => !state.isEven(currentRow.getLongAt(1)))
+
+    new ThenOutput(row, 2, 0)
+      .shouldBeDone()
+  }
+
+  test("skip should work after filtering") {
+    val row = new FilteringInput()
+      .addRow(Longs(1, 1)) //0
+      .addRow(Longs(1, 2)) //1
+      .addRow(Longs(1, 3)) //2
+      .addRow(Longs(1, 4)) //3
+      .addRow(Longs(1, 5)) //4
+      .addRow(Longs(1, 6)) //5
+      .addRow(Longs(1, 7)) //6
+      .addRow(Longs(1, 8)) //7
+      .addRow(Longs(2, 2)) //8
+      .addRow(Longs(2, 4)) //9
+      .addRow(Longs(2, 6)) //10
+      .addRow(Longs(2, 8)) //11
+      .addRow(Longs(2, 10))//12
+      .addRow(Longs(3, 1)) //13
+      .addRow(Longs(3, 3)) //14
+      .addRow(Longs(3, 5)) //15
+      .addRow(Longs(3, 7)) //16
+      .addRow(Longs(5, 1)) //17
+      .addRow(Longs(5, 2)) //18
+      .addRow(Longs(5, 3)) //19
+      .build()
+
+    ArgumentStateMap.filter[FilterEven](0, row,
+                                        (_, _) => new FilterEven(),
+                                        (state, currentRow) => state.isEven(currentRow.getLongAt(1)))
+    ArgumentStateMap.skip(0, row, (_, askingFor) => math.min(askingFor, 2))
+
+    new ThenOutput(row, 2, 0)
+      .shouldReturnRow(Longs(1, 6))
+      .shouldReturnRow(Longs(1, 8))
+      .shouldReturnRow(Longs(2, 6))
+      .shouldReturnRow(Longs(2, 8))
+      .shouldReturnRow(Longs(2, 10))
+      .shouldBeDone()
+  }
+
+  test("skip twice should work with current row") {
+    val row = new FilteringInput()
+      .addRow(Longs(1, 10))
+      .addRow(Longs(1, 11))
+      .addRow(Longs(1, 12))
+      .addRow(Longs(2, 20))
+      .addRow(Longs(3, 30))
+      .addRow(Longs(5, 50))
+      .addRow(Longs(5, 51))
+      .build()
+
+    //give back one less than asked for
+    ArgumentStateMap.skip(0, row, (_, askingFor) => askingFor - 1)
+    //give back all that was asked for
+    ArgumentStateMap.skip(0, row, (_, askingFor) => askingFor)
+
+    new ThenOutput(row, 2, 0)
+      .shouldBeDone()
   }
 
   //-------------------
@@ -137,5 +388,9 @@ class ArgumentStateMapTest extends MorselUnitTest {
       sum += add
       sum <= 32
     }
+  }
+
+  class FilterEven() {
+    def isEven(n: Long): Boolean = n % 2 == 0
   }
 }
