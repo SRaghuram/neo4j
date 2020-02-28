@@ -91,6 +91,7 @@ class TransactionToRecordStateVisitor extends TxStateVisitor.Adapter
     {
         // record the state changes to be made to the store
         recordState.relCreate( id, type, startNode, endNode );
+        visitAddedRelProperties( id, addedProperties );
     }
 
     @Override
@@ -124,6 +125,11 @@ class TransactionToRecordStateVisitor extends TxStateVisitor.Adapter
         {
             recordState.relChangeProperty( id, prop.propertyKeyId(), prop.value() );
         }
+        visitAddedRelProperties( id, added );
+    }
+
+    public void visitAddedRelProperties( long id, Iterable<StorageProperty> added )
+    {
         for ( StorageProperty prop : added )
         {
             recordState.relAddProperty( id, prop.propertyKeyId(), prop.value() );
