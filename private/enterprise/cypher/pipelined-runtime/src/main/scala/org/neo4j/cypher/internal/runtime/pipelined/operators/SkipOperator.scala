@@ -10,6 +10,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.equal
+import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
@@ -30,7 +31,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.ConcurrentCountingState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.StandardCountingState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.evaluateCountValue
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRows
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SkipOperator.SkipStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
@@ -97,12 +98,14 @@ class SerialTopLevelSkipOperatorTaskTemplate(inner: OperatorTaskTemplate,
   override protected def howMuchToReserve: IntermediateRepresentation = constant(Int.MaxValue)
 
   override def genOperate: IntermediateRepresentation = {
-      IntermediateRepresentation.ifElse(equal(load(countLeftVar), constant(0)))(inner.genOperateWithExpressions)(
-        doIfInnerCantContinue(
-          block(
-            if (innermost.shouldCheckOutputCounter) OperatorCodeGenHelperTemplates.UPDATE_OUTPUT_COUNTER else noop(),
-            assign(countLeftVar, subtract(load(countLeftVar), constant(1))),
-            )
+    ifElse(equal(load(countLeftVar), constant(0)))(block(
+      profileRow(id),
+      inner.genOperateWithExpressions))(
+      doIfInnerCantContinue(
+        block(
+          if (innermost.shouldCheckOutputCounter) OperatorCodeGenHelperTemplates.UPDATE_OUTPUT_COUNTER else noop(),
+          assign(countLeftVar, subtract(load(countLeftVar), constant(1))),
+          )
         )
       )
   }
@@ -111,7 +114,6 @@ class SerialTopLevelSkipOperatorTaskTemplate(inner: OperatorTaskTemplate,
     block(
       invoke(loadField(countingStateField), method[SerialTopLevelCountingState, Unit, Int]("update"),
              subtract(load(reservedVar), load(countLeftVar))),
-      profileRows(id,subtract(load(reservedVar), load(countLeftVar))),
       inner.genOperateExit)
   }
 }
