@@ -62,7 +62,6 @@ class InteractiveRunIT extends AnnotationsFixture
         for ( int forkCount = 0; forkCount < 2; forkCount++ )
         {
             runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL, forkCount, "randomNodeById" );
-            temporaryFolder.cleanup();
         }
     }
 
@@ -77,7 +76,6 @@ class InteractiveRunIT extends AnnotationsFixture
         for ( int forkCount = 0; forkCount < 2; forkCount++ )
         {
             runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL, forkCount );
-            temporaryFolder.cleanup();
         }
     }
 
@@ -164,6 +162,7 @@ class InteractiveRunIT extends AnnotationsFixture
             int measurementForks,
             String... methods ) throws Exception
     {
+        temporaryFolder.cleanup();
         File storesDir = temporaryFolder.directory( "store" );
         Path profilerRecordingDirectory = temporaryFolder.directory( "recordings" ).toPath();
         int iterationCount = 1;
