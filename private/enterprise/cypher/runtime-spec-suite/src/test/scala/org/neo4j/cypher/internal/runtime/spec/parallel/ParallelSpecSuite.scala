@@ -317,8 +317,8 @@ class ParallelRuntimeUnionTest extends UnionTestBase(FUSING, PARALLEL, SIZE_HINT
 class ParallelRuntimeUnionNoFusingTest extends UnionTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 
 // SEMI APPLY
-class ParallelRuntimeSemiApplyTest extends SemiApplyTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
-class ParallelRuntimeSemiApplyNoFusingTest extends SemiApplyTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeSemiApplyTest extends SemiApplyTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeSemiApplyNoFusingTest extends SemiApplyTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 
 // GENERAL
 class ParallelRuntimeMiscTest extends MiscTestBase(FUSING, PARALLEL) with ParallelRuntimeSpecSuite
