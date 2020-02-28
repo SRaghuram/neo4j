@@ -26,6 +26,7 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.NullLogService;
@@ -73,7 +74,7 @@ class CheckPointingLogRotationStressTesting
               JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
             Config dbConfig = Config.defaults();
-            new ParallelBatchImporter( DatabaseLayout.ofFlat( ensureExistsAndEmpty( storeDir ) ), fileSystem, null, DEFAULT,
+            new ParallelBatchImporter( DatabaseLayout.ofFlat( ensureExistsAndEmpty( storeDir ) ), fileSystem, null, PageCacheTracer.NULL, DEFAULT,
                     NullLogService.getInstance(), ExecutionMonitors.defaultVisible(), EMPTY, dbConfig,
                     RecordFormatSelector.selectForConfig( dbConfig, NullLogProvider.getInstance() ), NO_MONITOR, jobScheduler, Collector.EMPTY,
                     TransactionLogsInitializer.INSTANCE )

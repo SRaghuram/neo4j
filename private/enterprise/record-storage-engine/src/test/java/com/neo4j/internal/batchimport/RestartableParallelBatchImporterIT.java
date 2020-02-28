@@ -34,6 +34,7 @@ import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
@@ -269,7 +270,8 @@ class RestartableParallelBatchImporterIT
 
     private BatchImporter importer( ExecutionMonitor monitor )
     {
-        return BatchImporterFactory.withHighestPriority().instantiate( databaseLayout, fs, null, DEFAULT, NullLogService.getInstance(), monitor, EMPTY,
+        return BatchImporterFactory.withHighestPriority().instantiate( databaseLayout, fs, null, PageCacheTracer.NULL,
+                DEFAULT, NullLogService.getInstance(), monitor, EMPTY,
                 Config.defaults( preallocate_logical_logs, false ), RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY,
                 TransactionLogsInitializer.INSTANCE );
     }

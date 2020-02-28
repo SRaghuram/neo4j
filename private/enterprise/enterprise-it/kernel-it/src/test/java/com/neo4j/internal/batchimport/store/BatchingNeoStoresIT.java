@@ -21,6 +21,7 @@ import org.neo4j.internal.batchimport.Configuration;
 import org.neo4j.internal.batchimport.store.BatchingNeoStores;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
@@ -59,7 +60,7 @@ class BatchingNeoStoresIT
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler();
                 BatchingNeoStores batchingNeoStores = BatchingNeoStores
                 .batchingNeoStores( fileSystem, databaseLayout, RecordFormatSelector.defaultFormat(), Configuration.DEFAULT,
-                        logService, AdditionalInitialIds.EMPTY, config, jobScheduler ) )
+                        logService, AdditionalInitialIds.EMPTY, config, jobScheduler, PageCacheTracer.NULL ) )
         {
             batchingNeoStores.createNew();
         }
@@ -72,7 +73,7 @@ class BatchingNeoStoresIT
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler();
                 BatchingNeoStores batchingNeoStores = BatchingNeoStores
                 .batchingNeoStores( fileSystem, databaseLayout, RecordFormatSelector.defaultFormat(), Configuration.DEFAULT,
-                        logService, new TestAdditionalInitialIds(), Config.defaults(), jobScheduler ) )
+                        logService, new TestAdditionalInitialIds(), Config.defaults(), jobScheduler, PageCacheTracer.NULL ) )
         {
             batchingNeoStores.createNew();
         }

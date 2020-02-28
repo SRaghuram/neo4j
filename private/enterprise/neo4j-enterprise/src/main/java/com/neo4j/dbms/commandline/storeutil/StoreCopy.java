@@ -156,7 +156,8 @@ public class StoreCopy
                 log.info( "Target: %s", toDatabaseLayout.databaseDirectory() );
                 log.info( "Empty database created, will start importing readable data from the source." );
 
-                BatchImporter batchImporter = BatchImporterFactory.withHighestPriority().instantiate( toDatabaseLayout, fs, pageCache, Configuration.DEFAULT,
+                BatchImporter batchImporter = BatchImporterFactory.withHighestPriority().instantiate( toDatabaseLayout, fs, pageCache, PageCacheTracer.NULL,
+                        Configuration.DEFAULT,
                         new SimpleLogService( logProvider ), executionMonitor, AdditionalInitialIds.EMPTY, config, recordFormats, NO_MONITOR, null,
                         Collector.EMPTY, TransactionLogsInitializer.INSTANCE );
 

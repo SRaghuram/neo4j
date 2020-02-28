@@ -63,6 +63,7 @@ import org.neo4j.internal.batchimport.input.csv.Header;
 import org.neo4j.internal.batchimport.input.csv.Type;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitors;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.impl.store.format.standard.StandardV4_0;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -931,6 +932,7 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                 Neo4jDb.layoutWithTxLogLocation( storeDir ),
                 new DefaultFileSystemAbstraction(),
                 null,
+                PageCacheTracer.NULL,
                 new LdbcImporterConfig(),
                 logService,
                 ExecutionMonitors.defaultVisible(),
