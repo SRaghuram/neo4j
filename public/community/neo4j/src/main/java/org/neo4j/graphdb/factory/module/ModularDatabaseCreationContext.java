@@ -25,6 +25,7 @@ import java.util.function.LongFunction;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseConfig;
 import org.neo4j.function.Factory;
 import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseComponents;
@@ -164,6 +165,16 @@ public class ModularDatabaseCreationContext implements DatabaseCreationContext
 
     private StorageEngineFactory selectStorageEngineBasedOnName( StorageEngineFactory defaultStorageEngineFactory, NamedDatabaseId namedDatabaseId )
     {
+        if ( namedDatabaseId.isSystemDatabase() )
+        {
+            return defaultStorageEngineFactory;
+        }
+
+        if ( globalConfig.get( GraphDatabaseSettings.force_freki ) )
+        {
+            return StorageEngineFactory.selectStorageEngine( "Freki" );
+        }
+
         int dotIndex = namedDatabaseId.name().indexOf( '.' );
         if ( dotIndex >= 0 )
         {
