@@ -400,6 +400,7 @@ public class Database extends LifecycleAdapter
             storageEngine = storageEngineFactory.instantiate( fs, databaseLayout, databaseConfig, databasePageCache, tokenHolders, databaseSchemaState,
                     constraintSemantics, indexProviderMap, lockService, idGeneratorFactory, idController, databaseHealth, internalLogProvider,
                     recoveryCleanupWorkCollector, pageCacheTracer, !storageExists, otherDatabaseMemoryTracker );
+            databaseDependencies.satisfyDependency( storageEngine );
 
             life.add( storageEngine );
             life.add( storageEngine.schemaAndTokensLifecycle() );
