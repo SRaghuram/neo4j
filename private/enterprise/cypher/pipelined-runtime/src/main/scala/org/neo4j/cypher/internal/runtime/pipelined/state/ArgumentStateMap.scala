@@ -43,12 +43,12 @@ trait ArgumentStateMap[S <: ArgumentState] {
   /**
    * Filter the input morsel using the [[ArgumentState]] related to `argument`.
    *
-   * @param onArgument is called once per argumentRowId, to generate a filter state.
-   * @param onRow      is called once per row, and given the filter state of the current argumentRowId
+   * @param createState is called once per argumentRowId, to generate a filter state.
+   * @param predicate   is called once per row, and given the filter state of the current argumentRowId
    */
   def filterWithSideEffect[FILTER_STATE](morsel: Morsel,
-                                         onArgument: (S, Int) => FILTER_STATE,
-                                         onRow: (FILTER_STATE, ReadWriteRow) => Boolean): Unit
+                                         createState: (S, Int) => FILTER_STATE,
+                                         predicate: (FILTER_STATE, ReadWriteRow) => Boolean): Unit
 
   /**
    * Returns the [[ArgumentState]] of each completed argument, but does not remove them from the [[ArgumentStateMap]].
@@ -356,18 +356,18 @@ object ArgumentStateMap {
 
   /**
    * For each argument row id at `argumentSlotOffset`, create a filter state (`FILTER_STATE`). This
-   * filter state is then used to call `onRow` on each row with the argument row id. If `onRow`
+   * filter state is then used to call `predicate` on each row with the argument row id. If `predicate`
    * returns true, the row is retained, otherwise it's discarded.
    *
    * @param morsel the morsel to filter
-   * @param onArgument onArgument(argumentRowId, nRows): FilterState
-   * @param onRow onRow(FilterState, morselRow): Boolean
+   * @param createState createState(argumentRowId, nRows): FilterState
+   * @param predicate predicate(FilterState, morselRow): Boolean
    * @tparam FILTER_STATE state used for filtering
    */
   def filter[FILTER_STATE](argumentSlotOffset: Int,
                            morsel: Morsel,
-                           onArgument: (Long, Int) => FILTER_STATE,
-                           onRow: (FILTER_STATE, ReadWriteRow) => Boolean): Unit = {
+                           createState: (Long, Int) => FILTER_STATE,
+                           predicate: (FILTER_STATE, ReadWriteRow) => Boolean): Unit = {
     val filteringMorsel = morsel.asInstanceOf[FilteringMorsel]
 
     val cursor = filteringMorsel.fullCursor(onFirstRow = true)
@@ -379,9 +379,9 @@ object ArgumentStateMap {
       val end: Int = cursor.row
       cursor.setRow(start)
 
-      val filterState = onArgument(arg, end - start)
+      val filterState = createState(arg, end - start)
       while (cursor.row < end) {
-        if (!onRow(filterState, cursor)) {
+        if (!predicate(filterState, cursor)) {
           filteringMorsel.cancelRow(cursor.row)
         }
         cursor.next()

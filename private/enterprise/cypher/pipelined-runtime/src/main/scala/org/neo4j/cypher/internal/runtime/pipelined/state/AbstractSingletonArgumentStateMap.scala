@@ -66,11 +66,11 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
   }
 
   override def filterWithSideEffect[U](morsel: Morsel,
-                                       onArgument: (STATE, Int) => U,
-                                       onRow: (U, ReadWriteRow) => Boolean): Unit = {
-    val filterState = onArgument(controller.state, morsel.numberOfRows)
+                                       createState: (STATE, Int) => U,
+                                       predicate: (U, ReadWriteRow) => Boolean): Unit = {
+    val filterState = createState(controller.state, morsel.numberOfRows)
     ArgumentStateMap.filter(morsel,
-      row => onRow(filterState, row))
+      row => predicate(filterState, row))
   }
 
   override def takeOneCompleted(): STATE = {
