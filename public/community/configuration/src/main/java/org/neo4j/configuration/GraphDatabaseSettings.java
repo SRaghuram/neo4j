@@ -1220,7 +1220,7 @@ public class GraphDatabaseSettings implements SettingsDeclaration
 
     @Internal
     public static final Setting<Boolean> force_freki =
-            newBuilder( "unsupported.dbms.force_freki_storage_engine", BOOL, Boolean.FALSE ).build();
+            newBuilder( "unsupported.dbms.force_freki_storage_engine", BOOL, Boolean.TRUE ).build();
 
     /**
      * Default settings for connectors. The default values are assumes to be default for embedded deployments through the code.
