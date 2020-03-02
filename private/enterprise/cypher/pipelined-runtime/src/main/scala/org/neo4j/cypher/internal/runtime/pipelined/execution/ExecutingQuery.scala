@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
 import org.neo4j.kernel.impl.query.QuerySubscription
 
 class ExecutingQuery(val executionState: ExecutionState,
-                     val queryState: QueryState,
+                     val queryState: PipelinedQueryState,
                      val queryExecutionTracer: QueryExecutionTracer,
                      val workersQueryProfiler: WorkersQueryProfiler,
                      val workerResourceProvider: WorkerResourceProvider,

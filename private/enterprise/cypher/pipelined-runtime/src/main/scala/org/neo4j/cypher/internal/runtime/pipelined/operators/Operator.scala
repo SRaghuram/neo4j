@@ -12,8 +12,8 @@ import org.neo4j.cypher.internal.runtime.WithHeapUsageEstimation
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
@@ -117,7 +117,7 @@ trait Operator extends HasWorkIdentity {
    */
   def createState(argumentStateCreator: ArgumentStateMapCreator,
                   stateFactory: StateFactory,
-                  state: QueryState,
+                  state: PipelinedQueryState,
                   resources: QueryResources): OperatorState
 }
 
@@ -135,7 +135,7 @@ trait OperatorState {
    *       by generating an OperatorState class that can create instances of a generated OperatorTask class.
    *       It can then pass the correct ArgumentStateMap directly as a constructor parameter.
    */
-  def nextTasks( state: QueryState,
+  def nextTasks(state: PipelinedQueryState,
                 operatorInput: OperatorInput,
                 parallelism: Int,
                 resources: QueryResources,
@@ -147,7 +147,7 @@ trait OperatorState {
  */
 trait ReduceOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extends OperatorState {
 
-  final override def nextTasks(state: QueryState,
+  final override def nextTasks(state: PipelinedQueryState,
                                operatorInput: OperatorInput,
                                parallelism: Int,
                                resources: QueryResources,
@@ -168,7 +168,7 @@ trait ReduceOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extend
   /**
    * Initialize new tasks for this operator.
    */
-  def nextTasks(state: QueryState,
+  def nextTasks(state: PipelinedQueryState,
                 input: ACC,
                 resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulator[DATA, ACC]]
 }
@@ -178,7 +178,7 @@ trait ReduceOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extend
  */
 trait StreamingOperator extends Operator with OperatorState {
 
-  final override def nextTasks(state: QueryState,
+  final override def nextTasks(state: PipelinedQueryState,
                                operatorInput: OperatorInput,
                                parallelism: Int,
                                resources: QueryResources,
@@ -200,7 +200,7 @@ trait StreamingOperator extends Operator with OperatorState {
    * Initialize new tasks for this operator. This code path let's operators create
    * multiple output rows for each row in `inputMorsel`.
    */
-  protected def nextTasks(state: QueryState,
+  protected def nextTasks(state: PipelinedQueryState,
                           inputMorsel: MorselParallelizer,
                           parallelism: Int,
                           resources: QueryResources,
@@ -208,21 +208,21 @@ trait StreamingOperator extends Operator with OperatorState {
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
-                           state: QueryState,
+                           state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = this
 }
 
 trait MiddleOperator extends HasWorkIdentity {
   def createTask(argumentStateCreator: ArgumentStateMapCreator,
                  stateFactory: StateFactory,
-                 state: QueryState,
+                 state: PipelinedQueryState,
                  resources: QueryResources): OperatorTask
 }
 
 trait StatelessOperator extends MiddleOperator with OperatorTask {
   final override def createTask(argumentStateCreator: ArgumentStateMapCreator,
                                 stateFactory: StateFactory,
-                                state: QueryState,
+                                state: PipelinedQueryState,
                                 resources: QueryResources): OperatorTask = this
 
   // stateless operators by definition do not hold cursors
@@ -235,7 +235,7 @@ trait StatelessOperator extends MiddleOperator with OperatorTask {
 trait OperatorTask extends HasWorkIdentity {
 
   def operateWithProfile(output: Morsel,
-                         state: QueryState,
+                         state: PipelinedQueryState,
                          resources: QueryResources,
                          queryProfiler: QueryProfiler): Unit = {
 
@@ -259,7 +259,7 @@ trait OperatorTask extends HasWorkIdentity {
   def setExecutionEvent(event: OperatorProfileEvent): Unit
 
   def operate(output: Morsel,
-              state: QueryState,
+              state: PipelinedQueryState,
               resources: QueryResources): Unit
 }
 

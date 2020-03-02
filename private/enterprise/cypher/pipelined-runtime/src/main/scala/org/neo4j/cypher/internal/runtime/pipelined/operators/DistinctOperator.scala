@@ -14,19 +14,18 @@ import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.internal.kernel.api.IndexReadSession
 
 /**
  * The distinct operator, for Cypher like
@@ -47,7 +46,7 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
 
   override def createTask(argumentStateCreator: ArgumentStateMapCreator,
                           stateFactory: StateFactory,
-                          state: QueryState,
+                          state: PipelinedQueryState,
                           resources: QueryResources): OperatorTask = {
 
     new DistinctOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId, new DistinctStateFactory(stateFactory.memoryTracker)))
@@ -58,7 +57,7 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
     override def workIdentity: WorkIdentity = DistinctOperator.this.workIdentity
 
     override def operate(outputMorsel: Morsel,
-                         state: QueryState,
+                         state: PipelinedQueryState,
                          resources: QueryResources): Unit = {
 
       val queryState = state.queryStateForExpressionEvaluation(resources)
@@ -86,7 +85,7 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
                       override val argumentRowIdsForReducers: Array[Long],
                       memoryTracker: QueryMemoryTracker) extends ArgumentState {
 
-    def filterOrProject(row: ReadWriteRow, queryState: SlottedQueryState): Boolean = {
+    def filterOrProject(row: ReadWriteRow, queryState: QueryState): Boolean = {
       val groupingKey = groupings.computeGroupingKey(row, queryState)
       if (seen.add(groupingKey)) {
         // Note: this allocation is currently never de-allocated

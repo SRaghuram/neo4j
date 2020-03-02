@@ -9,8 +9,8 @@ import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.WithHeapUsageEstimation
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTask
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorTask
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperatorState
@@ -27,7 +27,7 @@ import org.neo4j.cypher.internal.util.attribution.Id
 case class PipelineTask(startTask: ContinuableOperatorTask,
                         middleTasks: Array[OperatorTask],
                         outputOperatorState: OutputOperatorState,
-                        state: QueryState,
+                        state: PipelinedQueryState,
                         pipelineState: PipelineState)
   extends Task[QueryResources] with WithHeapUsageEstimation {
 

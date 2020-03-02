@@ -41,8 +41,8 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.SeekArgs
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeByIdSeekOperator.asIdMethod
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeByIdSeekOperator.isValidNode
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
@@ -53,10 +53,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
-import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.Read
 import org.neo4j.values.AnyValue
@@ -67,7 +65,7 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
                            nodeIdsExpr: SeekArgs,
                            argumentSize: SlotConfiguration.Size) extends StreamingOperator {
 
-  override protected def nextTasks(state: QueryState,
+  override protected def nextTasks(state: PipelinedQueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
@@ -89,7 +87,7 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
      *
      * @return true iff the inner loop might result it output rows
      */
-    override protected def initializeInnerLoop(state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+    override protected def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
       val queryState = state.queryStateForExpressionEvaluation(resources)
       initExecutionContext.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
       ids = nodeIdsExpr.expressions(initExecutionContext, queryState).iterator()
@@ -98,7 +96,7 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
 
     override def workIdentity: WorkIdentity = NodeByIdSeekOperator.this.workIdentity
 
-    override protected def innerLoop(outputRow: MorselFullCursor, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
 
       while (outputRow.onValidRow && ids.hasNext) {
         val nextId = NumericHelper.asLongEntityIdPrimitive(ids.next())

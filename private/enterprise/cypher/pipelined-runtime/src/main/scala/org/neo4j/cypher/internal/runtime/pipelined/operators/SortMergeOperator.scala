@@ -13,8 +13,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBuffer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -41,13 +41,13 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
-                           state: QueryState,
+                           state: PipelinedQueryState,
                            resources: QueryResources): ReduceOperatorState[Morsel, ArgumentStateBuffer] = {
     argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStateBuffer.Factory(stateFactory, id))
     this
   }
 
-  override def nextTasks(state: QueryState,
+  override def nextTasks(state: PipelinedQueryState,
                          input: ArgumentStateBuffer,
                          resources: QueryResources
                         ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[Morsel, ArgumentStateBuffer]] = {
@@ -68,7 +68,7 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
     var sortedInputPerArgument: PriorityQueue[MorselReadCursor] = _
 
     override def operate(outputMorsel: Morsel,
-                         state: QueryState,
+                         state: PipelinedQueryState,
                          resources: QueryResources): Unit = {
       if (sortedInputPerArgument == null) {
         sortedInputPerArgument = new PriorityQueue[MorselReadCursor](comparator)

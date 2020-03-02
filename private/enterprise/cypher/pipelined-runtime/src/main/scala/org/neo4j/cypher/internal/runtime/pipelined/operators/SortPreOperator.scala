@@ -11,8 +11,8 @@ import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
@@ -36,7 +36,7 @@ class SortPreOperator(val workIdentity: WorkIdentity,
     override def trackTime: Boolean = true
 
     override def prepareOutput(morsel: Morsel,
-                               state: QueryState,
+                               state: PipelinedQueryState,
                                resources: QueryResources,
                                operatorExecutionEvent: OperatorProfileEvent): PreSortedOutput = {
 

@@ -72,7 +72,7 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
     val tracer = schedulerTracer.traceQuery()
     val tracker = stateFactory.newTracker(subscriber, queryContext, tracer)
 
-    val queryState = QueryState(queryContext,
+    val queryState = PipelinedQueryState(queryContext,
                                 params,
                                 subscriber,
                                 tracker,

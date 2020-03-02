@@ -53,8 +53,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ
@@ -102,7 +102,7 @@ trait CompiledStreamingOperator extends StreamingOperator {
    * Initialize new tasks for this operator. This code path let's operators create
    * multiple output rows for each row in `inputMorsel`.
    */
-  override protected def nextTasks(state: QueryState,
+  override protected def nextTasks(state: PipelinedQueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
@@ -177,7 +177,7 @@ object CompiledStreamingOperator {
           returnType = typeRefOf[OperatorState],
           parameters = Seq(param[ArgumentStateMapCreator]("argumentStateCreator"),
             param[StateFactory]("stateFactory"),
-            param[QueryState]("state"),
+            param[PipelinedQueryState]("state"),
             param[QueryResources]("resources")),
           body = block(createState, self()))
       ),
@@ -220,7 +220,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
   override def trackTime: Boolean = false
 
   override def operateWithProfile(output: Morsel,
-                                  state: QueryState,
+                                  state: PipelinedQueryState,
                                   resources: QueryResources,
                                   queryProfiler: QueryProfiler): Unit = {
     initializeProfileEvents(queryProfiler)
@@ -251,7 +251,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
    * Method of [[OutputOperatorState]] trait. Override to prevent creation of profiler event, which is not necessary when output operator is fused.
    */
   override final def prepareOutputWithProfile(output: Morsel,
-                                              state: QueryState,
+                                              state: PipelinedQueryState,
                                               resources: QueryResources,
                                               queryProfiler: QueryProfiler): PreparedOutput = this
 
@@ -259,7 +259,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
    * Method of [[OutputOperatorState]] trait. Implementing this allows the same [[CompiledTask]] instance to also act as a [[PreparedOutput]].
    */
   override protected final def prepareOutput(outputMorsel: Morsel,
-                                             state: QueryState,
+                                             state: PipelinedQueryState,
                                              resources: QueryResources,
                                              operatorExecutionEvent: OperatorProfileEvent): PreparedOutput =
     throw new IllegalStateException("Fused operators should be called via prepareOutputWithProfile.")
@@ -280,7 +280,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
   @throws[Exception]
   def compiledOperate(outputMorsel: Morsel,
                       dbAccess: QueryContext,
-                      state: QueryState,
+                      state: PipelinedQueryState,
                       resources: QueryResources,
                       queryProfiler: QueryProfiler): Unit
 
@@ -312,7 +312,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
   override def setExecutionEvent(event: OperatorProfileEvent): Unit = throw new IllegalStateException("Fused operators should be called via operateWithProfile.")
 
   override def operate(output: Morsel,
-                       state: QueryState,
+                       state: PipelinedQueryState,
                        resources: QueryResources): Unit = throw new IllegalStateException("Fused operators should be called via operateWithProfile.")
 }
 
@@ -549,7 +549,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
           returnType = typeRefOf[Unit],
           Seq(param[Morsel]("outputMorsel"),
             param[QueryContext]("dbAccess"),
-            param[QueryState]("state"),
+            param[PipelinedQueryState]("state"),
             param[QueryResources]("resources"),
             param[QueryProfiler]("queryProfiler")
           ),
@@ -562,7 +562,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
             Seq(
               variable[Array[AnyValue]]("params",
                 invoke(QUERY_STATE,
-                  method[QueryState, Array[AnyValue]]("params"))),
+                  method[PipelinedQueryState, Array[AnyValue]]("params"))),
               variable[ExpressionCursors]("cursors",
                 invoke(QUERY_RESOURCES,
                   method[QueryResources, ExpressionCursors]("expressionCursors"))),
@@ -570,7 +570,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
                 invoke(QUERY_RESOURCES,
                   method[QueryResources, Array[AnyValue], Int]("expressionVariables"),
                   invoke(QUERY_STATE,
-                    method[QueryState, Int]("nExpressionSlots")))
+                    method[PipelinedQueryState, Int]("nExpressionSlots")))
               )) ++ flatMap[LocalVariable](op => op.genLocalVariables ++
               op.genExpressions.flatMap(_.variables))
           },

@@ -29,8 +29,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.NodeIndexCursorRepresentation
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_NODE_INDEX_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_NODE_INDEX_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NodeValueIndexCursorPool
@@ -60,7 +61,7 @@ class NodeIndexScanOperator(val workIdentity: WorkIdentity,
 
   private val needsValues: Boolean = indexPropertyIndices.nonEmpty
 
-  override protected def nextTasks(state: QueryState,
+  override protected def nextTasks(state: PipelinedQueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
@@ -75,7 +76,7 @@ class NodeIndexScanOperator(val workIdentity: WorkIdentity,
 
     private var cursor: NodeValueIndexCursor = _
 
-    protected override def initializeInnerLoop(state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+    protected override def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
 
       cursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
       val read = state.queryContext.transactionalContext.dataRead
@@ -83,7 +84,7 @@ class NodeIndexScanOperator(val workIdentity: WorkIdentity,
       true
     }
 
-    override protected def innerLoop(outputRow: MorselFullCursor, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
       iterate(inputCursor, outputRow, cursor, argumentSize)
     }
 

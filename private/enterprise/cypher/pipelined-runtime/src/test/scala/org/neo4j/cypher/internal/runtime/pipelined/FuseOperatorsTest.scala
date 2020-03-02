@@ -58,8 +58,8 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.ProcedureCallPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.pipelined.InterpretedPipesFallbackPolicy.INTERPRETED_PIPES_FALLBACK_DISABLED
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CompiledStreamingOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MiddleOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselFeedPipe
@@ -542,7 +542,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
   }
 
   class DummyMiddleOperator extends MiddleOperator {
-    override def createTask(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory, state: QueryState, resources: QueryResources): OperatorTask = null
+    override def createTask(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory, state: PipelinedQueryState, resources: QueryResources): OperatorTask = null
     override def workIdentity: WorkIdentity = WorkIdentityImpl(Id.INVALID_ID, "middle")
   }
 

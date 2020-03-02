@@ -12,18 +12,20 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.RANGE_SEEKABLE_VALUE_GROUPS
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekMode
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NodeIndexSeeker
 import org.neo4j.cypher.internal.runtime.pipelined.NodeIndexSeekParameters
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.internal.kernel.api.IndexQuery
 import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
 import org.neo4j.internal.kernel.api.IndexQueryConstraints
@@ -57,7 +59,7 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
   private val indexSeekers: Array[IndexSeeker] = nodeIndexSeekParameters.map(new IndexSeeker(_)).toArray
   private val numberOfSeeks: Int = indexSeekers.length
 
-  override protected def nextTasks(state: QueryState,
+  override protected def nextTasks(state: PipelinedQueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
@@ -86,7 +88,7 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
     private var currentIndexQuery: Array[Int] = _ // For each IndexSeeker this holds the index of the current index query we are positioned at
 
     // INPUT LOOP TASK
-    override protected def initializeInnerLoop(state: QueryState,
+    override protected def initializeInnerLoop(state: PipelinedQueryState,
                                                resources: QueryResources,
                                                initExecutionContext: ReadWriteRow): Boolean = {
       // First time initialization: allocate node cursors and state holders for all index seeks
@@ -143,7 +145,7 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
       true
     }
 
-    override protected def innerLoop(outputRow: MorselFullCursor, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
 
       while (outputRow.onValidRow && next(numberOfSeeks - 1)) {
         var j = 0

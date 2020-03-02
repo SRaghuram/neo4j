@@ -29,8 +29,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.ConcurrentCountingState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.StandardCountingState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.evaluateCountValue
@@ -43,6 +43,10 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.exceptions.InvalidArgumentException
+import org.neo4j.util.Preconditions
+import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.FloatingPointValue
 
 object LimitOperator {
 
@@ -69,7 +73,7 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
                     val workIdentity: WorkIdentity,
                     countExpression: Expression) extends MiddleOperator {
 
-  override def createTask(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory, state: QueryState, resources: QueryResources): OperatorTask = {
+  override def createTask(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory, state: PipelinedQueryState, resources: QueryResources): OperatorTask = {
     val limit = evaluateCountValue(state, resources, countExpression)
     new LimitOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId,
       new LimitOperator.LimitStateFactory(limit)))
@@ -80,7 +84,7 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
     override def workIdentity: WorkIdentity = LimitOperator.this.workIdentity
 
     override def operate(outputMorsel: Morsel,
-                         state: QueryState,
+                         state: PipelinedQueryState,
                          resources: QueryResources): Unit = {
 
       argumentStateMap.filterWithSideEffect[FilterState](outputMorsel,

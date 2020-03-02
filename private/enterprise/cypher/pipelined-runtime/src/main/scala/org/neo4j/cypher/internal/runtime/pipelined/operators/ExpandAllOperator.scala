@@ -61,8 +61,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.RelationshipCursorRepresentat
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.getNodeIdFromSlot
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.loadTypes
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_GROUP_CURSOR
@@ -111,7 +112,7 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
 
   override def toString: String = "ExpandAll"
 
-  override protected def nextTasks(state: QueryState,
+  override protected def nextTasks(state: PipelinedQueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
@@ -152,7 +153,7 @@ class ExpandAllTask(inputMorsel: Morsel,
   private var traversalCursor: RelationshipTraversalCursor = _
   protected var relationships: RelationshipSelectionCursor = _
 
-  protected override def initializeInnerLoop(state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+  protected override def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
     val fromNode = getFromNodeFunction.applyAsLong(inputCursor)
     if (entityIsNull(fromNode))
       false
@@ -164,7 +165,7 @@ class ExpandAllTask(inputMorsel: Morsel,
     }
   }
 
-  override protected def innerLoop(outputRow: MorselFullCursor, state: QueryState): Unit = {
+  override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
 
     while (outputRow.onValidRow && relationships.next()) {
       val relId = relationships.relationshipReference()

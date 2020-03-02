@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.runtime.createParameterArray
 import org.neo4j.cypher.internal.runtime.interpreted.BaseExecutionResultBuilderFactory
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionResultBuilder
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
@@ -45,9 +46,9 @@ class SlottedExecutionResultBuilderFactory(pipe: Pipe,
                                             prePopulateResults: Boolean,
                                             input: InputDataStream,
                                             subscriber: QuerySubscriber,
-                                            doProfile: Boolean): SlottedQueryState = {
+                                            doProfile: Boolean): QueryState = {
 
-      new SlottedQueryState(queryContext,
+      new QueryState(queryContext,
         externalResource,
         createParameterArray(params, parameterMapping),
         cursors,

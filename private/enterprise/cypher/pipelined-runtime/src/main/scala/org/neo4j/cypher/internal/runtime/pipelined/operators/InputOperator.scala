@@ -31,8 +31,8 @@ import org.neo4j.cypher.internal.runtime.InputDataStream
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.InputOperator.nodeOrNoValue
 import org.neo4j.cypher.internal.runtime.pipelined.operators.InputOperator.relationshipOrNoValue
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATE
@@ -53,7 +53,7 @@ class InputOperator(val workIdentity: WorkIdentity,
                     relationshipOffsets: Array[Int],
                     refOffsets: Array[Int]) extends StreamingOperator {
 
-  override protected def nextTasks(state: QueryState,
+  override protected def nextTasks(state: PipelinedQueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
@@ -73,7 +73,7 @@ class InputOperator(val workIdentity: WorkIdentity,
     override def workIdentity: WorkIdentity = InputOperator.this.workIdentity
 
     override def operate(outputMorsel: Morsel,
-                         queryState: QueryState,
+                         queryState: PipelinedQueryState,
                          resources: QueryResources): Unit = {
 
       val outputCursor = outputMorsel.writeCursor()
@@ -216,7 +216,7 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
       condition(isNull(loadField(inputCursorField)))(
         setField(inputCursorField, newInstance(constructor[MutatingInputCursor, InputDataStream],
           invoke(QUERY_STATE,
-            method[QueryState, InputDataStream]("input"))))),
+            method[PipelinedQueryState, InputDataStream]("input"))))),
       condition(not(loadField(canContinue)))(
         block(
           setField(canContinue, invoke(loadField(inputCursorField), method[MutatingInputCursor, Boolean]("nextInput"))),

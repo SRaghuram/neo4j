@@ -35,6 +35,7 @@ import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
@@ -42,8 +43,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AggregatingAccumu
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Updater
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate.createAggregators
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate.createUpdaters
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.EXECUTION_STATE
@@ -52,9 +53,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArg
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.AnyValue
 
 import scala.collection.mutable.ArrayBuffer
@@ -104,7 +103,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
       override def trackTime: Boolean = true
 
       override def prepareOutput(outputMorsel: Morsel,
-                                 state: QueryState,
+                                 state: PipelinedQueryState,
                                  resources: QueryResources,
                                  operatorExecutionEvent: OperatorProfileEvent): PreAggregatedOutput = {
 
@@ -117,7 +116,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
         new PreAggregatedOutput(preAggregated, sink)
       }
 
-      private def preAggregate(queryState: SlottedQueryState)(morsel: Morsel): Array[Updater] = {
+      private def preAggregate(queryState: QueryState)(morsel: Morsel): Array[Updater] = {
         val updaters = aggregations.map(_.newUpdater)
         //loop over the entire morsel view and apply the aggregation
         val cursor = morsel.readCursor()
@@ -154,13 +153,13 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
 
     override def createState(argumentStateCreator: ArgumentStateMapCreator,
                              stateFactory: StateFactory,
-                             state: QueryState,
+                             state: PipelinedQueryState,
                              resources: QueryResources): ReduceOperatorState[Array[Updater], AggregatingAccumulator] = {
       argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AggregatingAccumulator.Factory(aggregations, stateFactory.memoryTracker, id))
       this
     }
 
-    override def nextTasks(state: QueryState,
+    override def nextTasks(state: PipelinedQueryState,
                            input: AggregatingAccumulator,
                            resources: QueryResources
                           ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[Array[Updater], AggregatingAccumulator]] = {
@@ -172,7 +171,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
       override def workIdentity: WorkIdentity = AggregationReduceOperatorNoGrouping.this.workIdentity
 
       override def operate(outputMorsel: Morsel,
-                           state: QueryState,
+                           state: PipelinedQueryState,
                            resources: QueryResources): Unit = {
 
         var i = 0

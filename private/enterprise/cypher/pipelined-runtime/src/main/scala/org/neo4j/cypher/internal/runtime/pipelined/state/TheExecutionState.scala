@@ -18,8 +18,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.PipelineState
 import org.neo4j.cypher.internal.runtime.pipelined.PipelineTask
 import org.neo4j.cypher.internal.runtime.pipelined.execution.AlarmSink
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.WorkerWaker
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
@@ -37,7 +37,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
                         pipelines: Seq[ExecutablePipeline],
                         stateFactory: StateFactory,
                         workerWaker: WorkerWaker,
-                        queryState: QueryState,
+                        queryState: PipelinedQueryState,
                         initializationResources: QueryResources,
                         tracker: QueryCompletionTracker) extends ExecutionState {
 

@@ -33,8 +33,8 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DB_ACCESS
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NO_TOKEN
@@ -58,7 +58,7 @@ class RelationshipCountFromCountStoreOperator(val workIdentity: WorkIdentity,
                                               endLabel: Option[LazyLabel],
                                               argumentSize: SlotConfiguration.Size) extends StreamingOperator {
 
-  override protected def nextTasks(state: QueryState,
+  override protected def nextTasks(state: PipelinedQueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
@@ -89,12 +89,12 @@ class RelationshipCountFromCountStoreOperator(val workIdentity: WorkIdentity,
 
     override def workIdentity: WorkIdentity = RelationshipCountFromCountStoreOperator.this.workIdentity
 
-    override protected def initializeInnerLoop(state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+    override protected def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
       hasNext = true
       true
     }
 
-    override protected def innerLoop(outputRow: MorselFullCursor, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
       if (hasNext) {
         val startLabelId = getLabelId(startLabel, state.queryContext)
         val endLabelId = getLabelId(endLabel, state.queryContext)

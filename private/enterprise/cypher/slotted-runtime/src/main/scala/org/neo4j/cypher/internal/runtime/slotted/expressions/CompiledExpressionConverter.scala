@@ -8,14 +8,21 @@ package org.neo4j.cypher.internal.runtime.slotted.expressions
 import org.neo4j.codegen.api.CodeGeneration.CodeGenerationMode
 import org.neo4j.cypher.internal.Assertion.assertionsEnabled
 import org.neo4j.cypher.internal.NonFatalCypherError
+import org.neo4j.cypher.internal.expressions
 import org.neo4j.cypher.internal.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.CypherRow
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.defaultGenerator
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
+import org.neo4j.cypher.internal.runtime.ReadableRow
+import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledExpression
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledGroupingExpression
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledProjection
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.defaultGenerator
+import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
+import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverter
@@ -25,20 +32,11 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Extend
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.RandFunction
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
-import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
-import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
-import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
+import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter.COMPILE_LIMIT
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.cypher.internal.expressions
-import org.neo4j.exceptions.InternalException
 import org.neo4j.logging.Log
 import org.neo4j.values.AnyValue
-import CompiledExpressionConverter.COMPILE_LIMIT
-import org.neo4j.cypher.internal.runtime.ReadWriteRow
-import org.neo4j.cypher.internal.runtime.ReadableRow
-import org.neo4j.cypher.internal.runtime.WritableRow
-import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledGroupingExpression
 
 class CompiledExpressionConverter(log: Log,
                                   physicalPlan: PhysicalPlan,
@@ -137,11 +135,6 @@ class CompiledExpressionConverter(log: Log,
 
 object CompiledExpressionConverter {
   private val COMPILE_LIMIT: Int = 2
-
-  def parametersOrFail(state: QueryState): Array[AnyValue] = state match {
-    case s: SlottedQueryState => s.params
-    case _ => throw new InternalException(s"Expected a slotted query state")
-  }
 }
 
 case class CompileWrappingDistinctGroupingExpression(grouping: CompiledGroupingExpression, isEmpty: Boolean) extends GroupingExpression {
@@ -151,7 +144,7 @@ case class CompileWrappingDistinctGroupingExpression(grouping: CompiledGroupingE
   override type KeyType = AnyValue
 
   override def computeGroupingKey(context: ReadableRow, state: QueryState): AnyValue =
-    grouping.computeGroupingKey(context, state.query, CompiledExpressionConverter.parametersOrFail(state), state.cursors, state.expressionVariables)
+    grouping.computeGroupingKey(context, state.query, state.params, state.cursors, state.expressionVariables)
 
   override def computeOrderedGroupingKey(groupingKey: AnyValue): AnyValue =
     throw new IllegalStateException("Compiled expressions do not support this yet.")
@@ -167,7 +160,7 @@ case class CompileWrappingProjection(projection: CompiledProjection, isEmpty: Bo
   override def registerOwningPipe(pipe: Pipe): Unit = {}
 
   override def project(ctx: ReadWriteRow, state: QueryState): Unit =
-    projection.project(ctx, state.query, CompiledExpressionConverter.parametersOrFail(state), state.cursors, state.expressionVariables)
+    projection.project(ctx, state.query, state.params, state.cursors, state.expressionVariables)
 }
 
 case class CompileWrappingExpression(ce: CompiledExpression, legacy: Expression) extends ExtendedExpression {
@@ -179,7 +172,7 @@ case class CompileWrappingExpression(ce: CompiledExpression, legacy: Expression)
   override def children: Seq[AstNode[_]] = Seq(legacy)
 
   override def apply(ctx: ReadableRow, state: QueryState): AnyValue =
-    ce.evaluate(ctx, state.query, CompiledExpressionConverter.parametersOrFail(state), state.cursors, state.expressionVariables)
+    ce.evaluate(ctx, state.query, state.params, state.cursors, state.expressionVariables)
 
   override def toString: String = legacy.toString
 

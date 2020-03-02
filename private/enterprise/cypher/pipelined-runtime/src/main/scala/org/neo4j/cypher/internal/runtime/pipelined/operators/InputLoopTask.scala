@@ -26,8 +26,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_ROW_IS_VALID
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NEXT
@@ -46,7 +46,7 @@ abstract class InputLoopTask(final val inputMorsel: Morsel) extends ContinuableO
    *
    * @return true iff the inner loop might result in output rows
    */
-  protected def initializeInnerLoop(state: QueryState,
+  protected def initializeInnerLoop(state: PipelinedQueryState,
                                     resources: QueryResources,
                                     initExecutionContext: ReadWriteRow): Boolean
 
@@ -54,20 +54,20 @@ abstract class InputLoopTask(final val inputMorsel: Morsel) extends ContinuableO
    * Execute the inner loop for the current input row, and write results to the output.
    */
   protected def innerLoop(outputRow: MorselFullCursor,
-                          state: QueryState): Unit
+                          state: PipelinedQueryState): Unit
 
   /**
    * Close any resources used by the inner loop.
    */
   protected def closeInnerLoop(resources: QueryResources): Unit
 
-  protected def enterOperate(state: QueryState, resources: QueryResources): Unit = {}
+  protected def enterOperate(state: PipelinedQueryState, resources: QueryResources): Unit = {}
   protected def exitOperate(): Unit = {}
 
   private var innerLoop: Boolean = false
 
   override final def operate(outputMorsel: Morsel,
-                             state: QueryState,
+                             state: PipelinedQueryState,
                              resources: QueryResources): Unit = {
 
     enterOperate(state, resources)

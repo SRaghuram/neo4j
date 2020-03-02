@@ -18,8 +18,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeHashJoinOperator.HashTable
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeHashJoinOperator.HashTableFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
@@ -48,7 +48,7 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
-                           state: QueryState,
+                           state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = {
     argumentStateCreator.createArgumentStateMap(
       lhsArgumentStateMapId,
@@ -59,7 +59,7 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
     this
   }
 
-  override def nextTasks(state: QueryState,
+  override def nextTasks(state: PipelinedQueryState,
                          operatorInput: OperatorInput,
                          parallelism: Int,
                          resources: QueryResources,
@@ -85,13 +85,13 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
     private var lhsRows: java.util.Iterator[Morsel] = _
     private val key = new Array[Long](rhsOffsets.length)
 
-    override protected def initializeInnerLoop(state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+    override protected def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
       fillKeyArray(inputCursor, key, rhsOffsets)
       lhsRows = accumulator.lhsRows(Values.longArray(key))
       true
     }
 
-    override protected def innerLoop(outputRow: MorselFullCursor, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
 
       while (outputRow.onValidRow && lhsRows.hasNext) {
         outputRow.copyFrom(lhsRows.next().readCursor(onFirstRow = true))

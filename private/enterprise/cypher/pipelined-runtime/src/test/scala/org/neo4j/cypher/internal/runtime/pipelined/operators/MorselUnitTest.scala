@@ -13,8 +13,8 @@ import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
@@ -116,14 +116,14 @@ abstract class MorselUnitTest extends CypherFunSuite {
 
   class Given {
     protected var context: QueryContext = _
-    protected var state: QueryState = _
+    protected var state: PipelinedQueryState = _
 
     def withContext(context: QueryContext): this.type = {
       this.context = context
       this
     }
 
-    def withQueryState(state: QueryState): this.type = {
+    def withQueryState(state: PipelinedQueryState): this.type = {
       this.state = state
       this
     }

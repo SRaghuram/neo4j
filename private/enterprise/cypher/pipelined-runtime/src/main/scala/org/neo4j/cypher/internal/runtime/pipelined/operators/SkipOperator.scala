@@ -19,15 +19,14 @@ import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.subtract
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.ConcurrentCountingState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.StandardCountingState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.evaluateCountValue
@@ -61,7 +60,7 @@ class SkipOperator(argumentStateMapId: ArgumentStateMapId,
 
   override def createTask(argumentStateCreator: ArgumentStateMapCreator,
                           stateFactory: StateFactory,
-                          state: QueryState,
+                          state: PipelinedQueryState,
                           resources: QueryResources): OperatorTask = {
     val skip = evaluateCountValue(state, resources, countExpression)
     new SkipOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId,
@@ -75,7 +74,7 @@ class SkipOperator(argumentStateMapId: ArgumentStateMapId,
     }
 
     override def operate(output: Morsel,
-                         state: QueryState,
+                         state: PipelinedQueryState,
                          resources: QueryResources): Unit = {
       asm.skip(output, (state, nRows) => state.reserve(nRows))
     }

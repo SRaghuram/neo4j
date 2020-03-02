@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
 import org.neo4j.kernel.impl.query.QuerySubscription
 
 class CallingThreadExecutingQuery(executionState: ExecutionState,
-                                  queryState: QueryState,
+                                  queryState: PipelinedQueryState,
                                   queryExecutionTracer: QueryExecutionTracer,
                                   workersQueryProfiler: WorkersQueryProfiler,
                                   worker: Worker,

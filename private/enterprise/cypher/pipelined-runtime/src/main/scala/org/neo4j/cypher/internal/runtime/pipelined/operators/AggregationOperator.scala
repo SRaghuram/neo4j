@@ -36,12 +36,12 @@ import org.neo4j.cypher.internal.expressions
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
@@ -59,8 +59,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.aggregators.SumAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Updater
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate.createAggregators
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate.createUpdaters
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.EXECUTION_STATE
@@ -71,10 +71,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArg
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.SyntaxException
-import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.AnyValue
 
 import scala.collection.mutable.ArrayBuffer
@@ -130,7 +128,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
       override def workIdentity: WorkIdentity = AggregationOperator.this.workIdentity
 
       override def prepareOutput(morsel: Morsel,
-                                 state: QueryState,
+                                 state: PipelinedQueryState,
                                  resources: QueryResources,
                                  operatorExecutionEvent: OperatorProfileEvent): PreAggregatedOutput = {
 
@@ -143,7 +141,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
         new PreAggregatedOutput(preAggregated, sink)
       }
 
-      private def preAggregate(queryState: SlottedQueryState)
+      private def preAggregate(queryState: QueryState)
                               (morsel: Morsel): AggPreMap = {
 
         val result = new AggPreMap()
@@ -255,13 +253,13 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
     override def createState(argumentStateCreator: ArgumentStateMapCreator,
                              stateFactory: StateFactory,
-                             state: QueryState,
+                             state: PipelinedQueryState,
                              resources: QueryResources): ReduceOperatorState[AggPreMap, AggregatingAccumulator] = {
       argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AggregatingAccumulator.Factory(aggregations, stateFactory.memoryTracker, id))
       this
     }
 
-    override def nextTasks(state: QueryState,
+    override def nextTasks(state: PipelinedQueryState,
                            input: AggregatingAccumulator,
                            resources: QueryResources
                           ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[AggPreMap, AggregatingAccumulator]] = {
@@ -276,7 +274,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
       private val resultIterator = accumulator.result()
 
       override def operate(outputMorsel: Morsel,
-                           state: QueryState,
+                           state: PipelinedQueryState,
                            resources: QueryResources): Unit = {
 
         val outputCursor = outputMorsel.fullCursor(onFirstRow = true)

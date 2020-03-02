@@ -36,8 +36,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DB_ACCESS
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DEMAND
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.PRE_POPULATE_RESULTS
@@ -49,12 +49,10 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.exceptions.InternalException
-import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.NodeValue
@@ -77,7 +75,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
   //==========================================================================
   // This is called when ProduceResult is the start operator of a new pipeline
-  override protected def nextTasks(state: QueryState,
+  override protected def nextTasks(state: PipelinedQueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
@@ -94,7 +92,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
     override def canContinue: Boolean = inputCursor.onValidRow()
 
     override def operateWithProfile(outputIgnore: Morsel,
-                                    state: QueryState,
+                                    state: PipelinedQueryState,
                                     resources: QueryResources,
                                     queryProfiler: QueryProfiler): Unit = {
 
@@ -110,7 +108,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
     }
 
     override def operate(output: Morsel,
-                         state: QueryState,
+                         state: PipelinedQueryState,
                          resources: QueryResources): Unit = throw new UnsupportedOperationException("ProduceResults should be called via operateWithProfile")
 
     override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
@@ -133,7 +131,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
     override def workIdentity: WorkIdentity = ProduceResultOperator.this.workIdentity
 
     override def prepareOutput(outputMorsel: Morsel,
-                               state: QueryState,
+                               state: PipelinedQueryState,
                                resources: QueryResources,
                                operatorExecutionEvent: OperatorProfileEvent): PreparedOutput = {
 
@@ -156,7 +154,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
   //==========================================================================
 
   protected def produceOutputWithProfile(output: MorselReadCursor,
-                                         state: QueryState,
+                                         state: PipelinedQueryState,
                                          resources: QueryResources,
                                          operatorExecutionEvent: OperatorProfileEvent): Unit = {
     val numberOfOutputedRows = produceOutput(output, state, resources)
@@ -166,7 +164,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
   }
 
   protected def produceOutput(output: MorselReadCursor,
-                              state: QueryState,
+                              state: PipelinedQueryState,
                               resources: QueryResources): Int = {
     val subscriber: QuerySubscriber = state.subscriber
     var served = 0

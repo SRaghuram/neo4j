@@ -12,8 +12,8 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFactory
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CompiledStreamingOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CompiledTask
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTask
@@ -54,7 +54,7 @@ case class ExecutablePipeline(id: PipelineId,
   }
 
   def createState(executionState: ExecutionState,
-                  queryState: QueryState,
+                  queryState: PipelinedQueryState,
                   resources: QueryResources,
                   stateFactory: StateFactory): PipelineState = {
 
@@ -105,7 +105,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
    * which to generate tasks. If the start operator find input and generates tasks,
    * one of these will be returned, and the rest stored as continuations.
    */
-  def nextTask(state: QueryState,
+  def nextTask(state: PipelinedQueryState,
                resources: QueryResources): SchedulingResult[PipelineTask] = {
     var task: PipelineTask = null
     var someTaskWasFilteredOut = false
@@ -149,7 +149,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
     SchedulingResult(task, someTaskWasFilteredOut)
   }
 
-  def allocateMorsel(producingWorkUnitEvent: WorkUnitEvent, state: QueryState): Morsel = {
+  def allocateMorsel(producingWorkUnitEvent: WorkUnitEvent, state: PipelinedQueryState): Morsel = {
     // TODO: Change pipeline.needsMorsel and needsFilteringMorsel into an Option[MorselFactory]
     //       The MorselFactory should probably originate from the MorselBuffer to play well with reuse/pooling
     if (pipeline.needsMorsel) {
@@ -162,7 +162,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
     } else Morsel.empty
   }
 
-  private def innerNextTask(state: QueryState,
+  private def innerNextTask(state: PipelinedQueryState,
                             resources: QueryResources): PipelineTask = {
     if (!executionState.canPut(pipeline)) {
       return null

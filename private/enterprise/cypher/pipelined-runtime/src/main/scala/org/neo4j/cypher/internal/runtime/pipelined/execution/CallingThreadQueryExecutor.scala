@@ -67,7 +67,7 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
     val resources = new QueryResources(cursors: CursorFactory, queryContext.transactionalContext.transaction.pageCursorTracer())
     val tracer = schedulerTracer.traceQuery()
     val tracker = stateFactory.newTracker(subscriber, queryContext, tracer)
-    val queryState = QueryState(queryContext,
+    val queryState = PipelinedQueryState(queryContext,
                                 params,
                                 subscriber,
                                 tracker,

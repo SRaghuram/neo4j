@@ -11,8 +11,8 @@ import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock
 import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.Operator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperator
 import org.scalatest.mockito.MockitoSugar
@@ -44,7 +44,7 @@ object MockHelper extends MockitoSugar {
     )
     when(result.pipeline).thenReturn(pipeline)
     if(schedulingResults.nonEmpty) {
-      schedulingResults.foldLeft(when(result.nextTask(any[QueryState], any[QueryResources]))) { (ongoingMock, sr) =>
+      schedulingResults.foldLeft(when(result.nextTask(any[PipelinedQueryState], any[QueryResources]))) { (ongoingMock, sr) =>
         ongoingMock.thenAnswer(sr(_))
       }
     }

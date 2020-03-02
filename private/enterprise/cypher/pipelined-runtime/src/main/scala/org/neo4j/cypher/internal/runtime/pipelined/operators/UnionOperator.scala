@@ -9,14 +9,12 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.runtime.slotted.pipes.UnionSlottedPipe.RowMapping
-import org.neo4j.internal.kernel.api.IndexReadSession
 
 class UnionOperator(val workIdentity: WorkIdentity,
                     lhsSlotConfig: SlotConfiguration,
@@ -27,7 +25,7 @@ class UnionOperator(val workIdentity: WorkIdentity,
 
   override def toString: String = "Union"
 
-  override protected def nextTasks(state: QueryState,
+  override protected def nextTasks(state: PipelinedQueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
@@ -55,7 +53,7 @@ class UnionTask(val inputMorsel: Morsel,
   override protected def closeCursors(resources: QueryResources): Unit = {}
 
   override def operate(outputMorsel: Morsel,
-                       state: QueryState,
+                       state: PipelinedQueryState,
                        resources: QueryResources): Unit = {
     val inputCursor = inputMorsel.fullCursor(onFirstRow = false)
     val outputCursor = outputMorsel.fullCursor(onFirstRow = true)

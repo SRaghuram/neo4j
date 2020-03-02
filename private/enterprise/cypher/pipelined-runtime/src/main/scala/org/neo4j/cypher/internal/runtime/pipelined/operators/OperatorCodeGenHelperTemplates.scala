@@ -51,8 +51,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.operations.CursorUtils
@@ -162,9 +162,9 @@ object OperatorCodeGenHelperTemplates {
     load("executionState")
 
   val SUBSCRIBER: LocalVariable = variable[QuerySubscriber]("subscriber",
-    invoke(QUERY_STATE, method[QueryState, QuerySubscriber]("subscriber")))
+    invoke(QUERY_STATE, method[PipelinedQueryState, QuerySubscriber]("subscriber")))
   val SUBSCRIPTION: LocalVariable = variable[FlowControl]("subscription",
-    invoke(QUERY_STATE, method[QueryState, FlowControl]("flowControl")))
+    invoke(QUERY_STATE, method[PipelinedQueryState, FlowControl]("flowControl")))
   val DEMAND: LocalVariable = variable[Long]("demand",
     invoke(load(SUBSCRIPTION), method[FlowControl, Long]("getDemand")))
 
@@ -175,7 +175,7 @@ object OperatorCodeGenHelperTemplates {
   val PRE_POPULATE_RESULTS_V: LocalVariable =
     variable[Boolean]("prePopulateResults",
       invoke(QUERY_STATE,
-        method[QueryState, Boolean]("prePopulateResults")))
+        method[PipelinedQueryState, Boolean]("prePopulateResults")))
 
   val PRE_POPULATE_RESULTS: IntermediateRepresentation =
     load(PRE_POPULATE_RESULTS_V)
@@ -200,7 +200,7 @@ object OperatorCodeGenHelperTemplates {
     invokeSideEffect(load(SUBSCRIPTION), method[FlowControl, Unit, Long]("addServed"), load(SERVED))
 
   // This is used as bound on the work unit for pipelines that does not write to output morsels, e.g. ends with pre-aggregation
-  val OUTPUT_COUNTER: LocalVariable = variable[Int]("outputCounter", invoke(QUERY_STATE, method[QueryState, Int]("morselSize")))
+  val OUTPUT_COUNTER: LocalVariable = variable[Int]("outputCounter", invoke(QUERY_STATE, method[PipelinedQueryState, Int]("morselSize")))
   val UPDATE_OUTPUT_COUNTER: IntermediateRepresentation = assign(OUTPUT_COUNTER, subtract(load(OUTPUT_COUNTER), constant(1)))
   val HAS_REMAINING_OUTPUT: IntermediateRepresentation = greaterThan(load(OUTPUT_COUNTER), constant(0))
 
@@ -463,7 +463,7 @@ object OperatorCodeGenHelperTemplates {
   def dbHits(event: IntermediateRepresentation, nHits: IntermediateRepresentation): IntermediateRepresentation = condition(isNotNull(event))(invoke(event, TRACE_DB_HITS, nHits))
   def onNode(event: IntermediateRepresentation, node: IntermediateRepresentation): IntermediateRepresentation = condition(isNotNull(event))(invoke(event, TRACE_ON_NODE, node))
   def indexReadSession(offset: Int): IntermediateRepresentation =
-    arrayLoad(invoke(QUERY_STATE, method[QueryState, Array[IndexReadSession]]("queryIndexes")), offset)
+    arrayLoad(invoke(QUERY_STATE, method[PipelinedQueryState, Array[IndexReadSession]]("queryIndexes")), offset)
 
   def asStorableValue(in: IntermediateRepresentation): IntermediateRepresentation = invokeStatic(method[CypherCoercions, Value, AnyValue]("asStorableValue"), in)
   def asListValue(in: IntermediateRepresentation): IntermediateRepresentation = invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), in)

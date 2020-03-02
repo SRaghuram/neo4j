@@ -20,8 +20,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.TopOperator.TopTable
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
@@ -74,7 +74,7 @@ case class TopOperator(workIdentity: WorkIdentity,
       override def trackTime: Boolean = true
 
       override def prepareOutput(morsel: Morsel,
-                                 state: QueryState,
+                                 state: PipelinedQueryState,
                                  resources: QueryResources,
                                  operatorExecutionEvent: OperatorProfileEvent): PreTopOutput = {
         val limit = CountingState.evaluateCountValue(state, resources, countExpression)
@@ -108,7 +108,7 @@ case class TopOperator(workIdentity: WorkIdentity,
 
     override def createState(argumentStateCreator: ArgumentStateMapCreator,
                              stateFactory: StateFactory,
-                             state: QueryState,
+                             state: PipelinedQueryState,
                              resources: QueryResources): ReduceOperatorState[Morsel, TopTable] = {
       // NOTE: If the _input size_ is larger than Int.MaxValue this will still fail, since an array cannot hold that many elements
       val limit = Math.min(CountingState.evaluateCountValue(state, resources, countExpression), Int.MaxValue).toInt
@@ -116,7 +116,7 @@ case class TopOperator(workIdentity: WorkIdentity,
       this
     }
 
-    override def nextTasks(state: QueryState,
+    override def nextTasks(state: PipelinedQueryState,
                            input: TopTable,
                            resources: QueryResources
                           ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[Morsel, TopTable]] = {
@@ -132,7 +132,7 @@ case class TopOperator(workIdentity: WorkIdentity,
       var sortedInputPerArgument: util.Iterator[MorselRow] = _
 
       override def operate(outputMorsel: Morsel,
-                           state: QueryState,
+                           state: PipelinedQueryState,
                            resources: QueryResources): Unit = {
 
         if (sortedInputPerArgument == null) {

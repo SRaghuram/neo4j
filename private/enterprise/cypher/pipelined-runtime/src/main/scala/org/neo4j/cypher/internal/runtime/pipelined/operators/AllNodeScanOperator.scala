@@ -29,8 +29,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_NODE_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NodeCursorPool
@@ -50,7 +50,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
                           offset: Int,
                           argumentSize: SlotConfiguration.Size) extends StreamingOperator {
 
-  override protected def nextTasks(state: QueryState,
+  override protected def nextTasks(state: PipelinedQueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
@@ -88,7 +88,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
 
     private var cursor: NodeCursor = _
 
-    override protected def initializeInnerLoop(state: QueryState,
+    override protected def initializeInnerLoop(state: PipelinedQueryState,
                                                resources: QueryResources,
                                                initExecutionContext: ReadWriteRow): Boolean = {
       cursor = resources.cursorPools.nodeCursorPool.allocateAndTrace()
@@ -96,7 +96,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
       true
     }
 
-    override protected def innerLoop(outputRow: MorselFullCursor, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
       while (outputRow.onValidRow && cursor.next()) {
         outputRow.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
         outputRow.setLongAt(offset, cursor.nodeReference())
@@ -142,7 +142,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
     inputCursor.setToEnd()
 
     override def operate(outputMorsel: Morsel,
-                         queryState: QueryState,
+                         queryState: PipelinedQueryState,
                          resources: QueryResources): Unit = {
 
       val outputCursor = outputMorsel.writeCursor(onFirstRow = true)
@@ -160,7 +160,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
     }
 
 
-    private def next(queryState: QueryState, resources: QueryResources): Boolean = {
+    private def next(queryState: PipelinedQueryState, resources: QueryResources): Boolean = {
       while (true) {
         if (deferredRow) {
           deferredRow = false

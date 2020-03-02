@@ -8,27 +8,27 @@ package org.neo4j.cypher.internal.runtime.pipelined.execution
 import org.neo4j.cypher.internal.runtime.InputDataStream
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
 
 /**
  * The query state of the pipelined runtime.
- * It extends [[SlottedQueryState]] for convenience of evaluating expressions that only need to access the CypherRow.
+ * It extends [[QueryState]] for convenience of evaluating expressions that only need to access the CypherRow.
  */
-case class QueryState(queryContext: QueryContext,
-                      override val params: Array[AnyValue],
-                      override val subscriber: QuerySubscriber,
-                      flowControl: FlowControl,
-                      morselSize: Int,
-                      override val queryIndexes: Array[IndexReadSession],
-                      numberOfWorkers: Int,
-                      nExpressionSlots: Int,
-                      override val prePopulateResults: Boolean,
-                      doProfile: Boolean,
-                      override val input: InputDataStream)
-  extends SlottedQueryState(queryContext,
+case class PipelinedQueryState(queryContext: QueryContext,
+                               override val params: Array[AnyValue],
+                               override val subscriber: QuerySubscriber,
+                               flowControl: FlowControl,
+                               morselSize: Int,
+                               override val queryIndexes: Array[IndexReadSession],
+                               numberOfWorkers: Int,
+                               nExpressionSlots: Int,
+                               override val prePopulateResults: Boolean,
+                               doProfile: Boolean,
+                               override val input: InputDataStream)
+  extends QueryState(queryContext,
     null,
     params,
     null,
@@ -44,8 +44,8 @@ case class QueryState(queryContext: QueryContext,
    * a suitable QueryState for that.
    * @param resources the resources of the current worker
    */
-  def queryStateForExpressionEvaluation(resources: QueryResources): SlottedQueryState = {
-    new SlottedQueryState(queryContext,
+  def queryStateForExpressionEvaluation(resources: QueryResources): QueryState = {
+    new QueryState(queryContext,
       null,
       params,
       resources.expressionCursors,

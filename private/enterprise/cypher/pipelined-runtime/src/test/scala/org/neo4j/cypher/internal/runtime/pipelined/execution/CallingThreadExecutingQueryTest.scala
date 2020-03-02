@@ -114,8 +114,8 @@ class CallingThreadExecutingQueryTest extends CypherFunSuite {
     m
   }
 
-  private def getQueryState: QueryState = {
-    val m = mock[QueryState]
+  private def getQueryState: PipelinedQueryState = {
+    val m = mock[PipelinedQueryState]
     val flowControl = getFlowControl
     when(m.flowControl).thenReturn(flowControl)
     m
