@@ -10,7 +10,6 @@ import com.neo4j.fabric.config.FabricConfig
 import com.neo4j.fabric.executor.FabricException
 import com.neo4j.fabric.pipeline.Pipeline
 import com.neo4j.fabric.planning.FabricPlan.DebugOptions
-import com.neo4j.fabric.planning.FabricQuery.Columns
 import com.neo4j.fabric.planning.FabricQuery.LocalQuery
 import com.neo4j.fabric.planning.FabricQuery.RemoteQuery
 import com.neo4j.fabric.util.Errors
@@ -34,6 +33,8 @@ import org.neo4j.cypher.internal.ast.ReturnItems
 import org.neo4j.cypher.internal.ast.SingleQuery
 import org.neo4j.cypher.internal.ast.UnresolvedCall
 import org.neo4j.cypher.internal.ast.With
+import org.neo4j.cypher.internal.ast.prettifier.ExpressionStringifier
+import org.neo4j.cypher.internal.ast.prettifier.Prettifier
 import org.neo4j.cypher.internal.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.expressions.FunctionName
 import org.neo4j.cypher.internal.expressions.Namespace
@@ -65,6 +66,7 @@ case class FabricPlanner(
     cypherConfig.queryCacheSize,
   )
   private[planning] val queryCache = new FabricQueryCache(cypherConfig.queryCacheSize)
+  private val renderer = Prettifier(ExpressionStringifier(alwaysParens = true, alwaysBacktick = true))
 
   def instance(queryString: String, queryParams: MapValue, defaultGraphName: String): PlannerInstance =
     PlannerInstance(queryString, queryParams, defaultGraphName)
@@ -104,9 +106,13 @@ case class FabricPlanner(
       val pos = leaf.clauses.head.position
 
       val inputClauses = Seq(
-        Ast.inputDataStream(leaf.input.outputColumns, pos),
-        Ast.paramBindings(leaf.importColumns, pos),
-      )
+        conditionally(
+          leaf.input.outputColumns.nonEmpty,
+          Ast.inputDataStream(leaf.input.outputColumns, pos)),
+        conditionally(
+          leaf.importColumns.nonEmpty,
+          Ast.paramBindings(leaf.importColumns, pos)),
+      ).flatten
 
       val outputClauses = leaf.clauses.last match {
         case _: Return => Seq()
@@ -127,7 +133,6 @@ case class FabricPlanner(
             materializedEntitiesMode = true
           )
         ),
-        columns = Columns(Seq.empty, Seq.empty, Seq.empty, Seq.empty),
         queryType = QueryType.local(leaf),
       )
     }
@@ -136,6 +141,8 @@ case class FabricPlanner(
       ???
     }
 
+    private def conditionally[T](cond: Boolean, prod: => T) =
+      if (cond) Some(prod) else None
 
     private def preParse(query: String): PreParsedQuery = {
       val preParsed = preParser.preParseQuery(query)

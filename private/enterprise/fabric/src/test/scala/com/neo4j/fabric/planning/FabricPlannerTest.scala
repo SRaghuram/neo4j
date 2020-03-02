@@ -17,26 +17,21 @@ import com.neo4j.fabric.config.FabricConfig.Graph
 import com.neo4j.fabric.pipeline.Pipeline
 import com.neo4j.fabric.pipeline.SignatureResolver
 import com.neo4j.fabric.planning.FabricPlan.DebugOptions
-import com.neo4j.fabric.planning.FabricQuery.Apply
-import com.neo4j.fabric.planning.FabricQuery.ChainedQuery
-import com.neo4j.fabric.planning.FabricQuery.Direct
-import com.neo4j.fabric.planning.FabricQuery.LocalQuery
-import com.neo4j.fabric.planning.FabricQuery.RemoteQuery
-import com.neo4j.fabric.planning.FabricQuery.UnionQuery
 import com.neo4j.fabric.planning.Fragment.ChainedFragment
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.configuration.helpers.NormalizedGraphName
 import org.neo4j.cypher.internal.CypherConfiguration
+import org.neo4j.cypher.internal.FullyParsedQuery
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.ast.Clause
 import org.neo4j.cypher.internal.ast.Query
 import org.neo4j.cypher.internal.ast.SingleQuery
 import org.neo4j.cypher.internal.ast.prettifier.ExpressionStringifier
 import org.neo4j.cypher.internal.ast.prettifier.Prettifier
-import org.neo4j.cypher.internal.util.symbols.CTAny
+import org.neo4j.cypher.internal.util.symbols
+import org.neo4j.cypher.internal.util.symbols.CypherType
 import org.neo4j.exceptions.InvalidSemanticsException
-import org.neo4j.exceptions.SyntaxException
 import org.neo4j.monitoring.Monitors
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.MapValue
@@ -66,8 +61,45 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
   def pipeline(query: String): Pipeline.Instance =
     Pipeline.Instance(monitors, query, signatures)
 
-  def plan(query: String, params: MapValue) =
-    planner.instance(query, params, defaultGraphName).plan
+  private def instance(query: String, params: MapValue) =
+    planner.instance(query, params, defaultGraphName)
+
+  private def plan(query: String, params: MapValue) =
+    instance(query, params).plan
+
+  "Rewrites:" - {
+
+    "simple asLocal" in {
+      instance("", params)
+        .asLocal(init(defaultGraph)
+          .leaf(Seq(return_(literal(1).as("x"))), Seq("x")))
+        .check(_.query.asSingleQuery.clauses.shouldEqual(Seq(
+          return_(literal(1).as("x")),
+        )))
+    }
+
+    "simple asLocal with imports" in {
+      instance("", params)
+        .asLocal(init(defaultGraph, Seq(), Seq("p", "q"))
+          .leaf(Seq(return_(literal(1).as("x"))), Seq("x")))
+        .check(_.query.asSingleQuery.clauses.shouldEqual(Seq(
+          with_(parameter("@@p", any).as("p"), parameter("@@q", any).as("q")),
+          return_(literal(1).as("x")),
+        )))
+    }
+
+    "simple asLocal with input and imports" in {
+      instance("", params)
+        .asLocal(init(defaultGraph, Seq(), Seq("p", "q"))
+          .leaf(Seq(), Seq("a", "b"))
+          .leaf(Seq(return_(literal(1).as("x"))), Seq("x")))
+        .check(_.query.asSingleQuery.clauses.shouldEqual(Seq(
+          input(varFor("a"), varFor("b")),
+          with_(parameter("@@p", any).as("p"), parameter("@@q", any).as("q")),
+          return_(literal(1).as("x")),
+        )))
+    }
+  }
 
 
   "Read/Write" - {
@@ -391,4 +423,12 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
       a
     }
   }
+
+  implicit class FullyParsedQueryHelp(q: FullyParsedQuery) {
+
+    def asSingleQuery: SingleQuery =
+      q.state.statement().as[Query].part.as[SingleQuery]
+  }
+
+  def any: CypherType = symbols.CTAny
 }
