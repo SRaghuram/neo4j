@@ -318,7 +318,7 @@ object ArgumentStateMap {
       val end: Int = cursor.row
       val last = reserve(arg, end - start)
       filteringMorsel.cancelRows(start, start + last)
-      //if moveToEnd didn't move use we now must move one step forwards
+      // if moveToEnd didn't move us, we now must move one step forwards
       if (end - start == 0) {
         cursor.next()
       }
