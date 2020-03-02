@@ -159,6 +159,17 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     result.toSet should be(expected)
   }
 
+  test("should not show role privileges as non admin") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    setupUserWithCustomRole()
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("joe", "soap", "SHOW ROLE custom PRIVILEGES")
+    } should have message "Permission denied."
+  }
+
   test("should give nothing when showing privileges for non-existing role") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -241,6 +252,27 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     )
 
     result.toSet should be(expected)
+  }
+
+  test("should show user privileges for current user as non admin") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+
+    // WHEN
+    executeOnSystem("joe", "soap", "SHOW USER joe PRIVILEGES", resultHandler = (row, _) => {
+      // THEN
+      val res = Map(
+        "access" -> row.get("access"),
+        "action" -> row.get("action"),
+        "resource" -> row.get("resource"),
+        "graph" -> row.get("graph"),
+        "segment" -> row.get("segment"),
+        "role" -> row.get("role"),
+        "user" -> row.get("user")
+      )
+      res should be(access().database(DEFAULT).role("PUBLIC").user("joe").map)
+    }) should be(1)
   }
 
   test("should give nothing when showing privileges for non-existing user") {

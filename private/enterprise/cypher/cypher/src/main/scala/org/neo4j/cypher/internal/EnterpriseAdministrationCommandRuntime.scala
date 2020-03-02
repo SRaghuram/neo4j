@@ -495,7 +495,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
            |ORDER BY role, graph, segment, resource, action
         """.stripMargin
 
-      val (grantee: Value, query) = scope match {
+      val (grantee: Value, query, updatedSource) = scope match {
         case ShowRolePrivileges(name) => (Values.utf8Value(name),
           s"""
              |OPTIONAL MATCH (r:Role) WHERE r.name = $$grantee WITH r
@@ -503,9 +503,14 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
              |WITH g, p, res, d, $segmentColumn AS segment, r ORDER BY d.name, r.name, segment
              |$returnColumns
              |$orderBy
-          """.stripMargin
+          """.stripMargin,
+          source
         )
-        case ShowUserPrivileges(name) => (Values.utf8Value(name),
+        case ShowUserPrivileges(name) =>
+          val currentUser = securityContext.subject().username()
+          // Should be able to see your own privileges without admin privilege, source is check for admin privilege
+          val newSource = if (name.equals(currentUser)) None else source
+          (Values.utf8Value(name),
           s"""
              |OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r:Role) WHERE u.name = $$grantee WITH r, u
              |$privilegeMatch
@@ -518,7 +523,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
              |WITH g, p, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, r.name, segment
              |$returnColumns, u.name AS user
              |$orderBy
-          """.stripMargin
+          """.stripMargin,
+          newSource
         )
         case ShowAllPrivileges() => (Values.NO_VALUE,
           s"""
@@ -527,12 +533,13 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
              |WITH g, p, res, d, $segmentColumn AS segment, r ORDER BY d.name, r.name, segment
              |$returnColumns
              |$orderBy
-          """.stripMargin
+          """.stripMargin,
+          source
         )
         case _ => throw new IllegalStateException(s"Invalid show privilege scope '$scope'")
       }
       SystemCommandExecutionPlan("ShowPrivileges", normalExecutionEngine, query, VirtualValues.map(Array("grantee"), Array(grantee)),
-        source = source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)))
+        source = updatedSource.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)))
 
     // CREATE [OR REPLACE] DATABASE foo [IF NOT EXISTS]
     case CreateDatabase(source, normalizedName) => (context, parameterMapping, securityContext) =>

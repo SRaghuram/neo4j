@@ -68,7 +68,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   )
 
   lazy val defaultRolePrivileges: Set[Map[String, AnyRef]] = Set(
-    access().database("DEFAULT").role("PUBLIC").map,
+    access().database(DEFAULT).role("PUBLIC").map,
 
     access().role("reader").map,
     traverse().role("reader").node("*").map,
