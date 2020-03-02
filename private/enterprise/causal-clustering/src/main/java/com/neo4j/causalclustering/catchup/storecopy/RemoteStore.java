@@ -29,6 +29,7 @@ import org.neo4j.storageengine.api.StoreId;
 import static com.neo4j.causalclustering.catchup.storecopy.TxPullRequestContext.createContextFromCatchingUp;
 import static com.neo4j.causalclustering.catchup.storecopy.TxPullRequestContext.createContextFromStoreCopy;
 import static com.neo4j.causalclustering.catchup.storecopy.TxPuller.createTxPuller;
+import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 
 /**
  * Entry point for remote store related RPC.
@@ -72,7 +73,7 @@ public class RemoteStore
             boolean forceTransactionLogRotation )
             throws StoreCopyFailedException, IOException
     {
-        CommitState commitState = commitStateHelper.getStoreState( databaseLayout );
+        CommitState commitState = commitStateHelper.getStoreState( databaseLayout, TRACER_SUPPLIER.get() );
         log.info( "Store commit state: " + commitState );
 
         TxPullRequestContext txPullRequestContext = createContextFromCatchingUp( expectedStoreId, commitState );

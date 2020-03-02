@@ -96,7 +96,7 @@ class HighLimitStoreMigrationTest
     {
         File neoStoreFile = createNeoStoreFile( fileSystem, databaseLayout );
         long value = MetaDataStore.versionStringToLong( storeVersion );
-        MetaDataStore.setRecord( pageCache, neoStoreFile, STORE_VERSION, value );
+        MetaDataStore.setRecord( pageCache, neoStoreFile, STORE_VERSION, value, PageCursorTracer.NULL );
         createSchemaStoreFile( fileSystem, databaseLayout, pageCache );
     }
 

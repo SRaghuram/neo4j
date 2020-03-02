@@ -20,6 +20,7 @@ import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static org.junit.Assert.assertEquals;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 public class TestStoreId
 {
@@ -50,6 +51,6 @@ public class TestStoreId
 
     private static StoreId doReadStoreId( DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException
     {
-        return MetaDataStore.getStoreId( pageCache, databaseLayout.metadataStore() );
+        return MetaDataStore.getStoreId( pageCache, databaseLayout.metadataStore(), NULL );
     }
 }

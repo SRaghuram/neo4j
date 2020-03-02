@@ -22,6 +22,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StoreId;
 
 import static java.lang.String.format;
+import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 
 class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
 {
@@ -115,7 +116,7 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
             {
                 return null;
             }
-            return storeFiles.readStoreId( databaseLayout );
+            return storeFiles.readStoreId( databaseLayout, TRACER_SUPPLIER.get() );
         }
         catch ( IOException e )
         {

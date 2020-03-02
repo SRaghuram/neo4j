@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.RANDOM_NUMBER;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.TIME;
@@ -328,15 +329,15 @@ class StoreFilesTest
         long upgradeTime = random.nextLong();
         long upgradeId = random.nextLong();
 
-        MetaDataStore.setRecord( pageCache, metadataStore, TIME, creationTime );
-        MetaDataStore.setRecord( pageCache, metadataStore, RANDOM_NUMBER, randomId );
-        MetaDataStore.setRecord( pageCache, metadataStore, STORE_VERSION, storeVersion );
-        MetaDataStore.setRecord( pageCache, metadataStore, UPGRADE_TIME, upgradeTime );
-        MetaDataStore.setRecord( pageCache, metadataStore, UPGRADE_TRANSACTION_ID, upgradeId );
+        MetaDataStore.setRecord( pageCache, metadataStore, TIME, creationTime, NULL );
+        MetaDataStore.setRecord( pageCache, metadataStore, RANDOM_NUMBER, randomId, NULL );
+        MetaDataStore.setRecord( pageCache, metadataStore, STORE_VERSION, storeVersion, NULL );
+        MetaDataStore.setRecord( pageCache, metadataStore, UPGRADE_TIME, upgradeTime, NULL );
+        MetaDataStore.setRecord( pageCache, metadataStore, UPGRADE_TRANSACTION_ID, upgradeId, NULL );
 
         DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( databaseDir );
 
-        StoreId storeId = storeFiles.readStoreId( databaseLayout );
+        StoreId storeId = storeFiles.readStoreId( databaseLayout, NULL );
 
         assertEquals( new StoreId( creationTime, randomId, storeVersion, upgradeTime, upgradeId ), storeId );
     }
@@ -348,7 +349,7 @@ class StoreFilesTest
 
         DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( databaseDir );
 
-        assertThrows( IOException.class, () -> storeFiles.readStoreId( databaseLayout ) );
+        assertThrows( IOException.class, () -> storeFiles.readStoreId( databaseLayout, NULL ) );
     }
 
     @Test

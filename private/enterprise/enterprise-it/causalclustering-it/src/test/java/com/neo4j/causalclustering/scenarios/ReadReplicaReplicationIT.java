@@ -87,10 +87,10 @@ import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.TIME;
-import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
-import static org.neo4j.test.conditions.Conditions.condition;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @ClusterExtension
@@ -405,7 +405,7 @@ class ReadReplicaReplicationIT
     {
         var neoStoreFile = replica.databaseLayout().metadataStore();
         var pageCache = replica.defaultDatabase().getDependencyResolver().resolveDependency( PageCache.class );
-        MetaDataStore.setRecord( pageCache, neoStoreFile, TIME, System.currentTimeMillis() );
+        MetaDataStore.setRecord( pageCache, neoStoreFile, TIME, System.currentTimeMillis(), NULL );
     }
 
     @Test

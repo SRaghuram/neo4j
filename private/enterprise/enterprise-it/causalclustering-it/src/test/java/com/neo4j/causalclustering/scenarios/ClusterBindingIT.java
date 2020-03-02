@@ -45,6 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.RANDOM_NUMBER;
 import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
 
@@ -221,7 +222,7 @@ class ClusterBindingIT
         try ( var jobScheduler = new ThreadPoolJobScheduler();
               var pageCache = StandalonePageCacheFactory.createPageCache( fs, jobScheduler ) )
         {
-            MetaDataStore.setRecord( pageCache, neoStoreFile, RANDOM_NUMBER, System.currentTimeMillis() );
+            MetaDataStore.setRecord( pageCache, neoStoreFile, RANDOM_NUMBER, System.currentTimeMillis(), NULL );
         }
     }
 }

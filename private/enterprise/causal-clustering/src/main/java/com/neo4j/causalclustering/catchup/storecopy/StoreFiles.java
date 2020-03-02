@@ -13,6 +13,7 @@ import java.util.Set;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.storageengine.api.StoreId;
 
@@ -103,11 +104,12 @@ public class StoreFiles
      * Read store ID from the metadata store.
      *
      * @param databaseLayout the database layout.
+     * @param cursorTracer underlying page cursor tracer.
      * @return the store ID, never {@code null}.
      * @throws IOException if there is an error while reading the metadata store file.
      */
-    public StoreId readStoreId( DatabaseLayout databaseLayout ) throws IOException
+    public StoreId readStoreId( DatabaseLayout databaseLayout, PageCursorTracer cursorTracer ) throws IOException
     {
-        return selectStorageEngine().storeId( databaseLayout, pageCache );
+        return selectStorageEngine().storeId( databaseLayout, pageCache, cursorTracer );
     }
 }

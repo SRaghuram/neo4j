@@ -18,6 +18,8 @@ import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 
+import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
+
 public class ReadReplicaDatabaseContext
 {
     private final Database kernelDatabase;
@@ -54,7 +56,7 @@ public class ReadReplicaDatabaseContext
     {
         try
         {
-            return storeFiles.readStoreId( kernelDatabase.getDatabaseLayout() );
+            return storeFiles.readStoreId( kernelDatabase.getDatabaseLayout(), TRACER_SUPPLIER.get() );
         }
         catch ( IOException e )
         {

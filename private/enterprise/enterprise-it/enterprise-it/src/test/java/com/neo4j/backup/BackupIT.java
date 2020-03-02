@@ -1245,13 +1245,13 @@ class BackupIT
     private static long lastTxChecksumOf( DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException
     {
         File neoStore = databaseLayout.metadataStore();
-        return MetaDataStore.getRecord( pageCache, neoStore, Position.LAST_TRANSACTION_CHECKSUM );
+        return MetaDataStore.getRecord( pageCache, neoStore, Position.LAST_TRANSACTION_CHECKSUM, NULL );
     }
 
     private static long getLastCommittedTx( DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException
     {
         File neoStore = databaseLayout.metadataStore();
-        return MetaDataStore.getRecord( pageCache, neoStore, Position.LAST_TRANSACTION_ID );
+        return MetaDataStore.getRecord( pageCache, neoStore, Position.LAST_TRANSACTION_ID, NULL );
     }
 
     private static long getLastCommittedTx( GraphDatabaseService db )
@@ -1261,7 +1261,7 @@ class BackupIT
 
     private static void setUpgradeTimeInMetaDataStore( DatabaseLayout databaseLayout, PageCache pageCache, long value ) throws IOException
     {
-        MetaDataStore.setRecord( pageCache, databaseLayout.metadataStore(), Position.UPGRADE_TIME, value );
+        MetaDataStore.setRecord( pageCache, databaseLayout.metadataStore(), Position.UPGRADE_TIME, value, NULL );
     }
 
     private static List<Label> createIndexes( GraphDatabaseService db, int indexCount )

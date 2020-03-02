@@ -17,6 +17,8 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.Log;
 import org.neo4j.storageengine.api.StoreId;
 
+import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
+
 public class StoreDownloadContext
 {
     private final Database kernelDatabase;
@@ -60,7 +62,7 @@ public class StoreDownloadContext
     {
         try
         {
-            return storeFiles.readStoreId( databaseLayout() );
+            return storeFiles.readStoreId( databaseLayout(), TRACER_SUPPLIER.get() );
         }
         catch ( IOException e )
         {

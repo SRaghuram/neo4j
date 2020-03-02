@@ -41,7 +41,6 @@ import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.ExternallyManagedPageCache;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
-import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionQueue;
@@ -61,6 +60,7 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
+import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.monitoring.tracing.Tracers;
 import org.neo4j.logging.FormattedLog;
@@ -68,7 +68,6 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.token.TokenHolders;
 
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
-import static org.neo4j.kernel.impl.transaction.tracing.CommitEvent.NULL;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
@@ -167,7 +166,7 @@ class RebuildFromLogs
 
             // set last tx id in neostore otherwise the db is not usable
             MetaDataStore.setRecord( pageCache, targetLayout.metadataStore(),
-                    MetaDataStore.Position.LAST_TRANSACTION_ID, lastTxId );
+                    MetaDataStore.Position.LAST_TRANSACTION_ID, lastTxId, PageCursorTracer.NULL );
 
             checkConsistency( targetLayout, pageCache );
         }
@@ -216,7 +215,7 @@ class RebuildFromLogs
             ReadableLogChannel channel = new ReadAheadLogChannel( startingChannel, versionBridge );
             long txId = BASE_TX_ID;
             TransactionQueue queue = new TransactionQueue( 10_000,
-                    ( tx, last ) -> commitProcess.commit( tx, NULL, EXTERNAL ) );
+                    ( tx, last ) -> commitProcess.commit( tx, CommitEvent.NULL, EXTERNAL ) );
             LogEntryReader entryReader = new VersionAwareLogEntryReader();
             try ( IOCursor<CommittedTransactionRepresentation> cursor = new PhysicalTransactionCursor( channel, entryReader ) )
             {

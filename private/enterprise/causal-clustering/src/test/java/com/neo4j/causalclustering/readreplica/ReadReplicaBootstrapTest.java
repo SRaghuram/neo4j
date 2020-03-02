@@ -270,7 +270,7 @@ class ReadReplicaBootstrapTest
     private ReadReplicaDatabaseContext normalDatabase( NamedDatabaseId namedDatabaseId, StoreId storeId, Boolean isEmpty ) throws IOException
     {
         StoreFiles storeFiles = mock( StoreFiles.class );
-        when( storeFiles.readStoreId( any() ) ).thenReturn( storeId );
+        when( storeFiles.readStoreId( any(), any() ) ).thenReturn( storeId );
         when( storeFiles.isEmpty( any() ) ).thenReturn( isEmpty );
 
         Database kernelDatabase = mock( Database.class );
@@ -284,7 +284,7 @@ class ReadReplicaBootstrapTest
     private ReadReplicaDatabaseContext failToReadLocalStoreId( NamedDatabaseId namedDatabaseId, Class<? extends Throwable> throwableClass ) throws IOException
     {
         StoreFiles storeFiles = mock( StoreFiles.class );
-        when( storeFiles.readStoreId( any() ) ).thenThrow( throwableClass );
+        when( storeFiles.readStoreId( any(), any() ) ).thenThrow( throwableClass );
 
         Database kernelDatabase = mock( Database.class );
         when( kernelDatabase.getNamedDatabaseId() ).thenReturn( namedDatabaseId );

@@ -25,6 +25,8 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 
+import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
+
 /**
  * Instances extending this class represent individual clustered databases in Neo4j.
  *
@@ -82,7 +84,7 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
     {
         try
         {
-            return storeFiles.readStoreId( databaseLayout );
+            return storeFiles.readStoreId( databaseLayout, TRACER_SUPPLIER.get() );
         }
         catch ( IOException e )
         {

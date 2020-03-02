@@ -45,6 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.graphdb.RelationshipType.withName;
 import static org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory.createPageCache;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 
 @TestDirectoryExtension
@@ -185,7 +186,7 @@ class DatabaseRebuildToolTest
               PageCache pageCache = createPageCache( fileSystem, scheduler ) )
         {
             return MetaDataStore.getRecord( pageCache, databaseLayout.metadataStore(),
-                    MetaDataStore.Position.LAST_TRANSACTION_ID );
+                    MetaDataStore.Position.LAST_TRANSACTION_ID, NULL );
         }
         catch ( Exception e )
         {

@@ -25,6 +25,7 @@ import org.neo4j.storageengine.api.StoreId;
 
 import static java.lang.String.format;
 import static org.neo4j.io.fs.FileSystemUtils.isEmptyOrNonExistingDirectory;
+import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 
 class BackupCopyService
 {
@@ -68,9 +69,10 @@ class BackupCopyService
         DatabaseLayout newSuccessfulBackupLayout = DatabaseLayout.ofFlat( newSuccessfulBackupDir.toFile() );
 
         StoreId preExistingBrokenBackupStoreId;
+        var cursorTracer = TRACER_SUPPLIER.get();
         try
         {
-            preExistingBrokenBackupStoreId = storeFiles.readStoreId( preExistingBrokenBackupLayout );
+            preExistingBrokenBackupStoreId = storeFiles.readStoreId( preExistingBrokenBackupLayout, cursorTracer );
         }
         catch ( IOException e )
         {
@@ -81,7 +83,7 @@ class BackupCopyService
         StoreId newSuccessfulBackupStoreId;
         try
         {
-            newSuccessfulBackupStoreId = storeFiles.readStoreId( newSuccessfulBackupLayout );
+            newSuccessfulBackupStoreId = storeFiles.readStoreId( newSuccessfulBackupLayout, cursorTracer );
         }
         catch ( IOException e )
         {

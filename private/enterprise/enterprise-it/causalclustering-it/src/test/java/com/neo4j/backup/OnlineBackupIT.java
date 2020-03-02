@@ -191,8 +191,8 @@ class OnlineBackupIT
         File metadataStore = DatabaseLayout.ofFlat( backupDir.toFile() ).metadataStore();
 
         // update store creation time and store random number
-        MetaDataStore.setRecord( pageCache, metadataStore, TIME, random.nextInt() );
-        MetaDataStore.setRecord( pageCache, metadataStore, RANDOM_NUMBER, random.nextInt() );
+        MetaDataStore.setRecord( pageCache, metadataStore, TIME, random.nextInt(), NULL );
+        MetaDataStore.setRecord( pageCache, metadataStore, RANDOM_NUMBER, random.nextInt(), NULL );
     }
 
     private OnlineBackup.Result executeBackupWithFallbackToFull()

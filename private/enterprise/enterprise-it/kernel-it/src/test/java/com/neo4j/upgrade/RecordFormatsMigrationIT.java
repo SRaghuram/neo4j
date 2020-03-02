@@ -49,6 +49,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 
 @Neo4jLayoutExtension
 class RecordFormatsMigrationIT
@@ -175,7 +176,7 @@ class RecordFormatsMigrationIT
               PageCache pageCache = ConfigurableStandalonePageCacheFactory.createPageCache( fileSystem, config, jobScheduler ) )
         {
             RecordFormats actual = RecordFormatSelector.selectForStoreOrConfig( config, databaseLayout,
-                    fileSystem, pageCache, NullLogProvider.getInstance() );
+                    fileSystem, pageCache, NullLogProvider.getInstance(), NULL );
             assertNotNull( actual );
             assertEquals( formatName, actual.name() );
         }

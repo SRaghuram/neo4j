@@ -12,6 +12,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.NoSuchTransactionException;
 import org.neo4j.kernel.impl.transaction.log.ReadOnlyTransactionStore;
@@ -39,9 +40,9 @@ public class CommitStateHelper
         this.storageEngineFactory = storageEngineFactory;
     }
 
-    CommitState getStoreState( DatabaseLayout databaseLayout ) throws IOException
+    CommitState getStoreState( DatabaseLayout databaseLayout, PageCursorTracer cursorTracer ) throws IOException
     {
-        TransactionIdStore txIdStore = storageEngineFactory.readOnlyTransactionIdStore( fs, databaseLayout, pageCache );
+        TransactionIdStore txIdStore = storageEngineFactory.readOnlyTransactionIdStore( fs, databaseLayout, pageCache, cursorTracer );
         long lastCommittedTxId = txIdStore.getLastCommittedTransactionId();
 
         Optional<Long> latestTransactionLogIndex = getLatestTransactionLogIndex( lastCommittedTxId, databaseLayout );

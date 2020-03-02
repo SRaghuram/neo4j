@@ -95,7 +95,7 @@ class CatchupPollingProcessTest
         when( kernelDatabase.isStarted() ).thenReturn( true );
 
         StoreFiles storeFiles = mock( StoreFiles.class );
-        when( storeFiles.readStoreId( any() )).thenReturn( storeId );
+        when( storeFiles.readStoreId( any(), any() ) ).thenReturn( storeId );
 
         databaseContext = spy( new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, mock( LogFiles.class ),
                 new ClusterInternalDbmsOperator() ) );

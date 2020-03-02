@@ -59,6 +59,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.store.format.standard.Standard.LATEST_STORE_VERSION;
 import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
 import static org.neo4j.logging.LogAssertions.assertThat;
@@ -329,7 +330,7 @@ class RaftBootstrapperIT
                 databaseLayout, config, monitors );
 
         LastCommittedIndexFinder lastCommittedIndexFinder = new LastCommittedIndexFinder(
-                new ReadOnlyTransactionIdStore( fileSystem, pageCache, databaseLayout ),
+                new ReadOnlyTransactionIdStore( fileSystem, pageCache, databaseLayout, NULL ),
                 transactionStore, logProvider );
 
         long lastCommittedIndex = lastCommittedIndexFinder.getLastCommittedIndex();

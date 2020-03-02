@@ -27,6 +27,7 @@ import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChecksumChannel;
@@ -106,6 +107,7 @@ public class RaftBootstrapper
     {
         try
         {
+            var cursorTracer = TRACER_SUPPLIER.get();
             log.info( "Bootstrapping database " + bootstrapContext.databaseId().name() + " for members " + members );
             if ( isStorePresent() )
             {
@@ -118,9 +120,9 @@ public class RaftBootstrapper
             }
             else
             {
-                createStore( storeId );
+                createStore( storeId, cursorTracer );
             }
-            appendNullTransactionLogEntryToSetRaftIndexToMinusOne( bootstrapContext );
+            appendNullTransactionLogEntryToSetRaftIndexToMinusOne( bootstrapContext, cursorTracer );
             CoreSnapshot snapshot = buildCoreSnapshot( members );
             log.info( "Bootstrapping of the database " + bootstrapContext.databaseId().name() + " completed " + snapshot );
             return snapshot;
@@ -174,7 +176,7 @@ public class RaftBootstrapper
         return storageEngineFactory.storageExists( fs, bootstrapContext.databaseLayout(), pageCache );
     }
 
-    private void createStore( StoreId storeId ) throws IOException
+    private void createStore( StoreId storeId, PageCursorTracer cursorTracer ) throws IOException
     {
         File bootstrapRootDir = new File( bootstrapContext.databaseLayout().databaseDirectory(), TEMP_BOOTSTRAP_DIRECTORY_NAME );
         fs.deleteRecursively( bootstrapRootDir ); // make sure temp bootstrap directory does not exist
@@ -186,7 +188,8 @@ public class RaftBootstrapper
             if ( storeId != null )
             {
                 log.info( "Changing store ID of bootstrapped database to " + storeId );
-                MetaDataStore.setStoreId( pageCache, bootstrapDatabaseLayout.metadataStore(), storeId, BASE_TX_CHECKSUM, BASE_TX_COMMIT_TIMESTAMP );
+                MetaDataStore.setStoreId( pageCache, bootstrapDatabaseLayout.metadataStore(), storeId, BASE_TX_CHECKSUM, BASE_TX_COMMIT_TIMESTAMP,
+                        cursorTracer );
             }
             log.info( "Moving created store files from " + bootstrapDatabaseLayout + " to " + bootstrapContext.databaseLayout() );
             bootstrapContext.replaceWith( bootstrapDatabaseLayout.databaseDirectory() );
@@ -241,13 +244,15 @@ public class RaftBootstrapper
      * the beginning of time (Raft log index -1) is created. This is used during recovery by the Raft machinery to pick up
      * where it left off. It is also highly useful for debugging.
      */
-    private void appendNullTransactionLogEntryToSetRaftIndexToMinusOne( BootstrapContext bootstrapContext ) throws IOException
+    private void appendNullTransactionLogEntryToSetRaftIndexToMinusOne( BootstrapContext bootstrapContext,
+            PageCursorTracer cursorTracer ) throws IOException
     {
         DatabaseLayout layout = bootstrapContext.databaseLayout();
         try ( DatabasePageCache databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY ) )
         {
-            StoreId storeId = storageEngineFactory.storeId( layout, pageCache );
-            TransactionIdStore readOnlyTransactionIdStore = storageEngineFactory.readOnlyTransactionIdStore( fs, layout, databasePageCache );
+            StoreId storeId = storageEngineFactory.storeId( layout, pageCache, cursorTracer );
+            TransactionIdStore readOnlyTransactionIdStore = storageEngineFactory.readOnlyTransactionIdStore( fs, layout, databasePageCache,
+                    cursorTracer );
             LogFiles logFiles = LogFilesBuilder
                     .activeFilesBuilder( layout, fs, databasePageCache )
                     .withConfig( config )
@@ -277,7 +282,7 @@ public class RaftBootstrapper
                     NULL ) )
             {
                 transactionMetaDataStore.setLastCommittedAndClosedTransactionId( dummyTransactionId, 0, currentTimeMillis(),
-                        logPositionMarker.getByteOffset(), logPositionMarker.getLogVersion(), TRACER_SUPPLIER.get() );
+                        logPositionMarker.getByteOffset(), logPositionMarker.getLogVersion(), cursorTracer );
             }
         }
     }

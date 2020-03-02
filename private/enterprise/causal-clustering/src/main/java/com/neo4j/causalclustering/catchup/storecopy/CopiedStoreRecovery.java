@@ -25,6 +25,7 @@ import org.neo4j.storageengine.migration.UpgradeNotAllowedException;
 import static java.lang.String.format;
 import static org.apache.commons.lang3.exception.ExceptionUtils.indexOfThrowable;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
+import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 import static org.neo4j.kernel.recovery.Recovery.performRecovery;
 
 public class CopiedStoreRecovery extends LifecycleAdapter
@@ -57,8 +58,10 @@ public class CopiedStoreRecovery extends LifecycleAdapter
             throw new DatabaseShutdownException( "Abort store-copied store recovery due to database shutdown" );
         }
 
-        StoreVersionCheck storeVersionCheck = storageEngineFactory.versionCheck( fs, databaseLayout, config, pageCache, NullLogService.getInstance() );
-        Optional<String> storeVersion = storeVersionCheck.storeVersion();
+        var pageCacheTracer = databaseTracers.getPageCacheTracer();
+        StoreVersionCheck storeVersionCheck = storageEngineFactory.versionCheck( fs, databaseLayout, config, pageCache, NullLogService.getInstance(),
+                pageCacheTracer );
+        Optional<String> storeVersion = storeVersionCheck.storeVersion( TRACER_SUPPLIER.get() );
         if ( databaseLayout.getDatabaseName().equals( GraphDatabaseSettings.SYSTEM_DATABASE_NAME ) )
         {
             // TODO: System database does not support older formats, remove this when it does!

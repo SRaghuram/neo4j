@@ -36,19 +36,19 @@ import static org.mockito.Mockito.when;
 
 class DefaultBackupStrategyTest
 {
-    private BackupDelegator backupDelegator = mock( BackupDelegator.class );
-    private DatabaseLayout desiredBackupLayout = mock( DatabaseLayout.class );
-    private SocketAddress address = new SocketAddress( "neo4j.com", 6362 );
-    private StoreFiles storeFiles = mock( StoreFiles.class );
-    private StoreId expectedStoreId = new StoreId( 11, 22, 33, 44, 55 );
-    private NamedDatabaseId namedDatabaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
-    private DefaultBackupStrategy strategy = new DefaultBackupStrategy( backupDelegator, NullLogProvider.getInstance(), storeFiles );
+    private final BackupDelegator backupDelegator = mock( BackupDelegator.class );
+    private final DatabaseLayout desiredBackupLayout = mock( DatabaseLayout.class );
+    private final SocketAddress address = new SocketAddress( "neo4j.com", 6362 );
+    private final StoreFiles storeFiles = mock( StoreFiles.class );
+    private final StoreId expectedStoreId = new StoreId( 11, 22, 33, 44, 55 );
+    private final NamedDatabaseId namedDatabaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
+    private final DefaultBackupStrategy strategy = new DefaultBackupStrategy( backupDelegator, NullLogProvider.getInstance(), storeFiles );
     private final String databaseName = "database name";
 
     @BeforeEach
     void setup() throws IOException, StoreIdDownloadFailedException, DatabaseIdDownloadFailedException
     {
-        when( storeFiles.readStoreId( any() ) ).thenReturn( expectedStoreId );
+        when( storeFiles.readStoreId( any(), any() ) ).thenReturn( expectedStoreId );
         when( backupDelegator.fetchDatabaseId( any(), anyString() ) ).thenReturn( namedDatabaseId );
         when( backupDelegator.fetchStoreId( any(), any() ) ).thenReturn( expectedStoreId );
     }
@@ -70,7 +70,7 @@ class DefaultBackupStrategyTest
     void fullBackupUsesCorrectAddress() throws Exception
     {
         // given ID of the local store can't be fetched
-        doThrow( IOException.class ).when( storeFiles ).readStoreId( any() );
+        doThrow( IOException.class ).when( storeFiles ).readStoreId( any(), any() );
 
         // when
         strategy.performFullBackup( desiredBackupLayout, address, databaseName );
@@ -98,7 +98,7 @@ class DefaultBackupStrategyTest
     void fullRunsRetrieveStoreWithTargetsStoreId() throws Exception
     {
         // given
-        when( storeFiles.readStoreId( any() ) ).thenThrow( IOException.class );
+        when( storeFiles.readStoreId( any(), any() ) ).thenThrow( IOException.class );
 
         // when
         strategy.performFullBackup( desiredBackupLayout, address, databaseName );
@@ -192,7 +192,7 @@ class DefaultBackupStrategyTest
         doThrow( storeCopyFailedException ).when( backupDelegator ).copy( any(), any(), any(), any() );
 
         // and
-        when( storeFiles.readStoreId( any() ) ).thenThrow( IOException.class );
+        when( storeFiles.readStoreId( any(), any() ) ).thenThrow( IOException.class );
 
         // when
         BackupExecutionException error = assertThrows( BackupExecutionException.class,
@@ -224,7 +224,7 @@ class DefaultBackupStrategyTest
     void exceptionWhenStoreMismatchNoExistingBackup() throws Exception
     {
         // given
-        when( storeFiles.readStoreId( any() ) ).thenThrow( IOException.class );
+        when( storeFiles.readStoreId( any(), any() ) ).thenThrow( IOException.class );
 
         // when
         BackupExecutionException error = assertThrows( BackupExecutionException.class,
@@ -238,7 +238,7 @@ class DefaultBackupStrategyTest
     void exceptionWhenStoreMismatch() throws Exception
     {
         // given
-        when( storeFiles.readStoreId( any() ) ).thenReturn( new StoreId( 5, 4, 3, 2, 1 ) );
+        when( storeFiles.readStoreId( any(), any() ) ).thenReturn( new StoreId( 5, 4, 3, 2, 1 ) );
 
         // when
         BackupExecutionException error = assertThrows( BackupExecutionException.class,
@@ -252,7 +252,7 @@ class DefaultBackupStrategyTest
     void fullBackupFailsWhenTargetHasStoreId() throws Exception
     {
         // given
-        when( storeFiles.readStoreId( any() ) ).thenReturn( expectedStoreId );
+        when( storeFiles.readStoreId( any(), any() ) ).thenReturn( expectedStoreId );
 
         // when
         BackupExecutionException error = assertThrows( BackupExecutionException.class,

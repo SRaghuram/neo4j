@@ -158,7 +158,7 @@ class StoreDownloaderTest
 
         StoreFiles storeFiles = mock( StoreFiles.class );
         when( storeFiles.isEmpty( any() ) ).thenReturn( isEmpty );
-        when( storeFiles.readStoreId( any() ) ).thenReturn( storeId );
+        when( storeFiles.readStoreId( any(), any() ) ).thenReturn( storeId );
 
         LogFiles transactionLogs = mock( LogFiles.class );
 

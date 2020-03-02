@@ -43,6 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 
 class StoreCopyCommandIT extends AbstractCommandIT
 {
@@ -398,7 +399,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
     {
         RecordFormats recordFormats = Objects.requireNonNull(
                 RecordFormatSelector.selectForStore( databaseAPI.databaseLayout().getNeo4jLayout().databaseLayout( databaseName ), fs, pageCache,
-                        NullLogProvider.getInstance() ) );
+                        NullLogProvider.getInstance(), NULL ) );
         assertEquals( formatFamily, recordFormats.getFormatFamily() );
     }
 

@@ -29,6 +29,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
 
 @PageCacheExtension
@@ -74,7 +75,7 @@ class StoreInfoCommandEnterpriseTest
     {
         File neoStoreFile = createNeoStoreFile();
         long value = MetaDataStore.versionStringToLong( storeVersion );
-        MetaDataStore.setRecord( pageCache, neoStoreFile, STORE_VERSION, value );
+        MetaDataStore.setRecord( pageCache, neoStoreFile, STORE_VERSION, value, NULL );
     }
 
     private File createNeoStoreFile() throws IOException
