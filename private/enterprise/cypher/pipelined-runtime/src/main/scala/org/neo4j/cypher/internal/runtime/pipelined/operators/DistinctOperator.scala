@@ -61,14 +61,7 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
                          state: QueryState,
                          resources: QueryResources): Unit = {
 
-      val queryState = new SlottedQueryState(state.queryContext,
-        resources = null,
-        params = state.params,
-        resources.expressionCursors,
-        Array.empty[IndexReadSession],
-        resources.expressionVariables(state.nExpressionSlots),
-        state.subscriber,
-        NoMemoryTracker)
+      val queryState = state.queryStateForExpressionEvaluation(resources)
 
       argumentStateMap.filterWithSideEffect[DistinctState](outputMorsel,
         (distinctState, _) => distinctState,

@@ -146,14 +146,7 @@ class OptionalExpandIntoOperator(val workIdentity: WorkIdentity,
 
     override protected def setUp(state: QueryState,
                                  resources: QueryResources): Unit = {
-      expressionState = new SlottedQueryState(state.queryContext,
-        resources = null,
-        params = state.params,
-        resources.expressionCursors,
-        Array.empty[IndexReadSession],
-        resources.expressionVariables(state.nExpressionSlots),
-        state.subscriber,
-        NoMemoryTracker)
+      expressionState = state.queryStateForExpressionEvaluation(resources)
     }
 
     override protected def writeRow(outputRow: MorselFullCursor,

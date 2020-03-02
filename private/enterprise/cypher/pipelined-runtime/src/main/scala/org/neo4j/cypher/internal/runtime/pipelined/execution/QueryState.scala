@@ -6,22 +6,52 @@
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
 import org.neo4j.cypher.internal.runtime.InputDataStream
+import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
 
 /**
- * The query state of the pipelined runtime
+ * The query state of the pipelined runtime.
+ * It extends [[SlottedQueryState]] for convenience of evaluating expressions that only need to access the CypherRow.
  */
 case class QueryState(queryContext: QueryContext,
-                      params: Array[AnyValue],
-                      subscriber: QuerySubscriber,
+                      override val params: Array[AnyValue],
+                      override val subscriber: QuerySubscriber,
                       flowControl: FlowControl,
                       morselSize: Int,
-                      queryIndexes: Array[IndexReadSession],
+                      override val queryIndexes: Array[IndexReadSession],
                       numberOfWorkers: Int,
                       nExpressionSlots: Int,
-                      prepopulateResults: Boolean,
+                      override val prePopulateResults: Boolean,
                       doProfile: Boolean,
-                      input: InputDataStream)
+                      override val input: InputDataStream)
+  extends SlottedQueryState(queryContext,
+    null,
+    params,
+    null,
+    Array.empty[IndexReadSession],
+    null,
+    subscriber,
+    NoMemoryTracker,
+    prePopulateResults = prePopulateResults
+  ) {
+
+  /**
+   * If more complex expressions need to be evaluated (i.e. not just accessing the CypherRow, use this method to obtain
+   * a suitable QueryState for that.
+   * @param resources the resources of the current worker
+   */
+  def queryStateForExpressionEvaluation(resources: QueryResources): SlottedQueryState = {
+    new SlottedQueryState(queryContext,
+      null,
+      params,
+      resources.expressionCursors,
+      Array.empty[IndexReadSession],
+      resources.expressionVariables(nExpressionSlots),
+      subscriber,
+      NoMemoryTracker)
+  }
+}

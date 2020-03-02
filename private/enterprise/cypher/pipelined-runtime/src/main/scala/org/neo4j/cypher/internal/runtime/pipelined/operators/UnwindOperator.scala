@@ -66,14 +66,7 @@ class UnwindOperator(val workIdentity: WorkIdentity,
 
     override protected def initializeInnerLoop(state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
 
-      val queryState = new SlottedQueryState(state.queryContext,
-        resources = null,
-        params = state.params,
-        resources.expressionCursors,
-        Array.empty[IndexReadSession],
-        resources.expressionVariables(state.nExpressionSlots),
-        state.subscriber,
-        NoMemoryTracker)
+      val queryState = state.queryStateForExpressionEvaluation(resources)
 
       initExecutionContext.copyFrom(inputCursor, inputMorsel.longsPerRow, inputMorsel.refsPerRow)
       val value = collection(initExecutionContext, queryState)

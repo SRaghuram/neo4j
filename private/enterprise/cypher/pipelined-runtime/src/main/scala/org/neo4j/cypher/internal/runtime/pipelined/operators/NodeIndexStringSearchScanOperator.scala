@@ -100,14 +100,7 @@ abstract class NodeIndexStringSearchScanOperator(val workIdentity: WorkIdentity,
     override protected def initializeInnerLoop(state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
 
       val read = state.queryContext.transactionalContext.dataRead
-      val queryState = new SlottedQueryState(state.queryContext,
-        resources = null,
-        params = state.params,
-        resources.expressionCursors,
-        Array.empty[IndexReadSession],
-        resources.expressionVariables(state.nExpressionSlots),
-        state.subscriber,
-        NoMemoryTracker)
+      val queryState = state.queryStateForExpressionEvaluation(resources)
 
       initExecutionContext.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
       val value = valueExpr(initExecutionContext, queryState)

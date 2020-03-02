@@ -52,14 +52,7 @@ object CountingState {
   def evaluateCountValue(state: QueryState,
                          resources: QueryResources,
                          countExpression: Expression): Long = {
-    val queryState = new SlottedQueryState(state.queryContext,
-                                           resources = null,
-                                           params = state.params,
-                                           resources.expressionCursors,
-                                           Array.empty[IndexReadSession],
-                                           resources.expressionVariables(state.nExpressionSlots),
-                                           state.subscriber,
-                                           NoMemoryTracker)
+    val queryState = state.queryStateForExpressionEvaluation(resources)
 
     val countValue = countExpression(CypherRow.empty, queryState)
     evaluateCountValue(countValue)

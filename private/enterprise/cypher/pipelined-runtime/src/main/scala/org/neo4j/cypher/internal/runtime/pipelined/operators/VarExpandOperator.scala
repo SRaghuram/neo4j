@@ -148,14 +148,7 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
 
     override protected def enterOperate(state: QueryState, resources: QueryResources): Unit = {
       if (tempNodeOffset != NO_PREDICATE_OFFSET || tempRelationshipOffset != NO_PREDICATE_OFFSET) {
-        predicateState = new SlottedQueryState(state.queryContext,
-          resources = null,
-          params = state.params,
-          resources.expressionCursors,
-          Array.empty[IndexReadSession],
-          resources.expressionVariables(state.nExpressionSlots),
-          state.subscriber,
-          NoMemoryTracker)
+        predicateState = state.queryStateForExpressionEvaluation(resources)
       }
 
       if (varExpandCursor != null) {

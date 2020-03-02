@@ -57,22 +57,13 @@ class UnionTask(val inputMorsel: Morsel,
   override def operate(outputMorsel: Morsel,
                        state: QueryState,
                        resources: QueryResources): Unit = {
-    val slottedQueryState = new SlottedQueryState(state.queryContext,
-      resources = null,
-      params = state.params,
-      resources.expressionCursors,
-      Array.empty[IndexReadSession],
-      resources.expressionVariables(state.nExpressionSlots),
-      state.subscriber,
-      NoMemoryTracker)
-
     val inputCursor = inputMorsel.fullCursor(onFirstRow = false)
     val outputCursor = outputMorsel.fullCursor(onFirstRow = true)
 
     // We write one output row per input row.
     // Since the input morsel can at most have as many rows as the output morsel, we don't need to check `outputCursor.onValidRow()`.
     while(inputCursor.next()) {
-      rowMapping.mapRows(inputCursor, outputCursor, slottedQueryState)
+      rowMapping.mapRows(inputCursor, outputCursor, state)
       outputCursor.next()
     }
     outputCursor.truncate()

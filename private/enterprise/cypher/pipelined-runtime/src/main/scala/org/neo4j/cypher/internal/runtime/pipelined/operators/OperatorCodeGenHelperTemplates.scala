@@ -175,7 +175,7 @@ object OperatorCodeGenHelperTemplates {
   val PRE_POPULATE_RESULTS_V: LocalVariable =
     variable[Boolean]("prePopulateResults",
       invoke(QUERY_STATE,
-        method[QueryState, Boolean]("prepopulateResults")))
+        method[QueryState, Boolean]("prePopulateResults")))
 
   val PRE_POPULATE_RESULTS: IntermediateRepresentation =
     load(PRE_POPULATE_RESULTS_V)

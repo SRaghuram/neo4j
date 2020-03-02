@@ -106,14 +106,7 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
       // For every input row, set up index seek lambdas with index queries computed on the current input row,
       // execute the first index query of all index seeks, and point all cursors except the innermost (rhs) at the first result
       val read = state.queryContext.transactionalContext.transaction.dataRead()
-      val queryState = new SlottedQueryState(state.queryContext,
-                                             resources = null,
-                                             params = state.params,
-                                             resources.expressionCursors,
-                                             Array.empty[IndexReadSession],
-                                             resources.expressionVariables(state.nExpressionSlots),
-                                             state.subscriber,
-                                             NoMemoryTracker)
+      val queryState = state.queryStateForExpressionEvaluation(resources)
 
       initExecutionContext.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences) // Copy arguments from the input row
       var i = 0

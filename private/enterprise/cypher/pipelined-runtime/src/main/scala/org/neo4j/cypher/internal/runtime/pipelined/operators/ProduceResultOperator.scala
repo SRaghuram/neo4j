@@ -168,17 +168,6 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
   protected def produceOutput(output: MorselReadCursor,
                               state: QueryState,
                               resources: QueryResources): Int = {
-    //TODO this is not really needed since all we are doing in the expressions is accessing the ExecutionContext
-    val queryState = new SlottedQueryState(state.queryContext,
-      resources = null,
-      params = state.params,
-      resources.expressionCursors,
-      Array.empty[IndexReadSession],
-      resources.expressionVariables(state.nExpressionSlots),
-      state.subscriber,
-      NoMemoryTracker,
-      prePopulateResults = state.prepopulateResults)
-
     val subscriber: QuerySubscriber = state.subscriber
     var served = 0
     val demand: Long = state.flowControl.getDemand
@@ -187,8 +176,8 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
       subscriber.onRecord()
       var i = 0
       while (i < expressions.length) {
-        val value = expressions(i)(output, queryState)
-        if (state.prepopulateResults) {
+        val value = expressions(i)(output, state)
+        if (state.prePopulateResults) {
           ValuePopulation.populate(value)
         }
         subscriber.onField(i, value)

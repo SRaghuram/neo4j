@@ -37,14 +37,7 @@ class FilterOperator(val workIdentity: WorkIdentity,
                        state: QueryState,
                        resources: QueryResources): Unit = {
 
-    val queryState = new SlottedQueryState(state.queryContext,
-      resources = null,
-      params = state.params,
-      resources.expressionCursors,
-      Array.empty[IndexReadSession],
-      resources.expressionVariables(state.nExpressionSlots),
-      state.subscriber,
-      NoMemoryTracker)
+    val queryState = state.queryStateForExpressionEvaluation(resources)
 
     val readCursor = morsel.readCursor()
     val writeCursor = morsel.writeCursor(onFirstRow = true)

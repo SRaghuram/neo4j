@@ -108,14 +108,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
                                  resources: QueryResources,
                                  operatorExecutionEvent: OperatorProfileEvent): PreAggregatedOutput = {
 
-        val queryState = new SlottedQueryState(state.queryContext,
-          resources = null,
-          params = state.params,
-          resources.expressionCursors,
-          Array.empty[IndexReadSession],
-          resources.expressionVariables(state.nExpressionSlots),
-          state.subscriber,
-          NoMemoryTracker)
+        val queryState = state.queryStateForExpressionEvaluation(resources)
 
         val preAggregated = ArgumentStateMap.map(argumentSlotOffset,
           outputMorsel,
