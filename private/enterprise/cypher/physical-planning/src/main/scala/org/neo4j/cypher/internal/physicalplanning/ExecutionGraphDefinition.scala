@@ -94,9 +94,14 @@ sealed trait BufferVariant
 case object RegularBufferVariant extends BufferVariant
 
 /**
- * A buffer between two pipelines before an Optional operator, or a delegate after an ApplyBuffer. Maps to an OptionalPipelinedBuffer.
+ * A buffer between two pipelines before an Optional/Anti operator, or a delegate after an ApplyBuffer. Maps to an OptionalMorselBuffer/AntiMorselBuffer.
  */
-case class OptionalBufferVariant(argumentStateMapId: ArgumentStateMapId) extends BufferVariant
+case class OptionalBufferVariant(argumentStateMapId: ArgumentStateMapId,
+                                 optionalBufferVariantType: OptionalBufferVariantType) extends BufferVariant
+
+sealed trait OptionalBufferVariantType
+case object OptionalType extends OptionalBufferVariantType
+case object AntiType extends OptionalBufferVariantType
 
 /**
  * The information representing the initialization of a receiver with a certain initial count.

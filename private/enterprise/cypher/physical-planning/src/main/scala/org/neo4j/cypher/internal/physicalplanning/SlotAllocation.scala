@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.ir.ShortestPathPattern
 import org.neo4j.cypher.internal.logical.plans.AbstractSelectOrSemiApply
 import org.neo4j.cypher.internal.logical.plans.AbstractSemiApply
 import org.neo4j.cypher.internal.logical.plans.Aggregation
+import org.neo4j.cypher.internal.logical.plans.Anti
 import org.neo4j.cypher.internal.logical.plans.AntiConditionalApply
 import org.neo4j.cypher.internal.logical.plans.Apply
 import org.neo4j.cypher.internal.logical.plans.ApplyPlan
@@ -497,6 +498,9 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         slots.newLong(relName, nullable, CTRelationship)
 
       case Optional(_, _) =>
+        recordArgument(lp)
+
+      case Anti(_) =>
         recordArgument(lp)
 
       case _: ProduceResult |

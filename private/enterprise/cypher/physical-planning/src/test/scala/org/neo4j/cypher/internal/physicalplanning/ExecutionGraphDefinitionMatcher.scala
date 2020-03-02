@@ -269,7 +269,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
           NO_ARGUMENT_STATE_MAPS,
           NO_ARGUMENT_STATE_MAPS,
           NO_ARGUMENT_STATE_MAPS,
-          OptionalBufferVariant(ArgumentStateMapId(asmId)))(SlotConfiguration.empty))
+          OptionalBufferVariant(ArgumentStateMapId(asmId), OptionalType))(SlotConfiguration.empty))
       val out = MorselArgumentStateBufferOutput(BufferId(id),argumentSlotOffset)
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
       new OptionalBufferSequence(bd)

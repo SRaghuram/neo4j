@@ -9,6 +9,7 @@ import org.eclipse.collections.api.map.primitive.MutableObjectIntMap
 import org.eclipse.collections.impl.map.mutable.primitive.ObjectIntHashMap
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.Aggregation
+import org.neo4j.cypher.internal.logical.plans.Anti
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
 import org.neo4j.cypher.internal.logical.plans.Distinct
 import org.neo4j.cypher.internal.logical.plans.Limit
@@ -120,8 +121,9 @@ object PipelineTreeBuilder {
                                     val producingPipelineId: PipelineId,
                                     val argumentStateMapId: ArgumentStateMapId,
                                     val argumentSlotOffset: Int,
-                                    bufferConfiguration: SlotConfiguration) extends BufferDefiner(id, memoryTrackingOperatorId, bufferConfiguration) {
-    override protected def variant: BufferVariant = OptionalBufferVariant(argumentStateMapId)
+                                    bufferConfiguration: SlotConfiguration,
+                                    val optionalBufferVariantType: OptionalBufferVariantType) extends BufferDefiner(id, memoryTrackingOperatorId, bufferConfiguration) {
+    override protected def variant: BufferVariant = OptionalBufferVariant(argumentStateMapId, optionalBufferVariantType)
   }
 
   class DelegateBufferDefiner(id: BufferId,
@@ -247,9 +249,16 @@ object PipelineTreeBuilder {
                           memoryTrackingOperatorId: Id,
                           argumentStateMapId: ArgumentStateMapId,
                           argumentSlotOffset: Int,
-                          bufferSlotConfiguration: SlotConfiguration): OptionalMorselBufferDefiner = {
+                          bufferSlotConfiguration: SlotConfiguration,
+                          optionalBufferVariantType: OptionalBufferVariantType): OptionalMorselBufferDefiner = {
       val x = buffers.size
-      val buffer = new OptionalMorselBufferDefiner(BufferId(x), memoryTrackingOperatorId, producingPipelineId, argumentStateMapId, argumentSlotOffset, bufferSlotConfiguration)
+      val buffer = new OptionalMorselBufferDefiner(BufferId(x),
+                                                   memoryTrackingOperatorId,
+                                                   producingPipelineId,
+                                                   argumentStateMapId,
+                                                   argumentSlotOffset,
+                                                   bufferSlotConfiguration,
+                                                   optionalBufferVariantType)
       buffers += buffer
       buffer
     }
@@ -408,9 +417,23 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     output
   }
 
-  private def outputToOptionalPipelinedBuffer(pipeline: PipelineDefiner, plan: LogicalPlan, applyBuffer: ApplyBufferDefiner, argumentSlotOffset: Int): OptionalMorselBufferDefiner = {
+  private def outputToOptionalPipelinedBuffer(pipeline: PipelineDefiner,
+                                              plan: LogicalPlan,
+                                              applyBuffer: ApplyBufferDefiner,
+                                              argumentSlotOffset: Int): OptionalMorselBufferDefiner = {
     val asm = stateDefiner.newArgumentStateMap(plan.id, argumentSlotOffset)
-    val output = stateDefiner.newOptionalBuffer(pipeline.id, plan.id, asm.id, argumentSlotOffset, slotConfigurations(pipeline.headPlan.id))
+    val output = stateDefiner.newOptionalBuffer(pipeline.id, plan.id, asm.id, argumentSlotOffset, slotConfigurations(pipeline.headPlan.id), OptionalType)
+    pipeline.outputDefinition = MorselArgumentStateBufferOutput(output.id, argumentSlotOffset, plan.id)
+    markReducerInUpstreamBuffers(pipeline.inputBuffer, applyBuffer, asm)
+    output
+  }
+
+  private def outputToAntiPipelinedBuffer(pipeline: PipelineDefiner,
+                                          plan: LogicalPlan,
+                                          applyBuffer: ApplyBufferDefiner,
+                                          argumentSlotOffset: Int): OptionalMorselBufferDefiner = {
+    val asm = stateDefiner.newArgumentStateMap(plan.id, argumentSlotOffset)
+    val output = stateDefiner.newOptionalBuffer(pipeline.id, plan.id, asm.id, argumentSlotOffset, slotConfigurations(pipeline.headPlan.id), AntiType)
     pipeline.outputDefinition = MorselArgumentStateBufferOutput(output.id, argumentSlotOffset, plan.id)
     markReducerInUpstreamBuffers(pipeline.inputBuffer, applyBuffer, asm)
     output
@@ -498,6 +521,17 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
           val pipeline = newPipeline(plan)
           val optionalPipelinedBuffer = outputToOptionalPipelinedBuffer(source, plan, argument, argument.argumentSlotOffset)
           pipeline.inputBuffer = optionalPipelinedBuffer
+          pipeline.lhs = source.id
+          pipeline
+        } else {
+          throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
+        }
+
+      case _: Anti =>
+        if (breakingPolicy.breakOn(plan)) {
+          val pipeline = newPipeline(plan)
+          val antiPipelinedBuffer = outputToAntiPipelinedBuffer(source, plan, argument, argument.argumentSlotOffset)
+          pipeline.inputBuffer = antiPipelinedBuffer
           pipeline.lhs = source.id
           pipeline
         } else {
