@@ -28,11 +28,13 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.kernel.impl.transaction.log.rotation.LogRotation;
@@ -69,6 +71,7 @@ public class TestStartTransactionDuringLogRotation
     private LogRotationMonitor rotationListener;
     private Label label;
     private Future<Void> rotationFuture;
+    private long nodeId;
 
     @Before
     public void setUp() throws InterruptedException
@@ -87,10 +90,11 @@ public class TestStartTransactionDuringLogRotation
                 startLogRotationLatch.countDown();
                 try
                 {
-                    completeLogRotationLatch.await();
+                    completeLogRotationLatch.await( 10, TimeUnit.SECONDS );
                 }
                 catch ( InterruptedException e )
                 {
+                    Thread.currentThread().interrupt();
                     throw new RuntimeException( e );
                 }
             }
@@ -115,8 +119,10 @@ public class TestStartTransactionDuringLogRotation
         {
             try ( Transaction tx = db.beginTx() )
             {
-                tx.createNode( label ).setProperty( "a", 1 );
+                Node node = tx.createNode( label );
+                node.setProperty( "a", 1 );
                 tx.commit();
+                nodeId = node.getId();
             }
 
             db.getDependencyResolver().resolveDependency( LogRotation.class ).rotateLogFile( LogAppendEvent.NULL );
@@ -137,7 +143,7 @@ public class TestStartTransactionDuringLogRotation
     {
         try ( Transaction tx = db.beginTx() )
         {
-            tx.getNodeById( 0 );
+            tx.getNodeById( nodeId );
             completeLogRotationLatch.countDown();
             tx.commit();
         }
