@@ -45,7 +45,7 @@ object QueryType {
     fragment match {
       case _: Fragment.Init    => Read
       case leaf: Fragment.Leaf => merge(global(leaf.input), of(leaf.clauses))
-      case apply: Fragment.Apply => merge(global(apply.input), global(apply.fragment))
+      case apply: Fragment.Apply => merge(global(apply.input), global(apply.inner))
       case union: Fragment.Union => merge(global(union.lhs), global(union.rhs))
     }
 
@@ -53,7 +53,7 @@ object QueryType {
     fragment match {
       case _: Fragment.Init    => Read
       case leaf: Fragment.Leaf => of(leaf.clauses)
-      case apply: Fragment.Apply => local(apply.fragment)
+      case apply: Fragment.Apply => local(apply.inner)
       case union: Fragment.Union => merge(local(union.lhs), local(union.rhs))
     }
 

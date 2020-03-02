@@ -5,13 +5,12 @@
  */
 package com.neo4j.fabric.planning
 
-import com.neo4j.fabric.planning.FabricQuery.Columns
 import com.neo4j.fabric.util.PrettyPrinting
 import org.neo4j.cypher.internal.ast
 
 sealed trait Fragment {
   /** Graph selection for this fragment */
-  def graph: ast.GraphSelection
+  def use: ast.GraphSelection
   /** Columns available to this fragment from an applied argument */
   def argumentColumns: Seq[String]
   /** Columns imported from the argument */
@@ -27,7 +26,7 @@ object Fragment {
   }
 
   case class Init(
-    graph: ast.GraphSelection,
+    use: ast.GraphSelection,
     argumentColumns: Seq[String],
     importColumns: Seq[String],
   ) extends Fragment {
@@ -36,16 +35,16 @@ object Fragment {
 
   sealed trait ChainedFragment {
     def input: Fragment
-    val graph: ast.GraphSelection = input.graph
+    val use: ast.GraphSelection = input.use
     val argumentColumns: Seq[String] = input.argumentColumns
     val importColumns: Seq[String] = input.importColumns
   }
 
   case class Apply(
     input: Fragment,
-    fragment: Fragment,
+    inner: Fragment,
   ) extends Fragment with ChainedFragment {
-    val outputColumns: Seq[String] = Columns.combine(input.outputColumns, fragment.outputColumns)
+    val outputColumns: Seq[String] = Columns.combine(input.outputColumns, inner.outputColumns)
   }
 
   case class Union(
@@ -70,7 +69,7 @@ object Fragment {
       case f: Init => node(
         name = "init",
         fields = Seq(
-          "use" -> expr(f.graph.expression),
+          "use" -> expr(f.use.expression),
           "arg" -> list(f.argumentColumns),
           "imp" -> list(f.importColumns),
         )
@@ -81,7 +80,7 @@ object Fragment {
         fields = Seq(
           "out" -> list(f.outputColumns),
         ),
-        children = Seq(f.fragment, f.input)
+        children = Seq(f.inner, f.input)
       )
 
       case f: Fragment.Union => node(
@@ -96,7 +95,7 @@ object Fragment {
       case f: Fragment.Leaf => node(
         name = "leaf",
         fields = Seq(
-          "use" -> expr(f.graph.expression),
+          "use" -> expr(f.use.expression),
           "arg" -> list(f.argumentColumns),
           "imp" -> list(f.importColumns),
           "out" -> list(f.outputColumns),

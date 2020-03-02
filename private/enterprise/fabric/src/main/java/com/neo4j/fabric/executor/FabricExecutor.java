@@ -222,7 +222,7 @@ public class FabricExecutor
 
             Map<String,AnyValue> argumentValues = argumentValues( leaf, argument);
 
-            FabricConfig.Graph graph = evalUse( leaf.graph(), argumentValues );
+            FabricConfig.Graph graph = evalUse( leaf.use(), argumentValues );
 
             MapValue parameters = addParamsFromRecord( queryParams, argumentValues, mapAsJavaMap( leaf.parameters() ) );
 

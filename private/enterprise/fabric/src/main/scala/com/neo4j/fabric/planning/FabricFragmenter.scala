@@ -40,8 +40,8 @@ class FabricFragmenter(
 
         case (in: Init, Right(clauses)) =>
           // Input is Init which means that we are at the start of a chain
-          val graph = leadingUse(sq).getOrElse(in.graph)
-          Leaf(Init(graph, in.argumentColumns, sq.importColumns), clauses, produced(clauses))
+          val use = leadingUse(sq).getOrElse(in.use)
+          Leaf(Init(use, in.argumentColumns, sq.importColumns), clauses, produced(clauses))
 
         case (in, Right(clauses)) =>
           // Section of clauses in the middle of a query
@@ -49,7 +49,7 @@ class FabricFragmenter(
 
         case (in, Left(subquery)) =>
           // Recurse and start the child chain with Init
-          Apply(in, fragment(Init(in.graph, in.outputColumns, Seq.empty), subquery.part))
+          Apply(in, fragment(Init(in.use, in.outputColumns, Seq.empty), subquery.part))
       }
 
     case uq: ast.Union =>

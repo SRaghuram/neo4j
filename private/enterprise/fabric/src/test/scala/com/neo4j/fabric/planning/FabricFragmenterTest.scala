@@ -58,9 +58,9 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
           |RETURN x
           |""".stripMargin)
 
-      frag.graph.shouldEqual(defaultGraph)
+      frag.use.shouldEqual(defaultGraph)
       inside(frag) { case Leaf(Apply(_, inner: Leaf), _, _) =>
-        inner.graph.shouldEqual(use("g"))
+        inner.use.shouldEqual(use("g"))
       }
     }
 
@@ -88,7 +88,7 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
           |""".stripMargin)
 
       inside(frag) { case Leaf(Apply(_, inner: Leaf), _, _) =>
-        inner.graph.shouldEqual(use(function("g", varFor("x"))))
+        inner.use.shouldEqual(use(function("g", varFor("x"))))
       }
     }
 
@@ -104,7 +104,7 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
           |""".stripMargin)
 
       inside(frag) { case Leaf(Apply(_, inner: Leaf), _, _) =>
-        inner.graph.shouldEqual(use(function("g", varFor("x"))))
+        inner.use.shouldEqual(use(function("g", varFor("x"))))
       }
     }
 
