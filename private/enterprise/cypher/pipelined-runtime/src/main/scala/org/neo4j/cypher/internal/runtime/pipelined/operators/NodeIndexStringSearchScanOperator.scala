@@ -219,7 +219,9 @@ class NodeIndexStringSearchScanTaskTemplate(inner: OperatorTaskTemplate,
   override def genExpressions: Seq[IntermediateExpression] = Seq(seekExpression)
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
-    seekExpression = generateExpression()
+    if (seekExpression == null) {
+      seekExpression = generateExpression()
+    }
     val hasInnerLoop = codeGen.namer.nextVariableName()
     /**
      * {{{

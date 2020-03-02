@@ -67,10 +67,9 @@ class FilterOperatorTemplate(val inner: OperatorTaskTemplate,
   override def genExpressions: Seq[IntermediateExpression] = Seq(predicate)
 
   override def genOperate: IntermediateRepresentation = {
-    if (predicate != null) {
-      throw new IllegalStateException("genOperate must be called first!!")
+    if (predicate == null) {
+      predicate = generatePredicate()
     }
-    predicate = generatePredicate()
 
     condition(equal(nullCheckIfRequired(predicate), trueValue)) (
       block(

@@ -335,8 +335,10 @@ abstract class SingleRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTemplat
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V, idVariable)
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
-    relationshipExpression = codeGen.intermediateCompileExpression(relIdExpr)
-      .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $relIdExpr"))
+    if (relationshipExpression == null) {
+      relationshipExpression = codeGen.intermediateCompileExpression(relIdExpr)
+        .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $relIdExpr"))
+    }
 
     /**
      * {{{
@@ -496,7 +498,9 @@ abstract class ManyRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
-    relationshipExpression = codeGen.intermediateCompileExpression(relIdsExpr).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $relIdsExpr"))
+    if (relationshipExpression == null) {
+      relationshipExpression = codeGen.intermediateCompileExpression(relIdsExpr).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $relIdsExpr"))
+    }
 
     /**
      * {{{

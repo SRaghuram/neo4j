@@ -51,10 +51,12 @@ class CachePropertiesOperatorTemplate(override val inner: OperatorTaskTemplate,
   private var properties: Seq[IntermediateExpression] = _
 
   override def genOperate: IntermediateRepresentation = {
-    properties =
-      propertyOps.map(p => codeGen.intermediateCompileExpression(p)
-        .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $p"))
-      )
+    if(properties == null) {
+      properties =
+        propertyOps.map(p => codeGen.intermediateCompileExpression(p)
+          .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $p"))
+        )
+    }
     val irs = properties.map(_.ir) ++ Seq(profileRow(id), inner.genOperateWithExpressions)
     block(irs:_*)
   }

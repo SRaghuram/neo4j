@@ -363,8 +363,10 @@ class SingleExactSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
   override protected def getPropertyValue: IntermediateRepresentation = load(seekValueVariable)
 
   override protected def beginInnerLoop: IntermediateRepresentation = {
-    val value = generateSeekValue()
-    seekValue = value.copy(ir = asStorableValue(nullCheckIfRequired(value)))
+    if (seekValue == null) {
+      val value = generateSeekValue()
+      seekValue = value.copy(ir = asStorableValue(nullCheckIfRequired(value)))
+    }
     assign(seekValueVariable, seekValue.ir)
   }
 
@@ -399,7 +401,9 @@ class SingleRangeSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
   override protected def getPropertyValue: IntermediateRepresentation =
     invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Value, Int]("propertyValue"), constant(0))
   override protected def beginInnerLoop: IntermediateRepresentation = {
-    seekValues = seekExpression.generateSeekValues.map(_()).map(v => v.copy(ir = nullCheckIfRequired(v)))
+    if (seekValues == null) {
+      seekValues = seekExpression.generateSeekValues.map(_ ()).map(v => v.copy(ir = nullCheckIfRequired(v)))
+    }
     assign(predicateVar, seekExpression.generatePredicate(seekValues.map(_.ir)))
   }
   override protected def isPredicatePossible: IntermediateRepresentation =
@@ -439,7 +443,9 @@ class ManyQueriesNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTempl
   override def genExpressions: Seq[IntermediateExpression] = seekValues
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
-    seekValues = seekExpression.generateSeekValues.map(_()).map(v => v.copy(ir = nullCheckIfRequired(v)))
+    if (seekValues == null) {
+      seekValues = seekExpression.generateSeekValues.map(_ ()).map(v => v.copy(ir = nullCheckIfRequired(v)))
+    }
     /**
      * {{{
      *   this.queryIterator = queryIterator(property, ([query predicate])
@@ -555,7 +561,9 @@ class CompositeNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTemplat
   override def genExpressions: Seq[IntermediateExpression] = seekValues.flatten
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
-    seekValues = seekExpressions.map(_.generateSeekValues).map(compile).map(nullCheck)
+    if (seekValues == null) {
+      seekValues = seekExpressions.map(_.generateSeekValues).map(compile).map(nullCheck)
+    }
     /**
       * {{{
       *   this.queryIterator = compositeQueryIterator(new IndexQuery[][]{[query predicate]}

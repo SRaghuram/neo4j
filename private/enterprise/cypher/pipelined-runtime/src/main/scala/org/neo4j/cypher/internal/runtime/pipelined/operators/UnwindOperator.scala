@@ -114,7 +114,9 @@ class UnwindOperatorTaskTemplate(inner: OperatorTaskTemplate,
   override def genExpressions: Seq[IntermediateExpression] = Seq(listExpression)
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
-    listExpression = codeGen.intermediateCompileExpression(rawListExpression).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $rawListExpression"))
+    if (listExpression == null) {
+      listExpression = codeGen.intermediateCompileExpression(rawListExpression).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $rawListExpression"))
+    }
 
     /**
      * {{{

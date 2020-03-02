@@ -307,9 +307,11 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
      * Generate node predicate to be checked on the fromNode
      */
     def generateStartNodePredicate() = {
-      startNodePredicate = maybeNodeVariablePredicate
-        .map(p => codeGen.intermediateCompileExpression(p.predicate)
-          .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile ${p.predicate}")))
+      if (startNodePredicate == null) {
+        startNodePredicate = maybeNodeVariablePredicate
+          .map(p => codeGen.intermediateCompileExpression(p.predicate)
+            .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile ${p.predicate}")))
+      }
 
       val fromNodePredicate =
         if (tempNodeOffset == NO_PREDICATE_OFFSET) None else startNodePredicate.map { pred =>
@@ -507,13 +509,17 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
       }
     }
 
-    nodePredicate = maybeNodeVariablePredicate
-      .map(p => newScopeExpressionCompiler.intermediateCompileExpression(p.predicate)
-        .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile ${p.predicate}")))
+    if (nodePredicate == null) {
+      nodePredicate = maybeNodeVariablePredicate
+        .map(p => newScopeExpressionCompiler.intermediateCompileExpression(p.predicate)
+          .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile ${p.predicate}")))
+    }
 
-    relPredicate = maybeRelVariablePredicate
-      .map(p => newScopeExpressionCompiler.intermediateCompileExpression(p.predicate)
-        .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile ${p.predicate}")))
+    if (relPredicate == null) {
+      relPredicate = maybeRelVariablePredicate
+        .map(p => newScopeExpressionCompiler.intermediateCompileExpression(p.predicate)
+          .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile ${p.predicate}")))
+    }
 
     //Directions governs what class we are extending
     val classToExtend = dir match {
