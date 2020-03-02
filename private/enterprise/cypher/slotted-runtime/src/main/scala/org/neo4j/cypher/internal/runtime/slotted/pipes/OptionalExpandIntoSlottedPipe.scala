@@ -51,7 +51,7 @@ abstract class OptionalExpandIntoSlottedPipe(source: Pipe,
   //===========================================================================
   protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
     val query = state.query
-    val expandInto = new CachingExpandInto(query.transactionalContext.dataRead, kernelDirection)
+    val expandInto = new CachingExpandInto(query.transactionalContext.dataRead, kernelDirection, state.memoryTracker, id.x)
     input.flatMap {
       inputRow: CypherRow =>
         val fromNode = getFromNodeFunction.applyAsLong(inputRow)

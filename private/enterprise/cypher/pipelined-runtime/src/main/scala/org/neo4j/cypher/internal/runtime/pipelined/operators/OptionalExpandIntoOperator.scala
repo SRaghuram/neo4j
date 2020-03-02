@@ -30,12 +30,14 @@ import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
+import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
+import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
@@ -47,6 +49,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -62,7 +65,7 @@ class OptionalExpandIntoOperator(val workIdentity: WorkIdentity,
                                  types: RelationshipTypes,
                                  maybeExpression: Option[Expression]) extends StreamingOperator {
 
-
+  private var memoryTracker: QueryMemoryTracker = NoMemoryTracker
 
   override def toString: String = "OptionalExpandInto"
 
@@ -72,18 +75,28 @@ class OptionalExpandIntoOperator(val workIdentity: WorkIdentity,
                                    resources: QueryResources,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
     maybeExpression match {
-      case None => IndexedSeq(new OptionalExpandIntoTask(inputMorsel.nextCopy))
+      case None => IndexedSeq(new OptionalExpandIntoTask(inputMorsel.nextCopy, memoryTracker))
       case Some(expression) => IndexedSeq(new FilteringOptionalExpandIntoTask(inputMorsel.nextCopy, expression))
     }
   }
 
-  class OptionalExpandIntoTask(inputMorsel: Morsel) extends ExpandIntoTask(inputMorsel,
-    workIdentity,
-    fromSlot,
-    relOffset,
-    toSlot,
-    dir,
-    types) {
+  override def createState(argumentStateCreator: ArgumentStateMapCreator,
+                           stateFactory: StateFactory,
+                           state: PipelinedQueryState,
+                           resources: QueryResources): OperatorState = {
+    this.memoryTracker = stateFactory.memoryTracker
+    this
+  }
+
+  class OptionalExpandIntoTask(inputMorsel: Morsel, memoryTracker: QueryMemoryTracker)
+    extends ExpandIntoTask(inputMorsel,
+                           workIdentity,
+                           fromSlot,
+                           relOffset,
+                           toSlot,
+                           dir,
+                           types,
+                           memoryTracker) {
 
     override def toString: String = "OptionalExpandIntoTask"
 
@@ -96,8 +109,7 @@ class OptionalExpandIntoOperator(val workIdentity: WorkIdentity,
 
     protected override def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
       if (expandInto == null) {
-        expandInto = new CachingExpandInto(state.queryContext.transactionalContext.dataRead,
-          kernelDirection(dir))
+        expandInto = new CachingExpandInto(state.queryContext.transactionalContext.dataRead, kernelDirection(dir), memoryTracker, workIdentity.workId.x)
       }
       val fromNode = getFromNodeFunction.applyAsLong(inputCursor)
       val toNode = getToNodeFunction.applyAsLong(inputCursor)
@@ -139,7 +151,7 @@ class OptionalExpandIntoOperator(val workIdentity: WorkIdentity,
 
   class FilteringOptionalExpandIntoTask(inputMorsel: Morsel,
                                         predicate: Expression)
-    extends OptionalExpandIntoTask(inputMorsel: Morsel) {
+    extends OptionalExpandIntoTask(inputMorsel, memoryTracker) {
 
     private var expressionState: QueryState = _
 

@@ -35,11 +35,14 @@ import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
+import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.RelationshipCursorRepresentation
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
@@ -64,6 +67,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -85,8 +89,17 @@ class ExpandIntoOperator(val workIdentity: WorkIdentity,
                          dir: SemanticDirection,
                          types: RelationshipTypes) extends StreamingOperator {
 
+  private var memoryTracker: QueryMemoryTracker = NoMemoryTracker
 
   override def toString: String = "ExpandInto"
+
+  override def createState(argumentStateCreator: ArgumentStateMapCreator,
+                           stateFactory: StateFactory,
+                           state: PipelinedQueryState,
+                           resources: QueryResources): OperatorState =  {
+    this.memoryTracker = stateFactory.memoryTracker
+    this
+  }
 
   override protected def nextTasks(state: PipelinedQueryState,
                                    inputMorsel: MorselParallelizer,
@@ -94,12 +107,13 @@ class ExpandIntoOperator(val workIdentity: WorkIdentity,
                                    resources: QueryResources,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
     IndexedSeq(new ExpandIntoTask(inputMorsel.nextCopy,
-      workIdentity,
-      fromSlot,
-      relOffset,
-      toSlot,
-      dir,
-      types))
+                                  workIdentity,
+                                  fromSlot,
+                                  relOffset,
+                                  toSlot,
+                                  dir,
+                                  types,
+                                  memoryTracker))
 
 }
 
@@ -109,7 +123,8 @@ class ExpandIntoTask(inputMorsel: Morsel,
                      relOffset: Int,
                      toSlot: Slot,
                      dir: SemanticDirection,
-                     types: RelationshipTypes) extends InputLoopTask(inputMorsel) {
+                     types: RelationshipTypes,
+                     memoryTracker: QueryMemoryTracker) extends InputLoopTask(inputMorsel) {
 
   //===========================================================================
   // Compile-time initializations
@@ -127,8 +142,7 @@ class ExpandIntoTask(inputMorsel: Morsel,
 
   protected override def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
     if (expandInto == null) {
-      expandInto = new CachingExpandInto(state.queryContext.transactionalContext.dataRead,
-        kernelDirection(dir))
+      expandInto = new CachingExpandInto(state.queryContext.transactionalContext.dataRead, kernelDirection(dir), memoryTracker, workIdentity.workId.x)
     }
     val fromNode = getFromNodeFunction.applyAsLong(inputCursor)
     val toNode = getToNodeFunction.applyAsLong(inputCursor)
@@ -142,7 +156,7 @@ class ExpandIntoTask(inputMorsel: Morsel,
 
   protected def setupCursors(context: QueryContext,
                              resources: QueryResources,
-                             fromNode: Long, toNode: Long) = {
+                             fromNode: Long, toNode: Long): Unit = {
     val pools: CursorPools = resources.cursorPools
     nodeCursor = pools.nodeCursorPool.allocateAndTrace()
     groupCursor = pools.relationshipGroupCursorPool.allocateAndTrace()
