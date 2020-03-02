@@ -29,8 +29,8 @@ import org.neo4j.storageengine.api.StorageRelationshipCursor;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
 
+import static org.neo4j.internal.freki.MutableNodeRecordData.idFromRelationshipId;
 import static org.neo4j.internal.freki.MutableNodeRecordData.internalRelationshipIdFromRelationshipId;
-import static org.neo4j.internal.freki.MutableNodeRecordData.nodeIdFromRelationshipId;
 import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipHasProperties;
 import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValueSizeIncludingTypeHeader;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
@@ -85,7 +85,7 @@ public class FrekiPropertyCursor extends FrekiMainStoreCursor implements Storage
         reset();
         if ( reference != NULL )
         {
-            nodeId = nodeIdFromRelationshipId( reference );
+            nodeId = idFromRelationshipId( reference );
             internalRelationshipId = internalRelationshipIdFromRelationshipId( reference );
         }
     }

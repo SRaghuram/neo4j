@@ -25,8 +25,8 @@ import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipScanCursor;
 
 import static org.neo4j.internal.freki.MutableNodeRecordData.externalRelationshipId;
+import static org.neo4j.internal.freki.MutableNodeRecordData.idFromRelationshipId;
 import static org.neo4j.internal.freki.MutableNodeRecordData.internalRelationshipIdFromRelationshipId;
-import static org.neo4j.internal.freki.MutableNodeRecordData.nodeIdFromRelationshipId;
 import static org.neo4j.internal.freki.MutableNodeRecordData.otherNodeOf;
 import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipHasProperties;
 import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipIsOutgoing;
@@ -54,7 +54,7 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
         if ( needsLoading && singleId != NULL )
         {
             needsLoading = false;
-            if ( loadMainRecord( nodeIdFromRelationshipId( singleId ) ) )
+            if ( loadMainRecord( idFromRelationshipId( singleId ) ) )
             {
                 readRelationshipTypesAndOffsets();
                 return findRelationship();

@@ -127,7 +127,7 @@ import static org.neo4j.values.storable.Values.stringValue;
  */
 @PageCacheExtension
 @ExtendWith( RandomExtension.class )
-public class FrekiStorageEngineGraphWritesIT
+class FrekiStorageEngineGraphWritesIT
 {
     private static final SchemaDescriptor SCHEMA_DESCRIPTOR = SchemaDescriptor.forLabel( 5, 10 );
 
@@ -144,6 +144,7 @@ public class FrekiStorageEngineGraphWritesIT
     private StorageEngine storageEngine;
     private RecordingNodeLabelUpdateListener nodeLabelUpdateListener;
     private RecordingIndexUpdatesListener indexUpdateListener;
+    private CommandCreationContext commandCreationContext;
 
     @BeforeEach
     void start() throws IOException
@@ -168,6 +169,7 @@ public class FrekiStorageEngineGraphWritesIT
         indexUpdateListener = new RecordingIndexUpdatesListener();
         storageEngine.addIndexUpdateListener( indexUpdateListener );
         life.start();
+        commandCreationContext = storageEngine.newCommandCreationContext( NULL );
     }
 
     @AfterEach
@@ -194,7 +196,7 @@ public class FrekiStorageEngineGraphWritesIT
             target.visitNodeLabelChanges( nodeId1, labelIds, LongSets.immutable.empty() );
             target.visitCreatedNode( nodeId2 );
             target.visitNodePropertyChanges( nodeId1, nodeProperties, Collections.emptyList(), IntSets.immutable.empty() );
-            target.visitCreatedRelationship( -1, 99, nodeId1, nodeId2, relationshipProperties );
+            target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId1 ), 99, nodeId1, nodeId2, relationshipProperties );
         } );
 
         // then
@@ -231,7 +233,8 @@ public class FrekiStorageEngineGraphWritesIT
             nodeProperties.addAll( addedNodeProperties );
             for ( RelationshipSpec relationship : relationships )
             {
-                target.visitCreatedRelationship( -1, relationship.type, relationship.startNodeId, relationship.endNodeId, relationshipProperties );
+                target.visitCreatedRelationship( commandCreationContext.reserveRelationship( relationship.startNodeId ), relationship.type,
+                        relationship.startNodeId, relationship.endNodeId, relationshipProperties );
             }
         } );
 
@@ -263,7 +266,7 @@ public class FrekiStorageEngineGraphWritesIT
                 long otherNodeId = nodeId + i + 1;
                 int type = i % 3;
                 target.visitCreatedNode( otherNodeId );
-                target.visitCreatedRelationship( -1, type, nodeId, otherNodeId, emptyList() );
+                target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId ), type, nodeId, otherNodeId, emptyList() );
                 relationships.add( new RelationshipSpec( nodeId, type, otherNodeId, emptySet() ) );
             }
         } );
@@ -276,7 +279,6 @@ public class FrekiStorageEngineGraphWritesIT
     void shouldUpdateOverflowedRecord() throws Exception
     {
         // given
-        CommandCreationContext commandCreationContext = storageEngine.newCommandCreationContext( NULL );
         long nodeId = commandCreationContext.reserveNode();
         LongSet labelIds = LongSets.immutable.of( 34, 563 );
         Set<StorageProperty> nodeProperties = asSet(
@@ -295,7 +297,7 @@ public class FrekiStorageEngineGraphWritesIT
                 long otherNodeId = commandCreationContext.reserveNode();
                 int type = i % 3;
                 target.visitCreatedNode( otherNodeId );
-                target.visitCreatedRelationship( -1, type, nodeId, otherNodeId, emptyList() );
+                target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId ), type, nodeId, otherNodeId, emptyList() );
                 relationships.add( new RelationshipSpec( nodeId, type, otherNodeId, emptySet() ) );
             }
         } );
@@ -308,7 +310,7 @@ public class FrekiStorageEngineGraphWritesIT
                 long otherNodeId = commandCreationContext.reserveNode();
                 int type = i % 3;
                 target.visitCreatedNode( otherNodeId );
-                target.visitCreatedRelationship( -1, type, nodeId, otherNodeId, emptyList() );
+                target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId ), type, nodeId, otherNodeId, emptyList() );
                 relationships.add( new RelationshipSpec( nodeId, type, otherNodeId, emptySet() ) );
             }
         } );
@@ -321,7 +323,6 @@ public class FrekiStorageEngineGraphWritesIT
     void shouldOverflowIntoDenseRepresentation() throws Exception
     {
         // given
-        CommandCreationContext commandCreationContext = storageEngine.newCommandCreationContext( NULL );
         long nodeId = commandCreationContext.reserveNode();
         ImmutableLongSet labels = LongSets.immutable.of( 1, 78, 95 );
         Set<StorageProperty> relationshipProperties = asSet( new PropertyKeyValue( 123, intValue( 5 ) ) );
@@ -343,7 +344,7 @@ public class FrekiStorageEngineGraphWritesIT
                 long otherNodeId = commandCreationContext.reserveNode();
                 target.visitCreatedNode( otherNodeId );
                 int type = i % 20;
-                target.visitCreatedRelationship( i, type, nodeId, otherNodeId, relationshipProperties );
+                target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId ), type, nodeId, otherNodeId, relationshipProperties );
                 relationships.add( new RelationshipSpec( nodeId, type, otherNodeId, relationshipProperties ) );
             }
         } );
@@ -356,7 +357,6 @@ public class FrekiStorageEngineGraphWritesIT
     void shouldOverflowIntoLargerLargerAndDense() throws Exception
     {
         // given
-        CommandCreationContext commandCreationContext = storageEngine.newCommandCreationContext( NULL );
         long nodeId = commandCreationContext.reserveNode();
         ImmutableLongSet labels = LongSets.immutable.of( 1, 78, 95 );
         Set<StorageProperty> nodeProperties = new HashSet<>();
@@ -368,7 +368,6 @@ public class FrekiStorageEngineGraphWritesIT
         } );
 
         // when
-        MutableLong nextRelationshipId = new MutableLong();
         MutableLong nextOtherNodeId = new MutableLong( nodeId + 1 );
         MutableInt nextPropertyKey = new MutableInt();
         for ( int i = 0, relationshipsToAdd = 5; i < 5; i++, relationshipsToAdd *= 4 )
@@ -380,7 +379,7 @@ public class FrekiStorageEngineGraphWritesIT
                 {
                     long otherNodeId = nextOtherNodeId.getAndIncrement();
                     target.visitCreatedNode( otherNodeId );
-                    target.visitCreatedRelationship( nextRelationshipId.getAndIncrement(), 0, nodeId, otherNodeId, emptyList() );
+                    target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId ), 0, nodeId, otherNodeId, emptyList() );
                     relationships.add( new RelationshipSpec( nodeId, 0, otherNodeId, emptySet() ) );
                 }
                 PropertyKeyValue property = new PropertyKeyValue( nextPropertyKey.getAndIncrement(), intValue( 1010 ) );
@@ -400,17 +399,15 @@ public class FrekiStorageEngineGraphWritesIT
     {
         // given
         long[] nodes = new long[10];
-        CommandCreationContext context = storageEngine.newCommandCreationContext( NULL );
         createAndApplyTransaction( target ->
         {
             for ( int i = 0; i < nodes.length; i++ )
             {
-                target.visitCreatedNode( nodes[i] = context.reserveNode() );
+                target.visitCreatedNode( nodes[i] = commandCreationContext.reserveNode() );
             }
         } );
 
         // when
-        MutableLong nextRelationshipId = new MutableLong( 1 );
         MutableLongObjectMap<Set<RelationshipSpec>> expectedRelationships = LongObjectMaps.mutable.empty();
         for ( int i = 0; i < 10; i++ )
         {
@@ -420,7 +417,7 @@ public class FrekiStorageEngineGraphWritesIT
                 {
                     long startNode = nodes[random.nextInt( nodes.length )];
                     long endNode = nodes[random.nextInt( nodes.length )];
-                    target.visitCreatedRelationship( nextRelationshipId.getAndIncrement(), 0, startNode, endNode, emptyList() );
+                    target.visitCreatedRelationship( commandCreationContext.reserveRelationship( startNode ), 0, startNode, endNode, emptyList() );
                     RelationshipSpec spec = new RelationshipSpec( startNode, 0, endNode, emptySet() );
                     expectedRelationships.getIfAbsentPut( startNode, HashSet::new ).add( spec );
                     expectedRelationships.getIfAbsentPut( endNode, HashSet::new ).add( spec );
@@ -571,7 +568,7 @@ public class FrekiStorageEngineGraphWritesIT
             {
                 long otherNodeId = nodeId + i + 1;
                 target.visitCreatedNode( otherNodeId );
-                target.visitCreatedRelationship( i, 0, nodeId, otherNodeId, emptyList() );
+                target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId ), 0, nodeId, otherNodeId, emptyList() );
             }
             target.visitNodePropertyChanges( nodeId, singletonList( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), value ) ), emptyList(),
                     IntSets.immutable.empty() );
@@ -597,7 +594,7 @@ public class FrekiStorageEngineGraphWritesIT
             {
                 long otherNodeId = nodeId + i + 1;
                 target.visitCreatedNode( otherNodeId );
-                target.visitCreatedRelationship( i, 0, nodeId, otherNodeId, emptyList() );
+                target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId ), 0, nodeId, otherNodeId, emptyList() );
             }
             target.visitNodePropertyChanges( nodeId, emptyList(), singletonList( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), afterValue ) ),
                     IntSets.immutable.empty() );
@@ -618,7 +615,7 @@ public class FrekiStorageEngineGraphWritesIT
             {
                 long otherNodeId = nodeId + i + 1;
                 target.visitCreatedNode( otherNodeId );
-                target.visitCreatedRelationship( i, 0, nodeId, otherNodeId, emptyList() );
+                target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId ), 0, nodeId, otherNodeId, emptyList() );
             }
         }, target ->
         {
@@ -709,6 +706,7 @@ public class FrekiStorageEngineGraphWritesIT
     {
         Collection<StorageCommand> commands = createCommands( data );
         applyCommands( commands );
+        commandCreationContext.reset();
     }
 
     private Collection<StorageCommand> createCommands( ThrowingConsumer<TxStateVisitor,Exception> data ) throws KernelException
@@ -723,7 +721,7 @@ public class FrekiStorageEngineGraphWritesIT
                 data.accept( visitor );
                 return null;
             } ).when( transactionState ).accept( any() );
-            storageEngine.createCommands( commands, transactionState, reader, storageEngine.newCommandCreationContext( NULL ),
+            storageEngine.createCommands( commands, transactionState, reader, commandCreationContext,
                     ResourceLocker.IGNORE, TransactionIdStore.BASE_TX_ID, NO_DECORATION, NULL );
         }
         return commands;
