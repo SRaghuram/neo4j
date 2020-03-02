@@ -65,10 +65,10 @@ case class ArgumentStateDefinition(id: ArgumentStateMapId,
 /**
  * A buffer between two pipelines, or a delegate after an ApplyBuffer. Maps to a PipelinedBuffer.
  *
- * @param operatorId the operator that consumes from this buffer. This information is needed for correct memory tracking per operator
+ * @param memoryTrackingOperatorId the operator that consumes from this buffer. This information is needed for correct memory tracking per operator
  */
 case class BufferDefinition(id: BufferId,
-                            operatorId: Id,
+                            memoryTrackingOperatorId: Id,
                             // We need multiple reducers because a buffer might need to
                             // reference count for multiple downstream reduce operators,
                             // at potentially different argument depths

@@ -183,7 +183,7 @@ class Buffers(numBuffers: Int,
             reducers,
             workCancellers,
             argumentStateMaps,
-            stateFactory.newBuffer[Morsel](bufferDefinition.operatorId))
+            stateFactory.newBuffer[Morsel](bufferDefinition.memoryTrackingOperatorId))
       }
   }
 

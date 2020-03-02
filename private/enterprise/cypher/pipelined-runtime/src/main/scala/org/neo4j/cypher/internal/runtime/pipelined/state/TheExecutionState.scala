@@ -105,7 +105,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
       val pipeline = pipelines(i)
       arr(i) =
         if (pipeline.serial) stateFactory.newSingletonBuffer[PipelineTask]()
-        else stateFactory.newBuffer[PipelineTask](pipeline.inputBuffer.operatorId)
+        else stateFactory.newBuffer[PipelineTask](pipeline.inputBuffer.memoryTrackingOperatorId)
       i += 1
     }
     arr

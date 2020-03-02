@@ -222,7 +222,7 @@ object AbstractArgumentStateMap {
    * A state controller that does not allow any mutating.
    *
    * This controller serves the use case when an argument state is constructed and immediately ready for consumption.
-   * This is the case for cartesian product. This `increment` and `decrement` will throw exceptions.
+   * This is the case for, e.g. cartesian product, distinct, and limit. This `increment` and `decrement` will throw exceptions.
    *
    * `tryTake` and `take` are also forbidden, since the pattern for this controller uses [[ArgumentStateMap.peekCompleted()]].
    */
