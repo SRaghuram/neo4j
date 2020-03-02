@@ -5,8 +5,8 @@
  */
 package com.neo4j.fabric.stream.summary;
 
-import com.neo4j.fabric.planning.FabricPlan;
 import com.neo4j.fabric.executor.EffectiveQueryType;
+import com.neo4j.fabric.planning.FabricPlan;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,7 +23,7 @@ public class MergedSummary implements Summary
     private final MergedQueryStatistics statistics;
     private final List<Notification> notifications;
     private final QueryExecutionType executionType;
-    private final FabricExecutionPlanDescription executionPlanDescription;
+    private final ExecutionPlanDescription executionPlanDescription;
 
     public MergedSummary( FabricPlan plan, AccessMode accessMode )
     {
@@ -32,7 +32,7 @@ public class MergedSummary implements Summary
         this.notifications = new ArrayList<>();
         if ( plan.executionType() == FabricPlan.EXPLAIN() )
         {
-            this.executionPlanDescription = new FabricExecutionPlanDescription( plan.query() );
+            this.executionPlanDescription = plan.query().description();
         }
         else
         {

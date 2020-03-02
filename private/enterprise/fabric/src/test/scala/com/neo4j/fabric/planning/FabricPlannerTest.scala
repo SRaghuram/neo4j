@@ -40,6 +40,7 @@ import org.scalatest.Assertion
 import org.scalatest.exceptions.TestFailedException
 
 import scala.reflect.ClassTag
+import scala.collection.JavaConverters.setAsJavaSetConverter
 
 //noinspection ZeroIndexToHead
 class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with ProcedureRegistryTestSupport with FragmentTestUtils {
@@ -387,6 +388,47 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
       shouldFail("CYPHER operatorEngine=interpreted RETURN 1", "Query option 'operatorEngine' not supported in Fabric database")
       shouldFail("CYPHER interpretedPipesFallback=all RETURN 1", "Query option 'interpretedPipesFallback' not supported in Fabric database")
     }
+  }
+
+  "Descriptions:" in {
+    val desc = plan(
+      """UNWIND [1, 2] AS x
+        |CALL {
+        |  USE graph(x)
+        |  RETURN 3 AS y
+        |    UNION
+        |  WITH 4 AS z
+        |  RETURN z AS y
+        |}
+        |RETURN x, y
+        |""".stripMargin, params
+    ).query.description
+
+    desc
+      .check(_.getName.shouldEqual("Leaf"))
+      .check(_.getIdentifiers.shouldEqual(Set("x", "y").asJava))
+      .check(_.getChildren.get(0)
+        .check(_.getName.shouldEqual("Apply"))
+        .check(_.getIdentifiers.shouldEqual(Set("x", "y").asJava))
+        .check(_.getChildren.get(1)
+          .check(_.getName.shouldEqual("Union"))
+          .check(_.getChildren.get(0)
+            .check(_.getName.shouldEqual("Leaf"))
+            .check(_.getIdentifiers.shouldEqual(Set("y").asJava))
+          )
+          .check(_.getChildren.get(1)
+            .check(_.getName.shouldEqual("Leaf"))
+            .check(_.getIdentifiers.shouldEqual(Set("y").asJava))
+          )
+        )
+        .check(_.getChildren.get(0)
+          .check(_.getName.shouldEqual("Leaf"))
+          .check(_.getIdentifiers.shouldEqual(Set("x").asJava))
+          .check(_.getChildren.get(0)
+            .check(_.getName.shouldEqual("Init"))
+          )
+        )
+      )
   }
 
   object ClauseOps {

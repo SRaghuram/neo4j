@@ -66,7 +66,6 @@ case class FabricPlanner(
     cypherConfig.queryCacheSize,
   )
   private[planning] val queryCache = new FabricQueryCache(cypherConfig.queryCacheSize)
-  private val renderer = Prettifier(ExpressionStringifier(alwaysParens = true, alwaysBacktick = true))
 
   def instance(queryString: String, queryParams: MapValue, defaultGraphName: String): PlannerInstance =
     PlannerInstance(queryString, queryParams, defaultGraphName)

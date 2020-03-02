@@ -5,8 +5,14 @@
  */
 package com.neo4j.fabric.planning
 
+import java.util
+
 import com.neo4j.fabric.util.PrettyPrinting
 import org.neo4j.cypher.internal.ast
+import org.neo4j.graphdb.ExecutionPlanDescription
+
+import scala.collection.JavaConverters.setAsJavaSet
+import scala.collection.JavaConverters.mapAsJavaMapConverter
 
 sealed trait Fragment {
   /** Graph selection for this fragment */
@@ -17,6 +23,8 @@ sealed trait Fragment {
   def importColumns: Seq[String]
   /** Produced columns */
   def outputColumns: Seq[String]
+  /** ExecutionPlanDescription */
+  def description: Fragment.Description
 }
 
 object Fragment {
@@ -31,6 +39,7 @@ object Fragment {
     importColumns: Seq[String],
   ) extends Fragment {
     val outputColumns: Seq[String] = Seq.empty
+    val description: Fragment.Description = Description.InitDesc(this)
   }
 
   sealed trait ChainedFragment {
@@ -45,6 +54,7 @@ object Fragment {
     inner: Fragment,
   ) extends Fragment with ChainedFragment {
     val outputColumns: Seq[String] = Columns.combine(input.outputColumns, inner.outputColumns)
+    val description: Fragment.Description = Description.ApplyDesc(this)
   }
 
   case class Union(
@@ -54,6 +64,7 @@ object Fragment {
     input: Fragment,
   ) extends Fragment with ChainedFragment {
     val outputColumns: Seq[String] = rhs.outputColumns
+    val description: Fragment.Description = Description.UnionDesc(this)
   }
 
   case class Leaf(
@@ -62,6 +73,48 @@ object Fragment {
     outputColumns: Seq[String],
   ) extends Fragment with ChainedFragment {
     val parameters: Map[String, String] = importColumns.map(varName => varName -> Columns.paramName(varName)).toMap
+    val description: Fragment.Description = Description.LeafDesc(this)
+  }
+
+
+  sealed abstract class Description(name: String, fragment: Fragment) extends ExecutionPlanDescription {
+    override def getName: String = name
+    override def getIdentifiers: util.Set[String] = setAsJavaSet(fragment.outputColumns.toSet)
+    override def hasProfilerStatistics: Boolean = false
+    override def getProfilerStatistics: ExecutionPlanDescription.ProfilerStatistics = null
+  }
+
+  object Description {
+    final case class InitDesc(fragment: Fragment.Init) extends Description("Init", fragment) {
+      override def getChildren: util.List[ExecutionPlanDescription] = list()
+      override def getArguments: util.Map[String, AnyRef] = map(
+        "argumentColumns" -> fragment.argumentColumns.mkString(","),
+        "importColumns" -> fragment.importColumns.mkString(","),
+      )
+    }
+
+    final case class ApplyDesc(fragment: Fragment.Apply) extends Description("Apply", fragment) {
+      override def getChildren: util.List[ExecutionPlanDescription] = list(fragment.input.description, fragment.inner.description)
+      override def getArguments: util.Map[String, AnyRef] = map()
+    }
+
+    final case class LeafDesc(fragment: Fragment.Leaf) extends Description("Leaf", fragment) {
+      override def getChildren: util.List[ExecutionPlanDescription] = list(fragment.input.description)
+      override def getArguments: util.Map[String, AnyRef] = map(
+        "query" -> QueryRenderer.render(fragment.clauses)
+      )
+    }
+
+    final case class UnionDesc(fragment: Fragment.Union) extends Description("Union", fragment) {
+      override def getChildren: util.List[ExecutionPlanDescription] = list(fragment.lhs.description, fragment.rhs.description)
+      override def getArguments: util.Map[String, AnyRef] = map()
+    }
+
+    private def list[E](es: E*): util.List[E] =
+      util.List.of(es: _*)
+
+    private def map[K, V](es: (K, V)*): util.Map[K, V] =
+      Map(es: _*).asJava
   }
 
   val pretty: PrettyPrinting[Fragment] = new PrettyPrinting[Fragment] {
@@ -106,6 +159,8 @@ object Fragment {
     }
   }
 }
+
+
 
 
 

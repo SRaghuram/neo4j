@@ -35,24 +35,18 @@ object QueryType {
   def of(ast: Seq[ASTNode]): QueryType =
     ast.map(of).fold(Read)(merge)
 
-  def of(query: FabricQuery): QueryType =
-    query match {
-      case leaf: FabricQuery.LeafQuery => leaf.queryType
-      case _                           => query.children.map(of).fold(Read)(merge)
-    }
-
   def global(fragment: Fragment): QueryType =
     fragment match {
-      case _: Fragment.Init    => Read
-      case leaf: Fragment.Leaf => merge(global(leaf.input), of(leaf.clauses))
+      case _: Fragment.Init      => Read
+      case leaf: Fragment.Leaf   => merge(global(leaf.input), of(leaf.clauses))
       case apply: Fragment.Apply => merge(global(apply.input), global(apply.inner))
       case union: Fragment.Union => merge(global(union.lhs), global(union.rhs))
     }
 
   def local(fragment: Fragment): QueryType =
     fragment match {
-      case _: Fragment.Init    => Read
-      case leaf: Fragment.Leaf => of(leaf.clauses)
+      case _: Fragment.Init      => Read
+      case leaf: Fragment.Leaf   => of(leaf.clauses)
       case apply: Fragment.Apply => local(apply.inner)
       case union: Fragment.Union => merge(local(union.lhs), local(union.rhs))
     }
