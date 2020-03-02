@@ -184,7 +184,10 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
             {
                 visitor.visitAddedConstraint( added );
             }
-            constraintsChanges.getRemoved().forEach( visitor::visitRemovedConstraint );
+            for ( ConstraintDescriptor removed : constraintsChanges.getRemoved() )
+            {
+                visitor.visitRemovedConstraint( removed );
+            }
         }
 
         if ( createdLabelTokens != null )
