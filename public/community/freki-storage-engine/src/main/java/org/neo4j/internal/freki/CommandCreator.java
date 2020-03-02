@@ -89,29 +89,33 @@ class CommandCreator implements TxStateVisitor
     public void visitCreatedRelationship( long id, int type, long startNode, long endNode, Iterable<StorageProperty> addedProperties )
     {
         long internalRelationshipId = internalRelationshipIdFromRelationshipId( id );
-        Relationship relationshipAtStartNode = createRelationship( null, internalRelationshipId, type, startNode, endNode, addedProperties );
+        createRelationship( internalRelationshipId, type, startNode, endNode, true, addedProperties );
         if ( startNode != endNode )
         {
-            createRelationship( relationshipAtStartNode, internalRelationshipId, type, endNode, startNode, addedProperties );
+            createRelationship( internalRelationshipId, type, endNode, startNode, false, addedProperties );
         }
     }
 
-    private Relationship createRelationship( Relationship sourceNodeRelationship, long internalRelationshipId, int type, long sourceNode, long targetNode,
+    private void createRelationship( long internalRelationshipId, int type, long sourceNode, long targetNode, boolean outgoing,
             Iterable<StorageProperty> addedProperties )
     {
         Mutation sourceMutation = getOrLoad( sourceNode );
-        Relationship relationship = sourceMutation.current.createRelationship( sourceNodeRelationship, internalRelationshipId, targetNode, type );
+        Relationship relationship = sourceMutation.current.createRelationship( internalRelationshipId, targetNode, type, outgoing );
         for ( StorageProperty property : addedProperties )
         {
             relationship.addProperty( property.propertyKeyId(), property.value() );
         }
-        return relationship;
     }
 
     @Override
-    public void visitDeletedRelationship( long id )
+    public void visitDeletedRelationship( long id, int type, long startNode, long endNode )
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+        long internalRelationshipId = internalRelationshipIdFromRelationshipId( id );
+        getOrLoad( startNode ).current.deleteRelationship( internalRelationshipId, type, endNode, true );
+        if ( startNode != endNode )
+        {
+            getOrLoad( endNode ).current.deleteRelationship( internalRelationshipId, type, startNode, false );
+        }
     }
 
     @Override
@@ -285,13 +289,13 @@ class CommandCreator implements TxStateVisitor
         return mutation;
     }
 
-    private Mutation getOrLoad( long id )
+    private Mutation getOrLoad( long nodeId )
     {
-        Mutation mutation = mutations.get( id );
+        Mutation mutation = mutations.get( nodeId );
         if ( mutation == null )
         {
             mutation = new Mutation();
-            mutation.small = new SparseRecordAndData( stores, stores.mainStore, id, null );
+            mutation.small = new SparseRecordAndData( stores, stores.mainStore, nodeId, null );
             mutation.small.loadExistingData();
             mutation.current = mutation.small;
             long forwardPointer = mutation.small.getForwardPointer();
@@ -313,7 +317,7 @@ class CommandCreator implements TxStateVisitor
                 mutation.current = mutation.large;
                 mutation.current.loadExistingData();
             }
-            mutations.put( id, mutation );
+            mutations.put( nodeId, mutation );
         }
         return mutation;
     }
@@ -342,7 +346,7 @@ class CommandCreator implements TxStateVisitor
 
         abstract void loadExistingData();
 
-        abstract Relationship createRelationship( Relationship sourceNodeRelationship, long internalId, long targetNode, int type );
+        abstract Relationship createRelationship( long internalId, long targetNode, int type, boolean outgoing );
 
         abstract void setNodeProperty( int propertyKeyId, Value value );
 
@@ -351,6 +355,8 @@ class CommandCreator implements TxStateVisitor
         abstract void addLabels( LongSet added );
 
         abstract void removeLabels( LongSet removed );
+
+        abstract void deleteRelationship( long internalId, int type, long otherNode, boolean outgoing );
 
         abstract void prepareForCommandExtraction( Consumer<StorageCommand> bigValueCommandConsumer );
 
@@ -418,9 +424,9 @@ class CommandCreator implements TxStateVisitor
         }
 
         @Override
-        Relationship createRelationship( Relationship sourceNodeRelationship, long internalId, long targetNode, int type )
+        Relationship createRelationship( long internalId, long targetNode, int type, boolean outgoing )
         {
-            return data.createRelationship( sourceNodeRelationship, internalId, targetNode, type );
+            return data.createRelationship( internalId, targetNode, type, outgoing );
         }
 
         @Override
@@ -445,6 +451,12 @@ class CommandCreator implements TxStateVisitor
         void removeLabels( LongSet removed )
         {
             removed.forEach( label -> data.labels.remove( toIntExact( label ) ) );
+        }
+
+        @Override
+        void deleteRelationship( long internalId, int type, long otherNode, boolean outgoing )
+        {
+            data.deleteRelationship( internalId, type, otherNode, outgoing );
         }
 
         long getForwardPointer()
@@ -553,16 +565,21 @@ class CommandCreator implements TxStateVisitor
         }
 
         @Override
-        Relationship createRelationship( Relationship sourceNodeRelationship, long internalId, long targetNode, int type )
+        Relationship createRelationship( long internalId, long targetNode, int type, boolean outgoing )
         {
             // For sparse representation the high internal relationship ID counter is simply the highest of the existing relationships,
             // decided when loading the node. But for dense nodes we won't load all relationships and will therefore need to keep
             // this counter in an explicit field in the small record. This call keeps that counter updated.
             smallRecord.data.registerInternalRelationshipId( internalId );
-
-            boolean outgoing = sourceNodeRelationship == null;
             return createdRelationships.getIfAbsentPutWithKey( type, MutableNodeRecordData.Relationships::new )
                     .add( internalId, smallRecord.after.id, targetNode, type, outgoing );
+        }
+
+        @Override
+        void deleteRelationship( long internalId, int type, long otherNode, boolean outgoing )
+        {
+            deletedRelationships.getIfAbsentPutWithKey( type, MutableNodeRecordData.Relationships::new )
+                    .add( internalId, smallRecord.data.id, otherNode, type, outgoing );
         }
 
         @Override

@@ -139,7 +139,7 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
                     throw new IllegalStateException( "No RelationshipState for added relationship!" );
                 }
             }
-            relationships.getRemoved().forEach( visitor::visitDeletedRelationship );
+            relationships.getRemoved().forEach( relationshipId -> relationshipVisit( relationshipId, visitor::visitDeletedRelationship ) );
         }
 
         if ( nodes != null )
@@ -345,7 +345,9 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
     @Override
     public void relationshipDoDelete( long id, int type, long startNodeId, long endNodeId )
     {
-        relationships().remove( id );
+        RemovalsCountingDiffSets relationships = relationships();
+        boolean wasAddedInThisTx = relationships.isAdded( id );
+        relationships.remove( id );
 
         if ( startNodeId == endNodeId )
         {
@@ -357,15 +359,23 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
             getOrCreateNodeState( endNodeId ).removeRelationship( id, type, RelationshipDirection.INCOMING );
         }
 
-        if ( relationshipStatesMap != null )
+        if ( wasAddedInThisTx )
         {
-            RelationshipStateImpl removed = relationshipStatesMap.remove( id );
-            if ( removed != null )
+            if ( relationshipStatesMap != null )
             {
-                removed.clear();
+                RelationshipStateImpl removed = relationshipStatesMap.remove( id );
+                if ( removed != null )
+                {
+                    removed.clear();
+                }
             }
         }
-        getOrCreateTypeStateRelationshipDiffSets( type ).remove( id );
+        else
+        {
+            RelationshipStateImpl state = getOrCreateRelationshipState( id );
+            state.setMetaData( startNodeId, endNodeId, type );
+            state.setDeleted();
+        }
 
         dataChanged();
     }
@@ -495,7 +505,7 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
             return RelationshipStateImpl.EMPTY;
         }
         final RelationshipStateImpl relationshipState = relationshipStatesMap.get( id );
-        return relationshipState == null ? RelationshipStateImpl.EMPTY : relationshipState;
+        return relationshipState == null || relationshipState.isDeleted() ? RelationshipStateImpl.EMPTY : relationshipState;
     }
 
     @Override
@@ -617,7 +627,8 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
     @Override
     public Iterable<RelationshipState> modifiedRelationships()
     {
-        return relationshipStatesMap == null ? Iterables.empty() : Iterables.cast( relationshipStatesMap.values() );
+        return relationshipStatesMap == null ? Iterables.empty()
+                                             : Iterables.cast( Iterables.filter( rel -> !rel.isDeleted(), relationshipStatesMap.values() ) );
     }
 
     @VisibleForTesting

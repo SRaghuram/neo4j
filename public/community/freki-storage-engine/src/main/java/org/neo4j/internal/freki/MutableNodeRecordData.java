@@ -45,6 +45,7 @@ import static org.neo4j.internal.freki.StreamVByte.readLongs;
 import static org.neo4j.internal.freki.StreamVByte.writeIntDeltas;
 import static org.neo4j.internal.freki.StreamVByte.writeLongs;
 import static org.neo4j.internal.helpers.Numbers.safeCastIntToUnsignedByte;
+import static org.neo4j.util.Preconditions.checkState;
 
 /**
  * [IN_USE|OFFSETS|LABELS|PROPERTY_KEYS,PROPERTY_VALUES|REL_TYPES|RELS[]|REL_TYPE_OFFSETS|FW]
@@ -62,7 +63,7 @@ class MutableNodeRecordData
     final MutableIntSet labels = IntSets.mutable.empty();
     final MutableIntObjectMap<Value> properties = IntObjectMaps.mutable.empty();
     final MutableIntObjectMap<Relationships> relationships = IntObjectMaps.mutable.empty();
-    private long nextInternalRelationshipId = FIRST_RELATIONSHIP_ID;
+    long nextInternalRelationshipId = FIRST_RELATIONSHIP_ID;
     private long forwardPointer = NULL;
     private long backPointer = NULL;
 
@@ -130,6 +131,13 @@ class MutableNodeRecordData
     void registerInternalRelationshipId( long internalId )
     {
         nextInternalRelationshipId = Long.max( this.nextInternalRelationshipId, internalId + 1 );
+    }
+
+    void deleteRelationship( long internalId, int type, long otherNode, boolean outgoing )
+    {
+        Relationships relationships = this.relationships.get( type );
+        checkState( relationships != null, "No such relationship (%d)-[:%d]->(%d)", id, type, otherNode );
+        relationships.remove( internalId, id, otherNode, outgoing );
     }
 
     static class Relationship
@@ -204,6 +212,23 @@ class MutableNodeRecordData
             return relationship;
         }
 
+        void remove( long internalId, long sourceNode, long otherNode, boolean outgoing )
+        {
+            int foundIndex = -1;
+            for ( int i = 0, size = relationships.size(); i < size; i++ )
+            {
+                Relationship relationship = relationships.get( i );
+                if ( relationship.internalId == internalId && relationship.sourceNodeId == sourceNode && relationship.otherNode == otherNode &&
+                        relationship.outgoing == outgoing )
+                {
+                    foundIndex = i;
+                    break;
+                }
+            }
+            checkState( foundIndex != -1, "No such relationship of type:%d internalId:%d", type, internalId );
+            relationships.remove( foundIndex );
+        }
+
         @Nonnull
         @Override
         public Iterator<Relationship> iterator()
@@ -274,9 +299,8 @@ class MutableNodeRecordData
         properties.remove( propertyKeyId );
     }
 
-    Relationship createRelationship( Relationship sourceNodeRelationship, long internalId, long otherNode, int type )
+    Relationship createRelationship( long internalId, long otherNode, int type, boolean outgoing )
     {
-        boolean outgoing = sourceNodeRelationship == null;
         return relationships.getIfAbsentPut( type, () -> new MutableNodeRecordData.Relationships( type ) ).add( internalId, id, otherNode, type, outgoing );
     }
 
@@ -448,12 +472,12 @@ class MutableNodeRecordData
         properties.clear();
         if ( propertiesOffset != 0 )
         {
-            Preconditions.checkState( buffer.position() == propertiesOffset, "Mismatching properties offset and expected offset" );
+            checkState( buffer.position() == propertiesOffset, "Mismatching properties offset and expected offset" );
             readProperties( properties, buffer, bigPropertyValueStore );
         }
 
         relationships.clear();
-        nextInternalRelationshipId = 1;
+        nextInternalRelationshipId = FIRST_RELATIONSHIP_ID;
         if ( relationshipOffset != 0 )
         {
             for ( int relationshipType : readIntDeltas( intArrayTarget(), buffer ).array() )
