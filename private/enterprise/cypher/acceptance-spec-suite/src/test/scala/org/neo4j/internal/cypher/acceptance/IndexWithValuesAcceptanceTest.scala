@@ -500,7 +500,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
     val query = "PROFILE MATCH (n:Awesome) WHERE n.prop1 < 42 OR n.prop1 > 43 RETURN n.prop1"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes,
+    val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere
         .aPlan("Projection")
         .containingArgument("{n.prop1 : cache[n.prop1]}")
@@ -530,7 +530,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
     val query = "PROFILE MATCH (n:Awesome) WHERE n.prop1 < 41 OR n.prop2 < 2 RETURN n.prop1, n.prop2"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes,
+    val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere
         .aPlan("Projection")
         .containingArgument("{n.prop1 : cache[n.prop1], n.prop2 : cache[n.prop2]}")

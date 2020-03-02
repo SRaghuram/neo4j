@@ -329,9 +329,8 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   }
 
   test("should support profiling union queries") {
-    profile(Configs.InterpretedAndSlotted,
-      "RETURN 1 AS A union RETURN 2 AS A",
-      planDescription => ())
+    profile(Configs.InterpretedAndSlottedAndPipelined,
+      "RETURN 1 AS A union RETURN 2 AS A")
   }
 
   test("should support profiling merge_queries") {

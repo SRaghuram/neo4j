@@ -34,7 +34,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     ).foreach {
       case (query: String, res: Seq[Seq[Any]]) =>
         val expected = res.map(v => Map("variable" -> v.head, "n.name" -> v(1), "n.number" -> v(2)))
-        val result = executeWith(Configs.InterpretedAndSlotted, query)
+        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
         result.executionPlanDescription() should includeSomewhere.aPlan("Optional").onTopOf(aSourcePlan("Distinct").onTopOf(aSourcePlan("Union").onTopOf(aSourcePlan("NodeIndexSeekByRange"))))
         result.toList should equal(expected)
     }
@@ -59,7 +59,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       Seq("Person", "Company", "Product").foreach(l => createLabeledNode(Map("uuid" -> s"xxx$i"), l))
       Seq("City", "AdministrativeLocation1", "AdministrativeLocation2", "Country", "Region").foreach(l => createLabeledNode(Map("geonameId" -> i), l, "Location"))
     }
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     result.executionPlanDescription() should includeSomewhere.aPlan("Optional").onTopOf(aPlan("Filter").onTopOf(aPlan("Distinct").onTopOf(aPlan("Union"))))
     val results: Seq[Map[String, AnyRef]] = result.toList
     results.size should be(1)

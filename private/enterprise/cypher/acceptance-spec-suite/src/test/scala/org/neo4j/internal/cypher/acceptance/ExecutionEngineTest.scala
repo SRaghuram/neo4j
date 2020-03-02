@@ -690,7 +690,7 @@ order by a.COL1""".format(a, b))
     createNode()
 
     // WHEN
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (n) where id(n) = 0 RETURN 1 as x UNION ALL match (n) where id(n) = 0 RETURN 2 as x")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (n) where id(n) = 0 RETURN 1 as x UNION ALL match (n) where id(n) = 0 RETURN 2 as x")
 
     // THEN
     result.toList should equal(List(Map("x" -> 1), Map("x" -> 2)))
@@ -700,7 +700,7 @@ order by a.COL1""".format(a, b))
     createNode()
 
     // WHEN
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (n) where id(n) = 0 RETURN 1 as x UNION match (n) where id(n) = 0 RETURN 1 as x")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (n) where id(n) = 0 RETURN 1 as x UNION match (n) where id(n) = 0 RETURN 1 as x")
 
     // THEN
     result.toList should equal(List(Map("x" -> 1)))
