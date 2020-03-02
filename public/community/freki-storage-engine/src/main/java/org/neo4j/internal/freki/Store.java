@@ -69,7 +69,7 @@ public class Store extends BareBoneSingleFileStore implements SimpleStore
         super.start();
         idGenerator.start( visitor ->
         {
-            long highestIdFound = 0;
+            long highestIdFound = -1;
             long[] foundIds = new long[recordsPerPage];
             int foundIdsCursor;
             try ( PageCursor cursor = openReadCursor() )
