@@ -178,8 +178,9 @@ class CommandCreator implements TxStateVisitor
     }
 
     @Override
-    public void visitRemovedConstraint( ConstraintDescriptor constraint )
+    public void visitRemovedConstraint( ConstraintDescriptor constraint ) throws KernelException
     {
+        constraint = stores.schemaStore.loadRule( constraint, PageCursorTracer.NULL );
         commands.add( new FrekiCommand.Schema( constraint, Mode.DELETE ) );
         switch ( constraint.type() )
         {

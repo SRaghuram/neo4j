@@ -54,11 +54,17 @@ public interface TxStateVisitor extends AutoCloseable
 
     void visitAddedIndex( IndexDescriptor element ) throws KernelException;
 
+    /**
+     * Signals a removed {@link IndexDescriptor}.
+     * Note on applying this change to store: Index schema rules may be deleted twice, if they were owned by a constraint;
+     * once for dropping the index, and then again as part of dropping the constraint. So applying this change must be idempotent.
+     * @param element the removed index.
+     */
     void visitRemovedIndex( IndexDescriptor element );
 
     void visitAddedConstraint( ConstraintDescriptor element ) throws KernelException;
 
-    void visitRemovedConstraint( ConstraintDescriptor element );
+    void visitRemovedConstraint( ConstraintDescriptor element ) throws KernelException;
 
     void visitCreatedLabelToken( long id, String name, boolean internal );
 
@@ -124,7 +130,7 @@ public interface TxStateVisitor extends AutoCloseable
         }
 
         @Override
-        public void visitRemovedConstraint( ConstraintDescriptor element )
+        public void visitRemovedConstraint( ConstraintDescriptor element ) throws KernelException
         {
         }
 
@@ -227,7 +233,7 @@ public interface TxStateVisitor extends AutoCloseable
         }
 
         @Override
-        public void visitRemovedConstraint( ConstraintDescriptor constraint )
+        public void visitRemovedConstraint( ConstraintDescriptor constraint ) throws KernelException
         {
             actual.visitRemovedConstraint( constraint );
         }
