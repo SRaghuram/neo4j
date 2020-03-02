@@ -121,7 +121,7 @@ class FulltextIndexTransactionStateVisitor extends TxStateVisitor.Adapter
     }
 
     @Override
-    public void visitDeletedRelationship( long id )
+    public void visitDeletedRelationship( long id, int type, long startNode, long endNode )
     {
         modifiedEntityIdsInThisTransaction.add( id );
     }

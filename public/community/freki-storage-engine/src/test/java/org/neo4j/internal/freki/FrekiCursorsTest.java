@@ -164,11 +164,11 @@ abstract class FrekiCursorsTest
 
         Node relationship( int type, Node otherNode, IntObjectMap<Value> properties )
         {
-            MutableNodeRecordData.Relationship relationship = data.createRelationship( null, data.nextInternalRelationshipId(), otherNode.record.id, type );
+            MutableNodeRecordData.Relationship relationship = data.createRelationship( data.nextInternalRelationshipId(), otherNode.record.id, type, true );
             properties.forEachKeyValue( relationship::addProperty );
             if ( record.id != otherNode.record.id )
             {
-                relationship = otherNode.data.createRelationship( relationship, data.nextInternalRelationshipId(), record.id, type );
+                relationship = otherNode.data.createRelationship( data.nextInternalRelationshipId(), record.id, type, false );
                 properties.forEachKeyValue( relationship::addProperty );
             }
             return this;

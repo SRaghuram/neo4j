@@ -95,7 +95,7 @@ class TransactionToRecordStateVisitor extends TxStateVisitor.Adapter
     }
 
     @Override
-    public void visitDeletedRelationship( long id )
+    public void visitDeletedRelationship( long id, int type, long startNode, long endNode )
     {
         // record the state changes to be made to the store
         recordState.relDelete( id );
