@@ -379,7 +379,7 @@ class SlotConfiguration private(private val slots: mutable.Map[SlotConfiguration
 
   def foreachCachedSlot[U](onCachedProperty: ((ASTCachedProperty, RefSlot)) => Unit): Unit = {
     slots.iterator.foreach {
-      case (CachedPropertySlotKey(key), slot: RefSlot) => onCachedProperty(key, slot)
+      case (CachedPropertySlotKey(key), slot: RefSlot) => onCachedProperty(key -> slot)
       case _ => // do nothing
     }
   }

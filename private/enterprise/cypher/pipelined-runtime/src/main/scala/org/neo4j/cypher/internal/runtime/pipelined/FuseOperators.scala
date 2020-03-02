@@ -131,7 +131,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
     // Compile pipelines from the end backwards/upstream, to track needsFilteringMorsel
     // (the previous pipelines will need a filtering morsel if its downstream pipeline has a work canceller
     val (executablePipelines, _, _) =
-      executionGraphDefinition.pipelines.foldRight(IndexedSeq.empty[ExecutablePipeline], false, false) {
+      executionGraphDefinition.pipelines.foldRight (IndexedSeq.empty[ExecutablePipeline], false, false) {
         case (p, (pipelines, needsFilteringMorsel, nextPipelineFused)) =>
           val (executablePipeline, upstreamNeedsFilteringMorsel) =
             compilePipeline(p, needsFilteringMorsel, nextPipelineFused)

@@ -6,8 +6,6 @@
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
-import org.mockito.invocation.InvocationOnMock
-import org.mockito.stubbing.Answer
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorsel
@@ -23,10 +21,6 @@ import org.neo4j.values.storable.Values
 
 abstract class MorselUnitTest extends CypherFunSuite {
   protected val resources: QueryResources = mock[QueryResources](RETURNS_DEEP_STUBS)
-
-  private def answer[T](a: InvocationOnMock => T): Answer[T] = {
-    invocationOnMock: InvocationOnMock => a(invocationOnMock)
-  }
 
   class Input {
     private val _longs = Array.newBuilder[Long]
