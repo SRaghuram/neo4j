@@ -433,6 +433,54 @@ class FrekiStorageEngineGraphWritesIT
     }
 
     @Test
+    void shouldDeleteRelationshipFromSparseNode() throws Exception
+    {
+        shouldDeleteRelationship( 2, 20 );
+    }
+
+    @Test
+    void shouldDeleteRelationshipFromDenseNode() throws Exception
+    {
+        shouldDeleteRelationship( 100, 200 );
+    }
+
+    private void shouldDeleteRelationship( int atLeastNumRelationships, int atMostNumRelationships ) throws Exception
+    {
+        // given
+        long nodeId1 = commandCreationContext.reserveNode();
+        long nodeId2 = commandCreationContext.reserveNode();
+        List<RelationshipSpec> relationships = new ArrayList<>();
+        createAndApplyTransaction( target ->
+        {
+            target.visitCreatedNode( nodeId1 );
+            target.visitCreatedNode( nodeId2 );
+            int numberOfRelationships = random.nextInt( atLeastNumRelationships, atMostNumRelationships );
+            for ( int i = 0; i < numberOfRelationships; i++ )
+            {
+                boolean outgoing = random.nextBoolean();
+                RelationshipSpec relationshipSpec = new RelationshipSpec( outgoing ? nodeId1 : nodeId2, random.nextInt( 3 ), outgoing ? nodeId2 : nodeId1,
+                        asSet( new PropertyKeyValue( 0, intValue( i ) ) ) );
+                relationships.add( relationshipSpec );
+                long id = commandCreationContext.reserveRelationship( relationshipSpec.startNodeId );
+                target.visitCreatedRelationship( id, relationshipSpec.type,
+                        relationshipSpec.startNodeId, relationshipSpec.endNodeId, relationshipSpec.properties );
+                relationshipSpec.id = id;
+            }
+        } );
+
+        // when
+        createAndApplyTransaction( target ->
+        {
+            RelationshipSpec deletedRelationship = relationships.remove( random.nextInt( relationships.size() ) );
+            target.visitDeletedRelationship( deletedRelationship.id, deletedRelationship.type, deletedRelationship.startNodeId,
+                    deletedRelationship.endNodeId );
+        } );
+
+        // then
+        assertContentsOfNode( nodeId1, LongSets.immutable.empty(), emptySet(), new HashSet<>( relationships ) );
+    }
+
+    @Test
     void shouldGenerateIndexUpdatesOnSmallCreatedNode() throws Exception
     {
         long nodeId = 123;
@@ -802,6 +850,8 @@ class FrekiStorageEngineGraphWritesIT
         private final int type;
         private final long endNodeId;
         private final Set<StorageProperty> properties;
+
+        private long id;
 
         RelationshipSpec( long startNodeId, int type, long endNodeId, Set<StorageProperty> properties )
         {

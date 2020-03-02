@@ -32,8 +32,8 @@ import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.StorageReader;
 import org.neo4j.storageengine.api.StorageRelationshipScanCursor;
 
-import static org.neo4j.storageengine.api.RelationshipSelection.ALL_RELATIONSHIPS;
 import static org.neo4j.io.IOUtils.closeAllUnchecked;
+import static org.neo4j.storageengine.api.RelationshipSelection.ALL_RELATIONSHIPS;
 import static org.neo4j.token.api.TokenConstants.ANY_LABEL;
 import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 
@@ -102,7 +102,7 @@ public class TransactionCountingStateVisitor extends TxStateVisitor.Delegator
     }
 
     @Override
-    public void visitDeletedRelationship( long id )
+    public void visitDeletedRelationship( long id, int type, long startNode, long endNode )
     {
         relationshipCursor.single( id );
         if ( !relationshipCursor.next() )
@@ -110,7 +110,7 @@ public class TransactionCountingStateVisitor extends TxStateVisitor.Delegator
             throw new IllegalStateException( "Relationship being deleted should exist along with its nodes. Relationship[" + id + "]" );
         }
         updateRelationshipCount( relationshipCursor.sourceNodeReference(), relationshipCursor.type(), relationshipCursor.targetNodeReference(), -1 );
-        super.visitDeletedRelationship( id );
+        super.visitDeletedRelationship( id, type, startNode, endNode );
     }
 
     @Override

@@ -625,7 +625,7 @@ abstract class TxStateTest
             }
 
             @Override
-            public void visitDeletedRelationship( long id )
+            public void visitDeletedRelationship( long id, int type, long startNode, long endNode )
             {
                 fail( "Should not delete any relationship" );
             }
@@ -694,7 +694,7 @@ abstract class TxStateTest
         state.accept( new TxStateVisitor.Adapter()
         {
             @Override
-            public void visitDeletedRelationship( long id )
+            public void visitDeletedRelationship( long id, int type, long startNode, long endNode )
             {
                 // Then
                 assertEquals( 42, id, "Wrong deleted relationship id" );
@@ -844,7 +844,7 @@ abstract class TxStateTest
             }
 
             @Override
-            public void visitDeletedRelationship( long id )
+            public void visitDeletedRelationship( long id, int type, long startNode, long endNode )
             {
                 visitLate();
             }
@@ -877,7 +877,7 @@ abstract class TxStateTest
             // then
 
             @Override
-            public void visitDeletedRelationship( long id )
+            public void visitDeletedRelationship( long id, int type, long startNode, long endNode )
             {
                 visitEarly();
             }

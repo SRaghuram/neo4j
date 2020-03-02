@@ -96,6 +96,7 @@ class RelationshipStateImpl extends EntityStateImpl implements RelationshipState
     private long startNode = -1;
     private long endNode = -1;
     private int type = -1;
+    private boolean deleted;
 
     static RelationshipStateImpl createRelationshipStateImpl( long id, CollectionsFactory collectionsFactory, MemoryTracker memoryTracker )
     {
@@ -113,6 +114,16 @@ class RelationshipStateImpl extends EntityStateImpl implements RelationshipState
         this.startNode = startNode;
         this.endNode = endNode;
         this.type = type;
+    }
+
+    void setDeleted()
+    {
+        this.deleted = true;
+    }
+
+    boolean isDeleted()
+    {
+        return this.deleted;
     }
 
     @Override
