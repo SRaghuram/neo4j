@@ -15,7 +15,9 @@ class FabricQueryCache(size: Int) {
   type Query = String
   type Params = MapValue
   type ParamTypes = Map[String, Class[_]]
-  type Key = (Query, ParamTypes)
+  type DefaultGraphName = String
+
+  type Key = (Query, ParamTypes, DefaultGraphName)
   type Value = FabricPlan
 
   private val cache = new LFUCache[Key, Value](size)
@@ -23,12 +25,12 @@ class FabricQueryCache(size: Int) {
   private var hits: Long = 0
   private var misses: Long = 0
 
-  def computeIfAbsent(query: String, params: MapValue, compute: (String, MapValue) => FabricPlan): FabricPlan = {
+  def computeIfAbsent(query: Query, params: Params, defaultGraphName: DefaultGraphName, compute: () => FabricPlan): FabricPlan = {
     val paramTypes = QueryCache.extractParameterTypeMap(params)
-    val key = (query, paramTypes)
+    val key = (query, paramTypes, defaultGraphName)
     cache.get(key) match {
       case None =>
-        val result = compute(query, params)
+        val result = compute()
         cache.put(key, result)
         misses += 1
         result

@@ -16,6 +16,7 @@ import com.neo4j.fabric.config.FabricConfig.GlobalDriverConfig
 import com.neo4j.fabric.config.FabricConfig.Graph
 import com.neo4j.fabric.pipeline.Pipeline
 import com.neo4j.fabric.pipeline.SignatureResolver
+import com.neo4j.fabric.planning.FabricPlan.DebugOptions
 import com.neo4j.fabric.planning.FabricQuery.Apply
 import com.neo4j.fabric.planning.FabricQuery.ChainedQuery
 import com.neo4j.fabric.planning.FabricQuery.Direct
@@ -177,7 +178,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
 
   "Cache:" - {
 
-    "two equal input strings" in {
+    "cache hit on equal input" in {
       val newPlanner = FabricPlanner(config, cypherConfig, monitors, signatures)
 
       val q =
@@ -191,7 +192,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |  RETURN 4 AS w
           |}
           |RETURN w, y
-          """.stripMargin
+          |""".stripMargin
 
       newPlanner.instance(q, params, defaultGraphName).plan
       newPlanner.instance(q, params, defaultGraphName).plan
@@ -200,26 +201,105 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
       newPlanner.queryCache.getHits.shouldEqual(1)
     }
 
-    "two equal input strings with different params" in {
+    "cache miss on different query" in {
+      val newPlanner = FabricPlanner(config, cypherConfig, monitors, signatures)
+
+      val q1 =
+        """WITH 1 AS x
+          |RETURN x
+          |""".stripMargin
+
+      val q2 =
+        """WITH 1 AS x
+          |RETURN x, 2 AS y
+          |""".stripMargin
+
+      newPlanner.instance(q1, params, defaultGraphName).plan
+      newPlanner.instance(q2, params, defaultGraphName).plan
+
+      newPlanner.queryCache.getMisses.shouldEqual(2)
+      newPlanner.queryCache.getHits.shouldEqual(0)
+    }
+
+    "cache miss on different default graph" in {
       val newPlanner = FabricPlanner(config, cypherConfig, monitors, signatures)
 
       val q =
         """WITH 1 AS x
-          |CALL {
-          |  RETURN 2 AS y
-          |}
-          |WITH 3 AS z, y AS y
-          |CALL {
-          |  WITH 0 AS a
-          |  RETURN 4 AS w
-          |}
-          |RETURN w, y
-          """.stripMargin
+          |RETURN x
+          |""".stripMargin
+
+      newPlanner.instance(q, params, "foo").plan
+      newPlanner.instance(q, params, "bar").plan
+
+      newPlanner.queryCache.getMisses.shouldEqual(2)
+      newPlanner.queryCache.getHits.shouldEqual(0)
+    }
+
+    "cache miss on options" in {
+      val newPlanner = FabricPlanner(config, cypherConfig, monitors, signatures)
+
+      val q1 =
+        """WITH 1 AS x
+          |RETURN x
+          |""".stripMargin
+
+      val q2 =
+        """CYPHER debug=fabriclogplan
+          |WITH 1 AS x
+          |RETURN x
+          |""".stripMargin
+
+      newPlanner.instance(q1, params, defaultGraphName).plan
+      newPlanner.instance(q2, params, defaultGraphName).plan
+
+      newPlanner.queryCache.getMisses.shouldEqual(2)
+      newPlanner.queryCache.getHits.shouldEqual(0)
+    }
+
+    "cache miss on different param types" in {
+      val newPlanner = FabricPlanner(config, cypherConfig, monitors, signatures)
+
+      val q =
+        """WITH 1 AS x
+          |RETURN x
+          |""".stripMargin
 
       newPlanner.instance(q, VirtualValues.map(Array("a"), Array(Values.of("a"))), defaultGraphName).plan
       newPlanner.instance(q, VirtualValues.map(Array("a"), Array(Values.of(1))), defaultGraphName).plan
 
       newPlanner.queryCache.getMisses.shouldEqual(2)
+      newPlanner.queryCache.getHits.shouldEqual(0)
+    }
+
+    "cache miss on new params" in {
+      val newPlanner = FabricPlanner(config, cypherConfig, monitors, signatures)
+
+      val q =
+        """WITH 1 AS x
+          |RETURN x
+          |""".stripMargin
+
+      newPlanner.instance(q, VirtualValues.map(Array("a"), Array(Values.of("a"))), defaultGraphName).plan
+      newPlanner.instance(q, VirtualValues.map(Array("a", "b"), Array(Values.of("a"), Values.of(1))), defaultGraphName).plan
+
+      newPlanner.queryCache.getMisses.shouldEqual(2)
+      newPlanner.queryCache.getHits.shouldEqual(0)
+    }
+
+    "cache hit on different param values" in {
+      val newPlanner = FabricPlanner(config, cypherConfig, monitors, signatures)
+
+      val q =
+        """WITH 1 AS x
+          |RETURN x
+          |""".stripMargin
+
+      newPlanner.instance(q, VirtualValues.map(Array("a"), Array(Values.of("a"))), defaultGraphName).plan
+      newPlanner.instance(q, VirtualValues.map(Array("a"), Array(Values.of("b"))), defaultGraphName).plan
+
+      newPlanner.queryCache.getMisses.shouldEqual(1)
+      newPlanner.queryCache.getHits.shouldEqual(1)
     }
 
   }
@@ -247,6 +327,19 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
 
       the[InvalidSemanticsException].thrownBy(plan(q, params))
         .check(_.getMessage.should(include("Query option: 'PROFILE' not supported in Fabric database")))
+    }
+
+    "allow fabric debug options" in {
+      val q =
+        """CYPHER debug=fabriclogplan debug=fabriclogrecords
+          |RETURN 1 AS x
+          |""".stripMargin
+
+      plan(q, params)
+        .check(_.debugOptions.shouldEqual(DebugOptions(true, true)))
+        .check(_.query.shouldEqual(
+          init(defaultGraph).leaf(Seq(return_(literal(1).as("x"))), Seq("x"))
+        ))
     }
 
     "disallow options" in {

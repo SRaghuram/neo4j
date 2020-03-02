@@ -77,7 +77,7 @@ case class FabricPlanner(
     private val pipeline = Pipeline.Instance(monitors, queryString, signatures)
 
     lazy val plan: FabricPlan =
-      queryCache.computeIfAbsent(queryString, queryParams, (_, _) => computePlan())
+      queryCache.computeIfAbsent(queryString, queryParams, defaultGraphName, () => computePlan())
 
     private def computePlan(): FabricPlan = {
 
