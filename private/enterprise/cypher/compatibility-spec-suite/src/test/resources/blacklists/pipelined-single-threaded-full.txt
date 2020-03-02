@@ -235,7 +235,6 @@ Feature "UnionAcceptance": Scenario "Two elements, both unique, distinct"
 Feature "UnionAcceptance": Scenario "Two elements, both unique, not distinct"
 Feature "UnwindAcceptance": Scenario "Creating nodes from an unwound parameter list"
 Feature "UnwindAcceptance": Scenario "Unwind with merge"
-Feature "WithAcceptance": Scenario "Handle dependencies across WITH with SKIP"
 
 // TCK needs to be updated, expects wrong error type or message
 Feature "ExpressionAcceptance": Scenario "Fail at runtime when trying to index into a map with a non-string"
