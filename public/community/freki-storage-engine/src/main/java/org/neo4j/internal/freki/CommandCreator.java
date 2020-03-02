@@ -65,12 +65,14 @@ class CommandCreator implements TxStateVisitor
 {
     private final Collection<StorageCommand> commands;
     private final Stores stores;
+    private final PageCursorTracer cursorTracer;
     private final MutableLongObjectMap<Mutation> mutations = LongObjectMaps.mutable.empty();
 
-    CommandCreator( Collection<StorageCommand> commands, Stores stores )
+    CommandCreator( Collection<StorageCommand> commands, Stores stores, PageCursorTracer cursorTracer )
     {
         this.commands = commands;
         this.stores = stores;
+        this.cursorTracer = cursorTracer;
     }
 
     @Override
@@ -164,13 +166,13 @@ class CommandCreator implements TxStateVisitor
     @Override
     public void visitAddedConstraint( ConstraintDescriptor constraint ) throws KernelException
     {
-        constraint = constraint.withId( stores.schemaStore.nextSchemaRuleId( PageCursorTracer.NULL ) );
+        constraint = constraint.withId( stores.schemaStore.nextSchemaRuleId( cursorTracer ) );
         commands.add( new FrekiCommand.Schema( constraint, Mode.CREATE ) );
         switch ( constraint.type() )
         {
         case UNIQUE:
             // This also means updating the index to have this constraint as owner
-            IndexDescriptor index = (IndexDescriptor) stores.schemaStore.loadRule( constraint.asUniquenessConstraint().ownedIndexId(), PageCursorTracer.NULL );
+            IndexDescriptor index = (IndexDescriptor) stores.schemaStore.loadRule( constraint.asUniquenessConstraint().ownedIndexId(), cursorTracer );
             commands.add( new FrekiCommand.Schema( index.withOwningConstraintId( constraint.getId() ), Mode.UPDATE ) );
             break;
         default:
@@ -181,7 +183,7 @@ class CommandCreator implements TxStateVisitor
     @Override
     public void visitRemovedConstraint( ConstraintDescriptor constraint ) throws KernelException
     {
-        constraint = stores.schemaStore.loadRule( constraint, PageCursorTracer.NULL );
+        constraint = stores.schemaStore.loadRule( constraint, cursorTracer );
         commands.add( new FrekiCommand.Schema( constraint, Mode.DELETE ) );
         switch ( constraint.type() )
         {
@@ -282,7 +284,7 @@ class CommandCreator implements TxStateVisitor
     private Mutation createNew( SimpleStore store, long id )
     {
         Mutation mutation = new Mutation();
-        mutation.small = new SparseRecordAndData( stores, store, id, null );
+        mutation.small = new SparseRecordAndData( stores, store, id, null, cursorTracer );
         mutation.small.markInUse( true );
         mutation.small.markCreated();
         mutation.current = mutation.small;
@@ -295,7 +297,7 @@ class CommandCreator implements TxStateVisitor
         if ( mutation == null )
         {
             mutation = new Mutation();
-            mutation.small = new SparseRecordAndData( stores, stores.mainStore, nodeId, null );
+            mutation.small = new SparseRecordAndData( stores, stores.mainStore, nodeId, null, cursorTracer );
             mutation.small.loadExistingData();
             mutation.current = mutation.small;
             long forwardPointer = mutation.small.getForwardPointer();
@@ -308,7 +310,7 @@ class CommandCreator implements TxStateVisitor
                     int fwSizeExp = sizeExponentialFromForwardPointer( forwardPointer );
                     long fwId = idFromForwardPointer( forwardPointer );
                     SimpleStore largeStore = stores.mainStore( fwSizeExp );
-                    mutation.large = new SparseRecordAndData( stores, largeStore, fwId, mutation.small );
+                    mutation.large = new SparseRecordAndData( stores, largeStore, fwId, mutation.small, cursorTracer );
                 }
                 else
                 {
@@ -372,6 +374,7 @@ class CommandCreator implements TxStateVisitor
         private final MainStores stores;
         private final SimpleStore store;
         private final SparseRecordAndData smallRecord;
+        private final PageCursorTracer cursorTracer;
 
         private boolean created;
         private Record before;
@@ -379,11 +382,12 @@ class CommandCreator implements TxStateVisitor
         // data here is really accidental state, a deserialized objectified version of the data found in the byte[] of the "after" record
         private MutableNodeRecordData data;
 
-        SparseRecordAndData( MainStores stores, SimpleStore store, long id, SparseRecordAndData smallRecord )
+        SparseRecordAndData( MainStores stores, SimpleStore store, long id, SparseRecordAndData smallRecord, PageCursorTracer cursorTracer )
         {
             this.stores = stores;
             this.store = store;
             this.smallRecord = smallRecord != null ? smallRecord : this;
+            this.cursorTracer = cursorTracer;
             int sizeExp = store.recordSizeExponential();
             before = new Record( sizeExp, id );
             after = new Record( sizeExp, id );
@@ -481,7 +485,7 @@ class CommandCreator implements TxStateVisitor
             RecordAndData result;
             if ( largerStore != null )
             {
-                SparseRecordAndData largerRecord = new SparseRecordAndData( stores, largerStore, -1, smallRecord );
+                SparseRecordAndData largerRecord = new SparseRecordAndData( stores, largerStore, -1, smallRecord, cursorTracer );
                 data.movePropertiesAndRelationshipsTo( largerRecord.data );
                 result = largerRecord;
             }
@@ -497,7 +501,7 @@ class CommandCreator implements TxStateVisitor
 
         private void acquireId()
         {
-            long id = store.nextId( PageCursorTracer.NULL );
+            long id = store.nextId( cursorTracer );
             data.id = id;
             before.id = id;
             after.id = id;

@@ -65,6 +65,10 @@ class FrekiCommandReader implements CommandReader
             return FrekiCommand.PropertyKeyToken.deserialize( channel );
         case FrekiCommand.Schema.TYPE :
             return FrekiCommand.Schema.deserialize( channel );
+        case FrekiCommand.NodeCount.TYPE :
+            return FrekiCommand.NodeCount.deserialize( channel );
+        case FrekiCommand.RelationshipCount.TYPE :
+            return FrekiCommand.RelationshipCount.deserialize( channel );
         default: throw new UnsupportedOperationException( String.format( "Command %d not implemented", commandType ) );
         }
     }
