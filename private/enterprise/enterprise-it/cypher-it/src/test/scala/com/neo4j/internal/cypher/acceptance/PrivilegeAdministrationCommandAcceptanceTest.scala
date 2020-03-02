@@ -5,11 +5,9 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.dbms.api.DatabaseNotFoundException
 import org.neo4j.exceptions.DatabaseAdministrationException
-import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
@@ -365,9 +363,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
               execute(s"$grantOrDenyCommand $actionCommand ON GRAPH * NODES * (*) TO custom")
               // THEN
             }
-            error1.getMessage should (be(s"Failed to $grantOrDeny traversal privilege to role 'custom': Role 'custom' does not exist.") or
-              (be(s"Failed to $grantOrDeny read privilege to role 'custom': Role 'custom' does not exist.") or
-              be(s"Failed to $grantOrDeny match privilege to role 'custom': Role 'custom' does not exist.")))
+            error1.getMessage should be(s"Failed to $grantOrDeny $actionName privilege to role 'custom': Role 'custom' does not exist.")
 
             // WHEN
             val error2 = the[InvalidArgumentsException] thrownBy {
@@ -375,9 +371,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
               execute(s"$grantOrDenyCommand $actionCommand ON GRAPH * RELATIONSHIPS * (*) TO custom")
               // THEN
             }
-            error2.getMessage should (be(s"Failed to $grantOrDeny traversal privilege to role 'custom': Role 'custom' does not exist.") or
-              (be(s"Failed to $grantOrDeny read privilege to role 'custom': Role 'custom' does not exist.") or
-              be(s"Failed to $grantOrDeny match privilege to role 'custom': Role 'custom' does not exist.")))
+            error2.getMessage should be(s"Failed to $grantOrDeny $actionName privilege to role 'custom': Role 'custom' does not exist.")
 
             // WHEN
             val error3 = the[InvalidArgumentsException] thrownBy {
@@ -385,9 +379,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
               execute(s"$grantOrDenyCommand $actionCommand ON GRAPH * TO custom")
               // THEN
             }
-            error3.getMessage should (be(s"Failed to $grantOrDeny traversal privilege to role 'custom': Role 'custom' does not exist.") or
-              (be(s"Failed to $grantOrDeny read privilege to role 'custom': Role 'custom' does not exist.") or
-              be(s"Failed to $grantOrDeny match privilege to role 'custom': Role 'custom' does not exist.")))
+            error3.getMessage should be(s"Failed to $grantOrDeny $actionName privilege to role 'custom': Role 'custom' does not exist.")
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set())
@@ -400,9 +392,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             val error = the[DatabaseNotFoundException] thrownBy {
               execute(s"$grantOrDenyCommand $actionCommand ON GRAPH foo TO custom")
             }
-            error.getMessage should (be(s"Failed to $grantOrDeny traversal privilege to role 'custom': Database 'foo' does not exist.") or
-              (be(s"Failed to $grantOrDeny read privilege to role 'custom': Database 'foo' does not exist.") or
-              be(s"Failed to $grantOrDeny match privilege to role 'custom': Database 'foo' does not exist.")))
+            error.getMessage should be(s"Failed to $grantOrDeny $actionName privilege to role 'custom': Database 'foo' does not exist.")
           }
 
           test(s"should fail when ${grantOrDeny}ing $actionName privilege to custom role when not on system database") {
