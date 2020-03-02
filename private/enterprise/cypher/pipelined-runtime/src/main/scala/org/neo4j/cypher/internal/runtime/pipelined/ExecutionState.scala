@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.AntiMorselBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.LHSAccumulatingRHSStreamingSource
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.OptionalMorselBuffer
@@ -80,7 +81,7 @@ trait ExecutionState extends ArgumentStateMapCreator {
   def takeAccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId): AccumulatorAndMorsel[DATA, ACC]
 
   /**
-   * Take data from the [[OptionalMorselBuffer]] buffer with id `bufferId`.
+   * Take data from a [[OptionalMorselBuffer]] or [[AntiMorselBuffer]] buffer with id `bufferId`.
    *
    * @return the data to take, or `null` if no data was available
    */

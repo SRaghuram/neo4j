@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
+import org.neo4j.cypher.internal.physicalplanning.AntiType
 import org.neo4j.cypher.internal.physicalplanning.ApplyBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
@@ -14,9 +15,10 @@ import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.physicalplanning.Initialization
 import org.neo4j.cypher.internal.physicalplanning.LHSAccumulatingBufferVariant
-import org.neo4j.cypher.internal.physicalplanning.RHSStreamingBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.LHSAccumulatingRHSStreamingBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.OptionalBufferVariant
+import org.neo4j.cypher.internal.physicalplanning.OptionalType
+import org.neo4j.cypher.internal.physicalplanning.RHSStreamingBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.RegularBufferVariant
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
@@ -90,6 +92,7 @@ class Buffers(numBuffers: Int,
         case x: MorselArgumentStateBuffer[_, _] if x.argumentStateMapId == argumentStateMapId =>
           return x
         case x: OptionalMorselBuffer if x.argumentStateMapId == argumentStateMapId =>
+          // NOTE: this will catch AntiMorselBuffer too
           return x
         case _ =>
       }
@@ -170,12 +173,19 @@ class Buffers(numBuffers: Int,
                                                 x.rhsArgumentStateMapId,
             stateFactory)
 
-        case x: OptionalBufferVariant =>
+        case OptionalBufferVariant(argumentStateMapId, OptionalType) =>
           new OptionalMorselBuffer(bufferDefinition.id,
             tracker,
             reducers,
             argumentStateMaps,
-            x.argumentStateMapId)
+            argumentStateMapId)
+
+        case OptionalBufferVariant(argumentStateMapId, AntiType) =>
+          new AntiMorselBuffer(bufferDefinition.id,
+            tracker,
+            reducers,
+            argumentStateMaps,
+            argumentStateMapId)
 
         case RegularBufferVariant =>
           new MorselBuffer(bufferDefinition.id,

@@ -11,7 +11,6 @@ import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NodeUniqueIndexSeek
 import org.neo4j.cypher.internal.logical.plans.QueryExpression
-import org.neo4j.cypher.internal.physicalplanning.AntiBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
@@ -359,16 +358,13 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         new OptionalOperator(WorkIdentity.fromPlan(plan), argumentStateMapId, argumentSlotOffset, nullableSlots, slots, argumentSize)(plan.id)
 
       case _: plans.Anti =>
-        val argumentStateMapId = inputBuffer.variant.asInstanceOf[AntiBufferVariant].argumentStateMapId
-        // TODO needed?
-//        val nullableKeys = source.availableSymbols -- protectedSymbols
-//        val nullableSlots: Array[Slot] = nullableKeys.map(k => slots.get(k).get).toArray
+        val argumentStateMapId = inputBuffer.variant.asInstanceOf[OptionalBufferVariant].argumentStateMapId
         val argumentSize = physicalPlan.argumentSizes(plan.id)
 
         val argumentDepth = physicalPlan.applyPlans(id)
         val argumentSlotOffset = slots.getArgumentLongOffsetFor(argumentDepth)
 
-        new AntiOperator(WorkIdentity.fromPlan(plan), argumentStateMapId, argumentSlotOffset, /*nullableSlots, // TODO needed?*/ slots, argumentSize)(plan.id)
+        new AntiOperator(WorkIdentity.fromPlan(plan), argumentStateMapId, argumentSlotOffset, slots, argumentSize)(plan.id)
 
       case joinPlan: plans.NodeHashJoin =>
 

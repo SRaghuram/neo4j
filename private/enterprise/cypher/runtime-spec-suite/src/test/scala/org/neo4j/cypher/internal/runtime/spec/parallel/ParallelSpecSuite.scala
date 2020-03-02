@@ -46,6 +46,7 @@ import org.neo4j.cypher.internal.runtime.spec.stress.WorkloadTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AggregationTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AllNodeScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AllNodeScanWithOtherOperatorsTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.AntiSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArgumentTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArrayIndexSupport
@@ -319,6 +320,10 @@ class ParallelRuntimeUnionNoFusingTest extends UnionTestBase(NO_FUSING, PARALLEL
 // SEMI APPLY
 class ParallelRuntimeSemiApplyTest extends SemiApplyTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 class ParallelRuntimeSemiApplyNoFusingTest extends SemiApplyTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+
+// ANTI SEMI APPLY
+class ParallelAntiSemiApplyTest extends AntiSemiApplyTestBase(FUSING, PARALLEL, SIZE_HINT)
+class ParallelAntiSemiApplyNoFusingTest extends AntiSemiApplyTestBase(NO_FUSING, PARALLEL, SIZE_HINT)
 
 // GENERAL
 class ParallelRuntimeMiscTest extends MiscTestBase(FUSING, PARALLEL) with ParallelRuntimeSpecSuite

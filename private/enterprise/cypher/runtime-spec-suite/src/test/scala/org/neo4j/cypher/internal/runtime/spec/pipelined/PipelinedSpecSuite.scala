@@ -23,6 +23,7 @@ import org.neo4j.cypher.internal.runtime.spec.stress.WorkloadTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AggregationTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AllNodeScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AllNodeScanWithOtherOperatorsTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.AntiSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArgumentTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArrayIndexSupport
@@ -294,6 +295,10 @@ class PipelinedUnionNoFusingTest extends UnionTestBase(NO_FUSING, PIPELINED, SIZ
 // SEMI APPLY
 class PipelinedSemiApplyTest extends SemiApplyTestBase(FUSING, PIPELINED, SIZE_HINT)
 class PipelinedSemiApplyNoFusingTest extends SemiApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+
+// ANTI SEMI APPLY
+class PipelinedAntiSemiApplyTest extends AntiSemiApplyTestBase(FUSING, PIPELINED, SIZE_HINT)
+class PipelinedAntiSemiApplyNoFusingTest extends AntiSemiApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
 
 class PipelinedSemiApplyRewriterTest extends SemiApplyRewriterTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedSemiApplyRewriterNoFusingTest extends SemiApplyRewriterTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
