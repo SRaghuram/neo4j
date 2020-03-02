@@ -124,7 +124,7 @@ public class FrekiStorageEngine implements StorageEngine
         this.cursorTracerSupplier = cursorTracerSupplier;
         this.idGeneratorUpdatesWorkSync = new IdGeneratorUpdatesWorkSync();
         this.stores = new Stores( fs, databaseLayout, pageCache, idGeneratorFactory, pageCacheTracer, cursorTracerSupplier, recoveryCleanupWorkCollector,
-                createStoreIfNotExists, constraintSemantics, indexConfigCompleter );
+                createStoreIfNotExists, constraintSemantics, indexConfigCompleter, tokenHolders );
         life.add( stores );
     }
 

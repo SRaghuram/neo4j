@@ -428,12 +428,14 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         }
         else
         {
-            stores.schemaStore.deleteRule( rule.getId(), TRACER_SUPPLIER.get() );
-            if ( rule instanceof IndexDescriptor  )
+            if ( stores.schemaStore.deleteRule( rule.getId(), TRACER_SUPPLIER.get() ) )
             {
-                indexUpdateListener.dropIndex( (IndexDescriptor) rule );
+                if ( rule instanceof IndexDescriptor )
+                {
+                    indexUpdateListener.dropIndex( (IndexDescriptor) rule );
+                }
+                stores.schemaCache.removeSchemaRule( rule.getId() );
             }
-            stores.schemaCache.removeSchemaRule( rule.getId() );
         }
     }
 
