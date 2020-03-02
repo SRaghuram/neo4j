@@ -14,6 +14,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.ObjectListing;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
@@ -124,11 +125,11 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
                 // TransferManager processes all transfers asynchronously,
                 // so this call returns immediately.
                 PutObjectRequest putObjectRequest = new PutObjectRequest( bucketName, s3key, artifact.toFile() );
-                uploads.add( tm.upload( putObjectRequest ) );
+                ObjectMetadata objectMetadata = new ObjectMetadata();
+                objectMetadata.setContentLength( Files.size( artifact ) );
+                uploads.add( tm.upload( putObjectRequest.withMetadata( objectMetadata ) ) );
                 LOG.info( "Object upload started" );
             }
-            // TODO this fails under tests, and works with real implementation
-            // Objects.requireNonNull( result.getExpirationTime(), "build artifacts should have expiration time set" );
             for ( Upload upload : uploads )
             {
                 upload.waitForCompletion();
@@ -136,7 +137,7 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
             LOG.info( "All object upload complete" );
             tm.shutdownNow( false );
         }
-        catch ( URISyntaxException | InterruptedException e )
+        catch ( URISyntaxException | InterruptedException | IOException e )
         {
             throw new ArtifactStoreException( e );
         }
