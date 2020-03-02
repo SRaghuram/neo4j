@@ -1115,7 +1115,7 @@ class OperationsTest
         // then
         InOrder inOrder = inOrder( ktx, commandCreationContext );
         inOrder.verify( ktx ).txState();
-        inOrder.verify( commandCreationContext ).reserveRelationship();
+        inOrder.verify( commandCreationContext ).reserveRelationship( anyLong() );
         inOrder.verifyNoMoreInteractions();
     }
 

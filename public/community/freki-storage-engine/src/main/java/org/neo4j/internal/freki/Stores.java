@@ -20,7 +20,6 @@
 package org.neo4j.internal.freki;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.eclipse.collections.api.factory.Sets;
 
 import java.io.IOException;
 
@@ -29,7 +28,6 @@ import org.neo4j.counts.CountsAccessor;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.internal.counts.CountsBuilder;
 import org.neo4j.internal.counts.GBPTreeCountsStore;
-import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.internal.metadatastore.GBPTreeMetaDataStore;
@@ -55,7 +53,6 @@ public class Stores extends MainStores
     private static final int MAX_TOKEN_ID = (int) ((1L << 24) - 1);
     static final String META_DATA_STORE_FILENAME = "meta-data-store";
 
-    private final IdGenerator relationshipIdGenerator;
     public final TransactionMetaDataStore metaDataStore;
     public final GBPTreeCountsStore countsStore;
     public final GBPTreeSchemaStore schemaStore;
@@ -71,7 +68,6 @@ public class Stores extends MainStores
             throws IOException
     {
         super( fs, databaseLayout, pageCache, idGeneratorFactory, pageCacheTracer, cursorTracerSupplier, recoveryCleanupWorkCollector, createStoreIfNotExists );
-        IdGenerator relationshipsIdGenerator = null;
         GBPTreeMetaDataStore metaDataStore = null;
         GBPTreeCountsStore countsStore = null;
         GBPTreeSchemaStore schemaStore = null;
@@ -81,10 +77,6 @@ public class Stores extends MainStores
         boolean success = false;
         try
         {
-            relationshipsIdGenerator =
-                    idGeneratorFactory.create( pageCache, databaseLayout.relationshipStore(), IdType.RELATIONSHIP, 0, false, Long.MAX_VALUE, false,
-                            cursorTracerSupplier.get(), Sets.immutable.empty() );
-            idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( idGeneratorFactory, IdType.RELATIONSHIP ) );
             PageCursorTracer cursorTracer = cursorTracerSupplier.get();
             metaDataStore = FrekiStorageEngineFactory.openMetaDataStore( databaseLayout, pageCache, pageCacheTracer, cursorTracer );
             countsStore = new GBPTreeCountsStore( pageCache, databaseLayout.countStore(), recoveryCleanupWorkCollector,
@@ -104,7 +96,6 @@ public class Stores extends MainStores
             SchemaCache schemaCache = new SchemaCache( constraintSemantics, indexConfigCompleter );
             success = true;
 
-            this.relationshipIdGenerator = relationshipsIdGenerator;
             this.metaDataStore = metaDataStore;
             this.countsStore = countsStore;
             this.schemaStore = schemaStore;
@@ -118,18 +109,17 @@ public class Stores extends MainStores
         {
             if ( !success )
             {
-                closeAllSilently( concat( relationshipsIdGenerator, metaDataStore, countsStore, schemaStore, propertyKeyTokenStore, relationshipTypeTokenStore,
+                closeAllSilently( concat( metaDataStore, countsStore, schemaStore, propertyKeyTokenStore, relationshipTypeTokenStore,
                         labelTokenStore ) );
             }
         }
     }
 
-    Stores( SimpleStore[] mainStores, BigPropertyValueStore bigPropertyValueStore, DenseStore denseStore, IdGenerator relationshipIdGenerator,
+    Stores( SimpleStore[] mainStores, BigPropertyValueStore bigPropertyValueStore, DenseStore denseStore,
             TransactionMetaDataStore metaDataStore, GBPTreeCountsStore countsStore, GBPTreeSchemaStore schemaStore, SchemaCache schemaCache,
             GBPTreeTokenStore propertyKeyTokenStore, GBPTreeTokenStore relationshipTypeTokenStore, GBPTreeTokenStore labelTokenStore )
     {
         super( mainStores, bigPropertyValueStore, denseStore );
-        this.relationshipIdGenerator = relationshipIdGenerator;
         this.metaDataStore = metaDataStore;
         this.countsStore = countsStore;
         this.schemaStore = schemaStore;
@@ -142,7 +132,6 @@ public class Stores extends MainStores
 
     private void addStoresToLife()
     {
-        life.add( onShutdown( relationshipIdGenerator::close ) );
         life.add( onShutdown( metaDataStore::close ) );
         life.add( onShutdown( countsStore::close ) );
         life.add( onShutdown( schemaStore::close ) );
@@ -155,7 +144,6 @@ public class Stores extends MainStores
     void flushAndForce( IOLimiter limiter, PageCursorTracer cursorTracer ) throws IOException
     {
         super.flushAndForce( limiter, cursorTracer );
-        relationshipIdGenerator.checkpoint( limiter, cursorTracer );
         metaDataStore.flush( cursorTracer );
         schemaStore.checkpoint( limiter, cursorTracer );
         propertyKeyTokenStore.checkpoint( limiter, cursorTracer );

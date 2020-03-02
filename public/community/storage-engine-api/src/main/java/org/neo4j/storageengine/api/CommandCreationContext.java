@@ -41,8 +41,9 @@ public interface CommandCreationContext extends AutoCloseable
      * This will likely change in the future though.
      *
      * @return a reserved relationship id for future use.
+     * @param sourceNode id of the source node to reserve this id for.
      */
-    long reserveRelationship();
+    long reserveRelationship( long sourceNode );
 
     /**
      * Reserves an id for a schema record, be it for a constraint or an index, for future use to store a schema record. The reason for it being exposed here
@@ -70,6 +71,14 @@ public interface CommandCreationContext extends AutoCloseable
      */
     int reserveRelationshipTypeTokenId();
 
+    /**
+     * Called between usage in two different transactions.
+     */
+    void reset();
+
+    /**
+     * Called after one or more usages (with {@link #reset()} in between). After this call it cannot be used anymore.
+     */
     @Override
     void close();
 }

@@ -269,7 +269,7 @@ public class Operations implements Write, SchemaWrite
         assertNodeExists( targetNode );
 
         TransactionState txState = ktx.txState();
-        long id = commandCreationContext.reserveRelationship();
+        long id = commandCreationContext.reserveRelationship( sourceNode );
         txState.relationshipDoCreate( id, relationshipType, sourceNode, targetNode );
         return id;
     }
@@ -781,6 +781,7 @@ public class Operations implements Write, SchemaWrite
 
         cursors.assertClosed();
         cursors.release();
+        commandCreationContext.reset();
     }
 
     public Token token()

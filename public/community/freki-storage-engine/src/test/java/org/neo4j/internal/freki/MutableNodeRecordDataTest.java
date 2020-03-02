@@ -65,39 +65,39 @@ class MutableNodeRecordDataTest
     @Test
     void canWriteAndReadRelationshipRecord()
     {
-        record.createRelationship( null, 10, 2 );
-        record.createRelationship( null, 11, 2 );
-        record.createRelationship( null, 12, 3 );
+        record.createRelationship( null, record.nextInternalRelationshipId(), 10, 2 );
+        record.createRelationship( null, record.nextInternalRelationshipId(), 11, 2 );
+        record.createRelationship( null, record.nextInternalRelationshipId(), 12, 3 );
         checkIfDeserializedRecordIsEqual();
     }
 
     @Test
     void canWriteAndReadRelationshipRecordMultipleTimes()
     {
-        record.createRelationship( null, 10, 2 );
+        record.createRelationship( null, record.nextInternalRelationshipId(), 10, 2 );
         checkIfDeserializedRecordIsEqual();
         MutableNodeRecordData.Relationship rel = new MutableNodeRecordData.Relationship( 7, 11, ID, 2, true );
-        record.createRelationship( rel, 11, 2 );
+        record.createRelationship( rel, rel.internalId, 11, 2 );
         checkIfDeserializedRecordIsEqual();
-        record.createRelationship( null, 12, 3 );
+        record.createRelationship( null, record.nextInternalRelationshipId(), 12, 3 );
         checkIfDeserializedRecordIsEqual();
     }
 
     @Test
     void canWriteAndReadRelationshipWithPropertyRecord()
     {
-        MutableNodeRecordData.Relationship r1 = record.createRelationship( null, 10, 2 );
+        MutableNodeRecordData.Relationship r1 = record.createRelationship( null, record.nextInternalRelationshipId(), 10, 2 );
         r1.addProperty( 1, Values.intValue( 5 ) );
         r1.addProperty( 2, Values.booleanValue( false ) );
         r1.addProperty( 3, Values.stringOrNoValue( "foo" ) );
         checkIfDeserializedRecordIsEqual();
 
-        MutableNodeRecordData.Relationship r2 = record.createRelationship( null, 11, 2 );
+        MutableNodeRecordData.Relationship r2 = record.createRelationship( null, record.nextInternalRelationshipId(), 11, 2 );
         r2.addProperty( 4, Values.intArray( new int[]{123, 4, -56} ) );
         r2.addProperty( 5, Values.pointValue( CoordinateReferenceSystem.Cartesian, 3.0,4.0 ) );
         checkIfDeserializedRecordIsEqual();
 
-        MutableNodeRecordData.Relationship r3 = record.createRelationship( null, 12, 3 );
+        MutableNodeRecordData.Relationship r3 = record.createRelationship( null, record.nextInternalRelationshipId(), 12, 3 );
         r3.addProperty( 6, Values.charValue( 'f' ) );
         r3.addProperty( 7, Values.charValue( 'o' ) );
         r3.addProperty( 8, Values.charValue( 'o' ) );
@@ -119,13 +119,13 @@ class MutableNodeRecordDataTest
         record.setNodeProperty( 3, Values.stringOrNoValue( "foo" ) );
         checkIfDeserializedRecordIsEqual();
 
-        MutableNodeRecordData.Relationship r1 = record.createRelationship( null, 10, 2 );
+        MutableNodeRecordData.Relationship r1 = record.createRelationship( null, record.nextInternalRelationshipId(), 10, 2 );
         r1.addProperty( 1, Values.intValue( 5 ) );
         r1.addProperty( 2, Values.booleanValue( false ) );
         r1.addProperty( 3, Values.stringOrNoValue( "foo" ) );
         checkIfDeserializedRecordIsEqual();
 
-        MutableNodeRecordData.Relationship r2 = record.createRelationship( null, 12, 3 );
+        MutableNodeRecordData.Relationship r2 = record.createRelationship( null, record.nextInternalRelationshipId(), 12, 3 );
         r2.addProperty( 6, Values.charValue( 'f' ) );
         r2.addProperty( 7, Values.charValue( 'o' ) );
         r2.addProperty( 8, Values.charValue( 'o' ) );

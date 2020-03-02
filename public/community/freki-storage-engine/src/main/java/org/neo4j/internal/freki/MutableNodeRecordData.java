@@ -38,13 +38,13 @@ import org.neo4j.util.Preconditions;
 import org.neo4j.values.storable.Value;
 
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
+import static org.neo4j.internal.freki.Record.recordXFactor;
 import static org.neo4j.internal.freki.StreamVByte.intArrayTarget;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
 import static org.neo4j.internal.freki.StreamVByte.readLongs;
 import static org.neo4j.internal.freki.StreamVByte.writeIntDeltas;
 import static org.neo4j.internal.freki.StreamVByte.writeLongs;
 import static org.neo4j.internal.helpers.Numbers.safeCastIntToUnsignedByte;
-import static org.neo4j.util.Preconditions.checkState;
 
 /**
  * [IN_USE|OFFSETS|LABELS|PROPERTY_KEYS,PROPERTY_VALUES|REL_TYPES|RELS[]|REL_TYPE_OFFSETS|FW]
@@ -56,12 +56,13 @@ class MutableNodeRecordData
     static final int ARTIFICIAL_MAX_RELATIONSHIP_COUNTER = 0xFFFFFF;
     static final int SIZE_SLOT_HEADER = 4;
     static final int ARRAY_ENTRIES_PER_RELATIONSHIP = 2;
+    static final int FIRST_RELATIONSHIP_ID = 1;
 
     long id;
     final MutableIntSet labels = IntSets.mutable.empty();
     final MutableIntObjectMap<Value> properties = IntObjectMaps.mutable.empty();
     final MutableIntObjectMap<Relationships> relationships = IntObjectMaps.mutable.empty();
-    private long internalRelationshipIdCounter = 1;
+    private long nextInternalRelationshipId = FIRST_RELATIONSHIP_ID;
     private long forwardPointer = NULL;
     private long backPointer = NULL;
 
@@ -82,7 +83,7 @@ class MutableNodeRecordData
             return false;
         }
         MutableNodeRecordData that = (MutableNodeRecordData) o;
-        return id == that.id && internalRelationshipIdCounter == that.internalRelationshipIdCounter &&
+        return id == that.id && nextInternalRelationshipId == that.nextInternalRelationshipId &&
                 forwardPointer == that.forwardPointer && backPointer == that.backPointer &&
                 labels.equals( that.labels ) && Objects.equals( properties, that.properties ) && Objects.equals( relationships, that.relationships );
     }
@@ -90,7 +91,7 @@ class MutableNodeRecordData
     @Override
     public int hashCode()
     {
-        int result = Objects.hash( id, properties, relationships, internalRelationshipIdCounter, forwardPointer, backPointer );
+        int result = Objects.hash( id, properties, relationships, nextInternalRelationshipId, forwardPointer, backPointer );
         result = 31 * result + labels.hashCode();
         return result;
     }
@@ -98,8 +99,8 @@ class MutableNodeRecordData
     @Override
     public String toString()
     {
-        return String.format( "ID:%s, labels:%s, properties:%s, relationships:%s, fw:%d, bw:%d",
-                id, labels, properties, relationships, forwardPointer, backPointer );
+        return String.format( "ID:%s, labels:%s, properties:%s, relationships:%s, fw:%d, bw:%d, nextRelId:%d",
+                id, labels, properties, relationships, forwardPointer, backPointer, nextInternalRelationshipId );
     }
 
     /**
@@ -109,7 +110,7 @@ class MutableNodeRecordData
     {
         otherData.properties.putAll( properties );
         otherData.relationships.putAll( relationships );
-        otherData.internalRelationshipIdCounter = internalRelationshipIdCounter;
+        otherData.nextInternalRelationshipId = nextInternalRelationshipId;
         clearPropertiesAndRelationships();
     }
 
@@ -118,12 +119,17 @@ class MutableNodeRecordData
         // Doesn't clear entity/identity things like id and forwardPointer
         properties.clear();
         relationships.clear();
-        internalRelationshipIdCounter = 1;
+        nextInternalRelationshipId = 1;
     }
 
     long nextInternalRelationshipId()
     {
-        return internalRelationshipIdCounter++;
+        return nextInternalRelationshipId++;
+    }
+
+    void registerInternalRelationshipId( long internalId )
+    {
+        nextInternalRelationshipId = Long.max( this.nextInternalRelationshipId, internalId + 1 );
     }
 
     static class Relationship
@@ -268,10 +274,8 @@ class MutableNodeRecordData
         properties.remove( propertyKeyId );
     }
 
-    Relationship createRelationship( Relationship sourceNodeRelationship, long otherNode, int type )
+    Relationship createRelationship( Relationship sourceNodeRelationship, long internalId, long otherNode, int type )
     {
-        checkState( internalRelationshipIdCounter < ARTIFICIAL_MAX_RELATIONSHIP_COUNTER, "Relationship counter exhausted for node %d", id );
-        long internalId = sourceNodeRelationship != null ? sourceNodeRelationship.internalId : nextInternalRelationshipId();
         boolean outgoing = sourceNodeRelationship == null;
         return relationships.getIfAbsentPut( type, () -> new MutableNodeRecordData.Relationships( type ) ).add( internalId, id, otherNode, type, outgoing );
     }
@@ -373,7 +377,7 @@ class MutableNodeRecordData
             buffer.putLong( forwardPointer );
             if ( isDenseFromForwardPointer( forwardPointer ) )
             {
-                buffer.putLong( internalRelationshipIdCounter );
+                buffer.putLong( nextInternalRelationshipId );
             }
         }
         else if ( backPointer != NULL )
@@ -449,7 +453,7 @@ class MutableNodeRecordData
         }
 
         relationships.clear();
-        internalRelationshipIdCounter = 1;
+        nextInternalRelationshipId = 1;
         if ( relationshipOffset != 0 )
         {
             for ( int relationshipType : readIntDeltas( intArrayTarget(), buffer ).array() )
@@ -464,9 +468,9 @@ class MutableNodeRecordData
                     boolean outgoing =  relationshipIsOutgoing( otherNodeRaw );
                     long internalId = packedRelationships[ relationshipArrayIndex + 1 ];
 
-                    if ( outgoing && internalId >= internalRelationshipIdCounter )
+                    if ( outgoing && internalId >= nextInternalRelationshipId )
                     {
-                        internalRelationshipIdCounter = internalId + 1;
+                        nextInternalRelationshipId = internalId + 1;
                     }
                     Relationship relationship = relationships.add( internalId, id, otherNodeOf( otherNodeRaw ), relationshipType, outgoing );
                     if ( relationshipHasProperties( otherNodeRaw ) )
@@ -491,7 +495,7 @@ class MutableNodeRecordData
                 forwardPointer = buffer.getLong();
                 if ( isDenseFromForwardPointer( forwardPointer ) )
                 {
-                    internalRelationshipIdCounter = buffer.getLong();
+                    nextInternalRelationshipId = buffer.getLong();
                 }
             }
             if ( containsBackPointer )
@@ -541,13 +545,18 @@ class MutableNodeRecordData
         return (offsetsHeader & 0x80000000) != 0;
     }
 
+    static long externalRelationshipId( long sourceNode, long internalRelationshipId )
+    {
+        return sourceNode | (internalRelationshipId << 40);
+    }
+
     static long externalRelationshipId( long sourceNode, long internalRelationshipId, long otherNode, boolean outgoing )
     {
         long nodeId = outgoing ? sourceNode : otherNode;
-        return nodeId | (internalRelationshipId << 40);
+        return externalRelationshipId( nodeId, internalRelationshipId );
     }
 
-    static long nodeIdFromRelationshipId( long relationshipId )
+    static long idFromRelationshipId( long relationshipId )
     {
         return relationshipId & 0xFF_FFFFFFFFL;
     }
@@ -580,5 +589,18 @@ class MutableNodeRecordData
     static long forwardPointer( int sizeExp, boolean isDense, long id )
     {
         return id | (((long) sizeExp) << 61) | (isDense ? 0x80000000_00000000L : 0);
+    }
+
+    static String forwardPointerToString( long forwardPointer )
+    {
+        if ( forwardPointer == NULL )
+        {
+            return "NULL";
+        }
+        if ( isDenseFromForwardPointer( forwardPointer ) )
+        {
+            return "->DENSE";
+        }
+        return String.format( "->[x%d]%d", recordXFactor( sizeExponentialFromForwardPointer( forwardPointer ) ), idFromRelationshipId( forwardPointer ) );
     }
 }
