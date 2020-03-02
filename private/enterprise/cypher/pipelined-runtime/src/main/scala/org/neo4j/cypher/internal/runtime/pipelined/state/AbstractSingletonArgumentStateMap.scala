@@ -18,7 +18,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
  * case for all argument state maps that are not on the RHS of any apply.
  */
 abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: AbstractArgumentStateMap.StateController[STATE]]
-  extends ArgumentStateMapWithArgumentIdCounter[STATE] with ArgumentStateMapWithoutArgumentIdCounter[STATE] {
+  extends OrderedArgumentStateMap[STATE] with UnorderedArgumentStateMap[STATE] {
 
   override def argumentSlotOffset: Int = TopLevelArgument.SLOT_OFFSET
 
@@ -83,6 +83,17 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
       return completedState
     }
     null.asInstanceOf[STATE]
+  }
+
+  override def takeNextIfCompleted(): STATE = {
+    if (hasController && controller.tryTake()) {
+      lastCompletedArgumentId = TopLevelArgument.VALUE
+      val completedState = controller.state
+      hasController = false
+      completedState
+    } else {
+      null.asInstanceOf[STATE]
+    }
   }
 
   override def takeNextIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {

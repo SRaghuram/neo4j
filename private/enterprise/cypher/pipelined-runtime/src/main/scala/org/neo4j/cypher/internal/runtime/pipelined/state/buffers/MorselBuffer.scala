@@ -14,9 +14,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.ArgumentSlots
 import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
+import org.neo4j.cypher.internal.runtime.pipelined.state.UnorderedArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
@@ -49,10 +49,10 @@ class MorselBuffer(id: BufferId,
                     with DataHolder {
 
   private val cancellerASMs = {
-    val x = new Array[ArgumentStateMap[WorkCanceller]](workCancellers.size)
+    val x = new Array[UnorderedArgumentStateMap[WorkCanceller]](workCancellers.size)
     var i = 0
     while (i < workCancellers.size) {
-      x(i) = argumentStateMaps(workCancellers(i)).asInstanceOf[ArgumentStateMap[WorkCanceller]]
+      x(i) = argumentStateMaps(workCancellers(i)).asInstanceOf[UnorderedArgumentStateMap[WorkCanceller]]
       i += 1
     }
     x

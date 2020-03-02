@@ -19,7 +19,7 @@ import scala.collection.JavaConverters.asScalaIteratorConverter
  * All functionality of either standard or concurrent ASM that can be written without knowing the concrete Map type.
  */
 abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: AbstractArgumentStateMap.StateController[STATE]]
-  extends ArgumentStateMapWithArgumentIdCounter[STATE] with ArgumentStateMapWithoutArgumentIdCounter[STATE] {
+  extends OrderedArgumentStateMap[STATE] with UnorderedArgumentStateMap[STATE] {
 
   /**
    * A Map of the controllers.
@@ -86,6 +86,22 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
       }
     }
     null.asInstanceOf[STATE]
+  }
+
+  override def takeNextIfCompleted(): STATE = {
+    val controller = controllers.get(lastCompletedArgumentId + 1)
+    if (controller != null) {
+      if (controller.tryTake()) {
+        lastCompletedArgumentId += 1
+        controllers.remove(controller.state.argumentRowId)
+        DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, controller.state.argumentRowId)
+        controller.state
+      } else {
+        null.asInstanceOf[STATE]
+      }
+    } else {
+      null.asInstanceOf[STATE]
+    }
   }
 
   override def takeNextIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {

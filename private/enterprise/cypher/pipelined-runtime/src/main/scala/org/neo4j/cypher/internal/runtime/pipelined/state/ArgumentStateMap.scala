@@ -17,6 +17,10 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 
 import scala.collection.mutable.ArrayBuffer
 
+trait UnorderedArgumentStateMap[S <: ArgumentState] extends ArgumentStateMap[S] with UnorderedArgumentStateMapReader[S]
+
+trait OrderedArgumentStateMap[S <: ArgumentState] extends ArgumentStateMap[S] with OrderedArgumentStateMapReader[S]
+
 /**
  * Maps every argument to one `ArgumentState`/`S`.
  */
@@ -49,28 +53,6 @@ trait ArgumentStateMap[S <: ArgumentState] {
   def filterWithSideEffect[FILTER_STATE](morsel: Morsel,
                                          createState: (S, Int) => FILTER_STATE,
                                          predicate: (FILTER_STATE, ReadWriteRow) => Boolean): Unit
-
-  /**
-   * Returns the [[ArgumentState]] of each completed argument, but does not remove them from the [[ArgumentStateMap]].
-   */
-  def peekCompleted(): Iterator[S]
-
-  /**
-   * Returns the [[ArgumentState]] for the specified argumentId, but does not remove it from the [[ArgumentStateMap]].
-   * @return the [[ArgumentState]] for the provided argumentId, or null if none exists
-   */
-  def peek(argumentId: Long): S
-
-  /**
-   * Returns `true` iff there is a completed argument.
-   * @return
-   */
-  def hasCompleted: Boolean
-
-  /**
-   * Returns `true` iff the argument is completed.
-   */
-  def hasCompleted(argument: Long): Boolean
 
   /**
    * Removes the state of this argument.
@@ -114,28 +96,57 @@ trait ArgumentStateMap[S <: ArgumentState] {
   def argumentSlotOffset: Int
 }
 
-trait ArgumentStateMapWithoutArgumentIdCounter[S <: ArgumentState]extends ArgumentStateMap[S] {
+trait UnorderedArgumentStateMapReader[S <: ArgumentState] {
   /**
-   * Take the [[ArgumentState]] of one complete arguments. The [[ArgumentState]] will
+   * Take the [[ArgumentState]] of one complete argument. The [[ArgumentState]] will
    * be removed from the [[ArgumentStateMap]] and cannot be taken again or modified after this call.
    */
   def takeOneCompleted(): S
+
+  /**
+   * Returns the [[ArgumentState]] of each completed argument, but does not remove them from the [[ArgumentStateMap]].
+   */
+  def peekCompleted(): Iterator[S]
+
+  /**
+   * Returns the [[ArgumentState]] for the specified argumentId, but does not remove it from the [[ArgumentStateMap]].
+   * @return the [[ArgumentState]] for the provided argumentId, or null if none exists
+   */
+  def peek(argumentId: Long): S
+
+  /**
+   * Returns `true` iff there is a completed argument.
+   * @return
+   */
+  def hasCompleted: Boolean
+
+  /**
+   * Returns `true` iff the argument is completed.
+   */
+  def hasCompleted(argument: Long): Boolean
 }
 
 /**
  * This interface groups all methods that make use of the [[AbstractArgumentStateMap.lastCompletedArgumentId]]. We split this out so that
  * users of [[ArgumentStateMap]] do not accidentally mix calls with other methods.
  */
-trait ArgumentStateMapWithArgumentIdCounter[S <: ArgumentState] extends ArgumentStateMap[S] {
+trait OrderedArgumentStateMapReader[S <: ArgumentState] {
   /**
    * When using this method to take argument states, an internal counter of the argument id of the last completed argument state is kept.
    * This will look at the next argument state and return that. If it is completed, it will take it and increment the counter.
    *
-   * The counter is unaffected by other methods that take, so they should not be mixed!
+   * Returns an [[ArgumentStateWithCompleted]] of the [[ArgumentState]] for the specified argumentId, if is completed, otherwise `null`.
+   * Will also return `null` if no state exist for that argumentId.
+   */
+  def takeNextIfCompleted(): S
+
+  /**
+   * When using this method to take argument states, an internal counter of the argument id of the last completed argument state is kept.
+   * This will look at the next argument state and return that. If it is completed, it will take it and increment the counter.
    *
-   * Returns an ArgumentStateWithCompleted of the [[ArgumentState]] for the specified argumentId
+   * Returns an [[ArgumentStateWithCompleted]] of the [[ArgumentState]] for the specified argumentId
    * which indicated whether the state was completed or not,
-   * or `null` if no state exist for that argumentId..
+   * or `null` if no state exist for that argumentId.
    */
   def takeNextIfCompletedOrElsePeek(): ArgumentStateWithCompleted[S]
 

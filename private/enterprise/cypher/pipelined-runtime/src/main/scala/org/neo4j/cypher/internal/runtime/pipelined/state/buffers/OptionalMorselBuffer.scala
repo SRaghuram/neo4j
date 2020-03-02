@@ -19,7 +19,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMapWithArgumentIdCounter
+import org.neo4j.cypher.internal.runtime.pipelined.state.OrderedArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
@@ -34,7 +34,7 @@ import scala.collection.mutable.ArrayBuffer
  *
  * This is used in front of a pipeline with an OptionalOperator.
  *
- * This buffer sits between two pipeline.
+ * This buffer sits between two pipelines.
  */
 class OptionalMorselBuffer(id: BufferId,
                            tracker: QueryCompletionTracker,
@@ -48,13 +48,14 @@ class OptionalMorselBuffer(id: BufferId,
   with ClosingSource[MorselData]
   with DataHolder {
 
-  private val argumentStateMap: ArgumentStateMapWithArgumentIdCounter[OptionalArgumentStateBuffer] = argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMapWithArgumentIdCounter[OptionalArgumentStateBuffer]]
+  protected val argumentStateMap: OrderedArgumentStateMap[OptionalArgumentStateBuffer] =
+    argumentStateMaps(argumentStateMapId).asInstanceOf[OrderedArgumentStateMap[OptionalArgumentStateBuffer]]
 
   override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
 
   override def take(): MorselData = {
     // To achieve streaming behavior, we peek at the data, even if it is not completed yet.
-    // To keep input order (i.e., place the null rows at thr right position), we give the
+    // To keep input order (i.e., place the null rows at the right position), we give the
     // data out in ascending argument row id order.
     val argumentState = argumentStateMap.takeNextIfCompletedOrElsePeek()
     val data: MorselData =
