@@ -442,7 +442,7 @@ trait OperatorTaskTemplate {
    *     def createState(executionState: ExecutionState): OutputOperatorState
    * }}}
    */
-  protected def genCreateState: IntermediateRepresentation = inner.genCreateState
+  def genCreateState: IntermediateRepresentation = inner.genCreateState
 
   /**
    * Responsible for generating:
@@ -749,7 +749,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
 
   override protected def genProduce: IntermediateRepresentation = noop()
 
-  override protected def genCreateState: IntermediateRepresentation = noop()
+  override def genCreateState: IntermediateRepresentation = noop()
 
   override def genOutputBuffer: Option[IntermediateRepresentation] = None
 }

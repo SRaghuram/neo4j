@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreE
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
+import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.CleanUpTask
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutablePipeline
@@ -309,6 +310,9 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     s"""continuations: ${continuations(pipeline.id.x)}
        |""".stripMargin
   }
+
+
+  override def memoryTracker: QueryMemoryTracker = stateFactory.memoryTracker
 
   /**
    * Assert that all buffers, continuations and argument state maps are empty.

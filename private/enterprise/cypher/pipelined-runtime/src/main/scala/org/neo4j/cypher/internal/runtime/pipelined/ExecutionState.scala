@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
+import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
@@ -251,5 +252,10 @@ trait ExecutionState extends ArgumentStateMapCreator {
    * Get a map used to lookup an ArgumentStateMap by id
    */
   def argumentStateMaps: ArgumentStateMaps
+
+  /**
+    * @return the memory tracker
+    */
+  def memoryTracker: QueryMemoryTracker
 
 }
