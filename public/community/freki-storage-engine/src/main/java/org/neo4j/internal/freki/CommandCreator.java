@@ -55,6 +55,7 @@ import static java.lang.Math.toIntExact;
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
 import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointer;
 import static org.neo4j.internal.freki.MutableNodeRecordData.idFromForwardPointer;
+import static org.neo4j.internal.freki.MutableNodeRecordData.internalRelationshipIdFromRelationshipId;
 import static org.neo4j.internal.freki.MutableNodeRecordData.isDenseFromForwardPointer;
 import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromForwardPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
@@ -87,23 +88,19 @@ class CommandCreator implements TxStateVisitor
     @Override
     public void visitCreatedRelationship( long id, int type, long startNode, long endNode, Iterable<StorageProperty> addedProperties )
     {
-        // TODO we cannot use the provided id since it comes from kernel which generated a relationship ID from an IdGenerator.
-        //      The actual ID that this relationship will get is something else, something based on the node ID and other data found in the node itself.
-        //      This is going to require some changes in the kernel, or at least some restrictions on how the Core API can expect to make use of
-        //      relationship IDs that gets created inside a transaction (the ID of the relationship read from the store later on will be different.
-
-        Relationship relationshipAtStartNode = createRelationship( null, type, startNode, endNode, addedProperties );
+        long internalRelationshipId = internalRelationshipIdFromRelationshipId( id );
+        Relationship relationshipAtStartNode = createRelationship( null, internalRelationshipId, type, startNode, endNode, addedProperties );
         if ( startNode != endNode )
         {
-            createRelationship( relationshipAtStartNode, type, endNode, startNode, addedProperties );
+            createRelationship( relationshipAtStartNode, internalRelationshipId, type, endNode, startNode, addedProperties );
         }
     }
 
-    private Relationship createRelationship( Relationship sourceNodeRelationship, int type, long sourceNode, long targetNode,
+    private Relationship createRelationship( Relationship sourceNodeRelationship, long internalRelationshipId, int type, long sourceNode, long targetNode,
             Iterable<StorageProperty> addedProperties )
     {
         Mutation sourceMutation = getOrLoad( sourceNode );
-        Relationship relationship = sourceMutation.current.createRelationship( sourceNodeRelationship, targetNode, type );
+        Relationship relationship = sourceMutation.current.createRelationship( sourceNodeRelationship, internalRelationshipId, targetNode, type );
         for ( StorageProperty property : addedProperties )
         {
             relationship.addProperty( property.propertyKeyId(), property.value() );
@@ -345,7 +342,7 @@ class CommandCreator implements TxStateVisitor
 
         abstract void loadExistingData();
 
-        abstract Relationship createRelationship( Relationship sourceNodeRelationship, long targetNode, int type );
+        abstract Relationship createRelationship( Relationship sourceNodeRelationship, long internalId, long targetNode, int type );
 
         abstract void setNodeProperty( int propertyKeyId, Value value );
 
@@ -421,9 +418,9 @@ class CommandCreator implements TxStateVisitor
         }
 
         @Override
-        Relationship createRelationship( Relationship sourceNodeRelationship, long targetNode, int type )
+        Relationship createRelationship( Relationship sourceNodeRelationship, long internalId, long targetNode, int type )
         {
-            return data.createRelationship( sourceNodeRelationship, targetNode, type );
+            return data.createRelationship( sourceNodeRelationship, internalId, targetNode, type );
         }
 
         @Override
@@ -556,14 +553,16 @@ class CommandCreator implements TxStateVisitor
         }
 
         @Override
-        Relationship createRelationship( Relationship sourceNodeRelationship, long targetNode, int type )
+        Relationship createRelationship( Relationship sourceNodeRelationship, long internalId, long targetNode, int type )
         {
-            long internalRelationshipId = sourceNodeRelationship == null
-                    ? smallRecord.data.nextInternalRelationshipId()
-                    : sourceNodeRelationship.internalId;
+            // For sparse representation the high internal relationship ID counter is simply the highest of the existing relationships,
+            // decided when loading the node. But for dense nodes we won't load all relationships and will therefore need to keep
+            // this counter in an explicit field in the small record. This call keeps that counter updated.
+            smallRecord.data.registerInternalRelationshipId( internalId );
+
             boolean outgoing = sourceNodeRelationship == null;
             return createdRelationships.getIfAbsentPutWithKey( type, MutableNodeRecordData.Relationships::new )
-                    .add( internalRelationshipId, smallRecord.after.id, targetNode, type, outgoing );
+                    .add( internalId, smallRecord.after.id, targetNode, type, outgoing );
         }
 
         @Override

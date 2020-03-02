@@ -26,12 +26,10 @@ import org.neo4j.configuration.Config;
 import org.neo4j.counts.CountsAccessor;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
-import org.neo4j.internal.counts.CountsBuilder;
 import org.neo4j.internal.diagnostics.DiagnosticsManager;
 import org.neo4j.internal.id.IdController;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.kernel.api.exceptions.TransactionApplyKernelException;
-import org.neo4j.internal.metadatastore.GBPTreeMetaDataStore;
 import org.neo4j.internal.schema.IndexConfigCompleter;
 import org.neo4j.internal.schema.SchemaState;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -128,28 +126,10 @@ public class FrekiStorageEngine implements StorageEngine
         life.add( stores );
     }
 
-    private CountsBuilder initialCountsBuilder( GBPTreeMetaDataStore metaDataStore )
-    {
-        return new CountsBuilder()
-        {
-            @Override
-            public void initialize( CountsAccessor.Updater updater, PageCursorTracer tracer )
-            {
-                // TODO rebuild from store, right?
-            }
-
-            @Override
-            public long lastCommittedTxId()
-            {
-                return metaDataStore.getLastCommittedTransactionId();
-            }
-        };
-    }
-
     @Override
     public CommandCreationContext newCommandCreationContext( PageCursorTracer cursorTracer )
     {
-        return new FrekiCommandCreationContext( idGeneratorFactory, cursorTracer );
+        return new FrekiCommandCreationContext( stores, idGeneratorFactory, cursorTracer );
     }
 
     @Override

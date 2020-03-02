@@ -71,7 +71,7 @@ class RecordStorageCommandCreationContext implements CommandCreationContext
     }
 
     @Override
-    public long reserveRelationship()
+    public long reserveRelationship( long sourceNode )
     {
         return nextId( StoreType.RELATIONSHIP );
     }
@@ -98,6 +98,12 @@ class RecordStorageCommandCreationContext implements CommandCreationContext
     public int reserveLabelTokenId()
     {
         return toIntExact( neoStores.getLabelTokenStore().nextId( cursorTracer ) );
+    }
+
+    @Override
+    public void reset()
+    {
+        // No state to reset
     }
 
     @Override
