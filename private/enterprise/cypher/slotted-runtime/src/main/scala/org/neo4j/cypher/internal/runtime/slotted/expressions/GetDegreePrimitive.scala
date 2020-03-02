@@ -17,11 +17,11 @@ case class GetDegreePrimitive(offset: Int, typ: Option[String], direction: Seman
   extends Expression
   with SlottedExpression {
 
-  override def apply(ctx: ReadableRow, state: QueryState): AnyValue = typ match {
-    case None => Values.longValue(state.query.nodeGetDegree(ctx.getLongAt(offset), direction, state.cursors.nodeCursor))
+  override def apply(row: ReadableRow, state: QueryState): AnyValue = typ match {
+    case None => Values.longValue(state.query.nodeGetDegree(row.getLongAt(offset), direction, state.cursors.nodeCursor))
     case Some(t) => state.query.getOptRelTypeId(t) match {
       case None => Values.ZERO_INT
-      case Some(relTypeId) => Values.longValue(state.query.nodeGetDegree(ctx.getLongAt(offset), direction, relTypeId, state.cursors.nodeCursor))
+      case Some(relTypeId) => Values.longValue(state.query.nodeGetDegree(row.getLongAt(offset), direction, relTypeId, state.cursors.nodeCursor))
     }
   }
 

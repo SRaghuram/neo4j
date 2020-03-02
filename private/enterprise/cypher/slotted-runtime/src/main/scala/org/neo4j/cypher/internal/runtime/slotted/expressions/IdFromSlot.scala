@@ -14,7 +14,7 @@ import org.neo4j.values.storable.Values.longValue
 
 case class IdFromSlot(offset: Int) extends Expression with SlottedExpression {
 
-  override def apply(ctx: ReadableRow, state: QueryState): AnyValue = longValue(ctx.getLongAt(offset))
+  override def apply(row: ReadableRow, state: QueryState): AnyValue = longValue(row.getLongAt(offset))
 
   override def children: Seq[AstNode[_]] = Seq.empty
 }

@@ -14,8 +14,8 @@ import org.neo4j.values.storable.Values.NO_VALUE
 
 case class NullCheckReference(offset: Int, inner: Expression) extends Expression with SlottedExpression {
 
-  override def apply(ctx: ReadableRow, state: QueryState): AnyValue =
-    if (ctx.getRefAt(offset) eq NO_VALUE) NO_VALUE else inner(ctx, state)
+  override def apply(row: ReadableRow, state: QueryState): AnyValue =
+    if (row.getRefAt(offset) eq NO_VALUE) NO_VALUE else inner(row, state)
 
   override def children: Seq[AstNode[_]] = Seq(inner)
 }

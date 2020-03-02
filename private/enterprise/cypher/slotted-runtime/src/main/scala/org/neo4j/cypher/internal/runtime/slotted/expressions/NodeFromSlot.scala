@@ -13,8 +13,8 @@ import org.neo4j.values.virtual.NodeValue
 
 case class NodeFromSlot(offset: Int) extends Expression with SlottedExpression {
 
-  override def apply(ctx: ReadableRow, state: QueryState): NodeValue =
-    state.query.nodeOps.getById(ctx.getLongAt(offset))
+  override def apply(row: ReadableRow, state: QueryState): NodeValue =
+    state.query.nodeOps.getById(row.getLongAt(offset))
 
   override def children: Seq[AstNode[_]] = Seq.empty
 }

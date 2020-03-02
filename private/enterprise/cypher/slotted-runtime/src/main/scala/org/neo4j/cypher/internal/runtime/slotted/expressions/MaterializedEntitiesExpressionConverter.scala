@@ -90,10 +90,10 @@ case class MaterializedEntityProperty(mapExpr: commands.expressions.Expression, 
 
   private val property = commands.expressions.Property(mapExpr, propertyKey)
 
-  def apply(ctx: ReadableRow, state: QueryState): AnyValue = mapExpr(ctx, state) match {
+  def apply(row: ReadableRow, state: QueryState): AnyValue = mapExpr(row, state) match {
     case n: NodeValue         => n.properties().get(propertyKey.name)
     case r: RelationshipValue => r.properties().get(propertyKey.name)
-    case _                    => property.apply(ctx, state)
+    case _                    => property.apply(row, state)
   }
 
   override def rewrite(f: commands.expressions.Expression => commands.expressions.Expression): commands.expressions.Expression

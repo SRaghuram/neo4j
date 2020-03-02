@@ -15,8 +15,8 @@ import org.neo4j.values.storable.Values
 
 case class RelationshipProperty(offset: Int, token: Int) extends Expression with SlottedExpression {
 
-  override def apply(ctx: ReadableRow, state: QueryState): AnyValue =
-    state.query.relationshipOps.getProperty(ctx.getLongAt(offset),
+  override def apply(row: ReadableRow, state: QueryState): AnyValue =
+    state.query.relationshipOps.getProperty(row.getLongAt(offset),
                                             token,
                                             state.cursors.relationshipScanCursor,
                                             state.cursors.propertyCursor,
@@ -27,12 +27,12 @@ case class RelationshipProperty(offset: Int, token: Int) extends Expression with
 
 case class RelationshipPropertyLate(offset: Int, propKey: String) extends Expression with SlottedExpression {
 
-  override def apply(ctx: ReadableRow, state: QueryState): AnyValue = {
+  override def apply(row: ReadableRow, state: QueryState): AnyValue = {
     val maybeToken = state.query.getOptPropertyKeyId(propKey)
     if (maybeToken.isEmpty)
       Values.NO_VALUE
     else
-      state.query.relationshipOps.getProperty(ctx.getLongAt(offset),
+      state.query.relationshipOps.getProperty(row.getLongAt(offset),
                                               maybeToken.get,
                                               state.cursors.relationshipScanCursor,
                                               state.cursors.propertyCursor,

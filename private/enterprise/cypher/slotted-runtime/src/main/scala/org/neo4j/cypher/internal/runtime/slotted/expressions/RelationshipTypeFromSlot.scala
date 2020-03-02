@@ -12,8 +12,8 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.values.AnyValue
 
 case class RelationshipTypeFromSlot(offset: Int) extends Expression with SlottedExpression {
-  override def apply(ctx: ReadableRow, state: QueryState): AnyValue =
-    state.query.getTypeForRelationship(ctx.getLongAt(offset), state.cursors.relationshipScanCursor)
+  override def apply(row: ReadableRow, state: QueryState): AnyValue =
+    state.query.getTypeForRelationship(row.getLongAt(offset), state.cursors.relationshipScanCursor)
 
   override def children: Seq[AstNode[_]] = Seq.empty
 }

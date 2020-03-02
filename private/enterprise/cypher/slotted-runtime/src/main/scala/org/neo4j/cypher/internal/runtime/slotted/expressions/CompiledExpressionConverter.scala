@@ -171,8 +171,8 @@ case class CompileWrappingExpression(ce: CompiledExpression, legacy: Expression)
 
   override def children: Seq[AstNode[_]] = Seq(legacy)
 
-  override def apply(ctx: ReadableRow, state: QueryState): AnyValue =
-    ce.evaluate(ctx, state.query, state.params, state.cursors, state.expressionVariables)
+  override def apply(row: ReadableRow, state: QueryState): AnyValue =
+    ce.evaluate(row, state.query, state.params, state.cursors, state.expressionVariables)
 
   override def toString: String = legacy.toString
 

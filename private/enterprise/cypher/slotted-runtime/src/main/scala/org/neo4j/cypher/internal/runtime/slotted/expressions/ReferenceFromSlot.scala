@@ -13,8 +13,8 @@ import org.neo4j.values.AnyValue
 
 case class ReferenceFromSlot(offset: Int) extends Expression with SlottedExpression {
 
-  override def apply(ctx: ReadableRow, state: QueryState): AnyValue =
-    ctx.getRefAt(offset)
+  override def apply(row: ReadableRow, state: QueryState): AnyValue =
+    row.getRefAt(offset)
 
   override def children: Seq[AstNode[_]] = Seq.empty
 }

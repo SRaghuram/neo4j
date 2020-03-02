@@ -15,20 +15,20 @@ import org.neo4j.values.storable.Values
 
 case class NodeProperty(offset: Int, token: Int) extends Expression with SlottedExpression {
 
-  override def apply(ctx: ReadableRow, state: QueryState): AnyValue =
-    state.query.nodeOps.getProperty(ctx.getLongAt(offset), token, state.cursors.nodeCursor, state.cursors.propertyCursor, throwOnDeleted = true)
+  override def apply(row: ReadableRow, state: QueryState): AnyValue =
+    state.query.nodeOps.getProperty(row.getLongAt(offset), token, state.cursors.nodeCursor, state.cursors.propertyCursor, throwOnDeleted = true)
 
   override def children: Seq[AstNode[_]] = Seq.empty
 }
 
 case class NodePropertyLate(offset: Int, propKey: String) extends Expression with SlottedExpression {
 
-  override def apply(ctx: ReadableRow, state: QueryState): AnyValue = {
+  override def apply(row: ReadableRow, state: QueryState): AnyValue = {
     val maybeToken = state.query.getOptPropertyKeyId(propKey)
     if (maybeToken.isEmpty)
       Values.NO_VALUE
     else
-      state.query.nodeOps.getProperty(ctx.getLongAt(offset), maybeToken.get, state.cursors.nodeCursor, state.cursors.propertyCursor, throwOnDeleted = true)
+      state.query.nodeOps.getProperty(row.getLongAt(offset), maybeToken.get, state.cursors.nodeCursor, state.cursors.propertyCursor, throwOnDeleted = true)
   }
 
   override def children: Seq[AstNode[_]] = Seq.empty

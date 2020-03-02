@@ -14,8 +14,8 @@ import org.neo4j.values.storable.BooleanValue
 import org.neo4j.values.storable.Values.booleanValue
 
 case class IsPrimitiveNull(offset: Int) extends Expression with SlottedExpression {
-  override def apply(ctx: ReadableRow, state: QueryState): BooleanValue =
-    booleanValue(entityIsNull(ctx.getLongAt(offset)))
+  override def apply(row: ReadableRow, state: QueryState): BooleanValue =
+    booleanValue(entityIsNull(row.getLongAt(offset)))
 
   override def children: Seq[AstNode[_]] = Seq.empty
 }

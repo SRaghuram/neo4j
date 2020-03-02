@@ -12,8 +12,8 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.values.AnyValue
 
 case class LabelsFromSlot(offset: Int) extends Expression with SlottedExpression {
-  override def apply(ctx: ReadableRow, state: QueryState): AnyValue =
-    state.query.getLabelsForNode(ctx.getLongAt(offset), state.cursors.nodeCursor)
+  override def apply(row: ReadableRow, state: QueryState): AnyValue =
+    state.query.getLabelsForNode(row.getLongAt(offset), state.cursors.nodeCursor)
 
   override def children: Seq[AstNode[_]] = Seq.empty
 }

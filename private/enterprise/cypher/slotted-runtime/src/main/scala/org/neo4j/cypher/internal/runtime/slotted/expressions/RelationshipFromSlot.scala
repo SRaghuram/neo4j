@@ -13,8 +13,8 @@ import org.neo4j.values.virtual.RelationshipValue
 
 case class RelationshipFromSlot(offset: Int) extends Expression with SlottedExpression {
 
-  override def apply(ctx: ReadableRow, state: QueryState): RelationshipValue =
-    state.query.relationshipOps.getById(ctx.getLongAt(offset))
+  override def apply(row: ReadableRow, state: QueryState): RelationshipValue =
+    state.query.relationshipOps.getById(row.getLongAt(offset))
 
   override def children: Seq[AstNode[_]] = Seq.empty
 }
