@@ -26,7 +26,7 @@ import org.neo4j.logging.NullLogProvider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.neo4j.internal.helpers.collection.Iterables.iterable;
 
@@ -101,7 +101,7 @@ public class UpstreamDatabaseStrategySelectorTest
         selector.bestUpstreamMemberForDatabase( NAMED_DATABASE_ID );
 
         // then
-        verifyZeroInteractions( shouldNotUse );
+        verifyNoInteractions( shouldNotUse );
     }
 
     @ServiceProvider

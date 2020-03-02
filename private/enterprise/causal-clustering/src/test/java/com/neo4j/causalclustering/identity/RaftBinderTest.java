@@ -57,8 +57,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
@@ -418,7 +418,7 @@ class RaftBinderTest
 
         // then
         verify( topologyService ).coreTopologyForDatabase( SOME_NAMED_DATABASE_ID );
-        verifyZeroInteractions( raftBootstrapper );
+        verifyNoInteractions( raftBootstrapper );
 
         Optional<RaftId> raftId = binder.get();
         assertEquals( Optional.of( publishedRaftId ), raftId );

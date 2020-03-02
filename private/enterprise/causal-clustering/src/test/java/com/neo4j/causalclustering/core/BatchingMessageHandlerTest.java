@@ -43,7 +43,7 @@ import static java.util.Collections.singletonList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.neo4j.internal.helpers.ArrayUtil.lastOf;
 import static org.neo4j.logging.AssertableLogProvider.Level.DEBUG;
 import static org.neo4j.logging.LogAssertions.assertThat;
@@ -85,7 +85,7 @@ public class BatchingMessageHandlerTest
         NewEntry.Request message = new NewEntry.Request( null, content( "dummy" ) );
 
         batchHandler.handle( wrap( message ) );
-        verifyZeroInteractions( downstreamHandler );
+        verifyNoInteractions( downstreamHandler );
 
         // when
         batchHandler.run();
@@ -134,7 +134,7 @@ public class BatchingMessageHandlerTest
 
         batchHandler.handle( wrap( messageA ) );
         batchHandler.handle( wrap( messageB ) );
-        verifyZeroInteractions( downstreamHandler );
+        verifyNoInteractions( downstreamHandler );
 
         // when
         batchHandler.run();
@@ -186,7 +186,7 @@ public class BatchingMessageHandlerTest
         batchHandler.handle( wrap( heartbeatA ) );
         batchHandler.handle( wrap( newEntryB ) );
         batchHandler.handle( wrap( heartbeatB ) );
-        verifyZeroInteractions( downstreamHandler );
+        verifyNoInteractions( downstreamHandler );
 
         // when
         batchHandler.run(); // heartbeatA
@@ -223,7 +223,7 @@ public class BatchingMessageHandlerTest
 
         batchHandler.handle( wrap( appendA ) );
         batchHandler.handle( wrap( appendB ) );
-        verifyZeroInteractions( downstreamHandler );
+        verifyNoInteractions( downstreamHandler );
 
         // when
         batchHandler.run();
@@ -271,7 +271,7 @@ public class BatchingMessageHandlerTest
         batchHandler.handle( wrap( appendA ) );
         batchHandler.handle( wrap( appendB ) );
         batchHandler.handle( wrap( appendC ) );
-        verifyZeroInteractions( downstreamHandler );
+        verifyNoInteractions( downstreamHandler );
 
         // when
         batchHandler.run();
@@ -308,7 +308,7 @@ public class BatchingMessageHandlerTest
 
         batchHandler.handle( wrap( appendA ) );
         batchHandler.handle( wrap( appendB ) );
-        verifyZeroInteractions( downstreamHandler );
+        verifyNoInteractions( downstreamHandler );
 
         // when
         batchHandler.run();
@@ -335,7 +335,7 @@ public class BatchingMessageHandlerTest
         batchHandler.handle( wrap( append ) );
         batchHandler.handle( wrap( heartbeat ) );
         batchHandler.handle( wrap( emptyAppend ) );
-        verifyZeroInteractions( downstreamHandler );
+        verifyNoInteractions( downstreamHandler );
 
         // when
         batchHandler.run();

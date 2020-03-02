@@ -35,7 +35,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
@@ -87,7 +87,7 @@ public class SegmentsTest
     @Test
     public void shouldDeleteOnPrune() throws Exception
     {
-        verifyZeroInteractions( fsa );
+        verifyNoInteractions( fsa );
         // Given
         try ( Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshals,
                 logProvider, -1 ) )

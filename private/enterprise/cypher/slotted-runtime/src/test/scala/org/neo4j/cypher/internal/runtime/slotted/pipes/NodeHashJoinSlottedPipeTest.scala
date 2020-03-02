@@ -7,8 +7,8 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.verify
+import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.verifyNoMoreInteractions
-import org.mockito.Mockito.verifyZeroInteractions
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
@@ -39,7 +39,7 @@ class NodeHashJoinSlottedPipeTest extends CypherFunSuite {
 
     // then
     result should be(empty)
-    verifyZeroInteractions(right)
+    verifyNoInteractions(right)
   }
 
   test("should not fetch results from RHS if LHS did not contain any nodes that can be hashed against") {
