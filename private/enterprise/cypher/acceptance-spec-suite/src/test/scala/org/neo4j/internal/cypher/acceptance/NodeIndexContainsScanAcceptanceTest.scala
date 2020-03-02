@@ -137,7 +137,7 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     failWithError(Configs.InterpretedAndSlottedAndPipelined + Configs.Compiled,
       query, message = List("Type mismatch for parameter 'param': expected String but was Integer",
-        "Expected a string value, but got 42","Expected a string value, but got Int(42)","Expected two strings, but got London and 42"),
+        "Expected a string value, but got 42", "Expected a string value, but got Int(42)", "Expected two strings, but got London and 42"),
       params = Map("param" -> 42))
   }
 }
