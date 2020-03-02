@@ -277,11 +277,6 @@ public class SecuritySettings implements SettingsDeclaration
     public static final Setting<Boolean> ldap_authorization_connection_pooling =
             newBuilder( "unsupported.dbms.security.ldap.authorization.connection_pooling", BOOL, true ).build();
 
-    @Internal
-    @Description( "" )
-    public static final Setting<Path> security_initialization_file =
-            newBuilder( "unsupported.dbms.security.initialization_file", PATH, null ).immutable().setDependency( neo4j_home ).build();
-
     //=========================================================================
     // Property level security settings
     //=========================================================================

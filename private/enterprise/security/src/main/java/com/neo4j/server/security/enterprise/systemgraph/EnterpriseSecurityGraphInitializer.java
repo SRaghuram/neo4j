@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
@@ -124,7 +125,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
 
             // If no users or roles were migrated we setup the
             // default predefined roles and user and make sure we have an admin user
-            if ( ensureDefaultUserAndRoles( tx ) && config.isExplicitlySet( SecuritySettings.security_initialization_file ) )
+            if ( ensureDefaultUserAndRoles( tx ) && config.isExplicitlySet( GraphDatabaseSettings.system_init_file ) )
             {
                 doCustomSecurityInitialization( tx );
             }
@@ -139,7 +140,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
     private void doCustomSecurityInitialization( Transaction tx ) throws IOException
     {
         // this is first startup and custom initialization specified
-        File initFile = config.get( SecuritySettings.security_initialization_file ).toFile();
+        File initFile = config.get( GraphDatabaseSettings.system_init_file ).toFile();
         BufferedReader reader = new BufferedReader( new FileReader( initFile ) );
         String[] commands = reader.lines().filter( line -> !line.matches( "^\\s*//" ) ).collect( Collectors.joining( "\n" ) ).split( ";\\s*\n" );
         reader.close();
