@@ -24,6 +24,7 @@ import java.util.Collection;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.counts.CountsAccessor;
+import org.neo4j.counts.CountsVisitor;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.internal.diagnostics.DiagnosticsManager;
@@ -50,6 +51,7 @@ import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.storageengine.api.CommandCreationContext;
 import org.neo4j.storageengine.api.CommandsToApply;
 import org.neo4j.storageengine.api.ConstraintRuleAccessor;
+import org.neo4j.storageengine.api.CountsDelta;
 import org.neo4j.storageengine.api.IndexUpdateListener;
 import org.neo4j.storageengine.api.LogVersionRepository;
 import org.neo4j.storageengine.api.NodeLabelUpdateListener;
@@ -61,6 +63,7 @@ import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
+import org.neo4j.storageengine.api.txstate.TransactionCountingStateVisitor;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 import org.neo4j.storageengine.util.IdGeneratorUpdatesWorkSync;
 import org.neo4j.storageengine.util.IndexUpdatesWorkSync;
@@ -152,10 +155,32 @@ public class FrekiStorageEngine implements StorageEngine
             PageCursorTracer cursorTracer )
             throws KernelException
     {
-        try ( TxStateVisitor visitor = additionalTxStateVisitor.apply( new CommandCreator( target, stores ) ) )
+        TxStateVisitor main = new CommandCreator( target, stores, cursorTracer );
+        TxStateVisitor withCounts = main; // TODO trackCounts( target, main, state, storageReader, cursorTracer );
+        try ( TxStateVisitor visitor = additionalTxStateVisitor.apply( withCounts ) )
         {
             state.accept( visitor );
         }
+    }
+
+    private TxStateVisitor trackCounts( Collection<StorageCommand> target, TxStateVisitor main, ReadableTransactionState state, StorageReader storageReader,
+            PageCursorTracer cursorTracer )
+    {
+        CountsVisitor countsVisitor = new CountsVisitor()
+        {
+            @Override
+            public void visitNodeCount( int labelId, long count )
+            {
+                target.add( new FrekiCommand.NodeCount( labelId, count ) );
+            }
+
+            @Override
+            public void visitRelationshipCount( int startLabelId, int typeId, int endLabelId, long count )
+            {
+                target.add( new FrekiCommand.RelationshipCount( startLabelId, typeId, endLabelId, count ) );
+            }
+        };
+        return new TransactionCountingStateVisitor( main, storageReader, state, new CountsDelta(), countsVisitor, cursorTracer );
     }
 
     @Override

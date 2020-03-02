@@ -23,6 +23,7 @@ import org.eclipse.collections.api.set.primitive.LongSet;
 
 import java.util.function.LongConsumer;
 
+import org.neo4j.counts.CountsVisitor;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.CountsDelta;
@@ -40,6 +41,8 @@ import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 public class TransactionCountingStateVisitor extends TxStateVisitor.Delegator
 {
     private final CountsDelta counts;
+    private final CountsVisitor countsVisitor;
+    private final PageCursorTracer cursorTracer;
     private final ReadableTransactionState txState;
     private final StorageNodeCursor nodeCursor;
     private final StorageRelationshipScanCursor relationshipCursor;
@@ -47,9 +50,17 @@ public class TransactionCountingStateVisitor extends TxStateVisitor.Delegator
     public TransactionCountingStateVisitor( TxStateVisitor next, StorageReader storageReader,
             ReadableTransactionState txState, CountsDelta counts, PageCursorTracer cursorTracer )
     {
+        this( next, storageReader, txState, counts, null, cursorTracer );
+    }
+
+    public TransactionCountingStateVisitor( TxStateVisitor next, StorageReader storageReader,
+            ReadableTransactionState txState, CountsDelta counts, CountsVisitor countsVisitor, PageCursorTracer cursorTracer )
+    {
         super( next );
         this.txState = txState;
         this.counts = counts;
+        this.countsVisitor = countsVisitor;
+        this.cursorTracer = cursorTracer;
         this.nodeCursor = storageReader.allocateNodeCursor( cursorTracer );
         this.relationshipCursor = storageReader.allocateRelationshipScanCursor( cursorTracer );
     }
@@ -200,5 +211,9 @@ public class TransactionCountingStateVisitor extends TxStateVisitor.Delegator
     {
         super.close();
         closeAllUnchecked( nodeCursor, relationshipCursor );
+        if ( countsVisitor != null )
+        {
+            counts.accept( countsVisitor, cursorTracer );
+        }
     }
 }

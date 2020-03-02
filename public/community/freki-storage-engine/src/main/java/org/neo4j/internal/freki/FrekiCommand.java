@@ -52,17 +52,17 @@ import org.neo4j.values.storable.Values;
 
 abstract class FrekiCommand implements StorageCommand
 {
-    private final byte recordType;
+    private final byte commandType;
 
-    FrekiCommand( byte recordType )
+    FrekiCommand( byte commandType )
     {
-        this.recordType = recordType;
+        this.commandType = commandType;
     }
 
     @Override
     public void serialize( WritableChannel channel ) throws IOException
     {
-        channel.put( recordType );
+        channel.put( commandType );
     }
 
     abstract boolean accept( FrekiTransactionApplier applier ) throws IOException;
@@ -309,7 +309,6 @@ abstract class FrekiCommand implements StorageCommand
 
     abstract static class Token extends FrekiCommand implements StorageCommand.TokenCommand
     {
-
         final NamedToken token;
 
         Token( byte recordType, NamedToken token )
@@ -411,7 +410,7 @@ abstract class FrekiCommand implements StorageCommand
         }
     }
 
-    enum Mode //Dont change order, will break format
+    enum Mode //Don't change order, will break format
     {
         CREATE,
         UPDATE,
@@ -597,6 +596,78 @@ abstract class FrekiCommand implements StorageCommand
         return UTF8.decode( nameBytes );
     }
 
+    static class NodeCount extends FrekiCommand
+    {
+        static final byte TYPE = 14;
+
+        private final int labelId;
+        private final long count;
+
+        NodeCount( int labelId, long count )
+        {
+            super( TYPE );
+            this.labelId = labelId;
+            this.count = count;
+        }
+
+        @Override
+        boolean accept( FrekiTransactionApplier applier ) throws IOException
+        {
+            applier.handle( this );
+            return false;
+        }
+
+        @Override
+        public void serialize( WritableChannel channel ) throws IOException
+        {
+            super.serialize( channel );
+            channel.putInt( labelId ).putLong( count );
+        }
+
+        static NodeCount deserialize( ReadableChannel channel ) throws IOException
+        {
+            return new NodeCount( channel.getInt(), channel.getLong() );
+        }
+    }
+
+    static class RelationshipCount extends FrekiCommand
+    {
+        static final byte TYPE = 15;
+
+        private final int startLabelId;
+        private final int typeId;
+        private final int endLabelId;
+        private final long count;
+
+        RelationshipCount( int startLabelId, int typeId, int endLabelId, long count )
+        {
+            super( TYPE );
+            this.startLabelId = startLabelId;
+            this.typeId = typeId;
+            this.endLabelId = endLabelId;
+            this.count = count;
+        }
+
+        @Override
+        boolean accept( FrekiTransactionApplier applier ) throws IOException
+        {
+            applier.handle( this );
+            return false;
+        }
+
+        @Override
+        public void serialize( WritableChannel channel ) throws IOException
+        {
+            super.serialize( channel );
+            channel.putInt( startLabelId ).putInt( typeId ).putInt( endLabelId ).putLong( count );
+        }
+
+        static RelationshipCount deserialize( ReadableChannel channel ) throws IOException
+        {
+            return new RelationshipCount( channel.getInt(), channel.getInt(), channel.getInt(), channel.getLong() );
+        }
+    }
+
     interface Dispatcher
     {
         void handle( SparseNode node ) throws IOException;
@@ -612,6 +683,10 @@ abstract class FrekiCommand implements StorageCommand
         void handle( PropertyKeyToken token ) throws IOException;
 
         void handle( Schema schema ) throws IOException;
+
+        void handle( NodeCount count ) throws IOException;
+
+        void handle( RelationshipCount count ) throws IOException;
 
         class Adapter implements Dispatcher
         {
@@ -647,6 +722,16 @@ abstract class FrekiCommand implements StorageCommand
 
             @Override
             public void handle( Schema schema ) throws IOException
+            {
+            }
+
+            @Override
+            public void handle( NodeCount count ) throws IOException
+            {
+            }
+
+            @Override
+            public void handle( RelationshipCount count ) throws IOException
             {
             }
         }
