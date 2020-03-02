@@ -27,6 +27,7 @@ case class PipelinedPlanRewriter(rewriterSequencer: String => RewriterStepSequen
     fixedPoint(rewriterSequencer("PipelinedPlanRewriter")(
       combineCartesianProductOfMultipleIndexSeeks(cardinalities, providedOrders),
       semiApplyToLimitApply(cardinalities, providedOrders, idGen),
+      antiSemiApplyToAntiLimitApply(cardinalities, providedOrders, idGen)
       ).rewriter)
   }
 

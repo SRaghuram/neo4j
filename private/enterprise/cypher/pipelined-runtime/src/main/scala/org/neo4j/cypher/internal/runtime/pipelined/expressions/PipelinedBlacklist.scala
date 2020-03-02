@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.expressions
 import org.neo4j.cypher.internal.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.expressions.functions
 import org.neo4j.cypher.internal.logical.plans.Aggregation
+import org.neo4j.cypher.internal.logical.plans.AntiSemiApply
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NestedPlanExpression
@@ -41,6 +42,9 @@ object PipelinedBlacklist {
 
         case s: SemiApply if hasAggregation(s.right) =>
           _ + "Aggregation on RHS of SemiApply"
+
+        case s: AntiSemiApply if hasAggregation(s.right) =>
+          _ + "Aggregation on RHS of AntiSemiApply"
       }
     if (unsupport.nonEmpty) {
       throw new CantCompileQueryException(s"Pipelined does not yet support ${unsupport.mkString("`", "`, `", "`")}, use another runtime.")

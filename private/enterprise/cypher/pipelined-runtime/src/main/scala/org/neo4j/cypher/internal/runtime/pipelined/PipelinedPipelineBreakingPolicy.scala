@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined
 import org.neo4j.cypher.CypherInterpretedPipesFallbackOption
 import org.neo4j.cypher.internal.logical.plans.Aggregation
 import org.neo4j.cypher.internal.logical.plans.AllNodesScan
+import org.neo4j.cypher.internal.logical.plans.Anti
 import org.neo4j.cypher.internal.logical.plans.Apply
 import org.neo4j.cypher.internal.logical.plans.Argument
 import org.neo4j.cypher.internal.logical.plans.CacheProperties
@@ -92,6 +93,7 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, i
            _: Top |
            _: Aggregation |
            _: Optional |
+           _: Anti |
            _: VarExpand
       => !canFuseOneChildOperator(lp)
 
