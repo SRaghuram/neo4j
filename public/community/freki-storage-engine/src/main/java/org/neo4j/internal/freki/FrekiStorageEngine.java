@@ -156,7 +156,7 @@ public class FrekiStorageEngine implements StorageEngine
             throws KernelException
     {
         TxStateVisitor main = new CommandCreator( target, stores, cursorTracer );
-        TxStateVisitor withCounts = main; // TODO trackCounts( target, main, state, storageReader, cursorTracer );
+        TxStateVisitor withCounts = trackCounts( target, main, state, storageReader, cursorTracer );
         try ( TxStateVisitor visitor = additionalTxStateVisitor.apply( withCounts ) )
         {
             state.accept( visitor );
