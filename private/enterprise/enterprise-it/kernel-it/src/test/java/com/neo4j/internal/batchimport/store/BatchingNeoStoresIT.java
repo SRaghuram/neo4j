@@ -21,6 +21,7 @@ import org.neo4j.internal.batchimport.Configuration;
 import org.neo4j.internal.batchimport.store.BatchingNeoStores;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -91,6 +92,24 @@ class BatchingNeoStoresIT
         {
             managementService.shutdown();
         }
+    }
+
+    @Test
+    void tracePageCacheAccessOnEmptyStoreCreation() throws Exception
+    {
+        var pageCacheTracer = new DefaultPageCacheTracer();
+        try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler();
+                BatchingNeoStores batchingNeoStores = BatchingNeoStores
+                        .batchingNeoStores( fileSystem, databaseLayout, RecordFormatSelector.defaultFormat(), Configuration.DEFAULT,
+                                logService, new TestAdditionalInitialIds(), Config.defaults(), jobScheduler, pageCacheTracer ) )
+        {
+            batchingNeoStores.createNew();
+        }
+
+        assertThat( pageCacheTracer.pins() ).isEqualTo( 368 );
+        assertThat( pageCacheTracer.unpins() ).isEqualTo( 368 );
+        assertThat( pageCacheTracer.hits() ).isEqualTo( 354 );
+        assertThat( pageCacheTracer.faults() ).isEqualTo( 14 );
     }
 
     private static TransactionIdStore getTransactionIdStore( GraphDatabaseAPI database )
