@@ -23,8 +23,10 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.MetaDataStore;
+import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.format.StoreVersion;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
@@ -36,6 +38,7 @@ import org.neo4j.test.extension.EphemeralNeo4jLayoutExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.EphemeralPageCacheExtension;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -99,6 +102,42 @@ class RecordFormatSelectorTest
     {
         assertSame( Standard.LATEST_RECORD_FORMATS, selectForConfig( config( Standard.LATEST_NAME ), LOG ) );
         assertSame( HighLimit.RECORD_FORMATS, selectForConfig( config( HighLimit.NAME ), LOG ) );
+    }
+
+    @Test
+    void tracePageCacheAccessOnStoreSelection() throws IOException
+    {
+        prepareNeoStoreFile( Standard.LATEST_RECORD_FORMATS.storeVersion(), pageCache );
+        var pageCacheTracer = new DefaultPageCacheTracer();
+        selectForStore( databaseLayout, fs, pageCache, LOG, pageCacheTracer );
+
+        assertThat( pageCacheTracer.pins() ).isEqualTo( 1 );
+        assertThat( pageCacheTracer.unpins() ).isEqualTo( 1 );
+        assertThat( pageCacheTracer.faults() ).isEqualTo( 1 );
+    }
+
+    @Test
+    void tracePageCacheAccessOnStoreSelectionOrConfig() throws IOException
+    {
+        prepareNeoStoreFile( Standard.LATEST_RECORD_FORMATS.storeVersion(), pageCache );
+        var pageCacheTracer = new DefaultPageCacheTracer();
+        selectForStoreOrConfig( Config.defaults(), databaseLayout, fs, pageCache, LOG, pageCacheTracer );
+
+        assertThat( pageCacheTracer.pins() ).isEqualTo( 1 );
+        assertThat( pageCacheTracer.unpins() ).isEqualTo( 1 );
+        assertThat( pageCacheTracer.faults() ).isEqualTo( 1 );
+    }
+
+    @Test
+    void tracePageCacheAccessOnNewestStoreSelection() throws IOException
+    {
+        prepareNeoStoreFile( Standard.LATEST_RECORD_FORMATS.storeVersion(), pageCache );
+        var pageCacheTracer = new DefaultPageCacheTracer();
+        selectNewestFormat( Config.defaults(), databaseLayout, fs, pageCache, LOG, pageCacheTracer );
+
+        assertThat( pageCacheTracer.pins() ).isEqualTo( 1 );
+        assertThat( pageCacheTracer.unpins() ).isEqualTo( 1 );
+        assertThat( pageCacheTracer.faults() ).isEqualTo( 1 );
     }
 
     @Test
