@@ -20,6 +20,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
 import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.isNotNull
 import org.neo4j.codegen.api.IntermediateRepresentation.isNull
 import org.neo4j.codegen.api.IntermediateRepresentation.load
@@ -238,7 +239,8 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
   private val missingTypeField = field[Array[String]](codeGen.namer.nextVariableName("missingType"),
     arrayOf[String](missingTypes.map(constant):_*))
   private val expandInto = field[CachingExpandInto](codeGen.namer.nextVariableName("expandInto"))
-  private val memoryTracker = field[QueryMemoryTracker](codeGen.namer.nextVariableName("memoryTracker"))
+  private val memoryTracker = field[QueryMemoryTracker](codeGen.namer.nextVariableName("memoryTracker"),
+                                                        invokeStatic(method[ExpandIntoOperatorTaskTemplate, QueryMemoryTracker]("NO_MEMORY_TRACKING")))
 
   codeGen.registerCursor(relName, RelationshipCursorRepresentation(loadField(relationshipsField)))
 
@@ -410,7 +412,7 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
 }
 
 object ExpandIntoOperatorTaskTemplate {
-
+  val NO_MEMORY_TRACKING: QueryMemoryTracker = NoMemoryTracker
   val CONNECTING_RELATIONSHIPS: Method = method[CachingExpandInto,
     RelationshipSelectionCursor,
     NodeCursor,
