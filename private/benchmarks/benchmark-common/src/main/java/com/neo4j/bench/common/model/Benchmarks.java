@@ -63,9 +63,9 @@ public class Benchmarks
         if ( matches.size() > 1 )
         {
             throw new RuntimeException( format( "Unexpected error. Found multiple matches: %s",
-                                                matches.stream().map( benchmark -> "\n" + benchmark.simpleName() ) ) );
+                                                matches.stream().map( benchmark -> "\n" + benchmark.simpleName() ).collect( joining( ", " ) ) ) );
         }
-        return matches.isEmpty() ? null : matches.get( 0 );
+        return matches.get( 0 );
     }
 
     public boolean isGroup()
