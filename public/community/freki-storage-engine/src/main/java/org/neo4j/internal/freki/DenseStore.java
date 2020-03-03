@@ -19,16 +19,25 @@
  */
 package org.neo4j.internal.freki;
 
+import org.eclipse.collections.api.IntIterable;
 import org.eclipse.collections.api.factory.Sets;
 import org.eclipse.collections.api.map.primitive.IntObjectMap;
+import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
+import org.eclipse.collections.api.set.primitive.MutableIntSet;
+import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
+import org.eclipse.collections.impl.factory.primitive.IntSets;
 
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import org.neo4j.graphdb.Direction;
@@ -47,11 +56,19 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.storageengine.api.RelationshipDirection;
 import org.neo4j.storageengine.api.RelationshipSelection;
+import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageProperty;
+import org.neo4j.storageengine.util.EagerDegrees;
 import org.neo4j.values.storable.Value;
 
 import static java.lang.String.format;
+import static org.neo4j.internal.freki.CommandCreator.serializeValue;
+import static org.neo4j.internal.freki.MutableNodeRecordData.externalRelationshipId;
+import static org.neo4j.internal.freki.PropertyUpdate.add;
+import static org.neo4j.internal.freki.PropertyUpdate.change;
+import static org.neo4j.internal.freki.PropertyUpdate.remove;
 import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValueSizeIncludingTypeHeader;
+import static org.neo4j.storageengine.api.RelationshipDirection.LOOP;
 import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 
 /**
@@ -81,10 +98,8 @@ class DenseStore extends LifecycleAdapter implements Closeable
 
     PrefetchingResourceIterator<StorageProperty> getProperties( long nodeId, PageCursorTracer cursorTracer )
     {
-        DenseStoreKey from = layout.newKey();
-        from.initializeProperty( nodeId, Integer.MIN_VALUE );
-        DenseStoreKey to = layout.newKey();
-        to.initializeProperty( nodeId, Integer.MAX_VALUE );
+        DenseStoreKey from = layout.newKey().initializeProperty( nodeId, Integer.MIN_VALUE );
+        DenseStoreKey to = layout.newKey().initializeProperty( nodeId, Integer.MAX_VALUE );
         try
         {
             return new PropertyIterator( tree.seek( from, to, cursorTracer ) )
@@ -108,13 +123,111 @@ class DenseStore extends LifecycleAdapter implements Closeable
         }
     }
 
+    /**
+     * Used to efficiently gather a set of node property changes, where existing values are loaded for changed and removed properties.
+     */
+    void prepareUpdateNodeProperties( long nodeId, Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed,
+            Consumer<StorageCommand> commandConsumer, MutableIntObjectMap<PropertyUpdate> updates )
+    {
+        try
+        {
+            MutableIntSet propertyKeysToLoad = IntSets.mutable.empty();
+            changed.forEach( p -> propertyKeysToLoad.add( p.propertyKeyId() ) );
+            removed.forEach( propertyKeysToLoad::add );
+            MutableIntObjectMap<ByteBuffer> loadedPropertyValues = IntObjectMaps.mutable.withInitialCapacity( propertyKeysToLoad.size() );
+            if ( !propertyKeysToLoad.isEmpty() )
+            {
+                loadRawNodeProperties( nodeId, ( key, value ) ->
+                {
+                    if ( propertyKeysToLoad.contains( key.tokenId ) )
+                    {
+                        loadedPropertyValues.put( key.tokenId, value.dataCopy() );
+                    }
+                } );
+            }
+
+            // added - simple, just add them
+            for ( StorageProperty property : added )
+            {
+                updates.put( property.propertyKeyId(),
+                        add( property.propertyKeyId(), serializeValue( bigPropertyValueStore, property.value(), commandConsumer ) ) );
+            }
+            // updates - load and add before/after
+            for ( StorageProperty property : changed )
+            {
+                updates.put( property.propertyKeyId(), change( property.propertyKeyId(), loadedPropertyValues.get( property.propertyKeyId() ),
+                        serializeValue( bigPropertyValueStore, property.value(), commandConsumer ) ) );
+            }
+            // removals - load and add before
+            removed.forEach( key -> updates.put( key, remove( key, loadedPropertyValues.get( key ) ) ) );
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
+    }
+
+    void loadAndRemoveNodeProperties( long nodeId, MutableIntObjectMap<PropertyUpdate> updates )
+    {
+        try
+        {
+            loadRawNodeProperties( nodeId, ( key, value ) -> updates.put( key.tokenId, PropertyUpdate.remove( key.tokenId, value.dataCopy() ) ) );
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
+    }
+
+    private void loadRawNodeProperties( long nodeId, BiConsumer<DenseStoreKey,DenseStoreValue> consumer ) throws IOException
+    {
+        try ( Seeker<DenseStoreKey,DenseStoreValue> seek = tree.seek( new DenseStoreKey().initializeProperty( nodeId, Integer.MIN_VALUE ),
+                new DenseStoreKey().initializeProperty( nodeId, Integer.MAX_VALUE ), PageCursorTracer.NULL ) )
+        {
+            while ( seek.next() )
+            {
+                consumer.accept( seek.key(), seek.value() );
+            }
+        }
+    }
+
+    MutableIntObjectMap<PropertyUpdate> loadRelationshipPropertiesForRemoval( long nodeId, long internalId, int type, long otherNodeId, boolean outgoing )
+    {
+        try
+        {
+            DenseStoreKey relationship =
+                    new DenseStoreKey().initializeRelationship( nodeId, type, outgoing ? Direction.OUTGOING : Direction.INCOMING, otherNodeId, internalId );
+            try ( Seeker<DenseStoreKey, DenseStoreValue> seek = tree.seek( relationship, relationship, PageCursorTracer.NULL ) )
+            {
+                if ( !seek.next() )
+                {
+                    throw new IllegalStateException( "Relationship about to be removed didn't exist id:" +
+                            externalRelationshipId( nodeId, internalId, otherNodeId, outgoing ) );
+                }
+                MutableIntObjectMap<PropertyUpdate> properties = IntObjectMaps.mutable.empty();
+                RelationshipPropertyIterator relationshipProperties = relationshipPropertiesIterator( seek.value().data );
+                while ( relationshipProperties.hasNext() )
+                {
+                    relationshipProperties.next();
+                    int key = relationshipProperties.propertyKeyId();
+                    properties.put( key, PropertyUpdate.remove( key, relationshipProperties.serializedValue() ) );
+                }
+                return properties;
+            }
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
+    }
+
     PrefetchingResourceIterator<RelationshipData> getRelationships( long nodeId, int type, Direction direction, PageCursorTracer cursorTracer )
     {
         // If type is defined (i.e. NOT -1) then we can seek by direction too, otherwise we'll have to filter on direction
-        DenseStoreKey from = layout.newKey();
-        from.initializeRelationship( nodeId, type == ANY_RELATIONSHIP_TYPE ? Integer.MIN_VALUE : type, direction, Long.MIN_VALUE, Long.MIN_VALUE );
-        DenseStoreKey to = layout.newKey();
-        to.initializeRelationship( nodeId, type == ANY_RELATIONSHIP_TYPE ? Integer.MAX_VALUE : type, direction, Long.MAX_VALUE, Long.MAX_VALUE );
+        DenseStoreKey from = layout.newKey().initializeRelationship( nodeId,
+                type == ANY_RELATIONSHIP_TYPE ? Integer.MIN_VALUE : type, direction, Long.MIN_VALUE, Long.MIN_VALUE );
+        DenseStoreKey to = layout.newKey().initializeRelationship( nodeId,
+                type == ANY_RELATIONSHIP_TYPE ? Integer.MAX_VALUE : type, direction, Long.MAX_VALUE, Long.MAX_VALUE );
         Predicate<RelationshipData> filter = null;
         if ( type == ANY_RELATIONSHIP_TYPE && direction != Direction.BOTH )
         {
@@ -154,60 +267,119 @@ class DenseStore extends LifecycleAdapter implements Closeable
                 public RelationshipDirection direction()
                 {
                     return key.direction == Direction.OUTGOING
-                           ? originNodeId() == neighbourNodeId() ? RelationshipDirection.LOOP : RelationshipDirection.OUTGOING
+                           ? originNodeId() == neighbourNodeId() ? LOOP : RelationshipDirection.OUTGOING
                            : RelationshipDirection.INCOMING;
                 }
 
                 @Override
                 public Iterator<StorageProperty> properties()
                 {
-                    int[] propertyKeys = StreamVByte.readIntDeltas( new StreamVByte.IntArrayTarget(), value.data ).array();
-                    return new RelationshipPropertyIterator()
-                    {
-                        private int current = -1;
-                        private Value currentValue;
-
-                        @Override
-                        protected StorageProperty fetchNextOrNull()
-                        {
-                            if ( current + 1 >= propertyKeys.length )
-                            {
-                                return null;
-                            }
-                            current++;
-                            if ( currentValue == null && current > 0 )
-                            {
-                                // If we didn't read the value of the previous key then skip it in the buffer
-                                value.data.position( value.data.position() + calculatePropertyValueSizeIncludingTypeHeader( value.data ) );
-                            }
-                            currentValue = null;
-                            return this;
-                        }
-
-                        @Override
-                        public int propertyKeyId()
-                        {
-                            return propertyKeys[current];
-                        }
-
-                        @Override
-                        public Value value()
-                        {
-                            if ( currentValue == null )
-                            {
-                                currentValue = PropertyValueFormat.readEagerly( value.data, bigPropertyValueStore );
-                            }
-                            return currentValue;
-                        }
-
-                        @Override
-                        public boolean isDefined()
-                        {
-                            return true;
-                        }
-                    };
+                    return relationshipPropertiesIterator( value.data );
                 }
             };
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
+    }
+
+    private RelationshipPropertyIterator relationshipPropertiesIterator( ByteBuffer relationshipData )
+    {
+        int[] propertyKeys = StreamVByte.readIntDeltas( new StreamVByte.IntArrayTarget(), relationshipData ).array();
+        return new RelationshipPropertyIterator()
+        {
+            private int current = -1;
+            private Value currentValue;
+
+            @Override
+            protected StorageProperty fetchNextOrNull()
+            {
+                if ( current + 1 >= propertyKeys.length )
+                {
+                    return null;
+                }
+                current++;
+                if ( currentValue == null && current > 0 )
+                {
+                    // If we didn't read the value of the previous key then skip it in the buffer
+                    relationshipData.position( relationshipData.position() + calculatePropertyValueSizeIncludingTypeHeader( relationshipData ) );
+                }
+                currentValue = null;
+                return this;
+            }
+
+            @Override
+            public int propertyKeyId()
+            {
+                return propertyKeys[current];
+            }
+
+            @Override
+            public Value value()
+            {
+                if ( currentValue == null )
+                {
+                    currentValue = PropertyValueFormat.readEagerly( relationshipData, bigPropertyValueStore );
+                }
+                return currentValue;
+            }
+
+            @Override
+            ByteBuffer serializedValue()
+            {
+                assert currentValue == null;
+                int from = relationshipData.position();
+                int length = calculatePropertyValueSizeIncludingTypeHeader( relationshipData );
+                return ByteBuffer.wrap( Arrays.copyOfRange( relationshipData.array(), from, from + length ) );
+            }
+
+            @Override
+            public boolean isDefined()
+            {
+                return true;
+            }
+        };
+
+    }    EagerDegrees getDegrees( long nodeId, RelationshipSelection selection, PageCursorTracer cursorTracer )
+    {
+        try
+        {
+            EagerDegrees degrees = new EagerDegrees();
+            if ( selection.numberOfCriteria() == 1 )
+            {
+                RelationshipSelection.Criterion criterion = selection.criterion( 0 );
+                int type = criterion.type();
+                if ( type != ANY_RELATIONSHIP_TYPE )
+                {
+                    // OK this is for a single type, we can do a very precise seek
+                    DenseStoreKey key = layout.newKey().initializeDegree( nodeId, type );
+                    try ( Seeker<DenseStoreKey,DenseStoreValue> seek = tree.seek( key, key, cursorTracer ) )
+                    {
+                        if ( seek.next() )
+                        {
+                            seek.value().addTo( type, degrees );
+                            return degrees;
+                        }
+                    }
+                }
+            }
+
+            // Let's do a range scan over all degrees and then filter instead
+            DenseStoreKey from = layout.newKey().initializeDegree( nodeId, Integer.MIN_VALUE );
+            DenseStoreKey to = layout.newKey().initializeDegree( nodeId, Integer.MAX_VALUE );
+            try ( Seeker<DenseStoreKey,DenseStoreValue> seek = tree.seek( from, to, cursorTracer ) )
+            {
+                while ( seek.next() )
+                {
+                    int type = seek.key().tokenId;
+                    if ( selection.test( type ) )
+                    {
+                        seek.value().addTo( type, degrees );
+                    }
+                }
+            }
+            return degrees;
         }
         catch ( IOException e )
         {
@@ -240,10 +412,10 @@ class DenseStore extends LifecycleAdapter implements Closeable
 
             @Override
             public void createRelationship( long internalId, long sourceNodeId, int type, long targetNodeId, boolean outgoing,
-                    IntObjectMap<ByteBuffer> properties )
+                    IntObjectMap<PropertyUpdate> properties, Function<PropertyUpdate,ByteBuffer> version )
             {
                 key.initializeRelationship( sourceNodeId, type, outgoing ? Direction.OUTGOING : Direction.INCOMING, targetNodeId, internalId );
-                value.initializeRelationship( properties );
+                value.initializeRelationship( properties, version );
                 writer.put( key, value );
             }
 
@@ -255,9 +427,18 @@ class DenseStore extends LifecycleAdapter implements Closeable
             }
 
             @Override
-            public void deleteNode( long nodeId )
+            public void setDegree( long nodeId, int relationshipType, int outgoing, int incoming, int loop )
             {
-                throw new UnsupportedOperationException( "Not implemented yet" );
+                key.initializeDegree( nodeId, relationshipType );
+                if ( outgoing == 0 && incoming == 0 && loop == 0 )
+                {
+                    writer.remove( key );
+                }
+                else
+                {
+                    value.initializeDegree( outgoing, incoming, loop );
+                    writer.put( key, value );
+                }
             }
 
             @Override
@@ -291,11 +472,15 @@ class DenseStore extends LifecycleAdapter implements Closeable
 
         void removeProperty( long nodeId, int key );
 
-        void createRelationship( long internalId, long sourceNodeId, int type, long targetNodeId, boolean outgoing, IntObjectMap<ByteBuffer> properties );
+        void createRelationship( long internalId, long sourceNodeId, int type, long targetNodeId, boolean outgoing, IntObjectMap<PropertyUpdate> properties,
+                Function<PropertyUpdate,ByteBuffer> version );
 
         void deleteRelationship( long internalId, long sourceNodeId, int type, long targetNodeId, boolean outgoing );
 
-        void deleteNode( long nodeId );
+        /**
+         * Setting all-zero degrees will remove the entry.
+         */
+        void setDegree( long nodeId, int relationshipType, int outgoing, int incoming, int loop );
     }
 
     private class DenseStoreLayout extends Layout.Adapter<DenseStoreKey,DenseStoreValue>
@@ -334,6 +519,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
         {
             switch ( key.itemType )
             {
+            case DenseStoreKey.TYPE_DEGREE:
             case DenseStoreKey.TYPE_PROPERTY:
                 return 8;
             case DenseStoreKey.TYPE_RELATIONSHIP:
@@ -354,6 +540,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
         {
             switch ( key.itemType )
             {
+            case DenseStoreKey.TYPE_DEGREE:
             case DenseStoreKey.TYPE_PROPERTY:
             {
                 // [ sss,iiii][tttt,tttt][tttt,tttt][tttt,tttt]
@@ -394,6 +581,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
             into.tokenId = serialized & 0xFFFFFF;
             switch ( into.itemType )
             {
+            case DenseStoreKey.TYPE_DEGREE:
             case DenseStoreKey.TYPE_PROPERTY:
             {
                 // Nothing additional to do
@@ -467,6 +655,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
             byte itemType = o1.itemType; // o1 and o2 both have the same itemType here
             switch ( itemType )
             {
+            case DenseStoreKey.TYPE_DEGREE:
             case DenseStoreKey.TYPE_PROPERTY:
                 return 0; // nothing more to compare
             case DenseStoreKey.TYPE_RELATIONSHIP:
@@ -493,6 +682,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
 
     private static class DenseStoreKey
     {
+        private static final byte TYPE_DEGREE = 0;
         private static final byte TYPE_PROPERTY = 1;
         private static final byte TYPE_RELATIONSHIP = 2;
 
@@ -504,14 +694,23 @@ class DenseStore extends LifecycleAdapter implements Closeable
         long neighbourNodeId;
         long internalRelationshipId;
 
-        void initializeProperty( long nodeId, int propertyKey )
+        DenseStoreKey initializeDegree( long nodeId, int relationshipType )
+        {
+            this.nodeId = nodeId;
+            this.itemType = TYPE_DEGREE;
+            this.tokenId = relationshipType;
+            return this;
+        }
+
+        DenseStoreKey initializeProperty( long nodeId, int propertyKey )
         {
             this.nodeId = nodeId;
             this.itemType = TYPE_PROPERTY;
             this.tokenId = propertyKey;
+            return this;
         }
 
-        void initializeRelationship( long originNodeId, int type, Direction direction, long neighbourNodeId, long internalId )
+        DenseStoreKey initializeRelationship( long originNodeId, int type, Direction direction, long neighbourNodeId, long internalId )
         {
             this.nodeId = originNodeId;
             this.itemType = TYPE_RELATIONSHIP;
@@ -519,6 +718,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
             this.direction = direction;
             this.neighbourNodeId = neighbourNodeId;
             this.internalRelationshipId = internalId;
+            return this;
         }
 
         boolean isOutgoing()
@@ -531,6 +731,8 @@ class DenseStore extends LifecycleAdapter implements Closeable
         {
             switch ( itemType )
             {
+            case TYPE_DEGREE:
+                return format( "degree:%d", tokenId );
             case TYPE_PROPERTY:
                 return format( "nodeId:%d,Property{key:%d}", nodeId, tokenId );
             case TYPE_RELATIONSHIP:
@@ -547,6 +749,20 @@ class DenseStore extends LifecycleAdapter implements Closeable
         // TODO let's just make up some upper limit here and the rest will go to big-value store anyway
         ByteBuffer data = ByteBuffer.wrap( new byte[MAX_ENTRY_VALUE_SIZE] );
 
+        ByteBuffer dataCopy()
+        {
+            return ByteBuffer.wrap( Arrays.copyOf( data.array(), data.limit() ) );
+        }
+
+        void initializeDegree( int outgoing, int incoming, int loop )
+        {
+            data.clear();
+            data.putInt( outgoing );
+            data.putInt( incoming );
+            data.putInt( loop );
+            data.flip();
+        }
+
         void initializeProperty( ByteBuffer value )
         {
             data.clear();
@@ -554,7 +770,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
             data.flip();
         }
 
-        void initializeRelationship( IntObjectMap<ByteBuffer> properties )
+        void initializeRelationship( IntObjectMap<PropertyUpdate> properties, Function<PropertyUpdate,ByteBuffer> version )
         {
             data.clear();
             properties.keySet().toSortedArray();
@@ -562,9 +778,14 @@ class DenseStore extends LifecycleAdapter implements Closeable
             StreamVByte.writeIntDeltas( sortedKeys, data );
             for ( int key : sortedKeys )
             {
-                data.put( properties.get( key ) );
+                data.put( version.apply( properties.get( key ) ) );
             }
             data.flip();
+        }
+
+        void addTo( int type, EagerDegrees into )
+        {
+            into.add( type, data.getInt(), data.getInt(), data.getInt() );
         }
     }
 
@@ -658,5 +879,6 @@ class DenseStore extends LifecycleAdapter implements Closeable
 
     private abstract static class RelationshipPropertyIterator extends PrefetchingIterator<StorageProperty> implements StorageProperty
     {
+        abstract ByteBuffer serializedValue();
     }
 }

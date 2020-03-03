@@ -83,6 +83,13 @@ public class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNode
     @Override
     public int[] relationshipTypes()
     {
+        // Dense
+        if ( headerState.isDense )
+        {
+            return stores.denseStore.getDegrees( loadedNodeId, RelationshipSelection.ALL_RELATIONSHIPS, cursorTracer ).types();
+        }
+
+        // Sparse
         readRelationshipTypesAndOffsets();
         return relationshipTypesInNode.clone();
     }
@@ -90,12 +97,20 @@ public class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNode
     @Override
     public Degrees degrees( RelationshipSelection selection )
     {
+        // Dense
+        if ( headerState.isDense )
+        {
+            return stores.denseStore.getDegrees( loadedNodeId, selection, cursorTracer );
+        }
+
+        // Sparse
         if ( relationshipsCursor == null )
         {
             relationshipsCursor = new FrekiRelationshipTraversalCursor( stores, cursorTracer );
         }
         EagerDegrees degrees = new EagerDegrees();
         relationshipsCursor.init( this, selection );
+        // TODO If the selection is for any direction then this can be made more efficient by simply looking at the vbyte relationship array length
         while ( relationshipsCursor.next() )
         {
             degrees.add( relationshipsCursor.type(), relationshipsCursor.currentDirection(), 1 );
@@ -107,7 +122,7 @@ public class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNode
     public boolean supportsFastDegreeLookup()
     {
         // For simplicity degree lookup involves an internal relationships cursor, but looping through the data is cheap
-        // and the data is right there in the buffer
+        // and the data is right there in the buffer. Also for dense nodes the degree lookup is a single lookup in the b+tree
         return true;
     }
 

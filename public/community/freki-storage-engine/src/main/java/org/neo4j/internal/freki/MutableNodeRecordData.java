@@ -301,6 +301,9 @@ class MutableNodeRecordData
 
     Relationship createRelationship( long internalId, long otherNode, int type, boolean outgoing )
     {
+        // Internal IDs are allocated in the CommandCreationContext and merely passed in here, so it's nice to keep this up to data for sanity's sake
+        // Also when moving over from sparse --> dense we can simply read this field to get the correct value
+//        registerInternalRelationshipId( internalId );
         return relationships.getIfAbsentPut( type, () -> new MutableNodeRecordData.Relationships( type ) ).add( internalId, id, otherNode, type, outgoing );
     }
 
@@ -580,7 +583,7 @@ class MutableNodeRecordData
         return externalRelationshipId( nodeId, internalRelationshipId );
     }
 
-    static long idFromRelationshipId( long relationshipId )
+    static long nodeIdFromRelationshipId( long relationshipId )
     {
         return relationshipId & 0xFF_FFFFFFFFL;
     }
@@ -625,6 +628,6 @@ class MutableNodeRecordData
         {
             return "->DENSE";
         }
-        return String.format( "->[x%d]%d", recordXFactor( sizeExponentialFromForwardPointer( forwardPointer ) ), idFromRelationshipId( forwardPointer ) );
+        return String.format( "->[x%d]%d", recordXFactor( sizeExponentialFromForwardPointer( forwardPointer ) ), nodeIdFromRelationshipId( forwardPointer ) );
     }
 }

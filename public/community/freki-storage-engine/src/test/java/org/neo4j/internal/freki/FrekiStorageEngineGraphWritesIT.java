@@ -74,11 +74,13 @@ import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.storageengine.api.CommandCreationContext;
 import org.neo4j.storageengine.api.CommandsToApply;
+import org.neo4j.storageengine.api.Degrees;
 import org.neo4j.storageengine.api.IndexEntryUpdate;
 import org.neo4j.storageengine.api.IndexUpdateListener;
 import org.neo4j.storageengine.api.NodeLabelUpdate;
 import org.neo4j.storageengine.api.NodeLabelUpdateListener;
 import org.neo4j.storageengine.api.PropertyKeyValue;
+import org.neo4j.storageengine.api.RelationshipDirection;
 import org.neo4j.storageengine.api.StandardConstraintRuleAccessor;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
@@ -93,6 +95,7 @@ import org.neo4j.storageengine.api.txstate.LongDiffSets;
 import org.neo4j.storageengine.api.txstate.NodeState;
 import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
+import org.neo4j.storageengine.util.EagerDegrees;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
@@ -104,6 +107,7 @@ import org.neo4j.token.TokenHolders;
 import org.neo4j.token.api.TokenHolder;
 import org.neo4j.values.storable.Value;
 
+import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
@@ -390,10 +394,10 @@ class FrekiStorageEngineGraphWritesIT
                 target.visitNodePropertyChanges( nodeId, singletonList( property ), emptyList(), IntSets.immutable.empty() );
                 nodeProperties.add( property );
             } );
-        }
 
-        // then
-        assertContentsOfNode( nodeId, labels, nodeProperties, relationships );
+            // then
+            assertContentsOfNode( nodeId, labels, nodeProperties, relationships );
+        }
     }
 
     // TODO shouldUpdateDenseNode
@@ -417,22 +421,29 @@ class FrekiStorageEngineGraphWritesIT
         {
             createAndApplyTransaction( target ->
             {
-                for ( int j = 0; j < nodes.length; j++ )
+                for ( int j = 0; j < nodes.length || expectedRelationships.size() < nodes.length; j++ )
                 {
                     long startNode = nodes[random.nextInt( nodes.length )];
                     long endNode = nodes[random.nextInt( nodes.length )];
-                    target.visitCreatedRelationship( commandCreationContext.reserveRelationship( startNode ), 0, startNode, endNode, emptyList() );
-                    RelationshipSpec spec = new RelationshipSpec( startNode, 0, endNode, emptySet() );
-                    expectedRelationships.getIfAbsentPut( startNode, HashSet::new ).add( spec );
-                    expectedRelationships.getIfAbsentPut( endNode, HashSet::new ).add( spec );
+                    Set<RelationshipSpec> startNodeRelationshipSet = expectedRelationships.getIfAbsentPut( startNode, HashSet::new );
+                    Set<RelationshipSpec> endNodeRelationshipSet = expectedRelationships.getIfAbsentPut( endNode, HashSet::new );
+                    RelationshipSpec spec = null;
+                    do
+                    {
+                        spec = new RelationshipSpec( startNode, spec == null ? 0 : spec.type + 1, endNode, emptySet() );
+                    }
+                    while ( startNodeRelationshipSet.contains( spec ) || endNodeRelationshipSet.contains( spec ) );
+                    startNodeRelationshipSet.add( spec );
+                    endNodeRelationshipSet.add( spec );
+                    target.visitCreatedRelationship( commandCreationContext.reserveRelationship( startNode ), spec.type, startNode, endNode, emptyList() );
                 }
             } );
-        }
 
-        // then
-        for ( long node : nodes )
-        {
-            assertContentsOfNode( node, LongSets.immutable.empty(), emptySet(), expectedRelationships.get( node ) );
+            // then
+            for ( long node : nodes )
+            {
+                assertContentsOfNode( node, LongSets.immutable.empty(), emptySet(), expectedRelationships.get( node ) );
+            }
         }
     }
 
@@ -676,6 +687,73 @@ class FrekiStorageEngineGraphWritesIT
         }, index -> asSet( IndexEntryUpdate.add( nodeId, index, value ) ) );
     }
 
+    @Test
+    void shouldDeleteSparseNode() throws Exception
+    {
+        // given
+        long nodeId = commandCreationContext.reserveNode();
+        createAndApplyTransaction( target ->
+        {
+            target.visitCreatedNode( nodeId );
+            target.visitNodeLabelChanges( nodeId, LongSets.immutable.of( 1, 2, 3 ), LongSets.immutable.empty() );
+            target.visitNodePropertyChanges( nodeId, asList( new PropertyKeyValue( 0, intValue( 10 ) ), new PropertyKeyValue( 1, stringValue( "abc" ) ) ),
+                    emptyList(), IntSets.immutable.empty() );
+        } );
+
+        // when
+        createAndApplyTransaction( target ->
+        {
+            target.visitDeletedNode( nodeId );
+        } );
+
+        // then
+        try ( StorageReader reader = storageEngine.newReader();
+              StorageNodeCursor nodeCursor = reader.allocateNodeCursor( NULL ) )
+        {
+            nodeCursor.single( nodeId );
+            assertThat( nodeCursor.next() ).isFalse();
+        }
+    }
+
+    @Test
+    void shouldDeleteDenseNode() throws Exception
+    {
+        // given
+        long nodeId = commandCreationContext.reserveNode();
+        Set<RelationshipSpec> relationships = new HashSet<>();
+        createAndApplyTransaction( target ->
+        {
+            target.visitCreatedNode( nodeId );
+            target.visitNodeLabelChanges( nodeId, LongSets.immutable.of( 1, 2, 3 ), LongSets.immutable.empty() );
+            target.visitNodePropertyChanges( nodeId, asList( new PropertyKeyValue( 0, intValue( 10 ) ), new PropertyKeyValue( 1, stringValue( "abc" ) ) ),
+                    emptyList(), IntSets.immutable.empty() );
+            for ( int i = 0; i < 100; i++ )
+            {
+                long otherNode = commandCreationContext.reserveNode();
+                target.visitCreatedNode( otherNode );
+                Set<StorageProperty> properties = asSet( new PropertyKeyValue( 0, intValue( i ) ) );
+                long id = commandCreationContext.reserveRelationship( nodeId );
+                target.visitCreatedRelationship( id, 0, nodeId, otherNode, properties );
+                relationships.add( new RelationshipSpec( nodeId, 0, otherNode, properties, id ) );
+            }
+        } );
+
+        // when
+        createAndApplyTransaction( target ->
+        {
+            relationships.forEach( r -> target.visitDeletedRelationship( r.id, r.type, r.startNodeId, r.endNodeId ) );
+            target.visitDeletedNode( nodeId );
+        } );
+
+        // then
+        try ( StorageReader reader = storageEngine.newReader();
+              StorageNodeCursor nodeCursor = reader.allocateNodeCursor( NULL ) )
+        {
+            nodeCursor.single( nodeId );
+            assertThat( nodeCursor.next() ).isFalse();
+        }
+    }
+
     private void shouldGenerateIndexUpdates(
             ThrowingConsumer<TxStateVisitor,Exception> beforeState, ThrowingConsumer<TxStateVisitor,Exception> testState,
             Function<IndexDescriptor,Set<IndexEntryUpdate<IndexDescriptor>>> expectedUpdates ) throws Exception
@@ -692,7 +770,9 @@ class FrekiStorageEngineGraphWritesIT
         createAndApplyTransaction( testState );
 
         // then
-        assertThat( Iterables.asSet( indexUpdateListener.updates ) ).isEqualTo( expectedUpdates.apply( index ) );
+        Set<IndexEntryUpdate<IndexDescriptor>> actual = Iterables.asSet( indexUpdateListener.updates );
+        Set<IndexEntryUpdate<IndexDescriptor>> expected = expectedUpdates.apply( index );
+        assertThat( actual ).isEqualTo( expected );
     }
 
     private IndexDescriptor createIndex( SchemaDescriptor schemaDescriptor ) throws Exception
@@ -735,7 +815,25 @@ class FrekiStorageEngineGraphWritesIT
                 readRelationships.add( relationship );
             }
             assertThat( readRelationships ).isEqualTo( relationships );
+
+            // degrees
+            Degrees degrees = nodeCursor.degrees( ALL_RELATIONSHIPS );
+            Degrees expectedDegrees = buildExpectedDegrees( nodeId, relationships );
+            assertThat( IntSets.immutable.of( degrees.types() ) ).isEqualTo( IntSets.immutable.of( expectedDegrees.types() ) );
+            for ( int type : degrees.types() )
+            {
+                assertThat( degrees.outgoingDegree( type ) ).isEqualTo( expectedDegrees.outgoingDegree( type ) );
+                assertThat( degrees.incomingDegree( type ) ).isEqualTo( expectedDegrees.incomingDegree( type ) );
+                assertThat( degrees.totalDegree( type ) ).isEqualTo( expectedDegrees.totalDegree( type ) );
+            }
         }
+    }
+
+    private static Degrees buildExpectedDegrees( long nodeId, Set<RelationshipSpec> relationships )
+    {
+        EagerDegrees degrees = new EagerDegrees();
+        relationships.forEach( relationship -> degrees.add( relationship.type, relationship.direction( nodeId ), 1 ) );
+        return degrees;
     }
 
     private void assertProperties( Set<StorageProperty> expectedProperties, StoragePropertyCursor propertyCursor )
@@ -862,10 +960,22 @@ class FrekiStorageEngineGraphWritesIT
 
         RelationshipSpec( long startNodeId, int type, long endNodeId, Set<StorageProperty> properties )
         {
+            this( startNodeId, type, endNodeId, properties, 0 );
+        }
+
+        RelationshipSpec( long startNodeId, int type, long endNodeId, Set<StorageProperty> properties, long id )
+        {
             this.startNodeId = startNodeId;
             this.type = type;
             this.endNodeId = endNodeId;
             this.properties = properties;
+            this.id = id;
+        }
+
+        RelationshipDirection direction( long fromPovOfNodeId )
+        {
+            return startNodeId == fromPovOfNodeId ? endNodeId == fromPovOfNodeId ? RelationshipDirection.LOOP : RelationshipDirection.OUTGOING
+                                                  : RelationshipDirection.INCOMING;
         }
 
         @Override

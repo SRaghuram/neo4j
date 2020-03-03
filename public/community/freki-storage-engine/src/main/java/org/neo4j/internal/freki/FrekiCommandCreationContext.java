@@ -84,7 +84,7 @@ class FrekiCommandCreationContext implements CommandCreationContext
             }
 
             long forwardPointer = data.getForwardPointer();
-            if ( forwardPointer != NULL && isDenseFromForwardPointer( forwardPointer ) )
+            if ( forwardPointer != NULL && !isDenseFromForwardPointer( forwardPointer ) )
             {
                 int sizeExp = sizeExponentialFromForwardPointer( forwardPointer );
                 long id = idFromForwardPointer( forwardPointer );
@@ -96,7 +96,7 @@ class FrekiCommandCreationContext implements CommandCreationContext
                 }
             }
 
-            return new MutableInt( data.nextInternalRelationshipId() );
+            return new MutableInt( data.nextInternalRelationshipId );
         } );
 
         long internalRelationshipId = nextRelationshipId.getAndIncrement();

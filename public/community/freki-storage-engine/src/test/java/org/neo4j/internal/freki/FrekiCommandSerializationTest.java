@@ -45,6 +45,7 @@ import org.neo4j.test.rule.RandomRule;
 import org.neo4j.token.api.NamedToken;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.neo4j.internal.freki.FrekiCommand.MODES;
 import static org.neo4j.internal.freki.InMemoryBigValueTestStore.applyToStoreImmediately;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 
@@ -111,25 +112,19 @@ public class FrekiCommandSerializationTest
     {
         // given
         long nodeId = randomLargeId();
-        IntObjectMap<ByteBuffer> addedProperties = randomProperties();
-        IntSet removedProperties = randomPropertyKeys();
-        IntObjectMap<DenseRelationships> createdRelationships = randomRelationships( true );
-        IntObjectMap<DenseRelationships> deletedRelationships = randomRelationships( false );
-        FrekiCommand.DenseNode node =
-                new FrekiCommand.DenseNode( nodeId, true, addedProperties, removedProperties, createdRelationships, deletedRelationships );
+        IntObjectMap<PropertyUpdate> properties = randomProperties();
+        IntObjectMap<DenseRelationships> relationships = randomRelationships();
+        FrekiCommand.DenseNode node = new FrekiCommand.DenseNode( nodeId, properties, relationships );
 
         // when
-        InMemoryClosableChannel channel = new InMemoryClosableChannel( 5_000 );
+        InMemoryClosableChannel channel = new InMemoryClosableChannel( 50_000 );
         node.serialize( channel );
 
         // then
         FrekiCommand.DenseNode readNode = readCommand( channel, FrekiCommand.DenseNode.class );
         assertThat( readNode.nodeId ).isEqualTo( node.nodeId );
-        assertThat( readNode.inUse ).isEqualTo( node.inUse );
-        assertThat( readNode.addedProperties ).isEqualTo( node.addedProperties );
-        assertThat( readNode.removedProperties ).isEqualTo( node.removedProperties );
-        assertThat( readNode.createdRelationships ).isEqualTo( node.createdRelationships );
-        assertThat( readNode.deletedRelationships ).isEqualTo( node.deletedRelationships );
+        assertThat( readNode.propertyUpdates ).isEqualTo( node.propertyUpdates );
+        assertThat( readNode.relationshipUpdates ).isEqualTo( node.relationshipUpdates );
     }
 
     @Test
@@ -288,17 +283,38 @@ public class FrekiCommandSerializationTest
         return tokens;
     }
 
-    private IntObjectMap<ByteBuffer> randomProperties()
+    private IntObjectMap<PropertyUpdate> randomProperties()
     {
-        MutableIntObjectMap<ByteBuffer> map = IntObjectMaps.mutable.empty();
+        MutableIntObjectMap<PropertyUpdate> map = IntObjectMaps.mutable.empty();
         for ( int key : randomTokens() )
         {
-            ByteBuffer serializedValue = ByteBuffer.wrap( new byte[512] );
-            random.nextValue().writeTo( new PropertyValueFormat( bigValueStore, applyToStoreImmediately( bigValueStore ), serializedValue ) );
-            serializedValue.flip();
-            map.put( key, serializedValue );
+            ByteBuffer serializedValue = randomSerializedValue();
+            PropertyUpdate update;
+            switch ( random.among( MODES ) )
+            {
+            case CREATE:
+                update = PropertyUpdate.add( key, serializedValue );
+                break;
+            case UPDATE:
+                update = PropertyUpdate.change( key, randomSerializedValue(), serializedValue );
+                break;
+            case DELETE:
+                update = PropertyUpdate.remove( key, serializedValue );
+                break;
+            default:
+                throw new IllegalArgumentException( "Unrecognized mode" );
+            }
+            map.put( key, update );
         }
         return map;
+    }
+
+    private ByteBuffer randomSerializedValue()
+    {
+        ByteBuffer serializedValue = ByteBuffer.wrap( new byte[512] );
+        random.nextValue().writeTo( new PropertyValueFormat( bigValueStore, applyToStoreImmediately( bigValueStore ), serializedValue ) );
+        serializedValue.flip();
+        return serializedValue;
     }
 
     private IntSet randomPropertyKeys()
@@ -306,16 +322,20 @@ public class FrekiCommandSerializationTest
         return IntSets.mutable.of( randomTokens() );
     }
 
-    private IntObjectMap<DenseRelationships> randomRelationships( boolean used )
+    private IntObjectMap<DenseRelationships> randomRelationships()
     {
         MutableIntObjectMap<DenseRelationships> map = IntObjectMaps.mutable.empty();
         for ( int type : randomTokens() )
         {
-            int count = random.nextInt( 1, 5 );
-            DenseRelationships relationships = map.getIfAbsentPut( type, new DenseRelationships( type ) );
-            for ( int i = 0; i < count; i++ )
+            DenseRelationships relationships = map.getIfAbsentPut( type, new DenseRelationships( 0, type,
+                    random.nextInt( 100 ), random.nextInt( 100 ), random.nextInt( 100 ) ) );
+            for ( int i = 0, count = random.nextInt( 1, 5 ); i < count; i++ )
             {
-                relationships.add( randomLargeId(), randomLargeId(), random.nextBoolean(), used ? randomProperties() : IntObjectMaps.immutable.empty() );
+                relationships.create( new DenseRelationships.DenseRelationship( randomLargeId(), randomLargeId(), random.nextBoolean(), randomProperties() ) );
+            }
+            for ( int i = 0, count = random.nextInt( 1, 5 ); i < count; i++ )
+            {
+                relationships.delete( new DenseRelationships.DenseRelationship( randomLargeId(), randomLargeId(), random.nextBoolean(), randomProperties() ) );
             }
         }
         return map;
