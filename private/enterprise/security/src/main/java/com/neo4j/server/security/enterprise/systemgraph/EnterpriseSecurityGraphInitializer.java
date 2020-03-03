@@ -347,7 +347,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
 
     private void migrateSystemGraph( Transaction tx )
     {
-        Node schemaNode = tx.findNode( PRIVILEGE_LABEL, "action", PrivilegeAction.SCHEMA.toString() );
+        Node schemaNode = tx.findNode( PRIVILEGE_LABEL, "action", "schema" );
         if ( schemaNode == null )
         {
             return;

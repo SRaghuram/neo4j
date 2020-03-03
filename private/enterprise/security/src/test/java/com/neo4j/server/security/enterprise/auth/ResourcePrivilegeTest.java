@@ -21,12 +21,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ACCESS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CONSTRAINT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DATABASE_ACTIONS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.GRAPH_ACTIONS;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.INDEX;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.MATCH;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.READ;
-import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SCHEMA;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRAVERSE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.WRITE;
@@ -70,7 +71,11 @@ class ResourcePrivilegeTest
                 {
                     assertOk( privilegeType, action, new DatabaseResource() );
                 }
-                else if ( SCHEMA.satisfies( action ) )
+                else if ( INDEX.satisfies( action ) )
+                {
+                    assertOk( privilegeType, action, new DatabaseResource() );
+                }
+                else if ( CONSTRAINT.satisfies( action ) )
                 {
                     assertOk( privilegeType, action, new DatabaseResource() );
                 }
@@ -141,7 +146,14 @@ class ResourcePrivilegeTest
                     assertFail( privilegeType, action, new PropertyResource( "foo" ) );
                     assertFail( privilegeType, action, new AllPropertiesResource() );
                 }
-                else if ( SCHEMA.satisfies( action ) )
+                else if ( INDEX.satisfies( action ) )
+                {
+                    assertFail( privilegeType, action, new ProcedureResource( "", "" ) );
+                    assertFail( privilegeType, action, new GraphResource() );
+                    assertFail( privilegeType, action, new PropertyResource( "foo" ) );
+                    assertFail( privilegeType, action, new AllPropertiesResource() );
+                }
+                else if ( CONSTRAINT.satisfies( action ) )
                 {
                     assertFail( privilegeType, action, new ProcedureResource( "", "" ) );
                     assertFail( privilegeType, action, new GraphResource() );
