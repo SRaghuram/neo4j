@@ -89,6 +89,8 @@ import org.neo4j.storageengine.api.StorageReader;
 import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
 import org.neo4j.storageengine.api.TransactionIdStore;
+import org.neo4j.storageengine.api.txstate.LongDiffSets;
+import org.neo4j.storageengine.api.txstate.NodeState;
 import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 import org.neo4j.test.extension.Inject;
@@ -109,8 +111,10 @@ import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
@@ -763,6 +767,9 @@ class FrekiStorageEngineGraphWritesIT
         try ( StorageReader reader = storageEngine.newReader() )
         {
             ReadableTransactionState transactionState = mock( ReadableTransactionState.class );
+            NodeState emptyNodeState = mock( NodeState.class );
+            when( transactionState.getNodeState( anyLong() ) ).thenReturn( emptyNodeState );
+            when( emptyNodeState.labelDiffSets() ).thenReturn( LongDiffSets.EMPTY );
             doAnswer( invocationOnMock ->
             {
                 TxStateVisitor visitor = invocationOnMock.getArgument( 0, TxStateVisitor.class );

@@ -31,7 +31,6 @@ import org.neo4j.storageengine.api.Degrees;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.StorageReader;
-import org.neo4j.storageengine.api.StorageRelationshipScanCursor;
 
 import static org.neo4j.io.IOUtils.closeAllUnchecked;
 import static org.neo4j.storageengine.api.RelationshipSelection.ALL_RELATIONSHIPS;
@@ -45,7 +44,6 @@ public class TransactionCountingStateVisitor extends TxStateVisitor.Delegator
     private final PageCursorTracer cursorTracer;
     private final ReadableTransactionState txState;
     private final StorageNodeCursor nodeCursor;
-    private final StorageRelationshipScanCursor relationshipCursor;
 
     public TransactionCountingStateVisitor( TxStateVisitor next, StorageReader storageReader,
             ReadableTransactionState txState, CountsDelta counts, PageCursorTracer cursorTracer )
@@ -62,7 +60,6 @@ public class TransactionCountingStateVisitor extends TxStateVisitor.Delegator
         this.countsVisitor = countsVisitor;
         this.cursorTracer = cursorTracer;
         this.nodeCursor = storageReader.allocateNodeCursor( cursorTracer );
-        this.relationshipCursor = storageReader.allocateRelationshipScanCursor( cursorTracer );
     }
 
     @Override
@@ -115,12 +112,7 @@ public class TransactionCountingStateVisitor extends TxStateVisitor.Delegator
     @Override
     public void visitDeletedRelationship( long id, int type, long startNode, long endNode )
     {
-        relationshipCursor.single( id );
-        if ( !relationshipCursor.next() )
-        {
-            throw new IllegalStateException( "Relationship being deleted should exist along with its nodes. Relationship[" + id + "]" );
-        }
-        updateRelationshipCount( relationshipCursor.sourceNodeReference(), relationshipCursor.type(), relationshipCursor.targetNodeReference(), -1 );
+        updateRelationshipCount( startNode, type, endNode, -1 );
         super.visitDeletedRelationship( id, type, startNode, endNode );
     }
 
@@ -210,7 +202,7 @@ public class TransactionCountingStateVisitor extends TxStateVisitor.Delegator
     public void close()
     {
         super.close();
-        closeAllUnchecked( nodeCursor, relationshipCursor );
+        closeAllUnchecked( nodeCursor );
         if ( countsVisitor != null )
         {
             counts.accept( countsVisitor, cursorTracer );
