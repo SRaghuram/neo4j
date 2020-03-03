@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.cypher.internal.profiling.QueryProfiler
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.WithHeapUsageEstimation
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
@@ -28,7 +27,6 @@ import org.neo4j.cypher.internal.util.attribution.Id
 case class PipelineTask(startTask: ContinuableOperatorTask,
                         middleTasks: Array[OperatorTask],
                         outputOperatorState: OutputOperatorState,
-                        queryContext: QueryContext,
                         state: QueryState,
                         pipelineState: PipelineState)
   extends Task[QueryResources] with WithHeapUsageEstimation {
@@ -61,13 +59,13 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
   private def executeOperators(resources: QueryResources,
                                queryProfiler: QueryProfiler): Unit = {
     DebugSupport.logPipelines(PipelinedDebugSupport.prettyStartTask(startTask, pipelineState.pipeline.start.workIdentity))
-    startTask.operateWithProfile(_output, queryContext, state, resources, queryProfiler)
+    startTask.operateWithProfile(_output, state, resources, queryProfiler)
     DebugSupport.logPipelines(PipelinedDebugSupport.prettyPostStartTask(startTask))
     var i = 0
     while (i < middleTasks.length) {
       val op = middleTasks(i)
       DebugSupport.logPipelines(PipelinedDebugSupport.prettyWork(_output, pipelineState.pipeline.middleOperators(i).workIdentity))
-      op.operateWithProfile(_output, queryContext, state, resources, queryProfiler)
+      op.operateWithProfile(_output, state, resources, queryProfiler)
       i += 1
     }
   }
@@ -75,7 +73,7 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
   private def executeOutputOperator(resources: QueryResources,
                                     queryProfiler: QueryProfiler): PreparedOutput = {
     DebugSupport.logPipelines(PipelinedDebugSupport.prettyWork(_output, pipelineState.pipeline.outputOperator.workIdentity))
-    val preparedOutput = outputOperatorState.prepareOutputWithProfile(_output, queryContext, state, resources, queryProfiler)
+    val preparedOutput = outputOperatorState.prepareOutputWithProfile(_output, state, resources, queryProfiler)
     if (!outputOperatorState.canContinueOutput) {
       // There is no continuation on the output operator,
       // next-time around we need a new output morsel

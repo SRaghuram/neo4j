@@ -28,7 +28,6 @@ import org.neo4j.cypher.internal.logical.plans.Selection
 import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
-import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.ApplyPlans
@@ -41,16 +40,11 @@ import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.PipelineDefiner
 import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
 import org.neo4j.cypher.internal.physicalplanning.ReduceOutput
-import org.neo4j.cypher.internal.physicalplanning.RefSlot
-import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotKey
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.ParameterMapping
 import org.neo4j.cypher.internal.runtime.ProcedureCallMode
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
@@ -89,8 +83,6 @@ import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.logging.NullLog
 import org.scalatest.matchers.BeMatcher
 import org.scalatest.matchers.MatchResult
-
-import scala.collection.mutable
 
 class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  {
   private val theId = new Id(3)
@@ -550,7 +542,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
   }
 
   class DummyMiddleOperator extends MiddleOperator {
-    override def createTask(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory, queryContext: QueryContext, state: QueryState, resources: QueryResources): OperatorTask = null
+    override def createTask(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory, state: QueryState, resources: QueryResources): OperatorTask = null
     override def workIdentity: WorkIdentity = WorkIdentityImpl(Id.INVALID_ID, "middle")
   }
 

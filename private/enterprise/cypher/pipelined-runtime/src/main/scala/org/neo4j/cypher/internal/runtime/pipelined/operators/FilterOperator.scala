@@ -13,7 +13,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.equal
 import org.neo4j.codegen.api.IntermediateRepresentation.trueValue
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -35,11 +34,10 @@ class FilterOperator(val workIdentity: WorkIdentity,
                      predicate: Expression) extends StatelessOperator {
 
   override def operate(morsel: Morsel,
-                       context: QueryContext,
                        state: QueryState,
                        resources: QueryResources): Unit = {
 
-    val queryState = new SlottedQueryState(context,
+    val queryState = new SlottedQueryState(state.queryContext,
       resources = null,
       params = state.params,
       resources.expressionCursors,

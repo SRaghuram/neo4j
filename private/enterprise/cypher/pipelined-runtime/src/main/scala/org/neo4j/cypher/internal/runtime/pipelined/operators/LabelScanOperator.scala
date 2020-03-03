@@ -27,7 +27,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
@@ -36,8 +35,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.NodeLabelCursorRepresentation
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_NODE_LABEL_CURSOR
@@ -63,8 +60,7 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
                         argumentSize: SlotConfiguration.Size)
   extends StreamingOperator {
 
-  override protected def nextTasks(queryContext: QueryContext,
-                                   state: QueryState,
+  override protected def nextTasks(state: QueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
@@ -87,18 +83,18 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
 
     private var cursor: NodeLabelIndexCursor = _
 
-    override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
-      val id = label.getId(context)
+    override protected def initializeInnerLoop(state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+      val id = label.getId(state.queryContext)
       if (id == UNKNOWN) false
       else {
         cursor = resources.cursorPools.nodeLabelIndexCursorPool.allocateAndTrace()
-        val read = context.transactionalContext.dataRead
+        val read = state.queryContext.transactionalContext.dataRead
         read.nodeLabelScan(id, cursor)
         true
       }
     }
 
-    override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselFullCursor, state: QueryState): Unit = {
       while (outputRow.onValidRow() && cursor.next()) {
         outputRow.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
         outputRow.setLongAt(offset, cursor.nodeReference())

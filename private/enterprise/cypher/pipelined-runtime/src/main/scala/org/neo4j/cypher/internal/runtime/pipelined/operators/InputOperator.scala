@@ -28,7 +28,6 @@ import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.InputCursor
 import org.neo4j.cypher.internal.runtime.InputDataStream
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
@@ -54,8 +53,7 @@ class InputOperator(val workIdentity: WorkIdentity,
                     relationshipOffsets: Array[Int],
                     refOffsets: Array[Int]) extends StreamingOperator {
 
-  override protected def nextTasks(queryContext: QueryContext,
-                                   state: QueryState,
+  override protected def nextTasks(state: QueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
@@ -75,7 +73,6 @@ class InputOperator(val workIdentity: WorkIdentity,
     override def workIdentity: WorkIdentity = InputOperator.this.workIdentity
 
     override def operate(outputMorsel: Morsel,
-                         context: QueryContext,
                          queryState: QueryState,
                          resources: QueryResources): Unit = {
 

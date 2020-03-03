@@ -21,10 +21,8 @@ import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.expressions
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ListSupport
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -32,8 +30,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expres
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
@@ -54,8 +50,7 @@ class UnwindOperator(val workIdentity: WorkIdentity,
                      offset: Int)
   extends StreamingOperator with ListSupport {
 
-  override protected def nextTasks(context: QueryContext,
-                                   state: QueryState,
+  override protected def nextTasks(state: QueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
@@ -69,9 +64,9 @@ class UnwindOperator(val workIdentity: WorkIdentity,
 
     private var unwoundValues: java.util.Iterator[AnyValue] = _
 
-    override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+    override protected def initializeInnerLoop(state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
 
-      val queryState = new SlottedQueryState(context,
+      val queryState = new SlottedQueryState(state.queryContext,
         resources = null,
         params = state.params,
         resources.expressionCursors,
@@ -86,7 +81,7 @@ class UnwindOperator(val workIdentity: WorkIdentity,
       true
     }
 
-    override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselFullCursor, state: QueryState): Unit = {
       while (unwoundValues.hasNext && outputRow.onValidRow) {
         val thisValue = unwoundValues.next()
         outputRow.copyFrom(inputCursor)

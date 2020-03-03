@@ -25,7 +25,6 @@ import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.DbAccess
-import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -34,8 +33,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
@@ -61,8 +58,7 @@ class RelationshipCountFromCountStoreOperator(val workIdentity: WorkIdentity,
                                               endLabel: Option[LazyLabel],
                                               argumentSize: SlotConfiguration.Size) extends StreamingOperator {
 
-  override protected def nextTasks(queryContext: QueryContext,
-                                   state: QueryState,
+  override protected def nextTasks(state: QueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
@@ -93,20 +89,20 @@ class RelationshipCountFromCountStoreOperator(val workIdentity: WorkIdentity,
 
     override def workIdentity: WorkIdentity = RelationshipCountFromCountStoreOperator.this.workIdentity
 
-    override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+    override protected def initializeInnerLoop(state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
       hasNext = true
       true
     }
 
-    override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselFullCursor, state: QueryState): Unit = {
       if (hasNext) {
-        val startLabelId = getLabelId(startLabel, context)
-        val endLabelId = getLabelId(endLabel, context)
+        val startLabelId = getLabelId(startLabel, state.queryContext)
+        val endLabelId = getLabelId(endLabel, state.queryContext)
 
         val count = if (startLabelId == Unknown || endLabelId == Unknown)
           0
         else
-          countOneDirection(context, startLabelId.id, endLabelId.id)
+          countOneDirection(state.queryContext, startLabelId.id, endLabelId.id)
 
         outputRow.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
         outputRow.setRefAt(offset, Values.longValue(count))

@@ -213,7 +213,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
 
     def whenOperate(): ThenOutput = {
       val morsel = input.build
-      operator.operate(morsel, context, state, resources)
+      operator.operate(morsel, state, resources)
       new ThenOutput(morsel, input.longSlots, input.refSlots)
     }
   }

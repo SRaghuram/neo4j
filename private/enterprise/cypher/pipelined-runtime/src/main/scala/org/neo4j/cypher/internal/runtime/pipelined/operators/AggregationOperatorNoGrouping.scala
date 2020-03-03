@@ -32,7 +32,6 @@ import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -105,12 +104,11 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
       override def trackTime: Boolean = true
 
       override def prepareOutput(outputMorsel: Morsel,
-                                 context: QueryContext,
                                  state: QueryState,
                                  resources: QueryResources,
                                  operatorExecutionEvent: OperatorProfileEvent): PreAggregatedOutput = {
 
-        val queryState = new SlottedQueryState(context,
+        val queryState = new SlottedQueryState(state.queryContext,
           resources = null,
           params = state.params,
           resources.expressionCursors,
@@ -163,15 +161,13 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
 
     override def createState(argumentStateCreator: ArgumentStateMapCreator,
                              stateFactory: StateFactory,
-                             queryContext: QueryContext,
                              state: QueryState,
                              resources: QueryResources): ReduceOperatorState[Array[Updater], AggregatingAccumulator] = {
       argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AggregatingAccumulator.Factory(aggregations, stateFactory.memoryTracker, id))
       this
     }
 
-    override def nextTasks(queryContext: QueryContext,
-                           state: QueryState,
+    override def nextTasks(state: QueryState,
                            input: AggregatingAccumulator,
                            resources: QueryResources
                           ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[Array[Updater], AggregatingAccumulator]] = {
@@ -183,7 +179,6 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
       override def workIdentity: WorkIdentity = AggregationReduceOperatorNoGrouping.this.workIdentity
 
       override def operate(outputMorsel: Morsel,
-                           context: QueryContext,
                            state: QueryState,
                            resources: QueryResources): Unit = {
 

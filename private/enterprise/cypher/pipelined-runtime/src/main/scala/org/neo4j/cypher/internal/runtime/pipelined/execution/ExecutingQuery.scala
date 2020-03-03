@@ -5,14 +5,12 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerResourceProvider
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
 import org.neo4j.kernel.impl.query.QuerySubscription
 
 class ExecutingQuery(val executionState: ExecutionState,
-                     val queryContext: QueryContext,
                      val queryState: QueryState,
                      val queryExecutionTracer: QueryExecutionTracer,
                      val workersQueryProfiler: WorkersQueryProfiler,

@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import org.neo4j.cypher.internal.NonFatalCypherError
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.profiling.QueryProfiler
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.WithHeapUsageEstimation
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException
@@ -118,7 +117,6 @@ trait Operator extends HasWorkIdentity {
    */
   def createState(argumentStateCreator: ArgumentStateMapCreator,
                   stateFactory: StateFactory,
-                  queryContext: QueryContext,
                   state: QueryState,
                   resources: QueryResources): OperatorState
 }
@@ -137,8 +135,7 @@ trait OperatorState {
    *       by generating an OperatorState class that can create instances of a generated OperatorTask class.
    *       It can then pass the correct ArgumentStateMap directly as a constructor parameter.
    */
-  def nextTasks(context: QueryContext,
-                state: QueryState,
+  def nextTasks( state: QueryState,
                 operatorInput: OperatorInput,
                 parallelism: Int,
                 resources: QueryResources,
@@ -150,8 +147,7 @@ trait OperatorState {
  */
 trait ReduceOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extends OperatorState {
 
-  final override def nextTasks(context: QueryContext,
-                               state: QueryState,
+  final override def nextTasks(state: QueryState,
                                operatorInput: OperatorInput,
                                parallelism: Int,
                                resources: QueryResources,
@@ -159,7 +155,7 @@ trait ReduceOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extend
     val input = operatorInput.takeAccumulator[DATA, ACC]()
     if (input != null) {
       try {
-        nextTasks(context, state, input, resources)
+        nextTasks(state, input, resources)
       } catch {
         case NonFatalCypherError(t) =>
           throw SchedulingInputException(input, t)
@@ -172,8 +168,7 @@ trait ReduceOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extend
   /**
    * Initialize new tasks for this operator.
    */
-  def nextTasks(context: QueryContext,
-                state: QueryState,
+  def nextTasks(state: QueryState,
                 input: ACC,
                 resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulator[DATA, ACC]]
 }
@@ -183,8 +178,7 @@ trait ReduceOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extend
  */
 trait StreamingOperator extends Operator with OperatorState {
 
-  final override def nextTasks(context: QueryContext,
-                               state: QueryState,
+  final override def nextTasks(state: QueryState,
                                operatorInput: OperatorInput,
                                parallelism: Int,
                                resources: QueryResources,
@@ -192,7 +186,7 @@ trait StreamingOperator extends Operator with OperatorState {
     val input = operatorInput.takeMorsel()
     if (input != null) {
       try {
-        nextTasks(context, state, input, parallelism, resources, argumentStateMaps)
+        nextTasks(state, input, parallelism, resources, argumentStateMaps)
       } catch {
         case NonFatalCypherError(t) =>
           throw SchedulingInputException(input, t)
@@ -206,8 +200,7 @@ trait StreamingOperator extends Operator with OperatorState {
    * Initialize new tasks for this operator. This code path let's operators create
    * multiple output rows for each row in `inputMorsel`.
    */
-  protected def nextTasks(context: QueryContext,
-                          state: QueryState,
+  protected def nextTasks(state: QueryState,
                           inputMorsel: MorselParallelizer,
                           parallelism: Int,
                           resources: QueryResources,
@@ -215,7 +208,6 @@ trait StreamingOperator extends Operator with OperatorState {
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
-                           queryContext: QueryContext,
                            state: QueryState,
                            resources: QueryResources): OperatorState = this
 }
@@ -223,7 +215,6 @@ trait StreamingOperator extends Operator with OperatorState {
 trait MiddleOperator extends HasWorkIdentity {
   def createTask(argumentStateCreator: ArgumentStateMapCreator,
                  stateFactory: StateFactory,
-                 queryContext: QueryContext,
                  state: QueryState,
                  resources: QueryResources): OperatorTask
 }
@@ -231,7 +222,6 @@ trait MiddleOperator extends HasWorkIdentity {
 trait StatelessOperator extends MiddleOperator with OperatorTask {
   final override def createTask(argumentStateCreator: ArgumentStateMapCreator,
                                 stateFactory: StateFactory,
-                                queryContext: QueryContext,
                                 state: QueryState,
                                 resources: QueryResources): OperatorTask = this
 
@@ -245,7 +235,6 @@ trait StatelessOperator extends MiddleOperator with OperatorTask {
 trait OperatorTask extends HasWorkIdentity {
 
   def operateWithProfile(output: Morsel,
-                         context: QueryContext,
                          state: QueryState,
                          resources: QueryResources,
                          queryProfiler: QueryProfiler): Unit = {
@@ -254,7 +243,7 @@ trait OperatorTask extends HasWorkIdentity {
     resources.setKernelTracer(operatorExecutionEvent)
     setExecutionEvent(operatorExecutionEvent)
     try {
-      operate(output, context, state, resources)
+      operate(output, state, resources)
       if (operatorExecutionEvent != null) {
         operatorExecutionEvent.rows(output.numberOfRows)
       }
@@ -270,7 +259,6 @@ trait OperatorTask extends HasWorkIdentity {
   def setExecutionEvent(event: OperatorProfileEvent): Unit
 
   def operate(output: Morsel,
-              context: QueryContext,
               state: QueryState,
               resources: QueryResources): Unit
 }

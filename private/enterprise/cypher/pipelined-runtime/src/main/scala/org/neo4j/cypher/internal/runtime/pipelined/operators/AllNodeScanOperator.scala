@@ -22,26 +22,22 @@ import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.CypherRow
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.pipelined.NodeCursorRepresentation
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.allocateAndTraceCursor
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_NODE_CURSOR
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.allNodeScan
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.freeCursor
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NodeCursorPool
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.allNodeScan
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.allocateAndTraceCursor
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.freeCursor
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -54,8 +50,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
                           offset: Int,
                           argumentSize: SlotConfiguration.Size) extends StreamingOperator {
 
-  override protected def nextTasks(queryContext: QueryContext,
-                                   state: QueryState,
+  override protected def nextTasks(state: QueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
@@ -66,7 +61,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
       IndexedSeq(new SingleThreadedScanTask(inputMorsel.nextCopy))
     } else {
       // Parallel scan
-      val scan = queryContext.transactionalContext.dataRead.allNodesScan()
+      val scan = state.queryContext.transactionalContext.dataRead.allNodesScan()
       val tasks = new Array[ContinuableOperatorTaskWithMorsel](parallelism)
       var i = 0
       while (i < parallelism) {
@@ -93,16 +88,15 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
 
     private var cursor: NodeCursor = _
 
-    override protected def initializeInnerLoop(context: QueryContext,
-                                               state: QueryState,
+    override protected def initializeInnerLoop(state: QueryState,
                                                resources: QueryResources,
                                                initExecutionContext: ReadWriteRow): Boolean = {
       cursor = resources.cursorPools.nodeCursorPool.allocateAndTrace()
-      context.transactionalContext.dataRead.allNodesScan(cursor)
+      state.queryContext.transactionalContext.dataRead.allNodesScan(cursor)
       true
     }
 
-    override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselFullCursor, state: QueryState): Unit = {
       while (outputRow.onValidRow && cursor.next()) {
         outputRow.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
         outputRow.setLongAt(offset, cursor.nodeReference())
@@ -148,7 +142,6 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
     inputCursor.setToEnd()
 
     override def operate(outputMorsel: Morsel,
-                         context: QueryContext,
                          queryState: QueryState,
                          resources: QueryResources): Unit = {
 

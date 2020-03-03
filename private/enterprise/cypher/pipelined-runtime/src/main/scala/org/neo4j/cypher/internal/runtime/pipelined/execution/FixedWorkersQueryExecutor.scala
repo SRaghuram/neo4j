@@ -8,16 +8,16 @@ package org.neo4j.cypher.internal.runtime.pipelined.execution
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
-import org.neo4j.cypher.internal.runtime.debug.DebugLog
-import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentStateFactory
-import org.neo4j.cypher.internal.runtime.pipelined.state.TheExecutionState
-import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
-import org.neo4j.cypher.internal.runtime.pipelined.ExecutablePipeline
-import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
-import org.neo4j.cypher.internal.runtime.pipelined.WorkerResourceProvider
 import org.neo4j.cypher.internal.runtime.InputDataStream
 import org.neo4j.cypher.internal.runtime.MemoryTracking
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.debug.DebugLog
+import org.neo4j.cypher.internal.runtime.pipelined.ExecutablePipeline
+import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
+import org.neo4j.cypher.internal.runtime.pipelined.WorkerResourceProvider
+import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.TheExecutionState
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
 import org.neo4j.cypher.result.QueryProfile
 import org.neo4j.exceptions.RuntimeUnsupportedException
 import org.neo4j.internal.kernel.api.IndexReadSession
@@ -72,7 +72,8 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
     val tracer = schedulerTracer.traceQuery()
     val tracker = stateFactory.newTracker(subscriber, queryContext, tracer)
 
-    val queryState = QueryState(params,
+    val queryState = QueryState(queryContext,
+                                params,
                                 subscriber,
                                 tracker,
                                 morselSize,
@@ -88,7 +89,6 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
                                                executablePipelines,
                                                stateFactory,
                                                workerManager,
-                                               queryContext,
                                                queryState,
                                                initializationResources,
                                                tracker)
@@ -102,7 +102,6 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
       }
 
     val executingQuery = new ExecutingQuery(executionState,
-                                            queryContext,
                                             queryState,
                                             tracer,
                                             workersProfiler,

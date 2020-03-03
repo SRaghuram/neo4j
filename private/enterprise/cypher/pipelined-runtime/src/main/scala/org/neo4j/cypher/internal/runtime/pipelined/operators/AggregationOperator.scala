@@ -37,7 +37,6 @@ import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -131,12 +130,11 @@ case class AggregationOperator(workIdentity: WorkIdentity,
       override def workIdentity: WorkIdentity = AggregationOperator.this.workIdentity
 
       override def prepareOutput(morsel: Morsel,
-                                 context: QueryContext,
                                  state: QueryState,
                                  resources: QueryResources,
                                  operatorExecutionEvent: OperatorProfileEvent): PreAggregatedOutput = {
 
-        val queryState = new SlottedQueryState(context,
+        val queryState = new SlottedQueryState(state.queryContext,
           resources = null,
           params = state.params,
           resources.expressionCursors,
@@ -264,15 +262,13 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
     override def createState(argumentStateCreator: ArgumentStateMapCreator,
                              stateFactory: StateFactory,
-                             queryContext: QueryContext,
                              state: QueryState,
                              resources: QueryResources): ReduceOperatorState[AggPreMap, AggregatingAccumulator] = {
       argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AggregatingAccumulator.Factory(aggregations, stateFactory.memoryTracker, id))
       this
     }
 
-    override def nextTasks(queryContext: QueryContext,
-                           state: QueryState,
+    override def nextTasks(state: QueryState,
                            input: AggregatingAccumulator,
                            resources: QueryResources
                           ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[AggPreMap, AggregatingAccumulator]] = {
@@ -287,7 +283,6 @@ case class AggregationOperator(workIdentity: WorkIdentity,
       private val resultIterator = accumulator.result()
 
       override def operate(outputMorsel: Morsel,
-                           context: QueryContext,
                            state: QueryState,
                            resources: QueryResources): Unit = {
 

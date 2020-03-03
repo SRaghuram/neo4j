@@ -50,6 +50,8 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGet
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
@@ -58,23 +60,24 @@ import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.RelationshipCursorRepresentation
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.getNodeIdFromSlot
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.loadTypes
-import OperatorCodeGenHelperTemplates.ALLOCATE_NODE_CURSOR
-import OperatorCodeGenHelperTemplates.ALLOCATE_GROUP_CURSOR
-import OperatorCodeGenHelperTemplates.ALLOCATE_TRAVERSAL_CURSOR
-import OperatorCodeGenHelperTemplates.CURSOR_POOL_V
-import OperatorCodeGenHelperTemplates.DB_ACCESS
-import OperatorCodeGenHelperTemplates.GroupCursorPool
-import OperatorCodeGenHelperTemplates.NodeCursorPool
-import OperatorCodeGenHelperTemplates.TraversalCursorPool
-import OperatorCodeGenHelperTemplates.allocateAndTraceCursor
-import OperatorCodeGenHelperTemplates.cursorNext
-import OperatorCodeGenHelperTemplates.freeCursor
-import OperatorCodeGenHelperTemplates.profilingCursorNext
-import OperatorCodeGenHelperTemplates.singleNode
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_GROUP_CURSOR
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_NODE_CURSOR
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_TRAVERSAL_CURSOR
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DB_ACCESS
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.GroupCursorPool
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NodeCursorPool
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.TraversalCursorPool
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.allocateAndTraceCursor
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.cursorNext
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.freeCursor
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.singleNode
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -98,9 +101,6 @@ import org.neo4j.values.AnyValue
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-import org.neo4j.cypher.internal.runtime.ReadWriteRow
-import org.neo4j.cypher.internal.runtime.ReadableRow
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 
 class ExpandAllOperator(val workIdentity: WorkIdentity,
                         fromSlot: Slot,
@@ -111,8 +111,7 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
 
   override def toString: String = "ExpandAll"
 
-  override protected def nextTasks(queryContext: QueryContext,
-                                   state: QueryState,
+  override protected def nextTasks(state: QueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
@@ -153,19 +152,19 @@ class ExpandAllTask(inputMorsel: Morsel,
   private var traversalCursor: RelationshipTraversalCursor = _
   protected var relationships: RelationshipSelectionCursor = _
 
-  protected override def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+  protected override def initializeInnerLoop(state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
     val fromNode = getFromNodeFunction.applyAsLong(inputCursor)
     if (entityIsNull(fromNode))
       false
     else {
       val pools: CursorPools = resources.cursorPools
       nodeCursor = pools.nodeCursorPool.allocateAndTrace()
-      relationships = getRelationshipsCursor(context, pools, fromNode, dir, types.types(context))
+      relationships = getRelationshipsCursor(state.queryContext, pools, fromNode, dir, types.types(state.queryContext))
       true
     }
   }
 
-  override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
+  override protected def innerLoop(outputRow: MorselFullCursor, state: QueryState): Unit = {
 
     while (outputRow.onValidRow && relationships.next()) {
       val relId = relationships.relationshipReference()

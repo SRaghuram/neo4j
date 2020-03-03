@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
 import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.Worker
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerResourceProvider
@@ -14,14 +13,13 @@ import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
 import org.neo4j.kernel.impl.query.QuerySubscription
 
 class CallingThreadExecutingQuery(executionState: ExecutionState,
-                                  queryContext: QueryContext,
                                   queryState: QueryState,
                                   queryExecutionTracer: QueryExecutionTracer,
                                   workersQueryProfiler: WorkersQueryProfiler,
                                   worker: Worker,
                                   workerResourceProvider: WorkerResourceProvider,
                                   executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy)
-  extends ExecutingQuery(executionState, queryContext, queryState, queryExecutionTracer, workersQueryProfiler, workerResourceProvider, executionGraphSchedulingPolicy)
+  extends ExecutingQuery(executionState, queryState, queryExecutionTracer, workersQueryProfiler, workerResourceProvider, executionGraphSchedulingPolicy)
   with QuerySubscription {
 
   private val workerResources = workerResourceProvider.resourcesForWorker(worker.workerId)

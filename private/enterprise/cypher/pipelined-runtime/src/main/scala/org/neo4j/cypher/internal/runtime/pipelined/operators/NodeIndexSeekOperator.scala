@@ -39,10 +39,8 @@ import org.neo4j.cypher.internal.logical.plans.QueryExpression
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.RANGE_SEEKABLE_VALUE_GROUPS
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
@@ -55,8 +53,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.NodeIndexCursorRepresentation
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate.compositeGetPropertyMethod
@@ -84,8 +80,8 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.kernel.api.IndexQuery
 import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
-import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.internal.kernel.api.IndexQueryConstraints
+import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
 import org.neo4j.internal.kernel.api.Read
@@ -108,8 +104,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
   private val indexPropertySlotOffsets: Array[Int] = properties.flatMap(_.maybeCachedNodePropertySlot)
   private val needsValues: Boolean = indexPropertyIndices.nonEmpty
 
-  override protected def nextTasks(queryContext: QueryContext,
-                                   state: QueryState,
+  override protected def nextTasks(state: QueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
@@ -130,9 +125,9 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
 
     // INPUT LOOP TASK
 
-    override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+    override protected def initializeInnerLoop(state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
 
-      val queryState = new SlottedQueryState(context,
+      val queryState = new SlottedQueryState(state.queryContext,
         resources = null,
         params = state.params,
         resources.expressionCursors,
@@ -146,8 +141,8 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
       true
     }
 
-    override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
-      val read = context.transactionalContext.transaction.dataRead()
+    override protected def innerLoop(outputRow: MorselFullCursor, state: QueryState): Unit = {
+      val read = state.queryContext.transactionalContext.transaction.dataRead()
       while (outputRow.onValidRow && next(state, read)) {
         outputRow.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
         outputRow.setLongAt(offset, nodeCursor.nodeReference())

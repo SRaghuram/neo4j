@@ -30,7 +30,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -68,8 +67,7 @@ class OptionalExpandIntoOperator(val workIdentity: WorkIdentity,
 
   override def toString: String = "OptionalExpandInto"
 
-  override protected def nextTasks(queryContext: QueryContext,
-                                   state: QueryState,
+  override protected def nextTasks(state: QueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
@@ -92,15 +90,14 @@ class OptionalExpandIntoOperator(val workIdentity: WorkIdentity,
 
     protected var hasWritten = false
 
-    protected def setUp(context: QueryContext,
-                        state: QueryState,
+    protected def setUp(state: QueryState,
                         resources: QueryResources): Unit = {
 
     }
 
-    protected override def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+    protected override def initializeInnerLoop(state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
       if (expandInto == null) {
-        expandInto = new CachingExpandInto(context.transactionalContext.dataRead,
+        expandInto = new CachingExpandInto(state.queryContext.transactionalContext.dataRead,
           kernelDirection(dir))
       }
       val fromNode = getFromNodeFunction.applyAsLong(inputCursor)
@@ -109,13 +106,13 @@ class OptionalExpandIntoOperator(val workIdentity: WorkIdentity,
       if (entityIsNull(fromNode) || entityIsNull(toNode)) {
         relationships = RelationshipSelectionCursor.EMPTY
       } else {
-        setUp(context, state, resources)
-        setupCursors(context, resources, fromNode, toNode)
+        setUp(state, resources)
+        setupCursors(state.queryContext, resources, fromNode, toNode)
       }
       true
     }
 
-    override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselFullCursor, state: QueryState): Unit = {
 
       while (outputRow.onValidRow && relationships.next()) {
         hasWritten = writeRow(outputRow,
@@ -147,10 +144,9 @@ class OptionalExpandIntoOperator(val workIdentity: WorkIdentity,
 
     private var expressionState: SlottedQueryState = _
 
-    override protected def setUp(context: QueryContext,
-                                 state: QueryState,
+    override protected def setUp(state: QueryState,
                                  resources: QueryResources): Unit = {
-      expressionState = new SlottedQueryState(context,
+      expressionState = new SlottedQueryState(state.queryContext,
         resources = null,
         params = state.params,
         resources.expressionCursors,

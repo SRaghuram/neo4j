@@ -49,11 +49,10 @@ import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.FloatingPointValue
 
 object CountingState {
-  def evaluateCountValue(queryContext: QueryContext,
-                         state: QueryState,
+  def evaluateCountValue(state: QueryState,
                          resources: QueryResources,
                          countExpression: Expression): Long = {
-    val queryState = new SlottedQueryState(queryContext,
+    val queryState = new SlottedQueryState(state.queryContext,
                                            resources = null,
                                            params = state.params,
                                            resources.expressionCursors,

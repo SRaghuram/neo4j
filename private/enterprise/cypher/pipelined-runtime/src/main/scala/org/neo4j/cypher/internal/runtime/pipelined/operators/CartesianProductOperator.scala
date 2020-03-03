@@ -7,13 +7,11 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CartesianProductOperator.LHSMorsel
@@ -36,7 +34,6 @@ class CartesianProductOperator(val workIdentity: WorkIdentity,
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
-                           queryContext: QueryContext,
                            state: QueryState,
                            resources: QueryResources): OperatorState = {
     argumentStateCreator.createArgumentStateMap(lhsArgumentStateMapId, new LHSMorsel.Factory(stateFactory))
@@ -44,8 +41,7 @@ class CartesianProductOperator(val workIdentity: WorkIdentity,
     this
   }
 
-  override def nextTasks(context: QueryContext,
-                         state: QueryState,
+  override def nextTasks(state: QueryState,
                          operatorInput: OperatorInput,
                          parallelism: Int,
                          resources: QueryResources,
@@ -72,12 +68,12 @@ class CartesianProductOperator(val workIdentity: WorkIdentity,
 
     override def toString: String = "CartesianProductTask"
 
-    override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+    override protected def initializeInnerLoop(state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
       rhsInputCursor.setToStart()
       true
     }
 
-    override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselFullCursor, state: QueryState): Unit = {
 
       while (outputRow.onValidRow && rhsInputCursor.hasNext) {
         rhsInputCursor.next()

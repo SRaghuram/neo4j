@@ -10,7 +10,6 @@ import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreE
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.CleanUpTask
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutablePipeline
@@ -38,7 +37,6 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
                         pipelines: Seq[ExecutablePipeline],
                         stateFactory: StateFactory,
                         workerWaker: WorkerWaker,
-                        queryContext: QueryContext,
                         queryState: QueryState,
                         initializationResources: QueryResources,
                         tracker: QueryCompletionTracker) extends ExecutionState {
@@ -77,7 +75,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
       val pipeline = pipelines(i)
       pipeline.outputOperator.outputBuffer.foreach(bufferId =>
         buffers.constructBuffer(executionGraphDefinition.buffers(bufferId.x)))
-      states(i) = pipeline.createState(this, queryContext, queryState, initializationResources, stateFactory)
+      states(i) = pipeline.createState(this, queryState, initializationResources, stateFactory)
       buffers.constructBuffer(pipeline.inputBuffer)
       i -= 1
     }

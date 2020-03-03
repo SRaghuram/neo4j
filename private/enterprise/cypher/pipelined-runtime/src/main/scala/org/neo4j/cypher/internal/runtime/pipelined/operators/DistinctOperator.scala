@@ -10,9 +10,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
@@ -49,7 +47,6 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
 
   override def createTask(argumentStateCreator: ArgumentStateMapCreator,
                           stateFactory: StateFactory,
-                          queryContext: QueryContext,
                           state: QueryState,
                           resources: QueryResources): OperatorTask = {
 
@@ -61,11 +58,10 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
     override def workIdentity: WorkIdentity = DistinctOperator.this.workIdentity
 
     override def operate(outputMorsel: Morsel,
-                         context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = {
 
-      val queryState = new SlottedQueryState(context,
+      val queryState = new SlottedQueryState(state.queryContext,
         resources = null,
         params = state.params,
         resources.expressionCursors,

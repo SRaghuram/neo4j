@@ -9,7 +9,6 @@ import java.util.Comparator
 import java.util.PriorityQueue
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
@@ -42,15 +41,13 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
-                           queryContext: QueryContext,
                            state: QueryState,
                            resources: QueryResources): ReduceOperatorState[Morsel, ArgumentStateBuffer] = {
     argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStateBuffer.Factory(stateFactory, id))
     this
   }
 
-  override def nextTasks(queryContext: QueryContext,
-                         state: QueryState,
+  override def nextTasks(state: QueryState,
                          input: ArgumentStateBuffer,
                          resources: QueryResources
                         ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[Morsel, ArgumentStateBuffer]] = {
@@ -71,7 +68,6 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
     var sortedInputPerArgument: PriorityQueue[MorselReadCursor] = _
 
     override def operate(outputMorsel: Morsel,
-                         context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = {
       if (sortedInputPerArgument == null) {

@@ -12,18 +12,16 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import org.eclipse.collections.impl.factory.Multimaps
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.CypherRow
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeHashJoinOperator.HashTable
+import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeHashJoinOperator.HashTableFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
@@ -33,10 +31,9 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.fillKeyArray
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.storable.LongArray
 import org.neo4j.values.storable.Values
-import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeHashJoinOperator.HashTableFactory
-import org.neo4j.cypher.internal.util.attribution.Id
 
 class NodeHashJoinOperator(val workIdentity: WorkIdentity,
                            lhsArgumentStateMapId: ArgumentStateMapId,
@@ -51,7 +48,6 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
-                           queryContext: QueryContext,
                            state: QueryState,
                            resources: QueryResources): OperatorState = {
     argumentStateCreator.createArgumentStateMap(
@@ -63,8 +59,7 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
     this
   }
 
-  override def nextTasks(context: QueryContext,
-                         state: QueryState,
+  override def nextTasks(state: QueryState,
                          operatorInput: OperatorInput,
                          parallelism: Int,
                          resources: QueryResources,
@@ -90,13 +85,13 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
     private var lhsRows: java.util.Iterator[Morsel] = _
     private val key = new Array[Long](rhsOffsets.length)
 
-    override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+    override protected def initializeInnerLoop(state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
       fillKeyArray(inputCursor, key, rhsOffsets)
       lhsRows = accumulator.lhsRows(Values.longArray(key))
       true
     }
 
-    override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselFullCursor, state: QueryState): Unit = {
 
       while (outputRow.onValidRow && lhsRows.hasNext) {
         outputRow.copyFrom(lhsRows.next().readCursor(onFirstRow = true))

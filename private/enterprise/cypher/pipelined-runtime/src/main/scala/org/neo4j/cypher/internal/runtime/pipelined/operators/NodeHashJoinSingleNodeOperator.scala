@@ -13,15 +13,12 @@ import org.eclipse.collections.impl.factory.primitive.LongObjectMaps
 import org.eclipse.collections.impl.list.mutable.FastList
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.CypherRow
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeHashJoinSingleNodeOperator.HashTable
@@ -49,7 +46,6 @@ class NodeHashJoinSingleNodeOperator(val workIdentity: WorkIdentity,
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
-                           queryContext: QueryContext,
                            state: QueryState,
                            resources: QueryResources): OperatorState = {
     argumentStateCreator.createArgumentStateMap(
@@ -61,8 +57,7 @@ class NodeHashJoinSingleNodeOperator(val workIdentity: WorkIdentity,
     this
   }
 
-  override def nextTasks(context: QueryContext,
-                         state: QueryState,
+  override def nextTasks(state: QueryState,
                          operatorInput: OperatorInput,
                          parallelism: Int,
                          resources: QueryResources,
@@ -87,13 +82,13 @@ class NodeHashJoinSingleNodeOperator(val workIdentity: WorkIdentity,
 
     private var lhsRows: java.util.Iterator[Morsel] = _
 
-    override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+    override protected def initializeInnerLoop(state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
       val key = inputCursor.getLongAt(rhsOffset)
       lhsRows = accumulator.lhsRows(key)
       true
     }
 
-    override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselFullCursor, state: QueryState): Unit = {
 
       while (outputRow.onValidRow && lhsRows.hasNext) {
         outputRow.copyFrom(lhsRows.next().readCursor(onFirstRow = true))

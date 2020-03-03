@@ -29,7 +29,6 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.ValuePopulation
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -78,8 +77,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
   //==========================================================================
   // This is called when ProduceResult is the start operator of a new pipeline
-  override protected def nextTasks(context: QueryContext,
-                                   state: QueryState,
+  override protected def nextTasks(state: QueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
@@ -96,7 +94,6 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
     override def canContinue: Boolean = inputCursor.onValidRow()
 
     override def operateWithProfile(outputIgnore: Morsel,
-                                    context: QueryContext,
                                     state: QueryState,
                                     resources: QueryResources,
                                     queryProfiler: QueryProfiler): Unit = {
@@ -104,7 +101,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
       val operatorExecutionEvent = queryProfiler.executeOperator(workIdentity.workId)
 
       try {
-        produceOutputWithProfile(inputCursor, context, state, resources, operatorExecutionEvent)
+        produceOutputWithProfile(inputCursor, state, resources, operatorExecutionEvent)
       } finally {
         if (operatorExecutionEvent != null) {
           operatorExecutionEvent.close()
@@ -113,7 +110,6 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
     }
 
     override def operate(output: Morsel,
-                         context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = throw new UnsupportedOperationException("ProduceResults should be called via operateWithProfile")
 
@@ -137,7 +133,6 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
     override def workIdentity: WorkIdentity = ProduceResultOperator.this.workIdentity
 
     override def prepareOutput(outputMorsel: Morsel,
-                               context: QueryContext,
                                state: QueryState,
                                resources: QueryResources,
                                operatorExecutionEvent: OperatorProfileEvent): PreparedOutput = {
@@ -146,7 +141,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
         outputCursor = outputMorsel.readCursor(onFirstRow = true)
       }
 
-      produceOutputWithProfile(outputCursor, context, state, resources, operatorExecutionEvent)
+      produceOutputWithProfile(outputCursor, state, resources, operatorExecutionEvent)
       doneWithPreviousMorsel = !outputCursor.onValidRow()
       this
     }
@@ -161,22 +156,20 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
   //==========================================================================
 
   protected def produceOutputWithProfile(output: MorselReadCursor,
-                                         context: QueryContext,
                                          state: QueryState,
                                          resources: QueryResources,
                                          operatorExecutionEvent: OperatorProfileEvent): Unit = {
-    val numberOfOutputedRows = produceOutput(output, context, state, resources)
+    val numberOfOutputedRows = produceOutput(output, state, resources)
     if (operatorExecutionEvent != null) {
       operatorExecutionEvent.rows(numberOfOutputedRows)
     }
   }
 
   protected def produceOutput(output: MorselReadCursor,
-                              context: QueryContext,
                               state: QueryState,
                               resources: QueryResources): Int = {
     //TODO this is not really needed since all we are doing in the expressions is accessing the ExecutionContext
-    val queryState = new SlottedQueryState(context,
+    val queryState = new SlottedQueryState(state.queryContext,
       resources = null,
       params = state.params,
       resources.expressionCursors,

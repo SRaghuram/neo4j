@@ -21,7 +21,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.loop
 import org.neo4j.codegen.api.IntermediateRepresentation.not
 import org.neo4j.codegen.api.IntermediateRepresentation.or
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
@@ -47,8 +46,7 @@ abstract class InputLoopTask(final val inputMorsel: Morsel) extends ContinuableO
    *
    * @return true iff the inner loop might result in output rows
    */
-  protected def initializeInnerLoop(context: QueryContext,
-                                    state: QueryState,
+  protected def initializeInnerLoop(state: QueryState,
                                     resources: QueryResources,
                                     initExecutionContext: ReadWriteRow): Boolean
 
@@ -56,7 +54,6 @@ abstract class InputLoopTask(final val inputMorsel: Morsel) extends ContinuableO
    * Execute the inner loop for the current input row, and write results to the output.
    */
   protected def innerLoop(outputRow: MorselFullCursor,
-                          context: QueryContext,
                           state: QueryState): Unit
 
   /**
@@ -64,22 +61,21 @@ abstract class InputLoopTask(final val inputMorsel: Morsel) extends ContinuableO
    */
   protected def closeInnerLoop(resources: QueryResources): Unit
 
-  protected def enterOperate(context: QueryContext, state: QueryState, resources: QueryResources): Unit = {}
+  protected def enterOperate(state: QueryState, resources: QueryResources): Unit = {}
   protected def exitOperate(): Unit = {}
 
   private var innerLoop: Boolean = false
 
   override final def operate(outputMorsel: Morsel,
-                             context: QueryContext,
                              state: QueryState,
                              resources: QueryResources): Unit = {
 
-    enterOperate(context, state, resources)
+    enterOperate(state, resources)
     val outputCursor = outputMorsel.fullCursor(onFirstRow = true)
 
     while ((inputCursor.onValidRow || innerLoop) && outputCursor.onValidRow) {
       if (!innerLoop) {
-        innerLoop = initializeInnerLoop(context, state, resources, outputCursor)
+        innerLoop = initializeInnerLoop(state, resources, outputCursor)
       }
       // Do we have any output rows for this input row?
       if (innerLoop) {
@@ -91,7 +87,7 @@ abstract class InputLoopTask(final val inputMorsel: Morsel) extends ContinuableO
         //          outputRow.next()
         //        }
         // The reason the loop itself is not already coded here is to avoid too many fine-grained virtual calls
-        innerLoop(outputCursor, context, state)
+        innerLoop(outputCursor, state)
 
         // If we have not filled the output rows, move to the next input row
         if (outputCursor.onValidRow()) {

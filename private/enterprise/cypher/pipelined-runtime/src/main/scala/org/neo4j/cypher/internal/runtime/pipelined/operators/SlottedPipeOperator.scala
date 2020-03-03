@@ -26,7 +26,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.profiler.Profiler
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeOperator.createFeedPipeQueryState
@@ -59,14 +58,13 @@ trait OperatorWithInterpretedDBHitsProfiling extends OperatorTask {
   // Overridden to not set the tracer on the operatorExecutionEvent. Otherwise we would count dbHits twice,
   // once from the morsel Tracer and once from the interpreted Profiler.
   override def operateWithProfile(output: Morsel,
-                                  context: QueryContext,
                                   state: QueryState,
                                   resources: QueryResources,
                                   queryProfiler: QueryProfiler): Unit = {
     val operatorExecutionEvent = queryProfiler.executeOperator(workIdentity.workId)
     setExecutionEvent(operatorExecutionEvent)
     try {
-      operate(output, context, state, resources)
+      operate(output, state, resources)
       if (operatorExecutionEvent != null) {
         operatorExecutionEvent.rows(output.numberOfRows)
       }
@@ -86,12 +84,10 @@ class SlottedPipeHeadOperator(workIdentity: WorkIdentityMutableDescription,
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
-                           queryContext: QueryContext,
                            state: QueryState,
                            resources: QueryResources): OperatorState = {
     new OperatorState {
-      override def nextTasks(context: QueryContext,
-                             state: QueryState,
+      override def nextTasks(state: QueryState,
                              operatorInput: OperatorInput,
                              parallelism: Int,
                              resources: QueryResources,
@@ -99,7 +95,7 @@ class SlottedPipeHeadOperator(workIdentity: WorkIdentityMutableDescription,
         val input = operatorInput.takeMorsel()
         if (input != null) {
           val inputMorsel = input.nextCopy
-          val inputQueryState = createFeedPipeQueryState(inputMorsel, context, state, resources, stateFactory.memoryTracker)
+          val inputQueryState = createFeedPipeQueryState(inputMorsel, state, resources, stateFactory.memoryTracker)
           IndexedSeq(new OTask(inputMorsel, inputQueryState))
         } else {
           null
@@ -118,7 +114,6 @@ class SlottedPipeHeadOperator(workIdentity: WorkIdentityMutableDescription,
     override def toString: String = s"SlottedPipeTask($pipe)"
 
     override def operate(outputMorsel: Morsel,
-                         context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = {
 
@@ -154,10 +149,9 @@ class SlottedPipeMiddleOperator(workIdentity: WorkIdentityMutableDescription,
 
   override def createTask(argumentStateCreator: ArgumentStateMapCreator,
                           stateFactory: StateFactory,
-                          queryContext: QueryContext,
                           state: QueryState,
                           resources: QueryResources): OperatorTask = {
-    val inputQueryState = createFeedPipeQueryState(null, queryContext, state, resources, stateFactory.memoryTracker)
+    val inputQueryState = createFeedPipeQueryState(null, state, resources, stateFactory.memoryTracker)
     new OMiddleTask(inputQueryState)
   }
 
@@ -172,7 +166,6 @@ class SlottedPipeMiddleOperator(workIdentity: WorkIdentityMutableDescription,
     override def toString: String = s"SlottedPipeMiddleTask($pipe)"
 
     override def operate(outputMorsel: Morsel,
-                         context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = {
 
@@ -213,7 +206,6 @@ class SlottedPipeMiddleOperator(workIdentity: WorkIdentityMutableDescription,
 
 object SlottedPipeOperator {
   def createFeedPipeQueryState(inputMorsel: Morsel,
-                               queryContext: QueryContext,
                                morselQueryState: QueryState,
                                resources: QueryResources,
                                memoryTracker: QueryMemoryTracker): FeedPipeQueryState = {
@@ -221,13 +213,13 @@ object SlottedPipeOperator {
     val (pipeDecorator, profileInformation) =
       if (morselQueryState.doProfile) {
         val profileInformation = new InterpretedProfileInformation
-        (new Profiler(queryContext.transactionalContext.databaseInfo, profileInformation), profileInformation)
+        (new Profiler(morselQueryState.queryContext.transactionalContext.databaseInfo, profileInformation), profileInformation)
       } else {
         (NullPipeDecorator, null)
       }
 
-    val externalResource: ExternalCSVResource = new CSVResources(queryContext.resources)
-    new FeedPipeQueryState(queryContext,
+    val externalResource: ExternalCSVResource = new CSVResources(morselQueryState.queryContext.resources)
+    new FeedPipeQueryState(morselQueryState.queryContext,
       externalResource,
       morselQueryState.params,
       resources.expressionCursors,

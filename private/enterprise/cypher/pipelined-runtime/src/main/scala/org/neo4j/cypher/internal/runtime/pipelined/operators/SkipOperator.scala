@@ -61,10 +61,9 @@ class SkipOperator(argumentStateMapId: ArgumentStateMapId,
 
   override def createTask(argumentStateCreator: ArgumentStateMapCreator,
                           stateFactory: StateFactory,
-                          queryContext: QueryContext,
                           state: QueryState,
                           resources: QueryResources): OperatorTask = {
-    val skip = evaluateCountValue(queryContext, state, resources, countExpression)
+    val skip = evaluateCountValue(state, resources, countExpression)
     new SkipOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId,
                                                                      new SkipStateFactory(skip)))
   }
@@ -76,7 +75,6 @@ class SkipOperator(argumentStateMapId: ArgumentStateMapId,
     }
 
     override def operate(output: Morsel,
-                         context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = {
       asm.skip(output, (state, nRows) => state.reserve(nRows))

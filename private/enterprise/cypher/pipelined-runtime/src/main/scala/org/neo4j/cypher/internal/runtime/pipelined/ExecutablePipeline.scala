@@ -9,7 +9,6 @@ import org.neo4j.cypher.internal.NonFatalCypherError
 import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
 import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFactory
@@ -55,7 +54,6 @@ case class ExecutablePipeline(id: PipelineId,
   }
 
   def createState(executionState: ExecutionState,
-                  queryContext: QueryContext,
                   queryState: QueryState,
                   resources: QueryResources,
                   stateFactory: StateFactory): PipelineState = {
@@ -71,12 +69,12 @@ case class ExecutablePipeline(id: PipelineId,
     val middleTasks = new Array[OperatorTask](middleOperators.length)
     var i = 0
     while (i < middleTasks.length) {
-      middleTasks(i) = middleOperators(i).createTask(executionState, stateFactory, queryContext, queryState, resources)
+      middleTasks(i) = middleOperators(i).createTask(executionState, stateFactory, queryState, resources)
       i += 1
     }
 
     new PipelineState(this,
-      start.createState(executionState, stateFactory, queryContext, queryState, resources),
+      start.createState(executionState, stateFactory, queryState, resources),
       middleTasks,
       outputOperatorStateFor,
       executionState)
@@ -107,8 +105,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
    * which to generate tasks. If the start operator find input and generates tasks,
    * one of these will be returned, and the rest stored as continuations.
    */
-  def nextTask(context: QueryContext,
-               state: QueryState,
+  def nextTask(state: QueryState,
                resources: QueryResources): SchedulingResult[PipelineTask] = {
     var task: PipelineTask = null
     var someTaskWasFilteredOut = false
@@ -126,7 +123,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
       do {
         task = if (pipeline.serial) {
           if (executionState.canContinueOrTake(pipeline) && executionState.tryLock(pipeline)) {
-            val t = innerNextTask(context, state, resources)
+            val t = innerNextTask(state, resources)
             if (t == null) {
               // the data might have been taken while we took the lock
               executionState.unlock(pipeline)
@@ -136,7 +133,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
             null
           }
         } else {
-          innerNextTask(context, state, resources)
+          innerNextTask(state, resources)
         }
         // filterCancelledArguments checks if there is work left to do for a task
         // if it returns `true`, there is no work left and the task has been already closed.
@@ -165,8 +162,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
     } else Morsel.empty
   }
 
-  private def innerNextTask(context: QueryContext,
-                            state: QueryState,
+  private def innerNextTask(state: QueryState,
                             resources: QueryResources): PipelineTask = {
     if (!executionState.canPut(pipeline)) {
       return null
@@ -177,7 +173,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
     }
 
     val parallelism = if (pipeline.serial) 1 else state.numberOfWorkers
-    val startTasks = startState.nextTasks(context, state, this, parallelism, resources, executionState.argumentStateMaps)
+    val startTasks = startState.nextTasks(state, this, parallelism, resources, executionState.argumentStateMaps)
     if (startTasks != null) {
       Preconditions.checkArgument(startTasks.nonEmpty, "If no tasks are available, `null` is expected rather than empty collections")
 
@@ -186,7 +182,6 @@ class PipelineState(val pipeline: ExecutablePipeline,
           middleTasks,
           // output operator state may be stateful, should not be shared across tasks
           outputOperatorStateCreator(startTask),
-          context,
           state,
           this)
 

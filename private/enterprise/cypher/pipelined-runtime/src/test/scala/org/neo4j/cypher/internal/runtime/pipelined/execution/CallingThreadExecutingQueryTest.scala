@@ -14,7 +14,6 @@ import org.mockito.Mockito.when
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition
 import org.neo4j.cypher.internal.physicalplanning.PipelineId
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutablePipeline
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.MockHelper.pipelineState
@@ -94,7 +93,6 @@ class CallingThreadExecutingQueryTest extends CypherFunSuite {
 
     new CallingThreadExecutingQuery(
       executionState,
-      mock[QueryContext],
       getQueryState,
       mock[QueryExecutionTracer],
       mock[WorkersQueryProfiler],

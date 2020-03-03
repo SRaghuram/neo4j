@@ -10,10 +10,10 @@ import java.util
 import org.eclipse.collections.impl.factory.primitive.IntStacks
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.physicalplanning.PipelineId
+import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.SchedulingResult
 import org.neo4j.cypher.internal.runtime.pipelined.Task
-import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 
 object LazyScheduling extends SchedulingPolicy {
   def executionGraphSchedulingPolicy(executionGraphDefinition: ExecutionGraphDefinition): ExecutionGraphSchedulingPolicy = {
@@ -72,7 +72,7 @@ class LazyQueryScheduling(executingQuery: ExecutingQuery, pipelinesInLHSDepthFir
     while (i < pipelinesInLHSDepthFirstOrder.length) {
       val pipelineState = pipelineStates(pipelinesInLHSDepthFirstOrder(i).x)
       DebugSupport.SCHEDULING.log("[nextTask] probe pipeline (%s)", pipelineState.pipeline)
-      val schedulingResult = pipelineState.nextTask(executingQuery.queryContext, executingQuery.queryState, queryResources)
+      val schedulingResult = pipelineState.nextTask(executingQuery.queryState, queryResources)
       if (schedulingResult.task != null) {
         DebugSupport.SCHEDULING.log("[nextTask] schedule %s", schedulingResult)
         return schedulingResult

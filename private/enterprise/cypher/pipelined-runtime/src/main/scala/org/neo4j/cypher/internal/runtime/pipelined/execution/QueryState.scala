@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
 import org.neo4j.cypher.internal.runtime.InputDataStream
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
@@ -13,7 +14,8 @@ import org.neo4j.values.AnyValue
 /**
  * The query state of the pipelined runtime
  */
-case class QueryState(params: Array[AnyValue],
+case class QueryState(queryContext: QueryContext,
+                      params: Array[AnyValue],
                       subscriber: QuerySubscriber,
                       flowControl: FlowControl,
                       morselSize: Int,

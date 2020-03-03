@@ -9,7 +9,6 @@ import java.util.Comparator
 
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
@@ -37,7 +36,6 @@ class SortPreOperator(val workIdentity: WorkIdentity,
     override def trackTime: Boolean = true
 
     override def prepareOutput(morsel: Morsel,
-                               context: QueryContext,
                                state: QueryState,
                                resources: QueryResources,
                                operatorExecutionEvent: OperatorProfileEvent): PreSortedOutput = {

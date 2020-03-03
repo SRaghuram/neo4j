@@ -43,9 +43,7 @@ import org.neo4j.cypher.internal.logical.plans.SeekableArgs
 import org.neo4j.cypher.internal.logical.plans.SingleSeekableArg
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -54,18 +52,16 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.SeekArgs
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.freeCursor
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.RelScanCursorPool
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.allocateAndTraceCursor
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_REL_SCAN_CURSOR
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.singleRelationship
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.RelScanCursorPool
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.allocateAndTraceCursor
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.cursorNext
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.freeCursor
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.singleRelationship
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipByIdSeekOperator.asIdMethod
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
@@ -95,9 +91,9 @@ abstract class RelationshipByIdSeekOperator(val workIdentity: WorkIdentity,
     protected var ids: java.util.Iterator[AnyValue] = _
     protected var cursor: RelationshipScanCursor = _
 
-    override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+    override protected def initializeInnerLoop(state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
       cursor = resources.cursorPools.relationshipScanCursorPool.allocateAndTrace()
-      val queryState = new SlottedQueryState(context,
+      val queryState = new SlottedQueryState(state.queryContext,
         resources = null,
         params = state.params,
         resources.expressionCursors,
@@ -204,18 +200,17 @@ class DirectedRelationshipByIdSeekOperator(workIdentity: WorkIdentity,
 
   override def toString: String = "DirectedRelationshipByIdTask"
 
-  override protected def nextTasks(queryContext: QueryContext,
-                                   state: QueryState,
+  override protected def nextTasks(state: QueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     IndexedSeq(new RelationshipByIdTask(inputMorsel.nextCopy) {
-      override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
+      override protected def innerLoop(outputRow: MorselFullCursor, state: QueryState): Unit = {
         while (outputRow.onValidRow() && ids.hasNext) {
           val nextId = NumericHelper.asLongEntityIdPrimitive(ids.next())
-          val read = context.transactionalContext.dataRead
+          val read = state.queryContext.transactionalContext.dataRead
           if (nextId >= 0L) {
             read.singleRelationship(nextId, cursor)
             if (cursor.next()) {
@@ -249,20 +244,19 @@ class UndirectedRelationshipByIdSeekOperator(workIdentity: WorkIdentity,
   private var forwardDirection = true
 
   override def toString: String = "UndirectedRelationshipByIdTask"
-  override protected def nextTasks(queryContext: QueryContext,
-                                   state: QueryState,
+  override protected def nextTasks(state: QueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     IndexedSeq(new RelationshipByIdTask(inputMorsel.nextCopy) {
-      override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
+      override protected def innerLoop(outputRow: MorselFullCursor, state: QueryState): Unit = {
         while (outputRow.onValidRow && (!forwardDirection || ids.hasNext)) {
           if (forwardDirection) {
             val nextId = NumericHelper.asLongEntityIdPrimitive(ids.next())
             if (nextId >= 0L) {
-              context.transactionalContext.dataRead.singleRelationship(nextId, cursor)
+              state.queryContext.transactionalContext.dataRead.singleRelationship(nextId, cursor)
               if (cursor.next()) {
                 outputRow.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
                 outputRow.setLongAt(relationship, nextId)

@@ -32,9 +32,7 @@ import org.neo4j.codegen.api.Method
 import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -43,17 +41,15 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.SeekArgs
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeByIdSeekOperator.asIdMethod
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeByIdSeekOperator.isValidNode
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.cursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.onNode
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.cursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -71,8 +67,7 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
                            nodeIdsExpr: SeekArgs,
                            argumentSize: SlotConfiguration.Size) extends StreamingOperator {
 
-  override protected def nextTasks(queryContext: QueryContext,
-                                   state: QueryState,
+  override protected def nextTasks(state: QueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
@@ -94,8 +89,8 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
      *
      * @return true iff the inner loop might result it output rows
      */
-    override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
-      val queryState = new SlottedQueryState(context,
+    override protected def initializeInnerLoop(state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+      val queryState = new SlottedQueryState(state.queryContext,
         resources = null,
         params = state.params,
         resources.expressionCursors,
@@ -110,14 +105,14 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
 
     override def workIdentity: WorkIdentity = NodeByIdSeekOperator.this.workIdentity
 
-    override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselFullCursor, state: QueryState): Unit = {
 
       while (outputRow.onValidRow && ids.hasNext) {
         val nextId = NumericHelper.asLongEntityIdPrimitive(ids.next())
         if (tracer != null) {
           tracer.onNode(nextId)
         }
-        if (nextId >= 0L && context.transactionalContext.dataRead.nodeExists(nextId)) {
+        if (nextId >= 0L && state.queryContext.transactionalContext.dataRead.nodeExists(nextId)) {
           outputRow.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
           outputRow.setLongAt(offset, nextId)
           outputRow.next()

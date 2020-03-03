@@ -20,6 +20,8 @@ import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.IntermediateRepresentation.subtract
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -67,8 +69,8 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
                     val workIdentity: WorkIdentity,
                     countExpression: Expression) extends MiddleOperator {
 
-  override def createTask(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory, queryContext: QueryContext, state: QueryState, resources: QueryResources): OperatorTask = {
-    val limit = evaluateCountValue(queryContext, state, resources, countExpression)
+  override def createTask(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory, state: QueryState, resources: QueryResources): OperatorTask = {
+    val limit = evaluateCountValue(state, resources, countExpression)
     new LimitOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId,
       new LimitOperator.LimitStateFactory(limit)))
   }
@@ -78,7 +80,6 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
     override def workIdentity: WorkIdentity = LimitOperator.this.workIdentity
 
     override def operate(outputMorsel: Morsel,
-                         context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = {
 

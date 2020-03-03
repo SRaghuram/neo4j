@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
@@ -28,8 +27,7 @@ class UnionOperator(val workIdentity: WorkIdentity,
 
   override def toString: String = "Union"
 
-  override protected def nextTasks(queryContext: QueryContext,
-                                   state: QueryState,
+  override protected def nextTasks(state: QueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
@@ -57,10 +55,9 @@ class UnionTask(val inputMorsel: Morsel,
   override protected def closeCursors(resources: QueryResources): Unit = {}
 
   override def operate(outputMorsel: Morsel,
-                       context: QueryContext,
                        state: QueryState,
                        resources: QueryResources): Unit = {
-    val slottedQueryState = new SlottedQueryState(context,
+    val slottedQueryState = new SlottedQueryState(state.queryContext,
       resources = null,
       params = state.params,
       resources.expressionCursors,

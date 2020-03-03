@@ -53,7 +53,6 @@ import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.DefaultExpressionCompiler
@@ -130,8 +129,7 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
 
   override def toString: String = "VarExpand"
 
-  override def nextTasks(queryContext: QueryContext,
-                         state: QueryState,
+  override def nextTasks(state: QueryState,
                          inputMorsel: MorselParallelizer,
                          parallelism: Int,
                          resources: QueryResources,
@@ -148,9 +146,9 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
     private var predicateState: SlottedQueryState = _
     private var executionEvent: OperatorProfileEvent = _
 
-    override protected def enterOperate(context: QueryContext, state: QueryState, resources: QueryResources): Unit = {
+    override protected def enterOperate(state: QueryState, resources: QueryResources): Unit = {
       if (tempNodeOffset != NO_PREDICATE_OFFSET || tempRelationshipOffset != NO_PREDICATE_OFFSET) {
-        predicateState = new SlottedQueryState(context,
+        predicateState = new SlottedQueryState(state.queryContext,
           resources = null,
           params = state.params,
           resources.expressionCursors,
@@ -165,7 +163,7 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    protected override def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+    protected override def initializeInnerLoop(state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
       val fromNode = getFromNodeFunction.applyAsLong(inputCursor)
       val toNode = getToNodeFunction.applyAsLong(inputCursor)
 
@@ -173,7 +171,7 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
         if (tempNodeOffset != NO_PREDICATE_OFFSET) {
           new VarExpandPredicate[Long] {
             override def isTrue(nodeId: Long): Boolean = {
-              val value = context.nodeById(nodeId)
+              val value = state.queryContext.nodeById(nodeId)
               predicateState.expressionVariables(tempNodeOffset) = value
               nodePredicate(inputCursor, predicateState) eq Values.TRUE
             }
@@ -186,7 +184,7 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
         if (tempRelationshipOffset != NO_PREDICATE_OFFSET) {
           new VarExpandPredicate[RelationshipSelectionCursor] {
             override def isTrue(cursor: RelationshipSelectionCursor): Boolean = {
-              val value = VarExpandCursor.relationshipFromCursor(context, cursor)
+              val value = VarExpandCursor.relationshipFromCursor(state.queryContext, cursor)
               predicateState.expressionVariables(tempRelationshipOffset) = value
               relationshipPredicate(inputCursor, predicateState) eq Values.TRUE
             }
@@ -203,11 +201,11 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
           toNode,
           resources.cursorPools.nodeCursorPool.allocateAndTrace(),
           projectBackwards,
-          types.types(context),
+          types.types(state.queryContext),
           minLength,
           maxLength,
-          context.transactionalContext.dataRead,
-          context,
+          state.queryContext.transactionalContext.dataRead,
+          state.queryContext,
           nodeVarExpandPredicate,
           relVarExpandPredicate)
         varExpandCursor.enterWorkUnit(resources.cursorPools)
@@ -216,7 +214,7 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselFullCursor, state: QueryState): Unit = {
 
       while (outputRow.onValidRow && varExpandCursor.next()) {
         outputRow.copyFrom(inputCursor)

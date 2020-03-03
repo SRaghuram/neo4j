@@ -11,8 +11,6 @@ import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.CypherRow
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
@@ -54,7 +52,6 @@ class OptionalOperator(val workIdentity: WorkIdentity,
   //===========================================================================
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
-                           queryContext: QueryContext,
                            state: QueryState,
                            resources: QueryResources): OperatorState = {
     argumentStateCreator.createArgumentStateMap(argumentStateMapId, new OptionalArgumentStateBuffer.Factory(stateFactory, id))
@@ -62,8 +59,7 @@ class OptionalOperator(val workIdentity: WorkIdentity,
   }
 
   class OptionalOperatorState() extends OperatorState {
-    override def nextTasks(context: QueryContext,
-                           state: QueryState,
+    override def nextTasks(state: QueryState,
                            operatorInput: OperatorInput,
                            parallelism: Int,
                            resources: QueryResources,
@@ -86,7 +82,7 @@ class OptionalOperator(val workIdentity: WorkIdentity,
 
     override def workIdentity: WorkIdentity = OptionalOperator.this.workIdentity
 
-    override def operate(outputMorsel: Morsel, context: QueryContext, state: QueryState, resources: QueryResources): Unit = {
+    override def operate(outputMorsel: Morsel, state: QueryState, resources: QueryResources): Unit = {
       val outputCursor = outputMorsel.writeCursor(onFirstRow = true)
       while (outputCursor.onValidRow && canContinue) {
         if (currentMorsel == null || !currentMorsel.onValidRow) {

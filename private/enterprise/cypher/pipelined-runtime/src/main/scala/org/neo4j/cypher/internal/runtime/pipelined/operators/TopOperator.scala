@@ -13,7 +13,6 @@ import org.neo4j.cypher.internal.DefaultComparatorTopTable
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
@@ -75,11 +74,10 @@ case class TopOperator(workIdentity: WorkIdentity,
       override def trackTime: Boolean = true
 
       override def prepareOutput(morsel: Morsel,
-                                 queryContext: QueryContext,
                                  state: QueryState,
                                  resources: QueryResources,
                                  operatorExecutionEvent: OperatorProfileEvent): PreTopOutput = {
-        val limit = CountingState.evaluateCountValue(queryContext, state, resources, countExpression)
+        val limit = CountingState.evaluateCountValue(state, resources, countExpression)
         val perArguments = if (limit <= 0) {
           IndexedSeq.empty
         } else {
@@ -110,17 +108,15 @@ case class TopOperator(workIdentity: WorkIdentity,
 
     override def createState(argumentStateCreator: ArgumentStateMapCreator,
                              stateFactory: StateFactory,
-                             queryContext: QueryContext,
                              state: QueryState,
                              resources: QueryResources): ReduceOperatorState[Morsel, TopTable] = {
       // NOTE: If the _input size_ is larger than Int.MaxValue this will still fail, since an array cannot hold that many elements
-      val limit = Math.min(CountingState.evaluateCountValue(queryContext, state, resources, countExpression), Int.MaxValue).toInt
+      val limit = Math.min(CountingState.evaluateCountValue(state, resources, countExpression), Int.MaxValue).toInt
       argumentStateCreator.createArgumentStateMap(argumentStateMapId, new TopOperator.Factory(stateFactory.memoryTracker, comparator, limit, id))
       this
     }
 
-    override def nextTasks(queryContext: QueryContext,
-                           state: QueryState,
+    override def nextTasks(state: QueryState,
                            input: TopTable,
                            resources: QueryResources
                           ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[Morsel, TopTable]] = {
@@ -136,7 +132,6 @@ case class TopOperator(workIdentity: WorkIdentity,
       var sortedInputPerArgument: util.Iterator[MorselRow] = _
 
       override def operate(outputMorsel: Morsel,
-                           context: QueryContext,
                            state: QueryState,
                            resources: QueryResources): Unit = {
 

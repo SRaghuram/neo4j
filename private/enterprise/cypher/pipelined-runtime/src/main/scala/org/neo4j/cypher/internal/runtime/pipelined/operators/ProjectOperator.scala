@@ -11,7 +11,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.block
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
@@ -29,11 +28,10 @@ class ProjectOperator(val workIdentity: WorkIdentity,
                       val projectionOps: CommandProjection) extends StatelessOperator {
 
   override def operate(morsel: Morsel,
-                       context: QueryContext,
                        state: QueryState,
                        resources: QueryResources): Unit = {
 
-    val queryState = new SlottedQueryState(context,
+    val queryState = new SlottedQueryState(state.queryContext,
       resources = null,
       params = state.params,
       resources.expressionCursors,

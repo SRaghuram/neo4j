@@ -35,7 +35,6 @@ import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.ReadableRow
@@ -46,8 +45,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.RelationshipCursorRepresentat
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.getNodeIdFromSlot
@@ -91,8 +88,7 @@ class ExpandIntoOperator(val workIdentity: WorkIdentity,
 
   override def toString: String = "ExpandInto"
 
-  override protected def nextTasks(queryContext: QueryContext,
-                                   state: QueryState,
+  override protected def nextTasks(state: QueryState,
                                    inputMorsel: MorselParallelizer,
                                    parallelism: Int,
                                    resources: QueryResources,
@@ -129,9 +125,9 @@ class ExpandIntoTask(inputMorsel: Morsel,
   protected var relationships: RelationshipSelectionCursor = _
   protected var expandInto: CachingExpandInto = _
 
-  protected override def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+  protected override def initializeInnerLoop(state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
     if (expandInto == null) {
-      expandInto = new CachingExpandInto(context.transactionalContext.dataRead,
+      expandInto = new CachingExpandInto(state.queryContext.transactionalContext.dataRead,
         kernelDirection(dir))
     }
     val fromNode = getFromNodeFunction.applyAsLong(inputCursor)
@@ -139,7 +135,7 @@ class ExpandIntoTask(inputMorsel: Morsel,
     if (entityIsNull(fromNode) || entityIsNull(toNode))
       false
     else {
-      setupCursors(context, resources, fromNode, toNode)
+      setupCursors(state.queryContext, resources, fromNode, toNode)
       true
     }
   }
@@ -158,7 +154,7 @@ class ExpandIntoTask(inputMorsel: Morsel,
       toNode)
   }
 
-  override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
+  override protected def innerLoop(outputRow: MorselFullCursor, state: QueryState): Unit = {
 
     while (outputRow.onValidRow && relationships.next()) {
       val relId = relationships.relationshipReference()
