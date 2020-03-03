@@ -72,7 +72,7 @@ public enum Repository
           "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
     ALGOS( "Graph Algorithms",
             "graph-analytics",
-            "neo-technology",
+            "neo4j",
             "^master$",
             "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}(\\.\\d{1,2})?$" );
 
