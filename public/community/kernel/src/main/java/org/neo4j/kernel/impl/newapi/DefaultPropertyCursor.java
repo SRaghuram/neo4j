@@ -118,7 +118,10 @@ public class DefaultPropertyCursor extends TraceableCursor implements PropertyCu
         assert entityReference != NO_ID;
 
         init( read, assertOpen );
-        storeCursor.initRelationshipProperties( relationshipCursor.storeCursor );
+        if ( !relationshipCursor.currentRelationshipIsAddedInTx() )
+        {
+            storeCursor.initRelationshipProperties( relationshipCursor.storeCursor );
+        }
 
         initializeRelationshipTransactionState( entityReference, read );
     }

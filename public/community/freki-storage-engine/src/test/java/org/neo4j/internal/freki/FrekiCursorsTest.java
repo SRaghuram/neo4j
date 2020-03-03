@@ -54,8 +54,8 @@ abstract class FrekiCursorsTest
     RandomRule random;
 
     InMemoryTestStore store = new InMemoryTestStore( 0 );
-    InMemoryTestStore largeStore = new InMemoryTestStore( 2 );
-    MainStores stores = new MainStores( new SimpleStore[]{store, null, largeStore}, new InMemoryBigValueTestStore(), null );
+    InMemoryTestStore largeStore = new InMemoryTestStore( 3 );
+    MainStores stores = new MainStores( new SimpleStore[]{store, null, null, largeStore}, new InMemoryBigValueTestStore(), null );
 
     static long[] toLongArray( int[] labelIds )
     {
@@ -64,12 +64,7 @@ abstract class FrekiCursorsTest
 
     Node node()
     {
-        return node( random.nextLong( 0, 0xFFFFFFFFFFL ) );
-    }
-
-    Node node( long id )
-    {
-        return new Node( id );
+        return new Node( store.nextId( PageCursorTracer.NULL ) );
     }
 
     class Node
@@ -103,7 +98,7 @@ abstract class FrekiCursorsTest
                 {
                     data.serialize( record.dataForWriting(), stores.bigPropertyValueStore, bigValueApplier );
                 }
-                catch ( BufferOverflowException e )
+                catch ( BufferOverflowException | ArrayIndexOutOfBoundsException e )
                 {
                     InMemoryTestStore largeStore = (InMemoryTestStore) stores.nextLargerMainStore( record.sizeExp() );
                     MutableNodeRecordData largeData = new MutableNodeRecordData( largeStore.nextId( PageCursorTracer.NULL ) );
@@ -157,21 +152,23 @@ abstract class FrekiCursorsTest
             return this;
         }
 
-        Node relationship( int type, Node otherNode )
+        long relationship( int type, Node otherNode )
         {
             return relationship( type, otherNode, IntObjectMaps.immutable.empty() );
         }
 
-        Node relationship( int type, Node otherNode, IntObjectMap<Value> properties )
+        long relationship( int type, Node otherNode, IntObjectMap<Value> properties )
         {
-            MutableNodeRecordData.Relationship relationship = data.createRelationship( data.nextInternalRelationshipId(), otherNode.record.id, type, true );
+            long internalId = data.nextInternalRelationshipId();
+            MutableNodeRecordData.Relationship relationship = data.createRelationship( internalId, otherNode.record.id, type, true );
+
             properties.forEachKeyValue( relationship::addProperty );
             if ( record.id != otherNode.record.id )
             {
-                relationship = otherNode.data.createRelationship( data.nextInternalRelationshipId(), record.id, type, false );
+                relationship = otherNode.data.createRelationship( internalId, record.id, type, false );
                 properties.forEachKeyValue( relationship::addProperty );
             }
-            return this;
+            return MutableNodeRecordData.externalRelationshipId( record.id, internalId );
         }
     }
 

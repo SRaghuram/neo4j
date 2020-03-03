@@ -20,6 +20,7 @@
 package org.neo4j.internal.freki;
 
 import org.eclipse.collections.api.set.primitive.MutableIntSet;
+import org.eclipse.collections.impl.factory.primitive.IntSets;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -93,6 +94,8 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     @Override
     public boolean visit( StorageCommand command ) throws IOException
     {
+        // TODO DUDE, we gotta handle reverse recovery at some point!!
+
         return ((FrekiCommand) command).accept( this );
     }
 
@@ -252,35 +255,37 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
                 initializePropertyCursorOnRecord( propertyCursorBefore, before );
             }
 
-            MutableIntSet newProperties = currentDenseNodeCommand.addedProperties.keySet().toSet();
+            MutableIntSet newProperties = IntSets.mutable.empty();
+            for ( PropertyUpdate propertyUpdate : currentDenseNodeCommand.propertyUpdates )
+            {
+                if ( propertyUpdate.mode == Mode.CREATE )
+                {
+                    newProperties.add( propertyUpdate.propertyKeyId );
+                }
+            }
             while ( propertyCursorBefore.next() )
             {
                 int key = propertyCursorBefore.propertyKey();
-                if ( currentDenseNodeCommand.inUse )
+                PropertyUpdate update = currentDenseNodeCommand.propertyUpdates.get( key );
+                if ( update != null )
                 {
-                    ByteBuffer addedValue = currentDenseNodeCommand.addedProperties.get( key );
-                    if ( addedValue != null )
+                    if ( update.mode == Mode.CREATE || update.mode == Mode.UPDATE )
                     {
                         newProperties.remove( key );
-                        builder.changed( key, propertyCursorBefore.propertyValue(), readValueAndRestorePosition( addedValue ) );
-                    }
-                    else if ( currentDenseNodeCommand.removedProperties.contains( key ) )
-                    {
-                        builder.removed( key, propertyCursorBefore.propertyValue() );
+                        builder.changed( key, propertyCursorBefore.propertyValue(), readValueAndRestorePosition( update.after ) );
                     }
                     else
                     {
-                        builder.existing( key, propertyCursorBefore.propertyValue() );
+                        builder.removed( key, propertyCursorBefore.propertyValue() );
                     }
                 }
                 else
                 {
-                    //Mark all as deleted
-                    builder.removed( key, propertyCursorBefore.propertyValue() );
+                    builder.existing( key, propertyCursorBefore.propertyValue() );
                 }
             }
             newProperties.forEach(
-                    key -> builder.added( key, readValueAndRestorePosition( currentDenseNodeCommand.addedProperties.get( key ) ) ) );
+                    key -> builder.added( key, readValueAndRestorePosition( currentDenseNodeCommand.propertyUpdates.get( key ).after ) ) );
         }
         return builder.build();
     }
@@ -351,26 +356,28 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         // Thoughts: we should perhaps to the usual combine-and-apply thing for the dense node updates?
         try ( DenseStore.Updater updater = stores.denseStore.newUpdater( PageCursorTracer.NULL ) )
         {
-            if ( node.inUse )
+            // node properties
+            node.propertyUpdates.forEach( p ->
             {
-                // added node properties
-                node.addedProperties.forEachKeyValue( ( key, value ) -> updater.setProperty( node.nodeId, key, value ) );
-                // removed node properties
-                node.removedProperties.forEach( key -> updater.removeProperty( node.nodeId, key ) );
-                // created relationships
-                node.createdRelationships.forEachKeyValue( ( type, typedRelationships ) ->
-                        typedRelationships.forEach( relationship ->
-                                updater.createRelationship( relationship.internalId, node.nodeId, type,
-                                        relationship.otherNodeId, relationship.outgoing, relationship.properties ) ) );
-                // deleted relationships
-                node.deletedRelationships.forEachKeyValue( ( type, typedRelationships ) -> typedRelationships.forEach(
-                        relationship -> updater.deleteRelationship( relationship.internalId, node.nodeId, type,
-                                relationship.otherNodeId, relationship.outgoing ) ) );
-            }
-            else
+                if ( p.mode == Mode.CREATE || p.mode == Mode.UPDATE )
+                {
+                    updater.setProperty( node.nodeId, p.propertyKeyId, p.after );
+                }
+                else
+                {
+                    updater.removeProperty( node.nodeId, p.propertyKeyId );
+                }
+            } );
+            // relationships
+            node.relationshipUpdates.forEachKeyValue( ( type, typedRelationships ) ->
             {
-                updater.deleteNode( node.nodeId );
-            }
+                typedRelationships.deleted.forEach( relationship ->
+                        updater.deleteRelationship( relationship.internalId, node.nodeId, type, relationship.otherNodeId, relationship.outgoing ) );
+                typedRelationships.created.forEach( relationship -> updater.createRelationship( relationship.internalId, node.nodeId, type,
+                        relationship.otherNodeId, relationship.outgoing, relationship.propertyUpdates, u -> u.after ) );
+                DenseRelationships.Degree degree = typedRelationships.degree( true );
+                updater.setDegree( node.nodeId, type, degree.outgoing(), degree.incoming(), degree.loop() );
+            } );
         }
     }
 

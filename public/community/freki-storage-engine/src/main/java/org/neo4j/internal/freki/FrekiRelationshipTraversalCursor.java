@@ -144,6 +144,8 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
                     // We don't need filtering here because we ask for the correct type and direction right away in the tree seek
                     currentDenseRelationship = denseRelationships.next();
                     currentRelationshipDirection = currentDenseRelationship.direction();
+                    currentRelationshipInternalId = currentDenseRelationship.internalId();
+                    currentRelationshipOtherNode = currentDenseRelationship.neighbourNodeId();
                     denseProperties = null;
                     return true;
                 }
@@ -168,6 +170,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
                         continue;
                     }
 
+                    data.position( relationshipTypeOffset( currentTypeIndex ) ); //update position to ensure we read from correct offset
                     currentTypeData = StreamVByte.readLongs( data );
                     currentTypePropertiesOffset = data.position();
                     currentTypeRelationshipIndex = 0;
@@ -317,6 +320,12 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
 
     @Override
     public void init( long nodeId, long reference, RelationshipSelection selection )
+    {
+        //We dont use reference, is that a problem?
+        init( nodeId, selection );
+    }
+
+    public void init( long nodeId, RelationshipSelection selection )
     {
         reset();
         this.nodeId = nodeId;
