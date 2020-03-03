@@ -10,7 +10,6 @@ import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.apache.shiro.authz.SimpleRole;
 
 import java.io.BufferedReader;
@@ -148,14 +147,14 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         {
             if ( commandIsValid( command ) )
             {
-                log.info( "Executing security initialization command: " + command );
+                securityLog.info( "Executing security initialization command: " + command );
                 Result result = tx.execute( command );
                 result.accept( new LoggingResultVisitor( result.columns() ) );
                 result.close();
             }
             else
             {
-                log.warn( "Ignoring invalid security initialization command: " + command );
+                securityLog.warn( "Ignoring invalid security initialization command: " + command );
             }
         }
     }
@@ -187,14 +186,14 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
                 }
                 sb.append( column ).append( ":" ).append( row.get( column ).toString() );
             }
-            log.info( "Result: " + sb.toString() );
+            securityLog.info( "Result: " + sb.toString() );
             return true;
         }
     }
 
     private InvalidArgumentsException logAndCreateException( String message )
     {
-        log.error( message );
+        securityLog.error( message );
         return new InvalidArgumentsException( message );
     }
 
@@ -309,7 +308,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         Node admin = tx.findNode( ROLE_LABEL, "name", PredefinedRoles.ADMIN );
 
         addRoleToUser( tx, admin, newAdmin );
-        log.info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, newAdmin );
+        securityLog.info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, newAdmin );
     }
 
     private void setUpDefaultPrivileges( Transaction tx )
@@ -587,7 +586,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         {
             // Log what happened to the security log
             String roleString = roles.values().size() == 1 ? "role" : "roles";
-            log.info( "Completed migration of %s %s into system graph.", Integer.toString( roles.values().size() ), roleString );
+            securityLog.info( "Completed migration of %s %s into system graph.", Integer.toString( roles.values().size() ), roleString );
         }
         return true;
     }

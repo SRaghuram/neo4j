@@ -22,10 +22,12 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -40,6 +42,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -96,6 +99,27 @@ class CustomSecurityInitializationIT
             assertTrue( result.stream().anyMatch( row -> row.get( "role" ).equals( "testRole" ) ) );
             result.close();
         }
+    }
+
+    @Test
+    void shouldLogInitializationStandalone() throws IOException
+    {
+        Path initFile = directory.homeDir().toPath().resolve( "scripts" ).resolve( "initFile" );
+        writeTestInitializationFile( initFile, "CREATE ROLE testRole" );
+        // Given a standalone db and initialization file
+        dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
+                .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.TRUE )
+                .setConfig( GraphDatabaseSettings.system_init_file, Path.of( "initFile" ) )
+                .setConfig( GraphDatabaseSettings.log_queries, GraphDatabaseSettings.LogQueryLevel.VERBOSE )
+                .build();
+
+        dbms.database( SYSTEM_DATABASE_NAME );
+        dbms.shutdown();
+
+        Path logsDir = directory.homeDir().toPath().resolve( "logs" );
+        var neo4jLog = logsDir.resolve( "security.log" );
+        var lines = Files.lines( neo4jLog ).collect( Collectors.toList() );
+        assertThat( lines, hasItem( containsString( "Executing security initialization command: CREATE ROLE testRole" ) ) );
     }
 
     @Test
@@ -211,6 +235,33 @@ class CustomSecurityInitializationIT
             assertTrue( result.stream().anyMatch( row -> row.get( "role" ).equals( "testRole" ) ), "Expect to find new role" );
             result.close();
         } );
+    }
+
+    @Test
+    @Timeout( value = 10, unit = TimeUnit.MINUTES )
+    void shouldLogInitializationClustered() throws Exception
+    {
+        // Given a cluster and initialization file
+        var clusterConfig = ClusterConfig.clusterConfig()
+                                         .withSharedCoreParam( GraphDatabaseSettings.auth_enabled, "true" )
+                                         .withSharedCoreParam( GraphDatabaseSettings.system_init_file, "initFile" )
+                                         .withNumberOfCoreMembers( 3 );
+        cluster = clusterFactory.createCluster( clusterConfig );
+        for ( ClusterMember member : cluster.coreMembers() )
+        {
+            File home = member.databaseLayout().getNeo4jLayout().homeDirectory();
+            org.apache.commons.io.FileUtils.forceMkdir( home );
+            Path initFile = home.toPath().resolve( "scripts" ).resolve( "initFile" );
+            writeTestInitializationFile( initFile, "CREATE ROLE testRole" );
+        }
+        cluster.start();
+        var leader = cluster.awaitLeader( SYSTEM_DATABASE_NAME );
+        var logsDir = leader.homeDir().toPath().resolve( "logs" );
+        cluster.shutdown();
+
+        var neo4jLog = logsDir.resolve( "security.log" );
+        var lines = Files.lines( neo4jLog ).collect( Collectors.toList() );
+        assertThat( lines, hasItem( containsString( "Executing security initialization command: CREATE ROLE testRole" ) ) );
     }
 
     @Disabled

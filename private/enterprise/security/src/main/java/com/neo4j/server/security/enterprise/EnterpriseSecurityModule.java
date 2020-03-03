@@ -88,6 +88,7 @@ public class EnterpriseSecurityModule extends SecurityModule
     private EnterpriseAuthManager authManager;
     private SecurityConfig securityConfig;
     private SecureHasher secureHasher;
+    private SecurityLog securityLog;
 
     public EnterpriseSecurityModule( LogProvider logProvider,
             Config config,
@@ -118,7 +119,7 @@ public class EnterpriseSecurityModule extends SecurityModule
         isClustered = config.get( EnterpriseEditionSettings.mode ) == EnterpriseEditionSettings.Mode.CORE ||
                       config.get( EnterpriseEditionSettings.mode ) == EnterpriseEditionSettings.Mode.READ_REPLICA;
 
-        SecurityLog securityLog = createSecurityLog();
+        securityLog = createSecurityLog();
         life.add( securityLog );
 
         authManager = newAuthManager( securityLog );
@@ -184,8 +185,7 @@ public class EnterpriseSecurityModule extends SecurityModule
 
         return Optional.of( database ->
         {
-            Log log = logProvider.getLog( getClass() );
-            SecurityGraphInitializer initializer = createSecurityInitializer( log );
+            SecurityGraphInitializer initializer = createSecurityInitializer();
             try
             {
                 initializer.initializeSecurityGraph( database );
@@ -214,7 +214,7 @@ public class EnterpriseSecurityModule extends SecurityModule
         List<Realm> realms = new ArrayList<>( securityConfig.authProviders.size() + 1 );
         SecureHasher secureHasher = new SecureHasher();
 
-        SystemGraphRealm internalRealm = createSystemGraphRealm( config, securityLog );
+        SystemGraphRealm internalRealm = createSystemGraphRealm( config );
         realms.add( internalRealm );
 
         if ( securityConfig.hasLdapProvider )
@@ -263,7 +263,7 @@ public class EnterpriseSecurityModule extends SecurityModule
         return orderedActiveRealms;
     }
 
-    private EnterpriseSecurityGraphInitializer createSecurityInitializer( Log log )
+    private EnterpriseSecurityGraphInitializer createSecurityInitializer()
     {
         UserRepository migrationUserRepository = CommunitySecurityModule.getUserRepository( config, logProvider, fileSystem );
         RoleRepository migrationRoleRepository = EnterpriseSecurityModule.getRoleRepository( config, logProvider, fileSystem );
@@ -272,7 +272,7 @@ public class EnterpriseSecurityModule extends SecurityModule
 
         return new EnterpriseSecurityGraphInitializer( databaseManager,
                                                        systemGraphInitializer,
-                                                       log,
+                                                       securityLog,
                                                        migrationUserRepository,
                                                        migrationRoleRepository,
                                                        initialUserRepository,
@@ -281,9 +281,9 @@ public class EnterpriseSecurityModule extends SecurityModule
                                                        config );
     }
 
-    private SystemGraphRealm createSystemGraphRealm( Config config, SecurityLog securityLog )
+    private SystemGraphRealm createSystemGraphRealm( Config config )
     {
-        SecurityGraphInitializer securityGraphInitializer = isClustered ? SecurityGraphInitializer.NO_OP : createSecurityInitializer( securityLog );
+        SecurityGraphInitializer securityGraphInitializer = isClustered ? SecurityGraphInitializer.NO_OP : createSecurityInitializer();
 
         return new SystemGraphRealm(
                 securityGraphInitializer,
