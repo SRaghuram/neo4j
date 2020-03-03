@@ -24,9 +24,7 @@ import org.eclipse.collections.api.map.primitive.IntObjectMap;
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.api.set.primitive.LongSet;
-import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
-import org.eclipse.collections.impl.factory.primitive.IntSets;
 import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 
 import java.nio.BufferOverflowException;
@@ -39,6 +37,7 @@ import java.util.OptionalLong;
 import java.util.function.Consumer;
 
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.graphdb.Direction;
 import org.neo4j.internal.freki.FrekiCommand.Mode;
 import org.neo4j.internal.freki.MutableNodeRecordData.Relationship;
 import org.neo4j.internal.schema.ConstraintDescriptor;
@@ -48,6 +47,7 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
+import org.neo4j.storageengine.util.EagerDegrees;
 import org.neo4j.token.api.NamedToken;
 import org.neo4j.values.storable.Value;
 
@@ -58,11 +58,14 @@ import static org.neo4j.internal.freki.MutableNodeRecordData.idFromForwardPointe
 import static org.neo4j.internal.freki.MutableNodeRecordData.internalRelationshipIdFromRelationshipId;
 import static org.neo4j.internal.freki.MutableNodeRecordData.isDenseFromForwardPointer;
 import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromForwardPointer;
+import static org.neo4j.internal.freki.PropertyUpdate.add;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.internal.helpers.collection.Iterators.loop;
+import static org.neo4j.storageengine.api.RelationshipSelection.selection;
 
 class CommandCreator implements TxStateVisitor
 {
+    private final Collection<StorageCommand> bigValueCommands = new ArrayList<>();
     private final Collection<StorageCommand> commands;
     private final Stores stores;
     private final PageCursorTracer cursorTracer;
@@ -101,12 +104,7 @@ class CommandCreator implements TxStateVisitor
     private void createRelationship( long internalRelationshipId, int type, long sourceNode, long targetNode, boolean outgoing,
             Iterable<StorageProperty> addedProperties )
     {
-        Mutation sourceMutation = getOrLoad( sourceNode );
-        Relationship relationship = sourceMutation.current.createRelationship( internalRelationshipId, targetNode, type, outgoing );
-        for ( StorageProperty property : addedProperties )
-        {
-            relationship.addProperty( property.propertyKeyId(), property.value() );
-        }
+        getOrLoad( sourceNode ).current.createRelationship( internalRelationshipId, targetNode, type, outgoing, addedProperties );
     }
 
     @Override
@@ -123,22 +121,11 @@ class CommandCreator implements TxStateVisitor
     @Override
     public void visitNodePropertyChanges( long id, Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
     {
-        Mutation mutation = getOrLoad( id );
-        setNodeProperties( added, mutation );
-        setNodeProperties( changed, mutation );
-        removed.forEach( propertyKey -> mutation.current.removeNodeProperty( propertyKey ) );
-    }
-
-    private void setNodeProperties( Iterable<StorageProperty> added, Mutation mutation )
-    {
-        for ( StorageProperty property : added )
-        {
-            mutation.current.setNodeProperty( property.propertyKeyId(), property.value() );
-        }
+        getOrLoad( id ).current.updateNodeProperties( added, changed, removed );
     }
 
     @Override
-    public void visitRelPropertyChanges( long id, Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
+    public void visitRelPropertyChanges( long relationshipId, Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
     {
         throw new UnsupportedOperationException( "Not implemented yet" );
     }
@@ -229,9 +216,7 @@ class CommandCreator implements TxStateVisitor
     @Override
     public void close()
     {
-        List<StorageCommand> bigValueCommands = new ArrayList<>();
         List<StorageCommand> otherCommands = new ArrayList<>();
-
         mutations.each( mutation ->
         {
             RecordAndData abandonedLargeRecord = null;
@@ -239,7 +224,7 @@ class CommandCreator implements TxStateVisitor
             {
                 try
                 {
-                    mutation.current.prepareForCommandExtraction( bigValueCommands::add );
+                    mutation.current.prepareForCommandExtraction();
                     break;
                 }
                 catch ( BufferOverflowException | ArrayIndexOutOfBoundsException e )
@@ -263,7 +248,7 @@ class CommandCreator implements TxStateVisitor
                 // TODO we should track whether or not we need to do this preparation actually
                 // TODO for the time being we expect this to work because there should only be labels in it, 60 or so should fit
                 mutation.small.data.setForwardPointer( mutation.current.asForwardPointer() );
-                mutation.small.prepareForCommandExtraction( bigValueCommands::add );
+                mutation.small.prepareForCommandExtraction();
             }
 
             mutation.small.createCommands( otherCommands ); //Small
@@ -271,7 +256,7 @@ class CommandCreator implements TxStateVisitor
             {
                 abandonedLargeRecord.createCommands( otherCommands );
             }
-            if ( mutation.large != null ) //Dense
+            if ( mutation.large != null ) //Large/Dense
             {
                 mutation.large.createCommands( otherCommands );
             }
@@ -284,7 +269,7 @@ class CommandCreator implements TxStateVisitor
     private Mutation createNew( SimpleStore store, long id )
     {
         Mutation mutation = new Mutation();
-        mutation.small = new SparseRecordAndData( stores, store, id, null, cursorTracer );
+        mutation.small = new SparseRecordAndData( stores, store, id, null, bigValueCommands::add, cursorTracer );
         mutation.small.markInUse( true );
         mutation.small.markCreated();
         mutation.current = mutation.small;
@@ -297,7 +282,7 @@ class CommandCreator implements TxStateVisitor
         if ( mutation == null )
         {
             mutation = new Mutation();
-            mutation.small = new SparseRecordAndData( stores, stores.mainStore, nodeId, null, cursorTracer );
+            mutation.small = new SparseRecordAndData( stores, stores.mainStore, nodeId, null, bigValueCommands::add, cursorTracer );
             mutation.small.loadExistingData();
             mutation.current = mutation.small;
             long forwardPointer = mutation.small.getForwardPointer();
@@ -310,11 +295,11 @@ class CommandCreator implements TxStateVisitor
                     int fwSizeExp = sizeExponentialFromForwardPointer( forwardPointer );
                     long fwId = idFromForwardPointer( forwardPointer );
                     SimpleStore largeStore = stores.mainStore( fwSizeExp );
-                    mutation.large = new SparseRecordAndData( stores, largeStore, fwId, mutation.small, cursorTracer );
+                    mutation.large = new SparseRecordAndData( stores, largeStore, fwId, mutation.small, bigValueCommands::add, cursorTracer );
                 }
                 else
                 {
-                    mutation.large = new DenseRecordAndData( stores.denseStore, stores.bigPropertyValueStore, mutation.small );
+                    mutation.large = new DenseRecordAndData( stores.denseStore, stores.bigPropertyValueStore, mutation.small, bigValueCommands::add );
                 }
                 mutation.current = mutation.large;
                 mutation.current.loadExistingData();
@@ -334,7 +319,10 @@ class CommandCreator implements TxStateVisitor
         void markAsUnused()
         {
             small.markInUse( false );
-            current.markInUse( false );
+            if ( small != current )
+            {
+                current.markInUse( false );
+            }
         }
     }
 
@@ -348,19 +336,13 @@ class CommandCreator implements TxStateVisitor
 
         abstract void loadExistingData();
 
-        abstract Relationship createRelationship( long internalId, long targetNode, int type, boolean outgoing );
+        abstract void createRelationship( long internalId, long targetNode, int type, boolean outgoing, Iterable<StorageProperty> properties );
 
-        abstract void setNodeProperty( int propertyKeyId, Value value );
-
-        abstract void removeNodeProperty( int propertyKeyId );
-
-        abstract void addLabels( LongSet added );
-
-        abstract void removeLabels( LongSet removed );
+        abstract void updateNodeProperties( Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed );
 
         abstract void deleteRelationship( long internalId, int type, long otherNode, boolean outgoing );
 
-        abstract void prepareForCommandExtraction( Consumer<StorageCommand> bigValueCommandConsumer );
+        abstract void prepareForCommandExtraction();
 
         abstract RecordAndData growAndRelocate();
 
@@ -374,6 +356,7 @@ class CommandCreator implements TxStateVisitor
         private final MainStores stores;
         private final SimpleStore store;
         private final SparseRecordAndData smallRecord;
+        private final Consumer<StorageCommand> bigValueCommands;
         private final PageCursorTracer cursorTracer;
 
         private boolean created;
@@ -382,11 +365,13 @@ class CommandCreator implements TxStateVisitor
         // data here is really accidental state, a deserialized objectified version of the data found in the byte[] of the "after" record
         private MutableNodeRecordData data;
 
-        SparseRecordAndData( MainStores stores, SimpleStore store, long id, SparseRecordAndData smallRecord, PageCursorTracer cursorTracer )
+        SparseRecordAndData( MainStores stores, SimpleStore store, long id, SparseRecordAndData smallRecord, Consumer<StorageCommand> bigValueCommands,
+                PageCursorTracer cursorTracer )
         {
             this.stores = stores;
             this.store = store;
             this.smallRecord = smallRecord != null ? smallRecord : this;
+            this.bigValueCommands = bigValueCommands;
             this.cursorTracer = cursorTracer;
             int sizeExp = store.recordSizeExponential();
             before = new Record( sizeExp, id );
@@ -428,30 +413,28 @@ class CommandCreator implements TxStateVisitor
         }
 
         @Override
-        Relationship createRelationship( long internalId, long targetNode, int type, boolean outgoing )
+        void createRelationship( long internalId, long targetNode, int type, boolean outgoing, Iterable<StorageProperty> properties )
         {
-            return data.createRelationship( internalId, targetNode, type, outgoing );
+            Relationship relationship = data.createRelationship( internalId, targetNode, type, outgoing );
+            for ( StorageProperty property : properties )
+            {
+                relationship.addProperty( property.propertyKeyId(), property.value() );
+            }
         }
 
         @Override
-        void setNodeProperty( int propertyKeyId, Value value )
+        void updateNodeProperties( Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
         {
-            data.setNodeProperty( propertyKeyId, value );
+            added.forEach( p -> data.setNodeProperty( p.propertyKeyId(), p.value() ) );
+            changed.forEach( p -> data.setNodeProperty( p.propertyKeyId(), p.value() ) );
+            removed.forEach( p -> data.removeNodeProperty( p ) );
         }
 
-        @Override
-        void removeNodeProperty( int propertyKeyId )
-        {
-            data.removeNodeProperty( propertyKeyId );
-        }
-
-        @Override
         void addLabels( LongSet added )
         {
             added.forEach( label -> data.labels.add( toIntExact( label ) ) );
         }
 
-        @Override
         void removeLabels( LongSet removed )
         {
             removed.forEach( label -> data.labels.remove( toIntExact( label ) ) );
@@ -469,9 +452,9 @@ class CommandCreator implements TxStateVisitor
         }
 
         @Override
-        void prepareForCommandExtraction( Consumer<StorageCommand> bigValueCommandConsumer )
+        void prepareForCommandExtraction()
         {
-            data.serialize( after.dataForWriting(), stores.bigPropertyValueStore, bigValueCommandConsumer );
+            data.serialize( after.dataForWriting(), stores.bigPropertyValueStore, bigValueCommands );
             if ( data.id == -1 )
             {
                 acquireId();
@@ -485,14 +468,14 @@ class CommandCreator implements TxStateVisitor
             RecordAndData result;
             if ( largerStore != null )
             {
-                SparseRecordAndData largerRecord = new SparseRecordAndData( stores, largerStore, -1, smallRecord, cursorTracer );
+                SparseRecordAndData largerRecord = new SparseRecordAndData( stores, largerStore, -1, smallRecord, bigValueCommands, cursorTracer );
                 data.movePropertiesAndRelationshipsTo( largerRecord.data );
                 result = largerRecord;
             }
             else
             {
                 // Time to move over to GBPTree-style data
-                DenseRecordAndData denseRecord = new DenseRecordAndData( stores.denseStore, stores.bigPropertyValueStore, smallRecord );
+                DenseRecordAndData denseRecord = new DenseRecordAndData( stores.denseStore, stores.bigPropertyValueStore, smallRecord, bigValueCommands );
                 denseRecord.movePropertiesAndRelationshipsFrom( data );
                 result = denseRecord;
             }
@@ -526,21 +509,25 @@ class CommandCreator implements TxStateVisitor
         private final DenseStore store;
         private final SimpleBigValueStore bigValueStore;
         private final SparseRecordAndData smallRecord;
+        private final Consumer<StorageCommand> bigValueCommands;
         private boolean created;
-        private boolean inUse;
 
         // changes
         // TODO it feels like we've simply moving tx-state data from one form to another and that's probably true and can probably be improved on later
-        private MutableIntObjectMap<MutableNodeRecordData.Relationships> createdRelationships = IntObjectMaps.mutable.empty();
-        private MutableIntObjectMap<MutableNodeRecordData.Relationships> deletedRelationships = IntObjectMaps.mutable.empty();
-        private MutableIntObjectMap<Value> addedProperties = IntObjectMaps.mutable.empty();
-        private MutableIntSet removedProperties = IntSets.mutable.empty();
+        private MutableIntObjectMap<PropertyUpdate> propertyUpdates = IntObjectMaps.mutable.empty();
+        private MutableIntObjectMap<DenseRelationships> relationshipUpdates = IntObjectMaps.mutable.empty();
 
-        DenseRecordAndData( DenseStore store, SimpleBigValueStore bigValueStore, SparseRecordAndData smallRecord )
+        DenseRecordAndData( DenseStore store, SimpleBigValueStore bigValueStore, SparseRecordAndData smallRecord, Consumer<StorageCommand> bigValueCommands )
         {
             this.store = store;
             this.bigValueStore = bigValueStore;
             this.smallRecord = smallRecord;
+            this.bigValueCommands = bigValueCommands;
+        }
+
+        private long nodeId()
+        {
+            return smallRecord.data.id;
         }
 
         @Override
@@ -558,7 +545,10 @@ class CommandCreator implements TxStateVisitor
         @Override
         void markInUse( boolean inUse )
         {
-            this.inUse = inUse;
+            if ( !inUse )
+            {
+                store.loadAndRemoveNodeProperties( nodeId(), propertyUpdates );
+            }
         }
 
         @Override
@@ -569,51 +559,42 @@ class CommandCreator implements TxStateVisitor
         }
 
         @Override
-        Relationship createRelationship( long internalId, long targetNode, int type, boolean outgoing )
+        void createRelationship( long internalId, long targetNode, int type, boolean outgoing, Iterable<StorageProperty> addedProperties )
         {
             // For sparse representation the high internal relationship ID counter is simply the highest of the existing relationships,
             // decided when loading the node. But for dense nodes we won't load all relationships and will therefore need to keep
             // this counter in an explicit field in the small record. This call keeps that counter updated.
             smallRecord.data.registerInternalRelationshipId( internalId );
-            return createdRelationships.getIfAbsentPutWithKey( type, MutableNodeRecordData.Relationships::new )
-                    .add( internalId, smallRecord.after.id, targetNode, type, outgoing );
+            relationshipUpdatesForType( type ).create( new DenseRelationships.DenseRelationship( internalId, targetNode, outgoing,
+                    serializeAddedProperties( addedProperties, IntObjectMaps.mutable.empty() ) ) );
+        }
+
+        private DenseRelationships relationshipUpdatesForType( int type )
+        {
+            return relationshipUpdates.getIfAbsentPutWithKey( type, t ->
+            {
+                EagerDegrees degrees = store.getDegrees( nodeId(), selection( t, Direction.BOTH ), PageCursorTracer.NULL );
+                return new DenseRelationships( nodeId(), t,
+                        degrees.rawOutgoingDegree( t ), degrees.rawIncomingDegree( t ), degrees.rawLoopDegree( t ) );
+            } );
         }
 
         @Override
         void deleteRelationship( long internalId, int type, long otherNode, boolean outgoing )
         {
-            deletedRelationships.getIfAbsentPutWithKey( type, MutableNodeRecordData.Relationships::new )
-                    .add( internalId, smallRecord.data.id, otherNode, type, outgoing );
+            // TODO have some way of at least saying whether or not this relationship had properties, so that this loading can be skipped completely
+            relationshipUpdatesForType( type ).delete( new DenseRelationships.DenseRelationship( internalId, otherNode, outgoing,
+                    store.loadRelationshipPropertiesForRemoval( nodeId(), internalId, type, otherNode, outgoing ) ) );
         }
 
         @Override
-        void setNodeProperty( int propertyKeyId, Value value )
+        void updateNodeProperties( Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
         {
-            removedProperties.remove( propertyKeyId );
-            addedProperties.put( propertyKeyId, value );
+            store.prepareUpdateNodeProperties( nodeId(), added, changed, removed, bigValueCommands, propertyUpdates );
         }
 
         @Override
-        void removeNodeProperty( int propertyKeyId )
-        {
-            addedProperties.remove( propertyKeyId );
-            removedProperties.add( propertyKeyId );
-        }
-
-        @Override
-        void addLabels( LongSet added )
-        {
-            throw new UnsupportedOperationException( "Should not happen, right?" );
-        }
-
-        @Override
-        void removeLabels( LongSet removed )
-        {
-            throw new UnsupportedOperationException( "Should not happen, right?" );
-        }
-
-        @Override
-        void prepareForCommandExtraction( Consumer<StorageCommand> bigValueCommandConsumer )
+        void prepareForCommandExtraction()
         {
             // Thoughts: no special preparation should be required here either
         }
@@ -634,42 +615,48 @@ class CommandCreator implements TxStateVisitor
         @Override
         void createCommands( Collection<StorageCommand> commands )
         {
-            // Thoughts: take all the logical changes and add to logical commands, either separate for each change or one big command containing all
-            commands.add(
-                    new FrekiCommand.DenseNode( smallRecord.after.id, inUse, convertProperties( addedProperties, commands::add ), removedProperties,
-                            convertRelationships( createdRelationships, commands::add ), convertRelationships( deletedRelationships, commands::add ) ) );
+            commands.add( new FrekiCommand.DenseNode( nodeId(), propertyUpdates, relationshipUpdates ) );
         }
 
-        private IntObjectMap<DenseRelationships> convertRelationships( MutableIntObjectMap<MutableNodeRecordData.Relationships> relationships,
-                Consumer<StorageCommand> commandConsumer )
-        {
-            MutableIntObjectMap<DenseRelationships> converted = IntObjectMaps.mutable.empty();
-            relationships.forEachKeyValue( ( type, value ) ->
-            {
-                DenseRelationships convertedRelationships = new DenseRelationships( type );
-                converted.put( type, convertedRelationships );
-                value.relationships.forEach( relationship -> convertedRelationships.add( relationship.internalId,
-                        relationship.otherNode, relationship.outgoing, convertProperties( relationship.properties, commandConsumer ) ) );
-            } );
-            return converted;
-        }
-
-        private IntObjectMap<ByteBuffer> convertProperties( IntObjectMap<Value> properties, Consumer<StorageCommand> commandConsumer )
-        {
-            MutableIntObjectMap<ByteBuffer> converted = IntObjectMaps.mutable.empty();
-            properties.forEachKeyValue( ( key, value ) -> converted.put( key, serializeValue( bigValueStore, value, commandConsumer ) ) );
-            return converted;
-        }
-
+        /**
+         * Moving from a sparse --> dense will have all data look like "created", since the before-state is the before-state of the sparse record
+         * that it comes from. This differs from changes to an existing dense node where all changes need to follow the added/changed/removed pattern.
+         */
         void movePropertiesAndRelationshipsFrom( MutableNodeRecordData data )
         {
-            addedProperties.putAll( data.properties );
-            createdRelationships.putAll( data.relationships );
+            serializeAddedProperties( data.properties, propertyUpdates );
+            data.relationships.forEachKeyValue( ( type, fromRelationships ) ->
+            {
+                // We're moving to the dense store, which from its POV all relationships will be created so therefore
+                // start at 0 degrees and all creations will increment those degrees.
+                DenseRelationships relationships = relationshipUpdates.getIfAbsentPut( type, new DenseRelationships( nodeId(), type, 0, 0, 0 ) );
+                fromRelationships.relationships.forEach( fromRelationship -> relationships.create(
+                        new DenseRelationships.DenseRelationship( fromRelationship.internalId, fromRelationship.otherNode, fromRelationship.outgoing,
+                                serializeAddedProperties( fromRelationship.properties, IntObjectMaps.mutable.empty() ) ) ) );
+            } );
+            smallRecord.data.nextInternalRelationshipId = data.nextInternalRelationshipId;
             data.clearPropertiesAndRelationships();
+        }
+
+        private IntObjectMap<PropertyUpdate> serializeAddedProperties( IntObjectMap<Value> properties, MutableIntObjectMap<PropertyUpdate> target )
+        {
+            properties.forEachKeyValue( ( key, value ) -> target.put( key, add( key, serializeValue( value ) ) ) );
+            return target;
+        }
+
+        private IntObjectMap<PropertyUpdate> serializeAddedProperties( Iterable<StorageProperty> properties, MutableIntObjectMap<PropertyUpdate> target )
+        {
+            properties.forEach( property -> target.put( property.propertyKeyId(), add( property.propertyKeyId(), serializeValue( property.value() ) ) ) );
+            return target;
+        }
+
+        ByteBuffer serializeValue( Value value )
+        {
+            return CommandCreator.serializeValue( bigValueStore, value, bigValueCommands );
         }
     }
 
-    private static ByteBuffer serializeValue( SimpleBigValueStore bigValueStore, Value value, Consumer<StorageCommand> commandConsumer )
+    static ByteBuffer serializeValue( SimpleBigValueStore bigValueStore, Value value, Consumer<StorageCommand> commandConsumer )
     {
         // TODO hand-wavy upper limit
         ByteBuffer buffer = ByteBuffer.wrap( new byte[256] );

@@ -21,16 +21,14 @@ package org.neo4j.internal.freki;
 
 import org.eclipse.collections.api.map.primitive.IntObjectMap;
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
-import org.eclipse.collections.api.set.primitive.IntSet;
-import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.api.tuple.primitive.IntObjectPair;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
-import org.eclipse.collections.impl.factory.primitive.IntSets;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import org.neo4j.internal.kernel.api.exceptions.schema.MalformedSchemaRuleException;
 import org.neo4j.internal.schema.SchemaRule;
@@ -49,6 +47,8 @@ import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
 import org.neo4j.values.storable.Values;
+
+import static org.neo4j.internal.helpers.Numbers.safeCastIntToShort;
 
 abstract class FrekiCommand implements StorageCommand
 {
@@ -110,27 +110,33 @@ abstract class FrekiCommand implements StorageCommand
         }
     }
 
+    /**
+     * Note, even though this is, in essence, a logical command it still needs to be able to be reversed.
+     * E.g. a changed property value must have its previous value, a removed property must have the value which was removed, a.s.o.
+     * This to be able to do recovery properly.
+     *
+     * Property: added, changed, removed
+     * Relationship: created(incl. added properties), changed properties, deleted(incl. removed properties)
+     * Degrees: for every changed type/direction(out,in,loop): previous degree, increment(arbitrary +N or -N)
+     *
+     * There's no such thing as deleting a node, you delete all its entries explicitly and it's gone. This is a good control
+     * that it's recoverable because we're not allowed to remove anything not covered by the command because otherwise we
+     * cannot recreated that data when doing reverse recovery.
+     */
     static class DenseNode extends FrekiCommand
     {
         static final byte TYPE = 2;
 
         final long nodeId;
-        final boolean inUse;
-        final IntObjectMap<ByteBuffer> addedProperties;
-        final IntSet removedProperties;
-        final IntObjectMap<DenseRelationships> createdRelationships;
-        final IntObjectMap<DenseRelationships> deletedRelationships;
+        final IntObjectMap<PropertyUpdate> propertyUpdates;
+        final IntObjectMap<DenseRelationships> relationshipUpdates;
 
-        DenseNode( long nodeId, boolean inUse, IntObjectMap<ByteBuffer> addedProperties, IntSet removedProperties,
-                IntObjectMap<DenseRelationships> createdRelationships, IntObjectMap<DenseRelationships> deletedRelationships )
+        DenseNode( long nodeId, IntObjectMap<PropertyUpdate> propertyUpdates, IntObjectMap<DenseRelationships> relationshipUpdates )
         {
             super( TYPE );
             this.nodeId = nodeId;
-            this.inUse = inUse;
-            this.addedProperties = addedProperties;
-            this.removedProperties = removedProperties;
-            this.createdRelationships = createdRelationships;
-            this.deletedRelationships = deletedRelationships;
+            this.propertyUpdates = propertyUpdates;
+            this.relationshipUpdates = relationshipUpdates;
         }
 
         @Override
@@ -145,126 +151,181 @@ abstract class FrekiCommand implements StorageCommand
         {
             super.serialize( channel );
             channel.putLong( nodeId );
-            channel.put( (byte) (inUse ? 1 : 0) );
 
-            // added/changed node properties
-            writeProperties( channel, addedProperties );
+            // node properties
+            writeProperties( channel, propertyUpdates );
 
-            // removed node properties
-            channel.putInt( removedProperties.size() );
-            for ( int key : removedProperties.toArray() )
-            {
-                channel.putInt( key );
-            }
-
-            // created relationships
-            writeRelationships( channel, createdRelationships, true );
-
-            // deleted relationships
-            writeRelationships( channel, deletedRelationships, false );
+            // relationships
+            writeRelationships( channel );
         }
 
-        private void writeProperties( WritableChannel channel, IntObjectMap<ByteBuffer> properties ) throws IOException
+        private void writeProperties( WritableChannel channel, IntObjectMap<PropertyUpdate> properties ) throws IOException
         {
             channel.putInt( properties.size() );
-            for ( IntObjectPair<ByteBuffer> property : properties.keyValuesView() )
+            for ( PropertyUpdate property : properties )
             {
-                writeProperty( channel, property.getOne(), property.getTwo() );
+                writeProperty( channel, property );
             }
         }
 
-        private void writeProperty( WritableChannel channel, int key, ByteBuffer value ) throws IOException
+        private void writeProperty( WritableChannel channel, PropertyUpdate property ) throws IOException
         {
-            channel.putInt( key );
-            channel.putInt( value.limit() );
+            int keyAndModeInt = property.propertyKeyId | (property.mode.ordinal() << 30);
+            channel.putInt( keyAndModeInt );
+            switch ( property.mode )
+            {
+            case UPDATE:
+                writePropertyValue( channel, property.before );
+                // fall-through
+            case CREATE:
+                writePropertyValue( channel, property.after );
+                break;
+            case DELETE:
+                writePropertyValue( channel, property.before );
+                break;
+            default:
+                throw new IllegalArgumentException( "Unrecognized mode " + property.mode );
+            }
+        }
+
+        private void writePropertyValue( WritableChannel channel, ByteBuffer value ) throws IOException
+        {
+            // 2B length + data[length]
+            channel.putShort( safeCastIntToShort( value.limit() ) );
             channel.put( value.array(), value.limit() );
         }
 
-        private static IntObjectMap<ByteBuffer> readProperties( ReadableChannel channel ) throws IOException
+        private static IntObjectMap<PropertyUpdate> readProperties( ReadableChannel channel ) throws IOException
         {
-            MutableIntObjectMap<ByteBuffer> properties = IntObjectMaps.mutable.empty();
             int numProperties = channel.getInt();
+            if ( numProperties == 0 )
+            {
+                return IntObjectMaps.immutable.empty();
+            }
+
+            MutableIntObjectMap<PropertyUpdate> properties = IntObjectMaps.mutable.empty();
             for ( int i = 0; i < numProperties; i++ )
             {
-                int key = channel.getInt();
-                int length = channel.getInt();
-                byte[] data = new byte[length];
-                channel.get( data, length );
-                ByteBuffer buffer = ByteBuffer.wrap( data );
-                properties.put( key, buffer );
+                int keyAndMode = channel.getInt();
+                int key = keyAndMode & 0x3FFFFFFF;
+                PropertyUpdate update;
+                switch ( FrekiCommand.MODES[keyAndMode >>> 30] )
+                {
+                case UPDATE:
+                    update = PropertyUpdate.change( key, readProperty( channel ), readProperty( channel ) );
+                    break;
+                case CREATE:
+                    update = PropertyUpdate.add( key, readProperty( channel ) );
+                    break;
+                case DELETE:
+                    update = PropertyUpdate.remove( key, readProperty( channel ) );
+                    break;
+                default:
+                    throw new IllegalArgumentException( "Unrecognized mode " + FrekiCommand.MODES[keyAndMode >>> 30] );
+                }
+                properties.put( key, update );
             }
             return properties;
         }
 
-        private static IntSet readRemovedProperties( ReadableChannel channel ) throws IOException
+        private static ByteBuffer readProperty( ReadableChannel channel ) throws IOException
         {
-            MutableIntSet removedProperties = IntSets.mutable.empty();
-            int numProperties = channel.getInt();
-            for ( int i = 0; i < numProperties; i++ )
-            {
-                removedProperties.add( channel.getInt() );
-            }
-            return removedProperties;
+            int length = channel.getShort();
+            byte[] data = new byte[length];
+            channel.get( data, length );
+            return ByteBuffer.wrap( data );
         }
 
-        private void writeRelationships( WritableChannel channel, IntObjectMap<DenseRelationships> relationshipTypeMap, boolean includeProperties )
+        private void writeRelationships( WritableChannel channel )
                 throws IOException
         {
-            channel.putInt( relationshipTypeMap.size() );
-            for ( IntObjectPair<DenseRelationships> relationships : relationshipTypeMap.keyValuesView() )
+            channel.putInt( relationshipUpdates.size() );
+            for ( IntObjectPair<DenseRelationships> relationships : relationshipUpdates.keyValuesView() )
             {
-                channel.putInt( relationships.getOne() ); // type
-                channel.putInt( relationships.getTwo().relationships.size() ); // number of relationships of this type
-                for ( DenseRelationships.DenseRelationship relationship : relationships.getTwo() )
+                // type and degrees
+                DenseRelationships relationshipsOfType = relationships.getTwo();
+                channel.putInt( relationships.getOne() );
+                DenseRelationships.Degree degreesBefore = relationshipsOfType.degree( false );
+                channel.putInt( degreesBefore.outgoing() );
+                channel.putInt( degreesBefore.incoming() );
+                channel.putInt( degreesBefore.loop() );
+
+                // Created
+                channel.putInt( relationshipsOfType.created.size() ); // number of relationships of this type
+                for ( DenseRelationships.DenseRelationship relationship : relationshipsOfType.created )
                 {
-                    writeRelationshipMainData( channel, relationship );
-                    if ( includeProperties )
-                    {
-                        writeProperties( channel, relationship.properties );
-                    }
+                    writeRelationship( channel, relationship );
+                }
+
+                // Deleted
+                channel.putInt( relationshipsOfType.deleted.size() ); // number of relationships of this type
+                for ( DenseRelationships.DenseRelationship relationship : relationshipsOfType.deleted )
+                {
+                    writeRelationship( channel, relationship );
                 }
             }
         }
 
-        private void writeRelationshipMainData( WritableChannel channel, DenseRelationships.DenseRelationship relationship ) throws IOException
+        private void writeRelationship( WritableChannel channel, DenseRelationships.DenseRelationship relationship ) throws IOException
         {
             channel.putLong( relationship.internalId );
             channel.putLong( relationship.otherNodeId );
-            channel.put( (byte) (relationship.outgoing ? 1 : 0) );
+            boolean hasProperties = !relationship.propertyUpdates.isEmpty();
+            byte outgoingAndProperties = (byte) ((relationship.outgoing ? 1 : 0) | (hasProperties ? 2 : 0));
+            channel.put( outgoingAndProperties );
+            if ( hasProperties )
+            {
+                writeProperties( channel, relationship.propertyUpdates );
+            }
         }
 
-        private static IntObjectMap<DenseRelationships> readRelationships( ReadableChannel channel, boolean includeProperties ) throws IOException
+        private static IntObjectMap<DenseRelationships> readRelationships( long nodeId, ReadableChannel channel ) throws IOException
         {
             MutableIntObjectMap<DenseRelationships> relationships = IntObjectMaps.mutable.empty();
             int numRelationshipTypes = channel.getInt();
             for ( int i = 0; i < numRelationshipTypes; i++ )
             {
                 int type = channel.getInt();
-                int numRelationships = channel.getInt();
-                DenseRelationships denseRelationships = relationships.getIfAbsentPut( type, new DenseRelationships( type ) );
-                for ( int j = 0; j < numRelationships; j++ )
-                {
-                    long internalId = channel.getLong();
-                    long otherNodeId = channel.getLong();
-                    boolean outgoing = channel.get() != 0;
-                    IntObjectMap<ByteBuffer> properties = includeProperties ? readProperties( channel ) : IntObjectMaps.immutable.empty();
-                    denseRelationships.add( internalId, otherNodeId, outgoing, properties );
-                }
+                int outgoingDegree = channel.getInt();
+                int incomingDegree = channel.getInt();
+                int loopDegree = channel.getInt();
+                DenseRelationships relationshipsOfType =
+                        relationships.getIfAbsentPut( type, new DenseRelationships( nodeId, type, outgoingDegree, incomingDegree, loopDegree ) );
+                readRelationships( channel, relationshipsOfType::create );
+                readRelationships( channel, relationshipsOfType::delete );
             }
             return relationships;
+        }
+
+        private static void readRelationships( ReadableChannel channel, Consumer<DenseRelationships.DenseRelationship> target ) throws IOException
+        {
+            int createdRelationships = channel.getInt();
+            for ( int j = 0; j < createdRelationships; j++ )
+            {
+                readRelationship( channel, target );
+            }
+        }
+
+        private static void readRelationship( ReadableChannel channel, Consumer<DenseRelationships.DenseRelationship> target )
+                throws IOException
+        {
+            long internalId = channel.getLong();
+            long otherNodeId = channel.getLong();
+            byte outgoingAndProperties = channel.get();
+            boolean outgoing = (outgoingAndProperties & 0x1) != 0;
+            boolean hasProperties = (outgoingAndProperties & 0x2) != 0;
+            target.accept( new DenseRelationships.DenseRelationship( internalId, otherNodeId, outgoing,
+                    hasProperties ? readProperties( channel ) : IntObjectMaps.immutable.empty() ) );
         }
 
         static DenseNode deserialize( ReadableChannel channel ) throws IOException
         {
             long nodeId = channel.getLong();
-            boolean inUse = channel.get() != 0;
 
-            IntObjectMap<ByteBuffer> addedProperties = readProperties( channel );
-            IntSet removedProperties = readRemovedProperties( channel );
-            IntObjectMap<DenseRelationships> createdRelationships = readRelationships( channel, true );
-            IntObjectMap<DenseRelationships> deletedRelationships = readRelationships( channel, false );
+            IntObjectMap<PropertyUpdate> propertyUpdates = readProperties( channel );
+            IntObjectMap<DenseRelationships> relationships = readRelationships( nodeId, channel );
 
-            return new DenseNode( nodeId, inUse, addedProperties, removedProperties,createdRelationships, deletedRelationships );
+            return new DenseNode( nodeId, propertyUpdates, relationships );
         }
     }
 
@@ -414,8 +475,10 @@ abstract class FrekiCommand implements StorageCommand
     {
         CREATE,
         UPDATE,
-        DELETE;
+        DELETE
     }
+
+    static Mode[] MODES = Mode.values();
 
     static class Schema extends FrekiCommand
     {

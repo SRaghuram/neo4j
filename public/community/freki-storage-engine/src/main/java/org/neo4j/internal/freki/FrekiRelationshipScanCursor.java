@@ -19,77 +19,66 @@
  */
 package org.neo4j.internal.freki;
 
+import org.neo4j.graphdb.Direction;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.AllRelationshipsScan;
+import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipScanCursor;
-
-import static org.neo4j.internal.freki.MutableNodeRecordData.externalRelationshipId;
-import static org.neo4j.internal.freki.MutableNodeRecordData.idFromRelationshipId;
-import static org.neo4j.internal.freki.MutableNodeRecordData.internalRelationshipIdFromRelationshipId;
-import static org.neo4j.internal.freki.MutableNodeRecordData.otherNodeOf;
-import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipHasProperties;
-import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipIsOutgoing;
-import static org.neo4j.internal.freki.StreamVByte.readLongs;
 
 class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements StorageRelationshipScanCursor
 {
     private long singleId;
     private boolean needsLoading;
+    private boolean inScan;
+    private long scanNodeId;
+    private RelationshipSelection selection;
 
-    private long internalId;
-    private long otherNode;
-    private int type;
-    private boolean hasProperties;
-    private int relationshipPropertiesIndex;
+    private final FrekiRelationshipTraversalCursor traversalCursor;
 
-    FrekiRelationshipScanCursor( Stores stores, PageCursorTracer cursorTracer )
+    FrekiRelationshipScanCursor( MainStores stores, PageCursorTracer cursorTracer )
     {
         super( stores, cursorTracer );
+        traversalCursor = new FrekiRelationshipTraversalCursor( stores, cursorTracer );
     }
 
     @Override
     public boolean next()
     {
-        if ( needsLoading && singleId != NULL )
+        if ( inScan )
         {
-            needsLoading = false;
-            if ( loadMainRecord( idFromRelationshipId( singleId ) ) )
+            while ( scanNodeId < stores.mainStore.getHighId() )
             {
-                readRelationshipTypesAndOffsets();
-                return findRelationship();
-            }
-        }
-        return false;
-    }
-
-    private boolean findRelationship()
-    {
-        long expectedInternalRelationshipId = internalRelationshipIdFromRelationshipId( singleId );
-        for ( int t = 0; t < relationshipTypesInNode.length; t++ )
-        {
-            data.position( relationshipTypeOffset( t ) );
-            int hasPropertiesIndex = -1;
-            long[] relationshipGroupData = readLongs( data );
-            for ( int d = 0; d < relationshipGroupData.length; d += 2 )
-            {
-                long otherNodeRaw = relationshipGroupData[d];
-                boolean hasProperties = relationshipHasProperties( otherNodeRaw );
-                if ( hasProperties )
+                if ( needsLoading )
                 {
-                    hasPropertiesIndex++;
+                    needsLoading = false;
+                    traversalCursor.init( scanNodeId++, selection ); //load next node
                 }
-                long internalId = relationshipGroupData[d + 1];
-                if ( internalId == expectedInternalRelationshipId && relationshipIsOutgoing( otherNodeRaw ) )
+
+                if ( traversalCursor.next() )
                 {
-                    this.internalId = internalId;
-                    this.hasProperties = hasProperties;
-                    otherNode = otherNodeOf( otherNodeRaw );
-                    type = relationshipTypesInNode[t];
-                    relationshipPropertiesIndex = hasPropertiesIndex;
+                    return true; // found a relationship
+                }
+                needsLoading = true; // reached end of relationships of this node
+            }
+            inScan = false;
+            scanNodeId = NULL;
+        }
+        else if ( singleId != NULL )
+        {
+            if ( needsLoading )
+            {
+                needsLoading = false;
+                traversalCursor.init( MutableNodeRecordData.nodeIdFromRelationshipId( singleId ), selection );
+            }
+            while ( traversalCursor.next() )
+            {
+                if ( traversalCursor.entityReference() == singleId )
+                {
                     return true;
                 }
             }
+            singleId = NULL;
         }
         return false;
     }
@@ -97,7 +86,7 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     @Override
     int currentRelationshipPropertiesOffset()
     {
-        return relationshipPropertiesOffset( data.position(), relationshipPropertiesIndex );
+        return traversalCursor.currentRelationshipPropertiesOffset();
     }
 
     @Override
@@ -105,24 +94,29 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     {
         super.reset();
         singleId = NULL;
-        internalId = NULL;
         needsLoading = false;
-        otherNode = NULL;
-        type = -1;
-        hasProperties = false;
-        relationshipPropertiesIndex = -1;
+        inScan = false;
+        scanNodeId = NULL;
+        selection = null;
     }
 
     @Override
     public void scan( int type )
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+        //We scan all nodes, traversing only outgoing relationships to not get duplicates
+        inScan = true;
+        traversalCursor.reset();
+        selection = type == -1
+                        ? RelationshipSelection.selection( Direction.OUTGOING )
+                        : RelationshipSelection.selection( type, Direction.OUTGOING );
+        scanNodeId = 0;
+        needsLoading = true;
     }
 
     @Override
     public void scan()
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+        scan( -1 );
     }
 
     @Override
@@ -134,56 +128,58 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     @Override
     public void single( long reference )
     {
-        this.singleId = reference;
-        this.needsLoading = true;
+        traversalCursor.reset();
+        singleId = reference;
+        needsLoading = true;
+        selection = RelationshipSelection.ALL_RELATIONSHIPS;
     }
 
     @Override
     public int type()
     {
-        return type;
+        return traversalCursor.type();
     }
 
     @Override
     public long sourceNodeReference()
     {
-        return loadedNodeId;
+        return traversalCursor.sourceNodeReference();
     }
 
     @Override
     public long targetNodeReference()
     {
-        return otherNode;
+        return traversalCursor.targetNodeReference();
     }
 
     @Override
     public boolean hasProperties()
     {
-        return hasProperties;
+        return traversalCursor.hasProperties();
     }
 
     @Override
     public long propertiesReference()
     {
-        return 0;
+        return traversalCursor.propertiesReference();
     }
 
     @Override
     public void properties( StoragePropertyCursor propertyCursor )
     {
-        if ( !hasProperties() )
-        {
-            propertyCursor.reset();
-            return;
-        }
-
-        FrekiPropertyCursor frekiPropertyCursor = (FrekiPropertyCursor) propertyCursor;
-        frekiPropertyCursor.initRelationshipProperties( this );
+        traversalCursor.properties( propertyCursor );
     }
 
     @Override
     public long entityReference()
     {
-        return externalRelationshipId( loadedNodeId, internalId, otherNode, true );
+        return traversalCursor.entityReference();
+    }
+
+    @Override
+    public void close()
+    {
+        super.close();
+        traversalCursor.close();
     }
 }

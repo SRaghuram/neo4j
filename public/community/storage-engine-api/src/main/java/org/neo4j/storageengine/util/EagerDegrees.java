@@ -76,6 +76,24 @@ public class EagerDegrees implements Degrees, Degrees.Mutator
         getOrCreateDegree( type ).loop += count;
     }
 
+    public int rawOutgoingDegree( int type )
+    {
+        Degree degree = findDegree( type );
+        return degree != null ? degree.outgoing : 0;
+    }
+
+    public int rawIncomingDegree( int type )
+    {
+        Degree degree = findDegree( type );
+        return degree != null ? degree.incoming : 0;
+    }
+
+    public int rawLoopDegree( int type )
+    {
+        Degree degree = findDegree( type );
+        return degree != null ? degree.loop : 0;
+    }
+
     private Degree getOrCreateDegree( int type )
     {
         if ( firstType == FIRST_TYPE_UNDECIDED )
@@ -116,15 +134,7 @@ public class EagerDegrees implements Degrees, Degrees.Mutator
     @Override
     public int degree( int type, Direction direction )
     {
-        Degree degree = null;
-        if ( firstType == type )
-        {
-            degree = firstTypeDegrees;
-        }
-        else if ( degrees != null )
-        {
-            degree = degrees.get( type );
-        }
+        Degree degree = findDegree( type );
         if ( degree == null )
         {
             return 0;
@@ -140,6 +150,20 @@ public class EagerDegrees implements Degrees, Degrees.Mutator
         default:
             throw new IllegalArgumentException( "Unrecognized direction " + direction );
         }
+    }
+
+    public Degree findDegree( int type )
+    {
+        Degree degree = null;
+        if ( firstType == type )
+        {
+            degree = firstTypeDegrees;
+        }
+        else if ( degrees != null )
+        {
+            degree = degrees.get( type );
+        }
+        return degree;
     }
 
     private static class Degree

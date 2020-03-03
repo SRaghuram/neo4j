@@ -21,25 +21,69 @@ package org.neo4j.internal.freki;
 
 import org.eclipse.collections.api.map.primitive.IntObjectMap;
 
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 
-class DenseRelationships implements Iterable<DenseRelationships.DenseRelationship>
+/**
+ * Logical information about relationships which will go into commands for dense nodes.
+ */
+class DenseRelationships
 {
+    private final long nodeId;
     final int type;
-    final List<DenseRelationship> relationships = new ArrayList<>();
+    // TODO consider consolidating these lists into one with a Mode on each individual relationship?
+    final List<DenseRelationship> created = new ArrayList<>();
+    final List<DenseRelationship> deleted = new ArrayList<>();
 
-    DenseRelationships( int type )
+    // Upon first create/delete relationship of this type for a dense node the existing degrees are loaded, they are then kept up to date
+    // after that point so that when applying these changes during transaction commit these degrees for this type can overwrite the existing degree
+    // for this type. If these values instead would have been relative then problems would arise during recovery regarding which transaction
+    // had already been applied to the dense store.
+    private final Degree prevDegree;
+    private final Degree degree;
+
+    DenseRelationships( long nodeId, int type, int existingAbsoluteOutgoingDegree, int existingAbsoluteIncomingDegree, int existingAbsoluteLoopDegree )
     {
+        this.nodeId = nodeId;
         this.type = type;
+        this.prevDegree = new Degree( existingAbsoluteOutgoingDegree, existingAbsoluteIncomingDegree, existingAbsoluteLoopDegree );
+        this.degree = new Degree( existingAbsoluteOutgoingDegree, existingAbsoluteIncomingDegree, existingAbsoluteLoopDegree );
     }
 
-    void add( long internalId, long otherNodeId, boolean outgoing, IntObjectMap<ByteBuffer> properties )
+    void create( DenseRelationship relationship )
     {
-        relationships.add( new DenseRelationship( internalId, otherNodeId, outgoing, properties ) );
+        add( relationship, created, 1 );
+    }
+
+    void delete( DenseRelationship relationship )
+    {
+        add( relationship, deleted, -1 );
+    }
+
+    void add( DenseRelationship relationship, List<DenseRelationship> list, int increment )
+    {
+        list.add( relationship );
+        modifyDegree( relationship.otherNodeId, relationship.outgoing, increment );
+    }
+
+    private void modifyDegree( long otherNodeId, boolean outgoing, int increment )
+    {
+        if ( outgoing )
+        {
+            if ( nodeId == otherNodeId )
+            {
+                degree.loop += increment;
+            }
+            else
+            {
+                degree.outgoing += increment;
+            }
+        }
+        else
+        {
+            degree.incoming += increment;
+        }
     }
 
     @Override
@@ -54,19 +98,19 @@ class DenseRelationships implements Iterable<DenseRelationships.DenseRelationshi
             return false;
         }
         DenseRelationships that = (DenseRelationships) o;
-        return type == that.type && relationships.equals( that.relationships );
+        return type == that.type && prevDegree.equals( that.prevDegree ) && degree.equals( that.degree ) &&
+                Objects.equals( created, that.created ) && Objects.equals( deleted, that.deleted );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( type, relationships );
+        return Objects.hash( type, created, deleted, prevDegree, degree );
     }
 
-    @Override
-    public Iterator<DenseRelationship> iterator()
+    Degree degree( boolean after )
     {
-        return relationships.iterator();
+        return after ? degree : prevDegree;
     }
 
     static class DenseRelationship
@@ -74,14 +118,14 @@ class DenseRelationships implements Iterable<DenseRelationships.DenseRelationshi
         long internalId;
         long otherNodeId;
         boolean outgoing;
-        IntObjectMap<ByteBuffer> properties;
+        IntObjectMap<PropertyUpdate> propertyUpdates;
 
-        DenseRelationship( long internalId, long otherNodeId, boolean outgoing, IntObjectMap<ByteBuffer> properties )
+        DenseRelationship( long internalId, long otherNodeId, boolean outgoing, IntObjectMap<PropertyUpdate> propertyUpdates )
         {
             this.internalId = internalId;
             this.otherNodeId = otherNodeId;
             this.outgoing = outgoing;
-            this.properties = properties;
+            this.propertyUpdates = propertyUpdates;
         }
 
         @Override
@@ -96,13 +140,64 @@ class DenseRelationships implements Iterable<DenseRelationships.DenseRelationshi
                 return false;
             }
             DenseRelationship that = (DenseRelationship) o;
-            return internalId == that.internalId && otherNodeId == that.otherNodeId && outgoing == that.outgoing && properties.equals( that.properties );
+            return internalId == that.internalId && otherNodeId == that.otherNodeId && outgoing == that.outgoing &&
+                    propertyUpdates.equals( that.propertyUpdates );
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash( internalId, otherNodeId, outgoing, properties );
+            return Objects.hash( internalId, otherNodeId, outgoing, propertyUpdates );
+        }
+    }
+
+    static class Degree
+    {
+        private int outgoing;
+        private int incoming;
+        private int loop;
+
+        Degree( int outgoing, int incoming, int loop )
+        {
+            this.outgoing = outgoing;
+            this.incoming = incoming;
+            this.loop = loop;
+        }
+
+        int outgoing()
+        {
+            return outgoing;
+        }
+
+        int incoming()
+        {
+            return incoming;
+        }
+
+        int loop()
+        {
+            return loop;
+        }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            if ( this == o )
+            {
+                return true;
+            }
+            if ( o == null || getClass() != o.getClass() )
+            {
+                return false;
+            }
+            Degree degree = (Degree) o;
+            return outgoing == degree.outgoing && incoming == degree.incoming && loop == degree.loop;
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash( outgoing, incoming, loop );
         }
     }
 }

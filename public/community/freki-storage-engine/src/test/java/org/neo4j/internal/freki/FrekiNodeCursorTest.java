@@ -20,8 +20,10 @@
 package org.neo4j.internal.freki;
 
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
+import org.eclipse.collections.api.multimap.MutableMultimap;
 import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
+import org.eclipse.collections.impl.factory.Multimaps;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
 import org.eclipse.collections.impl.factory.primitive.IntSets;
 import org.eclipse.collections.impl.factory.primitive.LongSets;
@@ -224,11 +226,13 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         FrekiNodeCursor cursor = node().storeAndPlaceNodeCursorAt();
 
         // when
-        FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL );
-        connector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL ) )
+        {
+            connector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
 
-        // then
-        assertFalse( relationshipCursor.next() );
+            // then
+            assertFalse( relationshipCursor.next() );
+        }
     }
 
     @ParameterizedTest
@@ -238,19 +242,23 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         // given
         int type = 99;
         Node otherNode = node();
-        FrekiNodeCursor cursor = node().relationship( type, otherNode ).storeAndPlaceNodeCursorAt();
+        Node node = node();
+        node.relationship( type, otherNode );
+        FrekiNodeCursor cursor = node.storeAndPlaceNodeCursorAt();
         Record otherNodeRecord = otherNode.store();
 
         // when
-        FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL );
-        connector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL ) )
+        {
+            connector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
 
-        // then
-        assertTrue( relationshipCursor.next() );
-        assertEquals( type, relationshipCursor.type() );
-        assertEquals( cursor.entityReference(), relationshipCursor.sourceNodeReference() );
-        assertEquals( otherNodeRecord.id, relationshipCursor.targetNodeReference() );
-        assertFalse( relationshipCursor.next() );
+            // then
+            assertTrue( relationshipCursor.next() );
+            assertEquals( type, relationshipCursor.type() );
+            assertEquals( cursor.entityReference(), relationshipCursor.sourceNodeReference() );
+            assertEquals( otherNodeRecord.id, relationshipCursor.targetNodeReference() );
+            assertFalse( relationshipCursor.next() );
+        }
     }
 
     @ParameterizedTest
@@ -269,16 +277,19 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         Record node3Record = node3.store();
 
         // when
-        FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL );
-        connector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
-
-        // then
-        MutableLongSet otherNodes = LongSets.mutable.empty();
-        while ( relationshipCursor.next() )
+        MutableLongSet otherNodes;
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL ) )
         {
-            assertEquals( type, relationshipCursor.type() );
-            assertEquals( cursor.entityReference(), relationshipCursor.originNodeReference() );
-            otherNodes.add( relationshipCursor.neighbourNodeReference() );
+            connector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
+
+            // then
+            otherNodes = LongSets.mutable.empty();
+            while ( relationshipCursor.next() )
+            {
+                assertEquals( type, relationshipCursor.type() );
+                assertEquals( cursor.entityReference(), relationshipCursor.originNodeReference() );
+                otherNodes.add( relationshipCursor.neighbourNodeReference() );
+            }
         }
         assertEquals( LongSets.mutable.of( node2Record.id, node3Record.id ), otherNodes );
     }
@@ -300,19 +311,21 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         Record node3Record = node3.store();
 
         // when
-        FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL );
-        connector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL ) )
+        {
+            connector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
 
-        // then
-        assertTrue( relationshipCursor.next() );
-        assertEquals( type1, relationshipCursor.type() );
-        assertEquals( node2Record.id, relationshipCursor.neighbourNodeReference() );
+            // then
+            assertTrue( relationshipCursor.next() );
+            assertEquals( type1, relationshipCursor.type() );
+            assertEquals( node2Record.id, relationshipCursor.neighbourNodeReference() );
 
-        assertTrue( relationshipCursor.next() );
-        assertEquals( type2, relationshipCursor.type() );
-        assertEquals( node3Record.id, relationshipCursor.neighbourNodeReference() );
+            assertTrue( relationshipCursor.next() );
+            assertEquals( type2, relationshipCursor.type() );
+            assertEquals( node3Record.id, relationshipCursor.neighbourNodeReference() );
 
-        assertFalse( relationshipCursor.next() );
+            assertFalse( relationshipCursor.next() );
+        }
     }
 
     @ParameterizedTest
@@ -338,14 +351,17 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         Record node5Record = node5.store();
 
         // when
-        FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL );
-        connector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
-
-        // then
-        MutableIntObjectMap<MutableLongSet> otherNodes = IntObjectMaps.mutable.empty();
-        while ( relationshipCursor.next() )
+        MutableIntObjectMap<MutableLongSet> otherNodes;
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL ) )
         {
-            otherNodes.getIfAbsentPut( relationshipCursor.type(), LongSets.mutable::empty ).add( relationshipCursor.neighbourNodeReference() );
+            connector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
+
+            // then
+            otherNodes = IntObjectMaps.mutable.empty();
+            while ( relationshipCursor.next() )
+            {
+                otherNodes.getIfAbsentPut( relationshipCursor.type(), LongSets.mutable::empty ).add( relationshipCursor.neighbourNodeReference() );
+            }
         }
         MutableIntObjectMap<MutableLongSet> expectedOtherNodes = IntObjectMaps.mutable.empty();
         expectedOtherNodes.put( type1, LongSets.mutable.of( node2Record.id, node3Record.id ) );
@@ -362,20 +378,24 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         MutableIntObjectMap<Value> properties = IntObjectMaps.mutable.empty();
         properties.put( 987, intValue( 12345 ) );
         Node otherNode = node();
-        FrekiNodeCursor cursor = node().relationship( type, otherNode, properties ).storeAndPlaceNodeCursorAt();
+        Node node = node();
+        node.relationship( type, otherNode, properties );
+        FrekiNodeCursor cursor = node.storeAndPlaceNodeCursorAt();
         otherNode.store();
 
         // when
-        FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL );
-        relationshipsConnector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
-        assertTrue( relationshipCursor.next() );
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL ) )
+        {
+            relationshipsConnector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
+            assertTrue( relationshipCursor.next() );
 
-        // then
-        FrekiPropertyCursor propertyCursor = new FrekiPropertyCursor( stores, NULL );
-        propertyConnector.connect( relationshipCursor, propertyCursor );
-        assertEquals( properties, readProperties( propertyCursor ) );
+            // then
+            FrekiPropertyCursor propertyCursor = new FrekiPropertyCursor( stores, NULL );
+            propertyConnector.connect( relationshipCursor, propertyCursor );
+            assertEquals( properties, readProperties( propertyCursor ) );
 
-        assertFalse( relationshipCursor.next() );
+            assertFalse( relationshipCursor.next() );
+        }
     }
 
     @ParameterizedTest
@@ -388,20 +408,24 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         properties.put( 111, longValue( 43879348578L ) );
         properties.put( 222, stringValue( "a-to-z" ) );
         Node otherNode = node();
-        FrekiNodeCursor cursor = node().relationship( type, otherNode, properties ).storeAndPlaceNodeCursorAt();
+        Node node = node();
+        node.relationship( type, otherNode, properties );
+        FrekiNodeCursor cursor = node.storeAndPlaceNodeCursorAt();
         otherNode.store();
 
         // when
-        FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL );
-        relationshipsConnector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
-        assertTrue( relationshipCursor.next() );
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL ) )
+        {
+            relationshipsConnector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
+            assertTrue( relationshipCursor.next() );
 
-        // then
-        FrekiPropertyCursor propertyCursor = new FrekiPropertyCursor( stores, NULL );
-        propertyConnector.connect( relationshipCursor, propertyCursor );
-        assertEquals( properties, readProperties( propertyCursor ) );
+            // then
+            FrekiPropertyCursor propertyCursor = new FrekiPropertyCursor( stores, NULL );
+            propertyConnector.connect( relationshipCursor, propertyCursor );
+            assertEquals( properties, readProperties( propertyCursor ) );
 
-        assertFalse( relationshipCursor.next() );
+            assertFalse( relationshipCursor.next() );
+        }
     }
 
     @ParameterizedTest
@@ -413,24 +437,27 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         MutableIntObjectMap<Value> properties = IntObjectMaps.mutable.empty();
         properties.put( 111, intValue( 5 ) );
         properties.put( 222, stringValue( "OMG" ) );
-        Node otherNode = node( 1 );
-        Node thirdNode = node( 2 );
-        FrekiNodeCursor cursor = node( 0 )
-                .relationship( type, otherNode, properties )
-                .relationship( type, thirdNode, properties )
-                .storeAndPlaceNodeCursorAt();
+        Node otherNode = node();
+        Node thirdNode = node();
+        Node node = node();
+        node.relationship( type, otherNode, properties );
+        node.relationship( type, thirdNode, properties );
+        FrekiNodeCursor cursor = node.storeAndPlaceNodeCursorAt();
         otherNode.store();
-        FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL );
-        relationshipsConnector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
-
-        // when/then
-        FrekiPropertyCursor propertyCursor = new FrekiPropertyCursor( stores, NULL );
-        int numRelationships = 0;
-        while ( relationshipCursor.next() )
+        int numRelationships;
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL ) )
         {
-            propertyConnector.connect( relationshipCursor, propertyCursor );
-            assertEquals( properties, readProperties( propertyCursor ) );
-            numRelationships++;
+            relationshipsConnector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
+
+            // when/then
+            FrekiPropertyCursor propertyCursor = new FrekiPropertyCursor( stores, NULL );
+            numRelationships = 0;
+            while ( relationshipCursor.next() )
+            {
+                propertyConnector.connect( relationshipCursor, propertyCursor );
+                assertEquals( properties, readProperties( propertyCursor ) );
+                numRelationships++;
+            }
         }
         assertEquals( 2, numRelationships );
     }
@@ -444,26 +471,29 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         MutableIntObjectMap<Value> properties = IntObjectMaps.mutable.empty();
         properties.put( 111, intValue( 5 ) );
         properties.put( 222, stringValue( "OMG" ) );
-        Node otherNode = node( 1 );
-        Node thirdNode = node( 2 );
-        FrekiNodeCursor cursor = node( 0 )
-                .relationship( type, otherNode, properties )
-                .relationship( type, thirdNode )
-                .storeAndPlaceNodeCursorAt();
+        Node otherNode = node();
+        Node thirdNode = node();
+        Node node = node();
+        node.relationship( type, otherNode, properties );
+        node.relationship( type, thirdNode );
+        FrekiNodeCursor cursor = node.storeAndPlaceNodeCursorAt();
         Record otherNodeRecord = otherNode.store();
         thirdNode.store();
-        FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL );
-        relationshipsConnector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
-
-        // when/then
-        FrekiPropertyCursor propertyCursor = new FrekiPropertyCursor( stores, NULL );
-        int numRelationships = 0;
-        while ( relationshipCursor.next() )
+        int numRelationships;
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL ) )
         {
-            propertyConnector.connect( relationshipCursor, propertyCursor );
-            assertEquals( relationshipCursor.neighbourNodeReference() == otherNodeRecord.id
-                          ? properties : IntObjectMaps.mutable.empty(), readProperties( propertyCursor ) );
-            numRelationships++;
+            relationshipsConnector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
+
+            // when/then
+            FrekiPropertyCursor propertyCursor = new FrekiPropertyCursor( stores, NULL );
+            numRelationships = 0;
+            while ( relationshipCursor.next() )
+            {
+                propertyConnector.connect( relationshipCursor, propertyCursor );
+                assertEquals( relationshipCursor.neighbourNodeReference() == otherNodeRecord.id ? properties : IntObjectMaps.mutable.empty(),
+                        readProperties( propertyCursor ) );
+                numRelationships++;
+            }
         }
         assertEquals( 2, numRelationships );
     }
@@ -474,26 +504,181 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
     {
         // given
         int type = 99;
-        Node node = node( 0 );
-        Node otherNode = node( 1 );
+        Node node = node();
+        Node otherNode = node();
         node.relationship( type, otherNode ); // OUTGOING
         otherNode.relationship( type, node ); // INCOMING
         node.relationship( type, node );      // LOOP
         otherNode.store();
         FrekiNodeCursor cursor = node.storeAndPlaceNodeCursorAt();
-        FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL );
-        relationshipsConnector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
-
-        // when/then
-        Set<RelationshipDirection> expectedDirections = new HashSet<>( asList( OUTGOING, INCOMING, LOOP ) );
-        while ( relationshipCursor.next() )
+        Set<RelationshipDirection> expectedDirections;
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL ) )
         {
-            RelationshipDirection direction = relationshipCursor.sourceNodeReference() == cursor.entityReference()
-                                              ? relationshipCursor.targetNodeReference() == cursor.entityReference() ? LOOP : OUTGOING
-                                              : INCOMING;
-            assertTrue( expectedDirections.remove( direction ) );
+            relationshipsConnector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
+
+            // when/then
+            expectedDirections = new HashSet<>( asList( OUTGOING, INCOMING, LOOP ) );
+            while ( relationshipCursor.next() )
+            {
+                RelationshipDirection direction = relationshipCursor.sourceNodeReference() == cursor.entityReference() ?
+                                                  relationshipCursor.targetNodeReference() == cursor.entityReference() ? LOOP : OUTGOING : INCOMING;
+                assertTrue( expectedDirections.remove( direction ) );
+            }
         }
         assertTrue( expectedDirections.isEmpty() );
+    }
+
+    @Test
+    void shouldFindAllRelationshipsInScan()
+    {
+        // given
+        int type = 99;
+        node().store();
+        node().store();
+        Node node = node();
+        Node otherNode = node();
+        node.relationship( type, otherNode ); // OUTGOING
+        node().store();
+        node().store();
+        otherNode.relationship( type, node ); // INCOMING
+        node.relationship( type, node );      // LOOP
+        otherNode.store();
+        node.storeAndPlaceNodeCursorAt();
+
+        MutableMultimap<Long,Long> createdRels = Multimaps.mutable.set.empty();
+        createdRels.put( node.id(), node.id() );
+        createdRels.put( node.id(), otherNode.id() );
+        createdRels.put( otherNode.id(), node.id() );
+
+        MutableMultimap<Long,Long> actualRels = Multimaps.mutable.set.empty();
+        try ( FrekiRelationshipScanCursor relationshipCursor = new FrekiRelationshipScanCursor( stores, NULL ) )
+        {
+            relationshipCursor.scan();
+            while ( relationshipCursor.next() )
+            {
+                actualRels.put( relationshipCursor.sourceNodeReference(), relationshipCursor.targetNodeReference() );
+            }
+        }
+
+        assertEquals( createdRels, actualRels );
+    }
+
+    @Test
+    void shouldFindNoRelationshipsInScan()
+    {
+        // given
+        for ( int i = 0; i < 20; i++ )
+        {
+            node().store();
+        }
+
+        try ( FrekiRelationshipScanCursor relationshipCursor = new FrekiRelationshipScanCursor( stores, NULL ) )
+        {
+            relationshipCursor.scan();
+            assertFalse( relationshipCursor.next() );
+        }
+    }
+
+    @Test
+    void shouldFindAllRelationshipsOfTypeInScan()
+    {
+        // given
+        int type1 = 3;
+        int type2 = 4;
+        int type3 = 4;
+        Node node = node();
+        Node otherNode = node();
+        node.relationship( type1, otherNode ); // OUTGOING
+        otherNode.relationship( type2, node ); // INCOMING
+        node.relationship( type2, node );      // LOOP
+        node.relationship( type3, node );      // LOOP
+        otherNode.store();
+        node.storeAndPlaceNodeCursorAt();
+
+        MutableMultimap<Long,Long> createdRels = Multimaps.mutable.set.empty();
+        createdRels.put( node.id(), node.id() );
+        createdRels.put( otherNode.id(), node.id() );
+
+        MutableMultimap<Long,Long> actualRels = Multimaps.mutable.set.empty();
+        try ( FrekiRelationshipScanCursor relationshipCursor = new FrekiRelationshipScanCursor( stores, NULL ) )
+        {
+            relationshipCursor.scan( type2 );
+            while ( relationshipCursor.next() )
+            {
+                actualRels.put( relationshipCursor.sourceNodeReference(), relationshipCursor.targetNodeReference() );
+            }
+        }
+
+        assertEquals( createdRels, actualRels );
+    }
+
+    @Test
+    void shouldFindSingleRelationship()
+    {
+        createSomeNodesAndRelationships();
+        Node node = node();
+        Node otherNode = node();
+        int type1 = 1;
+        int type2 = 2;
+        for ( int i = 0; i < 3; i++ )
+        {
+            otherNode.relationship( type1, node );
+            node.relationship( type1, otherNode );
+        }
+        long relId = node.relationship( type2, otherNode );
+        node.store();
+        otherNode.store();
+
+        try ( FrekiRelationshipScanCursor relationshipCursor = new FrekiRelationshipScanCursor( stores, NULL ) )
+        {
+            relationshipCursor.single( relId );
+            assertTrue( relationshipCursor.next() );
+            assertEquals( node.id(), relationshipCursor.sourceNodeReference() );
+            assertEquals( otherNode.id(), relationshipCursor.targetNodeReference() );
+            assertEquals( type2, relationshipCursor.type() );
+        }
+
+    }
+
+    @Test
+    void shouldNotFindSingleRelationship()
+    {
+        createSomeNodesAndRelationships();
+        Node node = node();
+        Node otherNode = node();
+        int type = 1;
+        long relId = node.relationship( type, otherNode );
+        // dont store the nodes (so relationship doesnt exist)
+
+        try ( FrekiRelationshipScanCursor relationshipCursor = new FrekiRelationshipScanCursor( stores, NULL ) )
+        {
+            relationshipCursor.single( relId );
+            assertFalse( relationshipCursor.next() );
+        }
+    }
+
+    void createSomeNodesAndRelationships()
+    {
+        Node[] nodes = new Node[random.nextInt( 20 ) + 20];
+        for ( int i = 0; i < nodes.length; i++ )
+        {
+            nodes[i] = node();
+        }
+
+        for ( Node node : nodes )
+        {
+            int numRels = random.nextInt( 3 );
+            for ( int i = 0; i < numRels; i++ )
+            {
+                int type = random.nextInt( 3 ) + 1;
+                node.relationship( type, nodes[random.nextInt( nodes.length )] );
+            }
+        }
+
+        for ( Node node : nodes )
+        {
+            node.store();
+        }
     }
 
     @TestFactory
