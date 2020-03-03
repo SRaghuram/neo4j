@@ -20,15 +20,38 @@
     "ORACLE11WORKERIMAGE": {
       "Description": "result store secret",
       "Type": "String",
-      "Default" : "535893049302.dkr.ecr.eu-north-1.amazonaws.com/benchmarks-worker:oracle_11"
+      "Default": "535893049302.dkr.ecr.eu-north-1.amazonaws.com/benchmarks-worker:oracle_11"
     },
     "ORACLE8WORKERIMAGE": {
       "Description": "result store secret",
       "Type": "String",
-      "Default" : "535893049302.dkr.ecr.eu-north-1.amazonaws.com/benchmarks-worker:oracle_8"
+      "Default": "535893049302.dkr.ecr.eu-north-1.amazonaws.com/benchmarks-worker:oracle_8"
     }
   },
   "Resources": {
+    "BenchmarkingWorkerSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Allow ssh into benchmarking worker instances",
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "1",
+            "ToPort": "65535",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+      "VpcId" : "vpc-39d63b50"
+      }
+    },
     "M5D2XLargeComputeEnvironment": {
       "Type": "AWS::Batch::ComputeEnvironment",
       "Properties": {
@@ -51,7 +74,13 @@
             "subnet-553c312d"
           ],
           "SecurityGroupIds": [
-            "sg-bcab66d5"
+            "sg-bcab66d5",
+            {
+              "Fn::GetAtt": [
+                "BenchmarkingWorkerSecurityGroup",
+                "GroupId"
+              ]
+            }
           ],
           "InstanceRole": "arn:aws:iam::535893049302:instance-profile/ecsInstanceRole",
           "Tags": {
@@ -91,7 +120,13 @@
             "subnet-553c312d"
           ],
           "SecurityGroupIds": [
-            "sg-bcab66d5"
+            "sg-bcab66d5",
+            {
+              "Fn::GetAtt": [
+                "BenchmarkingWorkerSecurityGroup",
+                "GroupId"
+              ]
+            }
           ],
           "InstanceRole": "arn:aws:iam::535893049302:instance-profile/ecsInstanceRole",
           "Tags": {
@@ -131,7 +166,13 @@
             "subnet-553c312d"
           ],
           "SecurityGroupIds": [
-            "sg-bcab66d5"
+            "sg-bcab66d5",
+            {
+              "Fn::GetAtt": [
+                "BenchmarkingWorkerSecurityGroup",
+                "GroupId"
+              ]
+            }
           ],
           "InstanceRole": "arn:aws:iam::535893049302:instance-profile/ecsInstanceRole",
           "Tags": {
@@ -148,8 +189,7 @@
         },
         "ServiceRole": "arn:aws:iam::535893049302:role/service-role/AWSBatchServiceRole"
       }
-    }
-    ,
+    },
     "MacroBenchmarkRunQueueXLarge": {
       "Type": "AWS::Batch::JobQueue",
       "Properties": {
@@ -209,7 +249,9 @@
         },
         "Type": "container",
         "ContainerProperties": {
-          "Image":  { "Ref" :  "ORACLE11WORKERIMAGE" },
+          "Image": {
+            "Ref": "ORACLE11WORKERIMAGE"
+          },
           "Command": [
             "/work/bootstrap-worker.sh",
             "--worker-artifact-uri",
@@ -236,11 +278,11 @@
           "Privileged": true,
           "Vcpus": 8,
           "Memory": 31000,
-          "Ulimits" : [
+          "Ulimits": [
             {
-              "Name" : "nofile",
-              "SoftLimit" : 80000,
-              "HardLimit" : 80000
+              "Name": "nofile",
+              "SoftLimit": 80000,
+              "HardLimit": 80000
             }
           ]
         }
@@ -254,7 +296,9 @@
         },
         "Type": "container",
         "ContainerProperties": {
-          "Image": { "Ref" :  "ORACLE11WORKERIMAGE" },
+          "Image": {
+            "Ref": "ORACLE11WORKERIMAGE"
+          },
           "Command": [
             "/work/bootstrap-worker.sh",
             "--worker-artifact-uri",
@@ -281,11 +325,11 @@
           "Privileged": true,
           "Vcpus": 2,
           "Memory": 7000,
-          "Ulimits" : [
+          "Ulimits": [
             {
-              "Name" : "nofile",
-              "SoftLimit" : 80000,
-              "HardLimit" : 80000
+              "Name": "nofile",
+              "SoftLimit": 80000,
+              "HardLimit": 80000
             }
           ]
         }
@@ -299,7 +343,9 @@
         },
         "Type": "container",
         "ContainerProperties": {
-          "Image": { "Ref" :  "ORACLE8WORKERIMAGE" },
+          "Image": {
+            "Ref": "ORACLE8WORKERIMAGE"
+          },
           "Command": [
             "/work/bootstrap-worker.sh",
             "--worker-artifact-uri",
@@ -326,11 +372,11 @@
           "Privileged": true,
           "Vcpus": 8,
           "Memory": 31000,
-          "Ulimits" : [
+          "Ulimits": [
             {
-              "Name" : "nofile",
-              "SoftLimit" : 80000,
-              "HardLimit" : 80000
+              "Name": "nofile",
+              "SoftLimit": 80000,
+              "HardLimit": 80000
             }
           ]
         }
@@ -344,7 +390,9 @@
         },
         "Type": "container",
         "ContainerProperties": {
-          "Image": { "Ref" :  "ORACLE8WORKERIMAGE" },
+          "Image": {
+            "Ref": "ORACLE8WORKERIMAGE"
+          },
           "Command": [
             "/work/bootstrap-worker.sh",
             "--worker-artifact-uri",
@@ -371,11 +419,11 @@
           "Privileged": true,
           "Vcpus": 2,
           "Memory": 7000,
-          "Ulimits" : [
+          "Ulimits": [
             {
-              "Name" : "nofile",
-              "SoftLimit" : 80000,
-              "HardLimit" : 80000
+              "Name": "nofile",
+              "SoftLimit": 80000,
+              "HardLimit": 80000
             }
           ]
         }
@@ -389,7 +437,9 @@
         },
         "Type": "container",
         "ContainerProperties": {
-          "Image": { "Ref" :  "ORACLE8WORKERIMAGE" },
+          "Image": {
+            "Ref": "ORACLE8WORKERIMAGE"
+          },
           "Command": [
             "/work/bootstrap-worker.sh",
             "--worker-artifact-uri",
@@ -416,11 +466,11 @@
           "Privileged": true,
           "Vcpus": 8,
           "Memory": 63000,
-          "Ulimits" : [
+          "Ulimits": [
             {
-              "Name" : "nofile",
-              "SoftLimit" : 280000,
-              "HardLimit" : 280000
+              "Name": "nofile",
+              "SoftLimit": 280000,
+              "HardLimit": 280000
             }
           ]
         }

@@ -166,6 +166,21 @@ The best way to develop and debug worker is to do it through docker container
     --results-store-uri \
     bolt+routing://e605d648.databases.neo4j.io:7687
 
+# Connect to worker
+
+To connect to worker instance you have two options:
+
+* use shared SSH key
+* use EC2 instance connect (which uses temporary SSH keys)
+
+In order to work with EC2 instance connect, which is recommended, follow these steps:
+
+* install `mssh` using `pip install ec2instanceconnectcli`
+* make sure that you are part of `benchmarking` group in AWS
+* find job id in AWS batch you want to connect to
+* run `src/main/get-job-instance-id.sh [job id]` to get EC2 instance id
+* login into machine with `mssh ec2-user@[instance id]`
+
 # Costs
 
 Are you curious how much our usage of AWS Batch is costing?

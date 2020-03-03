@@ -19,3 +19,23 @@
         src: "init-ephemeral-storage.sh"
         dest: "/var/lib/cloud/scripts/per-instance"
         mode: u=rx,g=r,o=r
+    - name: update ECS agent
+      yum:
+        name: ecs-init
+        state: latest
+      notify:
+        - restart docker
+        - restart ecs
+    - name: install ec2 instance connect
+      yum:
+        name: ec2-instance-connect
+        state: latest
+  handlers:
+    - name: restart docker
+      service:
+        name: docker
+        state: restarted
+    - name: restart ecs
+      service:
+        name: ecs
+        state: restarted
