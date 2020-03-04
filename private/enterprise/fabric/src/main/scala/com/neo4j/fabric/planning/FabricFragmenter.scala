@@ -6,6 +6,7 @@
 package com.neo4j.fabric.planning
 
 import com.neo4j.fabric.planning.Fragment.Apply
+import com.neo4j.fabric.planning.Fragment.Chain
 import com.neo4j.fabric.planning.Fragment.Leaf
 import com.neo4j.fabric.planning.Fragment.Init
 import com.neo4j.fabric.planning.Fragment.Union
@@ -25,35 +26,39 @@ class FabricFragmenter(
   private val defaultGraphSelection = defaultUse(defaultGraphName, InputPosition.NONE)
 
   def fragment: Fragment = queryStatement match {
-    case ast.Query(_, part)  => fragment(Init.unit(defaultGraphSelection), part)
+    case ast.Query(_, part)  => fragment(Init(defaultGraphSelection), part)
     case ddl: ast.CatalogDDL => Errors.ddlNotSupported(ddl)
     case _: ast.Command      => Errors.notSupported("Commands")
   }
 
   private def fragment(
-    input: Fragment,
+    input: Fragment.Chain,
     part: ast.QueryPart,
   ): Fragment = part match {
-    case sq: ast.SingleQuery =>
-      val parts = partitioned(sq.clauses)
-      parts.foldLeft(input) {
+    case sq: ast.SingleQuery => fragment(input, sq)
+    case uq: ast.Union       => Union(isDistinct(uq), fragment(input, uq.part), fragment(input, uq.query))
+  }
 
-        case (in: Init, Right(clauses)) =>
-          // Input is Init which means that we are at the start of a chain
-          val use = leadingUse(sq).getOrElse(in.use)
-          Leaf(Init(use, in.argumentColumns, sq.importColumns), clauses, produced(clauses))
+  private def fragment(
+    input: Fragment.Chain,
+    sq: ast.SingleQuery,
+  ): Fragment.Chain = {
+    val parts = partitioned(sq.clauses)
+    parts.foldLeft(input) {
 
-        case (in, Right(clauses)) =>
-          // Section of clauses in the middle of a query
-          Leaf(in, clauses, produced(clauses))
+      case (in: Init, Right(clauses)) =>
+        // Input is Init which means that we are at the start of a chain
+        val use = leadingUse(sq).getOrElse(in.use)
+        Leaf(Init(use, in.argumentColumns, sq.importColumns), clauses, produced(clauses))
 
-        case (in, Left(subquery)) =>
-          // Recurse and start the child chain with Init
-          Apply(in, fragment(Init(in.use, in.outputColumns, Seq.empty), subquery.part))
-      }
+      case (in, Right(clauses)) =>
+        // Section of clauses in the middle of a query
+        Leaf(in, clauses, produced(clauses))
 
-    case uq: ast.Union =>
-      Union(isDistinct(uq), fragment(input, uq.part), fragment(input, uq.query), input)
+      case (in, Left(subquery)) =>
+        // Recurse and start the child chain with Init
+        Apply(in, fragment(Init(in.use, in.outputColumns, Seq.empty), subquery.part))
+    }
   }
 
   private def isDistinct(uq: ast.Union) =

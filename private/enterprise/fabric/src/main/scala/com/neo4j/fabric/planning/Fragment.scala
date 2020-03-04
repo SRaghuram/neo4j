@@ -15,8 +15,6 @@ import scala.collection.JavaConverters.setAsJavaSet
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 
 sealed trait Fragment {
-  /** Graph selection for this fragment */
-  def use: ast.GraphSelection
   /** Columns available to this fragment from an applied argument */
   def argumentColumns: Seq[String]
   /** Columns imported from the argument */
@@ -29,53 +27,54 @@ sealed trait Fragment {
 
 object Fragment {
 
-  object Init {
-    def unit(graph: ast.GraphSelection): Init = Init(graph, Seq.empty, Seq.empty)
+  sealed trait Chain extends Fragment {
+    /** Graph selection for this fragment */
+    def use: ast.GraphSelection
   }
 
-  case class Init(
-    use: ast.GraphSelection,
-    argumentColumns: Seq[String],
-    importColumns: Seq[String],
-  ) extends Fragment {
-    val outputColumns: Seq[String] = Seq.empty
-    val description: Fragment.Description = Description.InitDesc(this)
-  }
-
-  sealed trait ChainedFragment {
-    def input: Fragment
+  sealed trait Segment extends Fragment.Chain {
+    def input: Fragment.Chain
     val use: ast.GraphSelection = input.use
     val argumentColumns: Seq[String] = input.argumentColumns
     val importColumns: Seq[String] = input.importColumns
   }
 
-  case class Apply(
-    input: Fragment,
+  final case class Init(
+    use: ast.GraphSelection,
+    argumentColumns: Seq[String] = Seq.empty,
+    importColumns: Seq[String] = Seq.empty,
+  ) extends Fragment.Chain {
+    val outputColumns: Seq[String] = Seq.empty
+    val description: Fragment.Description = Description.InitDesc(this)
+  }
+
+  final case class Apply(
+    input: Fragment.Chain,
     inner: Fragment,
-  ) extends Fragment with ChainedFragment {
+  ) extends Fragment.Segment {
     val outputColumns: Seq[String] = Columns.combine(input.outputColumns, inner.outputColumns)
     val description: Fragment.Description = Description.ApplyDesc(this)
   }
 
-  case class Union(
-    distinct: Boolean,
-    lhs: Fragment,
-    rhs: Fragment,
-    input: Fragment,
-  ) extends Fragment with ChainedFragment {
-    val outputColumns: Seq[String] = rhs.outputColumns
-    val description: Fragment.Description = Description.UnionDesc(this)
-  }
-
-  case class Leaf(
-    input: Fragment,
+  final case class Leaf(
+    input: Fragment.Chain,
     clauses: Seq[ast.Clause],
     outputColumns: Seq[String],
-  ) extends Fragment with ChainedFragment {
+  ) extends Fragment.Segment {
     val parameters: Map[String, String] = importColumns.map(varName => varName -> Columns.paramName(varName)).toMap
     val description: Fragment.Description = Description.LeafDesc(this)
   }
 
+  final case class Union(
+    distinct: Boolean,
+    lhs: Fragment,
+    rhs: Fragment.Chain,
+  ) extends Fragment {
+    val outputColumns: Seq[String] = rhs.outputColumns
+    val argumentColumns: Seq[String] = Seq.empty
+    val importColumns: Seq[String] = Seq.empty
+    val description: Fragment.Description = Description.UnionDesc(this)
+  }
 
   sealed abstract class Description(name: String, fragment: Fragment) extends ExecutionPlanDescription {
     override def getName: String = name
@@ -84,7 +83,7 @@ object Fragment {
     override def getProfilerStatistics: ExecutionPlanDescription.ProfilerStatistics = null
   }
 
-  object Description {
+  final object Description {
     final case class InitDesc(fragment: Fragment.Init) extends Description("Init", fragment) {
       override def getChildren: util.List[ExecutionPlanDescription] = list()
       override def getArguments: util.Map[String, AnyRef] = map(

@@ -7,6 +7,7 @@ package com.neo4j.fabric.planning
 
 import com.neo4j.fabric.pipeline.Pipeline
 import com.neo4j.fabric.planning.Fragment.Apply
+import com.neo4j.fabric.planning.Fragment.Chain
 import com.neo4j.fabric.planning.Fragment.Init
 import com.neo4j.fabric.planning.Fragment.Leaf
 import com.neo4j.fabric.planning.Fragment.Union
@@ -17,10 +18,11 @@ trait FragmentTestUtils {
 
   def init(graph: ast.GraphSelection, argumentColumns: Seq[String] = Seq(), importColumns: Seq[String] = Seq()): Init = Init(graph, argumentColumns, importColumns)
 
-  implicit class FragBuilder(input: Fragment) {
+  def unionAll(lhs: Fragment, rhs: Chain): Union = Union(false, lhs, rhs)
+  def union(lhs: Fragment, rhs: Chain): Union = Union(true, lhs, rhs)
+
+  implicit class FragBuilder(input: Chain) {
     def apply(fragment: Fragment): Apply = Apply(input, fragment)
-    def unionAll(lhs: Fragment, rhs: Fragment): Union = Union(false, lhs, rhs, input)
-    def union(lhs: Fragment, rhs: Fragment): Union = Union(true, lhs, rhs, input)
     def leaf(clauses: Seq[ast.Clause], outputColumns: Seq[String]): Leaf = Leaf(input, clauses, outputColumns)
   }
 

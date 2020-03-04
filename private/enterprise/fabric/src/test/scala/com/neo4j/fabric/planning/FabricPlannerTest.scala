@@ -17,7 +17,6 @@ import com.neo4j.fabric.config.FabricConfig.Graph
 import com.neo4j.fabric.pipeline.Pipeline
 import com.neo4j.fabric.pipeline.SignatureResolver
 import com.neo4j.fabric.planning.FabricPlan.DebugOptions
-import com.neo4j.fabric.planning.Fragment.ChainedFragment
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.configuration.helpers.NormalizedGraphName
@@ -29,7 +28,7 @@ import org.neo4j.cypher.internal.ast.Query
 import org.neo4j.cypher.internal.ast.SingleQuery
 import org.neo4j.cypher.internal.ast.prettifier.ExpressionStringifier
 import org.neo4j.cypher.internal.ast.prettifier.Prettifier
-import org.neo4j.cypher.internal.util.symbols
+import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.symbols.CypherType
 import org.neo4j.exceptions.InvalidSemanticsException
 import org.neo4j.monitoring.Monitors
@@ -39,8 +38,8 @@ import org.neo4j.values.virtual.VirtualValues
 import org.scalatest.Assertion
 import org.scalatest.exceptions.TestFailedException
 
-import scala.reflect.ClassTag
 import scala.collection.JavaConverters.setAsJavaSetConverter
+import scala.reflect.ClassTag
 
 //noinspection ZeroIndexToHead
 class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with ProcedureRegistryTestSupport with FragmentTestUtils {
@@ -68,9 +67,12 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
   private def plan(query: String, params: MapValue) =
     instance(query, params).plan
 
-  "Rewrites:" - {
+  private def parse(query: String) =
+    pipeline(query).parseAndPrepare.process(query).statement()
 
-    "simple asLocal" in {
+  "asLocal: " - {
+
+    "single query" in {
       instance("", params)
         .asLocal(init(defaultGraph)
           .leaf(Seq(return_(literal(1).as("x"))), Seq("x")))
@@ -79,7 +81,16 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
         )))
     }
 
-    "simple asLocal with imports" in {
+    "single query with USE" in {
+      instance("", params)
+        .asLocal(init(defaultGraph)
+          .leaf(Seq(use(varFor("foo")), return_(literal(1).as("x"))), Seq("x")))
+        .check(_.query.asSingleQuery.clauses.shouldEqual(Seq(
+          return_(literal(1).as("x")),
+        )))
+    }
+
+    "single query with imports" in {
       instance("", params)
         .asLocal(init(defaultGraph, Seq(), Seq("p", "q"))
           .leaf(Seq(return_(literal(1).as("x"))), Seq("x")))
@@ -89,7 +100,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
         )))
     }
 
-    "simple asLocal with input and imports" in {
+    "single query with input and imports" in {
       instance("", params)
         .asLocal(init(defaultGraph, Seq(), Seq("p", "q"))
           .leaf(Seq(), Seq("a", "b"))
@@ -102,8 +113,180 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
     }
   }
 
+  "asRemote: " - {
+    "single query" in {
+      val inst = instance("", params)
+      val remote = inst.asRemote(
+        init(defaultGraph)
+          .leaf(Seq(return_(literal(1).as("x"))), Seq("x")))
 
-  "Read/Write" - {
+      parse(remote.query).as[Query].part.as[SingleQuery].clauses
+        .shouldEqual(Seq(
+          return_(literal(1).as("x"))
+        ))
+    }
+
+    "single query with USE" in {
+      val inst = instance("", params)
+      val remote = inst.asRemote(
+        init(defaultGraph)
+          .leaf(Seq(use(varFor("foo")), return_(literal(1).as("x"))), Seq("x")))
+
+      parse(remote.query).as[Query].part.as[SingleQuery].clauses
+        .shouldEqual(Seq(
+          return_(literal(1).as("x"))
+        ))
+    }
+
+    "single query with subquery" in {
+      val inst = instance("", params)
+      val remote = inst.asRemote(
+        init(defaultGraph)
+          .leaf(Seq(with_(literal(1).as("a"))), Seq("a"))
+          .apply(
+            init(defaultGraph)
+              .leaf(Seq(use(varFor("foo")), return_(literal(1).as("y"))), Seq("y")))
+          .leaf(Seq(return_(literal(1).as("x"))), Seq("x")))
+
+      parse(remote.query).as[Query].part.as[SingleQuery].clauses
+        .shouldEqual(Seq(
+          with_(literal(1).as("a")),
+          subQuery(
+            use(varFor("foo")),
+            return_(literal(1).as("y"))),
+          return_(literal(1).as("x")),
+        ))
+    }
+
+    "single query with subquery with imports and USE" in {
+      val inst = instance("", params)
+      val remote = inst.asRemote(
+        init(defaultGraph, Seq(), Seq("p"))
+          .leaf(Seq(with_(literal(1).as("a"))), Seq("a"))
+          .apply(
+            init(defaultGraph, Seq("a", "b"), Seq("q"))
+              .leaf(Seq(use(varFor("foo")), return_(literal(1).as("y"))), Seq("y")))
+          .leaf(Seq(return_(literal(1).as("x"))), Seq("x")))
+
+      parse(remote.query).as[Query].part.as[SingleQuery].clauses
+        .shouldEqual(Seq(
+          with_(parameter("@@p", CTAny).as("p")),
+          with_(literal(1).as("a")),
+          subQuery(
+            use(varFor("foo")),
+            return_(literal(1).as("y"))),
+          return_(literal(1).as("x")),
+        ))
+    }
+
+    "union parts" in {
+      val inst = instance(
+        """WITH 1 AS a, 2 AS b
+          |CALL {
+          |  RETURN 3 AS c
+          |    UNION
+          |  WITH a
+          |  RETURN a AS c
+          |    UNION
+          |  USE baz
+          |  WITH b
+          |  RETURN b AS c
+          |}
+          |RETURN a, b, c
+          |
+          |""".stripMargin, params)
+
+      val inner = inst.plan
+        .query.as[Fragment.Leaf]
+        .input.as[Fragment.Apply]
+        .inner.as[Fragment.Union]
+
+      val part1 = inner.lhs.as[Fragment.Union].lhs.as[Fragment.Leaf]
+      val part2 = inner.lhs.as[Fragment.Union].rhs.as[Fragment.Leaf]
+      val part3 = inner.rhs.as[Fragment.Leaf]
+
+      parse(inst.asRemote(part1).query)
+        .shouldEqual(parse(
+          """RETURN 3 AS c
+            |""".stripMargin))
+
+      parse(inst.asRemote(part2).query)
+        .shouldEqual(parse(
+          """WITH $`@@a` AS a
+            |WITH a
+            |RETURN a AS c
+            |""".stripMargin))
+
+      parse(inst.asRemote(part3).query)
+        .shouldEqual(parse(
+          """WITH $`@@b` AS b
+            |WITH b
+            |RETURN b AS c
+            |""".stripMargin))
+    }
+
+    "complicated nested query" in {
+      val inst = instance(
+        """WITH 1 AS a
+          |CALL {
+          |  USE foo
+          |  WITH a
+          |  WITH 2 AS b
+          |  CALL {
+          |    USE bar
+          |    WITH b
+          |    RETURN b AS c
+          |  }
+          |  CALL {
+          |   RETURN 3 AS d
+          |     UNION
+          |   WITH b
+          |   RETURN b AS d
+          |     UNION
+          |   USE baz
+          |   WITH b
+          |   RETURN b AS d
+          |  }
+          |  RETURN b, c, d
+          |}
+          |RETURN a, b, c, d
+          |""".stripMargin, params)
+
+      val fooRemote = parse(
+        inst.asRemote(inst.plan
+          .query.as[Fragment.Leaf]
+          .input.as[Fragment.Apply]
+          .inner.as[Fragment.Leaf]
+        ).query)
+
+      val expected = parse(
+        """WITH $`@@a` AS a
+          |WITH a
+          |WITH 2 AS b
+          |CALL {
+          |  USE bar
+          |  WITH b
+          |  RETURN b AS c
+          |}
+          |CALL {
+          | RETURN 3 AS d
+          |   UNION
+          | WITH b
+          | RETURN b AS d
+          |   UNION
+          | USE baz
+          | WITH b
+          | RETURN b AS d
+          |}
+          |RETURN b, c, d
+          |""".stripMargin)
+
+      fooRemote.shouldEqual(expected)
+    }
+
+  }
+
+  "Read/Write: " - {
 
     "read" in {
       plan("MATCH (x) RETURN *", params).queryType
@@ -181,8 +364,9 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
 
       val leafs = Stream
         .iterate(Option(pln.query)) {
-          case Some(f: ChainedFragment) => Some(f.input)
-          case _                        => None
+          case Some(l: Fragment.Leaf) => Some(l.input)
+          case Some(a: Fragment.Apply) => Some(a.input)
+          case _                      => None
         }
         .takeWhile(_.isDefined)
         .collect { case Some(f) => f }
@@ -472,5 +656,5 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
       q.state.statement().as[Query].part.as[SingleQuery]
   }
 
-  def any: CypherType = symbols.CTAny
+  def any: CypherType = CTAny
 }

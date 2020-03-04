@@ -7,8 +7,6 @@ package com.neo4j.fabric.planning
 
 import com.neo4j.fabric.planning.FabricPlan.DebugOptions
 import org.neo4j.cypher.internal.FullyParsedQuery
-import org.neo4j.cypher.internal.ast.Query
-import org.neo4j.cypher.internal.ast.UseGraph
 import org.neo4j.cypher.internal.util.ObfuscationMetadata
 
 case class FabricPlan(
@@ -52,8 +50,7 @@ object FabricQuery {
   ) extends FabricQuery
 
   final case class RemoteQuery(
-    use: UseGraph,
-    query: Query,
+    query: String,
     queryType: QueryType,
   ) extends FabricQuery
 

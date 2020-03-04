@@ -12,7 +12,6 @@ import com.neo4j.fabric.pipeline.SignatureResolver
 import com.neo4j.fabric.planning.Fragment.Apply
 import com.neo4j.fabric.planning.Fragment.Leaf
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
-import org.neo4j.cypher.internal.ast.Return
 import org.neo4j.cypher.internal.ast.UnresolvedCall
 import org.neo4j.cypher.internal.ast.UseGraph
 import org.neo4j.cypher.internal.ast.With
@@ -23,6 +22,8 @@ import org.neo4j.exceptions.SyntaxException
 import org.neo4j.monitoring.Monitors
 import org.scalatest.Inside
 
+import scala.reflect.ClassTag
+
 //noinspection ZeroIndexToHead
 class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport with ProcedureRegistryTestSupport with Inside with FragmentTestUtils {
 
@@ -31,8 +32,6 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
 
   def pipeline(query: String): Pipeline.Instance =
     Pipeline.Instance(monitors, query, signatures)
-
-
 
 
   "USE handling: " - {
@@ -58,10 +57,8 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
           |RETURN x
           |""".stripMargin)
 
-      frag.use.shouldEqual(defaultGraph)
-      inside(frag) { case Leaf(Apply(_, inner: Leaf), _, _) =>
-        inner.use.shouldEqual(use("g"))
-      }
+      frag.as[Fragment.Leaf].use.shouldEqual(defaultGraph)
+      frag.as[Fragment.Leaf].input.as[Fragment.Apply].inner.as[Fragment.Leaf].use.shouldEqual(use("g"))
     }
 
     "disallow USE at start of non-initial fragment" in {
@@ -252,8 +249,7 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
           |RETURN 2 AS y
           |""".stripMargin
       ).shouldEqual(
-        init(defaultGraph)
-          .union(
+          union(
             init(use("foo")).leaf(Seq(use("foo"), returnLit(1 -> "y")), Seq("y")),
             init(use("bar")).leaf(Seq(use("bar"), returnLit(2 -> "y")), Seq("y")),
           )
@@ -276,7 +272,7 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
         init(defaultGraph)
           .leaf(Seq(withLit(1, "x")), Seq("x"))
           .apply(
-            init(defaultGraph, Seq("x")).union(
+            union(
               init(use("foo"), Seq("x"))
                 .leaf(Seq(use("foo"), returnLit(1 -> "y")), Seq("y")),
               init(defaultGraph, Seq("x"), Seq("x"))
@@ -421,4 +417,11 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
 
   private def resolved(unresolved: FunctionInvocation): ResolvedFunctionInvocation =
     ResolvedFunctionInvocation(signatures.functionSignature)(unresolved)
+
+  implicit class Caster[A](a: A) {
+    def as[T](implicit ct: ClassTag[T]): T = {
+      assert(ct.runtimeClass.isInstance(a), s"expected: ${ct.runtimeClass.getName}, was: ${a.getClass.getName}")
+      a.asInstanceOf[T]
+    }
+  }
 }
