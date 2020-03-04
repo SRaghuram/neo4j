@@ -228,6 +228,8 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
 
   class OptionalBufferSequence(bufferDefinition: BufferDefinition) extends BufferBeforePipelineSequence(bufferDefinition)
 
+  class AntiBufferSequence(bufferDefinition: BufferDefinition) extends BufferBeforePipelineSequence(bufferDefinition)
+
   class LhsJoinBufferSequence(bufferDefinition: BufferDefinition) extends BufferBeforePipelineSequence(bufferDefinition)
 
   class JoinBufferSequence(bufferDefinition: BufferDefinition) extends BufferBeforePipelineSequence(bufferDefinition)
@@ -273,6 +275,20 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
       val out = MorselArgumentStateBufferOutput(BufferId(id),argumentSlotOffset)
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
       new OptionalBufferSequence(bd)
+    }
+
+    def antiBuffer(id: Int, argumentSlotOffset: Int,  asmId: Int = -1, planId: Int = -1): AntiBufferSequence = {
+      val bd = buffers.getOrElseUpdate(id,
+        BufferDefinition(
+          BufferId(id),
+          Id(planId),
+          NO_ARGUMENT_STATE_MAPS,
+          NO_ARGUMENT_STATE_MAPS,
+          NO_ARGUMENT_STATE_MAPS,
+          OptionalBufferVariant(ArgumentStateMapId(asmId), AntiType))(SlotConfiguration.empty))
+      val out = MorselArgumentStateBufferOutput(BufferId(id),argumentSlotOffset)
+      pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
+      new AntiBufferSequence(bd)
     }
 
     def attachBuffer(id: Int, argumentSlotOffset: Int = -1, planId: Int = -1, slots: SlotConfiguration = SlotConfiguration.empty) : AttachBufferSequence = {

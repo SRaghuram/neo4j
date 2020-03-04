@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.physicalplanning
 
 import org.neo4j.cypher.internal.logical.plans.AllNodesScan
+import org.neo4j.cypher.internal.logical.plans.Anti
 import org.neo4j.cypher.internal.logical.plans.Argument
 import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
@@ -15,6 +16,7 @@ import org.neo4j.cypher.internal.logical.plans.NodeByLabelScan
 import org.neo4j.cypher.internal.logical.plans.NodeHashJoin
 import org.neo4j.cypher.internal.logical.plans.Optional
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
+import org.neo4j.cypher.internal.logical.plans.Selection
 import org.neo4j.cypher.internal.logical.plans.Sort
 import org.neo4j.cypher.internal.logical.plans.Union
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinitionMatcher.newGraph
@@ -164,6 +166,49 @@ class PipelineBuilderTest extends CypherFunSuite {
 
       start(graph).applyBuffer(2).reducerOnRHS(0, 2, argumentSlotOffset)
       start(graph).morselBuffer(3).reducer(0)
+    }
+  }
+
+  test("should plan anti") {
+    new ExecutionGraphDefinitionBuilder()
+      .produceResults("n")
+      .apply().withBreak()
+      .|.anti().withBreak()
+      .|.limit(1).withBreak()
+      .|.filter("false")
+      .|.argument("n").withBreak()
+      .allNodeScan("n").withBreak()
+      .build() should plan {
+
+      /*
+      id  plan
+      0   ProduceResult
+      1   Apply
+      2   Anti
+      3   Limit
+      4   Selection
+      5   Argument
+      6   AllNodeScan
+      */
+
+      val graph = newGraph
+      val argumentSlotOffset = 1
+      start(graph)
+        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 6)
+        .delegateToMorselBuffer(1, 6)
+        .pipeline(0, Seq(classOf[AllNodesScan]))
+        .applyBuffer(2, argumentSlotOffset, 1)
+        .delegateToMorselBuffer(3, 5)
+        .pipeline(1, Seq(classOf[Argument], classOf[Selection], classOf[Limit]))
+        .antiBuffer(4, argumentSlotOffset, 1, 2)
+        .pipeline(2, Seq(classOf[Anti], classOf[ProduceResult]), serial = true)
+        .end
+
+      start(graph).applyBuffer(2).reducerOnRHS(1, 2, argumentSlotOffset)
+      start(graph).applyBuffer(2).canceller(0, 3, argumentSlotOffset)
+
+      start(graph).morselBuffer(3).reducer(1, 2, argumentSlotOffset)
+      start(graph).morselBuffer(3).canceller(0, 3, argumentSlotOffset)
     }
   }
 
