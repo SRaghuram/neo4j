@@ -258,5 +258,4 @@ trait ExecutionState extends ArgumentStateMapCreator {
     * @return the memory tracker
     */
   def memoryTracker: QueryMemoryTracker
-
 }

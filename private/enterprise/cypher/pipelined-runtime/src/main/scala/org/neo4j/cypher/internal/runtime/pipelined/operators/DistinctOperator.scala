@@ -15,14 +15,17 @@ import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
 import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
@@ -31,11 +34,13 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateGroupi
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
+import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.EXECUTION_STATE
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.peekState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDistinctOperatorTaskTemplate.SerialTopLevelDistinctState
@@ -133,6 +138,8 @@ class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate
   private val distinctStateField = field[SerialTopLevelDistinctState](codeGen.namer.nextVariableName("distinctState"),
                                                                       peekState[SerialTopLevelDistinctState](argumentStateMapId))
 
+  private val memoryTracker = field[QueryMemoryTracker](codeGen.namer.nextVariableName("memoryTracker"),
+                                                        invokeStatic(method[SerialTopLevelDistinctOperatorTaskTemplate, QueryMemoryTracker]("NO_MEMORY_TRACKING")))
   override def genInit: IntermediateRepresentation = inner.genInit
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
@@ -145,10 +152,19 @@ class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate
     //note that this key ir read later also by project
     val keyVar = codeGen.namer.nextVariableName("groupingKey")
     groupingExpression = codeGen.intermediateCompileGroupingExpression(compiled, keyVar)
+
+    /**
+      * val key = [computeKey]
+      * if (distinctState.distinct(key, memoryTracker)) {
+      *   [project key]
+      *   <<inner.generate>>
+      * }
+      */
     block(
       declareAndAssign(typeRefOf[AnyValue], keyVar, nullCheckIfRequired(groupingExpression.computeKey)),
       condition(invoke(loadField(distinctStateField),
-                       method[SerialTopLevelDistinctState, Boolean, AnyValue]("distinct"), nullCheckIfRequired(groupingExpression.computeKey))) {
+                       method[SerialTopLevelDistinctState, Boolean, AnyValue, QueryMemoryTracker]("distinct"),
+                       nullCheckIfRequired(groupingExpression.computeKey), loadField(memoryTracker))) {
         block(
           profileRow(id),
           nullCheckIfRequired(groupingExpression.projectKey),
@@ -157,9 +173,18 @@ class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate
       })
   }
 
+  override def genCreateState: IntermediateRepresentation =
+    block(
+      inner.genCreateState,
+      setField(memoryTracker,
+               invoke(EXECUTION_STATE,
+                      method[ExecutionState, QueryMemoryTracker]("memoryTracker")))
+
+      )
+
   override def genExpressions: Seq[IntermediateExpression] = Seq(groupingExpression.computeKey, groupingExpression.projectKey)
 
-  override def genFields: Seq[Field] = Seq(distinctStateField)
+  override def genFields: Seq[Field] = Seq(distinctStateField, memoryTracker)
 
   override def genLocalVariables: Seq[LocalVariable] = Seq.empty
 
@@ -169,6 +194,8 @@ class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate
 }
 
 object SerialTopLevelDistinctOperatorTaskTemplate {
+  val NO_MEMORY_TRACKING: QueryMemoryTracker = NoMemoryTracker
+
   class DistinctStateFactory(id: Id) extends ArgumentStateFactory[SerialTopLevelDistinctState] {
     override def newStandardArgumentState(argumentRowId: Long,
                                           argumentMorsel: MorselReadCursor,
@@ -187,7 +214,13 @@ object SerialTopLevelDistinctOperatorTaskTemplate {
                                     override val argumentRowIdsForReducers: Array[Long],
                                     seen: util.Set[AnyValue],
                                     id: Id) extends ArgumentState {
-    def distinct(groupingKey: AnyValue): Boolean = seen.add(groupingKey)
-    override def toString: String = s"DistinctState($argumentRowId, concurrent=${seen.getClass.getPackageName.contains("concurrent")})"
+    def distinct(groupingKey: AnyValue, memoryTracker: QueryMemoryTracker): Boolean = {
+      if (seen.add(groupingKey)) {
+        memoryTracker.allocated(groupingKey, id.x)
+        true
+      } else false
+    }
+
+    override def toString: String = s"SerialTopLevelDistinctState($argumentRowId, concurrent=${seen.getClass.getPackageName.contains("concurrent")})"
   }
 }

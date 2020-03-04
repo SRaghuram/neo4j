@@ -312,7 +312,6 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
        |""".stripMargin
   }
 
-
   override def memoryTracker: QueryMemoryTracker = stateFactory.memoryTracker
 
   /**
