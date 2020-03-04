@@ -94,6 +94,7 @@ class OptionalMorselBuffer(id: BufferId,
   }
 
   override def canPut: Boolean = {
+    // TODO why does canPut depend on the existence of the NEXT argument state? what if data comes in for the previous argument, due to parallel/asynchrony?
     val buffer = argumentStateMap.peekNext()
     buffer != null && buffer.canPut
   }
