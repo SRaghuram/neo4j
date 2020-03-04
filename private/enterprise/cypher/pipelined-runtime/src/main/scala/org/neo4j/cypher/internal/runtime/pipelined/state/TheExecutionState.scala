@@ -63,7 +63,8 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   private val buffers: Buffers = new Buffers(executionGraphDefinition.buffers.size,
     tracker,
     argumentStateMaps,
-    stateFactory)
+    stateFactory,
+    queryState.morselSize)
 
 
   // This can hold a CleanUpTask if the query was cancelled. It will get scheduled before anything else.

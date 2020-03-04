@@ -41,7 +41,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.DataHol
 class Buffers(numBuffers: Int,
               tracker: QueryCompletionTracker,
               argumentStateMaps: ArgumentStateMaps,
-              stateFactory: StateFactory) {
+              stateFactory: StateFactory,
+              morselSize: Int) {
 
   private val buffers: Array[Any] = new Array[Any](numBuffers)
 
@@ -186,7 +187,8 @@ class Buffers(numBuffers: Int,
             tracker,
             reducers,
             argumentStateMaps,
-            argumentStateMapId)
+            argumentStateMapId,
+            morselSize)
 
         case RegularBufferVariant =>
           new MorselBuffer(bufferDefinition.id,

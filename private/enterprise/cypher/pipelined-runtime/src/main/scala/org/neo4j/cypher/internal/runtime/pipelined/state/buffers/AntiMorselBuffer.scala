@@ -12,6 +12,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 
+import scala.collection.mutable.ArrayBuffer
+
 /**
  * Extension of OptionalMorselBuffer.
  * Holds an ASM in order to track argument rows that do not result in any output rows, i.e. gets filtered out.
@@ -22,18 +24,32 @@ class AntiMorselBuffer(id: BufferId,
                        tracker: QueryCompletionTracker,
                        downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
                        argumentStateMaps: ArgumentStateMaps,
-                       argumentStateMapId: ArgumentStateMapId
+                       argumentStateMapId: ArgumentStateMapId,
+                       morselSize: Int
                       )
-  extends BaseArgExistsMorselBuffer[MorselData](id, tracker, downstreamArgumentReducers, argumentStateMaps, argumentStateMapId) {
+  extends BaseArgExistsMorselBuffer[Seq[MorselData]](id, tracker, downstreamArgumentReducers, argumentStateMaps, argumentStateMapId) {
 
-  override def take(): MorselData = {
+  override def take(): Seq[MorselData] = {
     // To keep input order (i.e., place the null rows at the right position), we give the data out in ascending argument row id order.
-    // Potential Optimization: return multiple rows
-    val data = getNextEmptyArgumentState
+
+    var data = getNextEmptyArgumentState
+    val result =
+      if (null == data) {
+        null.asInstanceOf[Seq[MorselData]]
+      } else {
+        val datas = new ArrayBuffer[MorselData]()
+        var i = morselSize
+        while (null != data && i > 0) {
+          datas += data
+          data = getNextEmptyArgumentState
+          i -= 1
+        }
+        datas
+      }
     if (DebugSupport.BUFFERS.enabled) {
-      DebugSupport.BUFFERS.log(s"[take]  $this -> $data")
+      DebugSupport.BUFFERS.log(s"[take]  $this -> $result")
     }
-    data
+    result
   }
 
   private def getNextEmptyArgumentState: MorselData = {
@@ -56,8 +72,8 @@ class AntiMorselBuffer(id: BufferId,
     argumentStateMap.nextArgumentStateIsCompletedOr(_ => false)
   }
 
-  override def close(data: MorselData): Unit = {
-    closeOne(data.argumentStream, numberOfDecrements = 0, data.argumentRowIdsForReducers)
+  override def close(datas: Seq[MorselData]): Unit = {
+    datas.foreach(data => closeOne(data.argumentStream, numberOfDecrements = 0, data.argumentRowIdsForReducers))
   }
 
   override def toString: String =

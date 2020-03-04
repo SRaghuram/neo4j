@@ -49,7 +49,7 @@ class AntiOperator(val workIdentity: WorkIdentity,
                            parallelism: Int,
                            resources: QueryResources,
                            argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
-      val input: MorselData = operatorInput.takeData()
+      val input: Seq[MorselData] = operatorInput.takeData()
       if (input != null) {
         IndexedSeq(new OTask(input))
       } else {
@@ -58,15 +58,15 @@ class AntiOperator(val workIdentity: WorkIdentity,
     }
   }
 
-  class OTask(val morselData: MorselData) extends ContinuableOperatorTask {
-    private var hasWritten = false
+  class OTask(val morselDatas: Seq[MorselData]) extends ContinuableOperatorTask {
+    private val morselDataIterator: Iterator[MorselData] = morselDatas.iterator
 
     override def workIdentity: WorkIdentity = AntiOperator.this.workIdentity
 
     override def operate(outputMorsel: Morsel, context: QueryContext, state: QueryState, resources: QueryResources): Unit = {
       val outputCursor = outputMorsel.writeCursor(onFirstRow = true)
-      if (outputCursor.onValidRow() && canContinue) {
-        hasWritten = true
+      while (outputCursor.onValidRow() && canContinue) {
+        val morselData = morselDataIterator.next()
         val row = morselData.argumentStream.asInstanceOf[EndOfEmptyStream].viewOfArgumentRow
         outputCursor.copyFrom(row, argumentSize.nLongs, argumentSize.nReferences)
         outputCursor.next()
@@ -76,10 +76,10 @@ class AntiOperator(val workIdentity: WorkIdentity,
 
     override protected def closeCursors(resources: QueryResources): Unit = {}
 
-    override def canContinue: Boolean = !hasWritten
+    override def canContinue: Boolean = morselDataIterator.hasNext
 
     override protected def closeInput(operatorCloser: OperatorCloser): Unit = {
-      operatorCloser.closeData(morselData)
+      operatorCloser.closeData(morselDatas)
     }
 
     override def filterCancelledArguments(operatorCloser: OperatorCloser): Boolean = {
@@ -90,6 +90,6 @@ class AntiOperator(val workIdentity: WorkIdentity,
 
     override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
 
-    override def estimatedHeapUsage: Long = morselData.morsels.map(_.estimatedHeapUsage).sum
+    override def estimatedHeapUsage: Long = morselDatas.map(morselData => morselData.morsels.map(_.estimatedHeapUsage).sum).sum
   }
 }
