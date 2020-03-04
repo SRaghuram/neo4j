@@ -40,6 +40,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
+import org.neo4j.cypher.internal.runtime.pipelined.state.UnorderedArgumentStateMapReader
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.internal.kernel.api.IndexReadSession
@@ -194,7 +195,7 @@ abstract class SerialTopLevelCountingOperatorTaskTemplate(val inner: OperatorTas
           ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name),
                method[ArgumentStateMaps, ArgumentStateMap[_ <: ArgumentState], Int]("applyByIntId"),
                constant(argumentStateMapId.x)),
-        method[ArgumentStateMap[_ <: ArgumentState], ArgumentState, Long]("peek"),
+        method[UnorderedArgumentStateMapReader[_ <: ArgumentState], ArgumentState, Long]("peek"),
         constant(TopLevelArgument.VALUE)
         )
       ))

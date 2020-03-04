@@ -16,7 +16,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfEmptyStream
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfNonEmptyStream
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.OptionalArgumentStateBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
@@ -66,17 +65,11 @@ class AntiOperator(val workIdentity: WorkIdentity,
 
     override def operate(outputMorsel: Morsel, context: QueryContext, state: QueryState, resources: QueryResources): Unit = {
       val outputCursor = outputMorsel.writeCursor(onFirstRow = true)
-      if (outputCursor.onValidRow()) {
+      if (outputCursor.onValidRow() && canContinue) {
         hasWritten = true
-        morselData.argumentStream match {
-          case EndOfEmptyStream(viewOfArgumentRow) =>
-            // An argument id did not produce any rows. We need to manufacture a row with arguments
-            // 1) Copy arguments from state
-            outputCursor.copyFrom(viewOfArgumentRow, argumentSize.nLongs, argumentSize.nReferences)
-            outputCursor.next()
-          case EndOfNonEmptyStream =>
-            // Do nothing
-        }
+        val row = morselData.argumentStream.asInstanceOf[EndOfEmptyStream].viewOfArgumentRow
+        outputCursor.copyFrom(row, argumentSize.nLongs, argumentSize.nReferences)
+        outputCursor.next()
       }
       outputCursor.truncate()
     }

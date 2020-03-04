@@ -92,7 +92,8 @@ class Buffers(numBuffers: Int,
         case x: MorselArgumentStateBuffer[_, _] if x.argumentStateMapId == argumentStateMapId =>
           return x
         case x: OptionalMorselBuffer if x.argumentStateMapId == argumentStateMapId =>
-          // NOTE: this will catch AntiMorselBuffer too
+          return x
+        case x: AntiMorselBuffer if x.argumentStateMapId == argumentStateMapId =>
           return x
         case _ =>
       }
