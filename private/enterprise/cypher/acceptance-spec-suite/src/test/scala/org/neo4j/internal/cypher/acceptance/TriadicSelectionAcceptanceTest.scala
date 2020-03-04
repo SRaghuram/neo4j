@@ -19,7 +19,7 @@ class TriadicSelectionAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
   private val usesTriadic = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("TriadicSelection"))
   private val usesExpandInto = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Expand(Into)"))
-  private val usesAntiSemiApply = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("AntiSemiApply"))
+  private val usesAntiSemiApply = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("AntiSemiApply").or(includeSomewhere.aPlan("Anti")))
   private val noTriadic = ComparePlansWithAssertion(_ should not(includeSomewhere.aPlan("TriadicSelection")))
   test("find friends of others") {
     // given
@@ -189,7 +189,7 @@ class TriadicSelectionAcceptanceTest extends ExecutionEngineFunSuite with Cypher
       Query("triadic-neg1", Configs.InterpretedAndSlotted,     usesTriadic,       7, "MATCH (u:User)-[:POSTED]->(q:Post)-[:ANSWER]->(a:Post) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
       Query("triadic-neg2", Configs.InterpretedAndSlotted,     usesTriadic,       7, "MATCH (u:User)-[:POSTED]->(q)-[:ANSWER]->(a) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
       Query("triadic-neg3", Configs.InterpretedAndSlotted,     usesTriadic,       7, "MATCH (u:User)-[:POSTED]->(q)-[:ANSWER]->(a:Post) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
-      Query("triadic-neg4", Configs.InterpretedAndSlotted,  usesAntiSemiApply, 7, "MATCH (u:User)-[:POSTED]->(q:Post)-[:ANSWER]->(a) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
+      Query("triadic-neg4", Configs.InterpretedAndSlottedAndPipelined,  usesAntiSemiApply, 7, "MATCH (u:User)-[:POSTED]->(q:Post)-[:ANSWER]->(a) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
       Query("triadic-pos1", Configs.InterpretedAndSlotted,     usesTriadic,       3, "MATCH (u:User)-[:POSTED]->(q:Post)-[:ANSWER]->(a:Post) WHERE (u)-[:POSTED]->(a) RETURN u, a"),
       Query("triadic-pos2", Configs.InterpretedAndSlotted,     usesTriadic,       3, "MATCH (u:User)-[:POSTED]->(q)-[:ANSWER]->(a) WHERE (u)-[:POSTED]->(a) RETURN u, a")
     )
