@@ -10,6 +10,7 @@ import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark1;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -112,16 +113,14 @@ class SuiteDescriptionTest extends BenchmarksFinderFixture
     public void shouldPartitionIntoSmallerPartitions()
     {
         SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getValidBenchmarksFinder(), new Validation() );
+
         List<SuiteDescription> partitions = suiteDescription.partition( 3 );
 
         assertEquals( 3, partitions.size() );
-        assertEquals( 4, partitions.get( 0 ).explodeEnabledBenchmarks().size() );
-        assertEquals( 4, partitions.get( 1 ).explodeEnabledBenchmarks().size() );
-        assertEquals( 2, partitions.get( 2 ).explodeEnabledBenchmarks().size() );
 
         assertEquals(
-                suiteDescription.explodeEnabledBenchmarks(),
-                partitions.stream().flatMap( partition -> partition.explodeEnabledBenchmarks().stream() ).collect( toList() )
+                new HashSet<>( suiteDescription.explodeEnabledBenchmarks() ),
+                new HashSet<>( partitions.stream().flatMap( partition -> partition.explodeEnabledBenchmarks().stream() ).collect( toList() ) )
         );
     }
 }

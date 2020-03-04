@@ -43,8 +43,8 @@ public class BenchmarkDescription
 {
 
     /**
-     * Combines BenchmarkDescriptions with the same className into a single BenchmarkDescription.
-     * Reverse operation of {@link BenchmarkDescription#explode()}
+     * Combines BenchmarkDescriptions with the same className into a single BenchmarkDescription. Reverse operation of {@link BenchmarkDescription#explode()}
+     * @implNote Imploding benchmarks and then exploding them again can lead to duplications.
      * @param benchmarkDescriptions BenchmarkDescriptions to implode
      * @return imploded BenchmarkDescriptions
      */
@@ -72,7 +72,21 @@ public class BenchmarkDescription
                 .collect( toMap(
                         BenchmarkMethodDescription::name,
                         Function.identity(),
-                        ( method1, method2 ) -> method1
+                        ( method1, method2 ) ->
+                        {
+                            if ( method1 == method2 )
+                            {
+                                return method1;
+                            }
+                            else
+                            {
+                                HashSet<Mode> combinedModes = new HashSet<>();
+                                combinedModes.addAll( method1.modes() );
+                                combinedModes.addAll( method2.modes() );
+
+                                return new BenchmarkMethodDescription( method1.name(), combinedModes.toArray( Mode[]::new ) );
+                            }
+                        }
                 ) );
 
         Map<String,BenchmarkParamDescription> implodedParameters = group

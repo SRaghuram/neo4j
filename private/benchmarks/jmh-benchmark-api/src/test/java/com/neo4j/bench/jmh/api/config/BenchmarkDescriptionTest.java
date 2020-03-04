@@ -818,7 +818,7 @@ class BenchmarkDescriptionTest extends BenchmarksFinderFixture
         boolean isEnabled = true;
 
         String method1Name = "method1";
-        Mode[] method1Modes = {Mode.Throughput};
+        Mode[] method1Modes = {Mode.Throughput, AverageTime};
         BenchmarkMethodDescription method1 = new BenchmarkMethodDescription( method1Name, method1Modes );
         String method2Name = "method2";
         Mode[] method2Modes = {Mode.SampleTime};

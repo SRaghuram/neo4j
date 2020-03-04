@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -166,23 +167,25 @@ public class SuiteDescription
         return groupBenchmarks;
     }
 
+    /**
+     * @implNote It is possible that a benchmark is part of multiple partitions.
+     */
     public List<SuiteDescription> partition( int numberOfPartitions )
     {
         List<BenchmarkDescription> enabledExplodedBenchmarks = explodeEnabledBenchmarks();
 
-        long benchmarksPerPartition = (long) Math.ceil( enabledExplodedBenchmarks.size() / (double) numberOfPartitions );
+        int benchmarksPerPartition = (int) Math.ceil( enabledExplodedBenchmarks.size() / (double) numberOfPartitions );
 
         List<SuiteDescription> partitions = new ArrayList<>( numberOfPartitions );
 
         for ( int partition = 0; partition < numberOfPartitions; partition++ )
         {
-            Set<BenchmarkDescription> rawBenchmarkDescriptionPartition = enabledExplodedBenchmarks
-                    .stream()
-                    .skip( partition * benchmarksPerPartition )
-                    .limit( benchmarksPerPartition )
-                    .collect( toSet() );
+            int startIndex = partition * benchmarksPerPartition;
+            int endIndex = Math.min( startIndex + benchmarksPerPartition, enabledExplodedBenchmarks.size() );
 
-            List<BenchmarkDescription> condensedBenchmarkDescriptionPartition = BenchmarkDescription.implode( rawBenchmarkDescriptionPartition );
+            List<BenchmarkDescription> rawBenchmarkDescriptionPartition = enabledExplodedBenchmarks.subList( startIndex, endIndex );
+
+            List<BenchmarkDescription> condensedBenchmarkDescriptionPartition = BenchmarkDescription.implode( new HashSet<>( rawBenchmarkDescriptionPartition ) );
 
             partitions.add( SuiteDescription.fromBenchmarkDescriptions( condensedBenchmarkDescriptionPartition ) );
         }
