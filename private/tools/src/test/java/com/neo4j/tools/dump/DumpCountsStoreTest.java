@@ -46,7 +46,8 @@ class DumpCountsStoreTest
     {
         // given
         File file = directory.file( "file" );
-        try ( GBPTreeCountsStore store = new GBPTreeCountsStore( pageCache, file, immediate(), EMPTY, false, PageCacheTracer.NULL, NO_MONITOR ) )
+        try ( GBPTreeCountsStore store = new GBPTreeCountsStore( pageCache, file, directory.getFileSystem(), immediate(), EMPTY, false, PageCacheTracer.NULL,
+                NO_MONITOR ) )
         {
             store.start( NULL );
             try ( CountsAccessor.Updater updater = store.apply( BASE_TX_ID + 1, NULL ) )
