@@ -52,6 +52,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 @TestDirectoryExtension
 class CustomSecurityInitializationIT
 {
+    private static final String INIT_FILENAME = "initFile";
     @Inject
     private ClusterFactory clusterFactory;
     @Inject
@@ -61,9 +62,9 @@ class CustomSecurityInitializationIT
     private Cluster cluster;
 
     @BeforeEach
-    void setup()
+    void setup() throws IOException
     {
-        FileUtils.deleteFile( directory.homeDir().toPath().resolve( "scripts" ).resolve( "initFile" ).toFile() );
+        FileUtils.deleteRecursively( directory.homeDir() );
     }
 
     @AfterEach
@@ -84,13 +85,11 @@ class CustomSecurityInitializationIT
     @Test
     void shouldDoCustomInitializationStandalone() throws IOException
     {
-        Path initFile = directory.homeDir().toPath().resolve( "scripts" ).resolve( "initFile" );
-        writeTestInitializationFile( initFile, "CREATE ROLE testRole" );
-        // Given a standalone db and initialization file
+        writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole" );
         dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
                 .impermanent()
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.TRUE )
-                .setConfig( GraphDatabaseSettings.system_init_file, Path.of( "initFile" ) )
+                .setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) )
                 .build();
         GraphDatabaseService db = dbms.database( SYSTEM_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
@@ -104,12 +103,10 @@ class CustomSecurityInitializationIT
     @Test
     void shouldLogInitializationStandalone() throws IOException
     {
-        Path initFile = directory.homeDir().toPath().resolve( "scripts" ).resolve( "initFile" );
-        writeTestInitializationFile( initFile, "CREATE ROLE testRole" );
-        // Given a standalone db and initialization file
+        writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole" );
         dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.TRUE )
-                .setConfig( GraphDatabaseSettings.system_init_file, Path.of( "initFile" ) )
+                .setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) )
                 .setConfig( GraphDatabaseSettings.log_queries, GraphDatabaseSettings.LogQueryLevel.VERBOSE )
                 .build();
 
@@ -119,15 +116,14 @@ class CustomSecurityInitializationIT
         Path logsDir = directory.homeDir().toPath().resolve( "logs" );
         var neo4jLog = logsDir.resolve( "security.log" );
         var lines = Files.lines( neo4jLog ).collect( Collectors.toList() );
+        System.out.println( lines );
         assertThat( lines, hasItem( containsString( "Executing security initialization command: CREATE ROLE testRole" ) ) );
     }
 
     @Test
     void shouldNotDoCustomInitializationWithoutSettingStandalone() throws IOException
     {
-        Path initFile = directory.homeDir().toPath().resolve( "scripts" ).resolve( "initFile" );
-        writeTestInitializationFile( initFile, "CREATE ROLE testRole" );
-        // Given a standalone db and initialization file
+        writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole" );
         dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
                 .impermanent()
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.TRUE )
@@ -150,12 +146,10 @@ class CustomSecurityInitializationIT
         dbms.database( SYSTEM_DATABASE_NAME );
         dbms.shutdown();
 
-        Path initFile = directory.homeDir().toPath().resolve( "scripts" ).resolve( "initFile" );
-        writeTestInitializationFile( initFile, "CREATE ROLE testRole" );
-        // Given a standalone db and initialization file
+        writeTestInitializationFile( getInitFile( directory.homeDir() ), "CREATE ROLE testRole" );
         dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.TRUE )
-                .setConfig( GraphDatabaseSettings.system_init_file, Path.of( "initFile" ) )
+                .setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) )
                 .build();
         GraphDatabaseService db = dbms.database( SYSTEM_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
@@ -173,7 +167,7 @@ class CustomSecurityInitializationIT
                 new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
                         .impermanent()
                         .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.TRUE )
-                        .setConfig( GraphDatabaseSettings.system_init_file, Path.of( "initFile" ) );
+                        .setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) );
         Exception exception = assertThrows( Exception.class, () -> dbms = builder.build() );
 
         assertTrue( isFileNotFoundException( exception ) );
@@ -182,13 +176,12 @@ class CustomSecurityInitializationIT
     @Test
     void shouldFailOnComplexCustomInitializationWithSyntaxErrorStandalone() throws IOException
     {
-        Path initFile = directory.homeDir().toPath().resolve( "scripts" ).resolve( "initFile" );
-        writeComplexInitialization( initFile, "(name, email)", "User, Person" );
+        writeComplexInitialization( getInitFile( directory.homeDir() ), "(name, email)", "User, Person" );
         TestEnterpriseDatabaseManagementServiceBuilder builder =
                 new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
                         .impermanent()
                         .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.TRUE )
-                        .setConfig( GraphDatabaseSettings.system_init_file, Path.of( "initFile" ) );
+                        .setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) );
         Exception exception = assertThrows( Exception.class, () -> dbms = builder.build() );
         assertThat( exception.getCause().getMessage(), containsString( "Invalid input '('" ) );
     }
@@ -196,12 +189,11 @@ class CustomSecurityInitializationIT
     @Test
     void shouldDoMoreComplexCustomInitializationStandalone() throws IOException
     {
-        Path initFile = directory.homeDir().toPath().resolve( "scripts" ).resolve( "initFile" );
-        writeComplexInitialization( initFile, "{name, email}", "User, Person" );
+        writeComplexInitialization( getInitFile( directory.homeDir() ), "{name, email}", "User, Person" );
         dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() )
                 .impermanent()
                 .setConfig( GraphDatabaseSettings.auth_enabled, Boolean.TRUE )
-                .setConfig( GraphDatabaseSettings.system_init_file, Path.of( "initFile" ) )
+                .setConfig( GraphDatabaseSettings.system_init_file, Path.of( INIT_FILENAME ) )
                 .build();
         GraphDatabaseService db = dbms.database( SYSTEM_DATABASE_NAME );
         try ( Transaction tx = db.beginTx() )
@@ -216,18 +208,16 @@ class CustomSecurityInitializationIT
     @Timeout( value = 10, unit = TimeUnit.MINUTES )
     void shouldDoCustomInitializationClustered() throws Exception
     {
-        // Given a standalone db and initialization file
         var clusterConfig = ClusterConfig.clusterConfig()
                                          .withSharedCoreParam( GraphDatabaseSettings.auth_enabled, "true" )
-                                         .withSharedCoreParam( GraphDatabaseSettings.system_init_file, "initFile" )
+                                         .withSharedCoreParam( GraphDatabaseSettings.system_init_file, INIT_FILENAME )
                                          .withNumberOfCoreMembers( 3 );
         cluster = clusterFactory.createCluster( clusterConfig );
         for ( ClusterMember member : cluster.coreMembers() )
         {
             File home = member.databaseLayout().getNeo4jLayout().homeDirectory();
             org.apache.commons.io.FileUtils.forceMkdir( home );
-            Path initFile = home.toPath().resolve( "scripts" ).resolve( "initFile" );
-            writeTestInitializationFile( initFile, "CREATE ROLE testRole" );
+            writeTestInitializationFile( getInitFile( home ), "CREATE ROLE testRole" );
         }
         cluster.start();
         cluster.systemTx( ( db, tx ) -> {
@@ -241,18 +231,16 @@ class CustomSecurityInitializationIT
     @Timeout( value = 10, unit = TimeUnit.MINUTES )
     void shouldLogInitializationClustered() throws Exception
     {
-        // Given a cluster and initialization file
         var clusterConfig = ClusterConfig.clusterConfig()
                                          .withSharedCoreParam( GraphDatabaseSettings.auth_enabled, "true" )
-                                         .withSharedCoreParam( GraphDatabaseSettings.system_init_file, "initFile" )
+                                         .withSharedCoreParam( GraphDatabaseSettings.system_init_file, INIT_FILENAME )
                                          .withNumberOfCoreMembers( 3 );
         cluster = clusterFactory.createCluster( clusterConfig );
         for ( ClusterMember member : cluster.coreMembers() )
         {
             File home = member.databaseLayout().getNeo4jLayout().homeDirectory();
             org.apache.commons.io.FileUtils.forceMkdir( home );
-            Path initFile = home.toPath().resolve( "scripts" ).resolve( "initFile" );
-            writeTestInitializationFile( initFile, "CREATE ROLE testRole" );
+            writeTestInitializationFile( getInitFile( home ), "CREATE ROLE testRole" );
         }
         cluster.start();
         var leader = cluster.awaitLeader( SYSTEM_DATABASE_NAME );
@@ -270,11 +258,16 @@ class CustomSecurityInitializationIT
     {
         var clusterConfig = ClusterConfig.clusterConfig()
                                          .withSharedCoreParam( GraphDatabaseSettings.auth_enabled, "true" )
-                                         .withSharedCoreParam( GraphDatabaseSettings.system_init_file, "initFile" )
+                                         .withSharedCoreParam( GraphDatabaseSettings.system_init_file, INIT_FILENAME )
                                          .withNumberOfCoreMembers( 3 );
         cluster = clusterFactory.createCluster( clusterConfig );
         Exception exception = assertThrows( Exception.class, () -> cluster.start() );
         assertTrue( isFileNotFoundException( exception ) );
+    }
+
+    private Path getInitFile( File homeDir )
+    {
+        return homeDir.toPath().resolve( "scripts" ).resolve( INIT_FILENAME );
     }
 
     private boolean isFileNotFoundException( Throwable e )
