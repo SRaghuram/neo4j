@@ -94,6 +94,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectOperatorTemp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipByIdSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipCountFromCountStoreOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SeekExpression
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDistinctOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate.SerialTopLevelLimitStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelSkipOperatorTaskTemplate
@@ -108,6 +109,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.VarExpandOperatorTa
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
 import org.neo4j.cypher.internal.util.Many
 import org.neo4j.cypher.internal.util.One
@@ -919,6 +921,22 @@ class FuseOperators(operatorFactory: OperatorFactory,
             acc.copy(
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)
+
+          // Special case for limit when not nested under an apply and with serial execution
+          case plan@Distinct(_, grouping) if hasNoNestedArguments(plan) && serialExecutionOnly =>
+            val argumentStateMapId = operatorFactory.executionGraphDefinition.findArgumentStateMapForPlan(plan.id)
+            val groupMapping = SlottedExpressionConverters.orderGroupingKeyExpressions(grouping, Seq.empty)(slots).map {
+              case (k, e, _) => slots(k) -> e
+            }
+            val newTemplate = new SerialTopLevelDistinctOperatorTaskTemplate(acc.template,
+                                                                             plan.id,
+                                                                             argumentStateMapId,
+                                                                             groupMapping)(expressionCompiler)
+            acc.copy(
+              template = newTemplate,
+              fusedPlans = nextPlan :: acc.fusedPlans,
+              argumentStates = (argumentStateMapId, new SerialTopLevelDistinctOperatorTaskTemplate.DistinctStateFactory(plan.id)) :: acc.argumentStates
+              )
 
           // Special case for limit when not nested under an apply and with serial execution
           case plan@Limit(_, countExpression, DoNotIncludeTies) if hasNoNestedArguments(plan) && serialExecutionOnly =>

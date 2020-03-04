@@ -373,7 +373,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
                         c <- intermediateCompileExpression(v)} yield slots(k) -> c
     if (compiled.size < orderedGroupingsBySlots.size) None
     else {
-      val grouping = intermediateCompileGroupingExpression(compiled)
+      val grouping = intermediateCompileGroupingExpression(compiled, "key")
       val classDeclaration =
         ClassDeclaration[CompiledGroupingExpression](
           PACKAGE_NAME,
@@ -2275,7 +2275,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
     }
   }
 
-  private def intermediateCompileGroupingExpression(orderedGroupings: Seq[(Slot, IntermediateExpression)]): IntermediateGroupingExpression = {
+  def intermediateCompileGroupingExpression(orderedGroupings: Seq[(Slot, IntermediateExpression)], keyName: String): IntermediateGroupingExpression = {
     require(orderedGroupings.nonEmpty)
     val listVar = namer.nextVariableName()
     val singleValue = orderedGroupings.size == 1
@@ -2286,7 +2286,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
     }
 
     def accessValue(i: Int) =  {
-      if (singleValue) load("key")
+      if (singleValue) load(keyName)
       else invoke(load(listVar), method[ListValue, AnyValue, Int]("value"), constant(i))
     }
 
@@ -2302,7 +2302,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
     }
     val projectKey =
       if (singleValue) projectKeyOps
-      else Seq(declare[ListValue](listVar), assign(listVar, cast[ListValue](load("key")))) ++ projectKeyOps
+      else Seq(declare[ListValue](listVar), assign(listVar, cast[ListValue](load(keyName)))) ++ projectKeyOps
 
     val getKeyOps = orderedGroupings.map(_._1).map {
       case LongSlot(offset, nullable, CTNode) =>
@@ -2329,9 +2329,9 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
 
     val orderedGroupingExpressions = orderedGroupings.map(_._2)
     IntermediateGroupingExpression(
-      IntermediateExpression(block(projectKey:_*), Seq.empty, Seq.empty, Set.empty),
-      IntermediateExpression(computeKey, orderedGroupingExpressions.flatMap(_.fields), orderedGroupingExpressions.flatMap(_.variables), Set.empty),
-      IntermediateExpression(getKey, Seq.empty, Seq.empty, Set.empty))
+      IntermediateExpression(block(projectKey:_*), Seq.empty, Seq.empty, Set.empty, requireNullCheck = false),
+      IntermediateExpression(computeKey, orderedGroupingExpressions.flatMap(_.fields), orderedGroupingExpressions.flatMap(_.variables), Set.empty, requireNullCheck = false),
+      IntermediateExpression(getKey, Seq.empty, Seq.empty, Set.empty, requireNullCheck = false))
   }
 
   //Extension points

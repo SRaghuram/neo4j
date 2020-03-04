@@ -12,7 +12,6 @@ import org.neo4j.codegen.api.InstanceField
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
-import org.neo4j.codegen.api.IntermediateRepresentation.cast
 import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.field
@@ -24,10 +23,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
-import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.runtime.CypherRow
-import org.neo4j.cypher.internal.runtime.NoMemoryTracker
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -35,15 +31,11 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Numeri
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.peekState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
 import org.neo4j.cypher.internal.runtime.pipelined.state.UnorderedArgumentStateMapReader
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.InvalidArgumentException
-import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.util.Preconditions
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.FloatingPointValue
@@ -189,16 +181,7 @@ abstract class SerialTopLevelCountingOperatorTaskTemplate(val inner: OperatorTas
     codeGen.namer.nextVariableName("countState"),
     // Get the skip operator state from the ArgumentStateMaps that is passed to the constructor
     // We do not generate any checks or error handling code, so the runtime compiler is responsible for this fitting together perfectly
-    cast[SerialTopLevelCountingState](
-      invoke(
-        invoke(load(
-          ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name),
-               method[ArgumentStateMaps, ArgumentStateMap[_ <: ArgumentState], Int]("applyByIntId"),
-               constant(argumentStateMapId.x)),
-        method[UnorderedArgumentStateMapReader[_ <: ArgumentState], ArgumentState, Long]("peek"),
-        constant(TopLevelArgument.VALUE)
-        )
-      ))
+    peekState[SerialTopLevelCountingState](argumentStateMapId))
 
   override def genInit: IntermediateRepresentation = inner.genInit
 

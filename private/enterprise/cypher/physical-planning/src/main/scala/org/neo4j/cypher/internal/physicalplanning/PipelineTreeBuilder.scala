@@ -552,8 +552,13 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
       case _: Distinct =>
         val asm = stateDefiner.newArgumentStateMap(plan.id, argument.argumentSlotOffset)
         argument.downstreamStates += DownstreamState(asm.id)
-        source.middlePlans += plan
-        source
+        if (canFuseOverPipeline) {
+          source.fusedPlans += plan
+          source
+        } else {
+          source.middlePlans += plan
+          source
+        }
 
       case _ =>
         if (canFuseOverPipeline) {

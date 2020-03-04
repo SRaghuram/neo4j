@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.logical.plans.Apply
 import org.neo4j.cypher.internal.logical.plans.Argument
 import org.neo4j.cypher.internal.logical.plans.CacheProperties
 import org.neo4j.cypher.internal.logical.plans.DirectedRelationshipByIdSeek
+import org.neo4j.cypher.internal.logical.plans.Distinct
 import org.neo4j.cypher.internal.logical.plans.Expand
 import org.neo4j.cypher.internal.logical.plans.Input
 import org.neo4j.cypher.internal.logical.plans.Limit
@@ -144,6 +145,7 @@ object OperatorFusionPolicy {
              _: UnwindCollection |
              _: Limit |
              _: Skip |
+             _: Distinct |
              _: VarExpand |
              _: CacheProperties
         => true
