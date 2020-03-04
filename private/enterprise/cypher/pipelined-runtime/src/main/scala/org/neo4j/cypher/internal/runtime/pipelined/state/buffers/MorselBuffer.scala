@@ -116,8 +116,8 @@ class MorselBuffer(id: BufferId,
    */
   def filterCancelledArguments(morsel: Morsel): Boolean = {
     if (workCancellers.nonEmpty) {
-      Preconditions.checkArgument(morsel.isInstanceOf[FilteringMorsel],
-        s"Expected filtering morsel for filterCancelledArguments in buffer $id, but got ${morsel.getClass}")
+      if (!morsel.isInstanceOf[FilteringMorsel])
+        throw new IllegalArgumentException(s"Expected filtering morsel for filterCancelledArguments in buffer $id, but got ${morsel.getClass}")
 
       val filteringMorsel = morsel.asInstanceOf[FilteringMorsel]
 
