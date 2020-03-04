@@ -18,6 +18,7 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.extension.DatabaseExtensions;
 import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.context.DatabaseExtensionContext;
@@ -98,7 +99,7 @@ public final class StoreMigration
         // Add participants from kernel extensions...
         Log log = userLogProvider.getLog( StoreMigration.class );
         JobScheduler jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
-        try ( PageCache pageCache = createPageCache( fs, config, jobScheduler ) )
+        try ( PageCache pageCache = createPageCache( fs, config, jobScheduler, PageCacheTracer.NULL ) )
         {
             Dependencies deps = new Dependencies();
             Monitors monitors = new Monitors();

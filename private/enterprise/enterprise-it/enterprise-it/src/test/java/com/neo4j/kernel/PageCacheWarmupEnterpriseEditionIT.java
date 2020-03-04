@@ -10,7 +10,6 @@ import com.neo4j.backup.impl.OnlineBackupExecutor;
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.test.rule.EnterpriseDbmsRule;
-import org.assertj.core.api.Condition;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -46,7 +45,6 @@ import static com.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.commons.io.FileUtils.cleanDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_TX_LOGS_ROOT_DIR_NAME;
 import static org.neo4j.io.fs.FileUtils.deleteRecursively;
@@ -127,10 +125,10 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         File backupDir = testDirectory.cleanDirectory( "backup" );
         executeBackup( backupDir );
         latch.release();
-        DbmsRule.RestartAction useBackupDir = ( fs, storeDir ) ->
+        DbmsRule.RestartAction useBackupDir = ( fs, databaseLayout ) ->
         {
-            fs.deleteRecursively( storeDir.databaseDirectory() );
-            fs.copyRecursively( backupDir, storeDir.databaseDirectory() );
+            fs.deleteRecursively( databaseLayout.databaseDirectory() );
+            fs.copyRecursively( backupDir, databaseLayout.getNeo4jLayout().databasesDirectory() );
         };
         db.restartDatabase( useBackupDir, Map.of(
                 OnlineBackupSettings.online_backup_enabled, false,

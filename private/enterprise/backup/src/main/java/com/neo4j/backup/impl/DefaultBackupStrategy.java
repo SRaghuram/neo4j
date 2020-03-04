@@ -15,6 +15,7 @@ import java.util.Objects;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
@@ -22,19 +23,21 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StoreId;
 
 import static java.lang.String.format;
-import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 
 class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
 {
+    private static final String BACKUP_LOCAL_STORE_READER_TAG = "backupLocalStoreReader";
     private final BackupDelegator backupDelegator;
     private final Log log;
     private final StoreFiles storeFiles;
+    private final PageCacheTracer pageCacheTracer;
 
-    DefaultBackupStrategy( BackupDelegator backupDelegator, LogProvider logProvider, StoreFiles storeFiles )
+    DefaultBackupStrategy( BackupDelegator backupDelegator, LogProvider logProvider, StoreFiles storeFiles, PageCacheTracer pageCacheTracer )
     {
         this.backupDelegator = backupDelegator;
         this.log = logProvider.getLog( DefaultBackupStrategy.class );
         this.storeFiles = storeFiles;
+        this.pageCacheTracer = pageCacheTracer;
     }
 
     @Override
@@ -97,7 +100,7 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
             StoreId remoteStoreId = backupDelegator.fetchStoreId( address, namedDatabaseId );
             log.info( "Remote store id is " + remoteStoreId );
 
-            StoreId localStoreId = readLocalStoreId( databaseLayout );
+            StoreId localStoreId = readLocalStoreId( databaseLayout, pageCacheTracer );
             log.info( "Local store id is " + remoteStoreId );
 
             return new BackupInfo( address, remoteStoreId, localStoreId, namedDatabaseId );
@@ -108,15 +111,15 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
         }
     }
 
-    private StoreId readLocalStoreId( DatabaseLayout databaseLayout )
+    private StoreId readLocalStoreId( DatabaseLayout databaseLayout, PageCacheTracer pageCacheTracer )
     {
-        try
+        try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( BACKUP_LOCAL_STORE_READER_TAG ) )
         {
             if ( storeFiles.isEmpty( databaseLayout ) )
             {
                 return null;
             }
-            return storeFiles.readStoreId( databaseLayout, TRACER_SUPPLIER.get() );
+            return storeFiles.readStoreId( databaseLayout, cursorTracer );
         }
         catch ( IOException e )
         {

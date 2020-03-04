@@ -33,6 +33,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 
 class DefaultBackupStrategyTest
 {
@@ -42,7 +43,7 @@ class DefaultBackupStrategyTest
     private final StoreFiles storeFiles = mock( StoreFiles.class );
     private final StoreId expectedStoreId = new StoreId( 11, 22, 33, 44, 55 );
     private final NamedDatabaseId namedDatabaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
-    private final DefaultBackupStrategy strategy = new DefaultBackupStrategy( backupDelegator, NullLogProvider.getInstance(), storeFiles );
+    private final DefaultBackupStrategy strategy = new DefaultBackupStrategy( backupDelegator, NullLogProvider.getInstance(), storeFiles, NULL );
     private final String databaseName = "database name";
 
     @BeforeEach

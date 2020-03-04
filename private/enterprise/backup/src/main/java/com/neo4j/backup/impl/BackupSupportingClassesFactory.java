@@ -26,6 +26,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
@@ -73,10 +74,12 @@ public class BackupSupportingClassesFactory
     BackupSupportingClasses createSupportingClasses( OnlineBackupContext context )
     {
         JobScheduler jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
-        PageCache pageCache = createPageCache( fileSystemAbstraction, context.getConfig(), jobScheduler );
+        PageCacheTracer pageCacheTracer = PageCacheTracer.NULL;
+        PageCache pageCache = createPageCache( fileSystemAbstraction, context.getConfig(), jobScheduler, pageCacheTracer );
         return new BackupSupportingClasses(
                 backupDelegatorFromConfig( pageCache, context, jobScheduler ),
                 pageCache,
+                pageCacheTracer,
                 Arrays.asList( pageCache, jobScheduler ) );
     }
 
@@ -138,8 +141,9 @@ public class BackupSupportingClassesFactory
         return new BackupDelegator( remoteStore, storeCopyClient, catchUpClient, logProvider );
     }
 
-    private static PageCache createPageCache( FileSystemAbstraction fileSystemAbstraction, Config config, JobScheduler jobScheduler )
+    private static PageCache createPageCache( FileSystemAbstraction fileSystemAbstraction, Config config, JobScheduler jobScheduler,
+            PageCacheTracer pageCacheTracer )
     {
-        return ConfigurableStandalonePageCacheFactory.createPageCache( fileSystemAbstraction, config, jobScheduler );
+        return ConfigurableStandalonePageCacheFactory.createPageCache( fileSystemAbstraction, config, jobScheduler, pageCacheTracer );
     }
 }

@@ -41,7 +41,6 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.string.HexString;
 
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
-import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory.createPageCache;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.CHECK;
@@ -81,7 +80,7 @@ public class RsdrMain
 
             Config config = buildConfig();
             JobScheduler jobScheduler = createInitialisedScheduler();
-            try ( PageCache pageCache = createPageCache( fileSystem, config, jobScheduler ) )
+            try ( PageCache pageCache = createPageCache( fileSystem, config, jobScheduler, PageCacheTracer.NULL ) )
             {
                 File neoStore = databaseLayout.metadataStore();
                 StoreFactory factory = openStore( fileSystem, neoStore, config, pageCache );
@@ -229,7 +228,7 @@ public class RsdrMain
 
                 try
                 {
-                    AbstractBaseRecord record = store.getRecord( i, store.newRecord(), CHECK, NULL );
+                    AbstractBaseRecord record = store.getRecord( i, store.newRecord(), CHECK, PageCursorTracer.NULL );
                     use = record.inUse() ? "+" : "-";
                     str = record.toString();
                 }

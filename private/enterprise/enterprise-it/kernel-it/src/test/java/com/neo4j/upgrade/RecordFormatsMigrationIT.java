@@ -173,7 +173,7 @@ class RecordFormatsMigrationIT
     {
         Config config = Config.defaults( GraphDatabaseSettings.pagecache_memory, "8m" );
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler();
-              PageCache pageCache = ConfigurableStandalonePageCacheFactory.createPageCache( fileSystem, config, jobScheduler ) )
+              PageCache pageCache = ConfigurableStandalonePageCacheFactory.createPageCache( fileSystem, config, jobScheduler, NULL ) )
         {
             RecordFormats actual = RecordFormatSelector.selectForStoreOrConfig( config, databaseLayout,
                     fileSystem, pageCache, NullLogProvider.getInstance(), NULL );

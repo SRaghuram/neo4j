@@ -63,12 +63,12 @@ public final class OnlineBackupExecutor
             monitors.addMonitorListener( backupStoreCopyMonitor );
 
             PageCache pageCache = supportingClasses.getPageCache();
+            var pageCacheTracer = supportingClasses.getPageCacheTracer();
 
             StoreFiles storeFiles = new StoreFiles( fs, pageCache );
-            BackupCopyService copyService = new BackupCopyService( fs, new FileMoveProvider( fs ), storeFiles, internalLogProvider );
+            BackupCopyService copyService = new BackupCopyService( fs, new FileMoveProvider( fs ), storeFiles, internalLogProvider, pageCacheTracer );
 
-            BackupStrategy strategy =
-                    new DefaultBackupStrategy( supportingClasses.getBackupDelegator(), internalLogProvider, storeFiles );
+            BackupStrategy strategy = new DefaultBackupStrategy( supportingClasses.getBackupDelegator(), internalLogProvider, storeFiles, pageCacheTracer );
             BackupStrategyWrapper wrapper = new BackupStrategyWrapper( strategy, copyService, fs, pageCache, userLogProvider, internalLogProvider );
 
             BackupStrategyCoordinator coordinator = new BackupStrategyCoordinator( fs, consistencyCheckService, internalLogProvider,

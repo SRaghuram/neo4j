@@ -19,29 +19,33 @@ import java.util.stream.Stream;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StoreId;
 
 import static java.lang.String.format;
 import static org.neo4j.io.fs.FileSystemUtils.isEmptyOrNonExistingDirectory;
-import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 
 class BackupCopyService
 {
+    private static final String BACKUP_CHECKER_TAG = "backupChecker";
     private static final int MAX_OLD_BACKUPS = 1000;
 
     private final FileSystemAbstraction fs;
     private final FileMoveProvider fileMoveProvider;
     private final StoreFiles storeFiles;
     private final Log log;
+    private final PageCacheTracer pageCacheTracer;
 
-    BackupCopyService( FileSystemAbstraction fs, FileMoveProvider fileMoveProvider, StoreFiles storeFiles, LogProvider logProvider )
+    BackupCopyService( FileSystemAbstraction fs, FileMoveProvider fileMoveProvider, StoreFiles storeFiles, LogProvider logProvider,
+            PageCacheTracer pageCacheTracer )
     {
         this.fs = fs;
         this.fileMoveProvider = fileMoveProvider;
         this.storeFiles = storeFiles;
         this.log = logProvider.getLog( getClass() );
+        this.pageCacheTracer = pageCacheTracer;
     }
 
     void moveBackupLocation( Path oldLocation, Path newLocation ) throws IOException
@@ -69,38 +73,39 @@ class BackupCopyService
         DatabaseLayout newSuccessfulBackupLayout = DatabaseLayout.ofFlat( newSuccessfulBackupDir.toFile() );
 
         StoreId preExistingBrokenBackupStoreId;
-        var cursorTracer = TRACER_SUPPLIER.get();
-        try
+        try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( BACKUP_CHECKER_TAG ) )
         {
-            preExistingBrokenBackupStoreId = storeFiles.readStoreId( preExistingBrokenBackupLayout, cursorTracer );
-        }
-        catch ( IOException e )
-        {
-            log.warn( "Unable to read store ID from the pre-existing invalid backup. It will not be deleted", e );
-            return;
-        }
+            try
+            {
+                preExistingBrokenBackupStoreId = storeFiles.readStoreId( preExistingBrokenBackupLayout, cursorTracer );
+            }
+            catch ( IOException e )
+            {
+                log.warn( "Unable to read store ID from the pre-existing invalid backup. It will not be deleted", e );
+                return;
+            }
 
-        StoreId newSuccessfulBackupStoreId;
-        try
-        {
-            newSuccessfulBackupStoreId = storeFiles.readStoreId( newSuccessfulBackupLayout, cursorTracer );
-        }
-        catch ( IOException e )
-        {
-            throw new IOException( "Unable to read store ID from the new successful backup", e );
-        }
+            StoreId newSuccessfulBackupStoreId;
+            try
+            {
+                newSuccessfulBackupStoreId = storeFiles.readStoreId( newSuccessfulBackupLayout, cursorTracer );
+            }
+            catch ( IOException e )
+            {
+                throw new IOException( "Unable to read store ID from the new successful backup", e );
+            }
+            if ( newSuccessfulBackupStoreId.equals( preExistingBrokenBackupStoreId ) )
+            {
+                log.info( "Deleting the pre-existing invalid backup because its store ID is the same as in the new successful backup %s",
+                        newSuccessfulBackupStoreId );
 
-        if ( newSuccessfulBackupStoreId.equals( preExistingBrokenBackupStoreId ) )
-        {
-            log.info( "Deleting the pre-existing invalid backup because its store ID is the same as in the new successful backup %s",
-                    newSuccessfulBackupStoreId );
-
-            fs.deleteRecursively( preExistingBrokenBackupDir.toFile() );
-        }
-        else
-        {
-            log.info( "Pre-existing invalid backup can't be deleted because its store ID %s is not the same as in the new successful backup %s",
-                    preExistingBrokenBackupStoreId, newSuccessfulBackupStoreId );
+                fs.deleteRecursively( preExistingBrokenBackupDir.toFile() );
+            }
+            else
+            {
+                log.info( "Pre-existing invalid backup can't be deleted because its store ID %s is not the same as in the new successful backup %s",
+                        preExistingBrokenBackupStoreId, newSuccessfulBackupStoreId );
+            }
         }
     }
 
