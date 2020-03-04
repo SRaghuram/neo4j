@@ -929,8 +929,12 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
     val result = executeWith(Configs.All, query,
       planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
-        planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("a"))
-        planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("b"))
+        planDescription should
+          includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("a"))
+          .or(includeSomewhere.aPlan("MultiNodeIndexSeek").containingVariables("a"))
+        planDescription should
+          includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("b"))
+          .or(includeSomewhere.aPlan("MultiNodeIndexSeek").containingVariables("b"))
       }))
 
     result.toList should equal (List(Map("res" -> "bar")))
