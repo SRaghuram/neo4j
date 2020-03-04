@@ -5,7 +5,7 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.config.FabricConfig;
+import com.neo4j.fabric.executor.Location;
 import com.neo4j.fabric.stream.Record;
 import com.neo4j.fabric.stream.StatementResult;
 import reactor.core.publisher.Flux;
@@ -26,9 +26,9 @@ class FabricDriverRxTransaction implements FabricDriverTransaction
 
     private final RxTransaction rxTransaction;
     private final RxSession rxSession;
-    private final FabricConfig.Graph location;
+    private final Location.Remote location;
 
-    FabricDriverRxTransaction( RxTransaction rxTransaction, RxSession rxSession, FabricConfig.Graph location )
+    FabricDriverRxTransaction( RxTransaction rxTransaction, RxSession rxSession, Location.Remote location )
     {
         this.rxTransaction = rxTransaction;
         this.rxSession = rxSession;

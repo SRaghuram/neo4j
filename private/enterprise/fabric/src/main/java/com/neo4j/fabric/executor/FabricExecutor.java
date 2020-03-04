@@ -21,6 +21,7 @@ import com.neo4j.fabric.stream.StatementResults;
 import com.neo4j.fabric.stream.summary.MergedSummary;
 import com.neo4j.fabric.stream.summary.Summary;
 import com.neo4j.fabric.transaction.FabricTransaction;
+import com.neo4j.fabric.transaction.TransactionMode;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -87,14 +88,17 @@ public class FabricExecutor
         }
         return fabricTransaction.execute( ctx ->
         {
+            var localDatabaseName = fabricTransaction.getTransactionInfo().getDatabaseName();
+
             FabricStatementExecution execution;
             if ( plan.debugOptions().logRecords() )
             {
-                execution = new FabricLoggingStatementExecution( statement, plan, params, accessMode, ctx, log, queryMonitor, dataStreamConfig );
+                execution =
+                        new FabricLoggingStatementExecution( statement, plan, params, accessMode, ctx, localDatabaseName, log, queryMonitor, dataStreamConfig );
             }
             else
             {
-                execution = new FabricStatementExecution( statement, plan, params, accessMode, ctx, queryMonitor, dataStreamConfig );
+                execution = new FabricStatementExecution( statement, plan, params, accessMode, ctx, localDatabaseName, queryMonitor, dataStreamConfig );
             }
             return execution.run();
         } );
@@ -109,18 +113,22 @@ public class FabricExecutor
         private final MergedSummary mergedSummary;
         private final FabricQueryMonitoring.QueryMonitor queryMonitor;
         private final Prefetcher prefetcher;
+        private final String localDatabaseName;
+        private final AccessMode accessMode;
 
         FabricStatementExecution( String originalStatement, FabricPlan plan, MapValue params, AccessMode accessMode,
-                                  FabricTransaction.FabricExecutionContext ctx,
-                                  FabricQueryMonitoring.QueryMonitor queryMonitor, FabricConfig.DataStream dataStreamConfig )
+                FabricTransaction.FabricExecutionContext ctx, String localDatabaseName, FabricQueryMonitoring.QueryMonitor queryMonitor,
+                FabricConfig.DataStream dataStreamConfig )
         {
             this.originalStatement = originalStatement;
             this.plan = plan;
             this.params = params;
             this.ctx = ctx;
+            this.localDatabaseName = localDatabaseName;
             this.mergedSummary = new MergedSummary( plan, accessMode );
             this.queryMonitor = queryMonitor;
             this.prefetcher = new Prefetcher( dataStreamConfig );
+            this.accessMode = accessMode;
         }
 
         StatementResult run()
@@ -140,12 +148,7 @@ public class FabricExecutor
             {
                 records = run( query, unit );
             }
-            return StatementResults.create(
-                    columns,
-                    records.doOnComplete( queryMonitor::endSuccess )
-                            .doOnError( queryMonitor::endFailure ),
-                    summary
-            );
+            return StatementResults.create( columns, records.doOnComplete( queryMonitor::endSuccess ).doOnError( queryMonitor::endFailure ), summary );
         }
 
         Flux<Record> run( FabricQuery query, Flux<Record> input )
@@ -212,13 +215,14 @@ public class FabricExecutor
         {
             return input.flatMap(
                     inputRecord -> run( query.query(), Flux.just( inputRecord ) ).map( outputRecord -> Records.join( inputRecord, outputRecord ) ),
-                    dataStreamConfig.getConcurrency(), 1
-            );
+                    dataStreamConfig.getConcurrency(), 1 );
         }
 
         Flux<Record> runLocalQuery( FabricQuery.LocalQuery query, Flux<Record> input )
         {
-            return ctx.getLocal().run( queryMonitor.getMonitoredQuery(), query.query(), params, input ).records();
+            var location = new Location.Local( -1, localDatabaseName );
+            var transactionMode = getTransactionMode( location, query.queryType( ));
+            return ctx.getLocal().run( location, transactionMode, queryMonitor.getMonitoredQuery(), query.query(), params, input ).records();
         }
 
         Flux<Record> runRemoteQuery( FabricQuery.RemoteQuery query, Flux<Record> input )
@@ -236,7 +240,11 @@ public class FabricExecutor
 
         Flux<Record> runRemoteQueryAt( FabricConfig.Graph graph, String queryString, QueryType queryType, MapValue parameters )
         {
-            Flux<Record> records =  ctx.getRemote().run( graph, queryString, queryType, parameters )
+            var uri = new Location.RemoteUri( graph.getUri().getScheme(), graph.getUri().getAddresses(), graph.getUri().getQuery() );
+            var location = new Location.Remote( graph.getId(), uri, graph.getDatabase() );
+            var transactionMode = getTransactionMode( location, queryType);
+            Flux<Record> records = ctx.getRemote()
+                    .run( location, queryString, transactionMode, parameters )
                     .flatMapMany( statementResult -> statementResult.records()
                             .doOnComplete( () -> statementResult.summary().subscribe( this::updateSummary ) ) );
             // 'onComplete' signal coming from an inner stream might cause more data being requested from an upstream operator
@@ -318,6 +326,29 @@ public class FabricExecutor
             return new InvalidSemanticsException( msg + ": " + info );
         }
 
+        private TransactionMode getTransactionMode( Location location, QueryType queryType )
+        {
+            var effectiveMode = EffectiveQueryType.effectiveAccessMode( accessMode, queryType );
+
+            if ( accessMode == AccessMode.READ )
+            {
+                if ( effectiveMode == AccessMode.WRITE )
+                {
+                    throw new FabricException( Status.Fabric.AccessMode, "Writing in read access mode not allowed. Attempted write to %s", location );
+                }
+
+                return TransactionMode.DEFINITELY_READ;
+            }
+
+            if ( effectiveMode == AccessMode.WRITE )
+            {
+                return TransactionMode.DEFINITELY_WRITE;
+            }
+            else
+            {
+                return TransactionMode.MAYBE_WRITE;
+            }
+        }
     }
 
     class FabricLoggingStatementExecution extends FabricStatementExecution
@@ -326,10 +357,10 @@ public class FabricExecutor
         private final Log log;
 
         FabricLoggingStatementExecution( String originalStatement, FabricPlan plan, MapValue params, AccessMode accessMode,
-                                         FabricTransaction.FabricExecutionContext ctx, Log log,
+                                         FabricTransaction.FabricExecutionContext ctx, String localDatabaseName, Log log,
                                          FabricQueryMonitoring.QueryMonitor queryMonitor, FabricConfig.DataStream dataStreamConfig )
         {
-            super( originalStatement, plan, params, accessMode, ctx, queryMonitor, dataStreamConfig );
+            super( originalStatement, plan, params, accessMode, ctx, localDatabaseName, queryMonitor, dataStreamConfig );
             this.step = new AtomicInteger( 0 );
             this.log = log;
         }

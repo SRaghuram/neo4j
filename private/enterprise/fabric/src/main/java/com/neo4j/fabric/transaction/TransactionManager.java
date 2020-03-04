@@ -50,7 +50,6 @@ public class TransactionManager extends LifecycleAdapter
                 this,
                 jobScheduler,
                 fabricConfig );
-        fabricTransaction.begin();
         openTransactions.add( fabricTransaction );
         return fabricTransaction;
     }

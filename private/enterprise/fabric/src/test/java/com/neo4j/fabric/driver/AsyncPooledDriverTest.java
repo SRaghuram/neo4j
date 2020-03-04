@@ -7,6 +7,7 @@ package com.neo4j.fabric.driver;
 
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.executor.FabricException;
+import com.neo4j.fabric.executor.Location;
 import com.neo4j.fabric.stream.Records;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,7 +59,7 @@ class AsyncPooledDriverTest
     private final AsyncSession session = mock( AsyncSession.class );
     private final AsyncTransaction asyncTransaction = mock( AsyncTransaction.class );
 
-    private final FabricConfig.Graph location = new FabricConfig.Graph( 1, FabricConfig.RemoteUri.create( "neo4j://somewhere:1234" ), "db1", null, null );
+    private final Location.Remote location = new Location.Remote( 0, null, null );
     private final FabricTransactionInfo transactionInfo = new FabricTransactionInfo( null, null, null, null, false, Duration.ZERO, null );
 
     @BeforeEach

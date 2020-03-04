@@ -7,6 +7,7 @@ package com.neo4j.fabric.driver;
 
 import com.neo4j.fabric.auth.CredentialsProvider;
 import com.neo4j.fabric.config.FabricConfig;
+import com.neo4j.fabric.executor.Location;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -63,7 +64,7 @@ public class DriverPool extends LifecycleAdapter
         eventLoopGroup = EventLoopGroupFactory.newEventLoopGroup( eventLoopCount );
     }
 
-    public PooledDriver getDriver( FabricConfig.Graph location, AuthSubject subject )
+    public PooledDriver getDriver( Location.Remote location, AuthSubject subject )
     {
 
         var authToken = credentialsProvider.credentialsFor( subject );
@@ -141,7 +142,7 @@ public class DriverPool extends LifecycleAdapter
         eventLoopGroup.shutdownGracefully( 1, 4,  TimeUnit.SECONDS);
     }
 
-    private PooledDriver createDriver( Key key, FabricConfig.Graph location, AuthToken token )
+    private PooledDriver createDriver( Key key, Location.Remote location, AuthToken token )
     {
         var config = driverConfigFactory.createConfig( location );
         var securityPlan = driverConfigFactory.createSecurityPlan( location );
@@ -169,7 +170,7 @@ public class DriverPool extends LifecycleAdapter
         }
     }
 
-    private URI constructDriverUri( FabricConfig.RemoteUri uri )
+    private URI constructDriverUri( Location.RemoteUri uri )
     {
         var address = uri.getAddresses().get( 0 );
         try
@@ -185,10 +186,10 @@ public class DriverPool extends LifecycleAdapter
     private static class Key
     {
 
-        private final FabricConfig.RemoteUri uri;
+        private final Location.RemoteUri uri;
         private final AuthToken auth;
 
-        Key( FabricConfig.RemoteUri uri, AuthToken auth )
+        Key( Location.RemoteUri uri, AuthToken auth )
         {
             this.uri = uri;
             this.auth = auth;

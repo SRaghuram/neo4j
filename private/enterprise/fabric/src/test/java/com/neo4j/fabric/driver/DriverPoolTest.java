@@ -8,6 +8,7 @@ package com.neo4j.fabric.driver;
 import com.neo4j.fabric.auth.CredentialsProvider;
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.config.FabricSettings;
+import com.neo4j.fabric.executor.Location;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,7 +20,6 @@ import java.time.Clock;
 import java.time.Duration;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.helpers.NormalizedGraphName;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.harness.Neo4j;
@@ -29,6 +29,7 @@ import org.neo4j.logging.Level;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
 
+import static com.neo4j.fabric.TestUtils.createUri;
 import static java.time.Duration.ofMinutes;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -48,10 +49,8 @@ class DriverPoolTest
     private final FabricConfig fabricConfig = mock( FabricConfig.class );
     private final Config config = mock( Config.class );
 
-    private final FabricConfig.Graph s1 =
-            new FabricConfig.Graph( 1, FabricConfig.RemoteUri.create( shard0.boltURI() ), "db1", new NormalizedGraphName( "shard-0" ), null );
-    private final FabricConfig.Graph s2 =
-            new FabricConfig.Graph( 2, FabricConfig.RemoteUri.create( shard1.boltURI() ), "db1", new NormalizedGraphName( "shard-1" ), null );
+    private final Location.Remote s1 = new Location.Remote( 1, createUri( shard0.boltURI().toString() ), "db1" );
+    private final Location.Remote s2 = new Location.Remote( 2, createUri( shard1.boltURI().toString() ), "db1" );
 
     private final CredentialsProvider credentialsProvider = Mockito.mock( CredentialsProvider.class );
     private final AuthSubject as1 = mock( AuthSubject.class );
@@ -90,6 +89,9 @@ class DriverPoolTest
         when( fabricConfig.getGlobalDriverConfig() ).thenReturn( remoteGraphDriver );
         when( credentialsProvider.credentialsFor( as1 ) ).thenReturn( at1 );
         when( credentialsProvider.credentialsFor( as2 ) ).thenReturn( at2 );
+
+        var database = mock(FabricConfig.Database.class );
+        when( fabricConfig.getDatabase() ).thenReturn( database );
 
         driverPool = new DriverPool( jobScheduler, fabricConfig, config, Clock.systemUTC(), credentialsProvider, mock(SslPolicyLoader.class ) );
     }

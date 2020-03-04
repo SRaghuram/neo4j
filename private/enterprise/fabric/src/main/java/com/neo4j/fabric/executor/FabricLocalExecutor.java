@@ -9,21 +9,22 @@ import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.localdb.FabricDatabaseManager;
 import com.neo4j.fabric.stream.Record;
 import com.neo4j.fabric.stream.StatementResult;
-import com.neo4j.fabric.stream.summary.Summary;
+import com.neo4j.fabric.transaction.CompositeTransaction;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
+import com.neo4j.fabric.transaction.TransactionMode;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.cypher.internal.FullyParsedQuery;
 import org.neo4j.cypher.internal.javacompat.ExecutionEngine;
-import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.GraphDatabaseQueryService;
@@ -48,80 +49,90 @@ public class FabricLocalExecutor
         this.dbms = dbms;
     }
 
-    public FabricLocalTransaction begin( FabricTransactionInfo transactionInfo )
+    public LocalTransactionContext startTransactionContext( CompositeTransaction compositeTransaction, FabricTransactionInfo transactionInfo )
     {
-        return new FabricLocalTransaction( transactionInfo );
+        return new LocalTransactionContext( compositeTransaction, transactionInfo );
     }
 
-    private KernelTransaction.Type getKernelTransactionType( FabricTransactionInfo fabricTransactionInfo )
+    public class LocalTransactionContext implements AutoCloseable
     {
-        if ( fabricTransactionInfo.isImplicitTransaction() )
-        {
-            return KernelTransaction.Type.IMPLICIT;
-        }
+        private final Map<Long, KernelTxWrapper> kernelTransactions = new ConcurrentHashMap<>();
 
-        return KernelTransaction.Type.EXPLICIT;
-    }
-
-    public class FabricLocalTransaction
-    {
+        private final CompositeTransaction compositeTransaction;
         private final FabricTransactionInfo transactionInfo;
-        private final Set<SingleStatementKernelTransaction> kernelTransactions = Collections.newSetFromMap( new ConcurrentHashMap<>() );
 
-        FabricLocalTransaction( FabricTransactionInfo transactionInfo )
+        private LocalTransactionContext( CompositeTransaction compositeTransaction, FabricTransactionInfo transactionInfo )
         {
+            this.compositeTransaction = compositeTransaction;
             this.transactionInfo = transactionInfo;
         }
 
-        public StatementResult run( ExecutingQuery parentQuery, FullyParsedQuery query, MapValue params, Flux<Record> input )
+        public StatementResult run( Location.Local location, TransactionMode transactionMode, ExecutingQuery parentQuery, FullyParsedQuery query,
+                MapValue params, Flux<Record> input )
         {
-            var kernelTransaction = beginKernelTransaction( parentQuery );
-            kernelTransactions.add( kernelTransaction );
+            var kernelTransaction = getOrCreateTx( location, transactionMode, parentQuery );
+            return kernelTransaction.run( query, params, input );
+        }
 
-            try
+        @Override
+        public void close()
+        {
+
+        }
+
+        private FabricKernelTransaction getOrCreateTx( Location.Local location, TransactionMode transactionMode, ExecutingQuery parentQuery )
+        {
+            var existingTx = kernelTransactions.get( location.getId() );
+            if ( existingTx != null )
             {
-                var result = kernelTransaction.run( query, params, input );
-
-                return new ResultInterceptor( result, () ->
-                {
-                    kernelTransaction.commit();
-                    kernelTransactions.remove( kernelTransaction );
-                }, () ->
-                {
-                    kernelTransaction.rollback();
-                    kernelTransactions.remove( kernelTransaction );
-                } );
+                maybeUpgradeToWritingTransaction( existingTx, transactionMode );
+                return existingTx.fabricKernelTransaction;
             }
-            catch ( RuntimeException e )
+
+            return kernelTransactions.computeIfAbsent( location.getId(), locationId ->
             {
-                kernelTransaction.rollback();
-                kernelTransactions.remove( kernelTransaction );
-                throw e;
+                switch ( transactionMode )
+                {
+                case DEFINITELY_WRITE:
+                    return compositeTransaction.startWritingTransaction( location, () ->
+                    {
+                        var tx = beginKernelTx( location, AccessMode.WRITE, parentQuery );
+                        return new KernelTxWrapper( tx, location );
+                    } );
+
+                case MAYBE_WRITE:
+                    return compositeTransaction.startReadingTransaction( location, () ->
+                    {
+                        var tx = beginKernelTx( location, AccessMode.WRITE, parentQuery );
+                        return new KernelTxWrapper( tx, location );
+                    } );
+
+                case DEFINITELY_READ:
+                    return compositeTransaction.startReadingOnlyTransaction( location, () ->
+                    {
+                        var tx = beginKernelTx( location, AccessMode.READ, parentQuery );
+                        return new KernelTxWrapper( tx, location );
+                    } );
+                default:
+                    throw new IllegalArgumentException( "Unexpected transaction mode: " + transactionMode );
+                }
+            } ).fabricKernelTransaction;
+        }
+
+        private void maybeUpgradeToWritingTransaction( KernelTxWrapper tx, TransactionMode transactionMode )
+        {
+            if ( transactionMode == TransactionMode.DEFINITELY_WRITE )
+            {
+                compositeTransaction.upgradeToWritingTransaction( tx );
             }
         }
 
-        public void commit()
+        private FabricKernelTransaction beginKernelTx( Location.Local location, AccessMode accessMode, ExecutingQuery parentQuery )
         {
-            kernelTransactions.forEach( SingleStatementKernelTransaction::commit );
-        }
-
-        public void rollback()
-        {
-            kernelTransactions.forEach( SingleStatementKernelTransaction::rollback );
-        }
-
-        public void terminate()
-        {
-            kernelTransactions.forEach( SingleStatementKernelTransaction::terminate );
-        }
-
-        private SingleStatementKernelTransaction beginKernelTransaction( ExecutingQuery parentQuery )
-        {
-            String databaseName = transactionInfo.getDatabaseName();
             GraphDatabaseFacade databaseFacade;
             try
             {
-                databaseFacade = dbms.getDatabase( databaseName );
+                databaseFacade = dbms.getDatabase( location.getDatabaseName() );
             }
             catch ( UnavailableException e )
             {
@@ -136,7 +147,7 @@ public class FabricLocalExecutor
             var queryService = dependencyResolver.resolveDependency( GraphDatabaseQueryService.class );
             var transactionalContextFactory = Neo4jTransactionalContextFactory.create( queryService );
 
-            return new SingleStatementKernelTransaction( parentQuery,executionEngine, transactionalContextFactory, internalTransaction, config );
+            return new FabricKernelTransaction( parentQuery,executionEngine, transactionalContextFactory, internalTransaction, config );
         }
 
         private InternalTransaction beginInternalTransaction( GraphDatabaseFacade databaseFacade, FabricTransactionInfo transactionInfo )
@@ -163,12 +174,55 @@ public class FabricLocalExecutor
             return internalTransaction;
         }
 
+        private KernelTransaction.Type getKernelTransactionType( FabricTransactionInfo fabricTransactionInfo )
+        {
+            if ( fabricTransactionInfo.isImplicitTransaction() )
+            {
+                return KernelTransaction.Type.IMPLICIT;
+            }
+
+            return KernelTransaction.Type.EXPLICIT;
+        }
+
         private LoginContext maybeRestrictLoginContext( EnterpriseLoginContext originalContext, String databaseName )
         {
             boolean isConfiguredFabricDatabase = dbms.isConfiguredFabricDatabase( databaseName );
             return isConfiguredFabricDatabase
                    ? new FabricLocalLoginContext( originalContext )
                    : transactionInfo.getLoginContext();
+        }
+    }
+
+    private class KernelTxWrapper implements SingleDbTransaction
+    {
+
+        private final FabricKernelTransaction fabricKernelTransaction;
+        private final Location location;
+
+        KernelTxWrapper( FabricKernelTransaction fabricKernelTransaction, Location location )
+        {
+            this.fabricKernelTransaction = fabricKernelTransaction;
+            this.location = location;
+        }
+
+        @Override
+        public Mono<Void> commit()
+        {
+            fabricKernelTransaction.commit();
+            return Mono.empty();
+        }
+
+        @Override
+        public Mono<Void> rollback()
+        {
+            fabricKernelTransaction.rollback();
+            return Mono.empty();
+        }
+
+        @Override
+        public Location getLocation()
+        {
+            return location;
         }
     }
 
@@ -197,40 +251,9 @@ public class FabricLocalExecutor
         public EnterpriseSecurityContext authorize( IdLookup idLookup, String dbName )
         {
             var originalSecurityContext = inner.authorize( idLookup, dbName );
-            var restrictedAccessMode = new RestrictedAccessMode( originalSecurityContext.mode(), AccessMode.Static.ACCESS );
+            var restrictedAccessMode =
+                    new RestrictedAccessMode( originalSecurityContext.mode(), org.neo4j.internal.kernel.api.security.AccessMode.Static.ACCESS );
             return new EnterpriseSecurityContext( inner.subject(), restrictedAccessMode, inner.roles(), action -> false );
-        }
-    }
-
-    private static class ResultInterceptor implements StatementResult
-    {
-        private final StatementResult wrappedResult;
-        private final Runnable commit;
-        private final Runnable rollback;
-
-        ResultInterceptor( StatementResult wrappedResult, Runnable commit, Runnable rollback )
-        {
-            this.wrappedResult = wrappedResult;
-            this.commit = commit;
-            this.rollback = rollback;
-        }
-
-        @Override
-        public Flux<String> columns()
-        {
-            return wrappedResult.columns().doOnError( error -> rollback.run() );
-        }
-
-        @Override
-        public Flux<Record> records()
-        {
-            return wrappedResult.records().doOnError( error -> rollback.run() ).doOnComplete( commit ).doOnCancel( rollback );
-        }
-
-        @Override
-        public Mono<Summary> summary()
-        {
-            return wrappedResult.summary();
         }
     }
 }

@@ -11,7 +11,12 @@ import com.neo4j.fabric.stream.Record;
 import com.neo4j.fabric.stream.Rx2SyncStream;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.stream.StatementResults;
+import com.neo4j.fabric.stream.summary.Summary;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.neo4j.cypher.internal.FullyParsedQuery;
 import org.neo4j.cypher.internal.javacompat.ExecutionEngine;
@@ -26,16 +31,16 @@ import org.neo4j.kernel.impl.query.TransactionalContext;
 import org.neo4j.kernel.impl.query.TransactionalContextFactory;
 import org.neo4j.values.virtual.MapValue;
 
-public class SingleStatementKernelTransaction
+public class FabricKernelTransaction
 {
     private final ExecutingQuery parentQuery;
     private final ExecutionEngine queryExecutionEngine;
     private final TransactionalContextFactory transactionalContextFactory;
     private final InternalTransaction internalTransaction;
     private final FabricConfig config;
-    private TransactionalContext executionContext;
+    private final Set<TransactionalContext> openExecutionContexts = ConcurrentHashMap.newKeySet();
 
-    SingleStatementKernelTransaction( ExecutingQuery parentQuery, ExecutionEngine queryExecutionEngine, TransactionalContextFactory transactionalContextFactory,
+    FabricKernelTransaction( ExecutingQuery parentQuery, ExecutionEngine queryExecutionEngine, TransactionalContextFactory transactionalContextFactory,
             InternalTransaction internalTransaction, FabricConfig config )
     {
         this.parentQuery = parentQuery;
@@ -47,21 +52,19 @@ public class SingleStatementKernelTransaction
 
     public StatementResult run( FullyParsedQuery query, MapValue params, Flux<Record> input )
     {
-        if ( executionContext != null )
-        {
-            throw new IllegalStateException( "This transaction can be used to execute only one statement" );
-        }
-
-        return StatementResults.create( subscriber -> execute( query, params, convert( input ), subscriber ) );
+        String queryText = "Internal query for Fabric query id:" + parentQuery.id();
+        var executionContext = transactionalContextFactory.newContext( internalTransaction, queryText, params );
+        openExecutionContexts.add( executionContext );
+        //Query is a sub-part of the parent fabric query that is already parsed and planned. The parent fabric query is monitored by the fabric executor.
+        var result = StatementResults.create( subscriber -> execute( query, params, executionContext, convert( input ), subscriber ) );
+        return new ContextClosingResultInterceptor( result, executionContext );
     }
 
-    private QueryExecution execute( FullyParsedQuery query, MapValue params, InputDataStream input, QuerySubscriber subscriber )
+    private QueryExecution execute( FullyParsedQuery query, MapValue params, TransactionalContext executionContext, InputDataStream input,
+            QuerySubscriber subscriber )
     {
         try
         {
-            String queryText = "Internal query for Fabric query id:" + parentQuery.id();
-            executionContext = transactionalContextFactory.newContext( internalTransaction, queryText, params );
-            //Query is a sub-part of the parent fabric query that is already parsed and planned. The parent fabric query is monitored by the fabric executor.
             return queryExecutionEngine.executeQuery( query, params, executionContext, true, input, subscriber );
         }
         catch ( QueryExecutionKernelException e )
@@ -91,7 +94,7 @@ public class SingleStatementKernelTransaction
         {
             if ( internalTransaction.isOpen() )
             {
-                closeContext();
+                closeContexts();
                 internalTransaction.commit();
             }
         }
@@ -103,22 +106,55 @@ public class SingleStatementKernelTransaction
         {
             if ( internalTransaction.isOpen() )
             {
-                closeContext();
+                closeContexts();
                 internalTransaction.rollback();
             }
         }
     }
 
-    private void closeContext()
+    private void closeContexts()
     {
-        if ( executionContext != null )
-        {
-            executionContext.close();
-        }
+        openExecutionContexts.forEach( TransactionalContext::close );
     }
 
     public void terminate()
     {
         internalTransaction.terminate();
+    }
+
+    private class ContextClosingResultInterceptor implements StatementResult
+    {
+        private final StatementResult wrappedResult;
+        private final TransactionalContext executionContext;
+
+        ContextClosingResultInterceptor( StatementResult wrappedResult, TransactionalContext executionContext )
+        {
+            this.wrappedResult = wrappedResult;
+            this.executionContext = executionContext;
+        }
+
+        @Override
+        public Flux<String> columns()
+        {
+            return wrappedResult.columns();
+        }
+
+        @Override
+        public Flux<Record> records()
+        {
+            // We care only about the case when the statement completes successfully.
+            // All contexts will be closed upon a failure in the rollback
+            return wrappedResult.records().doOnComplete( () ->
+            {
+                openExecutionContexts.remove( executionContext );
+                executionContext.close();
+            } );
+        }
+
+        @Override
+        public Mono<Summary> summary()
+        {
+            return wrappedResult.summary();
+        }
     }
 }

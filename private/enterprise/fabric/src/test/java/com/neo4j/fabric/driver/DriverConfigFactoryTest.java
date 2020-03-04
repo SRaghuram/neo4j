@@ -6,16 +6,20 @@
 package com.neo4j.fabric.driver;
 
 import com.neo4j.fabric.config.FabricConfig;
+import com.neo4j.fabric.executor.Location;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.driver.net.ServerAddress;
 import org.neo4j.ssl.config.SslPolicyLoader;
 
+import static com.neo4j.fabric.TestUtils.createUri;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -56,7 +60,7 @@ class DriverConfigFactoryTest
         properties.put( "fabric.graph.1.uri", "bolt://mega:2222" );
 
         // graph driver with something overloaded
-        properties.put( "fabric.graph.2.uri", "bolt://mega:333" );
+        properties.put( "fabric.graph.2.uri", "bolt://mega:3333" );
         properties.put( "fabric.graph.2.driver.connection.connect_timeout", "11" );
 
         var config = Config.newBuilder()
@@ -66,7 +70,7 @@ class DriverConfigFactoryTest
         var fabricConfig = FabricConfig.from( config );
         var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, mock( SslPolicyLoader.class ) );
 
-        var graph0DriverConfig = driverConfigFactory.createConfig( getGraph( fabricConfig, 0 ) );
+        var graph0DriverConfig = driverConfigFactory.createConfig( new Location.Remote( 0, createUri( "bolt://mega:1111" ), null ) );
 
         assertTrue( graph0DriverConfig.logging().getLog( "" ).isDebugEnabled() );
         assertTrue( graph0DriverConfig.logLeakedSessions() );
@@ -76,7 +80,7 @@ class DriverConfigFactoryTest
         assertEquals( Duration.ofSeconds( 17 ).toMillis(), graph0DriverConfig.connectionAcquisitionTimeoutMillis() );
         assertEquals( Duration.ofSeconds( 9 ).toMillis(), graph0DriverConfig.connectionTimeoutMillis() );
 
-        var graph1DriverConfig = driverConfigFactory.createConfig( getGraph( fabricConfig, 1 ) );
+        var graph1DriverConfig = driverConfigFactory.createConfig( new Location.Remote( 1, createUri( "bolt://mega:2222" ), null ) );
 
         assertFalse( graph1DriverConfig.logging().getLog( "" ).isDebugEnabled() );
         assertFalse( graph1DriverConfig.logLeakedSessions() );
@@ -86,7 +90,7 @@ class DriverConfigFactoryTest
         assertEquals( Duration.ofSeconds( 7 ).toMillis(), graph1DriverConfig.connectionAcquisitionTimeoutMillis() );
         assertEquals( Duration.ofSeconds( 3 ).toMillis(), graph1DriverConfig.connectionTimeoutMillis() );
 
-        var graph2DriverConfig = driverConfigFactory.createConfig( getGraph( fabricConfig, 2 ) );
+        var graph2DriverConfig = driverConfigFactory.createConfig( new Location.Remote( 2, createUri( "bolt://mega:3333" ), null ) );
         assertEquals( 99, graph2DriverConfig.maxConnectionPoolSize() );
         assertEquals( Duration.ofSeconds( 11 ).toMillis(), graph2DriverConfig.connectionTimeoutMillis() );
     }
@@ -105,7 +109,7 @@ class DriverConfigFactoryTest
         var fabricConfig = FabricConfig.from( config );
         var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, mock( SslPolicyLoader.class ) );
 
-        var graph0DriverConfig = driverConfigFactory.createConfig( getGraph( fabricConfig, 0 ) );
+        var graph0DriverConfig = driverConfigFactory.createConfig( new Location.Remote( 0, createUri( "bolt://mega:1111" ), null ) );
 
         assertFalse( graph0DriverConfig.logging().getLog( "" ).isDebugEnabled() );
         assertFalse( graph0DriverConfig.logLeakedSessions() );
@@ -130,17 +134,13 @@ class DriverConfigFactoryTest
         var fabricConfig = FabricConfig.from( config );
         var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, mock( SslPolicyLoader.class ) );
 
-        var graph0DriverConfig = driverConfigFactory.createConfig( getGraph( fabricConfig, 0 ) );
+        var address1 = new SocketAddress( "core-1", 1111 );
+        var address2 = new SocketAddress( "core-2", 2222 );
+        var address3 = new SocketAddress( "core-3", 3333 );
+        var uri = new Location.RemoteUri( "bolt", List.of( address1, address2, address3 ), null );
+        var graph0DriverConfig = driverConfigFactory.createConfig( new Location.Remote( 0, uri, null ) );
 
         var resolvedAddresses = graph0DriverConfig.resolver().resolve( null );
         assertThat( resolvedAddresses ).contains( ServerAddress.of( "core-1", 1111 ), ServerAddress.of( "core-2", 2222 ), ServerAddress.of( "core-3", 3333 ) );
-    }
-
-    private FabricConfig.Graph getGraph( FabricConfig fabricConfig, long id )
-    {
-        return fabricConfig.getDatabase().getGraphs().stream()
-                .filter( graph -> graph.getId() == id )
-                .findAny()
-                .orElseThrow( () -> new IllegalStateException( "Graph with id " + id + " not found" ) );
     }
 }

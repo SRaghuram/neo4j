@@ -5,7 +5,7 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.config.FabricConfig;
+import com.neo4j.fabric.executor.Location;
 import com.neo4j.fabric.stream.Record;
 import com.neo4j.fabric.stream.StatementResult;
 import reactor.core.publisher.Flux;
@@ -26,9 +26,9 @@ class FabricDriverAsyncTransaction implements FabricDriverTransaction
 
     private final AsyncTransaction asyncTransaction;
     private final AsyncSession asyncSession;
-    private final FabricConfig.Graph location;
+    private final Location.Remote location;
 
-    FabricDriverAsyncTransaction( AsyncTransaction asyncTransaction, AsyncSession asyncSession, FabricConfig.Graph location )
+    FabricDriverAsyncTransaction( AsyncTransaction asyncTransaction, AsyncSession asyncSession, Location.Remote location )
     {
         this.asyncTransaction = asyncTransaction;
         this.asyncSession = asyncSession;

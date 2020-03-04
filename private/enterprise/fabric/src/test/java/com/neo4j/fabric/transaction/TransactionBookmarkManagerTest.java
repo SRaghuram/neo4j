@@ -8,6 +8,7 @@ package com.neo4j.fabric.transaction;
 import com.neo4j.fabric.bolt.FabricBookmark;
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.driver.RemoteBookmark;
+import com.neo4j.fabric.executor.Location;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -22,6 +23,7 @@ import org.neo4j.bolt.runtime.Bookmark;
 import org.neo4j.bolt.txtracking.TransactionIdTracker;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
+import static com.neo4j.fabric.TestUtils.createUri;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -31,10 +33,8 @@ import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABA
 
 class TransactionBookmarkManagerTest
 {
-    private final FabricConfig.Graph graph1 =
-            new FabricConfig.Graph( 1, FabricConfig.RemoteUri.create( "bolt://somewhere:1001" ), null, null, emptyDriverConfig() );
-    private final FabricConfig.Graph graph2 =
-            new FabricConfig.Graph( 2, FabricConfig.RemoteUri.create( "bolt://somewhere:1002" ), null, null, emptyDriverConfig() );
+    private final Location.Remote location1 = new Location.Remote( 1, createUri( "bolt://somewhere:1001" ), null );
+    private final Location.Remote location2 = new Location.Remote( 2, createUri( "bolt://somewhere:1002" ), null );
 
     private final FabricConfig fabricConfig = mock(FabricConfig.class);
     private final TransactionIdTracker transactionIdTracker = mock(TransactionIdTracker.class);
@@ -43,6 +43,9 @@ class TransactionBookmarkManagerTest
     @BeforeEach
     void beforeEach()
     {
+        var graph1 = new FabricConfig.Graph( 1, FabricConfig.RemoteUri.create( "bolt://somewhere:1001" ), null, null, emptyDriverConfig() );
+        var graph2 = new FabricConfig.Graph( 2, FabricConfig.RemoteUri.create( "bolt://somewhere:1002" ), null, null, emptyDriverConfig() );
+
         var database = mock( FabricConfig.Database.class );
         when( database.getGraphs() ).thenReturn( Set.of( graph1, graph2 ) );
         when( fabricConfig.getDatabase() ).thenReturn( database );
@@ -51,14 +54,14 @@ class TransactionBookmarkManagerTest
     @Test
     void testBasicRemoteBookmarkHandling()
     {
-        bookmarkManager.recordBookmarkReceivedFromGraph( graph1, bookmark( "BB-1" ));
-        bookmarkManager.recordBookmarkReceivedFromGraph( graph2, bookmark( "BB-2" ));
-        bookmarkManager.recordBookmarkReceivedFromGraph( graph1, bookmark( "BB-3" ));
+        bookmarkManager.recordBookmarkReceivedFromGraph( location1, bookmark( "BB-1" ));
+        bookmarkManager.recordBookmarkReceivedFromGraph( location2, bookmark( "BB-2" ));
+        bookmarkManager.recordBookmarkReceivedFromGraph( location1, bookmark( "BB-3" ));
 
         var bookmark = bookmarkManager.constructFinalBookmark();
-        var graph1State = getGraphState( bookmark, graph1 );
+        var graph1State = getGraphState( bookmark, location1 );
         assertThat( graph1State ).contains( "BB-3" );
-        var graph2State = getGraphState( bookmark, graph2 );
+        var graph2State = getGraphState( bookmark, location2 );
         assertThat( graph2State ).contains( "BB-2" );
     }
 
@@ -69,19 +72,19 @@ class TransactionBookmarkManagerTest
         var b2 = bookmark( graphState( 1, "BB-5" ) );
         bookmarkManager.processSubmittedByClient( List.of( b1, b2 ) );
 
-        assertThat( getBookmarksForGraph( graph1 ) ).contains( "BB-1", "BB-2", "BB-5" );
-        assertThat( getBookmarksForGraph( graph2 ) ).contains( "BB-3", "BB-4" );
+        assertThat( getBookmarksForGraph( location1 ) ).contains( "BB-1", "BB-2", "BB-5" );
+        assertThat( getBookmarksForGraph( location2 ) ).contains( "BB-3", "BB-4" );
 
-        bookmarkManager.recordBookmarkReceivedFromGraph( graph1, bookmark( "BB-6" ));
-        bookmarkManager.recordBookmarkReceivedFromGraph( graph2, bookmark("BB-7" ));
+        bookmarkManager.recordBookmarkReceivedFromGraph( location1, bookmark( "BB-6" ));
+        bookmarkManager.recordBookmarkReceivedFromGraph( location2, bookmark("BB-7" ));
 
-        assertThat( getBookmarksForGraph( graph1 ) ).contains( "BB-1", "BB-2", "BB-5" );
-        assertThat( getBookmarksForGraph( graph2 ) ).contains( "BB-3", "BB-4" );
+        assertThat( getBookmarksForGraph( location1 ) ).contains( "BB-1", "BB-2", "BB-5" );
+        assertThat( getBookmarksForGraph( location2 ) ).contains( "BB-3", "BB-4" );
 
         var bookmark = bookmarkManager.constructFinalBookmark();
-        var graph1State = getGraphState( bookmark, graph1 );
+        var graph1State = getGraphState( bookmark, location1 );
         assertThat( graph1State ).contains( "BB-6" );
-        var graph2State = getGraphState( bookmark, graph2 );
+        var graph2State = getGraphState( bookmark, location2 );
         assertThat( graph2State ).contains( "BB-7" );
     }
 
@@ -93,7 +96,7 @@ class TransactionBookmarkManagerTest
         bookmarkManager.processSubmittedByClient( List.of( b1, b2 ) );
 
         var bookmark = bookmarkManager.constructFinalBookmark();
-        var graph1State = getGraphState( bookmark, graph1 );
+        var graph1State = getGraphState( bookmark, location1 );
         assertThat( graph1State ).contains( "BB-1", "BB-2", "BB-3" );
     }
 
@@ -106,10 +109,10 @@ class TransactionBookmarkManagerTest
 
         verify( transactionIdTracker ).awaitUpToDate( NAMED_SYSTEM_DATABASE_ID, 1234, Duration.ofSeconds( 123 ) );
 
-        assertThat( getBookmarksForGraph( graph1 ) ).contains( "BB-1" );
+        assertThat( getBookmarksForGraph( location1 ) ).contains( "BB-1" );
     }
 
-    private List<String> getBookmarksForGraph( FabricConfig.Graph graph )
+    private List<String> getBookmarksForGraph( Location.Remote graph )
     {
         return bookmarkManager.getBookmarksForGraph( graph ).stream().flatMap( rb -> rb.getSerialisedState().stream() ).collect( Collectors.toList());
     }
@@ -119,7 +122,7 @@ class TransactionBookmarkManagerTest
         return new FabricConfig.GraphDriverConfig( null, null, null, null, null, null, null, null, false );
     }
 
-    private List<String> getGraphState( FabricBookmark fabricBookmark, FabricConfig.Graph graph )
+    private List<String> getGraphState( FabricBookmark fabricBookmark, Location graph )
     {
         List<FabricBookmark.GraphState> graphStates = fabricBookmark.getGraphStates().stream()
                 .filter( gs -> gs.getRemoteGraphId() == graph.getId() )

@@ -184,8 +184,6 @@ class FabricExecutorTest
         when( tx.rollback() ).thenReturn( Mono.empty() );
 
         when( mockDriver.beginTransaction( any(), accessModeArgument.capture(), any(), any() ) ).thenReturn( Mono.just( tx ) );
-
-        when( mockDriver.run( any(), any(), any(), accessModeArgument.capture(), any(), any() ) ).thenReturn( mockStatementResult );
         return mockDriver;
     }
 
@@ -200,7 +198,7 @@ class FabricExecutorTest
             tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
         } );
 
-        verifySessionConfig( 4, org.neo4j.bolt.runtime.AccessMode.READ );
+        verifySessionConfig( 2, org.neo4j.bolt.runtime.AccessMode.READ );
         verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.WRITE );
     }
 
@@ -215,8 +213,8 @@ class FabricExecutorTest
             tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
         } );
 
-        verifySessionConfig( 4, org.neo4j.bolt.runtime.AccessMode.READ );
-        verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.WRITE );
+        verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.READ );
+        verifySessionConfig( 2, org.neo4j.bolt.runtime.AccessMode.WRITE );
     }
 
     @Test
@@ -271,7 +269,7 @@ class FabricExecutorTest
             );
         } );
 
-        verifySessionConfig( 8, org.neo4j.bolt.runtime.AccessMode.READ );
+        verifySessionConfig( 2, org.neo4j.bolt.runtime.AccessMode.READ );
         verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.WRITE );
     }
 
@@ -296,7 +294,7 @@ class FabricExecutorTest
             );
         } );
 
-        verifySessionConfig( 8, org.neo4j.bolt.runtime.AccessMode.READ );
+        verifySessionConfig( 2, org.neo4j.bolt.runtime.AccessMode.READ );
         verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.WRITE );
     }
 
@@ -323,8 +321,8 @@ class FabricExecutorTest
             );
         } );
 
-        verifySessionConfig( 1, org.neo4j.bolt.runtime.AccessMode.WRITE );
-        verifySessionConfig( 6, org.neo4j.bolt.runtime.AccessMode.READ );
+        verifySessionConfig( 2, org.neo4j.bolt.runtime.AccessMode.WRITE );
+        verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.READ );
     }
 
     @Test

@@ -5,7 +5,7 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.config.FabricConfig;
+import com.neo4j.fabric.executor.Location;
 import com.neo4j.fabric.stream.Record;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
 import reactor.core.publisher.Flux;
@@ -38,7 +38,7 @@ public class AsyncPooledDriver extends PooledDriver
     }
 
     @Override
-    public AutoCommitStatementResult run( String query, MapValue params, FabricConfig.Graph location, AccessMode accessMode,
+    public AutoCommitStatementResult run( String query, MapValue params, Location.Remote location, AccessMode accessMode,
             FabricTransactionInfo transactionInfo, List<RemoteBookmark> bookmarks )
     {
         var sessionConfig = createSessionConfig( location, accessMode, bookmarks );
@@ -54,7 +54,7 @@ public class AsyncPooledDriver extends PooledDriver
     }
 
     @Override
-    public Mono<FabricDriverTransaction> beginTransaction( FabricConfig.Graph location, AccessMode accessMode, FabricTransactionInfo transactionInfo,
+    public Mono<FabricDriverTransaction> beginTransaction( Location.Remote location, AccessMode accessMode, FabricTransactionInfo transactionInfo,
             List<RemoteBookmark> bookmarks )
     {
         var sessionConfig = createSessionConfig( location, accessMode, bookmarks );

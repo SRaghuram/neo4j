@@ -7,6 +7,7 @@ package com.neo4j.fabric.driver;
 
 import com.neo4j.fabric.auth.CredentialsProvider;
 import com.neo4j.fabric.config.FabricConfig;
+import com.neo4j.fabric.executor.Location;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -55,6 +56,7 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.ssl.SelfSignedCertificateFactory;
 import org.neo4j.values.virtual.MapValue;
 
+import static com.neo4j.fabric.TestUtils.createUri;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -185,9 +187,10 @@ class DriverSslTest
     private <T extends Exception> void testConnection( SslDir sslResource, String host, Class<T> errorCause, String errorMessage, boolean verifyHostname )
     {
 
+        var graph0Uri = "bolt://" + host + ":" + server.port();
         var properties = Map.of(
                 "fabric.database.name", "mega",
-                "fabric.graph.0.uri", "bolt://" + host + ":" + server.port(),
+                "fabric.graph.0.uri", graph0Uri,
                 "dbms.ssl.policy.fabric.enabled", "true",
                 "dbms.ssl.policy.fabric.base_directory", testDirectory.directory( "client" ).getAbsolutePath(),
                 "dbms.ssl.policy.fabric.private_key", sslResource.privateKey.toString(),
@@ -208,14 +211,16 @@ class DriverSslTest
 
         driverPool = new DriverPool( jobScheduler, fabricConfig, config, Clock.systemUTC(), credentialsProvider, sslLoader );
         driverPool.start();
-        var graph = getGraph( fabricConfig, 0 );
-        var driver = driverPool.getDriver( graph, null );
+        var driver = driverPool.getDriver( new Location.Remote( 0, createUri( graph0Uri ), null ), null );
 
         var transactionInfo = mock( FabricTransactionInfo.class );
         when( transactionInfo.getTxTimeout() ).thenReturn( Duration.ZERO );
         try
         {
-            driver.run( "RETURN 1", MapValue.EMPTY, graph, AccessMode.WRITE, transactionInfo, List.of() ).columns().collectList().block();
+            driver.run( "RETURN 1", MapValue.EMPTY, new Location.Remote( 0, null, null ), AccessMode.WRITE, transactionInfo, List.of() )
+                    .columns()
+                    .collectList()
+                    .block();
         }
         catch ( Exception e )
         {
@@ -231,14 +236,6 @@ class DriverSslTest
             assertEquals( errorCause, cause.getClass() );
             assertThat( cause.getMessage() ).contains( errorMessage );
         }
-    }
-
-    private FabricConfig.Graph getGraph( FabricConfig fabricConfig, long id )
-    {
-        return fabricConfig.getDatabase().getGraphs().stream()
-                .filter( graph -> graph.getId() == id )
-                .findAny()
-                .orElseThrow( () -> new IllegalStateException( "Graph with id " + id + " not found" ) );
     }
 
     private SslDir selfSignedCertificate( Path directory ) throws GeneralSecurityException, IOException, OperatorCreationException

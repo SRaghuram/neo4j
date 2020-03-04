@@ -6,22 +6,20 @@
 package com.neo4j.fabric.executor;
 
 import com.neo4j.fabric.driver.FabricDriverTransaction;
-import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.driver.DriverPool;
 import com.neo4j.fabric.driver.PooledDriver;
-import com.neo4j.fabric.planning.QueryType;
 import com.neo4j.fabric.stream.StatementResult;
+import com.neo4j.fabric.transaction.CompositeTransaction;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
 import com.neo4j.fabric.transaction.TransactionBookmarkManager;
+import com.neo4j.fabric.transaction.TransactionMode;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.neo4j.bolt.runtime.AccessMode;
 
-import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.values.virtual.MapValue;
 
 public class FabricRemoteExecutor
@@ -33,126 +31,138 @@ public class FabricRemoteExecutor
         this.driverPool = driverPool;
     }
 
-    public FabricRemoteTransaction begin( FabricTransactionInfo transactionInfo, TransactionBookmarkManager bookmarkManager )
+    public RemoteTransactionContext startTransactionContext( CompositeTransaction compositeTransaction,
+            FabricTransactionInfo transactionInfo,
+            TransactionBookmarkManager bookmarkManager )
     {
-        return new FabricRemoteTransaction( transactionInfo, bookmarkManager );
+        return new RemoteTransactionContext( compositeTransaction, transactionInfo, bookmarkManager );
     }
 
-    public class FabricRemoteTransaction
+    public class RemoteTransactionContext implements AutoCloseable
     {
-        private final Object writeTransactionStartLock = new Object();
+        private final Map<Long,PooledDriver> usedDrivers = new ConcurrentHashMap<>();
+        private final Map<Long,DriverTxWrapper> driverTransactions = new ConcurrentHashMap<>();
+
+        private final CompositeTransaction compositeTransaction;
         private final FabricTransactionInfo transactionInfo;
         private final TransactionBookmarkManager bookmarkManager;
-        private final Map<Long,PooledDriver> usedDrivers = new ConcurrentHashMap<>();
-        private volatile FabricConfig.Graph writingTo;
-        private volatile Mono<FabricDriverTransaction> writeTransaction;
 
-        private FabricRemoteTransaction( FabricTransactionInfo transactionInfo, TransactionBookmarkManager bookmarkManager )
+        private RemoteTransactionContext( CompositeTransaction compositeTransaction, FabricTransactionInfo transactionInfo,
+                TransactionBookmarkManager bookmarkManager )
         {
+            this.compositeTransaction = compositeTransaction;
             this.transactionInfo = transactionInfo;
             this.bookmarkManager = bookmarkManager;
         }
 
-        public Mono<StatementResult> run( FabricConfig.Graph location, String query, QueryType queryType, MapValue params )
+        public Mono<StatementResult> run( Location.Remote location, String query, TransactionMode transactionMode, MapValue params )
         {
-            if ( location.equals( writingTo ) )
+            var driverTx = getOrCreateTx( location, transactionMode );
+            return runInTx( driverTx, query, params );
+        }
+
+        private Mono<FabricDriverTransaction> getOrCreateTx( Location.Remote location, TransactionMode transactionMode )
+        {
+            var existingTx = driverTransactions.get( location.getId() );
+            if ( existingTx != null )
             {
-                return runInWriteTransaction( query, params );
+                maybeUpgradeToWritingTransaction( existingTx, transactionMode );
+                return existingTx.driverTx;
             }
 
-            var requestedMode = transactionInfo.getAccessMode();
-            var effectiveMode = EffectiveQueryType.effectiveAccessMode( requestedMode, queryType );
-
-            if ( effectiveMode == AccessMode.READ )
+            return driverTransactions.computeIfAbsent( location.getId(), locationId ->
             {
-                return runInAutoCommitReadTransaction( location, query, params );
-            }
-
-            if ( requestedMode == AccessMode.READ && effectiveMode == AccessMode.WRITE )
-            {
-                throw writeInReadError( location );
-            }
-
-            synchronized ( writeTransactionStartLock )
-            {
-                if ( writingTo != null && !writingTo.equals( location ) )
+                switch ( transactionMode )
                 {
-                    throw multipleWriteError( location, writingTo );
+                case DEFINITELY_WRITE:
+                    return compositeTransaction.startWritingTransaction( location, () ->
+                    {
+                        var tx = beginDriverTx( location, AccessMode.WRITE );
+                        return new DriverTxWrapper( tx, location, bookmarkManager );
+                    } );
+
+                case MAYBE_WRITE:
+                    return compositeTransaction.startReadingTransaction( location, () ->
+                    {
+                        var tx = beginDriverTx( location, AccessMode.WRITE );
+                        return new DriverTxWrapper( tx, location, bookmarkManager );
+                    } );
+
+                case DEFINITELY_READ:
+                    return compositeTransaction.startReadingOnlyTransaction( location, () ->
+                    {
+                        var tx = beginDriverTx( location, AccessMode.READ );
+                        return new DriverTxWrapper( tx, location, bookmarkManager );
+                    } );
+                default:
+                    throw new IllegalArgumentException( "Unexpected transaction mode: " + transactionMode );
                 }
-
-                if ( writingTo == null )
-                {
-                    beginWriteTransaction( location );
-                }
-            }
-
-            return runInWriteTransaction( query, params );
+            } ).driverTx;
         }
 
-        public Mono<Void> commit()
+        @Override
+        public void close()
         {
-            if ( writeTransaction == null )
+            usedDrivers.values().forEach( PooledDriver::release );
+        }
+
+        private void maybeUpgradeToWritingTransaction( DriverTxWrapper tx, TransactionMode transactionMode )
+        {
+            if ( transactionMode == TransactionMode.DEFINITELY_WRITE )
             {
-                releaseTransactionResources();
-                return Mono.empty();
+                compositeTransaction.upgradeToWritingTransaction( tx );
             }
-            return writeTransaction.flatMap( FabricDriverTransaction::commit )
-                    .doOnSuccess( bookmark -> bookmarkManager.recordBookmarkReceivedFromGraph( writingTo, bookmark ) )
-                    .then()
-                    .doFinally( signal -> releaseTransactionResources() );
         }
 
-        public Mono<Void> rollback()
-        {
-            if ( writeTransaction == null )
-            {
-                releaseTransactionResources();
-                return Mono.empty();
-            }
-            return writeTransaction.flatMap( FabricDriverTransaction::rollback ).doFinally( signal -> releaseTransactionResources() );
-        }
-
-        private void beginWriteTransaction( FabricConfig.Graph location )
-        {
-            writingTo = location;
-            var driver = getDriver( location );
-            writeTransaction = driver.beginTransaction( location, AccessMode.WRITE, transactionInfo, List.of() );
-        }
-
-        private Mono<StatementResult> runInAutoCommitReadTransaction( FabricConfig.Graph location, String query, MapValue params )
+        private Mono<FabricDriverTransaction> beginDriverTx( Location.Remote location, AccessMode accessMode )
         {
             var driver = getDriver( location );
             var bookmarks = bookmarkManager.getBookmarksForGraph( location );
-            var autoCommitStatementResult = driver.run( query, params, location, AccessMode.READ, transactionInfo, bookmarks );
-            autoCommitStatementResult.getBookmark().subscribe( bookmark -> bookmarkManager.recordBookmarkReceivedFromGraph( location, bookmark ) );
-            return Mono.just( autoCommitStatementResult );
+            return driver.beginTransaction( location, accessMode, transactionInfo, bookmarks );
         }
 
-        private Mono<StatementResult> runInWriteTransaction( String query, MapValue params )
-        {
-            return writeTransaction.map( rxTransaction -> rxTransaction.run( query, params ) );
-        }
-
-        private PooledDriver getDriver( FabricConfig.Graph location )
+        private PooledDriver getDriver( Location.Remote location )
         {
             return usedDrivers.computeIfAbsent( location.getId(), gid -> driverPool.getDriver( location, transactionInfo.getLoginContext().subject() ) );
         }
 
-        private FabricException writeInReadError( FabricConfig.Graph attempt )
+        private Mono<StatementResult> runInTx( Mono<FabricDriverTransaction> tx, String query, MapValue params )
         {
-            return new FabricException( Status.Fabric.AccessMode,
-                                        "Writing in read access mode not allowed. Attempted write to %s", attempt );
+            return tx.map( rxTransaction -> rxTransaction.run( query, params ) );
+        }
+    }
+
+    private static class DriverTxWrapper implements SingleDbTransaction
+    {
+        private final Mono<FabricDriverTransaction> driverTx;
+        private final Location.Remote location;
+        private final TransactionBookmarkManager bookmarkManager;
+
+        DriverTxWrapper( Mono<FabricDriverTransaction> driverTx, Location.Remote location, TransactionBookmarkManager bookmarkManager )
+        {
+            this.driverTx = driverTx;
+            this.location = location;
+            this.bookmarkManager = bookmarkManager;
         }
 
-        private FabricException multipleWriteError( FabricConfig.Graph attempt, FabricConfig.Graph writingTo )
+        @Override
+        public Mono<Void> commit()
         {
-            return new FabricException( Status.Fabric.AccessMode,
-                                        "Multi-shard writes not allowed. Attempted write to %s, currently writing to %s", attempt, writingTo );
+            return driverTx.flatMap( FabricDriverTransaction::commit )
+                    .doOnSuccess( bookmark -> bookmarkManager.recordBookmarkReceivedFromGraph( location, bookmark ) )
+                    .then();
         }
 
-        private void releaseTransactionResources()
+        @Override
+        public Mono<Void> rollback()
         {
-            usedDrivers.values().forEach( PooledDriver::release );
+            return driverTx.flatMap( FabricDriverTransaction::rollback ).then();
+        }
+
+        @Override
+        public Location getLocation()
+        {
+            return location;
         }
     }
 }

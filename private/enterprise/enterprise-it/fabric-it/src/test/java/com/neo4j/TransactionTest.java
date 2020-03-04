@@ -5,12 +5,12 @@
  */
 package com.neo4j;
 
-import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.driver.AutoCommitStatementResult;
 import com.neo4j.fabric.driver.DriverPool;
 import com.neo4j.fabric.driver.FabricDriverTransaction;
 import com.neo4j.fabric.driver.PooledDriver;
 import com.neo4j.fabric.driver.RemoteBookmark;
+import com.neo4j.fabric.executor.Location;
 import com.neo4j.fabric.localdb.FabricDatabaseManager;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.stream.summary.EmptySummary;
@@ -24,7 +24,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +39,7 @@ import java.util.stream.IntStream;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
@@ -76,7 +76,7 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class RemoteTransactionTest
+class TransactionTest
 {
     private static Driver clientDriver;
     private static TestServer testServer;
@@ -99,15 +99,15 @@ class RemoteTransactionTest
     @BeforeAll
     static void beforeAll() throws UnavailableException
     {
-        FabricConfig.Graph graph1 = new FabricConfig.Graph( 1, FabricConfig.RemoteUri.create( "bolt://somewhere:1001" ), null, null, emptyDriverConfig() );
-        FabricConfig.Graph graph2 = new FabricConfig.Graph( 2, FabricConfig.RemoteUri.create( "bolt://somewhere:1002" ), null, null, emptyDriverConfig() );
-        FabricConfig.Graph graph3 = new FabricConfig.Graph( 3, FabricConfig.RemoteUri.create( "bolt://somewhere:1003" ), null, null, emptyDriverConfig() );
+        var graph1 = new Location.Remote( 1, createUri( "bolt://somewhere:1001" ), null );
+        var graph2 = new Location.Remote( 2, createUri( "bolt://somewhere:1002" ), null );
+        var graph3 = new Location.Remote( 3, createUri( "bolt://somewhere:1003" ), null );
 
         var configProperties = Map.of(
                 "fabric.database.name", "mega",
-                "fabric.graph.1.uri", getUri( graph1 ),
-                "fabric.graph.2.uri", getUri( graph2 ),
-                "fabric.graph.3.uri", getUri( graph3 ),
+                "fabric.graph.1.uri", "bolt://somewhere:1001",
+                "fabric.graph.2.uri", "bolt://somewhere:1002",
+                "fabric.graph.3.uri", "bolt://somewhere:1003",
                 "dbms.transaction.timeout", "1000",
                 "dbms.connector.bolt.listen_address", "0.0.0.0:0",
                 "dbms.connector.bolt.enabled", "true"
@@ -153,22 +153,7 @@ class RemoteTransactionTest
         mockShardDriver( shard3Driver, Mono.just( tx3 ) );
     }
 
-    private static String getUri( FabricConfig.Graph graph )
-    {
-        try
-        {
-            var remoteUri = graph.getUri();
-            var address = remoteUri.getAddresses().get( 0 );
-            var uri = new URI( remoteUri.getScheme(), null, address.getHostname(), address.getPort(), null, remoteUri.getQuery(), null );
-            return uri.toString();
-        }
-        catch ( URISyntaxException e )
-        {
-            throw new IllegalArgumentException( e.getMessage(), e );
-        }
-    }
-
-    private static void mockDriverPool( FabricConfig.Graph graph, PooledDriver pooledDriver )
+    private static void mockDriverPool( Location.Remote graph, PooledDriver pooledDriver )
     {
         when( driverPool.getDriver( eq( graph ), any() ) ).thenReturn( pooledDriver );
     }
@@ -212,8 +197,6 @@ class RemoteTransactionTest
         when( result.summary() ).thenReturn( Mono.just( new EmptySummary() ) );
         when( result.getBookmark() ).thenReturn( Mono.just( new RemoteBookmark( Set.of("BB") ) ) );
 
-        when( shardDriver.run( any(), any(), any(), any(), any(), any() ) ).thenReturn( result );
-
         doAnswer( invocationOnMock ->
         {
             latch.countDown();
@@ -244,11 +227,12 @@ class RemoteTransactionTest
         {
             writeToShard1( tx );
             readFromShard2( tx );
+            readFromShard3( tx );
         } );
 
-        waitForDriverRelease( 2 );
-        verifyCommitted( tx1 );
-        verifyDriverReturned( shard1Driver, shard2Driver );
+        waitForDriverRelease( 3 );
+        verifyCommitted( tx1, tx2, tx3 );
+        verifyDriverReturned( shard1Driver, shard2Driver, shard3Driver );
     }
 
     @Test
@@ -258,12 +242,13 @@ class RemoteTransactionTest
         {
             writeToShard1( tx );
             readFromShard2( tx );
+            readFromShard3( tx );
             tx.rollback();
         } );
 
-        waitForDriverRelease( 2 );
-        verifyRolledBack( tx1 );
-        verifyDriverReturned( shard1Driver, shard2Driver );
+        waitForDriverRelease( 3 );
+        verifyRolledBack( tx1, tx2, tx3 );
+        verifyDriverReturned( shard1Driver, shard2Driver, shard3Driver );
     }
 
     @Test
@@ -283,11 +268,12 @@ class RemoteTransactionTest
         assertThat( e.getMessage() ).contains( "Begin failed on shard 1" );
 
         waitForDriverRelease( 3 );
+        verifyRolledBack( tx2, tx3 );
         verifyDriverReturned( shard1Driver, shard2Driver, shard3Driver );
     }
 
     @Test
-    void testShardTxCommitFailure()
+    void testWriteShardTxCommitFailure()
     {
         when( tx1.commit() ).thenReturn( Mono.error( new IllegalStateException( "Commit failed on shard 1" ) ) );
 
@@ -299,10 +285,31 @@ class RemoteTransactionTest
         } ) );
 
         assertEquals( "Neo.DatabaseError.Transaction.TransactionCommitFailed", e.code() );
-        assertThat( e.getMessage() ).contains( "Failed to commit remote transaction" );
+        assertThat( e.getMessage() ).contains( "Failed to commit a composite transaction" );
 
         waitForDriverRelease( 3 );
-        verifyCommitted( tx1 );
+        verifyCommitted( tx1, tx2, tx3 );
+        verifyDriverReturned( shard1Driver, shard2Driver, shard3Driver );
+    }
+
+    @Test
+    void testReadShardTxCommitFailure()
+    {
+        when( tx3.commit() ).thenReturn( Mono.error( new IllegalStateException( "Commit failed on shard 3" ) ) );
+
+        var e = assertThrows( DatabaseException.class, () -> doInMegaTx( tx ->
+        {
+            writeToShard1( tx );
+            readFromShard2( tx );
+            readFromShard3( tx );
+        } ) );
+
+        assertEquals( "Neo.DatabaseError.Transaction.TransactionCommitFailed", e.code() );
+        assertThat( e.getMessage() ).contains( "Failed to commit a composite transaction" );
+
+        waitForDriverRelease( 3 );
+        verifyCommitted( tx2, tx3 );
+        verifyRolledBack( tx1 );
         verifyDriverReturned( shard1Driver, shard2Driver, shard3Driver );
     }
 
@@ -320,17 +327,17 @@ class RemoteTransactionTest
         } ) );
 
         assertEquals( "Neo.DatabaseError.Transaction.TransactionRollbackFailed", e.code() );
-        assertThat( e.getMessage() ).contains( "Failed to rollback remote transaction" );
+        assertThat( e.getMessage() ).contains( "Failed to rollback a composite transaction" );
 
         waitForDriverRelease( 3 );
-        verifyRolledBack( tx1 );
+        verifyRolledBack( tx1, tx2, tx3 );
         verifyDriverReturned( shard1Driver, shard2Driver, shard3Driver );
     }
 
     @Test
     void testShardRunFailure()
     {
-        when( shard3Driver.run( any(), any(), any(), any(), any(), any() ) ).thenThrow( new IllegalStateException( "Query on shard 3 failed" ) );
+        when( tx3.run( any(), any() ) ).thenThrow( new IllegalStateException( "Query on shard 3 failed" ) );
 
         var e = assertThrows( DatabaseException.class, () -> {
             doInMegaTx( tx -> {
@@ -344,7 +351,7 @@ class RemoteTransactionTest
         assertThat( e.getMessage() ).contains( "Query on shard 3 failed" );
 
         waitForDriverRelease( 3 );
-        verifyRolledBack( tx1 );
+        verifyRolledBack( tx1, tx2, tx3 );
         verifyDriverReturned( shard1Driver, shard2Driver, shard3Driver );
     }
 
@@ -356,7 +363,7 @@ class RemoteTransactionTest
         when( result.records() ).thenReturn( Flux.error( new IllegalStateException( "Result stream from shard 3 failed" ) ) );
         when( result.getBookmark() ).thenReturn( Mono.empty() );
 
-        when( shard3Driver.run( any(), any(), any(), any(), any(), any() ) ).thenReturn( result );
+        when( tx3.run( any(), any() ) ).thenReturn( result );
 
         var e = assertThrows( DatabaseException.class, () -> doInMegaTx( tx -> {
             writeToShard1( tx );
@@ -368,7 +375,7 @@ class RemoteTransactionTest
         assertThat( e.getMessage() ).contains( "Result stream from shard 3 failed" );
 
         waitForDriverRelease( 3 );
-        verifyRolledBack( tx1 );
+        verifyRolledBack( tx1, tx2, tx3 );
         verifyDriverReturned( shard1Driver, shard2Driver, shard3Driver );
     }
 
@@ -383,7 +390,7 @@ class RemoteTransactionTest
                 readFromShard2( tx );
                 session.reset();
 
-                verifyRolledBack( tx1 );
+                verifyRolledBack( tx1, tx2 );
                 verifyDriverReturned( shard1Driver, shard2Driver );
             }
         }
@@ -408,20 +415,26 @@ class RemoteTransactionTest
         assertEquals( "Neo.ClientError.Transaction.TransactionTimedOut", e.code() );
         assertThat( e.getMessage() ).contains( "Trying to execute query in a terminated transaction" );
 
-        verifyRolledBack( tx1 );
+        verifyRolledBack( tx1, tx2 );
         verifyDriverReturned( shard1Driver, shard2Driver );
     }
 
-    private void verifyCommitted( FabricDriverTransaction tx )
+    private void verifyCommitted( FabricDriverTransaction... txs )
     {
-        verify( tx ).commit();
-        verify( tx, never() ).rollback();
+        Arrays.stream( txs ).forEach( tx ->
+        {
+            verify( tx ).commit();
+            verify( tx, never() ).rollback();
+        } );
     }
 
-    private void verifyRolledBack( FabricDriverTransaction tx )
+    private void verifyRolledBack( FabricDriverTransaction... txs )
     {
-        verify( tx ).rollback();
-        verify( tx, never() ).commit();
+        Arrays.stream( txs ).forEach( tx ->
+        {
+            verify( tx ).rollback();
+            verify( tx, never() ).commit();
+        } );
     }
 
     private void writeToShard1( Transaction tx )
@@ -457,11 +470,6 @@ class RemoteTransactionTest
         }
     }
 
-    private static FabricConfig.GraphDriverConfig emptyDriverConfig()
-    {
-        return new FabricConfig.GraphDriverConfig( null, null, null, null, null, null, null, null, true );
-    }
-
     private Session openSession()
     {
         return clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() );
@@ -470,5 +478,11 @@ class RemoteTransactionTest
     private void doInMegaTx( Consumer<Transaction> workload )
     {
         driverUtils.doInTx( clientDriver, workload );
+    }
+
+    private static Location.RemoteUri createUri( String uriString )
+    {
+        var uri = URI.create( uriString );
+        return new Location.RemoteUri( uri.getScheme(), List.of( new SocketAddress( uri.getHost(), uri.getPort() ) ), uri.getQuery() );
     }
 }

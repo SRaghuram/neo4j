@@ -6,17 +6,22 @@
 package com.neo4j.fabric.driver;
 
 import com.neo4j.fabric.config.FabricConfig;
+import com.neo4j.fabric.executor.Location;
 import org.junit.jupiter.api.Test;
 
+import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.driver.Logger;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.logging.JULBridge;
 import org.neo4j.ssl.config.SslPolicyLoader;
 
+import static com.neo4j.fabric.TestUtils.createUri;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.logging.AssertableLogProvider.Level.DEBUG;
 import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
@@ -97,7 +102,7 @@ class DriverLoggingTest
 
         var fabricConfig = FabricConfig.from( config );
         var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, mock( SslPolicyLoader.class ) );
-        var graph0DriverConfig = driverConfigFactory.createConfig( getGraph( fabricConfig, 0 ) );
+        var graph0DriverConfig = driverConfigFactory.createConfig( new Location.Remote( 0, createUri( "bolt://mega:1111" ), null ) );
 
         var logger = graph0DriverConfig.logging().getLog( LOG_NAME );
         log( logger );
@@ -110,14 +115,6 @@ class DriverLoggingTest
         logger.info( INFO_MESSAGE );
         logger.debug( DEBUG_MESSAGE );
         logger.trace( TRACE_MESSAGE );
-    }
-
-    private FabricConfig.Graph getGraph( FabricConfig fabricConfig, long id )
-    {
-        return fabricConfig.getDatabase().getGraphs().stream()
-                .filter( graph -> graph.getId() == id )
-                .findAny()
-                .orElseThrow( () -> new IllegalStateException( "Graph with id " + id + " not found" ) );
     }
 
     private void setUpLogging()

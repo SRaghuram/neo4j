@@ -6,6 +6,7 @@
 package com.neo4j.fabric.driver;
 
 import com.neo4j.fabric.config.FabricConfig;
+import com.neo4j.fabric.executor.Location;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -43,7 +44,7 @@ class SecurityPlanConstructionTest
         var sslLoader = SslPolicyLoader.create( config, NullLogProvider.nullLogProvider() );
         var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, sslLoader );
 
-        var securityPlan = driverConfigFactory.createSecurityPlan( getGraph( fabricConfig, 0 ) );
+        var securityPlan = driverConfigFactory.createSecurityPlan( new Location.Remote( 0, null, null ) );
 
         assertFalse( securityPlan.requiresEncryption() );
         assertNull(securityPlan.sslContext());
@@ -66,7 +67,7 @@ class SecurityPlanConstructionTest
         var sslLoader = SslPolicyLoader.create( config, NullLogProvider.nullLogProvider() );
         var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, sslLoader );
 
-        var securityPlan = driverConfigFactory.createSecurityPlan( getGraph( fabricConfig, 0 ) );
+        var securityPlan = driverConfigFactory.createSecurityPlan( new Location.Remote( 0, null, null ) );
 
         assertFalse(securityPlan.requiresEncryption());
         assertNull(securityPlan.sslContext());
@@ -93,24 +94,16 @@ class SecurityPlanConstructionTest
         var sslLoader = SslPolicyLoader.create( config, NullLogProvider.nullLogProvider() );
         var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, sslLoader );
 
-        var securityPlanForGraph0 = driverConfigFactory.createSecurityPlan( getGraph( fabricConfig, 0 ) );
+        var securityPlanForGraph0 = driverConfigFactory.createSecurityPlan( new Location.Remote( 0, null, null ) );
 
         assertTrue( securityPlanForGraph0.requiresEncryption() );
         assertNotNull( securityPlanForGraph0.sslContext() );
         assertTrue( securityPlanForGraph0.requiresHostnameVerification() );
 
-        var securityPlanForGraph1 = driverConfigFactory.createSecurityPlan( getGraph( fabricConfig, 1 ) );
+        var securityPlanForGraph1 = driverConfigFactory.createSecurityPlan( new Location.Remote( 1, null, null ) );
 
         assertFalse(securityPlanForGraph1.requiresEncryption());
         assertNull(securityPlanForGraph1.sslContext());
         assertFalse(securityPlanForGraph1.requiresHostnameVerification());
-    }
-
-    private FabricConfig.Graph getGraph( FabricConfig fabricConfig, long id )
-    {
-        return fabricConfig.getDatabase().getGraphs().stream()
-                .filter( graph -> graph.getId() == id )
-                .findAny()
-                .orElseThrow( () -> new IllegalStateException( "Graph with id " + id + " not found" ) );
     }
 }

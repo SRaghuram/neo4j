@@ -5,7 +5,7 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.config.FabricConfig;
+import com.neo4j.fabric.executor.Location;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
 import reactor.core.publisher.Mono;
 
@@ -41,10 +41,10 @@ public abstract class PooledDriver
         releaseCallback.accept( this );
     }
 
-    public abstract AutoCommitStatementResult run( String query, MapValue params, FabricConfig.Graph location, AccessMode accessMode,
+    public abstract AutoCommitStatementResult run( String query, MapValue params, Location.Remote location, AccessMode accessMode,
             FabricTransactionInfo transactionInfo, List<RemoteBookmark> bookmarks  );
 
-    public abstract Mono<FabricDriverTransaction> beginTransaction( FabricConfig.Graph location, AccessMode accessMode, FabricTransactionInfo transactionInfo,
+    public abstract Mono<FabricDriverTransaction> beginTransaction( Location.Remote location, AccessMode accessMode, FabricTransactionInfo transactionInfo,
             List<RemoteBookmark> bookmarks );
 
     AtomicInteger getReferenceCounter()
@@ -67,7 +67,7 @@ public abstract class PooledDriver
         driver.close();
     }
 
-    protected SessionConfig createSessionConfig( FabricConfig.Graph location, AccessMode accessMode, List<RemoteBookmark> bookmarks )
+    protected SessionConfig createSessionConfig( Location.Remote location, AccessMode accessMode, List<RemoteBookmark> bookmarks )
     {
         var builder = SessionConfig.builder().withDefaultAccessMode( translateAccessMode( accessMode ) );
 
@@ -76,9 +76,9 @@ public abstract class PooledDriver
 
         builder.withBookmarks(  Bookmark.from( mergedBookmarks ) );
 
-        if ( location.getDatabase() != null )
+        if ( location.getDatabaseName() != null )
         {
-            builder.withDatabase( location.getDatabase() );
+            builder.withDatabase( location.getDatabaseName() );
         }
 
         return builder.build();

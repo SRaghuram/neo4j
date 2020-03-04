@@ -6,10 +6,12 @@
 package com.neo4j.fabric.driver;
 
 import com.neo4j.fabric.config.FabricConfig;
+import com.neo4j.fabric.executor.Location;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.net.ssl.KeyManagerFactory;
@@ -37,6 +39,7 @@ class DriverConfigFactory
     private final Level serverLogLevel;
     private final SSLContext sslContext;
     private final SslPolicy sslPolicy;
+    private final Map<Long,FabricConfig.GraphDriverConfig> graphDriverConfigs;
 
     DriverConfigFactory( FabricConfig fabricConfig, org.neo4j.configuration.Config serverConfig, SslPolicyLoader sslPolicyLoader )
     {
@@ -54,19 +57,23 @@ class DriverConfigFactory
             sslPolicy = null;
             sslContext = null;
         }
+
+        graphDriverConfigs = fabricConfig.getDatabase().getGraphs().stream()
+                .filter( graph -> graph.getDriverConfig() != null )
+                .collect( Collectors.toMap( FabricConfig.Graph::getId, FabricConfig.Graph::getDriverConfig ) );
     }
 
-    Config createConfig( FabricConfig.Graph graph )
+    Config createConfig( Location.Remote location )
     {
         var builder = Config.builder();
 
-        var logLeakedSessions = getProperty( graph, FabricConfig.DriverConfig::getLogLeakedSessions );
+        var logLeakedSessions = getProperty( location, FabricConfig.DriverConfig::getLogLeakedSessions );
         if ( logLeakedSessions )
         {
             builder.withLeakedSessionsLogging();
         }
 
-        var idleTimeBeforeConnectionTest = getProperty( graph, FabricConfig.DriverConfig::getIdleTimeBeforeConnectionTest );
+        var idleTimeBeforeConnectionTest = getProperty( location, FabricConfig.DriverConfig::getIdleTimeBeforeConnectionTest );
         if ( idleTimeBeforeConnectionTest != null )
         {
             builder.withConnectionLivenessCheckTimeout( idleTimeBeforeConnectionTest.toMillis(), MILLISECONDS );
@@ -76,42 +83,44 @@ class DriverConfigFactory
             builder.withConnectionLivenessCheckTimeout( -1, MILLISECONDS );
         }
 
-        var maxConnectionLifetime = getProperty( graph, FabricConfig.DriverConfig::getMaxConnectionLifetime );
+        var maxConnectionLifetime = getProperty( location, FabricConfig.DriverConfig::getMaxConnectionLifetime );
         if ( maxConnectionLifetime != null )
         {
             builder.withMaxConnectionLifetime( maxConnectionLifetime.toMillis(), MILLISECONDS );
         }
 
-        var connectionAcquisitionTimeout = getProperty( graph, FabricConfig.DriverConfig::getConnectionAcquisitionTimeout );
+        var connectionAcquisitionTimeout = getProperty( location, FabricConfig.DriverConfig::getConnectionAcquisitionTimeout );
         if ( connectionAcquisitionTimeout != null )
         {
             builder.withConnectionAcquisitionTimeout( connectionAcquisitionTimeout.toMillis(), MILLISECONDS );
         }
 
-        var connectTimeout = getProperty( graph, FabricConfig.DriverConfig::getConnectTimeout );
+        var connectTimeout = getProperty( location, FabricConfig.DriverConfig::getConnectTimeout );
         if ( connectTimeout != null )
         {
             builder.withConnectionTimeout( connectTimeout.toMillis(), MILLISECONDS );
         }
 
-        var maxConnectionPoolSize = getProperty( graph, FabricConfig.DriverConfig::getMaxConnectionPoolSize );
+        var maxConnectionPoolSize = getProperty( location, FabricConfig.DriverConfig::getMaxConnectionPoolSize );
         if ( maxConnectionPoolSize != null )
         {
             builder.withMaxConnectionPoolSize( maxConnectionPoolSize );
         }
 
-        var serverAddresses = graph.getUri().getAddresses().stream()
+        var serverAddresses = location.getUri().getAddresses().stream()
                 .map( address -> ServerAddress.of( address.getHostname(), address.getPort() ) )
                 .collect( Collectors.toSet());
 
         return builder
                 .withResolver( mainAddress -> serverAddresses )
-                .withLogging( Logging.javaUtilLogging( getLoggingLevel( graph ) ) ).build();
+                .withLogging( Logging.javaUtilLogging( getLoggingLevel( location ) ) ).build();
     }
 
-    SecurityPlan createSecurityPlan( FabricConfig.Graph graph )
+    SecurityPlan createSecurityPlan( Location.Remote location )
     {
-        if ( sslPolicy == null || !graph.getDriverConfig().isSslEnabled() )
+        var graphDriverConfig = graphDriverConfigs.get( location.getId() );
+
+        if ( sslPolicy == null || (graphDriverConfig != null && !graphDriverConfig.isSslEnabled()) )
         {
             return new SecurityPlanImpl( false, null, false );
         }
@@ -119,9 +128,9 @@ class DriverConfigFactory
         return new SecurityPlanImpl( true, sslContext, sslPolicy.isVerifyHostname() );
     }
 
-    <T> T getProperty( FabricConfig.Graph graph, Function<FabricConfig.DriverConfig,T> extractor )
+    <T> T getProperty( Location.Remote location, Function<FabricConfig.DriverConfig,T> extractor )
     {
-        var graphDriverConfig = graph.getDriverConfig();
+        var graphDriverConfig = graphDriverConfigs.get( location.getId() );
 
         if ( graphDriverConfig != null )
         {
@@ -137,9 +146,9 @@ class DriverConfigFactory
         return extractor.apply( fabricConfig.getGlobalDriverConfig().getDriverConfig() );
     }
 
-    private java.util.logging.Level getLoggingLevel( FabricConfig.Graph graph )
+    private java.util.logging.Level getLoggingLevel( Location.Remote location )
     {
-        var loggingLevel = getProperty( graph, FabricConfig.DriverConfig::getLoggingLevel );
+        var loggingLevel = getProperty( location, FabricConfig.DriverConfig::getLoggingLevel );
         if ( loggingLevel == null )
         {
             loggingLevel = serverLogLevel;

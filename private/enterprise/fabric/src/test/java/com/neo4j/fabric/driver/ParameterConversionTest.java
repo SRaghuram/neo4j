@@ -5,7 +5,7 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.config.FabricConfig;
+import com.neo4j.fabric.executor.Location;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -288,8 +288,8 @@ class ParameterConversionTest
 
     private void execute( Map<String,Object> params )
     {
-        var location = mock( FabricConfig.Graph.class);
-        when( location.getDatabase() ).thenReturn( "mega" );
+        var location = mock( Location.Remote.class);
+        when( location.getDatabaseName() ).thenReturn( "mega" );
         var transactionIfo = mock( FabricTransactionInfo.class );
         when( transactionIfo.getTxTimeout() ).thenReturn( Duration.ZERO );
 

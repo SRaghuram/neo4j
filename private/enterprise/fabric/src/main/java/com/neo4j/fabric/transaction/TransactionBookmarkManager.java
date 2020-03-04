@@ -9,6 +9,7 @@ import com.neo4j.fabric.bolt.FabricBookmark;
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.driver.RemoteBookmark;
 import com.neo4j.fabric.executor.FabricException;
+import com.neo4j.fabric.executor.Location;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -30,7 +31,7 @@ public class TransactionBookmarkManager
     private final TransactionIdTracker transactionIdTracker;
     private final Duration bookmarkTimeout;
 
-    private final Map<FabricConfig.Graph, GraphBookmarkData> graphBookmarkData = new ConcurrentHashMap<>();
+    private final Map<Long, GraphBookmarkData> remoteGraphBookmarkData = new ConcurrentHashMap<>();
 
     public TransactionBookmarkManager( FabricConfig fabricConfig, TransactionIdTracker transactionIdTracker, Duration bookmarkTimeout )
     {
@@ -51,9 +52,9 @@ public class TransactionBookmarkManager
         processFabricBookmarks( bookmarksByType );
     }
 
-    public List<RemoteBookmark> getBookmarksForGraph( FabricConfig.Graph graph )
+    public List<RemoteBookmark> getBookmarksForGraph( Location.Remote location )
     {
-        var bookmarkData = graphBookmarkData.get( graph );
+        var bookmarkData = remoteGraphBookmarkData.get( location.getId() );
 
         if ( bookmarkData != null )
         {
@@ -63,15 +64,15 @@ public class TransactionBookmarkManager
         return List.of();
     }
 
-    public void recordBookmarkReceivedFromGraph( FabricConfig.Graph graph, RemoteBookmark bookmark )
+    public void recordBookmarkReceivedFromGraph( Location.Remote location, RemoteBookmark bookmark )
     {
-        var bookmarkData = graphBookmarkData.computeIfAbsent( graph, g -> new GraphBookmarkData() );
+        var bookmarkData = remoteGraphBookmarkData.computeIfAbsent( location.getId(), g -> new GraphBookmarkData() );
         bookmarkData.bookmarkReceivedFromGraph = bookmark;
     }
 
     public FabricBookmark constructFinalBookmark()
     {
-        var remoteStates = graphBookmarkData.entrySet().stream().map( entry -> {
+        var remoteStates = remoteGraphBookmarkData.entrySet().stream().map( entry -> {
 
             var bookmarkData = entry.getValue();
             List<RemoteBookmark> graphBookmarks;
@@ -84,7 +85,7 @@ public class TransactionBookmarkManager
                 graphBookmarks = bookmarkData.bookmarksSubmittedByClient;
             }
 
-            return new FabricBookmark.GraphState( entry.getKey().getId(), graphBookmarks );
+            return new FabricBookmark.GraphState( entry.getKey(), graphBookmarks );
         } ).collect( Collectors.toList() );
 
         return new FabricBookmark( remoteStates );
@@ -143,7 +144,7 @@ public class TransactionBookmarkManager
                             "Bookmark with non-existent remote graph ID database encountered: " + bookmark );
                 }
 
-                var bookmarkData = graphBookmarkData.computeIfAbsent( graph, g -> new GraphBookmarkData() );
+                var bookmarkData = remoteGraphBookmarkData.computeIfAbsent( graph.getId(), g -> new GraphBookmarkData() );
                 bookmarkData.bookmarksSubmittedByClient.addAll( graphState.getBookmarks() );
             } );
         }

@@ -17,8 +17,6 @@ import org.neo4j.kernel.api.exceptions.Status;
 public interface FabricTransaction
 {
 
-    void begin();
-
     void commit();
 
     void rollback();
@@ -35,8 +33,8 @@ public interface FabricTransaction
 
     interface FabricExecutionContext
     {
-        FabricRemoteExecutor.FabricRemoteTransaction getRemote();
+        FabricRemoteExecutor.RemoteTransactionContext getRemote();
 
-        FabricLocalExecutor.FabricLocalTransaction getLocal();
+        FabricLocalExecutor.LocalTransactionContext getLocal();
     }
 }

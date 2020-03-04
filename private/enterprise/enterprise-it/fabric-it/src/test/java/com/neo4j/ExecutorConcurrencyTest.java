@@ -52,7 +52,7 @@ class ExecutorConcurrencyTest
     private static DriverUtils driverUtils;
 
     private final List<RemoteQueryRecord> remoteQueryRecords = mockRemoteQueries( 10 );
-    private final FabricRemoteExecutor.FabricRemoteTransaction fabricRemoteTransaction = mock( FabricRemoteExecutor.FabricRemoteTransaction.class );
+    private final FabricRemoteExecutor.RemoteTransactionContext fabricRemoteTransactionContext = mock( FabricRemoteExecutor.RemoteTransactionContext.class );
 
     @BeforeAll
     static void beforeAll() throws KernelException
@@ -106,12 +106,11 @@ class ExecutorConcurrencyTest
 
     private FabricRemoteExecutor mockRemoteExecutor()
     {
-        when( remoteExecutor.begin( any(), any() ) ).thenReturn( fabricRemoteTransaction );
+        when( remoteExecutor.startTransactionContext( any(), any(), any() ) ).thenReturn( fabricRemoteTransactionContext );
 
         var counter = new AtomicInteger( 0 );
 
-        when( fabricRemoteTransaction.commit() ).thenReturn( Mono.empty() );
-        when( fabricRemoteTransaction.run( any(), any(), any(), any() ) ).thenAnswer( invocationOnMock ->
+        when( fabricRemoteTransactionContext.run( any(), any(), any(), any() ) ).thenAnswer( invocationOnMock ->
         {
             int queryCount = counter.getAndIncrement();
             return Mono.just( remoteQueryRecords.get( queryCount ).statementResult );
