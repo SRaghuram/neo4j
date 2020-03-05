@@ -252,6 +252,7 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
     )
   }
 
+  //noinspection MutatorLikeMethodIsParameterless
   private def doInitializeInnerLoopOrRestoreContinuationState: IntermediateRepresentation = {
     // TODO: In this initialization scope we can record all the operator state variables (cursors etc.) that are now generated as explicit fields
     //       and instead use local variables together with a ScopeContinuationState containing the fields that needs to be

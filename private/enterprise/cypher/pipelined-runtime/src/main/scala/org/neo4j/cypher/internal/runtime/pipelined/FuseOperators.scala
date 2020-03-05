@@ -104,11 +104,13 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleNodeByIdSeekT
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleRangeSeekQueryNodeIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleThreadedAllNodeScanTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleThreadedLabelScanTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.UnionOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnwindOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.VarExpandOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
 import org.neo4j.cypher.internal.util.Many
@@ -966,6 +968,22 @@ class FuseOperators(operatorFactory: OperatorFactory,
               fusedPlans = nextPlan :: acc.fusedPlans,
               argumentStates = (argumentStateMapId, SerialTopLevelSkipStateFactory) :: acc.argumentStates
               )
+
+          case plan@plans.Union(lhs ,rhs) =>
+            val lhsSlots = physicalPlan.slotConfigurations(lhs.id)
+            val rhsSlots = physicalPlan.slotConfigurations(rhs.id)
+            val slots = physicalPlan.slotConfigurations(plan.id)
+            val newTemplate =
+              new UnionOperatorTemplate(acc.template,
+                plan.id,
+                innermostTemplate,
+                lhsSlots,
+                rhsSlots,
+                SlottedPipeMapper.computeUnionSlotMappings(lhsSlots, slots),
+                SlottedPipeMapper.computeUnionSlotMappings(rhsSlots, slots))(expressionCompiler)
+            acc.copy(
+              template = newTemplate,
+              fusedPlans = nextPlan :: acc.fusedPlans)
 
           case _ =>
             cantHandle(acc, nextPlan)

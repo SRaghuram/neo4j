@@ -5,16 +5,58 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
+import org.neo4j.codegen.api.Field
+import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.and
+import org.neo4j.codegen.api.IntermediateRepresentation.assign
+import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.constructor
+import org.neo4j.codegen.api.IntermediateRepresentation.declare
+import org.neo4j.codegen.api.IntermediateRepresentation.equal
+import org.neo4j.codegen.api.IntermediateRepresentation.fail
+import org.neo4j.codegen.api.IntermediateRepresentation.getStatic
+import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
+import org.neo4j.codegen.api.IntermediateRepresentation.invoke
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
+import org.neo4j.codegen.api.IntermediateRepresentation.load
+import org.neo4j.codegen.api.IntermediateRepresentation.loop
+import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
+import org.neo4j.codegen.api.IntermediateRepresentation.noValue
+import org.neo4j.codegen.api.IntermediateRepresentation.or
+import org.neo4j.codegen.api.IntermediateRepresentation.self
+import org.neo4j.codegen.api.IntermediateRepresentation.staticConstant
+import org.neo4j.codegen.api.IntermediateRepresentation.ternary
+import org.neo4j.codegen.api.LocalVariable
+import org.neo4j.codegen.api.StaticField
+import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.NoMemoryTracker
+import org.neo4j.cypher.internal.runtime.DbAccess
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
+import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DB_ACCESS
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_MORSEL
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_ROW_IS_VALID
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NEXT
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.pipes.UnionSlottedPipe.RowMapping
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.RowMapping
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.UnionSlotMapping
+import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.cypher.internal.util.symbols
+import org.neo4j.exceptions.CantCompileQueryException
+import org.neo4j.exceptions.InternalException
+import org.neo4j.values.virtual.NodeValue
+import org.neo4j.values.virtual.RelationshipValue
 
 class UnionOperator(val workIdentity: WorkIdentity,
                     lhsSlotConfig: SlotConfiguration,
@@ -33,7 +75,7 @@ class UnionOperator(val workIdentity: WorkIdentity,
     val morsel = inputMorsel.nextCopy
 
     val rowMapping =
-      if(morsel.slots eq lhsSlotConfig) lhsMapping
+      if (morsel.slots eq lhsSlotConfig) lhsMapping
       else if (morsel.slots eq rhsSlotConfig) rhsMapping
       else throw new IllegalStateException(s"Unknown slot configuration in UnionOperator. Got: ${morsel.slots}. LHS: $lhsSlotConfig. RHS: $rhsSlotConfig")
 
@@ -60,7 +102,7 @@ class UnionTask(val inputMorsel: Morsel,
 
     // We write one output row per input row.
     // Since the input morsel can at most have as many rows as the output morsel, we don't need to check `outputCursor.onValidRow()`.
-    while(inputCursor.next()) {
+    while (inputCursor.next()) {
       rowMapping.mapRows(inputCursor, outputCursor, state)
       outputCursor.next()
     }
@@ -70,4 +112,139 @@ class UnionTask(val inputMorsel: Morsel,
   override def canContinue: Boolean = false
 
   override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
+}
+
+class UnionOperatorTemplate(val inner: OperatorTaskTemplate,
+                            override val id: Id,
+                            innermost: DelegateOperatorTaskTemplate,
+                            lhsSlotConfig: SlotConfiguration,
+                            rhsSlotConfig: SlotConfiguration,
+                            lhsMapping: Iterable[UnionSlotMapping],
+                            rhsMapping: Iterable[UnionSlotMapping])
+                           (protected val codeGen: OperatorExpressionCompiler) extends ContinuableOperatorTaskWithMorselTemplate {
+
+  // Union does not support fusing over pipelines, so it is always gonna be the head operator
+  override protected val isHead: Boolean = true
+
+  protected val lhsSlotsConfigsFused: StaticField = staticConstant[SlotConfiguration](codeGen.namer.nextVariableName("lhsSlotConfig"), lhsSlotConfig)
+  protected val rhsSlotsConfigsFused: StaticField = staticConstant[SlotConfiguration](codeGen.namer.nextVariableName("rhsSlotConfig"), rhsSlotConfig)
+
+  private val fromLHSName = codeGen.namer.nextVariableName("fromLHS")
+
+  override protected def scopeId: String = "union" + id.x
+
+  override def genExpressions: Seq[IntermediateExpression] = Seq.empty
+
+  override def genFields: Seq[Field] = Seq(lhsSlotsConfigsFused, rhsSlotsConfigsFused)
+
+  override def genLocalVariables: Seq[LocalVariable] = Seq.empty
+
+  override def genInit: IntermediateRepresentation = inner.genInit
+
+  /**
+   * {{{
+   *   boolean fromLHS;
+   *   if ( (this.inputMorsel().slots()) == (lhsSlotConfig) )
+   *       fromLHS = true;
+   *   else if ( (this.inputMorsel().slots()) == (rhsSlotConfig) )
+   *       fromLHS = false;
+   *   else
+   *       throw new java.lang.IllegalStateException( "Unknown slot configuration in UnionOperator." );
+   *    << genLoop >>
+   * }}}
+   */
+  override protected def genOperateHead: IntermediateRepresentation = {
+    val inputSlotConfig = invoke(INPUT_MORSEL, method[Morsel, SlotConfiguration]("slots"))
+    block(
+      declare[Boolean](fromLHSName),
+      ifElse(equal(inputSlotConfig, getStatic(lhsSlotsConfigsFused))) {
+        assign(fromLHSName, constant(true))
+      } {
+        ifElse(equal(inputSlotConfig, getStatic(rhsSlotsConfigsFused))) {
+          assign(fromLHSName, constant(false))
+        } {
+          fail(newInstance(constructor[IllegalStateException, String], constant("Unknown slot configuration in UnionOperator.")))
+        }
+      },
+      genLoop
+    )
+  }
+  /**
+   * {{{
+   *    while( (this.canContinue()) && ((served) < (demand)) )
+   *    {
+   *        if ( fromLHS )
+   *            // copy from LHS
+   *        else
+   *            // copy from RHS
+   *        << inner.genOperate >>
+   *        this.inputCursor.next();
+   *    }
+   * }}}
+   */
+  private def genLoop: IntermediateRepresentation = {
+    loop(and(invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue")), innermost.predicate)) {
+      block(
+        codeGen.copyFromInput(
+          codeGen.inputSlotConfiguration.numberOfLongs,
+          codeGen.inputSlotConfiguration.numberOfReferences),
+        ifElse(load(fromLHSName)) {
+          copySlots(lhsMapping)
+        } {
+          copySlots(rhsMapping)
+        },
+        inner.genOperateWithExpressions,
+        // Else if no inner operator can proceed we move to the next input row
+        doIfInnerCantContinue(block(invokeSideEffect(INPUT_CURSOR, NEXT), profileRow(id))),
+        innermost.resetCachedPropertyVariables
+      )
+    }
+  }
+
+  private def copySlots(slotMapping: Iterable[UnionSlotMapping]): IntermediateRepresentation = {
+    val ops = slotMapping.map {
+      case SlottedPipeMapper.CopyLongSlot(sourceOffset, targetOffset) =>
+        codeGen.setLongAt(targetOffset, codeGen.getLongFromExecutionContext(sourceOffset, INPUT_CURSOR))
+      case SlottedPipeMapper.CopyRefSlot(sourceOffset, targetOffset) =>
+        codeGen.setRefAt(targetOffset, codeGen.getRefFromExecutionContext(sourceOffset, INPUT_CURSOR))
+      case SlottedPipeMapper.CopyCachedProperty(sourceOffset, targetOffset) =>
+        codeGen.setCachedPropertyAt(targetOffset, codeGen.getCachedPropertyFromExecutionContext(sourceOffset, INPUT_CURSOR))
+      case SlottedPipeMapper.ProjectLongToRefSlot(sourceSlot, targetOffset) =>
+        codeGen.setRefAt(targetOffset, getFromSlot(sourceSlot))
+    }
+
+    block(ops.toSeq: _*)
+  }
+
+  private def nodeFromSlot(offset: Int): IntermediateRepresentation = {
+    invoke(DB_ACCESS, method[DbAccess, NodeValue, Long]("nodeById"), codeGen.getLongFromExecutionContext(offset, INPUT_CURSOR))
+  }
+
+  private def relFromSlot(offset: Int): IntermediateRepresentation = {
+    invoke(DB_ACCESS, method[DbAccess, RelationshipValue, Long]("relationshipById"), codeGen.getLongFromExecutionContext(offset, INPUT_CURSOR))
+  }
+
+  private def getFromSlot(slot: LongSlot): IntermediateRepresentation = slot match {
+    case LongSlot(offset, true, symbols.CTNode) =>
+      ternary(equal(codeGen.getLongAt(offset), constant(-1L)), noValue, nodeFromSlot(offset))
+    case LongSlot(offset, false, symbols.CTNode) =>
+      nodeFromSlot(offset)
+    case LongSlot(offset, true, symbols.CTRelationship) =>
+      ternary(equal(codeGen.getLongAt(offset), constant(-1L)), noValue, relFromSlot(offset))
+    case LongSlot(offset, false, symbols.CTRelationship) =>
+      relFromSlot(offset)
+
+    case _ =>
+      throw new InternalException(s"Do not know how to project $slot")
+  }
+
+  override protected def genOperateMiddle: IntermediateRepresentation = throw new CantCompileQueryException("Cannot compile Union as middle operator")
+
+  override def genCanContinue: Option[IntermediateRepresentation] = {
+    inner.genCanContinue.map(or(_, INPUT_ROW_IS_VALID)).orElse(Some(INPUT_ROW_IS_VALID))
+  }
+
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
+
+  override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
 }

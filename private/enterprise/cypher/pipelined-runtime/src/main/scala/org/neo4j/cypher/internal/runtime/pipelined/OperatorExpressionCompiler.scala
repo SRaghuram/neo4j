@@ -674,7 +674,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
       }
     }
 
-    // Now we can compute how many arguments slots that we actually need to copy
+    // Now we can compute how many arguments slots we actually need to copy
     val nLongsToCopy = Math.min(nLongSlotsToCopyFromInput, firstModifiedLongSlot)
     val nRefsToCopy = Math.min(nRefSlotsToCopyFromInput, firstModifiedRefSlot)
 

@@ -73,9 +73,11 @@ class ArgumentOperator(val workIdentity: WorkIdentity,
 class ArgumentOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
                                    override val id: Id,
                                    innermost: DelegateOperatorTaskTemplate,
-                                   argumentSize: SlotConfiguration.Size,
-                                   final override protected val isHead: Boolean = true)
+                                   argumentSize: SlotConfiguration.Size)
                                   (protected val codeGen: OperatorExpressionCompiler) extends ContinuableOperatorTaskWithMorselTemplate {
+
+  // Argument does not support fusing over pipelines, so it is always gonna be the head operator
+  override protected val isHead: Boolean = true
 
   override protected def scopeId: String = "argument" + id.x
 

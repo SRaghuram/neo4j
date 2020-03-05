@@ -837,14 +837,14 @@ object SlottedPipeMapper {
   case class ProjectLongToRefSlot(sourceSlot: LongSlot, targetOffset: Int) extends UnionSlotMapping
 
   /**
-   * A [[UnionSlotMapping]] as a function that actually performs the copying.
+   * A [[UnionSlotMapping]] is a function that actually performs the copying.
    */
   trait RowMapping extends {
     def mapRows(incoming: CypherRow, outgoing: CypherRow, state: QueryState): Unit
   }
 
   /**
-   * compute mapping from incoming to outgoing pipe line, the slot order may differ
+   * compute mapping from incoming to outgoing pipeline, the slot order may differ
    * between the output and the input (lhs and rhs) and it may be the case that
    * we have a reference slot in the output but a long slot on one of the inputs,
    * e.g. MATCH (n) RETURN n UNION RETURN 42 AS n

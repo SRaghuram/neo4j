@@ -16,6 +16,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.cast
 import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
+import org.neo4j.codegen.api.IntermediateRepresentation.equal
 import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.getStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.greaterThan
@@ -28,10 +29,12 @@ import org.neo4j.codegen.api.IntermediateRepresentation.lessThan
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.noValue
 import org.neo4j.codegen.api.IntermediateRepresentation.param
 import org.neo4j.codegen.api.IntermediateRepresentation.self
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.IntermediateRepresentation.subtract
+import org.neo4j.codegen.api.IntermediateRepresentation.ternary
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
@@ -41,6 +44,7 @@ import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.expressions.SemanticDirection.BOTH
 import org.neo4j.cypher.internal.expressions.SemanticDirection.INCOMING
 import org.neo4j.cypher.internal.expressions.SemanticDirection.OUTGOING
+import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
@@ -49,6 +53,7 @@ import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
+import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPool
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
 import org.neo4j.cypher.internal.runtime.pipelined.execution.FlowControl
@@ -63,6 +68,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.UnorderedArgumentStateMapReader
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.cypher.operations.CursorUtils
 import org.neo4j.cypher.operations.CypherCoercions
 import org.neo4j.cypher.operations.CypherFunctions
@@ -88,6 +94,8 @@ import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.TextValue
 import org.neo4j.values.storable.Value
 import org.neo4j.values.virtual.ListValue
+import org.neo4j.values.virtual.NodeValue
+import org.neo4j.values.virtual.RelationshipValue
 
 object OperatorCodeGenHelperTemplates {
   sealed trait CursorPoolsType {
@@ -152,6 +160,9 @@ object OperatorCodeGenHelperTemplates {
         method[QueryResources, CursorPools]("cursorPools")))
   val CURSOR_POOL: IntermediateRepresentation =
     load(CURSOR_POOL_V)
+
+  val INPUT_MORSEL: IntermediateRepresentation =
+    invoke(self(), method[ContinuableOperatorTaskWithMorsel, Morsel]("inputMorsel"))
 
   val OUTPUT_MORSEL: IntermediateRepresentation =
     load("outputMorsel")
@@ -497,5 +508,40 @@ object OperatorCodeGenHelperTemplates {
     case OUTGOING => getStatic[Direction, Direction]("OUTGOING")
     case INCOMING => getStatic[Direction, Direction]("INCOMING")
     case BOTH => getStatic[Direction, Direction]("BOTH")
+  }
+
+  /**
+   * Project a node value from a long slot directly from the input cursor.
+   */
+  def nodeFromSlotAsValue(codeGen: OperatorExpressionCompiler)(offset: Int): IntermediateRepresentation = {
+    invoke(DB_ACCESS, method[DbAccess, NodeValue, Long]("nodeById"), codeGen.getLongFromExecutionContext(offset, INPUT_CURSOR))
+  }
+
+  /**
+   * Project a relationship value from a long slot directly from the input cursor.
+   */
+  def relFromSlotAsValue(codeGen: OperatorExpressionCompiler)(offset: Int): IntermediateRepresentation = {
+    invoke(DB_ACCESS, method[DbAccess, RelationshipValue, Long]("relationshipById"), codeGen.getLongFromExecutionContext(offset, INPUT_CURSOR))
+  }
+
+  /**
+   * Partial function to project values from long slots, with configurable projection for nodes and relationships.
+   *
+   * @param codeGen the OperatorExpressionCompiler
+   * @param nodeProjector the function to project nodes by offset
+   * @param relProjector  the function to project relationships by offset
+   * @return a partial function that generates the correct projection including null checks depending on the slot given to it.
+   */
+  def getFromLongSlot[SLOT >: LongSlot](codeGen: OperatorExpressionCompiler)
+                                       (nodeProjector: Int => IntermediateRepresentation = nodeFromSlotAsValue(codeGen),
+                                        relProjector: Int => IntermediateRepresentation = relFromSlotAsValue(codeGen)): PartialFunction[SLOT, IntermediateRepresentation] = {
+    case LongSlot(offset, true, symbols.CTNode) =>
+      ternary(equal(codeGen.getLongAt(offset), constant(-1L)), noValue, nodeProjector(offset))
+    case LongSlot(offset, false, symbols.CTNode) =>
+      nodeProjector(offset)
+    case LongSlot(offset, true, symbols.CTRelationship) =>
+      ternary(equal(codeGen.getLongAt(offset), constant(-1L)), noValue, relProjector(offset))
+    case LongSlot(offset, false, symbols.CTRelationship) =>
+      relProjector(offset)
   }
 }

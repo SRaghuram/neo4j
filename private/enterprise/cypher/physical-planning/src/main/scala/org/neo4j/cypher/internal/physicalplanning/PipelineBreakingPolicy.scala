@@ -31,6 +31,7 @@ import org.neo4j.cypher.internal.logical.plans.RelationshipCountFromCountStore
 import org.neo4j.cypher.internal.logical.plans.Selection
 import org.neo4j.cypher.internal.logical.plans.Skip
 import org.neo4j.cypher.internal.logical.plans.UndirectedRelationshipByIdSeek
+import org.neo4j.cypher.internal.logical.plans.Union
 import org.neo4j.cypher.internal.logical.plans.UnwindCollection
 import org.neo4j.cypher.internal.logical.plans.VarExpand
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -138,6 +139,7 @@ object OperatorFusionPolicy {
              _: Argument
         => true
 
+        // one child operators
         case _: Expand |
              _: OptionalExpand |
              _: Selection |
@@ -151,7 +153,8 @@ object OperatorFusionPolicy {
         => true
 
         // two child operators
-        case _: Apply =>
+        case _: Apply |
+             _: Union =>
           true
 
         case _ =>
@@ -161,7 +164,8 @@ object OperatorFusionPolicy {
 
     override def canFuseOverPipeline(lp: LogicalPlan): Boolean = lp match {
       case _: Argument |
-           _: Input =>
+           _: Input |
+           _: Union =>
         false
 
       //because of how fused var expand is implemented where we evaluate predicate in a separate specialized
