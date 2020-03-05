@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.PipelinedRuntime.CODE_GEN_FAILED_MESSAGE
 import org.neo4j.cypher.internal.compiler.CodeGenerationFailedNotification
 import org.neo4j.cypher.internal.compiler.ExperimentalFeatureNotification
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphVisualizer
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefiner
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
@@ -140,7 +141,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                           query: LogicalQuery,
                           context: EnterpriseRuntimeContext,
                           queryIndexRegistrator: QueryIndexRegistrator,
-                          warnings: Set[InternalNotification]): PipelinedExecutionPlan = {
+                          warnings: Set[InternalNotification]): ExecutionPlan = {
     val batchSize = selectBatchSize(query, context)
     val optimizedLogicalPlan = optimizingRewriter(query, batchSize)
 
@@ -184,6 +185,10 @@ class PipelinedRuntime private(parallelExecution: Boolean,
 
     DebugLog.logDiff("PhysicalPlanner.plan")
     val executionGraphDefinition = ExecutionGraphDefiner.defineFrom(breakingPolicy, operatorFusionPolicy, physicalPlan)
+
+    if (context.debugOptions.contains("visualizepipelines")) {
+      return ExecutionGraphVisualizer.getExecutionPlan(executionGraphDefinition)
+    }
 
     // Currently only interpreted pipes can do writes. Ask the policy if it is allowed.
     val readOnly = interpretedPipesFallbackPolicy.readOnly
