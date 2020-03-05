@@ -304,8 +304,8 @@ class ParallelRuntimeCartesianProductTest extends CartesianProductTestBase(FUSIN
 class ParallelRuntimeCartesianProductNoFusingTest extends CartesianProductTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 
 // APPLY
-class ParallelRuntimeApplyTest extends ApplyTestBase(ENTERPRISE.FUSING, PIPELINED, SIZE_HINT) with ParallelRuntimeSpecSuite
-class ParallelRuntimeApplyNoFusingTest extends ApplyTestBase(ENTERPRISE.NO_FUSING, PIPELINED, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeApplyTest extends ApplyTestBase(FUSING, PIPELINED, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeApplyNoFusingTest extends ApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with ParallelRuntimeSpecSuite
 
 // SHORTEST PATH
 class ParallelRuntimeShortestPathTest extends ShortestPathTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
