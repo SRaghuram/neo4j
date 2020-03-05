@@ -53,6 +53,7 @@ import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.helpers.collection.Visitor;
 import org.neo4j.internal.id.DefaultIdController;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
+import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.internal.schema.IndexConfigCompleter;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.IndexPrototype;
@@ -83,7 +84,6 @@ import org.neo4j.storageengine.api.PropertyKeyValue;
 import org.neo4j.storageengine.api.RelationshipDirection;
 import org.neo4j.storageengine.api.StandardConstraintRuleAccessor;
 import org.neo4j.storageengine.api.StorageCommand;
-import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
@@ -149,7 +149,7 @@ class FrekiStorageEngineGraphWritesIT
     private RandomRule random;
 
     private LifeSupport life;
-    private StorageEngine storageEngine;
+    private FrekiStorageEngine storageEngine;
     private RecordingNodeLabelUpdateListener nodeLabelUpdateListener;
     private RecordingIndexUpdatesListener indexUpdateListener;
     private CommandCreationContext commandCreationContext;
@@ -754,6 +754,98 @@ class FrekiStorageEngineGraphWritesIT
         }
     }
 
+    @Test
+    void modifyingNodeShouldNotAccidentallyCreateNewBigValueRecordSparse() throws Exception
+    {
+        modifyingNodeShouldNotAccidentallyCreateNewBigValueRecord( 0 );
+    }
+
+    @Test
+    void modifyingNodeShouldNotAccidentallyCreateNewBigValueRecordDense() throws Exception
+    {
+        modifyingNodeShouldNotAccidentallyCreateNewBigValueRecord( 100 );
+    }
+
+    private void modifyingNodeShouldNotAccidentallyCreateNewBigValueRecord( int numberOfRelationships ) throws Exception
+    {
+        // given a node with a property that has a big value
+        long nodeId = commandCreationContext.reserveNode();
+        long initializeBigValuePosition = storageEngine.stores().bigPropertyValueStore.position();
+        createAndApplyTransaction( target ->
+        {
+            target.visitCreatedNode( nodeId );
+            target.visitNodePropertyChanges( nodeId, singletonList( new PropertyKeyValue( 0, stringValue( random.nextAlphaNumericString( 100, 100 ) ) ) ),
+                    emptyList(), IntSets.immutable.empty() );
+            for ( int i = 0; i < numberOfRelationships; i++ )
+            {
+                target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId ), 0, nodeId, nodeId, emptyList() );
+            }
+        } );
+        long bigValuePosition = storageEngine.stores().bigPropertyValueStore.position();
+        assertThat( bigValuePosition ).isGreaterThan( initializeBigValuePosition );
+
+        // when
+        createAndApplyTransaction( target ->
+        {
+            target.visitNodePropertyChanges( nodeId, singletonList( new PropertyKeyValue( 1, intValue( 10 ) ) ), emptyList(), IntSets.immutable.empty() );
+        } );
+
+        // then
+        assertThat( storageEngine.stores().bigPropertyValueStore.position() ).isEqualTo( bigValuePosition );
+    }
+
+    @Test
+    void modifyingNodeShouldNotAccidentallyCreateNewRelationshipBigValueRecordSparse() throws Exception
+    {
+        modifyingNodeShouldNotAccidentallyCreateNewRelationshipBigValueRecord( 0 );
+    }
+
+    @Test
+    void modifyingNodeShouldNotAccidentallyCreateNewRelationshipBigValueRecordDense() throws Exception
+    {
+        modifyingNodeShouldNotAccidentallyCreateNewRelationshipBigValueRecord( 100 );
+    }
+
+    private void modifyingNodeShouldNotAccidentallyCreateNewRelationshipBigValueRecord( int numberOfAdditionalRelationships ) throws Exception
+    {
+        // given a node with a property that has a big value
+        long nodeId = commandCreationContext.reserveNode();
+        long otherNodeId = commandCreationContext.reserveNode();
+        long initializeBigValuePosition = storageEngine.stores().bigPropertyValueStore.position();
+        String value = random.nextAlphaNumericString( 100, 100 );
+        RelationshipSpec relationship =
+                new RelationshipSpec( nodeId, 0, otherNodeId, asSet( new PropertyKeyValue( 0, stringValue( value ) ) ),
+                        commandCreationContext.reserveRelationship( nodeId ) );
+        createAndApplyTransaction( target ->
+        {
+            target.visitCreatedNode( nodeId );
+            target.visitCreatedNode( otherNodeId );
+            relationship.create( target );
+            for ( int i = 0; i < numberOfAdditionalRelationships; i++ )
+            {
+                target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId ), 0, nodeId, nodeId, emptyList() );
+            }
+        } );
+        long bigValuePosition = storageEngine.stores().bigPropertyValueStore.position();
+        assertThat( bigValuePosition ).isGreaterThan( initializeBigValuePosition );
+
+        // when
+        createAndApplyTransaction( target ->
+        {
+            target.visitNodePropertyChanges( nodeId, singletonList( new PropertyKeyValue( 1, intValue( 10 ) ) ), emptyList(), IntSets.immutable.empty() );
+            target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId ), 0, nodeId, nodeId, emptyList() );
+        } );
+
+        // then
+        assertThat( storageEngine.stores().bigPropertyValueStore.position() ).isEqualTo( bigValuePosition );
+    }
+
+    // TODO: 2020-03-06 addingBigValueRelationshipPropertyShouldOnlyCreateOneShared (sparse/dense)
+
+    // TODO since we don't quite support removing and reusing big value record space then wait with these until we do
+    // TODO: 2020-03-06 removingBigValueNodePropertyShouldAlsoRemoveItsBigValueRecord
+    // TODO: 2020-03-06 changingBigValueNodePropertyShouldAlsoRemoveThePreviousBigValueRecord
+
     private void shouldGenerateIndexUpdates(
             ThrowingConsumer<TxStateVisitor,Exception> beforeState, ThrowingConsumer<TxStateVisitor,Exception> testState,
             Function<IndexDescriptor,Set<IndexEntryUpdate<IndexDescriptor>>> expectedUpdates ) throws Exception
@@ -885,6 +977,11 @@ class FrekiStorageEngineGraphWritesIT
         storageEngine.apply( new SingleTxToApply( commands ), TransactionApplicationMode.EXTERNAL );
     }
 
+    private void assertNodeIsDense( long nodeId )
+    {
+        assertThat( storageEngine.analysis().nodeIsDense( nodeId ) ).isTrue();
+    }
+
     private static class SimpleTokenCreator implements TokenCreator
     {
         private final AtomicInteger highId = new AtomicInteger( 1 );
@@ -981,7 +1078,8 @@ class FrekiStorageEngineGraphWritesIT
         @Override
         public String toString()
         {
-            return "RelationshipSpec{" + "startNodeId=" + startNodeId + ", type=" + type + ", endNodeId=" + endNodeId + ", properties=" + properties + '}';
+            return "RelationshipSpec{" + "startNodeId=" + startNodeId + ", type=" + type + ", endNodeId=" + endNodeId + ", properties=" + properties + ", id=" +
+                    id + '}';
         }
 
         @Override
@@ -1003,6 +1101,11 @@ class FrekiStorageEngineGraphWritesIT
         public int hashCode()
         {
             return Objects.hash( startNodeId, type, endNodeId, properties );
+        }
+
+        void create( TxStateVisitor target ) throws ConstraintValidationException
+        {
+            target.visitCreatedRelationship( id, type, startNodeId, endNodeId, properties );
         }
     }
 

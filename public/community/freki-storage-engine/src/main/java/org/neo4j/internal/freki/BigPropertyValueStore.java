@@ -195,4 +195,10 @@ class BigPropertyValueStore extends BareBoneSingleFileStore implements SimpleBig
         while ( !nextPosition.compareAndSet( expect, update ) );
         return pos;
     }
+
+    @Override
+    public long position()
+    {
+        return nextPosition.get();
+    }
 }

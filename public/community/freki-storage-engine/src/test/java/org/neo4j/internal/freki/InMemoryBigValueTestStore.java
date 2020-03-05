@@ -112,4 +112,10 @@ class InMemoryBigValueTestStore extends LifecycleAdapter implements SimpleBigVal
     public void flush( IOLimiter ioLimiter, PageCursorTracer cursorTracer )
     {
     }
+
+    @Override
+    public long position()
+    {
+        return position.get();
+    }
 }

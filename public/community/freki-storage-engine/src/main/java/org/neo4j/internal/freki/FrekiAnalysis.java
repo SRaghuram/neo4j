@@ -35,28 +35,44 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.kernel.lifecycle.Life;
 
+import static java.util.stream.Stream.of;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
+import static org.neo4j.internal.freki.MutableNodeRecordData.isDenseFromForwardPointer;
+import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
+import static org.neo4j.internal.freki.Record.recordSize;
 import static org.neo4j.internal.freki.Record.recordXFactor;
+import static org.neo4j.io.ByteUnit.bytesToString;
 import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 import static org.neo4j.storageengine.api.RelationshipDirection.INCOMING;
 import static org.neo4j.storageengine.api.RelationshipDirection.LOOP;
 import static org.neo4j.storageengine.api.RelationshipDirection.OUTGOING;
 import static org.neo4j.storageengine.api.RelationshipSelection.ALL_RELATIONSHIPS;
 
-public class FrekiAnalysis
+public class FrekiAnalysis extends Life implements AutoCloseable
 {
     private final MainStores stores;
 
     public FrekiAnalysis( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException
     {
         this( new MainStores( fs, databaseLayout, pageCache, new DefaultIdGeneratorFactory( fs, immediate() ), PageCacheTracer.NULL, TRACER_SUPPLIER,
-                immediate(), false ) );
+                immediate(), false ), true );
     }
 
     public FrekiAnalysis( MainStores stores )
     {
+        this( stores, false );
+    }
+
+    FrekiAnalysis( MainStores stores, boolean manageStoreLifeToo )
+    {
         this.stores = stores;
+        if ( manageStoreLifeToo )
+        {
+            life.add( stores );
+        }
+        life.start();
     }
 
     public void dumpNodes( String nodeIdSpec )
@@ -65,10 +81,16 @@ public class FrekiAnalysis
         {
             dumpAllNodes();
         }
+        else if ( nodeIdSpec.contains( "-" ) )
+        {
+            var separatorIndex = nodeIdSpec.indexOf( '-' );
+            var fromId = Long.parseLong( nodeIdSpec.substring( 0, separatorIndex ) );
+            var toId = Long.parseLong( nodeIdSpec.substring( separatorIndex + 1 ) );
+            dumpNodes( fromId, toId );
+        }
         else
         {
-            var nodeId = Long.parseLong( nodeIdSpec );
-            dumpNode( nodeId );
+            dumpNode( Long.parseLong( nodeIdSpec ) );
         }
     }
 
@@ -88,17 +110,25 @@ public class FrekiAnalysis
 
     public void dumpNode( long nodeId )
     {
+        dumpNodes( nodeId, nodeId + 1 );
+    }
+
+    public void dumpNodes( long fromNodeId, long toNodeId )
+    {
         try ( var nodeCursor = new FrekiNodeCursor( stores, PageCursorTracer.NULL );
               var propertyCursor = new FrekiPropertyCursor( stores, PageCursorTracer.NULL );
               var relationshipCursor = new FrekiRelationshipTraversalCursor( stores, PageCursorTracer.NULL ) )
         {
-            nodeCursor.single( nodeId );
-            if ( !nodeCursor.next() )
+            for ( long nodeId = fromNodeId; nodeId < toNodeId; nodeId++ )
             {
-                System.out.println( "Node " + nodeId + " not in use" );
-                return;
+                nodeCursor.single( nodeId );
+                if ( !nodeCursor.next() )
+                {
+                    System.out.println( "Node " + nodeId + " not in use" );
+                    return;
+                }
+                dumpNode( nodeCursor, propertyCursor, relationshipCursor );
             }
-            dumpNode( nodeCursor, propertyCursor, relationshipCursor );
         }
     }
 
@@ -107,21 +137,17 @@ public class FrekiAnalysis
         dumpLogicalRepresentation( nodeCursor, propertyCursor, relationshipCursor );
 
         // More physical
-        System.out.println( "x1: " + nodeCursor.smallRecord.dataForReading() );
-        if ( nodeCursor.headerState.isDense )
+        System.out.printf( "x1: %s%s%n", nodeCursor.smallRecord, nodeCursor.headerState.isDense ? " (DENSE)" : "" );
+        if ( nodeCursor.headerState.containsForwardPointer )
         {
-            System.out.println( "DENSE" );
-        }
-        else if ( nodeCursor.headerState.containsForwardPointer )
-        {
-            System.out.printf( "x%d: %s%n", recordXFactor( nodeCursor.record.sizeExp() ), nodeCursor.smallRecord.dataForReading() );
+            System.out.printf( "x%d: %s%n", recordXFactor( nodeCursor.record.sizeExp() ), nodeCursor.record );
         }
     }
 
     public void dumpLogicalRepresentation( FrekiNodeCursor nodeCursor, FrekiPropertyCursor propertyCursor,
             FrekiRelationshipTraversalCursor relationshipCursor )
     {
-        long nodeId = nodeCursor.loadedNodeId;
+        var nodeId = nodeCursor.loadedNodeId;
         System.out.printf( "Node[%d] %s%n", nodeId, nodeCursor );
         System.out.printf( "  labels:%s%n", Arrays.toString( nodeCursor.labels() ) );
 
@@ -138,9 +164,47 @@ public class FrekiAnalysis
         {
             var direction = relationshipCursor.sourceNodeReference() == relationshipCursor.targetNodeReference() ? LOOP :
                             relationshipCursor.sourceNodeReference() == nodeId ? OUTGOING : INCOMING;
-            System.out.printf( "  %s[:%d]%s(%d)%n",
+            System.out.printf( "  (%d)%s[:%d,%d]%s(%d)%n", relationshipCursor.originNodeReference(),
                     direction == LOOP ? "--" : direction == OUTGOING ? "--" : "<-", relationshipCursor.type(),
+                    relationshipCursor.entityReference(),
                     direction == LOOP ? "--" : direction == OUTGOING ? "->" : "--", relationshipCursor.neighbourNodeReference() );
+        }
+    }
+
+    /**
+     * E.g. 123x4 or 456
+     */
+    public void dumpRecord( String record )
+    {
+        var xIndex = record.indexOf( 'x' );
+        long id;
+        int sizeExp;
+        if ( xIndex == -1 )
+        {
+            id = Long.parseLong( record );
+            sizeExp = 0;
+        }
+        else
+        {
+            id = Long.parseLong( record.substring( 0, xIndex ) );
+            sizeExp = Record.sizeExpFromXFactor( Integer.parseInt( record.substring( xIndex + 1 ) ) );
+        }
+        dumpRecord( id, sizeExp );
+    }
+
+    public void dumpRecord( long id, int sizeExp )
+    {
+        dumpRecord( loadRecord( id, sizeExp ) );
+    }
+
+    private Record loadRecord( long id, int sizeExp )
+    {
+        var store = stores.mainStore( sizeExp );
+        var record = store.newRecord();
+        try ( var cursor = store.openReadCursor() )
+        {
+            store.read( cursor, record, id );
+            return record;
         }
     }
 
@@ -167,29 +231,48 @@ public class FrekiAnalysis
         System.out.println( "Calculating stats ..." );
         var storeStats = gatherStoreStats();
 
-        printFactors( "Distribution of record sizes", storeStats, ( stats, stat ) ->
+        var totalNumDenseNodes = of( storeStats ).mapToLong( s -> s.numDenseNodes ).sum();
+        printPercents( "Distribution of used record sizes", storeStats, ( stats, stat ) ->
                 (double) stat.usedRecords / stats[0].usedRecords );
-        printFactors( "Record occupancy", storeStats, ( stats, stat ) ->
+        System.out.printf( " (DE: %.2f%%)%n", percent( totalNumDenseNodes, storeStats[0].usedRecords ) );
+        printPercents( "Record occupancy i.e. avg occupancy rate for each record size", storeStats, ( stats, stat ) ->
                 (double) stat.bytesOccupiedInUsedRecords / (stat.bytesOccupiedInUsedRecords + stat.bytesVacantInUsedRecords) );
+
+        var totalOccupied = of( storeStats ).mapToLong( s -> s.bytesOccupiedInUsedRecords ).sum();
+        var totalVacant = of( storeStats ).mapToLong( s -> s.bytesVacantInUsedRecords + (s.unusedRecords * recordSize( s.sizeExp )) ).sum();
+        var totalVacantInUsedRecords = of( storeStats ).mapToLong( s -> s.bytesVacantInUsedRecords ).sum();
+        var totalPossibleOccupied = of( storeStats ).mapToLong( s -> s.usedRecords * recordSize( s.sizeExp ) ).sum();
+        var total = of( storeStats ).mapToLong( s -> (s.usedRecords + s.unusedRecords) * recordSize( s.sizeExp ) ).sum();
+
+        System.out.printf( "Total occupied bytes in used records %s (%.2f%%)%n", bytesToString( totalOccupied ),
+                percent( totalOccupied, totalPossibleOccupied ) );
+        System.out.printf( "Total vacant bytes in used records %s (%.2f%%)%n", bytesToString( totalVacantInUsedRecords ),
+                percent( totalVacantInUsedRecords, totalPossibleOccupied ) );
+        System.out.printf( "Total occupied bytes %s (%.2f%%)%n", bytesToString( totalOccupied ), percent( totalOccupied, total ) );
+        System.out.printf( "Total vacant bytes %s (%.2f%%)%n", bytesToString( totalVacant ), percent( totalVacant, total ) );
 
         // - TODO Number of big values
         // - TODO Avg size of big value
     }
 
-    private void printFactors( String title, StoreStats[] stats, BiFunction<StoreStats[],StoreStats,Double> calculator )
+    private static double percent( long part, long whole )
+    {
+        return 100D * part / whole;
+    }
+
+    private void printPercents( String title, StoreStats[] stats, BiFunction<StoreStats[],StoreStats,Double> calculator )
     {
         System.out.println( title + ":" );
         for ( StoreStats stat : stats )
         {
-            System.out.printf( "  x%d: %.2f%n", recordXFactor( stat.sizeExp ), calculator.apply( stats, stat ) * 100d );
+            System.out.printf( "  x%d: %.2f%%%n", recordXFactor( stat.sizeExp ), calculator.apply( stats, stat ) * 100d );
         }
     }
 
     public StoreStats[] gatherStoreStats()
     {
-        var storeStats = new StoreStats[stores.getNumMainStores()];
         Collection<Callable<StoreStats>> storeDistributionTasks = new ArrayList<>();
-        for ( var i = 0; i < storeStats.length; i++ )
+        for ( var i = 0; i < stores.getNumMainStores(); i++ )
         {
             var sizeExp = i;
             var store = stores.mainStore( sizeExp );
@@ -203,16 +286,29 @@ public class FrekiAnalysis
                     var recordSize = store.recordSize();
                     try ( var cursor = store.openReadCursor() )
                     {
-                        for ( var nodeId = 0; nodeId < highId; nodeId++ )
+                        for ( var id = 0; id < highId; id++ )
                         {
-                            if ( store.read( cursor, record, nodeId ) )
+                            if ( store.read( cursor, record, id ) && record.hasFlag( FLAG_IN_USE ) )
                             {
                                 stats.usedRecords++;
-                                var data = new MutableNodeRecordData( nodeId );
+                                var data = new MutableNodeRecordData( id );
                                 var buffer = record.dataForReading();
-                                data.deserialize( buffer, stores.bigPropertyValueStore );
+                                try
+                                {
+                                    data.deserialize( buffer, stores.bigPropertyValueStore );
+                                }
+                                catch ( Exception e )
+                                {
+                                    System.err.println( "Caught exception when processing id " + id + " in store x" +
+                                            Record.recordXFactor( store.recordSizeExponential() ) );
+                                    throw e;
+                                }
                                 stats.bytesOccupiedInUsedRecords += Record.HEADER_SIZE + buffer.position();
                                 stats.bytesVacantInUsedRecords += recordSize - Record.HEADER_SIZE - buffer.position();
+                                if ( isDenseFromForwardPointer( data.getForwardPointer() ) )
+                                {
+                                    stats.numDenseNodes++;
+                                }
                             }
                             else
                             {
@@ -224,11 +320,22 @@ public class FrekiAnalysis
                 } );
             }
         }
-        runTasksInParallel( storeDistributionTasks );
-        return storeStats;
+        return runTasksInParallel( storeDistributionTasks ).stream().toArray( StoreStats[]::new );
     }
 
-    public <T> List<T> runTasksInParallel( Collection<Callable<T>> storeDistributionTasks )
+    public boolean nodeIsDense( long nodeId )
+    {
+        var record = loadRecord( nodeId, 0 );
+        if ( record.hasFlag( FLAG_IN_USE ) )
+        {
+            var data = new MutableNodeRecordData( nodeId );
+            data.deserialize( record.dataForReading(), stores.bigPropertyValueStore );
+            return isDenseFromForwardPointer( data.getForwardPointer() );
+        }
+        return false;
+    }
+
+    private <T> List<T> runTasksInParallel( Collection<Callable<T>> storeDistributionTasks )
     {
         var executorService = Executors.newFixedThreadPool( storeDistributionTasks.size() );
         try
@@ -252,39 +359,10 @@ public class FrekiAnalysis
         }
     }
 
-    public void printAverageFactorFilledRecords() throws IOException
+    @Override
+    public void close()
     {
-        for ( var i = 0; i < 4; i++ )
-        {
-            var store = stores.mainStore( i );
-            if ( store != null )
-            {
-                System.out.println( averageFactorFilledRecords( store ) );
-            }
-        }
-    }
-
-    private double averageFactorFilledRecords( SimpleStore store )
-    {
-        var bytesUsed = 0;
-        var bytesMax = 9;
-        var record = store.newRecord();
-        try ( var cursor = store.openReadCursor() )
-        {
-            var highId = store.getHighId();
-            for ( var id = 0; id < highId; id++ )
-            {
-                if ( store.read( cursor, record, id ) )
-                {
-                    var data = new MutableNodeRecordData( id );
-                    var buffer = record.dataForReading();
-                    data.deserialize( buffer, stores.bigPropertyValueStore );
-                    bytesUsed += buffer.position();
-                    bytesMax += buffer.capacity();
-                }
-            }
-        }
-        return ((double) bytesUsed) / bytesMax;
+        shutdown();
     }
 
     private static class StoreStats
@@ -294,6 +372,7 @@ public class FrekiAnalysis
         private long unusedRecords;
         private long bytesOccupiedInUsedRecords;
         private long bytesVacantInUsedRecords;
+        private long numDenseNodes;
 
         StoreStats( int sizeExp )
         {

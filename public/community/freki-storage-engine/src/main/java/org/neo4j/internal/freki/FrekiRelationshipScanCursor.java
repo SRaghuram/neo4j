@@ -177,6 +177,13 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     }
 
     @Override
+    boolean initializeOtherCursorFromStateOfThisCursor( FrekiMainStoreCursor otherCursor )
+    {
+        // This scan cursor is an empty shell, just forward all things to the inner traversal cursor
+        return traversalCursor.initializeOtherCursorFromStateOfThisCursor( otherCursor );
+    }
+
+    @Override
     public void close()
     {
         super.close();
