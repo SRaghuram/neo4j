@@ -91,7 +91,7 @@ class ExpandIntoOperator(val workIdentity: WorkIdentity,
                          relOffset: Int,
                          toSlot: Slot,
                          dir: SemanticDirection,
-                         types: RelationshipTypes) extends StreamingOperator {
+                         types: RelationshipTypes)(val id: Id = Id.INVALID_ID) extends StreamingOperator {
 
   private var memoryTracker: QueryMemoryTracker = NoMemoryTracker
 
@@ -112,6 +112,7 @@ class ExpandIntoOperator(val workIdentity: WorkIdentity,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
     IndexedSeq(new ExpandIntoTask(inputMorsel.nextCopy,
                                   workIdentity,
+                                  id,
                                   fromSlot,
                                   relOffset,
                                   toSlot,
@@ -123,6 +124,7 @@ class ExpandIntoOperator(val workIdentity: WorkIdentity,
 
 class ExpandIntoTask(inputMorsel: Morsel,
                      val workIdentity: WorkIdentity,
+                     id: Id,
                      fromSlot: Slot,
                      relOffset: Int,
                      toSlot: Slot,
@@ -146,7 +148,7 @@ class ExpandIntoTask(inputMorsel: Morsel,
 
   protected override def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
     if (expandInto == null) {
-      expandInto = new CachingExpandInto(state.queryContext.transactionalContext.dataRead, kernelDirection(dir), memoryTracker, workIdentity.workId.x)
+      expandInto = new CachingExpandInto(state.queryContext.transactionalContext.dataRead, kernelDirection(dir), memoryTracker, id.x)
     }
     val fromNode = getFromNodeFunction.applyAsLong(inputCursor)
     val toNode = getToNodeFunction.applyAsLong(inputCursor)

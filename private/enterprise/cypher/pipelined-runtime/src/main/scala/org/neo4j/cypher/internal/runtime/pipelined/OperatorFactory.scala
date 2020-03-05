@@ -290,7 +290,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           relOffset,
           toSlot,
           dir,
-          lazyTypes)
+          lazyTypes)(plan.id)
 
       case plans.VarExpand(_,
       fromName,
@@ -343,7 +343,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           slots(to),
           dir,
           RelationshipTypes(types.toArray)(semanticTable),
-          maybePredicate.map(converters.toCommandExpression(id, _)))
+          maybePredicate.map(converters.toCommandExpression(id, _)))(plan.id)
 
       case plans.Optional(source, protectedSymbols) =>
         val argumentStateMapId = inputBuffer.variant.asInstanceOf[OptionalBufferVariant].argumentStateMapId
