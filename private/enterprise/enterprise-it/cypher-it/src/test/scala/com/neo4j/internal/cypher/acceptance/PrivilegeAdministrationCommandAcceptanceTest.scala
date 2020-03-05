@@ -148,10 +148,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     // THEN
     val expected = Set(
       access().role("editor").map,
-      traverse().role("editor").node("*").map,
-      traverse().role("editor").relationship("*").map,
-      read().role("editor").node("*").map,
-      read().role("editor").relationship("*").map,
+      matchPrivilege().role("editor").node("*").map,
+      matchPrivilege().role("editor").relationship("*").map,
       write().role("editor").node("*").map,
       write().role("editor").relationship("*").map,
     )
@@ -239,10 +237,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     val expected = Set(
       access().database(DEFAULT).role("PUBLIC").user("neo4j").map,
       access().role("admin").user("neo4j").map,
-      traverse().role("admin").user("neo4j").node("*").map,
-      traverse().role("admin").user("neo4j").relationship("*").map,
-      read().role("admin").user("neo4j").node("*").map,
-      read().role("admin").user("neo4j").relationship("*").map,
+      matchPrivilege().role("admin").user("neo4j").node("*").map,
+      matchPrivilege().role("admin").user("neo4j").relationship("*").map,
       write().role("admin").user("neo4j").node("*").map,
       write().role("admin").user("neo4j").relationship("*").map,
       nameManagement().role("admin").user("neo4j").map,

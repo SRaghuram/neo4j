@@ -6,7 +6,6 @@
 package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
@@ -879,8 +878,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   private def createRoleWithOnlyAdminPrivilege(name: String = "adminOnly"): Unit = {
     execute(s"CREATE ROLE $name AS COPY OF admin")
-    execute(s"REVOKE READ {*} ON GRAPH * FROM $name")
-    execute(s"REVOKE TRAVERSE ON GRAPH * FROM $name")
+    execute(s"REVOKE MATCH {*} ON GRAPH * FROM $name")
     execute(s"REVOKE WRITE ON GRAPH * FROM $name")
     execute(s"REVOKE ACCESS ON DATABASE * FROM $name")
     execute(s"REVOKE ALL ON DATABASE * FROM $name")

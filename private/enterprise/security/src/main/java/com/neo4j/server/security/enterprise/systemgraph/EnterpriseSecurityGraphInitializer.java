@@ -64,10 +64,8 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
     private RelationshipType QUALIFIED = RelationshipType.withName( "QUALIFIED" );
     private RelationshipType FOR = RelationshipType.withName( "FOR" );
 
-    private Node traverseNodePriv;
-    private Node traverseRelPriv;
-    private Node readNodePriv;
-    private Node readRelPriv;
+    private Node matchNodePriv;
+    private Node matchRelPriv;
     private Node writeNodePriv;
     private Node writeRelPriv;
     private Node defaultAccessPriv;
@@ -347,21 +345,21 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         // Create initial segments nodes and connect them with DatabaseAll and qualifiers
         Label segmentLabel = Label.label( "Segment" );
 
-        Node labelSegement = tx.createNode( segmentLabel );
-        labelSegement.createRelationshipTo( labelQualifier, QUALIFIED );
-        labelSegement.createRelationshipTo( allDb, FOR );
+        Node labelSegment = tx.createNode( segmentLabel );
+        labelSegment.createRelationshipTo( labelQualifier, QUALIFIED );
+        labelSegment.createRelationshipTo( allDb, FOR );
 
-        Node relSegement = tx.createNode( segmentLabel );
-        relSegement.createRelationshipTo( relQualifier, QUALIFIED );
-        relSegement.createRelationshipTo( allDb, FOR );
+        Node relSegment = tx.createNode( segmentLabel );
+        relSegment.createRelationshipTo( relQualifier, QUALIFIED );
+        relSegment.createRelationshipTo( allDb, FOR );
 
-        Node dbSegement = tx.createNode( segmentLabel );
-        dbSegement.createRelationshipTo( dbQualifier, QUALIFIED );
-        dbSegement.createRelationshipTo( allDb, FOR );
+        Node dbSegment = tx.createNode( segmentLabel );
+        dbSegment.createRelationshipTo( dbQualifier, QUALIFIED );
+        dbSegment.createRelationshipTo( allDb, FOR );
 
-        Node defaultDbSegement = tx.createNode( segmentLabel );
-        defaultDbSegement.createRelationshipTo( dbQualifier, QUALIFIED );
-        defaultDbSegement.createRelationshipTo( defaultDb, FOR );
+        Node defaultDbSegment = tx.createNode( segmentLabel );
+        defaultDbSegment.createRelationshipTo( dbQualifier, QUALIFIED );
+        defaultDbSegment.createRelationshipTo( defaultDb, FOR );
 
         // Create initial resource nodes
         Label resourceLabel = Label.label( "Resource" );
@@ -382,10 +380,8 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         dbResource.setProperty( "arg2", "" );
 
         // Create initial privilege nodes and connect them with resources and segments
-        traverseNodePriv = tx.createNode( PRIVILEGE_LABEL );
-        traverseRelPriv = tx.createNode( PRIVILEGE_LABEL );
-        readNodePriv = tx.createNode( PRIVILEGE_LABEL );
-        readRelPriv = tx.createNode( PRIVILEGE_LABEL );
+        matchNodePriv = tx.createNode( PRIVILEGE_LABEL );
+        matchRelPriv = tx.createNode( PRIVILEGE_LABEL );
         writeNodePriv = tx.createNode( PRIVILEGE_LABEL );
         writeRelPriv = tx.createNode( PRIVILEGE_LABEL );
         defaultAccessPriv = tx.createNode( PRIVILEGE_LABEL );
@@ -395,18 +391,16 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         indexPriv = tx.createNode( PRIVILEGE_LABEL );
         constraintPriv = tx.createNode( PRIVILEGE_LABEL );
 
-        setupPrivilegeNode( traverseNodePriv, PrivilegeAction.TRAVERSE, labelSegement, graphResource );
-        setupPrivilegeNode( traverseRelPriv, PrivilegeAction.TRAVERSE, relSegement, graphResource );
-        setupPrivilegeNode( readNodePriv, PrivilegeAction.READ, labelSegement, allPropResource );
-        setupPrivilegeNode( readRelPriv, PrivilegeAction.READ, relSegement, allPropResource );
-        setupPrivilegeNode( writeNodePriv, PrivilegeAction.WRITE, labelSegement, graphResource );
-        setupPrivilegeNode( writeRelPriv, PrivilegeAction.WRITE, relSegement, graphResource );
-        setupPrivilegeNode( defaultAccessPriv, PrivilegeAction.ACCESS, defaultDbSegement, dbResource );
-        setupPrivilegeNode( accessPriv, PrivilegeAction.ACCESS, dbSegement, dbResource );
-        setupPrivilegeNode( tokenPriv, PrivilegeAction.TOKEN, dbSegement, dbResource );
-        setupPrivilegeNode( indexPriv, PrivilegeAction.INDEX, dbSegement, dbResource );
-        setupPrivilegeNode( constraintPriv, PrivilegeAction.CONSTRAINT, dbSegement, dbResource );
-        setupPrivilegeNode( adminPriv, PrivilegeAction.ADMIN, dbSegement, dbResource );
+        setupPrivilegeNode( matchNodePriv, PrivilegeAction.MATCH, labelSegment, allPropResource );
+        setupPrivilegeNode( matchRelPriv, PrivilegeAction.MATCH, relSegment, allPropResource );
+        setupPrivilegeNode( writeNodePriv, PrivilegeAction.WRITE, labelSegment, graphResource );
+        setupPrivilegeNode( writeRelPriv, PrivilegeAction.WRITE, relSegment, graphResource );
+        setupPrivilegeNode( defaultAccessPriv, PrivilegeAction.ACCESS, defaultDbSegment, dbResource );
+        setupPrivilegeNode( accessPriv, PrivilegeAction.ACCESS, dbSegment, dbResource );
+        setupPrivilegeNode( tokenPriv, PrivilegeAction.TOKEN, dbSegment, dbResource );
+        setupPrivilegeNode( indexPriv, PrivilegeAction.INDEX, dbSegment, dbResource );
+        setupPrivilegeNode( constraintPriv, PrivilegeAction.CONSTRAINT, dbSegment, dbResource );
+        setupPrivilegeNode( adminPriv, PrivilegeAction.ADMIN, dbSegment, dbResource );
     }
 
     private void setupPrivilegeNode( Node privNode, PrivilegeAction action, Node segmentNode, Node resourceNode )
@@ -499,10 +493,8 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         }
         if ( simpleRole.isPermitted( PredefinedRolesBuilder.READ ) )
         {
-            role.createRelationshipTo( traverseNodePriv, GRANTED );
-            role.createRelationshipTo( traverseRelPriv, GRANTED );
-            role.createRelationshipTo( readNodePriv, GRANTED );
-            role.createRelationshipTo( readRelPriv, GRANTED );
+            role.createRelationshipTo( matchNodePriv, GRANTED );
+            role.createRelationshipTo( matchRelPriv, GRANTED );
         }
         if ( simpleRole.isPermitted( PredefinedRolesBuilder.ACCESS ) )
         {

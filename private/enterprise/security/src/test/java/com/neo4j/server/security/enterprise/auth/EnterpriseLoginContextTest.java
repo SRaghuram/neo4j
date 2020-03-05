@@ -40,9 +40,8 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ACCESS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CONSTRAINT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.INDEX;
-import static org.neo4j.internal.kernel.api.security.PrivilegeAction.READ;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.MATCH;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
-import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRAVERSE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.WRITE;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 
@@ -54,10 +53,8 @@ class EnterpriseLoginContextTest
     private SystemGraphRealm realm;
 
     private ResourcePrivilege accessPrivilege;
-    private ResourcePrivilege traverseNodePrivilege;
-    private ResourcePrivilege traverseRelPrivilege;
-    private ResourcePrivilege readNodePrivilege;
-    private ResourcePrivilege readRelPrivilege;
+    private ResourcePrivilege matchNodePrivilege;
+    private ResourcePrivilege matchRelPrivilege;
     private ResourcePrivilege writeNodePrivilege;
     private ResourcePrivilege writeRelPrivilege;
     private ResourcePrivilege tokenPrivilege;
@@ -82,10 +79,8 @@ class EnterpriseLoginContextTest
     private void createPrivileges() throws InvalidArgumentsException
     {
         accessPrivilege = new ResourcePrivilege( GRANT, ACCESS, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
-        traverseNodePrivilege = new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), LabelSegment.ALL, SpecialDatabase.ALL );
-        traverseRelPrivilege = new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
-        readNodePrivilege = new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), LabelSegment.ALL, SpecialDatabase.ALL );
-        readRelPrivilege = new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
+        matchNodePrivilege = new ResourcePrivilege( GRANT, MATCH, new Resource.AllPropertiesResource(), LabelSegment.ALL, SpecialDatabase.ALL );
+        matchRelPrivilege = new ResourcePrivilege( GRANT, MATCH, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
         writeNodePrivilege = new ResourcePrivilege( GRANT, WRITE, new Resource.GraphResource(), LabelSegment.ALL, SpecialDatabase.ALL );
         writeRelPrivilege = new ResourcePrivilege( GRANT, WRITE, new Resource.GraphResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
         tokenPrivilege = new ResourcePrivilege( GRANT, TOKEN, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
@@ -100,8 +95,8 @@ class EnterpriseLoginContextTest
         // Given
         when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Collections.singleton( PredefinedRoles.ADMIN ) ) );
         when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN ) ) ).thenReturn(
-                Set.of( accessPrivilege, traverseNodePrivilege, traverseRelPrivilege, readNodePrivilege, readRelPrivilege, writeNodePrivilege,
-                        writeRelPrivilege, tokenPrivilege, indexPrivilege, constraintPrivilege, adminPrivilege ) );
+                Set.of( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenPrivilege, indexPrivilege,
+                        constraintPrivilege, adminPrivilege ) );
         EnterpriseLoginContext loginContext = login();
 
         // When
@@ -119,8 +114,8 @@ class EnterpriseLoginContextTest
         // Given
         when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Collections.singleton( PredefinedRoles.ARCHITECT ) ) );
         when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.ARCHITECT ) ) ).thenReturn(
-                Set.of( accessPrivilege, traverseNodePrivilege, traverseRelPrivilege, readNodePrivilege, readRelPrivilege, writeNodePrivilege,
-                        writeRelPrivilege, tokenPrivilege, indexPrivilege, constraintPrivilege ) );
+                Set.of( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenPrivilege, indexPrivilege,
+                        constraintPrivilege ) );
         EnterpriseLoginContext loginContext = login();
 
         // When
@@ -137,8 +132,7 @@ class EnterpriseLoginContextTest
         // Given
         when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Collections.singleton( PredefinedRoles.PUBLISHER ) ) );
         when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.PUBLISHER ) ) ).thenReturn(
-                Set.of( accessPrivilege, traverseNodePrivilege, traverseRelPrivilege, readNodePrivilege, readRelPrivilege, writeNodePrivilege,
-                        writeRelPrivilege, tokenPrivilege ) );
+                Set.of( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenPrivilege ) );
         EnterpriseLoginContext loginContext = login();
 
         // When
@@ -155,7 +149,7 @@ class EnterpriseLoginContextTest
         // Given
         when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Collections.singleton( PredefinedRoles.READER ) ) );
         when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.READER ) ) ).thenReturn(
-                Set.of( accessPrivilege, traverseNodePrivilege, traverseRelPrivilege, readNodePrivilege, readRelPrivilege ) );
+                Set.of( accessPrivilege, matchNodePrivilege, matchRelPrivilege ) );
         EnterpriseLoginContext loginContext = login();
 
         // When
@@ -193,8 +187,8 @@ class EnterpriseLoginContextTest
         // Given
         when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Collections.singleton( PredefinedRoles.ARCHITECT ) ) );
         when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.ARCHITECT ) ) ).thenReturn(
-                Set.of( accessPrivilege, traverseNodePrivilege, traverseRelPrivilege, readNodePrivilege, readRelPrivilege, writeNodePrivilege,
-                        writeRelPrivilege, tokenPrivilege, indexPrivilege, constraintPrivilege ) );
+                Set.of( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenPrivilege, indexPrivilege,
+                        constraintPrivilege ) );
         EnterpriseLoginContext loginContext = login();
 
         // When

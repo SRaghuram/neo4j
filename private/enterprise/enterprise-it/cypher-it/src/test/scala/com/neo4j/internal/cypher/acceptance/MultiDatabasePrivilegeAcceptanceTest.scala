@@ -14,7 +14,6 @@ import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.default_database
 import org.neo4j.dbms.api.DatabaseNotFoundException
 import org.neo4j.graphdb.QueryExecutionException
-import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
@@ -863,7 +862,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
   // REDUCED ADMIN
 
   Seq(
-    ("without traverse, read and write privileges", testAdminWithoutBasePrivileges _),
+    ("without match and write privileges", testAdminWithoutBasePrivileges _),
     ("with only user, role, database and access control privileges", testAdminWithoutAllRemovablePrivileges _)
   ).foreach {
     case (partialName, testMethod) =>
@@ -894,8 +893,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     clearPublicRole()
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
-    execute(s"REVOKE TRAVERSE ON GRAPH * FROM $role")
-    execute(s"REVOKE READ {*} ON GRAPH * FROM $role")
+    execute(s"REVOKE MATCH {*} ON GRAPH * FROM $role")
     execute(s"REVOKE WRITE ON GRAPH * FROM $role")
     // have to deny since we can't revoke compound admin privilege
     execute(s"DENY INDEX ON DATABASE * TO $role")
@@ -950,8 +948,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
-    execute(s"REVOKE TRAVERSE ON GRAPH * FROM $role")
-    execute(s"REVOKE READ {*} ON GRAPH * FROM $role")
+    execute(s"REVOKE MATCH {*} ON GRAPH * FROM $role")
     execute(s"REVOKE WRITE ON GRAPH * FROM $role")
 
     // THEN

@@ -63,10 +63,8 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ACCESS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CONSTRAINT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.INDEX;
-import static org.neo4j.internal.kernel.api.security.PrivilegeAction.READ;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.MATCH;
-import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRAVERSE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.WRITE;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_PASSWORD;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
@@ -338,14 +336,10 @@ class SystemGraphRealmIT
                 new ResourcePrivilege( GRANT, ACCESS, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.DEFAULT );
         ResourcePrivilege accessPrivilege =
                 new ResourcePrivilege( GRANT, ACCESS, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
-        ResourcePrivilege readNodePrivilege =
-                new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), LabelSegment.ALL, SpecialDatabase.ALL );
-        ResourcePrivilege readRelPrivilege =
-                new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
-        ResourcePrivilege findNodePrivilege =
-                new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), LabelSegment.ALL, SpecialDatabase.ALL );
-        ResourcePrivilege findRelPrivilege =
-                new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
+        ResourcePrivilege matchNodePrivilege =
+                new ResourcePrivilege( GRANT, MATCH, new Resource.AllPropertiesResource(), LabelSegment.ALL, SpecialDatabase.ALL );
+        ResourcePrivilege matchRelPrivilege =
+                new ResourcePrivilege( GRANT, MATCH, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
         ResourcePrivilege writeNodePrivilege =
                 new ResourcePrivilege( GRANT, WRITE, new Resource.GraphResource(), LabelSegment.ALL, SpecialDatabase.ALL );
         ResourcePrivilege writeRelPrivilege =
@@ -363,7 +357,7 @@ class SystemGraphRealmIT
         Set<ResourcePrivilege> privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.READER ) );
 
         // Then
-        assertThat( privileges, containsInAnyOrder( accessPrivilege, readNodePrivilege, readRelPrivilege, findNodePrivilege, findRelPrivilege ) );
+        assertThat( privileges, containsInAnyOrder( accessPrivilege, matchNodePrivilege, matchRelPrivilege ) );
 
         // When
         privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.PUBLIC ) );
@@ -375,33 +369,30 @@ class SystemGraphRealmIT
         privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.EDITOR ) );
 
         // Then
-        assertThat( privileges,
-                containsInAnyOrder( accessPrivilege, readNodePrivilege, readRelPrivilege, findNodePrivilege, findRelPrivilege, writeNodePrivilege,
-                        writeRelPrivilege ) );
+        assertThat( privileges, containsInAnyOrder( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege ) );
 
         // When
         privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.PUBLISHER ) );
 
         // Then
         assertThat( privileges,
-                containsInAnyOrder( accessPrivilege, readNodePrivilege, readRelPrivilege, findNodePrivilege, findRelPrivilege, writeNodePrivilege,
-                        writeRelPrivilege, tokenNodePrivilege ) );
+                containsInAnyOrder( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenNodePrivilege ) );
 
         // When
         privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.ARCHITECT ) );
 
         // Then
         assertThat( privileges,
-                containsInAnyOrder( accessPrivilege, readNodePrivilege, readRelPrivilege, findNodePrivilege, findRelPrivilege, writeNodePrivilege,
-                        writeRelPrivilege, tokenNodePrivilege, indexNodePrivilege, constraintNodePrivilege ) );
+                containsInAnyOrder( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenNodePrivilege,
+                        indexNodePrivilege, constraintNodePrivilege ) );
 
         // When
         privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.ADMIN ) );
 
         // Then
         assertThat( privileges,
-                containsInAnyOrder( accessPrivilege, readNodePrivilege, readRelPrivilege, findNodePrivilege, findRelPrivilege, writeNodePrivilege,
-                        writeRelPrivilege, tokenNodePrivilege, indexNodePrivilege, constraintNodePrivilege, adminNodePrivilege ) );
+                containsInAnyOrder( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenNodePrivilege,
+                        indexNodePrivilege, constraintNodePrivilege, adminNodePrivilege ) );
     }
 
     @Test
