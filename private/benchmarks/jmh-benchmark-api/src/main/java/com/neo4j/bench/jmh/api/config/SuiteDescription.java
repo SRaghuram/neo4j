@@ -24,8 +24,8 @@ import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
 /**
- * Describes final configuration (what will actually be used during execution) of the benchmark suite,
- * including which benchmarks to run and how they are configured.
+ * Describes final configuration (what will actually be used during execution) of the benchmark suite, including which benchmarks to run and how they are
+ * configured.
  */
 public class SuiteDescription
 {
@@ -185,7 +185,8 @@ public class SuiteDescription
 
             List<BenchmarkDescription> rawBenchmarkDescriptionPartition = enabledExplodedBenchmarks.subList( startIndex, endIndex );
 
-            List<BenchmarkDescription> condensedBenchmarkDescriptionPartition = BenchmarkDescription.implode( new HashSet<>( rawBenchmarkDescriptionPartition ) );
+            List<BenchmarkDescription> condensedBenchmarkDescriptionPartition =
+                    BenchmarkDescription.implode( new HashSet<>( rawBenchmarkDescriptionPartition ) );
 
             partitions.add( SuiteDescription.fromBenchmarkDescriptions( condensedBenchmarkDescriptionPartition ) );
         }
