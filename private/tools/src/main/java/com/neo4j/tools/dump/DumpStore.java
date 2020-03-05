@@ -87,13 +87,14 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
             return;
         }
 
+        var cacheTracer = PageCacheTracer.NULL;
         try ( DefaultFileSystemAbstraction fs = new DefaultFileSystemAbstraction();
               JobScheduler scheduler = createInitialisedScheduler();
-              PageCache pageCache = createPageCache( fs, scheduler ) )
+              PageCache pageCache = createPageCache( fs, scheduler, cacheTracer ) )
         {
             final DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fs, immediate() );
             Function<File,StoreFactory> createStoreFactory = file -> new StoreFactory( DatabaseLayout.ofFlat( file.getParentFile() ),
-                    Config.defaults(), idGeneratorFactory, pageCache, fs, logProvider(), PageCacheTracer.NULL );
+                    Config.defaults(), idGeneratorFactory, pageCache, fs, logProvider(), cacheTracer );
 
             for ( String arg : args )
             {

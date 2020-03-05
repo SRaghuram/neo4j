@@ -17,6 +17,7 @@ import org.neo4j.io.IOUtils;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -112,6 +113,6 @@ class SimpleCatchupClient implements AutoCloseable
 
     private PageCache createPageCache()
     {
-        return StandalonePageCacheFactory.createPageCache( fsa, jobScheduler );
+        return StandalonePageCacheFactory.createPageCache( fsa, jobScheduler, PageCacheTracer.NULL );
     }
 }

@@ -19,6 +19,7 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
@@ -98,7 +99,7 @@ public class ApplyTransactionsCommand extends ArgsCommand
         LifeSupport life = new LifeSupport();
         try ( DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
               JobScheduler jobScheduler = createInitialisedScheduler();
-              PageCache pageCache = StandalonePageCacheFactory.createPageCache( fileSystem, jobScheduler ) )
+              PageCache pageCache = StandalonePageCacheFactory.createPageCache( fileSystem, jobScheduler, PageCacheTracer.NULL ) )
         {
             LogicalTransactionStore source = life.add( new ReadOnlyTransactionStore( pageCache, fileSystem, fromLayout, Config.defaults(), new Monitors() ) );
             life.start();

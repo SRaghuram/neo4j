@@ -9,14 +9,14 @@ import java.io.IOException;
 
 import org.neo4j.internal.batchimport.input.Group;
 import org.neo4j.internal.batchimport.input.InputEntityVisitor;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.RelationshipStore;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.token.api.TokenHolder;
-
-import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 
 class LenientRelationshipReader extends LenientStoreInputChunk
 {
@@ -25,9 +25,9 @@ class LenientRelationshipReader extends LenientStoreInputChunk
     private final StoreCopyFilter.TokenLookup tokenLookup;
 
     LenientRelationshipReader( StoreCopyStats stats, RelationshipStore relationshipStore, PropertyStore propertyStore, TokenHolders tokenHolders,
-            StoreCopyFilter storeCopyFilter )
+            StoreCopyFilter storeCopyFilter, PageCacheTracer pageCacheTracer )
     {
-        super( stats, propertyStore, tokenHolders, relationshipStore.openPageCursorForReading( 0, TRACER_SUPPLIER.get() ), storeCopyFilter );
+        super( stats, propertyStore, tokenHolders, storeCopyFilter, relationshipStore, pageCacheTracer );
         this.relationshipStore = relationshipStore;
         this.record = relationshipStore.newRecord();
         TokenHolder tokenHolder = tokenHolders.relationshipTypeTokens();
@@ -35,12 +35,12 @@ class LenientRelationshipReader extends LenientStoreInputChunk
     }
 
     @Override
-    void readAndVisit( long id, InputEntityVisitor visitor ) throws IOException
+    void readAndVisit( long id, InputEntityVisitor visitor, PageCursorTracer cursorTracer ) throws IOException
     {
         relationshipStore.getRecordByCursor( id, record, RecordLoad.NORMAL, cursor );
         if ( record.inUse() )
         {
-            relationshipStore.ensureHeavy( record, TRACER_SUPPLIER.get() );
+            relationshipStore.ensureHeavy( record, cursorTracer );
             int relType = record.getType();
             String relName = storeCopyFilter.filterRelationship( relType, tokenLookup );
             if ( relName != null )

@@ -28,6 +28,8 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.store.format.FormatFamily;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
@@ -101,6 +103,31 @@ class StoreCopyCommandIT extends AbstractCommandIT
         {
             Files.delete( file );
         }
+    }
+
+    @Test
+    void tracePageCacheAccessOnStoreCopy() throws Exception
+    {
+        try ( Transaction tx = databaseAPI.beginTx() )
+        {
+            Node a = tx.createNode( NUMBER_LABEL );
+            a.setProperty( "name", "Uno" );
+            Node b = tx.createNode( NUMBER_LABEL );
+            b.setProperty( "name", "Dos" );
+            a.createRelationshipTo( b, RelationshipType.withName( "KNOWS" ) );
+            tx.commit();
+        }
+        String databaseName = databaseAPI.databaseName();
+        String copyName = getCopyName( databaseName, "copy" );
+        managementService.shutdownDatabase( databaseName );
+
+        var pageCacheTracer = new DefaultPageCacheTracer();
+        copyDatabase( pageCacheTracer, "--from-database=" + databaseName, "--to-database=" + copyName );
+
+        assertThat( pageCacheTracer.hits() ).isEqualTo( 19 );
+        assertThat( pageCacheTracer.faults() ).isEqualTo( 16 );
+        assertThat( pageCacheTracer.pins() ).isEqualTo( 35 );
+        assertThat( pageCacheTracer.unpins() ).isEqualTo( 35 );
     }
 
     @Test
@@ -382,11 +409,16 @@ class StoreCopyCommandIT extends AbstractCommandIT
 
     private void copyDatabase( String... args ) throws Exception
     {
+        copyDatabase( NULL, args );
+    }
+
+    private void copyDatabase( PageCacheTracer pageCacheTracer,  String... args ) throws Exception
+    {
         var context = new ExecutionContext( neo4jHome, configDir );
         var command = new StoreCopyCommand( context );
 
         CommandLine.populateCommand( command, args );
-
+        command.setPageCacheTracer( pageCacheTracer );
         command.execute();
     }
 

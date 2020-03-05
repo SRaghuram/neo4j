@@ -28,6 +28,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.TransactionIdStore;
@@ -183,7 +184,7 @@ class DatabaseRebuildToolTest
     {
         try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
               JobScheduler scheduler = createInitialisedScheduler();
-              PageCache pageCache = createPageCache( fileSystem, scheduler ) )
+              PageCache pageCache = createPageCache( fileSystem, scheduler, PageCacheTracer.NULL ) )
         {
             return MetaDataStore.getRecord( pageCache, databaseLayout.metadataStore(),
                     MetaDataStore.Position.LAST_TRANSACTION_ID, NULL );

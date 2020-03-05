@@ -30,6 +30,7 @@ import org.neo4j.dbms.database.UnableToStartDatabaseException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.lifecycle.LifecycleException;
 import org.neo4j.logging.NullLogProvider;
@@ -220,7 +221,7 @@ class ClusterBindingIT
     {
         var neoStoreFile = databaseLayout.metadataStore();
         try ( var jobScheduler = new ThreadPoolJobScheduler();
-              var pageCache = StandalonePageCacheFactory.createPageCache( fs, jobScheduler ) )
+              var pageCache = StandalonePageCacheFactory.createPageCache( fs, jobScheduler, PageCacheTracer.NULL ) )
         {
             MetaDataStore.setRecord( pageCache, neoStoreFile, RANDOM_NUMBER, System.currentTimeMillis(), NULL );
         }

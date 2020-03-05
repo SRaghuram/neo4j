@@ -26,9 +26,11 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.kernel.impl.util.Validators;
 import org.neo4j.kernel.internal.locker.FileLockException;
+import org.neo4j.util.VisibleForTesting;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
@@ -48,6 +50,7 @@ import static picocli.CommandLine.Option;
 )
 public class StoreCopyCommand extends AbstractCommand
 {
+    private PageCacheTracer pageCacheTracer = PageCacheTracer.NULL;
     @ArgGroup( multiplicity = "1" )
     private SourceOption source = new SourceOption();
 
@@ -142,9 +145,8 @@ public class StoreCopyCommand extends AbstractCommand
             }
             try ( Closeable ignored2 = LockChecker.checkDatabaseLock( toDatabaseLayout )  )
             {
-                StoreCopy copy =
-                        new StoreCopy( fromDatabaseLayout, config, format, deleteNodesWithLabels, skipLabels, skipProperties, skipRelationships, verbose,
-                                ctx.out() );
+                StoreCopy copy = new StoreCopy( fromDatabaseLayout, config, format, deleteNodesWithLabels, skipLabels, skipProperties, skipRelationships,
+                        verbose, ctx.out(), pageCacheTracer );
                 try
                 {
                     copy.copyTo( toDatabaseLayout );
@@ -281,5 +283,11 @@ public class StoreCopyCommand extends AbstractCommand
                 .set( GraphDatabaseSettings.neo4j_home, ctx.homeDir() ).build();
         ConfigUtils.disableAllConnectors( cfg );
         return cfg;
+    }
+
+    @VisibleForTesting
+    public void setPageCacheTracer( PageCacheTracer pageCacheTracer )
+    {
+        this.pageCacheTracer = pageCacheTracer;
     }
 }

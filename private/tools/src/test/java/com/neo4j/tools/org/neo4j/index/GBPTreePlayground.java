@@ -23,6 +23,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 
 import static com.neo4j.tools.input.ConsoleUtil.staticPrompt;
@@ -34,16 +35,16 @@ public class GBPTreePlayground
     private final File indexFile;
     private GBPTree<MutableLong,MutableLong> tree;
 
-    private int pageSize = 256;
-    private PageCache pageCache;
-    private SimpleLongLayout layout;
+    private final int pageSize = 256;
+    private final PageCache pageCache;
+    private final SimpleLongLayout layout;
     private final MutableBoolean autoPrint = new MutableBoolean( true );
 
     private GBPTreePlayground( FileSystemAbstraction fs, File indexFile )
     {
         this.indexFile = indexFile;
         this.layout = SimpleLongLayout.longLayout().build();
-        this.pageCache = StandalonePageCacheFactory.createPageCache( fs, createInitialisedScheduler() );
+        this.pageCache = StandalonePageCacheFactory.createPageCache( fs, createInitialisedScheduler(), PageCacheTracer.NULL );
     }
 
     private void setupIndex()

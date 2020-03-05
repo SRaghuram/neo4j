@@ -45,6 +45,8 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.CommonAbstractStore;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.NodeStore;
@@ -73,17 +75,17 @@ import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
 import static org.neo4j.internal.recordstorage.StoreTokens.readOnlyTokenHolders;
-import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
-import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.logging.Level.DEBUG;
 import static org.neo4j.logging.Level.INFO;
 
 public class StoreCopy
 {
+    private static final String STORE_COPY_TAG = "storeCopy";
     private final DatabaseLayout from;
     private final Config config;
     private final boolean verbose;
+    private final PageCacheTracer pageCacheTracer;
     private final FormatEnum format;
     private final List<String> deleteNodesWithLabels;
     private final List<String> skipLabels;
@@ -106,7 +108,7 @@ public class StoreCopy
     }
 
     public StoreCopy( DatabaseLayout from, Config config, FormatEnum format, List<String> deleteNodesWithLabels, List<String> skipLabels,
-            List<String> skipProperties, List<String> skipRelationships, boolean verbose, PrintStream out )
+            List<String> skipProperties, List<String> skipRelationships, boolean verbose, PrintStream out, PageCacheTracer pageCacheTracer )
     {
         this.from = from;
         this.config = config;
@@ -117,6 +119,7 @@ public class StoreCopy
         this.skipRelationships = skipRelationships;
         this.out = out;
         this.verbose = verbose;
+        this.pageCacheTracer = pageCacheTracer;
     }
 
     public void copyTo( DatabaseLayout toDatabaseLayout ) throws Exception
@@ -126,18 +129,18 @@ public class StoreCopy
         {
             LogProvider logProvider = new DuplicatingLogProvider( getLog( logFile ), getLog( out ) );
             Log log = logProvider.getLog( "StoreCopy" );
-            try ( FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
-                    JobScheduler scheduler = createInitialisedScheduler();
-                    PageCache pageCache = StandalonePageCacheFactory.createPageCache( fs, scheduler );
-                    NeoStores neoStores =
-                            new StoreFactory( from, config, new ScanOnOpenReadOnlyIdGeneratorFactory(), pageCache, fs, NullLogProvider.getInstance(),
-                                    NULL ).openAllNeoStores(); )
+            try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( STORE_COPY_TAG );
+                  FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
+                  JobScheduler scheduler = createInitialisedScheduler();
+                  PageCache pageCache = StandalonePageCacheFactory.createPageCache( fs, scheduler, pageCacheTracer );
+                  NeoStores neoStores = new StoreFactory( from, config, new ScanOnOpenReadOnlyIdGeneratorFactory(), pageCache, fs,
+                          NullLogProvider.getInstance(), pageCacheTracer ).openAllNeoStores() )
             {
                 out.println( "Starting to copy store, output will be saved to: " + logFilePath.toAbsolutePath() );
                 nodeStore = neoStores.getNodeStore();
                 propertyStore = neoStores.getPropertyStore();
                 relationshipStore = neoStores.getRelationshipStore();
-                tokenHolders = readOnlyTokenHolders( neoStores, TRACER_SUPPLIER.get() );
+                tokenHolders = readOnlyTokenHolders( neoStores, cursorTracer );
                 stats = new StoreCopyStats( log );
                 SchemaStore schemaStore = neoStores.getSchemaStore();
 
@@ -157,13 +160,14 @@ public class StoreCopy
                         new SimpleLogService( logProvider ), executionMonitor, AdditionalInitialIds.EMPTY, config, recordFormats, NO_MONITOR, null,
                         Collector.EMPTY, TransactionLogsInitializer.INSTANCE );
 
-                batchImporter.doImport( Input.input( this::nodeIterator, this::relationshipIterator, IdType.INTEGER, getEstimates(), new Groups() ) );
+                batchImporter.doImport( Input.input( () -> nodeIterator( pageCacheTracer ), () -> relationshipIterator( pageCacheTracer ), IdType.INTEGER,
+                        getEstimates(), new Groups() ) );
 
                 stats.printSummary();
                 // Display schema information
                 log.info( "### Extracting schema ###" );
                 log.info( "Trying to extract schema..." );
-                Map<String,String> schemaStatements = getSchemaStatements( stats, schemaStore, tokenHolders );
+                Map<String,String> schemaStatements = getSchemaStatements( stats, schemaStore, tokenHolders, cursorTracer );
                 log.info( "... found %d schema definition. The following can be used to recreate the schema:", schemaStatements.size() );
                 log.info( System.lineSeparator() + System.lineSeparator() + String.join( ";" + System.lineSeparator(), schemaStatements.values() ) );
             }
@@ -184,14 +188,14 @@ public class StoreCopy
     }
 
     private static Map<String,String> getSchemaStatements( StoreCopyStats stats, SchemaStore schemaStore,
-            TokenHolders tokenHolders )
+            TokenHolders tokenHolders, PageCursorTracer cursorTracer )
     {
         TokenRead tokenRead = new ReadOnlyTokenRead( tokenHolders );
         SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( schemaStore, tokenHolders );
         Map<String,IndexDescriptor> indexes = new HashMap<>();
         List<ConstraintDescriptor> constraints = new ArrayList<>();
-        schemaRuleAccess.indexesGetAllIgnoreMalformed( TRACER_SUPPLIER.get() ).forEachRemaining( i -> indexes.put( i.getName(), i ) );
-        schemaRuleAccess.constraintsGetAllIgnoreMalformed( TRACER_SUPPLIER.get() ).forEachRemaining(constraints::add );
+        schemaRuleAccess.indexesGetAllIgnoreMalformed( cursorTracer ).forEachRemaining( i -> indexes.put( i.getName(), i ) );
+        schemaRuleAccess.constraintsGetAllIgnoreMalformed( cursorTracer ).forEachRemaining(constraints::add );
 
         Map<String,String> schemaStatements = new HashMap<>();
         for ( var entry : indexes.entrySet() )
@@ -303,26 +307,26 @@ public class StoreCopy
         }
     }
 
-    private LenientInputChunkIterator nodeIterator()
+    private LenientInputChunkIterator nodeIterator( PageCacheTracer pageCacheTracer )
     {
         return new LenientInputChunkIterator( nodeStore )
         {
             @Override
             public InputChunk newChunk()
             {
-                return new LenientNodeReader( stats, nodeStore, propertyStore, tokenHolders, storeCopyFilter );
+                return new LenientNodeReader( stats, nodeStore, propertyStore, tokenHolders, storeCopyFilter, pageCacheTracer );
             }
         };
     }
 
-    private LenientInputChunkIterator relationshipIterator()
+    private LenientInputChunkIterator relationshipIterator( PageCacheTracer pageCacheTracer )
     {
         return new LenientInputChunkIterator( relationshipStore )
         {
             @Override
             public InputChunk newChunk()
             {
-                return new LenientRelationshipReader( stats, relationshipStore, propertyStore, tokenHolders, storeCopyFilter );
+                return new LenientRelationshipReader( stats, relationshipStore, propertyStore, tokenHolders, storeCopyFilter, pageCacheTracer );
             }
         };
     }

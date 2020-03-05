@@ -53,8 +53,8 @@ public class DumpIndexStatisticsStore
         SimpleSchemaRuleCache schema = null;
         var cacheTracer = PageCacheTracer.NULL;
         try ( JobScheduler jobScheduler = createInitialisedScheduler();
-                PageCache pageCache = createPageCache( fs, jobScheduler );
-                Lifespan life = new Lifespan() )
+              PageCache pageCache = createPageCache( fs, jobScheduler, cacheTracer );
+              Lifespan life = new Lifespan() )
         {
             NullLogProvider logProvider = NullLogProvider.getInstance();
             if ( fs.isDirectory( path ) )

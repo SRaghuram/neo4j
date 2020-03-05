@@ -10,6 +10,9 @@ import java.io.IOException;
 import org.neo4j.internal.batchimport.input.InputChunk;
 import org.neo4j.internal.batchimport.input.InputEntityVisitor;
 import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.kernel.impl.store.CommonAbstractStore;
 import org.neo4j.kernel.impl.store.InvalidRecordException;
 import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.record.PrimitiveRecord;
@@ -21,10 +24,9 @@ import org.neo4j.token.TokenHolders;
 import org.neo4j.token.api.TokenNotFoundException;
 import org.neo4j.values.storable.Value;
 
-import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
-
 public abstract class LenientStoreInputChunk implements InputChunk
 {
+    private static final String COPY_STORE_READER_TAG = "copyStoreReader";
     private final PropertyStore propertyStore;
     private long id;
     private long endId;
@@ -33,14 +35,17 @@ public abstract class LenientStoreInputChunk implements InputChunk
     protected final TokenHolders tokenHolders;
     protected final PageCursor cursor;
     final StoreCopyFilter storeCopyFilter;
+    private final PageCursorTracer cursorTracer;
 
-    LenientStoreInputChunk( StoreCopyStats stats, PropertyStore propertyStore, TokenHolders tokenHolders, PageCursor cursor, StoreCopyFilter storeCopyFilter )
+    LenientStoreInputChunk( StoreCopyStats stats, PropertyStore propertyStore, TokenHolders tokenHolders, StoreCopyFilter storeCopyFilter,
+            CommonAbstractStore<?,?> store, PageCacheTracer pageCacheTracer )
     {
         this.stats = stats;
         this.propertyStore = propertyStore;
         this.tokenHolders = tokenHolders;
-        this.cursor = cursor;
         this.storeCopyFilter = storeCopyFilter;
+        this.cursorTracer = pageCacheTracer.createPageCursorTracer( COPY_STORE_READER_TAG );
+        this.cursor = store.openPageCursorForReading( 0, cursorTracer );
     }
 
     void setChunkRange( long startId, long endId )
@@ -57,7 +62,7 @@ public abstract class LenientStoreInputChunk implements InputChunk
             stats.count.increment();
             try
             {
-                readAndVisit( id, visitor );
+                readAndVisit( id, visitor, cursorTracer );
             }
             catch ( Exception e )
             {
@@ -82,9 +87,10 @@ public abstract class LenientStoreInputChunk implements InputChunk
     public void close()
     {
         cursor.close();
+        cursorTracer.close();
     }
 
-    abstract void readAndVisit( long id, InputEntityVisitor visitor ) throws IOException;
+    abstract void readAndVisit( long id, InputEntityVisitor visitor, PageCursorTracer cursorTracer ) throws IOException;
 
     abstract String recordType();
 
@@ -101,7 +107,6 @@ public abstract class LenientStoreInputChunk implements InputChunk
             }
 
             long nextProp = record.getNextProp();
-            var cursorTracer = TRACER_SUPPLIER.get();
             while ( !Record.NO_NEXT_PROPERTY.is( nextProp ) )
             {
                 PropertyRecord propertyRecord = propertyStore.getRecord( nextProp, propertyStore.newRecord(), RecordLoad.NORMAL, cursorTracer );

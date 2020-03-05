@@ -41,6 +41,7 @@ import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.ExternallyManagedPageCache;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionQueue;
@@ -147,7 +148,7 @@ class RebuildFromLogs
     public void rebuild( DatabaseLayout sourceDatabaseLayout, DatabaseLayout targetLayout, long txId ) throws Exception, InconsistentStoreException
     {
         try ( JobScheduler scheduler = createInitialisedScheduler();
-              PageCache pageCache = StandalonePageCacheFactory.createPageCache( fs, scheduler ) )
+              PageCache pageCache = StandalonePageCacheFactory.createPageCache( fs, scheduler, PageCacheTracer.NULL ) )
         {
             File transactionLogsDirectory = sourceDatabaseLayout.getTransactionLogsDirectory();
             LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( transactionLogsDirectory, fs ).build();

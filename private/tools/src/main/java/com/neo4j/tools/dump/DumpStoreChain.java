@@ -18,7 +18,6 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.impl.store.PropertyStore;
@@ -107,13 +106,13 @@ public abstract class DumpStoreChain<RECORD extends AbstractBaseRecord>
 
     void dump( DatabaseLayout databaseLayout ) throws IOException
     {
+        var cacheTracer = PageCacheTracer.NULL;
         try ( DefaultFileSystemAbstraction fs = new DefaultFileSystemAbstraction();
-              PageCache pageCache = createPageCache( fs, createInitialisedScheduler() ) )
+              PageCache pageCache = createPageCache( fs, createInitialisedScheduler(), cacheTracer ) )
         {
             DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fs, immediate() );
             Config config = Config.defaults();
-            StoreFactory storeFactory = new StoreFactory( databaseLayout, config, idGeneratorFactory, pageCache, fs,
-                    logProvider(), PageCacheTracer.NULL );
+            StoreFactory storeFactory = new StoreFactory( databaseLayout, config, idGeneratorFactory, pageCache, fs, logProvider(), cacheTracer );
 
             try ( NeoStores neoStores = storeFactory.openNeoStores( getStoreTypes() ) )
             {
