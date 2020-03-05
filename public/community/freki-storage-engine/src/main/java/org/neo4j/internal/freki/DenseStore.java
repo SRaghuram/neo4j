@@ -743,7 +743,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
         }
     }
 
-    private class DenseStoreValue
+    private static class DenseStoreValue
     {
         // TODO for simplicity just have this a ByteBuffer so that the other serialize/deserialize stuff can be used in here too
         // TODO let's just make up some upper limit here and the rest will go to big-value store anyway

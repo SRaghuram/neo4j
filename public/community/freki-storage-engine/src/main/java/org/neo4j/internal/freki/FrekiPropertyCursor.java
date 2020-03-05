@@ -69,7 +69,7 @@ public class FrekiPropertyCursor extends FrekiMainStoreCursor implements Storage
     @Override
     public void initNodeProperties( StorageNodeCursor nodeCursor )
     {
-        if ( useSharedRecordFrom( (FrekiNodeCursor) nodeCursor ) && readNodePropertyKeys() )
+        if ( ((FrekiMainStoreCursor) nodeCursor).initializeOtherCursorFromStateOfThisCursor( this ) && readNodePropertyKeys() )
         {
             initializedFromEntity = true;
         }
@@ -96,7 +96,7 @@ public class FrekiPropertyCursor extends FrekiMainStoreCursor implements Storage
         if ( relationshipCursor.hasProperties() )
         {
             FrekiRelationshipCursor relCursor = (FrekiRelationshipCursor) relationshipCursor;
-            if ( useSharedRecordFrom( relCursor ) )
+            if ( relCursor.initializeOtherCursorFromStateOfThisCursor( this ) )
             {
                 if ( headerState.isDense )
                 {

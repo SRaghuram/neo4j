@@ -42,11 +42,13 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.storageengine.api.ConstraintRuleAccessor;
 import org.neo4j.storageengine.api.TransactionMetaDataStore;
 
 import static org.neo4j.internal.helpers.ArrayUtil.concat;
 import static org.neo4j.io.IOUtils.closeAllSilently;
+import static org.neo4j.kernel.lifecycle.LifecycleAdapter.onShutdown;
 
 public class Stores extends MainStores
 {
@@ -133,7 +135,20 @@ public class Stores extends MainStores
     private void addStoresToLife()
     {
         life.add( onShutdown( metaDataStore::close ) );
-        life.add( onShutdown( countsStore::close ) );
+        life.add( new LifecycleAdapter()
+        {
+            @Override
+            public void start() throws Exception
+            {
+                countsStore.start( PageCursorTracer.NULL );
+            }
+
+            @Override
+            public void shutdown()
+            {
+                countsStore.close();
+            }
+        } );
         life.add( onShutdown( schemaStore::close ) );
         life.add( onShutdown( propertyKeyTokenStore::close ) );
         life.add( onShutdown( relationshipTypeTokenStore::close ) );

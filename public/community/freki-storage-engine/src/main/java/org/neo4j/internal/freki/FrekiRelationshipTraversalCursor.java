@@ -336,7 +336,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     public void init( StorageNodeCursor nodeCursor, RelationshipSelection selection )
     {
         init( nodeCursor.entityReference(), nodeCursor.relationshipsReference(), selection );
-        useSharedRecordFrom( (FrekiNodeCursor) nodeCursor );
+        ((FrekiMainStoreCursor) nodeCursor).initializeOtherCursorFromStateOfThisCursor( this );
         startIterationAfterLoad();
         readRelationshipTypesAndOffsets();
     }

@@ -29,14 +29,18 @@ public class DumpFrekiStore
         var fs = new DefaultFileSystemAbstraction();
         var scheduler = JobSchedulerFactory.createScheduler();
         try ( var life = new Lifespan( scheduler );
-              var pageCache = new MuninnPageCache( new SingleFilePageSwapperFactory( fs ), 10_000, NULL, EMPTY, scheduler );
-              var storeLife = new Lifespan() )
+              var pageCache = new MuninnPageCache( new SingleFilePageSwapperFactory( fs ), 100_000, NULL, EMPTY, scheduler );
+              var analysis = new FrekiAnalysis( fs, databaseLayout, pageCache ) )
         {
-            var analysis = new FrekiAnalysis( fs, databaseLayout, pageCache );
-            var nodeIdSpec = args.get( "nodeId", null );
+            var nodeIdSpec = args.get( "nodes", null );
             if ( nodeIdSpec != null )
             {
                 analysis.dumpNodes( nodeIdSpec );
+            }
+            var recordSpec = args.get( "record", null );
+            if ( recordSpec != null )
+            {
+                analysis.dumpRecord( recordSpec );
             }
             var stats = args.getBoolean( "stats", false );
             if ( stats )

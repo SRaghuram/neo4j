@@ -19,6 +19,7 @@
  */
 package org.neo4j.internal.freki;
 
+import org.apache.commons.lang3.tuple.Triple;
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
 import org.eclipse.collections.api.multimap.MutableMultimap;
 import org.eclipse.collections.api.set.primitive.MutableIntSet;
@@ -43,11 +44,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.neo4j.graphdb.Direction;
 import org.neo4j.storageengine.api.RelationshipDirection;
+import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.values.storable.Value;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -58,6 +62,7 @@ import static org.neo4j.storageengine.api.RelationshipDirection.INCOMING;
 import static org.neo4j.storageengine.api.RelationshipDirection.LOOP;
 import static org.neo4j.storageengine.api.RelationshipDirection.OUTGOING;
 import static org.neo4j.storageengine.api.RelationshipSelection.ALL_RELATIONSHIPS;
+import static org.neo4j.storageengine.api.RelationshipSelection.selection;
 import static org.neo4j.values.storable.Values.intValue;
 import static org.neo4j.values.storable.Values.longValue;
 import static org.neo4j.values.storable.Values.stringValue;
@@ -656,6 +661,89 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
             assertFalse( relationshipCursor.next() );
         }
     }
+
+    @Test
+    void shouldSelectRelationships()
+    {
+        // given
+        Set<Triple<Long,Integer,Long>> relationships = new HashSet<>();
+        int numRelationshipTypes = 4;
+        FrekiNodeCursor node = createNodeWithRandomRelationships( numRelationshipTypes, 1, 5, relationships );
+
+        // when
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL ) )
+        {
+            for ( int type = 0; type < numRelationshipTypes; type++ )
+            {
+                assertRelationshipSelection( node, relationshipCursor, relationships, selection( type, Direction.BOTH ) );
+                assertRelationshipSelection( node, relationshipCursor, relationships, selection( type, Direction.OUTGOING ) );
+                assertRelationshipSelection( node, relationshipCursor, relationships, selection( type, Direction.INCOMING ) );
+                assertRelationshipSelection( node, relationshipCursor, relationships, selection( typesUpTo( type ), Direction.BOTH ) );
+                assertRelationshipSelection( node, relationshipCursor, relationships, selection( typesUpTo( type ), Direction.OUTGOING ) );
+                assertRelationshipSelection( node, relationshipCursor, relationships, selection( typesUpTo( type ), Direction.INCOMING ) );
+                assertRelationshipSelection( node, relationshipCursor, relationships, selection( Direction.BOTH ) );
+                assertRelationshipSelection( node, relationshipCursor, relationships, selection( Direction.OUTGOING ) );
+                assertRelationshipSelection( node, relationshipCursor, relationships, selection( Direction.INCOMING ) );
+            }
+        }
+    }
+
+    private static int[] typesUpTo( int type )
+    {
+        int[] types = new int[type + 1];
+        for ( int i = 0; i <= type; i++ )
+        {
+            types[i] = i;
+        }
+        return types;
+    }
+
+    private void assertRelationshipSelection( FrekiNodeCursor node, FrekiRelationshipTraversalCursor relationshipCursor,
+            Set<Triple<Long,Integer,Long>> relationships, RelationshipSelection selection )
+    {
+        Set<Triple<Long,Integer,Long>> expectedRelationships = new HashSet<>();
+        relationships.stream().filter( r -> selection.test( r.getMiddle(), directionOf( node.entityReference(), r.getLeft(), r.getRight() ) ) )
+                .forEach( expectedRelationships::add );
+        node.relationships( relationshipCursor, selection );
+        while ( relationshipCursor.next() )
+        {
+            Triple<Long,Integer,Long> foundRelationship =
+                    Triple.of( relationshipCursor.sourceNodeReference(), relationshipCursor.type(), relationshipCursor.targetNodeReference() );
+            assertThat( expectedRelationships.remove( foundRelationship ) ).isTrue();
+        }
+        assertThat( expectedRelationships.isEmpty() ).isTrue();
+    }
+
+    private static RelationshipDirection directionOf( long nodeId, long startNodeId, long endNodeId )
+    {
+        return nodeId == startNodeId ? nodeId == endNodeId ? LOOP : OUTGOING : INCOMING;
+    }
+
+    private FrekiNodeCursor createNodeWithRandomRelationships( int numRelationshipTypes, int minNumRelationshipsPerType, int maxNumRelationshipsPerType,
+            Set<Triple<Long,Integer,Long>> relationships )
+    {
+        Node node = node();
+        for ( int type = 0; type < numRelationshipTypes; type++ )
+        {
+            int numRelationshipsOfThisType = random.nextInt( minNumRelationshipsPerType, maxNumRelationshipsPerType );
+            for ( int i = 0; i < numRelationshipsOfThisType; i++ )
+            {
+                Node otherNode = node();
+                boolean outgoing = random.nextBoolean();
+                Node startNode = outgoing ? node : otherNode;
+                Node endNode = outgoing ? otherNode : node;
+                startNode.relationship( type, endNode );
+                otherNode.store();
+                relationships.add( Triple.of( startNode.id(), type, endNode.id() ) );
+            }
+        }
+        return node.storeAndPlaceNodeCursorAt();
+    }
+
+    // by types - sparse/dense
+    // by type and direction - sparse/dense
+    // by direction - sparse/dense
+    // by types and direction - sparse/dense
 
     void createSomeNodesAndRelationships()
     {
