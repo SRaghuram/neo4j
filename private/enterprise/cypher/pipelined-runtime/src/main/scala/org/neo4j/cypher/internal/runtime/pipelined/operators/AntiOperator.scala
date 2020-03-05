@@ -8,11 +8,10 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfEmptyStream
@@ -35,16 +34,14 @@ class AntiOperator(val workIdentity: WorkIdentity,
   //===========================================================================
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
-                           queryContext: QueryContext,
-                           state: QueryState,
+                           state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = {
     argumentStateCreator.createArgumentStateMap(argumentStateMapId, new OptionalArgumentStateBuffer.Factory(stateFactory, id))
     new AntiOperatorState
   }
 
   class AntiOperatorState() extends OperatorState {
-    override def nextTasks(context: QueryContext,
-                           state: QueryState,
+    override def nextTasks(state: PipelinedQueryState,
                            operatorInput: OperatorInput,
                            parallelism: Int,
                            resources: QueryResources,
@@ -63,7 +60,7 @@ class AntiOperator(val workIdentity: WorkIdentity,
 
     override def workIdentity: WorkIdentity = AntiOperator.this.workIdentity
 
-    override def operate(outputMorsel: Morsel, context: QueryContext, state: QueryState, resources: QueryResources): Unit = {
+    override def operate(outputMorsel: Morsel, state: PipelinedQueryState, resources: QueryResources): Unit = {
       val outputCursor = outputMorsel.writeCursor(onFirstRow = true)
       while (outputCursor.onValidRow() && canContinue) {
         val morselData = morselDataIterator.next()

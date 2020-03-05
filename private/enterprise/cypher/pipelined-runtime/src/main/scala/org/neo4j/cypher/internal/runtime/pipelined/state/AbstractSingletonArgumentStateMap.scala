@@ -86,26 +86,23 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
   }
 
   override def takeNextIfCompleted(): STATE = {
-    if (hasController && controller.tryTake()) {
-      lastCompletedArgumentId = TopLevelArgument.VALUE
-      val completedState = controller.state
-      hasController = false
-      completedState
-    } else {
-      null.asInstanceOf[STATE]
-    }
+    nextIfCompletedOrNull((state, isCompleted) => if (isCompleted) state else null.asInstanceOf[STATE])
   }
 
   override def takeNextIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {
+    nextIfCompletedOrNull((state, isCompleted) => ArgumentStateWithCompleted(state, isCompleted))
+  }
+
+  private def nextIfCompletedOrNull[T](stateMapper: (STATE, Boolean) => T): T = {
     if (hasController && controller.tryTake()) {
       lastCompletedArgumentId = TopLevelArgument.VALUE
       val completedState = controller.state
       hasController = false
-      ArgumentStateWithCompleted(completedState, isCompleted = true)
+      stateMapper(completedState, true)
     } else if (hasController) {
-      ArgumentStateWithCompleted(controller.state, isCompleted = false)
+      stateMapper(controller.state, false)
     } else {
-      null.asInstanceOf[ArgumentStateWithCompleted[STATE]]
+      null.asInstanceOf[T]
     }
   }
 

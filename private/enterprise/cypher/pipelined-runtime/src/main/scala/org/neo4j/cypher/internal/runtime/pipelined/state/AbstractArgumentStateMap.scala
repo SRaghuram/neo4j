@@ -89,34 +89,26 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   }
 
   override def takeNextIfCompleted(): STATE = {
-    val controller = controllers.get(lastCompletedArgumentId + 1)
-    if (controller != null) {
-      if (controller.tryTake()) {
-        lastCompletedArgumentId += 1
-        controllers.remove(controller.state.argumentRowId)
-        DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, controller.state.argumentRowId)
-        controller.state
-      } else {
-        null.asInstanceOf[STATE]
-      }
-    } else {
-      null.asInstanceOf[STATE]
-    }
+    nextIfCompletedOrNull((state, isCompleted) => if (isCompleted) state else null.asInstanceOf[STATE])
   }
 
   override def takeNextIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {
+    nextIfCompletedOrNull((state, isCompleted) => ArgumentStateWithCompleted(state, isCompleted))
+  }
+
+  private def nextIfCompletedOrNull[T](stateMapper: (STATE, Boolean) => T): T = {
     val controller = controllers.get(lastCompletedArgumentId + 1)
     if (controller != null) {
       if (controller.tryTake()) {
         lastCompletedArgumentId += 1
         controllers.remove(controller.state.argumentRowId)
         DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, controller.state.argumentRowId)
-        ArgumentStateWithCompleted(controller.state, isCompleted = true)
+        stateMapper(controller.state, true)
       } else {
-        ArgumentStateWithCompleted(controller.state, isCompleted = false)
+        stateMapper(controller.state, false)
       }
     } else {
-      null.asInstanceOf[ArgumentStateWithCompleted[STATE]]
+      null.asInstanceOf[T]
     }
   }
 

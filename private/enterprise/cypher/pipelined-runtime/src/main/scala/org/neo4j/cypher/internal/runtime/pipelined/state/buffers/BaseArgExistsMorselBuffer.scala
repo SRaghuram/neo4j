@@ -31,8 +31,6 @@ import scala.collection.mutable.ArrayBuffer
  * Extension of Morsel buffer that also holds an argument state map in order to track
  * argument rows that do not result in any output rows, i.e. gets filtered out.
  *
- * This is used in front of a pipeline with an OptionalOperator.
- *
  * This buffer sits between two pipelines.
  */
 abstract class BaseArgExistsMorselBuffer[PRODUCES <: AnyRef](id: BufferId,
@@ -76,12 +74,12 @@ abstract class BaseArgExistsMorselBuffer[PRODUCES <: AnyRef](id: BufferId,
     }
   }
 
-  override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor): Unit = {
+  override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor, initialCount: Int): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
-      DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
+      DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel with initial count $initialCount")
     }
     val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, _.increment(_))
-    argumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers)
+    argumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers, initialCount)
     tracker.increment()
   }
 
@@ -129,7 +127,7 @@ abstract class BaseArgExistsMorselBuffer[PRODUCES <: AnyRef](id: BufferId,
   }
 
   override def toString: String =
-    s"BaseArgumentExistenceMorselBuffer(planId: $argumentStateMapId)$argumentStateMap"
+    s"BaseArgExistsMorselBuffer(planId: $argumentStateMapId)$argumentStateMap"
 }
 
 // --- Messaging protocol ---
