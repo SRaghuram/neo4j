@@ -87,7 +87,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     } should have message startOfError + "The provided database name must have a length between 3 and 63 characters."
 
     // Too long name
-    val name = "ihaveallooootoflettersclearlymorethenishould-ihaveallooootoflettersclearlymorethenishould"
+    val name = "ihaveallooootoflettersclearlymorethanishould-ihaveallooootoflettersclearlymorethanishould"
     the[IllegalArgumentException] thrownBy {
       // WHEN
       Config.defaults(default_database, name)
@@ -106,6 +106,139 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     result.toList should be(List(db(DEFAULT_DATABASE_NAME, default = true)))
+  }
+
+  test("Should always show system even without access") {
+    // GIVEN
+    setup(defaultConfig)
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+
+    executeOnSystem("foo","bar", "SHOW DATABASES", resultHandler = (row, _) => {
+      // THEN
+      row.get("name") should be ("system")
+    }) should be (1)
+  }
+
+  test("Should show only databases that a user has been given access to") {
+    // GIVEN
+    setup(defaultConfig)
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("CREATE DATABASE baz")
+    execute("CREATE ROLE blub")
+    execute("GRANT ROLE blub TO foo")
+    execute("GRANT ACCESS ON DATABASE baz TO blub")
+
+    executeOnSystem("foo","bar", "SHOW DATABASES", resultHandler = (row, _) => {
+      // THEN
+      row.get("name") should (be ("system") or be ("baz"))
+    }) should be (2)
+  }
+
+  test("Should show all databases if user granted access on all") {
+    // GIVEN
+    setup(defaultConfig)
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE baz")
+
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE blub")
+    execute("GRANT ROLE blub TO foo")
+    execute("GRANT ACCESS ON DATABASE * TO blub")
+
+    val expected = Seq("baz", "neo4j", "system")
+    executeOnSystem("foo","bar", "SHOW DATABASES", resultHandler = (row, index) => {
+      // THEN
+      row.get("name") should be(expected(index))
+    }) should be (3)
+  }
+
+  test("Should not show denied database") {
+    // GIVEN
+    setup(defaultConfig)
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE baz")
+
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE blub")
+    execute("GRANT ROLE blub TO foo")
+    execute("GRANT ACCESS ON DATABASE * TO blub")
+    execute("DENY ACCESS ON DATABASE baz TO blub")
+
+    val expected = Seq("neo4j", "system")
+    executeOnSystem("foo","bar", "SHOW DATABASES", resultHandler = (row, index) => {
+      // THEN
+      row.get("name") should be(expected(index))
+    }) should be (2)
+  }
+
+  test("Should show databases granted through different roles") {
+    // GIVEN
+    setup(defaultConfig)
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE baz")
+
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE blub")
+    execute("CREATE ROLE blob")
+    execute("GRANT ROLE blub TO foo")
+    execute("GRANT ROLE blob TO foo")
+    execute("GRANT ACCESS ON DATABASE neo4j TO blub")
+    execute("GRANT ACCESS ON DATABASE baz TO blob")
+
+    val expected = Seq("baz", "neo4j", "system")
+    executeOnSystem("foo","bar", "SHOW DATABASES", resultHandler = (row, index) => {
+      // THEN
+      row.get("name") should be(expected(index))
+    }) should be (3)
+  }
+
+  test("Should aggregate show databases over different roles") {
+    // GIVEN
+    setup(defaultConfig)
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE baz")
+
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE blub")
+    execute("CREATE ROLE blob")
+    execute("GRANT ROLE blub TO foo")
+    execute("GRANT ROLE blob TO foo")
+    execute("GRANT ACCESS ON DATABASE * TO blub")
+    execute("DENY ACCESS ON DATABASE baz TO blob")
+
+    val expected = Seq("neo4j", "system")
+    executeOnSystem("foo","bar", "SHOW DATABASES", resultHandler = (row, index) => {
+      // THEN
+      row.get("name") should be(expected(index))
+    }) should be (2)
+  }
+
+  test("Should not show database if access both granted and denied") {
+    // GIVEN
+    setup(defaultConfig)
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE baz")
+
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE blub")
+    execute("GRANT ROLE blub TO foo")
+    execute("GRANT ACCESS ON DATABASE baz TO blub")
+    execute("DENY ACCESS ON DATABASE baz TO blub")
+
+    val expected = Seq("system")
+    executeOnSystem("foo","bar", "SHOW DATABASES", resultHandler = (row, index) => {
+      // THEN
+      row.get("name") should be(expected(index))
+    }) should be (1)
   }
 
   test("should show custom default database") {
