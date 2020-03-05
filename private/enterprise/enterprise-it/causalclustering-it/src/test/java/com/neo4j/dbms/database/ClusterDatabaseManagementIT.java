@@ -42,6 +42,7 @@ import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.drop
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.startDatabase;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.stopDatabase;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
+import static java.util.Collections.singleton;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -400,6 +401,8 @@ class ClusterDatabaseManagementIT
         // Restart core
         toStop.start();
 
+        // Core should have eventually started database and have only data from the recreation
+        assertDatabaseEventuallyStarted( databaseName, singleton( toStop ) );
         assertEventually( () -> hasNodeCount( toStop, databaseName, secondLabel ), equalityCondition( 1L ), 90, SECONDS );
         assertThat( hasNodeCount( toStop, databaseName, firstLabel ), equalTo( 0L ) );
     }
