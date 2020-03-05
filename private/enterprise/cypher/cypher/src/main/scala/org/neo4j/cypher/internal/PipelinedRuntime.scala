@@ -342,20 +342,19 @@ class PipelinedRuntime private(parallelExecution: Boolean,
       // If this proves to be too costly we could maintain a map structure
       executionGraphDefinition.pipelines.foreach { pipeline =>
         if (pipeline.fusedPlans.exists(_.id.x == planId.x)) {
-          return Some(PipelineInfo(s"${pipeline.id.x}.0F"))
+          return Some(PipelineInfo(pipeline.id.x, fused = true))
         }
         else if (pipeline.headPlan.id == planId) {
-          return Some(PipelineInfo(s"${pipeline.id.x}.0"))
+          return Some(PipelineInfo(pipeline.id.x, fused = false))
         }
         else {
           val middleIndex = pipeline.middlePlans.indexWhere(_.id.x == planId.x)
           if (middleIndex >= 0) {
-            return Some(PipelineInfo(s"${pipeline.id.x}.${middleIndex + 1}"))
+            return Some(PipelineInfo(pipeline.id.x, fused = false))
           } else {
             pipeline.outputDefinition match {
               case ProduceResultOutput(o) if o.id.x == planId.x =>
-                val outputIndex = 1 + pipeline.middlePlans.size
-                return Some(PipelineInfo(s"${pipeline.id.x}.$outputIndex"))
+                return Some(PipelineInfo(pipeline.id.x, fused = false))
 
               case _ =>
                 // Do nothing
