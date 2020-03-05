@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 import com.neo4j.causalclustering.protocol.ProtocolInstallerRepository;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 
 import java.net.InetSocketAddress;
@@ -68,16 +69,6 @@ public class HandshakeServerInitializer extends ChannelInitializer<SocketChannel
         );
 
         handshakeServer.protocolStackFuture().whenComplete( ( protocolStack, failure ) -> onHandshakeComplete( protocolStack, channel, failure ) );
-        channel.closeFuture().addListener( f -> {
-            try
-            {
-                channel.parent().pipeline().fireUserEventTriggered(
-                        new ServerHandshakeFinishedEvent.Closed( toSocketAddress( channel ) ) );
-            }
-            catch ( RejectedExecutionException ignored )
-            {
-            }
-        } );
         return new NettyHandshakeServer( handshakeServer );
     }
 
@@ -94,7 +85,7 @@ public class HandshakeServerInitializer extends ChannelInitializer<SocketChannel
             log.info( "Handshake completed on channel %s. Installing: %s", channel, protocolStack );
 
             protocolInstallerRepository.installerFor( protocolStack ).install( channel );
-            channel.parent().pipeline().fireUserEventTriggered( new ServerHandshakeFinishedEvent.Created( toSocketAddress( channel ), protocolStack ) );
+            registerChannelAndProtocol( channel, protocolStack );
         }
         catch ( Throwable t )
         {
@@ -102,9 +93,38 @@ public class HandshakeServerInitializer extends ChannelInitializer<SocketChannel
         }
     }
 
-    private SocketAddress toSocketAddress( SocketChannel channel )
+    private void registerChannelAndProtocol( SocketChannel channel, ProtocolStack protocolStack )
     {
-        InetSocketAddress inetSocketAddress = channel.remoteAddress();
-        return new SocketAddress( inetSocketAddress.getHostString(), inetSocketAddress.getPort() );
+        SocketAddress remoteAddress = getRemoteAddress( channel );
+        if ( remoteAddress == null )
+        {
+            // already disconnected
+            return;
+        }
+
+        ChannelPipeline parent = channel.parent().pipeline();
+        parent.fireUserEventTriggered( new ServerHandshakeFinishedEvent.Created( remoteAddress, protocolStack ) );
+
+        channel.closeFuture().addListener( f ->
+        {
+            try
+            {
+                parent.fireUserEventTriggered( new ServerHandshakeFinishedEvent.Closed( remoteAddress ) );
+            }
+            catch ( RejectedExecutionException ignored )
+            {
+            }
+        } );
+    }
+
+    private SocketAddress getRemoteAddress( SocketChannel channel )
+    {
+        InetSocketAddress remoteAddress = channel.remoteAddress();
+        if ( remoteAddress == null )
+        {
+            // this has been observed to happen when a connection is closed immediately after having been opened, i.e. port probing
+            return null;
+        }
+        return new SocketAddress( remoteAddress.getHostString(), remoteAddress.getPort() );
     }
 }
