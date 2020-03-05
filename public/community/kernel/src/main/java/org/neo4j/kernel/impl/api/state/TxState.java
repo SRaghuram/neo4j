@@ -139,7 +139,7 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
                     throw new IllegalStateException( "No RelationshipState for added relationship!" );
                 }
             }
-            relationships.getRemoved().forEach( relationshipId -> relationshipVisit( relationshipId, visitor::visitDeletedRelationship ) );
+            relationships.getRemoved().forEach( relationshipId -> relationshipStatesMap.get( relationshipId ).accept( visitor::visitDeletedRelationship ) );
         }
 
         if ( nodes != null )
