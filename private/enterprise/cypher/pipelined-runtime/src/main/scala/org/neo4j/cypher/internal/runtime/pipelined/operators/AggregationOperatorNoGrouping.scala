@@ -31,7 +31,6 @@ import org.neo4j.cypher.internal.expressions
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -310,11 +309,11 @@ class AggregationMapperOperatorNoGroupingTaskTemplate(val inner: OperatorTaskTem
 
   override def genCreateState: IntermediateRepresentation = {
     block(
-      inner.genCreateState,
       setField(sinkField,
                invoke(EXECUTION_STATE,
                       method[ExecutionState, Sink[_], Int]("getSinkInt"),
-                      loadField(bufferIdField)))
+                      loadField(bufferIdField))),
+      inner.genCreateState
     )
   }
 

@@ -175,11 +175,10 @@ class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate
 
   override def genCreateState: IntermediateRepresentation =
     block(
-      inner.genCreateState,
       setField(memoryTracker,
                invoke(EXECUTION_STATE,
-                      method[ExecutionState, QueryMemoryTracker]("memoryTracker")))
-
+                      method[ExecutionState, QueryMemoryTracker]("memoryTracker"))),
+        inner.genCreateState
       )
 
   override def genExpressions: Seq[IntermediateExpression] = Seq(groupingExpression.computeKey, groupingExpression.projectKey)
