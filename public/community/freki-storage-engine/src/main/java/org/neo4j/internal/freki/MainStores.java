@@ -38,16 +38,14 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
-import org.neo4j.kernel.lifecycle.LifeSupport;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.kernel.lifecycle.Life;
 
 import static org.neo4j.internal.freki.Record.recordXFactor;
 import static org.neo4j.internal.helpers.ArrayUtil.concat;
 import static org.neo4j.io.IOUtils.closeAllSilently;
 
-class MainStores extends LifecycleAdapter
+class MainStores extends Life
 {
-    final LifeSupport life = new LifeSupport();
     public final SimpleStore mainStore;
     private final SimpleStore[] mainStores;
     public final SimpleBigValueStore bigPropertyValueStore;
@@ -160,29 +158,5 @@ class MainStores extends LifecycleAdapter
         }
         bigPropertyValueStore.flush( limiter, cursorTracer );
         denseStore.checkpoint( limiter, cursorTracer );
-    }
-
-    @Override
-    public void init()
-    {
-        life.init();
-    }
-
-    @Override
-    public void start()
-    {
-        life.start();
-    }
-
-    @Override
-    public void stop()
-    {
-        life.stop();
-    }
-
-    @Override
-    public void shutdown()
-    {
-        life.shutdown();
     }
 }

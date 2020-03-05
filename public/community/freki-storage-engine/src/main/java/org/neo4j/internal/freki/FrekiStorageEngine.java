@@ -40,7 +40,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
-import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.kernel.lifecycle.Life;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.lock.LockGroup;
 import org.neo4j.lock.LockService;
@@ -72,7 +72,7 @@ import org.neo4j.token.TokenHolders;
 
 import static org.neo4j.kernel.lifecycle.LifecycleAdapter.onInit;
 
-public class FrekiStorageEngine implements StorageEngine
+public class FrekiStorageEngine extends Life implements StorageEngine
 {
     private final FileSystemAbstraction fs;
     private final DatabaseLayout databaseLayout;
@@ -91,7 +91,6 @@ public class FrekiStorageEngine implements StorageEngine
     private final boolean createStoreIfNotExists;
     private final PageCacheTracer pageCacheTracer;
     private final PageCursorTracerSupplier cursorTracerSupplier;
-    private final LifeSupport life = new LifeSupport();
 
     private final Stores stores;
     private final IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync;
@@ -195,7 +194,15 @@ public class FrekiStorageEngine implements StorageEngine
         {
             while ( batch != null )
             {
-                batch.accept( txApplier );
+                txApplier.beginTx( batch.transactionId() );
+                try
+                {
+                    batch.accept( txApplier );
+                }
+                finally
+                {
+                    txApplier.endTx();
+                }
                 batch = batch.next();
             }
         }
@@ -281,29 +288,16 @@ public class FrekiStorageEngine implements StorageEngine
         return new FrekiStorageReader( stores, tokenHolders );
     }
 
+    Stores stores()
+    {
+        return stores;
+    }
+
     @Override
     public void init()
     {
-        life.init();
+        super.init();
         // Now that all stores have been initialized and all id generators are opened then register them at the work-sync
         stores.idGenerators( idGeneratorUpdatesWorkSync::add );
-    }
-
-    @Override
-    public void start()
-    {
-        life.start();
-    }
-
-    @Override
-    public void stop()
-    {
-        life.stop();
-    }
-
-    @Override
-    public void shutdown()
-    {
-        life.shutdown();
     }
 }

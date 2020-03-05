@@ -663,8 +663,8 @@ abstract class FrekiCommand implements StorageCommand
     {
         static final byte TYPE = 14;
 
-        private final int labelId;
-        private final long count;
+        final int labelId;
+        final long count;
 
         NodeCount( int labelId, long count )
         {
@@ -697,10 +697,10 @@ abstract class FrekiCommand implements StorageCommand
     {
         static final byte TYPE = 15;
 
-        private final int startLabelId;
-        private final int typeId;
-        private final int endLabelId;
-        private final long count;
+        final int startLabelId;
+        final int typeId;
+        final int endLabelId;
+        final long count;
 
         RelationshipCount( int startLabelId, int typeId, int endLabelId, long count )
         {

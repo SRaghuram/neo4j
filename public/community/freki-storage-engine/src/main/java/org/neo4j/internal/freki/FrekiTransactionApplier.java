@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 import org.neo4j.common.EntityType;
+import org.neo4j.counts.CountsAccessor;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.freki.FrekiCommand.Mode;
 import org.neo4j.internal.helpers.collection.Visitor;
@@ -71,6 +72,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     private final FrekiNodeCursor nodeCursor;
     private final FrekiPropertyCursor propertyCursorBefore;
     private final FrekiPropertyCursor propertyCursorAfter;
+    private CountsAccessor.Updater countsApplier;
 
     // State used for generating index updates
     private long currentNodeId = NULL;
@@ -89,6 +91,25 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         this.nodeCursor = new FrekiNodeCursor( stores, PageCursorTracer.NULL );
         this.propertyCursorBefore = new FrekiPropertyCursor( stores, PageCursorTracer.NULL );
         this.propertyCursorAfter = new FrekiPropertyCursor( stores, PageCursorTracer.NULL );
+    }
+
+    void beginTx( long transactionId )
+    {
+        countsApplier = stores.countsStore.apply( transactionId, PageCursorTracer.NULL );
+    }
+
+    void endTx()
+    {
+        closeCountsStoreApplier();
+    }
+
+    private void closeCountsStoreApplier()
+    {
+        if ( countsApplier != null )
+        {
+            countsApplier.close();
+            countsApplier = null;
+        }
     }
 
     @Override
@@ -405,6 +426,10 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         // TODO There should be logic around avoiding deadlocks and working around problems with batches of transactions where some transactions
         //      updates indexes and some change schema, which are not quite implemented here yet
 
+        // (copied from RecordStorageEngine) closing the counts store here resolves an otherwise deadlocking scenario between check pointer,
+        // this applier and an index population thread wanting to apply index sampling to the counts store.
+        closeCountsStoreApplier();
+
         SchemaRule rule = schema.descriptor;
         if ( schema.mode == Mode.CREATE || schema.mode == Mode.UPDATE )
         {
@@ -444,6 +469,18 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
                 stores.schemaCache.removeSchemaRule( rule.getId() );
             }
         }
+    }
+
+    @Override
+    public void handle( FrekiCommand.NodeCount count ) throws IOException
+    {
+        countsApplier.incrementNodeCount( count.labelId, count.count );
+    }
+
+    @Override
+    public void handle( FrekiCommand.RelationshipCount count ) throws IOException
+    {
+        countsApplier.incrementRelationshipCount( count.startLabelId, count.typeId, count.endLabelId, count.count );
     }
 
     @Override

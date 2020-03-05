@@ -17,22 +17,37 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.internal.freki;
+package org.neo4j.kernel.lifecycle;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
-import org.neo4j.io.pagecache.PageCursor;
-
-interface SimpleBigValueStore extends SingleFileStore
+/**
+ * A {@link Lifecycle} that has a {@link LifeSupport} inside of it. Convenient in situations where you have a component involving
+ * multiple {@link Lifecycle} "child" instances.
+ */
+public class Life implements Lifecycle
 {
-    long allocateSpace( int length );
+    protected final LifeSupport life = new LifeSupport();
 
-    void write( PageCursor cursor, ByteBuffer data, long position ) throws IOException;
+    @Override
+    public void init()
+    {
+        life.init();
+    }
 
-    boolean read( PageCursor cursor, ByteBuffer data, long position ) throws IOException;
+    @Override
+    public void start()
+    {
+        life.start();
+    }
 
-    int length( PageCursor cursor, long position ) throws IOException;
+    @Override
+    public void stop()
+    {
+        life.stop();
+    }
 
-    long position();
+    @Override
+    public void shutdown()
+    {
+        life.shutdown();
+    }
 }

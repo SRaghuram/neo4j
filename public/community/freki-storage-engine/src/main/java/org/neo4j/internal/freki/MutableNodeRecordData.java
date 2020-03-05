@@ -137,7 +137,10 @@ class MutableNodeRecordData
     {
         Relationships relationships = this.relationships.get( type );
         checkState( relationships != null, "No such relationship (%d)-[:%d]->(%d)", id, type, otherNode );
-        relationships.remove( internalId, id, otherNode, outgoing );
+        if ( relationships.remove( internalId, id, otherNode, outgoing ) )
+        {
+            this.relationships.remove( type );
+        }
     }
 
     static class Relationship
@@ -212,7 +215,10 @@ class MutableNodeRecordData
             return relationship;
         }
 
-        void remove( long internalId, long sourceNode, long otherNode, boolean outgoing )
+        /**
+         * @return {@code true} if the last relationship of this type was removed, otherwise {@code false}.
+         */
+        boolean remove( long internalId, long sourceNode, long otherNode, boolean outgoing )
         {
             int foundIndex = -1;
             for ( int i = 0, size = relationships.size(); i < size; i++ )
@@ -227,6 +233,7 @@ class MutableNodeRecordData
             }
             checkState( foundIndex != -1, "No such relationship of type:%d internalId:%d", type, internalId );
             relationships.remove( foundIndex );
+            return relationships.isEmpty();
         }
 
         @Nonnull
@@ -520,18 +527,19 @@ class MutableNodeRecordData
             {
                 StreamVByte.readIntDeltas( StreamVByte.SKIP, buffer );
             }
-            if ( containsForwardPointer )
+        }
+
+        if ( containsForwardPointer )
+        {
+            forwardPointer = buffer.getLong();
+            if ( isDenseFromForwardPointer( forwardPointer ) )
             {
-                forwardPointer = buffer.getLong();
-                if ( isDenseFromForwardPointer( forwardPointer ) )
-                {
-                    nextInternalRelationshipId = buffer.getLong();
-                }
+                nextInternalRelationshipId = buffer.getLong();
             }
-            if ( containsBackPointer )
-            {
-                backPointer = readLongs( buffer )[0];
-            }
+        }
+        if ( containsBackPointer )
+        {
+            backPointer = readLongs( buffer )[0];
         }
     }
 
@@ -600,8 +608,7 @@ class MutableNodeRecordData
 
     static boolean isDenseFromForwardPointer( long forwardPointer )
     {
-        Preconditions.checkArgument( forwardPointer != NULL, "NULL FW pointer" );
-        return (forwardPointer & 0x80000000_00000000L) != 0;
+        return forwardPointer != NULL && (forwardPointer & 0x80000000_00000000L) != 0;
     }
 
     static int sizeExponentialFromForwardPointer( long forwardPointer )

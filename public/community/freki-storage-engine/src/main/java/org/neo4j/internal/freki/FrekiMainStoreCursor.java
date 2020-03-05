@@ -138,30 +138,29 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     }
 
     /**
-     * Uses already loaded data from another cursor, starting with the "small" record, which corresponds to the given id.
-     * If a larger record is also involved then that too will be used for this cursor. They will live in {@link #smallRecord} and
+     * Initializes another cursor with the state of this cursor, starting with the "small" record, which corresponds to the given id.
+     * If a larger record is also involved then that too will be transferred. They will live in {@link #smallRecord} and
      * {@link #record} respectively, but {@link #data} will point to the large record data, which for the time being holds the majority of the data.
      */
-    boolean useSharedRecordFrom( FrekiMainStoreCursor alreadyLoadedRecord )
+    boolean initializeOtherCursorFromStateOfThisCursor( FrekiMainStoreCursor otherCursor )
     {
-        Record otherRecord = alreadyLoadedRecord.smallRecord;
-        if ( otherRecord.hasFlag( FLAG_IN_USE ) )
+        if ( smallRecord.hasFlag( FLAG_IN_USE ) )
         {
-            smallRecord.initializeFromSharedData( otherRecord );
-            data = smallRecord.dataForReading();
-            headerState = alreadyLoadedRecord.headerState;
-            borrowedHeaderState = true;
-            loadedNodeId = alreadyLoadedRecord.loadedNodeId;
+            otherCursor.smallRecord.initializeFromSharedData( smallRecord );
+            otherCursor.data = otherCursor.smallRecord.dataForReading();
+            otherCursor.headerState = headerState;
+            otherCursor.borrowedHeaderState = true;
+            otherCursor.loadedNodeId = loadedNodeId;
             if ( headerState.containsForwardPointer && !headerState.isDense )
             {
                 int sizeExp = sizeExponentialFromForwardPointer( headerState.forwardPointer );
                 SimpleStore largeStore = stores.mainStore( sizeExp );
-                if ( record == null || record.sizeExp() != sizeExp )
+                if ( otherCursor.record == null || otherCursor.record.sizeExp() != sizeExp )
                 {
-                    record = largeStore.newRecord();
+                    otherCursor.record = largeStore.newRecord();
                 }
-                record.initializeFromSharedData( alreadyLoadedRecord.record );
-                data = record.dataForReading();
+                otherCursor.record.initializeFromSharedData( record );
+                otherCursor.data = otherCursor.record.dataForReading();
             }
             return true;
         }
