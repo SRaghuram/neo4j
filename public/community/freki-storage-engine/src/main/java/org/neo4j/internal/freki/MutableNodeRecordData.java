@@ -303,7 +303,10 @@ class MutableNodeRecordData
     {
         // Internal IDs are allocated in the CommandCreationContext and merely passed in here, so it's nice to keep this up to data for sanity's sake
         // Also when moving over from sparse --> dense we can simply read this field to get the correct value
-//        registerInternalRelationshipId( internalId );
+        if ( outgoing )
+        {
+            registerInternalRelationshipId( internalId );
+        }
         return relationships.getIfAbsentPut( type, () -> new MutableNodeRecordData.Relationships( type ) ).add( internalId, id, otherNode, type, outgoing );
     }
 
