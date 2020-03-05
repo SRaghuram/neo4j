@@ -24,7 +24,6 @@ import org.neo4j.cypher.internal.runtime.spec.tests.CachePropertiesTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ApplyTestBase
-import org.neo4j.cypher.internal.runtime.spec.tests.ApplyUnionTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DistinctTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllTestBase
@@ -160,7 +159,6 @@ class SlottedMemoryManagementDisabledTest extends MemoryManagementDisabledTestBa
 class SlottedSubscriberErrorTest extends SubscriberErrorTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
 class SlottedCartesianProductTest extends CartesianProductTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedApplyTest extends ApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
-                       with ApplyUnionTestBase[EnterpriseRuntimeContext]
 class SlottedExpressionTest extends ExpressionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
                             with ThreadUnsafeExpressionTests[EnterpriseRuntimeContext]
                             with ExpressionWithTxStateChangesTests[EnterpriseRuntimeContext]
