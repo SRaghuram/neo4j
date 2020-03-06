@@ -66,6 +66,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
@@ -319,7 +320,6 @@ class QueryLoggerIT
         databaseManagementService.shutdown();
 
         List<String> logLines = readAllLines( logFilename );
-        assertEquals( 1, logLines.size() );
         assertThat( logLines.get( 0 ), containsString( "ERROR" ) );
         assertThat( logLines.get( 0 ), containsString( "Not a parsable query" ) );
     }
@@ -337,7 +337,6 @@ class QueryLoggerIT
         databaseManagementService.shutdown();
 
         List<String> logLines = readAllLines( logFilename );
-        assertEquals( 2, logLines.size() );
         assertThat( logLines.get( 0 ), containsString( "Query started:" ) );
     }
 
@@ -370,7 +369,6 @@ class QueryLoggerIT
         databaseManagementService.shutdown();
 
         List<String> logLines = readAllLines( logFilename );
-        assertEquals( 1, logLines.size() );
         assertThat( logLines.get( 0 ), containsString( "CREATE USER testUser SET PASSWORD '******'" ) );
     }
 
@@ -401,6 +399,30 @@ class QueryLoggerIT
                 connectionAndDatabaseDetails(),
                 query ) ) );
         assertThat( logLines.get( 0 ), containsString( AUTH_DISABLED.username() ) );
+    }
+
+    @Test
+    void shouldLogNoSuchProcedureInQueryLog() throws Throwable
+    {
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() );
+        buildDatabase();
+
+        try
+        {
+            executeQuery( "Call this.procedure.doesnt.exist()" );
+            fail( "Should have thrown" );
+        }
+        catch ( QueryExecutionException e )
+        {
+            databaseManagementService.shutdown();
+        }
+
+        // THEN
+        List<String> logLines = readAllLines( logFilename );
+        logLines.forEach( System.out::println );
+        String expectedMessage = "There is no procedure with the name `this.procedure.doesnt.exist` registered for this database instance.";
+        assertEquals( 3, logLines.stream().filter( line -> line.contains( expectedMessage ) ).count() ); //1 in log, 2 in stacktrace
     }
 
     @Test
