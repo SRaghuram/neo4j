@@ -30,6 +30,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import org.neo4j.test.extension.Inject;
@@ -162,9 +163,8 @@ class InteractiveRunIT extends AnnotationsFixture
             int measurementForks,
             String... methods ) throws Exception
     {
-        temporaryFolder.cleanDirectory( temporaryFolder.homeDir().getName() );
-        File storesDir = temporaryFolder.directory( "store" );
-        Path profilerRecordingDirectory = temporaryFolder.directory( "recordings" ).toPath();
+        File storesDir = temporaryFolder.directory( UUID.randomUUID().toString() );
+        Path profilerRecordingDirectory = temporaryFolder.directory( UUID.randomUUID().toString() ).toPath();
         int iterationCount = 1;
         TimeValue iterationDuration = TimeValue.seconds( 1 );
         Main.run(
