@@ -24,24 +24,6 @@
         <url>https://github.com/neo4j/neo4j</url>
     </scm>
 
-  <build>
-        <plugins>
-            <!-- This module contains public API, run revapi -->
-            <plugin>
-                <groupId>org.revapi</groupId>
-                <artifactId>revapi-maven-plugin</artifactId>
-                <configuration>
-                    <checkDependencies>false</checkDependencies>
-                    <oldArtifacts>
-                        <oldArtifact>
-                            org.neo4j:neo4j-enterprise-kernel:jar:LATEST
-                        </oldArtifact>
-                    </oldArtifacts>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
-
     <dependencies>
         <dependency>
             <groupId>org.neo4j</groupId>
