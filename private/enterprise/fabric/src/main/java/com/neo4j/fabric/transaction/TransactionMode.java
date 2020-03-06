@@ -11,7 +11,7 @@ package com.neo4j.fabric.transaction;
 public enum TransactionMode
 {
     /**
-     * Event thought the current statement is not write, a write statement might be coming later.
+     * The current statement is a read, but a write statement might be coming later.
      */
     MAYBE_WRITE,
 
