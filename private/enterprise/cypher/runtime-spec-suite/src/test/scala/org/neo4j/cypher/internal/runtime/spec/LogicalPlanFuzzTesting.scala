@@ -24,8 +24,9 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 
-class LogicalPlanFuzzTest extends CypherFunSuite
-                          with GeneratorDrivenPropertyChecks {
+// Class name not ending in `Test` to make sure `mvn test` won't run it
+class LogicalPlanFuzzTesting extends CypherFunSuite
+                             with GeneratorDrivenPropertyChecks {
 
   implicit val config: PropertyCheckConfiguration = PropertyCheckConfiguration(minSuccessful = 100)
 
@@ -39,13 +40,12 @@ class LogicalPlanFuzzTest extends CypherFunSuite
 
   private val runtimes = Seq(InterpretedRuntime, SlottedRuntime, PIPELINED/*, PARALLEL*/)
 
-  // This is still an early prototype, thus ignored.
-  // It should probably be put into a downstream dependency instead of a regular test, and there are still a number of unsolved problems
+  // This is still an early prototype, and there are a number of unsolved problems
   // * How to generate the graph
   // * How to  generate valid plans (or at x % of valid plans) where the invalid ones could be a result of other erros, not system errors
   // Also it only generates very few plans right now.
 
-  ignore("all sorts of queries") {
+  test("all sorts of queries") {
     // Create the data (all executors use the same database instance)
     runtimeTestSupport.start()
     runtimeTestSupport.startTx()
