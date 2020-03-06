@@ -14,6 +14,16 @@ import java.io.IOException;
 
 import org.neo4j.common.ProgressReporter;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.internal.batchimport.AdditionalInitialIds;
+import org.neo4j.internal.batchimport.BatchImporter;
+import org.neo4j.internal.batchimport.BatchImporterFactory;
+import org.neo4j.internal.batchimport.Configuration;
+import org.neo4j.internal.batchimport.ImportLogic;
+import org.neo4j.internal.batchimport.LogFilesInitializer;
+import org.neo4j.internal.batchimport.StandardBatchImporterFactory;
+import org.neo4j.internal.batchimport.input.Collector;
+import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -27,6 +37,7 @@ import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.storemigration.RecordStorageMigrator;
 import org.neo4j.kernel.impl.storemigration.legacy.SchemaStore35;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.format.CapabilityType;
@@ -56,6 +67,7 @@ class HighLimitStoreMigrationTest
     private Neo4jLayout neo4jLayout;
     @Inject
     private DatabaseLayout databaseLayout;
+    private final BatchImporterFactory batchImporterFactory = BatchImporterFactory.withHighestPriority();
 
     @Test
     void haveDifferentFormatCapabilitiesAsHighLimit3_0()
@@ -75,7 +87,7 @@ class HighLimitStoreMigrationTest
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
             RecordStorageMigrator migrator = new RecordStorageMigrator( fileSystem, pageCache, Config.defaults(), NullLogService.getInstance(), jobScheduler,
-                    NULL );
+                    NULL, batchImporterFactory );
             DatabaseLayout migrationLayout = neo4jLayout.databaseLayout( "migration" );
             fileSystem.mkdirs( migrationLayout.databaseDirectory() );
 
@@ -88,6 +100,29 @@ class HighLimitStoreMigrationTest
             int newStoreFilesCount = fileSystem.listFiles( migrationLayout.databaseDirectory() ).length;
             assertThat( newStoreFilesCount ).as( "Store should be migrated and new store files should be created." ).isGreaterThanOrEqualTo(
                     StoreType.values().length );
+        }
+    }
+
+    @Test
+    void settingForNumberOfProcessorsToUseWhenMigratingShouldPropagateToBatchImporter() throws Exception
+    {
+        try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
+        {
+            Config config = Config.defaults();
+            int maxNbrOfProcessors = 2;
+            config.set( GraphDatabaseSettings.upgrade_processors, maxNbrOfProcessors );
+            TrackingBatchImporterFactory batchImporterFactory = new TrackingBatchImporterFactory();
+
+            RecordStorageMigrator migrator = new RecordStorageMigrator( fileSystem, pageCache, config, NullLogService.getInstance(), jobScheduler,
+                    NULL, batchImporterFactory );
+            DatabaseLayout migrationLayout = neo4jLayout.databaseLayout( "migration" );
+            fileSystem.mkdirs( migrationLayout.databaseDirectory() );
+
+            prepareStoreFiles( fileSystem, databaseLayout, HighLimitV3_0_0.STORE_VERSION, pageCache );
+
+            migrator.migrate( databaseLayout, migrationLayout, ProgressReporter.SILENT, HighLimitV3_0_0.STORE_VERSION, HighLimit.STORE_VERSION );
+
+            assertThat( batchImporterFactory.configuration.maxNumberOfProcessors() ).isEqualTo( maxNbrOfProcessors );
         }
     }
 
@@ -120,6 +155,36 @@ class HighLimitStoreMigrationTest
                 immutable.empty() ) )
         {
             schemaStore35.initialise( true, PageCursorTracer.NULL );
+        }
+    }
+
+    private static class TrackingBatchImporterFactory extends BatchImporterFactory
+    {
+        private StandardBatchImporterFactory delegate;
+        private Configuration configuration;
+
+        TrackingBatchImporterFactory()
+        {
+            super( Integer.MAX_VALUE );
+            delegate = new StandardBatchImporterFactory();
+        }
+
+        @Override
+        public BatchImporter instantiate( DatabaseLayout directoryStructure, FileSystemAbstraction fileSystem, PageCache externalPageCache,
+                Configuration config, LogService logService, ExecutionMonitor executionMonitor, AdditionalInitialIds additionalInitialIds, Config dbConfig,
+                RecordFormats recordFormats, ImportLogic.Monitor monitor, JobScheduler jobScheduler, Collector badCollector,
+                LogFilesInitializer logFilesInitializer )
+        {
+            this.configuration = config;
+            return delegate
+                    .instantiate( directoryStructure, fileSystem, externalPageCache, config, logService, executionMonitor, additionalInitialIds, dbConfig,
+                            recordFormats, monitor, jobScheduler, badCollector, logFilesInitializer );
+        }
+
+        @Override
+        public String getName()
+        {
+            return "TrackingBatchImporterFactory";
         }
     }
 }
