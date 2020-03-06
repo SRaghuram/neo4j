@@ -1542,7 +1542,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
                   block(
                     assign(variableName,
                            getCachedPropertyAt(property,
-                                               invoke(DB_ACCESS, propertyGet, entityId, constant(token), cursor, PROPERTY_CURSOR, constant(true))))),
+                                               invoke(DB_ACCESS, propertyGet, entityId, constant(token), cursor, PROPERTY_CURSOR, constant(true)))))
                     )
                   )
                 )
@@ -1602,7 +1602,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
                 block(
                   assign(variableName,
                          getCachedPropertyAt(property,
-                                             invoke(DB_ACCESS, propertyGet, entityId, loadField(f), cursor, PROPERTY_CURSOR, constant(true)))),
+                                             invoke(DB_ACCESS, propertyGet, entityId, loadField(f), cursor, PROPERTY_CURSOR, constant(true))))
                   )
                 )
               )

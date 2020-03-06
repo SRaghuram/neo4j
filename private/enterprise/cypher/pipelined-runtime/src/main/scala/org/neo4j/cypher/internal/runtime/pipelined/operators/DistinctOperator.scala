@@ -15,10 +15,8 @@ import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
 import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
-import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
-import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.expressions.Expression
@@ -34,13 +32,13 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateGroupi
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
-import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.EXECUTION_STATE
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.MEMORY_TRACKER
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.SET_MEMORY_TRACKER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.peekState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDistinctOperatorTaskTemplate.SerialTopLevelDistinctState
@@ -138,8 +136,6 @@ class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate
   private val distinctStateField = field[SerialTopLevelDistinctState](codeGen.namer.nextVariableName("distinctState"),
                                                                       peekState[SerialTopLevelDistinctState](argumentStateMapId))
 
-  private val memoryTracker = field[QueryMemoryTracker](codeGen.namer.nextVariableName("memoryTracker"),
-                                                        invokeStatic(method[SerialTopLevelDistinctOperatorTaskTemplate, QueryMemoryTracker]("NO_MEMORY_TRACKING")))
   override def genInit: IntermediateRepresentation = inner.genInit
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
@@ -164,7 +160,7 @@ class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate
       declareAndAssign(typeRefOf[AnyValue], keyVar, nullCheckIfRequired(groupingExpression.computeKey)),
       condition(invoke(loadField(distinctStateField),
                        method[SerialTopLevelDistinctState, Boolean, AnyValue, QueryMemoryTracker]("distinct"),
-                       nullCheckIfRequired(groupingExpression.computeKey), loadField(memoryTracker))) {
+                       nullCheckIfRequired(groupingExpression.computeKey), loadField(MEMORY_TRACKER))) {
         block(
           profileRow(id),
           nullCheckIfRequired(groupingExpression.projectKey),
@@ -173,17 +169,11 @@ class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate
       })
   }
 
-  override def genCreateState: IntermediateRepresentation =
-    block(
-      setField(memoryTracker,
-               invoke(EXECUTION_STATE,
-                      method[ExecutionState, QueryMemoryTracker]("memoryTracker"))),
-        inner.genCreateState
-      )
+  override def genCreateState: IntermediateRepresentation = block(SET_MEMORY_TRACKER, inner.genCreateState)
 
   override def genExpressions: Seq[IntermediateExpression] = Seq(groupingExpression.computeKey, groupingExpression.projectKey)
 
-  override def genFields: Seq[Field] = Seq(distinctStateField, memoryTracker)
+  override def genFields: Seq[Field] = Seq(distinctStateField, MEMORY_TRACKER)
 
   override def genLocalVariables: Seq[LocalVariable] = Seq.empty
 
@@ -219,7 +209,6 @@ object SerialTopLevelDistinctOperatorTaskTemplate {
         true
       } else false
     }
-
     override def toString: String = s"SerialTopLevelDistinctState($argumentRowId, concurrent=${seen.getClass.getPackageName.contains("concurrent")})"
   }
 }

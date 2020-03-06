@@ -45,8 +45,10 @@ import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.DbAccess
+import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
+import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPool
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
 import org.neo4j.cypher.internal.runtime.pipelined.execution.FlowControl
@@ -136,6 +138,8 @@ object OperatorCodeGenHelperTemplates {
     )
   val INPUT_CURSOR: IntermediateRepresentation = loadField(INPUT_CURSOR_FIELD)
   val SHOULD_BREAK: InstanceField = field[Boolean]("shouldBreak", constant(false))
+  val MEMORY_TRACKER: InstanceField  = field[QueryMemoryTracker]("memoryTracker",
+    invokeStatic(method[QueryMemoryTracker , QueryMemoryTracker]("NO_MEMORY_TRACKER")))
 
   // IntermediateRepresentation code
   val QUERY_PROFILER: IntermediateRepresentation = load("queryProfiler")
@@ -166,6 +170,10 @@ object OperatorCodeGenHelperTemplates {
 
   val EXECUTION_STATE: IntermediateRepresentation =
     load("executionState")
+
+  val SET_MEMORY_TRACKER: IntermediateRepresentation =
+    setField(MEMORY_TRACKER, invoke(EXECUTION_STATE,
+      method[ExecutionState, QueryMemoryTracker]("memoryTracker")))
 
   val SUBSCRIBER: LocalVariable = variable[QuerySubscriber]("subscriber",
     invoke(QUERY_STATE, method[PipelinedQueryState, QuerySubscriber]("subscriber")))
