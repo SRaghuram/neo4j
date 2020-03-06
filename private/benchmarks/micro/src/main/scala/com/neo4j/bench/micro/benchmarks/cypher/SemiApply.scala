@@ -31,7 +31,7 @@ import org.openjdk.jmh.annotations.TearDown
 import org.openjdk.jmh.infra.Blackhole
 
 @BenchmarkEnabled(true)
-class AntiSemiApply extends AbstractCypherBenchmark {
+class SemiApply extends AbstractCypherBenchmark {
   @ParamValues(
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME),
     base = Array(Slotted.NAME, Morsel.NAME))
@@ -50,7 +50,7 @@ class AntiSemiApply extends AbstractCypherBenchmark {
   @Param(Array[String]())
   var rhsRows: Int = _
 
-  override def description = "Anti Semi Apply"
+  override def description = "Semi Apply"
 
   private var expectedRowCount: Int = _
 
@@ -58,7 +58,7 @@ class AntiSemiApply extends AbstractCypherBenchmark {
     if (rhsRows > lhsRows) {
       throw new IllegalStateException("In this benchmark RHS row count may not exceed LHS row count")
     }
-    expectedRowCount = if (rhsRows > 0) 0 else lhsRows
+    expectedRowCount = if (rhsRows > 0) lhsRows else 0
   }
 
   override protected def getConfig: DataGeneratorConfig =
@@ -73,9 +73,9 @@ class AntiSemiApply extends AbstractCypherBenchmark {
     val lhsAllNodesScan = plans.AllNodesScan(lhs, Set.empty)(IdGen)
     val rhsAllNodesScan = plans.AllNodesScan(rhs, Set(lhs))(IdGen)
     val limit = plans.Limit(rhsAllNodesScan, astLiteralFor(rhsRows, LNG), DoNotIncludeTies)(IdGen)
-    val antiSemiApply = plans.AntiSemiApply(lhsAllNodesScan, limit)(IdGen)
+    val semiApply = plans.SemiApply(lhsAllNodesScan, limit)(IdGen)
     val resultColumns = List(lhs)
-    val produceResults = plans.ProduceResult(antiSemiApply, columns = resultColumns)(IdGen)
+    val produceResults = plans.ProduceResult(semiApply, columns = resultColumns)(IdGen)
 
     val table = SemanticTable()
       .addNode(astVariable(lhs))
@@ -86,7 +86,7 @@ class AntiSemiApply extends AbstractCypherBenchmark {
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
-  def executePlan(threadState: AntiSemiApplyThreadState, bh: Blackhole): Long = {
+  def executePlan(threadState: SemiApplyThreadState, bh: Blackhole): Long = {
     val subscriber = new CountSubscriber(bh)
     val result = threadState.executablePlan.execute(tx = threadState.tx, subscriber = subscriber)
     result.consumeAll()
@@ -95,12 +95,12 @@ class AntiSemiApply extends AbstractCypherBenchmark {
 }
 
 @State(Scope.Thread)
-class AntiSemiApplyThreadState {
+class SemiApplyThreadState {
   var tx: InternalTransaction = _
   var executablePlan: ExecutablePlan = _
 
   @Setup
-  def setUp(benchmarkState: AntiSemiApply): Unit = {
+  def setUp(benchmarkState: SemiApply): Unit = {
     executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
@@ -111,8 +111,8 @@ class AntiSemiApplyThreadState {
   }
 }
 
-object AntiSemiApply {
+object SemiApply {
   def main(args: Array[String]): Unit = {
-    Main.run(classOf[AntiSemiApply])
+    Main.run(classOf[SemiApply])
   }
 }
