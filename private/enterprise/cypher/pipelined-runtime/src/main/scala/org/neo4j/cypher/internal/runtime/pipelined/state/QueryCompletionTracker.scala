@@ -15,8 +15,6 @@ import org.neo4j.cypher.internal.runtime.QueryStatistics
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.FlowControl
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
-import org.neo4j.cypher.internal.util.AssertionRunner
-import org.neo4j.cypher.internal.util.AssertionRunner.Thunk
 import org.neo4j.internal.kernel.api.exceptions.LocksNotFrozenException
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
@@ -62,21 +60,23 @@ trait QueryCompletionTracker extends FlowControl {
   /**
    * Add an assertion to be run when the query is completed.
    */
-  def addCompletionAssertion(assertion: Thunk): Unit = {
-    if (AssertionRunner.ASSERTIONS_ENABLED) {
-      assertions += assertion
-    }
+  def addCompletionAssertion(assertion: () => Unit): Boolean = {
+    getOrCreateAssertions() += assertion
+    true
   }
 
-  protected val assertions: ArrayBuffer[Thunk] =
-    if (AssertionRunner.ASSERTIONS_ENABLED)
-      new ArrayBuffer[Thunk]()
-    else null
+  private var _assertions: ArrayBuffer[() => Unit] = _
 
-  protected def runAssertions(): Unit = {
-    if (AssertionRunner.ASSERTIONS_ENABLED) {
-      assertions.foreach(_.apply())
+  protected def runAssertions(): Boolean = {
+    getOrCreateAssertions().foreach(_.apply())
+    true
+  }
+
+  private def getOrCreateAssertions() = {
+    if (_assertions == null) {
+      _assertions = new ArrayBuffer[() => Unit]()
     }
+    _assertions
   }
 
   private val instanceName = if (DebugSupport.TRACKER.enabled) s"[${getClass.getSimpleName}@${System.identityHashCode(this)}] " else ""

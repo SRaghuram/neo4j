@@ -45,7 +45,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   checkOnlyWhenAssertionsAreEnabled(verifyThatIdsAndOffsetsMatch())
 
   // Add assertion for query completion
-  tracker.addCompletionAssertion(() => this.assertEmpty())
+  checkOnlyWhenAssertionsAreEnabled(tracker.addCompletionAssertion(() => this.assertEmpty()))
 
   // State
 
@@ -318,7 +318,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   /**
    * Assert that all buffers, continuations and argument state maps are empty.
    */
-  private def assertEmpty(): Unit = {
+  private def assertEmpty(): Boolean = {
     buffers.assertAllEmpty()
     var i = 0
     while (i < continuations.length) {
@@ -328,6 +328,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
       }
       i += 1
     }
+    true
   }
 
   override def toString: String = "TheExecutionState"

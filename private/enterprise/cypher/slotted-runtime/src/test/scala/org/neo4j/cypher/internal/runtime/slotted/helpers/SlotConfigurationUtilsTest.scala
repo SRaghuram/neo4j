@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeSet
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeSetValueInSlotFunctionFor
 import org.neo4j.cypher.internal.runtime.EntityById
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
-import org.neo4j.cypher.internal.util.AssertionUtils.ifAssertionsEnabled
+import org.neo4j.cypher.internal.util.AssertionRunner.isAssertionsEnabled
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.symbols.CTRelationship
@@ -30,12 +30,12 @@ import org.neo4j.values.virtual.VirtualValues
 // If this test class gets in your way you can just delete it
 class SlotConfigurationUtilsTest extends CypherFunSuite {
   private val slots = SlotConfiguration.empty
-    .newLong("n1", false, CTNode)
-    .newLong("n2", true, CTNode)
-    .newLong("r1", false, CTRelationship)
-    .newLong("r2", true, CTRelationship)
-    .newReference("x", true, CTAny)
-    .newReference("y", false, CTAny)
+    .newLong("n1", nullable = false, CTNode)
+    .newLong("n2", nullable = true, CTNode)
+    .newLong("r1", nullable = false, CTRelationship)
+    .newLong("r2", nullable = true, CTRelationship)
+    .newReference("x", nullable = true, CTAny)
+    .newReference("y", nullable = false, CTAny)
 
   // GETTING
 
@@ -97,8 +97,8 @@ class SlotConfigurationUtilsTest extends CypherFunSuite {
     context.getLongAt(slot.offset) should equal(expected)
   }
 
-  private def assertSetNode(slot: Slot, id: Long) = assertSetLong(slot, VirtualValues.node(id), id)
-  private def assertSetRelationship(slot: Slot, id: Long) = assertSetLong(slot, VirtualValues.relationship(id), id)
+  private def assertSetNode(slot: Slot, id: Long): Unit = assertSetLong(slot, VirtualValues.node(id), id)
+  private def assertSetRelationship(slot: Slot, id: Long): Unit = assertSetLong(slot, VirtualValues.relationship(id), id)
 
   private def assertSetFails(slot: Slot, value: AnyValue): Unit = {
     val context = SlottedRow(slots)
@@ -196,7 +196,7 @@ class SlotConfigurationUtilsTest extends CypherFunSuite {
     val setter = makeSetPrimitiveNodeInSlotFunctionFor(slot)
 
     // The setter only throws if assertions are enabled
-    ifAssertionsEnabled {
+    if (isAssertionsEnabled) {
       a[ParameterWrongTypeException] should be thrownBy setter(context, id, TestEntityById)
     }
   }
@@ -206,7 +206,7 @@ class SlotConfigurationUtilsTest extends CypherFunSuite {
     val setter = makeSetPrimitiveRelationshipInSlotFunctionFor(slot)
 
     // The setter only throws if assertions are enabled
-    ifAssertionsEnabled {
+    if (isAssertionsEnabled) {
       a[ParameterWrongTypeException] should be thrownBy setter(context, id, TestEntityById)
     }
   }

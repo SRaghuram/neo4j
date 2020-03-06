@@ -9,11 +9,11 @@ import java.util.function.ToLongFunction
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotWithKeyAndAliases
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
-import org.neo4j.cypher.internal.runtime.EntityById
 import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.EntityById
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.WritableRow
-import org.neo4j.cypher.internal.util.AssertionUtils
+import org.neo4j.cypher.internal.util.AssertionRunner
 import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.symbols.CTRelationship
 import org.neo4j.cypher.internal.util.symbols.CypherType
@@ -224,7 +224,7 @@ object SlotConfigurationUtils {
   def makeSetPrimitiveInSlotFunctionFor(slot: Slot, valueType: CypherType): (CypherRow, Long, EntityById) => Unit =
     (slot, valueType) match {
       case (LongSlot(offset, nullable, CTNode), CTNode) =>
-        if (AssertionUtils.assertionsEnabled && !nullable) {
+        if (AssertionRunner.isAssertionsEnabled && !nullable) {
           (context: CypherRow, value: Long, _: EntityById) =>
             if (value == PRIMITIVE_NULL)
               throw new ParameterWrongTypeException(s"Cannot assign null to a non-nullable slot")
@@ -236,7 +236,7 @@ object SlotConfigurationUtils {
         }
 
       case (LongSlot(offset, nullable, CTRelationship), CTRelationship) =>
-        if (AssertionUtils.assertionsEnabled && !nullable) {
+        if (AssertionRunner.isAssertionsEnabled && !nullable) {
           (context: CypherRow, value: Long, _: EntityById) =>
             if (value == PRIMITIVE_NULL)
               throw new ParameterWrongTypeException(s"Cannot assign null to a non-nullable slot")
@@ -248,7 +248,7 @@ object SlotConfigurationUtils {
         }
 
       case (RefSlot(offset, false, typ), CTNode) if typ.isAssignableFrom(CTNode) =>
-        if (AssertionUtils.assertionsEnabled) {
+        if (AssertionRunner.isAssertionsEnabled) {
           (context: CypherRow, value: Long, entityById: EntityById) =>
             if (value == PRIMITIVE_NULL)
               throw new ParameterWrongTypeException(s"Cannot assign null to a non-nullable slot")
@@ -261,7 +261,7 @@ object SlotConfigurationUtils {
         }
 
       case (RefSlot(offset, false, typ), CTRelationship) if typ.isAssignableFrom(CTRelationship) =>
-        if (AssertionUtils.assertionsEnabled) {
+        if (AssertionRunner.isAssertionsEnabled) {
           (context: CypherRow, value: Long, entityById: EntityById) =>
             if (value == -1L)
               if (value == PRIMITIVE_NULL)
