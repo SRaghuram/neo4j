@@ -240,7 +240,7 @@ public class DbmsReconciler implements DatabaseStateService
     private CompletableFuture<EnterpriseDatabaseState> preReconcile( String databaseName, List<DbmsOperator> operators, ReconcilerRequest request,
             Executor executor )
     {
-        return CompletableFuture.supplyAsync( () ->
+        Supplier<EnterpriseDatabaseState> preReconcileJob = () ->
         {
             try
             {
@@ -273,7 +273,8 @@ public class DbmsReconciler implements DatabaseStateService
                 throw new CompletionException( e );
             }
 
-        }, executor );
+        };
+        return CompletableFuture.supplyAsync( () -> namedJob( databaseName, preReconcileJob ), executor );
     }
 
     private CompletableFuture<ReconcilerStepResult> doTransitions( String databaseName, EnterpriseDatabaseState desiredState, ReconcilerRequest request,
@@ -304,11 +305,18 @@ public class DbmsReconciler implements DatabaseStateService
 
     private static ReconcilerStepResult doTransitions( EnterpriseDatabaseState currentState, Stream<Transition> steps, EnterpriseDatabaseState desiredState )
     {
+        Supplier<ReconcilerStepResult> job = () -> doTransitionStep( steps.iterator(), new ReconcilerStepResult( currentState, null, desiredState ) );
+        return namedJob( desiredState.databaseId().name(), job );
+    }
+
+    private static <T> T namedJob( String name, Supplier<T> operation )
+    {
+
         String oldThreadName = currentThread().getName();
         try
         {
-            currentThread().setName( oldThreadName + "-" + desiredState.databaseId().name() );
-            return doTransitionStep( steps.iterator(), new ReconcilerStepResult( currentState, null, desiredState ) );
+            currentThread().setName( oldThreadName + "-" + name );
+            return operation.get();
         }
         finally
         {
