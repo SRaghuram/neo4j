@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
+import com.neo4j.causalclustering.core.state.BootstrapSaver;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.identity.BoundState;
@@ -34,10 +35,11 @@ class CoreBootstrap
     private final ClusterInternalDbmsOperator clusterInternalOperator;
     private final DatabaseStartAborter databaseStartAborter;
     private final SimpleStorage<RaftId> raftIdStorage;
+    private final BootstrapSaver bootstrapSaver;
 
     CoreBootstrap( Database kernelDatabase, RaftBinder raftBinder, LifecycleMessageHandler<?> raftMessageHandler, CoreSnapshotService snapshotService,
             CoreDownloaderService downloadService, ClusterInternalDbmsOperator clusterInternalOperator, DatabaseStartAborter databaseStartAborter,
-            SimpleStorage<RaftId> raftIdStorage )
+            SimpleStorage<RaftId> raftIdStorage, BootstrapSaver bootstrapSaver )
     {
         this.kernelDatabase = kernelDatabase;
         this.raftBinder = raftBinder;
@@ -47,6 +49,7 @@ class CoreBootstrap
         this.clusterInternalOperator = clusterInternalOperator;
         this.databaseStartAborter = databaseStartAborter;
         this.raftIdStorage = raftIdStorage;
+        this.bootstrapSaver = bootstrapSaver;
     }
 
     public void perform() throws Exception
@@ -65,6 +68,7 @@ class CoreBootstrap
 
     private void bindAndStartMessageHandler() throws Exception
     {
+        bootstrapSaver.restore( kernelDatabase.getDatabaseLayout() );
         BoundState boundState = raftBinder.bindToRaft( databaseStartAborter );
 
         if ( boundState.snapshot().isPresent() )
@@ -79,6 +83,7 @@ class CoreBootstrap
             try
             {
                 awaitState();
+                bootstrapSaver.clean( kernelDatabase.getDatabaseLayout() );
             }
             catch ( Exception e )
             {

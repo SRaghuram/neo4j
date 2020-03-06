@@ -21,22 +21,19 @@ public class TemporaryStoreDirectory implements AutoCloseable
 {
     private final File tempHomeDir;
     private final DatabaseLayout tempDatabaseLayout;
+    private final FileSystemAbstraction fs;
     private final StoreFiles storeFiles;
     private final LogFiles tempLogFiles;
     private boolean keepStore;
 
-    public TemporaryStoreDirectory( FileSystemAbstraction fs, PageCache pageCache, DatabaseLayout databaseLayout ) throws IOException
+    TemporaryStoreDirectory( FileSystemAbstraction fs, PageCache pageCache, DatabaseLayout databaseLayout ) throws IOException
     {
         this.tempHomeDir = databaseLayout.file( TEMP_STORE_COPY_DIRECTORY_NAME );
         this.tempDatabaseLayout = Neo4jLayout.ofFlat( tempHomeDir ).databaseLayout( databaseLayout.getDatabaseName() );
+        this.fs = fs;
         storeFiles = new StoreFiles( fs, pageCache, ( directory, name ) -> true );
         tempLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( tempDatabaseLayout.getTransactionLogsDirectory(), fs ).build();
         storeFiles.delete( tempDatabaseLayout, tempLogFiles );
-    }
-
-    public File storeDir()
-    {
-        return tempHomeDir;
     }
 
     public DatabaseLayout databaseLayout()
@@ -55,6 +52,7 @@ public class TemporaryStoreDirectory implements AutoCloseable
         if ( !keepStore )
         {
             storeFiles.delete( tempDatabaseLayout, tempLogFiles );
+            fs.deleteFile( tempHomeDir );
         }
     }
 }

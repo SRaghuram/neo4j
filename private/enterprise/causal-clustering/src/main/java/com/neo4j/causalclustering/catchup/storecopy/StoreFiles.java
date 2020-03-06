@@ -18,13 +18,15 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.storageengine.api.StoreId;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.TEMP_BOOTSTRAP_DIRECTORY_NAME;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.TEMP_SAVE_DIRECTORY_NAME;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.TEMP_STORE_COPY_DIRECTORY_NAME;
 import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngine;
 
 public class StoreFiles
 {
-    private static final FilenameFilter DATABASE_FILE_FILTER = ( dir, name ) -> !name.equals( TEMP_STORE_COPY_DIRECTORY_NAME ) &&
-                                                                                !name.equals( TEMP_BOOTSTRAP_DIRECTORY_NAME );
+    public static final FilenameFilter EXCLUDE_TEMPORARY_DIRS = ( dir, name ) -> !name.equals( TEMP_STORE_COPY_DIRECTORY_NAME ) &&
+                                                                                 !name.equals( TEMP_BOOTSTRAP_DIRECTORY_NAME ) &&
+                                                                                 !name.equals( TEMP_SAVE_DIRECTORY_NAME );
 
     private final FileSystemAbstraction fs;
     private final PageCache pageCache;
@@ -32,7 +34,7 @@ public class StoreFiles
 
     public StoreFiles( FileSystemAbstraction fs, PageCache pageCache )
     {
-        this( fs, pageCache, DATABASE_FILE_FILTER );
+        this( fs, pageCache, EXCLUDE_TEMPORARY_DIRS );
     }
 
     public StoreFiles( FileSystemAbstraction fs, PageCache pageCache, FilenameFilter filenameFilter )
@@ -44,7 +46,8 @@ public class StoreFiles
 
     public void delete( DatabaseLayout databaseLayout, LogFiles logFiles ) throws IOException
     {
-        File[] files = fs.listFiles( databaseLayout.databaseDirectory(), filenameFilter );
+        File databaseDirectory = databaseLayout.databaseDirectory();
+        File[] files = fs.listFiles( databaseDirectory, filenameFilter );
         if ( files != null )
         {
             for ( File file : files )
@@ -57,6 +60,7 @@ public class StoreFiles
         {
             fs.deleteFile( txLog );
         }
+        fs.deleteFile( databaseDirectory );
     }
 
     public void delete( LogFiles logFiles )

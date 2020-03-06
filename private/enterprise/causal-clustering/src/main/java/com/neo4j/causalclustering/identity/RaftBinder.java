@@ -50,7 +50,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
 
         void retryPublishRaftId( NamedDatabaseId namedDatabaseId, RaftId raftId );
 
-        void logRemoveSystemDatabase();
+        void logSaveSystemDatabase();
 
         void logBootstrapAttemptWithDiscoveryService();
 
@@ -262,7 +262,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
 
     private BoundState handleBootstrapByOther( DatabaseCoreTopology topology ) throws IOException
     {
-        removeIfSystemDb();
+        saveSystemDatabase();
         monitor.boundToRaftThroughTopology( namedDatabaseId, raftId );
         raftId = topology.raftId();
         return new BoundState( raftId );
@@ -273,12 +273,12 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
      * the store ID, other instances have to remove their seeds and perform
      * a store copy later in the startup.
      */
-    private void removeIfSystemDb() throws IOException
+    private void saveSystemDatabase() throws IOException
     {
         if ( namedDatabaseId.isSystemDatabase() )
         {
-            monitor.logRemoveSystemDatabase();
-            raftBootstrapper.removeStore();
+            monitor.logSaveSystemDatabase();
+            raftBootstrapper.saveStore();
         }
     }
 

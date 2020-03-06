@@ -114,9 +114,9 @@ public class RaftMonitor implements RaftBinder.Monitor, PersistentSnapshotDownlo
     }
 
     @Override
-    public void logRemoveSystemDatabase()
+    public void logSaveSystemDatabase()
     {
-        debug.info( "Removing system database to force store copy" );
+        debug.info( "Temporarily moving system database to force store copy" );
     }
 
     @Override

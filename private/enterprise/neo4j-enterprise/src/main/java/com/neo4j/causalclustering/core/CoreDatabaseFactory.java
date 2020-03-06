@@ -29,6 +29,7 @@ import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreEditionKernelComponents;
 import com.neo4j.causalclustering.core.state.CoreKernelResolvers;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
+import com.neo4j.causalclustering.core.state.BootstrapSaver;
 import com.neo4j.causalclustering.core.state.RaftBootstrapper;
 import com.neo4j.causalclustering.core.state.RaftLogPruner;
 import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
@@ -169,6 +170,7 @@ class CoreDatabaseFactory
     private final ReplicatedDatabaseEventService databaseEventService;
     private final ClusterSystemGraphDbmsModel dbmsModel;
     private final DatabaseStartAborter databaseStartAborter;
+    private final BootstrapSaver bootstrapSaver;
 
     CoreDatabaseFactory( GlobalModule globalModule, PanicService panicService, DatabaseManager<ClusteredDatabaseContext> databaseManager,
             CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, TemporaryDatabaseFactory temporaryDatabaseFactory,
@@ -205,6 +207,7 @@ class CoreDatabaseFactory
         this.pageCacheTracer = tracers.getPageCacheTracer();
         this.dbmsModel = dbmsModel;
         this.databaseStartAborter = databaseStartAborter;
+        this.bootstrapSaver = new BootstrapSaver( fileSystem, globalModule.getLogService().getInternalLogProvider() );
     }
 
     CoreRaftContext createRaftContext( NamedDatabaseId namedDatabaseId, LifeSupport life, Monitors monitors, Dependencies dependencies,
@@ -342,7 +345,7 @@ class CoreDatabaseFactory
         CorePanicHandlers panicHandler = new CorePanicHandlers( raftGroup.raftMachine(), kernelDatabase, applicationProcess, internalOperator, panicService );
 
         CoreBootstrap bootstrap = new CoreBootstrap( kernelDatabase, raftContext.raftBinder(), messageHandler, snapshotService, downloadService,
-                internalOperator, databaseStartAborter, raftContext.raftIdStorage() );
+                internalOperator, databaseStartAborter, raftContext.raftIdStorage(), bootstrapSaver );
 
         return new CoreDatabase( raftGroup.raftMachine(), kernelDatabase, applicationProcess, messageHandler, downloadService, recoveryFacade,
                 clusterComponents, panicHandler, bootstrap, topologyNotifier );
@@ -354,7 +357,7 @@ class CoreDatabaseFactory
     {
         DatabasePageCache pageCache = new DatabasePageCache( this.pageCache, EmptyVersionContextSupplier.EMPTY );
         var raftBootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer, pageCache, fileSystem, debugLog,
-                storageEngineFactory, config );
+                storageEngineFactory, config, bootstrapSaver );
 
         int minimumCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
         Duration clusterBindingTimeout = config.get( CausalClusteringSettings.cluster_binding_timeout );

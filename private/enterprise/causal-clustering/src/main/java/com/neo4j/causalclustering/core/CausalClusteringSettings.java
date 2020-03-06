@@ -53,6 +53,7 @@ public class CausalClusteringSettings implements SettingsDeclaration
 {
     public static final String TEMP_STORE_COPY_DIRECTORY_NAME = "temp-copy";
     public static final String TEMP_BOOTSTRAP_DIRECTORY_NAME = "temp-bootstrap";
+    public static final String TEMP_SAVE_DIRECTORY_NAME = "temp-save";
 
     @Description( "Time out for a new member to catch up" )
     public static final Setting<Duration> join_catch_up_timeout =

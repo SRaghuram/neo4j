@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core;
 
+import com.neo4j.causalclustering.core.state.BootstrapSaver;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
 import com.neo4j.causalclustering.core.state.storage.InMemorySimpleStorage;
@@ -45,6 +46,7 @@ class CoreBootstrapTest
     private final RaftBinder raftBinder = mock( RaftBinder.class );
     private final DatabaseStartAborter databaseStartAborter = mock( DatabaseStartAborter.class );
     private final BootstrappingHandle bootstrapHandle = mock( BootstrappingHandle.class );
+    private final BootstrapSaver bootstrapSaver = mock( BootstrapSaver.class );
 
     private final NamedDatabaseId databaseId = databaseIdRepository.getRaw( "foo" );
     private final RaftId raftId = RaftIdFactory.random();
@@ -122,6 +124,6 @@ class CoreBootstrapTest
     private CoreBootstrap createBootstrap()
     {
         return new CoreBootstrap( database, raftBinder, messageHandler, snapshotService, downloaderService, internalOperator, databaseStartAborter,
-                raftIdStorage );
+                raftIdStorage, bootstrapSaver );
     }
 }

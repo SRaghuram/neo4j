@@ -84,9 +84,11 @@ public class RaftBootstrapper
     private final Log log;
     private final StorageEngineFactory storageEngineFactory;
     private final Config config;
+    private final BootstrapSaver bootstrapSaver;
 
     public RaftBootstrapper( BootstrapContext bootstrapContext, TemporaryDatabaseFactory tempDatabaseFactory, DatabaseInitializer databaseInitializer,
-            PageCache pageCache, FileSystemAbstraction fs, LogProvider logProvider, StorageEngineFactory storageEngineFactory, Config config )
+            PageCache pageCache, FileSystemAbstraction fs, LogProvider logProvider, StorageEngineFactory storageEngineFactory, Config config,
+            BootstrapSaver bootstrapSaver )
     {
         this.bootstrapContext = bootstrapContext;
         this.tempDatabaseFactory = tempDatabaseFactory;
@@ -96,6 +98,7 @@ public class RaftBootstrapper
         this.log = logProvider.getLog( getClass() );
         this.storageEngineFactory = storageEngineFactory;
         this.config = config;
+        this.bootstrapSaver = bootstrapSaver;
     }
 
     public CoreSnapshot bootstrap( Set<MemberId> members )
@@ -133,12 +136,10 @@ public class RaftBootstrapper
         }
     }
 
-    public void removeStore() throws IOException
+    public void saveStore() throws IOException
     {
         DatabaseLayout databaseLayout = bootstrapContext.databaseLayout();
-
-        fs.deleteRecursively( databaseLayout.databaseDirectory() );
-        fs.deleteRecursively( databaseLayout.getTransactionLogsDirectory() );
+        bootstrapSaver.save( databaseLayout );
     }
 
     /**

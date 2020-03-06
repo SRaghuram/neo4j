@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.identity;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.core.state.BootstrapSaver;
 import com.neo4j.causalclustering.core.state.RaftBootstrapper;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.storage.InMemorySimpleStorage;
@@ -443,7 +444,7 @@ class RaftBinderTest
 
         // then
         verify( topologyService ).coreTopologyForDatabase( NAMED_SYSTEM_DATABASE_ID );
-        verify( raftBootstrapper ).removeStore();
+        verify( raftBootstrapper ).saveStore();
         verifyNoMoreInteractions( raftBootstrapper );
 
         Optional<RaftId> raftId = binder.get();
