@@ -115,7 +115,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
 
-    executeOnSystem("foo","bar", "SHOW DATABASES", resultHandler = (row, _) => {
+    executeOnSystem("foo", "bar", "SHOW DATABASES", resultHandler = (row, _) => {
       // THEN
       row.get("name") should be ("system")
     }) should be (1)

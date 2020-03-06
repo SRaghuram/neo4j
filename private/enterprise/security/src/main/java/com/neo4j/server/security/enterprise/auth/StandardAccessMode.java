@@ -437,7 +437,8 @@ class StandardAccessMode implements AccessMode
         return allowsAccess;
     }
 
-    Set<String> getRoles()
+    @Override
+    public Set<String> roles()
     {
         return roles;
     }

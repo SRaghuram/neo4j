@@ -90,7 +90,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
             throw AccessMode.Static.CREDENTIALS_EXPIRED.onViolation( "Permission denied." );
         }
         StandardAccessMode mode = mode( idLookup, dbName );
-        return new EnterpriseSecurityContext( neoShiroSubject, mode, mode.getRoles(), mode.getAdminAccessMode() );
+        return new EnterpriseSecurityContext( neoShiroSubject, mode, mode.roles(), mode.getAdminAccessMode() );
     }
 
     @Override
