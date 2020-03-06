@@ -35,6 +35,7 @@ import org.neo4j.cypher.internal.logical.plans.RangeQueryExpression
 import org.neo4j.cypher.internal.logical.plans.SingleQueryExpression
 import org.neo4j.cypher.internal.logical.plans.SingleSeekableArg
 import org.neo4j.cypher.internal.logical.plans.Skip
+import org.neo4j.cypher.internal.logical.plans.Union
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.physicalplanning.NoOutput
@@ -104,6 +105,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleNodeByIdSeekT
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleRangeSeekQueryNodeIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleThreadedAllNodeScanTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleThreadedLabelScanTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.UnionOperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnionOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnwindOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.VarExpandOperatorTaskTemplate
@@ -210,7 +212,12 @@ class FuseOperators(operatorFactory: OperatorFactory,
     val slots = physicalPlan.slotConfigurations(headPlan.id) // getSlots
 
     val namer = new VariableNamer
-    val expressionCompiler = new OperatorExpressionCompiler(slots, inputSlotConfiguration, operatorFactory.readOnly, codeGenerationMode, namer) // NOTE: We assume slots is the same within an entire pipeline
+    val expressionCompiler = headPlan match {
+      case Union(left, right) =>
+        new UnionOperatorExpressionCompiler(slots, inputSlotConfiguration, physicalPlan.slotConfigurations(left.id), physicalPlan.slotConfigurations(right.id), operatorFactory.readOnly, codeGenerationMode, namer)
+      case _ =>
+        new OperatorExpressionCompiler(slots, inputSlotConfiguration, operatorFactory.readOnly, codeGenerationMode, namer) // NOTE: We assume slots is the same within an entire pipeline
+    }
 
     def compileExpression(astExpression: Expression): () => IntermediateExpression =
       () => expressionCompiler.intermediateCompileExpression(astExpression)
@@ -980,7 +987,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
                 lhsSlots,
                 rhsSlots,
                 SlottedPipeMapper.computeUnionSlotMappings(lhsSlots, slots),
-                SlottedPipeMapper.computeUnionSlotMappings(rhsSlots, slots))(expressionCompiler)
+                SlottedPipeMapper.computeUnionSlotMappings(rhsSlots, slots))(expressionCompiler.asInstanceOf[UnionOperatorExpressionCompiler])
             acc.copy(
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)

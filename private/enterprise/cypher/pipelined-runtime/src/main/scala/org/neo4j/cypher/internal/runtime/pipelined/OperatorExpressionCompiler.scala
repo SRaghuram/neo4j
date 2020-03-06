@@ -416,7 +416,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
    * and may need to be written to the output context by [[writeLocalsToSlots()]],
    * as well as which properties have been cached ([[getCachedPropertyAt]], [[setCachedPropertyAt]]).
    */
-  private val locals = LocalsForSlots(this)
+  protected val locals: LocalsForSlots = LocalsForSlots(this)
 
   /**
    * Used by [[copyFromInput]] to track the argument state
@@ -517,6 +517,77 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
   protected def didLoadLocalCachedProperty(): Unit = {}
 
   /**
+   * Extension point of caching of properties needs to be modified.
+   */
+  abstract class PropertyCacher(property: SlottedCachedProperty, getFromStore: IntermediateRepresentation) {
+    protected val offset: Int = property.cachedPropertyOffset
+    protected var local: String = locals.getLocalForRefSlot(offset)
+
+    final def initializeFromStore: IntermediateRepresentation = {
+      assign(local, getFromStore)
+    }
+
+    def assignLocalVariables: IntermediateRepresentation
+    def initializeIfLocalDoesNotExist: IntermediateRepresentation
+    def initializeIfLocalExists: IntermediateRepresentation
+
+    def getCachedProperty: IntermediateRepresentation = {
+      // Mark the corresponding refslot as initialized in this scope, to prevent us from generating an additional load from input context
+      locals.markInitializedLocalForRefSlot(offset)
+
+      val prepareOps = if (local == null) {
+        local = locals.addCachedProperty(offset)
+        initializeIfLocalDoesNotExist
+      } else {
+        didLoadLocalCachedProperty()
+        // Even if the local has been seen before in this method it may not be in a code path that have been hit at runtime
+        // in this loop iteration. The cached property variable is also reset to null at the end of each inner loop iteration.
+        condition(isNull(load(local)))(
+          initializeIfLocalExists
+        )
+      }
+
+      locals.markModifiedLocalForRefSlot(offset)
+      block(assignLocalVariables, prepareOps, cast[Value](load(local)))
+    }
+  }
+
+  /**
+   * The default behavior for cached properties. Override this to modify behavior of [[getCachedPropertyAt]]
+   */
+  def getPropertyCacherAt(property: SlottedCachedProperty, getFromStore: IntermediateRepresentation): PropertyCacher =
+    new PropertyCacher(property, getFromStore) {
+      private val maybeCachedPropertyOffset = inputSlotConfiguration.getCachedPropertySlot(property).map(_.offset)
+
+      override def assignLocalVariables: IntermediateRepresentation = noop()
+
+      private def initializeFromContextOrStore: IntermediateRepresentation = {
+        block(
+          assign(local, getCachedPropertyFromExecutionContext(maybeCachedPropertyOffset.get, INPUT_CURSOR)),
+          condition(isNull(load(local)))(initializeFromStore)
+        )
+      }
+
+      override def initializeIfLocalDoesNotExist: IntermediateRepresentation =
+        if (maybeCachedPropertyOffset.isDefined) {
+          didInitializeCachedPropertyFromContext()
+          local = locals.addCachedProperty(offset)
+          initializeFromContextOrStore
+        } else {
+          didInitializeCachedPropertyFromStore()
+          local = locals.addCachedProperty(offset)
+          initializeFromStore
+        }
+
+      override def initializeIfLocalExists: IntermediateRepresentation =
+        if (maybeCachedPropertyOffset.isDefined) {
+          initializeFromContextOrStore
+        } else {
+          initializeFromStore
+        }
+    }
+
+  /**
    * Get _and_ cache property into a local variable for its predetermined refslot.
    * If this is the first time this cached property is accessed and no local variable exists in this scope,
    * the value will be retrieved from either 1) the input context if it exist there or else 2) from the store.
@@ -526,47 +597,8 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
    * This is needed because the planner does not determine a single definition point for cached properties at compile time,
    * but rather defers to the runtime to do this on first access.
    */
-  override def getCachedPropertyAt(property: SlottedCachedProperty, getFromStore: IntermediateRepresentation): IntermediateRepresentation = {
-    val offset = property.cachedPropertyOffset
-    var local = locals.getLocalForRefSlot(offset)
-    val maybeCachedProperty = inputSlotConfiguration.getCachedPropertySlot(property)
-
-    // Mark the corresponding refslot as initialized in this scope, to prevent us from generating an additional load from input context
-    locals.markInitializedLocalForRefSlot(offset)
-
-    def initializeFromStoreIR: IntermediateRepresentation = {
-      assign(local, getFromStore)
-    }
-    def initializeFromContextIR: IntermediateRepresentation = {
-      block(
-        assign(local, getCachedPropertyFromExecutionContext(maybeCachedProperty.get.offset, INPUT_CURSOR)),
-        condition(isNull(load(local)))(initializeFromStoreIR)
-      )
-    }
-
-    val prepareOps =
-      if (local == null && maybeCachedProperty.isDefined) {
-        didInitializeCachedPropertyFromContext()
-        local = locals.addCachedProperty(offset)
-        initializeFromContextIR
-      } else if (local == null) {
-        didInitializeCachedPropertyFromStore()
-        local = locals.addCachedProperty(offset)
-        initializeFromStoreIR
-      } else {
-        didLoadLocalCachedProperty()
-        // Even if the local has been seen before in this method it may not be in a code path that have been hit at runtime
-        // in this loop iteration. The cached property variable is also reset to null at the end of each inner loop iteration.
-        condition(isNull(load(local)))(
-          if (maybeCachedProperty.isDefined) {
-            initializeFromContextIR
-          } else {
-            initializeFromStoreIR
-          }
-        )
-      }
-    locals.markModifiedLocalForRefSlot(offset)
-    block(prepareOps, cast[Value](load(local)))
+  override final def getCachedPropertyAt(property: SlottedCachedProperty, getFromStore: IntermediateRepresentation): IntermediateRepresentation = {
+    getPropertyCacherAt(property, getFromStore).getCachedProperty
   }
 
   override def setCachedPropertyAt(offset: Int,

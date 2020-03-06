@@ -2379,7 +2379,10 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
     invoke(context, method[CypherRow, AnyValue, Int]("getRefAt"), constant(offset))
 
   final def getCachedPropertyFromExecutionContext(offset: Int, context: IntermediateRepresentation = LOAD_CONTEXT): IntermediateRepresentation =
-    invoke(context, method[CypherRow, Value, Int]("getCachedPropertyAt"), constant(offset))
+    getCachedPropertyFromExecutionContextWithDynamicOffset(constant(offset), context)
+
+  final def getCachedPropertyFromExecutionContextWithDynamicOffset(offset: IntermediateRepresentation, context: IntermediateRepresentation = LOAD_CONTEXT): IntermediateRepresentation =
+    invoke(context, method[CypherRow, Value, Int]("getCachedPropertyAt"), offset)
 
   final def setRefInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(LOAD_CONTEXT, method[CypherRow, Unit, Int, AnyValue]("setRefAt"),

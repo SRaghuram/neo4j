@@ -11,6 +11,7 @@ import org.neo4j.codegen.api.CodeGeneration.CodeSaver
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.cast
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.load
@@ -173,7 +174,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
       val local = refSlotLocal(i)
       oec.getAllLocalsForCachedProperties shouldEqual (0 to i).map(j => (j, refSlotLocal(j))) // Each iteration should add one more cached property local
       oec.getAllLocalsForRefSlots shouldEqual (0 to i).map(j => (j, refSlotLocal(j))) // Each iteration should add one more local
-      getFirstTimeIr should matchIR(block(assign(local, getFromStoreIr), cast[Value](load(local))))
+      getFirstTimeIr should matchIR(block(noop(),assign(local, getFromStoreIr), cast[Value](load(local))))
     }
   }
 
