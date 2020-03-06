@@ -11,10 +11,7 @@ import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.ExecutionEngineHelper.createEngine
 import org.neo4j.cypher.internal.ExecutionEngine
-import org.neo4j.cypher.internal.QueryCache.ParameterTypeMap
-import org.neo4j.cypher.internal.StringCacheMonitor
 import org.neo4j.graphdb.config.Setting
-import org.neo4j.internal.helpers.collection.Pair
 import org.neo4j.kernel.impl.query.QuerySubscriber.DO_NOTHING_SUBSCRIBER
 import org.neo4j.logging.AssertableLogProvider
 import org.neo4j.logging.AssertableLogProvider.Level
@@ -22,28 +19,6 @@ import org.neo4j.logging.LogAssertions.assertThat
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 
 class CypherCompilerStringCacheMonitoringAcceptanceTest extends ExecutionEngineFunSuite {
-
-  case class CacheCounts(hits: Int = 0, misses: Int = 0, flushes: Int = 0, evicted: Int = 0) {
-    override def toString = s"hits = $hits, misses = $misses, flushes = $flushes, evicted = $evicted"
-  }
-
-  class CacheCounter(var counts: CacheCounts = CacheCounts()) extends StringCacheMonitor {
-    override def cacheMiss(key: Pair[String, ParameterTypeMap]) {
-      counts = counts.copy(misses = counts.misses + 1)
-    }
-
-    override def cacheHit(key: Pair[String, ParameterTypeMap]) {
-      counts = counts.copy(hits = counts.hits + 1)
-    }
-
-    override def cacheFlushDetected(sizeBeforeFlush: Long) {
-      counts = counts.copy(flushes = counts.flushes + 1)
-    }
-
-    override def cacheDiscard(key: Pair[String, ParameterTypeMap], key2: String, secondsSinceReplan: Int, maybeReason: Option[String]) {
-      counts = counts.copy(evicted = counts.evicted + 1)
-    }
-  }
 
   override def databaseConfig(): Map[Setting[_],Object] = super.databaseConfig() ++ Map(GraphDatabaseSettings.cypher_min_replan_interval -> Duration.ZERO)
 

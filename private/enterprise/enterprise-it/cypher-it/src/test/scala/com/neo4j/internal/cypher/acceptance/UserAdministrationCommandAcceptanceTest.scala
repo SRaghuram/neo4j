@@ -164,6 +164,30 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     testUserLogin("foo", "bar", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
+  test("should use query cache when creating multiple users with parameterized passwords") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    val passwords = Seq("bar", "abc", "password")
+    val commandCount = 5  // CREATE is two and DROP is three (one outer and two inner Cypher commands)
+
+    // WHEN
+    val counter = new CacheCounter()
+    kernelMonitors.addMonitorListener(counter)
+    counter.counts should equal(CacheCounts())
+    passwords.foreach { pw =>
+        execute("CREATE USER foo SET PASSWORD $password CHANGE NOT REQUIRED", Map("password" -> pw))
+        testUserLogin("foo", "wrong", AuthenticationResult.FAILURE)
+        testUserLogin("foo", pw, AuthenticationResult.SUCCESS)
+        execute("DROP USER foo")
+        testUserLogin("foo", pw, AuthenticationResult.FAILURE)
+    }
+
+    // THEN
+    counter.counts should equal(CacheCounts(misses = commandCount, hits = commandCount * (passwords.size - 1)))
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+  }
+
   test("should fail when creating user with numeric password as parameter") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
