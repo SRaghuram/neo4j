@@ -1781,7 +1781,10 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
       //and have side effects, if it happens that we never use the nullcheck later things may not have been properly
       //initialized
       val loadRef = getRefAt(offset)
-      val nullCheck = slots.get(name).filter(_.nullable).map(_ => equal(getRefAt(offset), noValue)).toSet
+      val nullCheck: Set[IntermediateRepresentation] = slots.get(name) match {
+        case Some(slot) if !slot.nullable => Set.empty
+        case _ => Set(equal(getRefAt(offset), noValue))
+      }
       Some(IntermediateExpression(loadRef, Seq.empty, Seq.empty, nullCheck, requireNullCheck = false))
 
     case IdFromSlot(offset) =>

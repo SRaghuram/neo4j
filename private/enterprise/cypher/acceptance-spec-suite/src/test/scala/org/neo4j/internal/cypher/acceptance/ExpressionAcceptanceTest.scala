@@ -234,4 +234,30 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     result.toList should contain theSameElementsAs List(Map("result" -> 1), Map("result" -> 2), Map("result" -> 3))
   }
 
+  test("compiled expressions should handle null path in nested functions 1") {
+    createNode()
+    val query =
+      """
+        |CYPHER runtime=slotted expressionEngine=compiled
+        |MATCH (n)
+        |OPTIONAL MATCH path=(n)-[*..]->()
+        |RETURN collect(relationships(path)) AS value
+        |""".stripMargin
+
+    val result = executeSingle(query)
+    result.toList should be(List(Map("value" -> List())))
+  }
+
+  test("compiled expressions should handle null path in nested functions 2") {
+    val query =
+      """
+        |CYPHER runtime=slotted expressionEngine=compiled
+        |OPTIONAL MATCH path=()-[*..]->()
+        |WITH path
+        |RETURN collect(last(relationships(path))) AS value
+        |""".stripMargin
+
+    val result = executeSingle(query)
+    result.toList should be(List(Map("value" -> List())))
+  }
 }
