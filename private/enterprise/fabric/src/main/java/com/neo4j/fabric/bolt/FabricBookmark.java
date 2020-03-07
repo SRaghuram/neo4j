@@ -19,7 +19,6 @@ import org.neo4j.bolt.runtime.BoltResponseHandler;
 import org.neo4j.bolt.runtime.Bookmark;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
-import static org.neo4j.values.storable.Values.stringValue;
 import static org.neo4j.values.storable.Values.utf8Value;
 
 public class FabricBookmark extends BookmarkMetadata implements Bookmark
@@ -58,6 +57,7 @@ public class FabricBookmark extends BookmarkMetadata implements Bookmark
         return graphStates;
     }
 
+    @Override
     public Bookmark toBookmark( BiFunction<Long,NamedDatabaseId, Bookmark> defaultBookmarkFormat )
     {
         return this;

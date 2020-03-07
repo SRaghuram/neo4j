@@ -18,6 +18,7 @@ public class EnterpriseCypherEngineProvider extends CommunityCypherEngineProvide
         return 1; // Lower means better. The enterprise version will have a lower number
     }
 
+    @Override
     protected CompilerFactory makeCompilerFactory( GraphDatabaseCypherService queryService,
                                                    SPI spi,
                                                    CypherPlannerConfiguration plannerConfig,

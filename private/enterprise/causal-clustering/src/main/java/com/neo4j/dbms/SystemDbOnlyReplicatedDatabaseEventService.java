@@ -23,18 +23,21 @@ public class SystemDbOnlyReplicatedDatabaseEventService implements ReplicatedDat
         this.log = logProvider.getLog( getClass() );
     }
 
+    @Override
     public void registerListener( NamedDatabaseId namedDatabaseId, ReplicatedDatabaseEventListener listener )
     {
         assertIsSystemDatabase( namedDatabaseId );
         listeners.add( listener );
     }
 
+    @Override
     public void unregisterListener( NamedDatabaseId namedDatabaseId, ReplicatedDatabaseEventListener listener )
     {
         assertIsSystemDatabase( namedDatabaseId );
         listeners.remove( listener );
     }
 
+    @Override
     public ReplicatedDatabaseEventDispatch getDatabaseEventDispatch( NamedDatabaseId namedDatabaseId )
     {
         if ( !namedDatabaseId.isSystemDatabase() )

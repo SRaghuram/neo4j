@@ -5,10 +5,10 @@
  */
 package com.neo4j.fabric.transaction;
 
-import com.neo4j.fabric.executor.Exceptions;
-import com.neo4j.fabric.executor.FabricLocalExecutor;
 import com.neo4j.fabric.config.FabricConfig;
+import com.neo4j.fabric.executor.Exceptions;
 import com.neo4j.fabric.executor.FabricException;
+import com.neo4j.fabric.executor.FabricLocalExecutor;
 import com.neo4j.fabric.executor.FabricRemoteExecutor;
 import com.neo4j.fabric.stream.StatementResult;
 
@@ -80,6 +80,7 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         return localTransaction;
     }
 
+    @Override
     public void begin()
     {
         internalLog.debug( "Starting transaction %d", id );
@@ -99,6 +100,7 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         }
     }
 
+    @Override
     public StatementResult execute( Function<FabricExecutionContext,StatementResult> runLogic )
     {
         if ( terminated )
@@ -126,6 +128,7 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         }
     }
 
+    @Override
     public void commit()
     {
         // the transaction has failed and been rolled back as part of the failure clean up
@@ -187,6 +190,7 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         internalLog.debug( "Transaction %d committed", id );
     }
 
+    @Override
     public void rollback()
     {
         // guard against someone calling rollback after 'begin' failure

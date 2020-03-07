@@ -23,11 +23,6 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 
-import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
-import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
-import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
-import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
-import static com.neo4j.dbms.EnterpriseOperatorState.UNKNOWN;
 import static java.lang.String.format;
 
 public class ClusteredDbmsReconciler extends DbmsReconciler
@@ -45,6 +40,7 @@ public class ClusteredDbmsReconciler extends DbmsReconciler
         this.panicService = panicService;
     }
 
+    @Override
     protected EnterpriseDatabaseState initialReconcilerEntry( NamedDatabaseId namedDatabaseId )
     {
         var raftIdOpt = readRaftIdForDatabase( namedDatabaseId, databaseLogProvider( namedDatabaseId ) );

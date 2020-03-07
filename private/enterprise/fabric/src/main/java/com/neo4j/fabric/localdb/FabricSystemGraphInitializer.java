@@ -22,6 +22,7 @@ public class FabricSystemGraphInitializer extends EnterpriseSystemGraphInitializ
         this.fabricDatabaseManager = fabricDatabaseManager;
     }
 
+    @Override
     protected void manageDatabases( GraphDatabaseService system, boolean update )
     {
         fabricDatabaseManager.manageFabricDatabases( system, update );

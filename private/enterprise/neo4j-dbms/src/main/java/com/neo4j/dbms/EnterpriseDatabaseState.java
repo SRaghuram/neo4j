@@ -52,11 +52,13 @@ public class EnterpriseDatabaseState implements DatabaseState
         this.failure = failure;
     }
 
+    @Override
     public NamedDatabaseId databaseId()
     {
         return namedDatabaseId;
     }
 
+    @Override
     public EnterpriseOperatorState operatorState()
     {
         return operationalState;
@@ -72,11 +74,13 @@ public class EnterpriseDatabaseState implements DatabaseState
         return new EnterpriseDatabaseState( namedDatabaseId, operationalState, failure );
     }
 
+    @Override
     public boolean hasFailed()
     {
         return failure != null;
     }
 
+    @Override
     public Optional<Throwable> failure()
     {
         return Optional.ofNullable( failure );

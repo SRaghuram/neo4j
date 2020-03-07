@@ -13,8 +13,8 @@ import reactor.core.publisher.Mono;
 
 import java.util.Map;
 
-import org.neo4j.driver.reactive.RxSession;
 import org.neo4j.driver.reactive.RxResult;
+import org.neo4j.driver.reactive.RxSession;
 import org.neo4j.driver.reactive.RxTransaction;
 import org.neo4j.values.virtual.MapValue;
 
@@ -35,6 +35,7 @@ class FabricDriverRxTransaction implements FabricDriverTransaction
         this.location = location;
     }
 
+    @Override
     public Mono<RemoteBookmark> commit()
     {
         return Mono.from( rxTransaction.commit() )
@@ -42,11 +43,13 @@ class FabricDriverRxTransaction implements FabricDriverTransaction
                 .doFinally( s -> rxSession.close() );
     }
 
+    @Override
     public Mono<Void> rollback()
     {
         return Mono.from( rxTransaction.rollback() ).then().doFinally( s -> rxSession.close() );
     }
 
+    @Override
     public StatementResult run( String query, MapValue params )
     {
         var paramMap = (Map<String,Object>) parameterConverter.convertValue( params );

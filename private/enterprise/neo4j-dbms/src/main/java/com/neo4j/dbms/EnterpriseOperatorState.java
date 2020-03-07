@@ -42,6 +42,7 @@ public enum EnterpriseOperatorState implements OperatorState
     /**
      * @return human readable name for the desired state.
      */
+    @Override
     public String description()
     {
         return description;

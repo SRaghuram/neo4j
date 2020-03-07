@@ -51,6 +51,7 @@ public class ClusterInternalDbmsOperator extends DbmsOperator
     private final Set<NamedDatabaseId> bootstrapping = ConcurrentHashMap.newKeySet();
     private final Set<NamedDatabaseId> panicked = ConcurrentHashMap.newKeySet();
 
+    @Override
     protected Map<String,EnterpriseDatabaseState> desired0()
     {
         var result = new HashMap<String,EnterpriseDatabaseState>();

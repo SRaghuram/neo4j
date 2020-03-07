@@ -118,6 +118,7 @@ public class RunWorkloadCommand extends BaseRunWorkloadCommand
              title = "Batch Job Id" )
     private String batchJobId;
 
+    @Override
     protected void doRun( RunWorkloadParams params )
     {
         for ( ProfilerType profiler : params.profilers() )

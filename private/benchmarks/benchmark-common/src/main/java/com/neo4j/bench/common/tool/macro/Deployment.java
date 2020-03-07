@@ -45,6 +45,7 @@ public abstract class Deployment implements DeploymentMode
         return mode;
     }
 
+    @Override
     public String name()
     {
         return mode.name();
@@ -112,6 +113,7 @@ public abstract class Deployment implements DeploymentMode
             return new EqualsBuilder().append( name(), that.name() ).isEquals();
         }
 
+        @Override
         public void assertExists()
         {
             //We can always run EMBEDDED we do not need any other files then the NAME, so we do not have to check that it exists.

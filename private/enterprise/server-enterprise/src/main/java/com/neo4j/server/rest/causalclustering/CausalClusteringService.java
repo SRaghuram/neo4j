@@ -40,6 +40,7 @@ public class CausalClusteringService extends AbstractCausalClusteringService
         return config.get( ServerSettings.db_api_path ).getPath() + DB_CLUSTER_PATH;
     }
 
+    @Override
     public String relativeClusterPath( String databaseName )
     {
         return databaseName + CLUSTER_PATH;
