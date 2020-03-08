@@ -104,6 +104,11 @@ class DefaultNodeCursor extends TraceableCursor implements NodeCursor
         this.addedNodes = ImmutableEmptyLongIterator.INSTANCE;
     }
 
+    protected boolean currentNodeIsAddedInTx()
+    {
+        return currentAddedInTx != NO_ID;
+    }
+
     @Override
     public long nodeReference()
     {

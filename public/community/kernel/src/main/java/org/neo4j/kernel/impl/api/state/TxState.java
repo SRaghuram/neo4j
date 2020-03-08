@@ -163,7 +163,7 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
 
         for ( RelationshipState rel : modifiedRelationships() )
         {
-            if ( !relationships.getAdded().contains( rel.getId() ) )
+            if ( relationships == null || !relationships.getAdded().contains( rel.getId() ) )
             {
                 visitor.visitRelPropertyChanges( rel.getId(), rel.addedProperties(), rel.changedProperties(), rel.removedProperties() );
             }
