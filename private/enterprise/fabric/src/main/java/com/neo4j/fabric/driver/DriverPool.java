@@ -182,7 +182,7 @@ public class DriverPool extends LifecycleAdapter
         }
     }
 
-    private class Key
+    private static class Key
     {
 
         private final FabricConfig.RemoteUri uri;

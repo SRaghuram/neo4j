@@ -9,6 +9,7 @@ import com.neo4j.bench.common.model.Benchmark.Mode;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
@@ -40,20 +41,12 @@ public class BenchmarkGroupBenchmarkMetricsTest
                         "description",
                         "a",
                         Mode.SINGLE_SHOT,
-                        new HashMap<String,String>()
-                        {{
-                            put( "k1", "v1" );
-                            put( "k2", "v2" );
-                        }} ),
+                        Map.of("k1", "v1", "k2", "v2" ) ),
                 equalTo( Benchmark.benchmarkFor(
                         "description",
                         "a",
                         Mode.SINGLE_SHOT,
-                        new HashMap<String,String>()
-                        {{
-                            put( "k1", "v1" );
-                            put( "k2", "v2" );
-                        }} ) ) );
+                        Map.of("k1", "v1", "k2", "v2" ) ) ) );
     }
 
     @Test
@@ -73,20 +66,12 @@ public class BenchmarkGroupBenchmarkMetricsTest
                         "description",
                         "a",
                         Mode.SINGLE_SHOT,
-                        new HashMap<String,String>()
-                        {{
-                            put( "k1", "v1" );
-                            put( "k2", "v2" );
-                        }} ),
+                        Map.of("k1", "v1","k2", "v2" ) ),
                 not( equalTo( Benchmark.benchmarkFor(
                         "description",
                         "a",
                         Mode.SINGLE_SHOT,
-                        new HashMap<String,String>()
-                        {{
-                            put( "k1", "v1" );
-                            put( "k3", "v3" );
-                        }} ) ) ) );
+                        Map.of("k1", "v1", "k3", "v3" ) ) ) ) );
     }
 
     @Test
@@ -126,15 +111,12 @@ public class BenchmarkGroupBenchmarkMetricsTest
                 auxiliaryMetrics(),
                 config() );
 
-        assertThrows( IllegalStateException.class, () ->
-        {
-            result.add(
-                    new BenchmarkGroup( "A" ),
-                    Benchmark.benchmarkFor( "description", "test1", Mode.LATENCY, new HashMap<>() ),
-                    metrics(),
-                    auxiliaryMetrics(),
-                    config() );
-        } );
+        assertThrows( IllegalStateException.class, () -> result.add(
+                new BenchmarkGroup( "A" ),
+                Benchmark.benchmarkFor( "description", "test1", Mode.LATENCY, new HashMap<>() ),
+                metrics(),
+                auxiliaryMetrics(),
+                config() ) );
     }
 
     private static Metrics metrics()
@@ -207,12 +189,8 @@ public class BenchmarkGroupBenchmarkMetricsTest
     private static Neo4jConfig config()
     {
         ThreadLocalRandom rng = ThreadLocalRandom.current();
-        return new Neo4jConfig(
-                new HashMap<String,String>()
-                {{
-                    put( "a", Long.toString( rng.nextLong() ) );
-                    put( "b", Long.toString( rng.nextLong() ) );
-                    put( "c", Long.toString( rng.nextLong() ) );
-                }} );
+        return new Neo4jConfig( Map.of( "a", Long.toString( rng.nextLong() ),
+                                        "b", Long.toString( rng.nextLong() ),
+                                        "c", Long.toString( rng.nextLong() ) ) );
     }
 }

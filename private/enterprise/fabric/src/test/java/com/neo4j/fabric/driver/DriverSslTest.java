@@ -388,7 +388,7 @@ class DriverSslTest
         }
     }
 
-    private final class SslDir
+    private static final class SslDir
     {
         private final Path privateKey;
         private final Path publicCertificate;

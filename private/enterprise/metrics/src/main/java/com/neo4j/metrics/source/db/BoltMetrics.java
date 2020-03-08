@@ -129,7 +129,7 @@ public class BoltMetrics extends LifecycleAdapter
         monitors.removeMonitorListener( boltMonitor );
     }
 
-    private class BoltMetricsMonitor implements BoltConnectionMetricsMonitor
+    private static class BoltMetricsMonitor implements BoltConnectionMetricsMonitor
     {
         final AtomicLong connectionsOpened = new AtomicLong();
         final AtomicLong connectionsClosed = new AtomicLong();

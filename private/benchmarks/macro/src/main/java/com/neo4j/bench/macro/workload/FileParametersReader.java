@@ -241,6 +241,7 @@ public class FileParametersReader implements ParametersReader
     @Override
     public int hashCode()
     {
-        return Objects.hash( separator, reader, columnTypes, columns, next, closed );
+        return Objects.hash( separator, reader, Arrays.hashCode( columnTypes ), Arrays.hashCode( columns ),
+                Arrays.hashCode( next ), closed );
     }
 }

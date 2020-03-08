@@ -115,9 +115,12 @@ class CustomSecurityInitializationIT
 
         Path logsDir = directory.homeDir().toPath().resolve( "logs" );
         var neo4jLog = logsDir.resolve( "security.log" );
-        var lines = Files.lines( neo4jLog ).collect( Collectors.toList() );
-        System.out.println( lines );
-        assertThat( lines, hasItem( containsString( "Executing security initialization command: CREATE ROLE testRole" ) ) );
+        try ( var stringStream = Files.lines( neo4jLog ) )
+        {
+            var lines = stringStream.collect( Collectors.toList() );
+            System.out.println( lines );
+            assertThat( lines, hasItem( containsString( "Executing security initialization command: CREATE ROLE testRole" ) ) );
+        }
     }
 
     @Test
@@ -248,8 +251,11 @@ class CustomSecurityInitializationIT
         cluster.shutdown();
 
         var neo4jLog = logsDir.resolve( "security.log" );
-        var lines = Files.lines( neo4jLog ).collect( Collectors.toList() );
-        assertThat( lines, hasItem( containsString( "Executing security initialization command: CREATE ROLE testRole" ) ) );
+        try ( var stringStream = Files.lines( neo4jLog ) )
+        {
+            var lines = stringStream.collect( Collectors.toList() );
+            assertThat( lines, hasItem( containsString( "Executing security initialization command: CREATE ROLE testRole" ) ) );
+        }
     }
 
     @Disabled

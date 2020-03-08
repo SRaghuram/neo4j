@@ -119,7 +119,7 @@ public class Config
         String[] split = value.split( "," );
         for ( String workloadString : split )
         {
-            workloads.add( T.valueOf( type, workloadString ) );
+            workloads.add( Enum.valueOf( type, workloadString ) );
         }
         return workloads;
     }

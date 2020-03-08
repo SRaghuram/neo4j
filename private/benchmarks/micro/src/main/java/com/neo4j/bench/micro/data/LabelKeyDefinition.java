@@ -56,7 +56,7 @@ public class LabelKeyDefinition
     @Override
     public int hashCode()
     {
-        return Objects.hash( labelName, keys );
+        return Objects.hash( labelName, Arrays.hashCode( keys ) );
     }
 
     @Override

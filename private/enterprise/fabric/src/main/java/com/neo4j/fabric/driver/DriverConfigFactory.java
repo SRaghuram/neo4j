@@ -12,7 +12,6 @@ import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 
@@ -197,7 +196,7 @@ class DriverConfigFactory
         }
     }
 
-    private final class SecurityPlanImpl implements SecurityPlan
+    private static final class SecurityPlanImpl implements SecurityPlan
     {
 
         private final boolean requiresEncryption;

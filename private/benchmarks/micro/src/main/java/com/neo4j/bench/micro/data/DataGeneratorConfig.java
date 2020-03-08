@@ -305,13 +305,15 @@ public class DataGeneratorConfig
     public int hashCode()
     {
         return Objects
-                .hash( nodeCount, relationshipTypeNames, relationshipTypeCounts, relationshipOrder,
+                .hash( nodeCount, Arrays.hashCode( relationshipTypeNames ), Arrays.hashCode( relationshipTypeCounts ), relationshipOrder,
                        relationshipLocality,
-                       graphWriter, nodeProperties, relationshipProperties, propertyLocality, propertyOrder,
-                       labelNames,
-                       labelOrder, labelLocality, schemaIndexes, uniqueConstraints, mandatoryNodeConstraints,
-                       mandatoryRelationshipConstraints,
-                       fulltextNodeSchemaIndexes, fulltextRelationshipSchemaIndexes, isReusable, augmentedBy, rngSeed );
+                       graphWriter, Arrays.hashCode( nodeProperties ), Arrays.hashCode( relationshipProperties ), propertyLocality, propertyOrder,
+                       Arrays.hashCode( labelNames ),
+                       labelOrder, labelLocality, Arrays.hashCode( schemaIndexes ), Arrays.hashCode( uniqueConstraints ),
+                       Arrays.hashCode( mandatoryNodeConstraints ),
+                       Arrays.hashCode( mandatoryRelationshipConstraints ),
+                       Arrays.hashCode( fulltextNodeSchemaIndexes ), Arrays.hashCode( fulltextRelationshipSchemaIndexes ),
+                       isReusable, augmentedBy, rngSeed );
     }
 
     @Override
