@@ -57,6 +57,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexStartsWithSeekTestB
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeLockingUniqueIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalExpandAllTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalExpandIntoTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.OptionalFailureTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OrderedAggregationTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OrderedDistinctTestBase
@@ -156,6 +157,7 @@ class SlottedProfileMemoryTest extends ProfileMemoryTestBase(ENTERPRISE.DEFAULT,
                                with ProfileSlottedMemoryTestBase
 class SlottedProfileMemoryTrackingDisabledTest extends ProfileMemoryTrackingDisabledTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedOptionalTest extends OptionalTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+                          with OptionalFailureTestBase[EnterpriseRuntimeContext]
 class SlottedMemoryManagementTest extends MemoryManagementTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
                                   with FullSupportMemoryManagementTestBase[EnterpriseRuntimeContext]
                                   with SlottedMemoryManagementTestBase

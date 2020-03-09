@@ -202,7 +202,7 @@ class OptionalArgumentStateBuffer(argumentRowId: Long,
   }
 
   override def toString: String = {
-    s"OptionalArgumentStateBuffer(argumentRowId=$argumentRowId, argumentRowIdsForReducers=[${argumentRowIdsForReducers.mkString(",")}], argumentMorsel=$argumentRow)"
+    s"OptionalArgumentStateBuffer(argumentRowId=$argumentRowId, argumentRowIdsForReducers=[${argumentRowIdsForReducers.mkString(",")}], argumentMorsel=$argumentRow, inner=$inner)"
   }
 }
 
@@ -257,4 +257,6 @@ class ConcurrentOptionalBuffer[T <: AnyRef](inner: Buffer[T]) extends Buffer[T] 
   override def canPut: Boolean = inner.canPut
 
   override def iterator: util.Iterator[T] = inner.iterator
+
+  override def toString: String = s"OptionalMorselBuffer(didReceiveData=${_didReceiveData}, inner=${inner.toString})"
 }

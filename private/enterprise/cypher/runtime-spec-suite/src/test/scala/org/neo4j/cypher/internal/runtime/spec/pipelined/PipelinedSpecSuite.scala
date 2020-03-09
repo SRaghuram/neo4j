@@ -57,6 +57,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexStartsWithSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalExpandAllTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalExpandIntoTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.OptionalFailureTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProcedureCallDbHitsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProcedureCallRowsTestBase
@@ -270,7 +271,9 @@ class PipelinedReactiveResultsNoFusingStressTest
 
 // OPTIONAL
 class PipelinedOptionalTest extends OptionalTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+                            with OptionalFailureTestBase[EnterpriseRuntimeContext]
 class PipelinedOptionalNoFusingTest extends OptionalTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+                                    with OptionalFailureTestBase[EnterpriseRuntimeContext]
 
 // CARTESIAN PRODUCT
 class PipelinedCartesianProductTest extends CartesianProductTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
