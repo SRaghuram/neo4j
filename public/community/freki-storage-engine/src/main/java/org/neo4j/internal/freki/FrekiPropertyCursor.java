@@ -19,9 +19,12 @@
  */
 package org.neo4j.internal.freki;
 
+import java.util.Arrays;
 import java.util.Iterator;
 
+import org.neo4j.graphdb.Direction;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.storageengine.api.Reference;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
@@ -29,8 +32,7 @@ import org.neo4j.storageengine.api.StorageRelationshipCursor;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
 
-import static org.neo4j.internal.freki.MutableNodeRecordData.internalRelationshipIdFromRelationshipId;
-import static org.neo4j.internal.freki.MutableNodeRecordData.nodeIdFromRelationshipId;
+import static java.util.Collections.emptyIterator;
 import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipHasProperties;
 import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValueSizeIncludingTypeHeader;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
@@ -41,8 +43,7 @@ public class FrekiPropertyCursor extends FrekiMainStoreCursor implements Storage
     private boolean initializedFromEntity;
 
     // either the properties are in the record data, where these fields come into play...
-    private long nodeId;
-    private long internalRelationshipId;
+    private FrekiReference referenceToLoad;
     private int[] propertyKeyArray;
     private int propertyKeyIndex;
     private Value readValue;
@@ -57,13 +58,10 @@ public class FrekiPropertyCursor extends FrekiMainStoreCursor implements Storage
     }
 
     @Override
-    public void initNodeProperties( long reference )
+    public void initNodeProperties( Reference reference )
     {
         reset();
-        if ( reference != NULL )
-        {
-            nodeId = reference;
-        }
+        this.referenceToLoad = (FrekiReference) reference;
     }
 
     @Override
@@ -80,14 +78,10 @@ public class FrekiPropertyCursor extends FrekiMainStoreCursor implements Storage
     }
 
     @Override
-    public void initRelationshipProperties( long reference )
+    public void initRelationshipProperties( Reference reference )
     {
         reset();
-        if ( reference != NULL )
-        {
-            nodeId = nodeIdFromRelationshipId( reference );
-            internalRelationshipId = internalRelationshipIdFromRelationshipId( reference );
-        }
+        this.referenceToLoad = (FrekiReference) reference;
     }
 
     @Override
@@ -151,40 +145,51 @@ public class FrekiPropertyCursor extends FrekiMainStoreCursor implements Storage
     {
         if ( loadedNodeId != NULL && headerState.isDense )
         {
-            if ( denseProperties.hasNext() )
-            {
-                currentDenseProperty = denseProperties.next();
-                return true;
-            }
-            return false;
+            return nextDense();
         }
 
-        if ( nodeId != NULL || propertyKeyIndex != NULL || initializedFromEntity )
+        boolean hasReferenceToLoad = referenceToLoad != null && referenceToLoad.sourceNodeId != NULL;
+        if ( hasReferenceToLoad || propertyKeyIndex != NULL || initializedFromEntity )
         {
             initializedFromEntity = false;
-            if ( nodeId != NULL )
+            if ( hasReferenceToLoad )
             {
-                boolean inUse = loadMainRecord( nodeId );
-                nodeId = NULL;
+                FrekiReference reference = referenceToLoad;
+                referenceToLoad = null;
+
+                boolean inUse = loadMainRecord( reference.sourceNodeId );
                 if ( !inUse )
                 {
                     return false;
                 }
 
-                int offset;
-                if ( internalRelationshipId == NULL )
+                if ( headerState.isDense )
                 {
-                    // This is properties for a node
-                    offset = headerState.nodePropertiesOffset;
+                    // TODO would be nice to not have to load this x1 record if this is a dense reference. Or we could also consider
+                    //      always trying to reference a sparse node in our reference if possible (if it's cheaper to lookup).
+                    DenseStore.RelationshipData relationship =
+                            stores.denseStore.getRelationship( reference.sourceNodeId, reference.type, Direction.OUTGOING, reference.endNodeId,
+                                    reference.internalId, cursorTracer );
+                    denseProperties = relationship != null ? relationship.properties() : emptyIterator();
+                    return nextDense();
                 }
                 else
                 {
-                    // This is properties for a relationship
-                    offset = findRelationshipPropertiesOffset( internalRelationshipId );
-                }
-                if ( !readPropertyKeys( offset ) )
-                {
-                    return false;
+                    int offset;
+                    if ( !reference.relationship )
+                    {
+                        // This is properties for a node
+                        offset = headerState.nodePropertiesOffset;
+                    }
+                    else
+                    {
+                        // This is properties for a relationship
+                        offset = findRelationshipPropertiesOffset( reference );
+                    }
+                    if ( !readPropertyKeys( offset ) )
+                    {
+                        return false;
+                    }
                 }
             }
 
@@ -205,12 +210,23 @@ public class FrekiPropertyCursor extends FrekiMainStoreCursor implements Storage
         return false;
     }
 
-    private int findRelationshipPropertiesOffset( long internalRelationshipId )
+    public boolean nextDense()
+    {
+        if ( denseProperties.hasNext() )
+        {
+            currentDenseProperty = denseProperties.next();
+            return true;
+        }
+        return false;
+    }
+
+    private int findRelationshipPropertiesOffset( FrekiReference reference )
     {
         readRelationshipTypesAndOffsets();
-        for ( int t = 0; t < relationshipTypesInNode.length; t++ )
+        int searchIndex = Arrays.binarySearch( relationshipTypesInNode, reference.type );
+        if ( searchIndex >= 0 )
         {
-            data.position( relationshipTypeOffset( t ) );
+            data.position( relationshipTypeOffset( searchIndex ) );
             int hasPropertiesIndex = -1;
             long[] relationshipGroupData = readLongs( data );
             int relationshipGroupPropertiesOffset = data.position();
@@ -222,7 +238,7 @@ public class FrekiPropertyCursor extends FrekiMainStoreCursor implements Storage
                     hasPropertiesIndex++;
                 }
                 long internalId = relationshipGroupData[d + 1];
-                if ( internalId == internalRelationshipId )
+                if ( internalId == reference.internalId )
                 {
                     return hasProperties ? relationshipPropertiesOffset( relationshipGroupPropertiesOffset, hasPropertiesIndex ) : NULL_OFFSET;
                 }
@@ -261,8 +277,7 @@ public class FrekiPropertyCursor extends FrekiMainStoreCursor implements Storage
     public void reset()
     {
         super.reset();
-        nodeId = NULL;
-        internalRelationshipId = NULL;
+        referenceToLoad = null;
         propertyKeyIndex = -1;
         initializedFromEntity = false;
         denseProperties = null;

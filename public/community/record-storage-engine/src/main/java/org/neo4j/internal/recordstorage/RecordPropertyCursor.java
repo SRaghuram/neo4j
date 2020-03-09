@@ -32,6 +32,8 @@ import org.neo4j.kernel.impl.store.TemporalType;
 import org.neo4j.kernel.impl.store.record.RecordLoadOverride;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
+import org.neo4j.storageengine.api.LongReference;
+import org.neo4j.storageengine.api.Reference;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.util.Bits;
 import org.neo4j.values.storable.ArrayValue;
@@ -74,13 +76,13 @@ public class RecordPropertyCursor extends PropertyRecord implements StoragePrope
     }
 
     @Override
-    public void initNodeProperties( long reference )
+    public void initNodeProperties( Reference reference )
     {
         init( reference );
     }
 
     @Override
-    public void initRelationshipProperties( long reference )
+    public void initRelationshipProperties( Reference reference )
     {
         init( reference );
     }
@@ -89,7 +91,7 @@ public class RecordPropertyCursor extends PropertyRecord implements StoragePrope
      * In this implementation property ids are unique among nodes AND relationships so they all init the same way
      * @param reference properties reference, actual property record id.
      */
-    private void init( long reference )
+    private void init( Reference reference )
     {
         if ( getId() != NO_ID )
         {
@@ -97,17 +99,18 @@ public class RecordPropertyCursor extends PropertyRecord implements StoragePrope
         }
 
         //Set to high value to force a read
+        long referenceId = ((LongReference) reference).id;
         this.block = Integer.MAX_VALUE;
-        if ( reference != NO_ID )
+        if ( referenceId != NO_ID )
         {
             if ( page == null )
             {
-                page = propertyPage( reference );
+                page = propertyPage( referenceId );
             }
         }
 
         // Store state
-        this.next = reference;
+        this.next = referenceId;
         this.open = true;
     }
 

@@ -73,6 +73,7 @@ import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.PropertyKeyValue;
+import org.neo4j.storageengine.api.Reference;
 import org.neo4j.storageengine.api.RelationshipVisitor;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageNodeCursor;
@@ -235,11 +236,11 @@ public class NeoStoresTest
         return property;
     }
 
-    private StorageProperty getProperty( int key, long propertyId )
+    private StorageProperty getProperty( int key, Reference propertyReference )
     {
         try ( StoragePropertyCursor propertyCursor = storageReader.allocatePropertyCursor( NULL ) )
         {
-            propertyCursor.initNodeProperties( propertyId );
+            propertyCursor.initNodeProperties( propertyReference );
             if ( propertyCursor.next() )
             {
                 Value oldValue = propertyCursor.propertyValue();

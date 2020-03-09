@@ -24,6 +24,7 @@ import java.util.Iterator;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.AllRelationshipsScan;
+import org.neo4j.storageengine.api.Reference;
 import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
@@ -168,7 +169,7 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     }
 
     @Override
-    public long propertiesReference()
+    public Reference propertiesReference()
     {
         return traversalCursor.propertiesReference();
     }
@@ -183,6 +184,12 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     public long entityReference()
     {
         return traversalCursor.entityReference();
+    }
+
+    @Override
+    public Reference relationshipReference()
+    {
+        return traversalCursor.relationshipReference();
     }
 
     @Override

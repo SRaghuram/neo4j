@@ -205,7 +205,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
                             externalRelationshipId( nodeId, internalId, otherNodeId, outgoing ) );
                 }
                 MutableIntObjectMap<PropertyUpdate> properties = IntObjectMaps.mutable.empty();
-                RelationshipPropertyIterator relationshipProperties = relationshipPropertiesIterator( seek.value().data );
+                RelationshipPropertyIterator relationshipProperties = relationshipPropertiesIterator( seek.value().data, bigPropertyValueStore );
                 while ( relationshipProperties.hasNext() )
                 {
                     relationshipProperties.next();
@@ -237,52 +237,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
 
         try
         {
-            return new RelationshipIterator( tree.seek( from, to, cursorTracer ), filter )
-            {
-                @Override
-                public long internalId()
-                {
-                    return key.internalRelationshipId;
-                }
-
-                @Override
-                public long originNodeId()
-                {
-                    return key.nodeId;
-                }
-
-                @Override
-                public long neighbourNodeId()
-                {
-                    return key.neighbourNodeId;
-                }
-
-                @Override
-                public int type()
-                {
-                    return key.tokenId;
-                }
-
-                @Override
-                public RelationshipDirection direction()
-                {
-                    return key.direction == Direction.OUTGOING
-                           ? originNodeId() == neighbourNodeId() ? LOOP : RelationshipDirection.OUTGOING
-                           : RelationshipDirection.INCOMING;
-                }
-
-                @Override
-                public Iterator<StorageProperty> properties()
-                {
-                    return relationshipPropertiesIterator( value.data );
-                }
-
-                @Override
-                public boolean hasProperties()
-                {
-                    return StreamVByte.hasNonEmptyIntArray( value.data );
-                }
-            };
+            return new RelationshipIterator( tree.seek( from, to, cursorTracer ), filter, bigPropertyValueStore );
         }
         catch ( IOException e )
         {
@@ -290,7 +245,24 @@ class DenseStore extends LifecycleAdapter implements Closeable
         }
     }
 
-    private RelationshipPropertyIterator relationshipPropertiesIterator( ByteBuffer relationshipData )
+    RelationshipData getRelationship( long nodeId, int type, Direction direction, long otherNodeId, long internalId, PageCursorTracer cursorTracer )
+    {
+        DenseStoreKey key = layout.newKey().initializeRelationship( nodeId, type, direction, otherNodeId, internalId );
+        try ( RelationshipIterator iterator = new RelationshipIterator( tree.seek( key, key, cursorTracer ), d -> true, bigPropertyValueStore ) )
+        {
+            if ( iterator.hasNext() )
+            {
+                return iterator.next();
+            }
+            return null;
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
+    }
+
+    private static RelationshipPropertyIterator relationshipPropertiesIterator( ByteBuffer relationshipData, SimpleBigValueStore bigPropertyValueStore )
     {
         int[] propertyKeys = StreamVByte.readIntDeltas( new StreamVByte.IntArrayTarget(), relationshipData ).array();
         return new RelationshipPropertyIterator()
@@ -878,11 +850,58 @@ class DenseStore extends LifecycleAdapter implements Closeable
         boolean hasProperties();
     }
 
-    private abstract static class RelationshipIterator extends CursorIterator<RelationshipData> implements RelationshipData
+    private static class RelationshipIterator extends CursorIterator<RelationshipData> implements RelationshipData
     {
-        RelationshipIterator( Seeker<DenseStoreKey,DenseStoreValue> seek, Predicate<RelationshipData> filter )
+        private final SimpleBigValueStore bigPropertyValueStore;
+
+        RelationshipIterator( Seeker<DenseStoreKey,DenseStoreValue> seek, Predicate<RelationshipData> filter, SimpleBigValueStore bigPropertyValueStore )
         {
             super( seek, filter );
+            this.bigPropertyValueStore = bigPropertyValueStore;
+        }
+
+        @Override
+        public long internalId()
+        {
+            return key.internalRelationshipId;
+        }
+
+        @Override
+        public long originNodeId()
+        {
+            return key.nodeId;
+        }
+
+        @Override
+        public long neighbourNodeId()
+        {
+            return key.neighbourNodeId;
+        }
+
+        @Override
+        public int type()
+        {
+            return key.tokenId;
+        }
+
+        @Override
+        public RelationshipDirection direction()
+        {
+            return key.direction == Direction.OUTGOING
+                   ? originNodeId() == neighbourNodeId() ? LOOP : RelationshipDirection.OUTGOING
+                   : RelationshipDirection.INCOMING;
+        }
+
+        @Override
+        public Iterator<StorageProperty> properties()
+        {
+            return relationshipPropertiesIterator( value.data, bigPropertyValueStore );
+        }
+
+        @Override
+        public boolean hasProperties()
+        {
+            return StreamVByte.hasNonEmptyIntArray( value.data );
         }
     }
 
