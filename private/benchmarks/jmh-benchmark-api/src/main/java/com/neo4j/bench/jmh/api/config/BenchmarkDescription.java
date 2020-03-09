@@ -84,7 +84,7 @@ public class BenchmarkDescription
                                 combinedModes.addAll( method1.modes() );
                                 combinedModes.addAll( method2.modes() );
 
-                                return new BenchmarkMethodDescription( method1.name(), combinedModes.toArray( Mode[]::new ) );
+                                return new BenchmarkMethodDescription( method1.name(), combinedModes.toArray( new Mode[0] ) );
                             }
                         }
                 ) );
