@@ -129,7 +129,7 @@ public class HashCode extends AbstractValuesBenchmark
             case STR_BIG:
                 String unhashedString = (String) value;
                 //noinspection StringOperationCanBeSimplified
-                return () -> Values.utf8Value( new String( unhashedString ) );
+                return () -> Values.stringValue( new String( unhashedString ) );
             case POINT:
                 return () -> (PointValue) value;
             case BYTE_ARR:
