@@ -55,6 +55,7 @@ public class DefaultPropertyCursor extends TraceableCursor implements PropertyCu
     private TokenSet labels;
     //stores relationship type or NODE if not a relationship
     private int type = NO_TOKEN;
+    private boolean addedInTx;
 
     DefaultPropertyCursor( CursorPool<DefaultPropertyCursor> pool, StoragePropertyCursor storeCursor, PageCursorTracer cursorTracer )
     {
@@ -82,7 +83,11 @@ public class DefaultPropertyCursor extends TraceableCursor implements PropertyCu
 
         init( read, assertOpen );
         this.type = NODE;
-        storeCursor.initNodeProperties( nodeCursor.storeCursor );
+        addedInTx = nodeCursor.currentNodeIsAddedInTx();
+        if ( !addedInTx )
+        {
+            storeCursor.initNodeProperties( nodeCursor.storeCursor );
+        }
 
         initializeNodeTransactionState( entityReference, read );
     }
@@ -118,7 +123,8 @@ public class DefaultPropertyCursor extends TraceableCursor implements PropertyCu
         assert entityReference != NO_ID;
 
         init( read, assertOpen );
-        if ( !relationshipCursor.currentRelationshipIsAddedInTx() )
+        addedInTx = relationshipCursor.currentRelationshipIsAddedInTx();
+        if ( !addedInTx )
         {
             storeCursor.initRelationshipProperties( relationshipCursor.storeCursor );
         }
@@ -147,6 +153,7 @@ public class DefaultPropertyCursor extends TraceableCursor implements PropertyCu
         this.read = read;
         this.labels = null;
         this.type = NO_TOKEN;
+        this.addedInTx = false;
     }
 
     boolean allowed()
@@ -182,6 +189,10 @@ public class DefaultPropertyCursor extends TraceableCursor implements PropertyCu
                 txStateChangedProperties = null;
                 txStateValue = null;
             }
+        }
+        if ( addedInTx )
+        {
+            return false;
         }
 
         while ( storeCursor.next() )
