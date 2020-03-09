@@ -75,6 +75,25 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         life.start();
     }
 
+    public void dumpRelationship( long relId )
+    {
+        try ( var cursor = new FrekiRelationshipScanCursor( stores, PageCursorTracer.NULL );
+              var propertyCursor = new FrekiPropertyCursor( stores, PageCursorTracer.NULL ) )
+        {
+            cursor.single( relId );
+            if ( cursor.next() )
+            {
+                System.out.printf( "%d --[%d]--> %d %n", cursor.sourceNodeReference(), cursor.type(), cursor.targetNodeReference() );
+                cursor.properties( propertyCursor );
+                dumpProperties( propertyCursor );
+            }
+            else
+            {
+                System.out.println( "Not found" );
+            }
+        }
+    }
+
     public void dumpNodes( String nodeIdSpec )
     {
         if ( nodeIdSpec.equals( "*" ) )
@@ -151,12 +170,8 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         System.out.printf( "Node[%d] %s%n", nodeId, nodeCursor );
         System.out.printf( "  labels:%s%n", Arrays.toString( nodeCursor.labels() ) );
 
-        System.out.println( "  properties..." );
         nodeCursor.properties( propertyCursor );
-        while ( propertyCursor.next() )
-        {
-            System.out.printf( "  %d=%s%n", propertyCursor.propertyKey(), propertyCursor.propertyValue() );
-        }
+        dumpProperties( propertyCursor );
 
         System.out.println( "  relationships..." );
         nodeCursor.relationships( relationshipCursor, ALL_RELATIONSHIPS );
@@ -168,6 +183,15 @@ public class FrekiAnalysis extends Life implements AutoCloseable
                     direction == LOOP ? "--" : direction == OUTGOING ? "--" : "<-", relationshipCursor.type(),
                     relationshipCursor.entityReference(),
                     direction == LOOP ? "--" : direction == OUTGOING ? "->" : "--", relationshipCursor.neighbourNodeReference() );
+        }
+    }
+
+    private void dumpProperties( FrekiPropertyCursor propertyCursor )
+    {
+        System.out.println( "  properties..." );
+        while ( propertyCursor.next() )
+        {
+            System.out.printf( "  %d=%s%n", propertyCursor.propertyKey(), propertyCursor.propertyValue() );
         }
     }
 
