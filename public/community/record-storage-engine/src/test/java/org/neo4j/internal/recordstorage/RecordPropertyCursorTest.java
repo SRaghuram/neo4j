@@ -56,6 +56,7 @@ import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.imme
 import static org.neo4j.internal.helpers.collection.Iterators.iterator;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
+import static org.neo4j.storageengine.api.LongReference.longReference;
 
 @EphemeralPageCacheExtension
 @EphemeralNeo4jLayoutExtension
@@ -145,7 +146,7 @@ public class RecordPropertyCursorTest
     {
         Map<Integer, Value> expectedValues = asMap( values );
         // This is a specific test for RecordPropertyCursor and we know that node/relationships init methods are the same
-        cursor.initNodeProperties( firstPropertyId );
+        cursor.initNodeProperties( longReference( firstPropertyId ) );
         while ( cursor.next() )
         {
             // then

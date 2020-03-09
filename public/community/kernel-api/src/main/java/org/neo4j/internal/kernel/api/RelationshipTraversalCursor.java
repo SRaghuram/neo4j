@@ -19,6 +19,9 @@
  */
 package org.neo4j.internal.kernel.api;
 
+import org.neo4j.storageengine.api.LongReference;
+import org.neo4j.storageengine.api.Reference;
+
 import static org.neo4j.internal.kernel.api.Read.NO_ID;
 
 /**
@@ -153,9 +156,9 @@ public interface RelationshipTraversalCursor extends RelationshipDataAccessor, C
         }
 
         @Override
-        public long propertiesReference()
+        public Reference propertiesReference()
         {
-            return NO_ID;
+            return LongReference.NULL_REFERENCE;
         }
 
         @Override

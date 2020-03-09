@@ -46,6 +46,7 @@ import static java.util.Collections.emptyIterator;
 import static org.apache.commons.lang3.ArrayUtils.contains;
 import static org.neo4j.collection.PrimitiveLongCollections.EMPTY_LONG_ARRAY;
 import static org.neo4j.internal.helpers.collection.MapUtil.genericMap;
+import static org.neo4j.storageengine.api.LongReference.longReference;
 import static org.neo4j.token.api.TokenHolder.TYPE_PROPERTY_KEY;
 
 /**
@@ -494,9 +495,9 @@ public class StubStorageCursors implements StorageReader
         }
 
         @Override
-        public long propertiesReference()
+        public Reference propertiesReference()
         {
-            return current.propertyId;
+            return longReference( current.propertyId );
         }
 
         @Override
@@ -622,9 +623,9 @@ public class StubStorageCursors implements StorageReader
         }
 
         @Override
-        public long propertiesReference()
+        public Reference propertiesReference()
         {
-            return current.propertyId;
+            return longReference( current.propertyId );
         }
 
         @Override
@@ -679,20 +680,21 @@ public class StubStorageCursors implements StorageReader
         private Iterator<Map.Entry<String,Value>> iterator;
 
         @Override
-        public void initNodeProperties( long reference )
+        public void initNodeProperties( Reference reference )
         {
             init( reference );
         }
 
         @Override
-        public void initRelationshipProperties( long reference )
+        public void initRelationshipProperties( Reference reference )
         {
             init( reference );
         }
 
-        private void init( long reference )
+        private void init( Reference reference )
         {
-            PropertyData properties = StubStorageCursors.this.propertyData.get( reference );
+            long id = ((LongReference) reference).id;
+            PropertyData properties = StubStorageCursors.this.propertyData.get( id );
             iterator = properties != null ? properties.properties.entrySet().iterator() : emptyIterator();
         }
 

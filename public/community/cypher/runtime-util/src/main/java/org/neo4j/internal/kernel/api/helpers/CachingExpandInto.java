@@ -39,6 +39,7 @@ import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.storageengine.api.Reference;
 import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.util.Preconditions;
@@ -354,7 +355,7 @@ public class CachingExpandInto
         }
 
         @Override
-        public long propertiesReference()
+        public Reference propertiesReference()
         {
             return currentRelationship.properties;
         }
@@ -475,7 +476,7 @@ public class CachingExpandInto
         }
 
         @Override
-        public long propertiesReference()
+        public Reference propertiesReference()
         {
             return allRelationships.propertiesReference();
         }
@@ -665,10 +666,11 @@ public class CachingExpandInto
 
     private static class Relationship
     {
-        private final long id, from, to, properties;
+        private final long id, from, to;
         private final int type;
+        private final Reference properties;
 
-        private Relationship( long id, long from, long to, long properties, int type )
+        private Relationship( long id, long from, long to, Reference properties, int type )
         {
             this.id = id;
             this.from = from;
