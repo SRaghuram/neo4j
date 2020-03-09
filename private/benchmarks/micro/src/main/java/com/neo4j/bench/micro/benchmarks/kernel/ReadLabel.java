@@ -25,7 +25,7 @@ import org.openjdk.jmh.annotations.TearDown;
 import java.util.SplittableRandom;
 import java.util.stream.Stream;
 
-import org.neo4j.internal.kernel.api.LabelSet;
+import org.neo4j.internal.kernel.api.TokenSet;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.Read;
 
@@ -151,7 +151,7 @@ public class ReadLabel extends AbstractKernelBenchmark
         txState.read.singleNode( nodeId, txState.node );
 
         txState.node.next();
-        LabelSet nodeLabels = txState.node.labels();
+        TokenSet nodeLabels = txState.node.labels();
         for ( int i = 0; i < nodeLabels.numberOfLabels(); i++ )
         {
             if ( nodeLabels.label( i ) == randomLabel )
@@ -171,7 +171,7 @@ public class ReadLabel extends AbstractKernelBenchmark
         txState.read.singleNode( nodeId, txState.node );
 
         txState.node.next();
-        LabelSet nodeLabels = txState.node.labels();
+        TokenSet nodeLabels = txState.node.labels();
         for ( int i = 0; i < nodeLabels.numberOfLabels(); i++ )
         {
             if ( nodeLabels.label( i ) == txState.firstLabel )
@@ -191,7 +191,7 @@ public class ReadLabel extends AbstractKernelBenchmark
         txState.read.singleNode( nodeId, txState.node );
 
         txState.node.next();
-        LabelSet nodeLabels = txState.node.labels();
+        TokenSet nodeLabels = txState.node.labels();
         for ( int i = 0; i < nodeLabels.numberOfLabels(); i++ )
         {
             if ( nodeLabels.label( i ) == txState.lastLabel )

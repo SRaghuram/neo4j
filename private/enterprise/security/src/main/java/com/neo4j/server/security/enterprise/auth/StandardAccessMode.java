@@ -21,7 +21,7 @@ import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 import org.neo4j.graphdb.security.AuthorizationViolationException;
-import org.neo4j.internal.kernel.api.LabelSet;
+import org.neo4j.internal.kernel.api.TokenSet;
 import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AdminActionOnResource;
 import org.neo4j.internal.kernel.api.security.LoginContext.IdLookup;
@@ -289,7 +289,7 @@ class StandardAccessMode implements AccessMode
     }
 
     @Override
-    public boolean allowsReadNodeProperty( Supplier<LabelSet> labelSupplier, int propertyKey )
+    public boolean allowsReadNodeProperty( Supplier<TokenSet> labelSupplier, int propertyKey )
     {
         if ( allowsReadPropertyAllLabels( propertyKey ) )
         {
@@ -301,13 +301,13 @@ class StandardAccessMode implements AccessMode
             return false;
         }
 
-        LabelSet labelSet = labelSupplier.get();
+        TokenSet tokenSet = labelSupplier.get();
         IntSet whiteListed = whitelistedLabelsForProperty.get( propertyKey );
         IntSet blackListed = blacklistedLabelsForProperty.get( propertyKey );
 
         boolean allowed = false;
 
-        for ( long labelAsLong : labelSet.all() )
+        for ( long labelAsLong : tokenSet.all() )
         {
             int label = (int) labelAsLong;
             if ( whiteListed != null && whiteListed.contains( label ) )

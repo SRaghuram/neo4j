@@ -22,7 +22,7 @@ import java.util.function.Function;
 
 import org.neo4j.common.TokenNameLookup;
 import org.neo4j.internal.kernel.api.CursorFactory;
-import org.neo4j.internal.kernel.api.LabelSet;
+import org.neo4j.internal.kernel.api.TokenSet;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.Read;
@@ -212,7 +212,7 @@ class PropertyExistenceEnforcer
                 return;
             }
 
-            final LabelSet labelIds;
+            final TokenSet labelIds;
             read.singleNode( nodeId, nodeCursor );
             if ( nodeCursor.next() )
             {
@@ -276,7 +276,7 @@ class PropertyExistenceEnforcer
         }
     }
 
-    private void validateNodeProperties( long id, LabelSet labelIds, IntSet propertyKeyIds )
+    private void validateNodeProperties( long id, TokenSet labelIds, IntSet propertyKeyIds )
             throws NodePropertyExistenceException
     {
         int numberOfLabels = labelIds.numberOfLabels();
