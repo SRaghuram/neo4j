@@ -30,7 +30,7 @@ case class antiSemiApplyToAntiLimitApply(cardinalities: Cardinalities,
                                          providedOrders: ProvidedOrders,
                                          idGen: IdGen) extends Rewriter {
   private val instance: Rewriter = bottomUp(Rewriter.lift {
-    case o@AntiSemiApply(lhs: LogicalPlan, rhs: LogicalPlan) if !hasAggregation(rhs) =>
+    case o@AntiSemiApply(lhs: LogicalPlan, rhs: LogicalPlan) =>
       val limit = Limit(rhs, SignedDecimalIntegerLiteral("1")(InputPosition.NONE), DoNotIncludeTies)(idGen)
       val anti = Anti(limit)(idGen)
       val rhsCardinality = Cardinality.min(cardinalities.get(rhs.id), Cardinality.SINGLE)
@@ -44,8 +44,4 @@ case class antiSemiApplyToAntiLimitApply(cardinalities: Cardinalities,
   })
 
   override def apply(input: AnyRef): AnyRef = instance.apply(input)
-
-  private def hasAggregation(plan: LogicalPlan): Boolean = plan.treeExists {
-    case _: Aggregation | _: OrderedAggregation => true
-  }
 }

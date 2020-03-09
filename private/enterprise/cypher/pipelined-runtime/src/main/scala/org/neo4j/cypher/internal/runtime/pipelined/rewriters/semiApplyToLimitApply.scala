@@ -29,7 +29,7 @@ case class semiApplyToLimitApply(cardinalities: Cardinalities,
                                  providedOrders: ProvidedOrders,
                                  idGen: IdGen) extends Rewriter {
   private val instance: Rewriter = bottomUp(Rewriter.lift {
-    case o @ SemiApply(lhs: LogicalPlan, rhs: LogicalPlan) if !hasAggregation(rhs) =>
+    case o @ SemiApply(lhs: LogicalPlan, rhs: LogicalPlan) =>
       val limit = Limit(rhs, SignedDecimalIntegerLiteral("1")(InputPosition.NONE), DoNotIncludeTies)(idGen)
       cardinalities.set(limit.id, Cardinality.min(cardinalities.get(rhs.id), Cardinality.SINGLE))
       providedOrders.copy(rhs.id, limit.id)
@@ -37,8 +37,4 @@ case class semiApplyToLimitApply(cardinalities: Cardinalities,
   })
 
   override def apply(input: AnyRef): AnyRef = instance.apply(input)
-
-  private def hasAggregation(plan: LogicalPlan): Boolean = plan.treeExists {
-    case _: Aggregation | _: OrderedAggregation => true
-  }
 }
