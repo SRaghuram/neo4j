@@ -156,7 +156,7 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
     }
 
     @Override
-    public Path downloadParameterFile(String jobParameters, Path baseDir, URI artifactBaseURI) throws ArtifactStoreException
+    public Path downloadParameterFile( String jobParameters, Path baseDir, URI artifactBaseURI ) throws ArtifactStoreException
     {
         return downloadFile( baseDir, artifactBaseURI, jobParameters );
     }
