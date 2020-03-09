@@ -51,7 +51,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
 
     // state from record data header
     MainRecordHeaderState headerState;
-    boolean borrowedHeaderState;
+    boolean sharedHeaderState;
 
     // state from relationship section, it's here because both relationship cursors as well as property cursor makes use of them
     int[] relationshipTypesInNode;
@@ -67,16 +67,16 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         reset();
     }
 
-    public void reset()
+    void reset()
     {
         data = null;
         relationshipTypeOffsets = null;
         relationshipTypesInNode = null;
         loadedNodeId = NULL;
-        if ( borrowedHeaderState )
+        if ( sharedHeaderState )
         {
             headerState = null;
-            borrowedHeaderState = false;
+            sharedHeaderState = false;
         }
         else if ( headerState != null )
         {
@@ -149,7 +149,8 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
             otherCursor.smallRecord.initializeFromSharedData( smallRecord );
             otherCursor.data = otherCursor.smallRecord.dataForReading();
             otherCursor.headerState = headerState;
-            otherCursor.borrowedHeaderState = true;
+            otherCursor.sharedHeaderState = true;
+            this.sharedHeaderState = true;
             otherCursor.loadedNodeId = loadedNodeId;
             if ( headerState.containsForwardPointer && !headerState.isDense )
             {
