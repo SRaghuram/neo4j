@@ -584,4 +584,160 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       ).toString
     )
   }
+
+  test("Grant create database") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN GRANT CREATE DATABASE ON DBMS TO reader, editor").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("GrantDbmsAction", "CREATE DATABASE", "editor",
+          dbmsPrivilegePlan("GrantDbmsAction", "CREATE DATABASE", "reader",
+            assertDbmsAdminPlan("GRANT PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Deny create database") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN DENY CREATE DATABASE ON DBMS TO reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("DenyDbmsAction", "CREATE DATABASE", "reader",
+          assertDbmsAdminPlan("DENY PRIVILEGE")
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke create database") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN REVOKE CREATE DATABASE ON DBMS FROM reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "CREATE DATABASE", "reader",
+          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "CREATE DATABASE", "reader",
+            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Grant drop database") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN GRANT DROP DATABASE ON DBMS TO reader, editor").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("GrantDbmsAction", "DROP DATABASE", "editor",
+          dbmsPrivilegePlan("GrantDbmsAction", "DROP DATABASE", "reader",
+            assertDbmsAdminPlan("GRANT PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Deny drop database") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN DENY DROP DATABASE ON DBMS TO reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("DenyDbmsAction", "DROP DATABASE", "reader",
+          assertDbmsAdminPlan("DENY PRIVILEGE")
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke drop database") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN REVOKE DROP DATABASE ON DBMS FROM reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "DROP DATABASE", "reader",
+          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "DROP DATABASE", "reader",
+            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Grant database management") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN GRANT DATABASE MANAGEMENT ON DBMS TO reader, editor").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("GrantDbmsAction", "DATABASE MANAGEMENT", "editor",
+          dbmsPrivilegePlan("GrantDbmsAction", "DATABASE MANAGEMENT", "reader",
+            assertDbmsAdminPlan("GRANT PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Deny database management") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN DENY DATABASE MANAGEMENT ON DBMS TO reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("DenyDbmsAction", "DATABASE MANAGEMENT", "reader",
+          assertDbmsAdminPlan("DENY PRIVILEGE")
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke database management") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN REVOKE DATABASE MANAGEMENT ON DBMS FROM reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "DATABASE MANAGEMENT", "reader",
+          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "DATABASE MANAGEMENT", "reader",
+            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
 }
