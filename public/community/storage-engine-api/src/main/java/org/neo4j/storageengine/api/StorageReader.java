@@ -105,7 +105,7 @@ public interface StorageReader extends AutoCloseable, StorageSchemaReader
 
     long nodesGetCount( PageCursorTracer cursorTracer );
 
-    long relationshipsGetCount();
+    long relationshipsGetCount( PageCursorTracer cursorTracer );
 
     int labelCount();
 

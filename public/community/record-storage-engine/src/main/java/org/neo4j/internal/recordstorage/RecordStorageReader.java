@@ -252,7 +252,7 @@ public class RecordStorageReader implements StorageReader
     }
 
     @Override
-    public long relationshipsGetCount()
+    public long relationshipsGetCount( PageCursorTracer cursorTracer )
     {
         return relationshipStore.getNumberOfIdsInUse();
     }
