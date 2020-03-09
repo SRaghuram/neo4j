@@ -131,9 +131,7 @@ object ExecutionGraphVisualizer {
           rels += new VirtualRelationshipHack(bufs(id), asms(asmId), Map.empty, "USES_ASM")
         case ArgumentStateBufferVariant(ArgumentStateMapId(asmId)) =>
           rels += new VirtualRelationshipHack(bufs(id), asms(asmId), Map.empty, "USES_ASM")
-        case OptionalBufferVariant(ArgumentStateMapId(asmId), OptionalType) =>
-          rels += new VirtualRelationshipHack(bufs(id), asms(asmId), Map.empty, "USES_ASM")
-        case OptionalBufferVariant(ArgumentStateMapId(asmId), AntiType) =>
+        case OptionalBufferVariant(ArgumentStateMapId(asmId), _) =>
           rels += new VirtualRelationshipHack(bufs(id), asms(asmId), Map.empty, "USES_ASM")
         case AttachBufferVariant(applyBuffer, _, _, _) =>
           rels += new VirtualRelationshipHack(bufs(id), bufs(applyBuffer.id.x), Map.empty, "DELEGATES_TO")
