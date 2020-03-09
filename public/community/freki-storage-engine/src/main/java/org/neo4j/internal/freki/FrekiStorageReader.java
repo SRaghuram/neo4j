@@ -49,6 +49,7 @@ import org.neo4j.token.TokenHolders;
 
 import static org.neo4j.collection.PrimitiveLongCollections.EMPTY_LONG_ARRAY;
 import static org.neo4j.token.api.TokenConstants.ANY_LABEL;
+import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 
 class FrekiStorageReader implements StorageReader
 {
@@ -220,9 +221,9 @@ class FrekiStorageReader implements StorageReader
     }
 
     @Override
-    public long relationshipsGetCount()
+    public long relationshipsGetCount( PageCursorTracer cursorTracer )
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+        return counts.relationshipCount( ANY_LABEL, ANY_RELATIONSHIP_TYPE, ANY_LABEL, cursorTracer );
     }
 
     @Override

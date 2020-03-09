@@ -47,7 +47,7 @@ public class RelationshipStoreScan<FAILURE extends Exception> extends PropertyAw
             @Nullable Visitor<EntityUpdates,FAILURE> propertyUpdatesVisitor,
             int[] relationshipTypeIds, IntPredicate propertyKeyIdFilter, PageCursorTracer cursorTracer )
     {
-        super( storageReader, storageReader.relationshipsGetCount(), propertyKeyIdFilter,
+        super( storageReader, storageReader.relationshipsGetCount( cursorTracer ), propertyKeyIdFilter,
                 id -> locks.acquireRelationshipLock( id, LockService.LockType.READ_LOCK ), cursorTracer );
         this.relationshipTypeUpdateVisitor = relationshipTypeUpdateVisitor;
         this.propertyUpdatesVisitor = propertyUpdatesVisitor;
