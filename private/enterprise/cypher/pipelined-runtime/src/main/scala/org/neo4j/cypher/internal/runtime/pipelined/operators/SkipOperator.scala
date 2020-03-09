@@ -11,10 +11,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.block
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.equal
 import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
-import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.load
-import org.neo4j.codegen.api.IntermediateRepresentation.loadField
-import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.subtract
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
@@ -91,9 +88,6 @@ class SerialTopLevelSkipOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                             (codeGen: OperatorExpressionCompiler)
   extends SerialTopLevelCountingOperatorTaskTemplate(inner, id, innermost, argumentStateMapId, generateCountExpression, codeGen) {
 
-
-  override protected def howMuchToReserve: IntermediateRepresentation = constant(Int.MaxValue)
-
   override def genOperate: IntermediateRepresentation = {
     ifElse(equal(load(countLeftVar), constant(0)))(block(
       profileRow(id),
@@ -105,13 +99,6 @@ class SerialTopLevelSkipOperatorTaskTemplate(inner: OperatorTaskTemplate,
           )
         )
       )
-  }
-
-  override def genOperateExit: IntermediateRepresentation = {
-    block(
-      invoke(loadField(countingStateField), method[SerialTopLevelCountingState, Unit, Int]("update"),
-             subtract(load(reservedVar), load(countLeftVar))),
-      inner.genOperateExit)
   }
 }
 

@@ -20,6 +20,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.subtract
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
@@ -33,7 +34,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.peekState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
-import org.neo4j.cypher.internal.runtime.pipelined.state.UnorderedArgumentStateMapReader
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.util.Preconditions
@@ -206,7 +206,14 @@ abstract class SerialTopLevelCountingOperatorTaskTemplate(val inner: OperatorTas
       )
   }
 
-  protected def howMuchToReserve: IntermediateRepresentation
+  override def genOperateExit: IntermediateRepresentation = {
+    block(
+      invoke(loadField(countingStateField), method[SerialTopLevelCountingState, Unit, Int]("update"),
+        subtract(load(reservedVar), load(countLeftVar))),
+      inner.genOperateExit)
+  }
+
+  protected def howMuchToReserve: IntermediateRepresentation = constant(Int.MaxValue)
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(countLeftVar, reservedVar)
 
