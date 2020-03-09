@@ -6,14 +6,15 @@
 package com.neo4j.tools.migration;
 
 import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.eclipse.collections.api.map.primitive.MutableIntIntMap;
 import org.eclipse.collections.impl.factory.primitive.IntIntMaps;
 
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -36,24 +37,24 @@ public class MigrateDataIntoOtherDatabase
 
     public static void main( String[] args )
     {
-        File homeDirectory = new File( args[0] );
-        DatabaseManagementService dbms = new EnterpriseDatabaseManagementServiceBuilder( homeDirectory ).build();
+        File fromHome = new File( args[0] );
+        File toHome = new File( args[1] );
+        DatabaseManagementService fromDbms = new EnterpriseDatabaseManagementServiceBuilder( fromHome )
+                .setConfig( GraphDatabaseSettings.force_freki, false )
+                .build();
+        DatabaseManagementService toDbms = new EnterpriseDatabaseManagementServiceBuilder( toHome )
+                .setConfig( OnlineBackupSettings.online_backup_enabled, false )
+                .setConfig( GraphDatabaseSettings.default_database, DB_NAME )
+                .setConfig( GraphDatabaseSettings.force_freki, true )
+                .build();
         try
         {
-            try
-            {
-                dbms.dropDatabase( DB_NAME );
-            }
-            catch ( DatabaseNotFoundException e )
-            {
-                // This is OK
-            }
-            dbms.createDatabase( DB_NAME );
-            copyDatabase( dbms.database( DEFAULT_DATABASE_NAME ), dbms.database( DB_NAME ) );
+            copyDatabase( fromDbms.database( DEFAULT_DATABASE_NAME ), toDbms.database( DB_NAME ) );
         }
         finally
         {
-            dbms.shutdown();
+            fromDbms.shutdown();
+            toDbms.shutdown();
         }
     }
 
