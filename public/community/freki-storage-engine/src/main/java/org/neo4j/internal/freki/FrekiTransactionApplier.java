@@ -35,8 +35,10 @@ import org.neo4j.counts.CountsAccessor;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.freki.FrekiCommand.Mode;
 import org.neo4j.internal.helpers.collection.Visitor;
+import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.SchemaRule;
+import org.neo4j.internal.schema.SchemaState;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.EntityUpdates;
@@ -64,6 +66,7 @@ import static org.neo4j.storageengine.util.IdUpdateListener.IGNORE;
 class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements Visitor<StorageCommand,IOException>, AutoCloseable
 {
     private final Stores stores;
+    private final SchemaState schemaState;
     private final IndexUpdateListener indexUpdateListener;
     private List<IndexDescriptor> createdIndexes;
     private final IdGeneratorUpdatesWorkSync.Batch idUpdates;
@@ -79,11 +82,12 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     private final FrekiCommand.SparseNode[] currentSparseNodeCommands = new FrekiCommand.SparseNode[4];
     private FrekiCommand.DenseNode currentDenseNodeCommand;
 
-    FrekiTransactionApplier( Stores stores, IndexUpdateListener indexUpdateListener, TransactionApplicationMode mode,
+    FrekiTransactionApplier( Stores stores, SchemaState schemaState, IndexUpdateListener indexUpdateListener, TransactionApplicationMode mode,
             IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync, LabelIndexUpdatesWorkSync labelIndexUpdatesWorkSync,
             IndexUpdatesWorkSync indexUpdatesWorkSync )
     {
         this.stores = stores;
+        this.schemaState = schemaState;
         this.indexUpdateListener = indexUpdateListener;
         this.labelIndexUpdates = mode == REVERSE_RECOVERY || labelIndexUpdatesWorkSync == null ? null : labelIndexUpdatesWorkSync.newBatch();
         this.idUpdates = mode == REVERSE_RECOVERY ? null : idGeneratorUpdatesWorkSync.newBatch();
@@ -457,6 +461,10 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
                 }
             }
             stores.schemaCache.addSchemaRule( rule );
+            if ( rule instanceof ConstraintDescriptor )
+            {
+                schemaState.clear();
+            }
         }
         else
         {
@@ -467,6 +475,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
                     indexUpdateListener.dropIndex( (IndexDescriptor) rule );
                 }
                 stores.schemaCache.removeSchemaRule( rule.getId() );
+                schemaState.clear();
             }
         }
     }
