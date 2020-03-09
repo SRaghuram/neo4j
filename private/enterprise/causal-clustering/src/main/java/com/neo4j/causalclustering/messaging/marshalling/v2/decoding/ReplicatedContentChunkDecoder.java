@@ -18,7 +18,6 @@ import java.util.List;
 public class ReplicatedContentChunkDecoder extends ByteToMessageDecoder
 {
     private final Codec<ReplicatedContent> codec;
-    private boolean expectingNewContent = true;
     private boolean isLast;
 
     ReplicatedContentChunkDecoder()
@@ -30,16 +29,10 @@ public class ReplicatedContentChunkDecoder extends ByteToMessageDecoder
     @Override
     protected void decode( ChannelHandlerContext ctx, ByteBuf in, List<Object> out ) throws Exception
     {
-        if ( expectingNewContent )
-        {
-            isLast = in.readBoolean();
-            expectingNewContent = false;
-        }
         if ( isLast )
         {
             out.add( codec.decode( in ) );
             isLast = false;
-            expectingNewContent = true;
         }
     }
 
