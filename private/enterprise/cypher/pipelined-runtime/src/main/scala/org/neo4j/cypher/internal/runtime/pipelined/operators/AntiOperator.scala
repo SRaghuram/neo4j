@@ -55,7 +55,7 @@ class AntiOperator(val workIdentity: WorkIdentity,
     }
   }
 
-  class OTask(val morselDatas: Seq[MorselData]) extends ContinuableOperatorTask {
+  class OTask(val morselDatas: Seq[MorselData]) extends AntiOperatorTask {
     private val morselDataIterator: Iterator[MorselData] = morselDatas.iterator
 
     override def workIdentity: WorkIdentity = AntiOperator.this.workIdentity
@@ -86,7 +86,11 @@ class AntiOperator(val workIdentity: WorkIdentity,
     override def producingWorkUnitEvent: WorkUnitEvent = null
 
     override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
-
-    override def estimatedHeapUsage: Long = morselDatas.map(morselData => morselData.morsels.map(_.estimatedHeapUsage).sum).sum
   }
+}
+
+trait AntiOperatorTask extends ContinuableOperatorTask {
+  def morselDatas: Seq[MorselData]
+
+  override def estimatedHeapUsage: Long = morselDatas.map(morselData => morselData.morsels.map(_.estimatedHeapUsage).sum).sum
 }

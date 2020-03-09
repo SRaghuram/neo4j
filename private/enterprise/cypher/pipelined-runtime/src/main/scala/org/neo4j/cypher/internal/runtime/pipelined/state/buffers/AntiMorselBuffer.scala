@@ -38,10 +38,13 @@ class AntiMorselBuffer(id: BufferId,
         null.asInstanceOf[Seq[MorselData]]
       } else {
         val datas = new ArrayBuffer[MorselData]()
+        datas += data
         var i = morselSize
         while (null != data && i > 0) {
-          datas += data
           data = getNextEmptyArgumentState
+          if (null != data) {
+            datas += data
+          }
           i -= 1
         }
         datas

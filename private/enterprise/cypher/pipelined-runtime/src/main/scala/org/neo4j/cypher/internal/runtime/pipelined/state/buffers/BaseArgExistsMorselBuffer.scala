@@ -202,7 +202,7 @@ class OptionalArgumentStateBuffer(argumentRowId: Long,
   }
 
   override def toString: String = {
-    s"OptionalArgumentStateBuffer(argumentRowId=$argumentRowId, argumentRowIdsForReducers=$argumentRowIdsForReducers, argumentMorsel=$argumentRow)"
+    s"OptionalArgumentStateBuffer(argumentRowId=$argumentRowId, argumentRowIdsForReducers=[${argumentRowIdsForReducers.mkString(",")}], argumentMorsel=$argumentRow)"
   }
 }
 
