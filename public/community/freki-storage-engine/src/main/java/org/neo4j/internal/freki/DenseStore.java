@@ -276,6 +276,12 @@ class DenseStore extends LifecycleAdapter implements Closeable
                 {
                     return relationshipPropertiesIterator( value.data );
                 }
+
+                @Override
+                public boolean hasProperties()
+                {
+                    return StreamVByte.hasNonEmptyIntArray( value.data );
+                }
             };
         }
         catch ( IOException e )
@@ -868,6 +874,8 @@ class DenseStore extends LifecycleAdapter implements Closeable
         RelationshipDirection direction();
 
         Iterator<StorageProperty> properties();
+
+        boolean hasProperties();
     }
 
     private abstract static class RelationshipIterator extends CursorIterator<RelationshipData> implements RelationshipData

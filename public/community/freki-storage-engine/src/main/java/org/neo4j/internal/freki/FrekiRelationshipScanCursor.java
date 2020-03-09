@@ -19,10 +19,13 @@
  */
 package org.neo4j.internal.freki;
 
+import java.util.Iterator;
+
 import org.neo4j.graphdb.Direction;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.AllRelationshipsScan;
 import org.neo4j.storageengine.api.RelationshipSelection;
+import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipScanCursor;
 
@@ -87,6 +90,12 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     int currentRelationshipPropertiesOffset()
     {
         return traversalCursor.currentRelationshipPropertiesOffset();
+    }
+
+    @Override
+    Iterator<StorageProperty> denseProperties()
+    {
+        return traversalCursor.denseProperties();
     }
 
     @Override
