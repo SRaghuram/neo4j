@@ -41,12 +41,14 @@ public interface ArtifactStorage
     /**
      * Downloads Workspace Structure.
      *
+     *
+     * @param jobParameters
      * @param baseDir base directory, where artifacts will be downloaded
      * @param artifactBaseURI the bucket to download the files from, should exist
      * @throws ArtifactStoreException
      * @return workspace with downloaded artifacts
      */
-    Path downloadParameterFile( Path baseDir, URI artifactBaseURI ) throws ArtifactStoreException;
+    Path downloadParameterFile(String jobParameters, Path baseDir, URI artifactBaseURI) throws ArtifactStoreException;
 
     /**
      * Downloads data set for specific Neo4j version

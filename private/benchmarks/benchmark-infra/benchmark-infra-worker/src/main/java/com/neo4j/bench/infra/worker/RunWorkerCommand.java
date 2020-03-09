@@ -68,7 +68,7 @@ public class RunWorkerCommand implements Runnable
             // download artifacts
 
             Path workspacePath = workspaceDir.toPath();
-            Path parameterFilePath = artifactStorage.downloadParameterFile( workspacePath, artifactBaseUri );
+            Path parameterFilePath = artifactStorage.downloadParameterFile( jobParameters, workspacePath, artifactBaseUri );
             JobParams jobParams = JsonUtil.deserializeJson( parameterFilePath, JobParams.class );
             InfraParams infraParams = jobParams.infraParams();
 
