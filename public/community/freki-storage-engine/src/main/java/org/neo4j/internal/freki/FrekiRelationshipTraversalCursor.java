@@ -19,11 +19,14 @@
  */
 package org.neo4j.internal.freki;
 
+import java.util.Iterator;
+
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.RelationshipDirection;
 import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StorageNodeCursor;
+import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 
@@ -69,11 +72,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     {
         if ( headerState.isDense )
         {
-            if ( denseProperties == null )
-            {
-                denseProperties = currentDenseRelationship.properties();
-            }
-            return denseProperties.hasNext();
+            return denseProperties().hasNext();
         }
         return currentRelationshipHasProperties;
     }
@@ -81,10 +80,6 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     @Override
     public long propertiesReference()
     {
-        if ( headerState.isDense )
-        {
-            throw new UnsupportedOperationException( "Not implemented yet for dense" );
-        }
         return currentRelationshipHasProperties ? entityReference() : NULL;
     }
 
@@ -105,6 +100,16 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     int currentRelationshipPropertiesOffset()
     {
         return relationshipPropertiesOffset( currentTypePropertiesOffset, currentTypePropertiesIndex );
+    }
+
+    @Override
+    Iterator<StorageProperty> denseProperties()
+    {
+        if ( densePropertiesItr == null )
+        {
+            densePropertiesItr = currentDenseRelationship.properties();
+        }
+        return densePropertiesItr;
     }
 
     @Override
@@ -146,7 +151,8 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
                     currentRelationshipDirection = currentDenseRelationship.direction();
                     currentRelationshipInternalId = currentDenseRelationship.internalId();
                     currentRelationshipOtherNode = currentDenseRelationship.neighbourNodeId();
-                    denseProperties = null;
+                    currentRelationshipHasProperties = currentDenseRelationship.hasProperties();
+                    densePropertiesItr = null;
                     return true;
                 }
                 // Mark the end of this criterion
@@ -262,7 +268,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
             denseRelationships.close();
             denseRelationships = null;
         }
-        denseProperties = null;
+        densePropertiesItr = null;
     }
 
     @Override

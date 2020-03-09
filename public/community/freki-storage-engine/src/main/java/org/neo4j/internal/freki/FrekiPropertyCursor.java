@@ -100,7 +100,7 @@ public class FrekiPropertyCursor extends FrekiMainStoreCursor implements Storage
             {
                 if ( headerState.isDense )
                 {
-                    denseProperties = relCursor.denseProperties;
+                    denseProperties = relCursor.denseProperties();
                     return;
                 }
                 else

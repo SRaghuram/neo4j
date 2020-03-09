@@ -169,6 +169,16 @@ class StreamVByte
         return offset;
     }
 
+    static boolean hasNonEmptyIntArray( ByteBuffer data )
+    {
+        byte header = data.get( data.position() );
+        if ( (header & MASK_SQUASHED_BLOCK) != 0 )
+        {
+            return (((header & 0b0110_0000) >>> SHIFT_SQUASHED_BLOCK_LENGTH) & 0b11) > 0;
+        }
+        return header > 0;
+    }
+
     private static int readIntValue( byte[] serialized, int offset, int size )
     {
         if ( size == 3 )

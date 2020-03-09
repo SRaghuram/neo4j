@@ -491,6 +491,12 @@ class DenseStoreTest
         }
 
         @Override
+        public boolean hasProperties()
+        {
+            return !properties.isEmpty();
+        }
+
+        @Override
         public boolean equals( Object o )
         {
             if ( this == o )

@@ -27,7 +27,7 @@ import org.neo4j.storageengine.api.StorageRelationshipCursor;
 
 abstract class FrekiRelationshipCursor extends FrekiMainStoreCursor implements StorageRelationshipCursor
 {
-    Iterator<StorageProperty> denseProperties;
+    Iterator<StorageProperty> densePropertiesItr;
 
     FrekiRelationshipCursor( MainStores stores, PageCursorTracer cursorTracer )
     {
@@ -41,4 +41,6 @@ abstract class FrekiRelationshipCursor extends FrekiMainStoreCursor implements S
     }
 
     abstract int currentRelationshipPropertiesOffset();
+
+    abstract Iterator<StorageProperty> denseProperties();
 }
