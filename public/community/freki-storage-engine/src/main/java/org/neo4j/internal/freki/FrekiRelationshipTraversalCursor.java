@@ -23,6 +23,7 @@ import java.util.Iterator;
 
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.storageengine.api.Reference;
 import org.neo4j.storageengine.api.RelationshipDirection;
 import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StorageNodeCursor;
@@ -78,9 +79,9 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     }
 
     @Override
-    public long propertiesReference()
+    public Reference propertiesReference()
     {
-        return currentRelationshipHasProperties ? entityReference() : NULL;
+        return currentRelationshipHasProperties ? relationshipReference() : FrekiReference.NULL_REFERENCE;
     }
 
     @Override
@@ -116,6 +117,13 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     public long entityReference()
     {
         return externalRelationshipId( loadedNodeId, currentRelationshipInternalId, currentRelationshipOtherNode, currentRelationshipDirection.isOutgoing() );
+    }
+
+    @Override
+    public Reference relationshipReference()
+    {
+        return FrekiReference.relationshipReference( sourceNodeReference(), currentRelationshipInternalId, type(),
+                currentDirection() == LOOP ? LOOP : OUTGOING, targetNodeReference() );
     }
 
     @Override
@@ -331,7 +339,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
         init( nodeId, selection );
     }
 
-    public void init( long nodeId, RelationshipSelection selection )
+    void init( long nodeId, RelationshipSelection selection )
     {
         reset();
         this.nodeId = nodeId;

@@ -273,7 +273,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
             Record before = findRelevantUsedRecord( node -> node.before );
             if ( before == null )
             {
-                propertyCursorBefore.initNodeProperties( currentDenseNodeCommand.nodeId );
+                propertyCursorBefore.initNodeProperties( FrekiReference.nodeReference( currentDenseNodeCommand.nodeId ) );
             }
             else
             {

@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.AllNodeScan;
 import org.neo4j.storageengine.api.Degrees;
+import org.neo4j.storageengine.api.Reference;
 import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
@@ -152,9 +153,9 @@ public class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNode
     }
 
     @Override
-    public long propertiesReference()
+    public Reference propertiesReference()
     {
-        return entityReference();
+        return FrekiReference.nodeReference( entityReference() );
     }
 
     @Override

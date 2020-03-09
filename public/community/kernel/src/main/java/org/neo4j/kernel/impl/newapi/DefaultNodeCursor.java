@@ -36,6 +36,7 @@ import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.storageengine.api.AllNodeScan;
 import org.neo4j.storageengine.api.Degrees;
+import org.neo4j.storageengine.api.Reference;
 import org.neo4j.storageengine.api.RelationshipDirection;
 import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StorageNodeCursor;
@@ -45,6 +46,7 @@ import org.neo4j.storageengine.util.EagerDegrees;
 import org.neo4j.storageengine.util.SingleDegree;
 
 import static org.neo4j.kernel.impl.newapi.Read.NO_ID;
+import static org.neo4j.storageengine.api.LongReference.NULL_REFERENCE;
 
 class DefaultNodeCursor extends TraceableCursor implements NodeCursor
 {
@@ -208,9 +210,9 @@ class DefaultNodeCursor extends TraceableCursor implements NodeCursor
     }
 
     @Override
-    public long propertiesReference()
+    public Reference propertiesReference()
     {
-        return currentAddedInTx != NO_ID ? NO_ID : storeCursor.propertiesReference();
+        return currentAddedInTx != NO_ID ? NULL_REFERENCE : storeCursor.propertiesReference();
     }
 
     @Override
