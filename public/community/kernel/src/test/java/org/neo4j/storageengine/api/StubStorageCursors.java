@@ -247,7 +247,7 @@ public class StubStorageCursors implements StorageReader
     }
 
     @Override
-    public long relationshipsGetCount()
+    public long relationshipsGetCount( PageCursorTracer cursorTracer )
     {
         return relationshipData.size();
     }

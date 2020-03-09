@@ -712,7 +712,7 @@ public class AllStoreHolder extends Read
     }
 
     @Override
-    public long nodesGetCount( )
+    public long nodesGetCount()
     {
         ktx.assertOpen();
         long base = storageReader.nodesGetCount( cursorTracer );
@@ -720,10 +720,10 @@ public class AllStoreHolder extends Read
     }
 
     @Override
-    public long relationshipsGetCount( )
+    public long relationshipsGetCount()
     {
         ktx.assertOpen();
-        long base = storageReader.relationshipsGetCount();
+        long base = storageReader.relationshipsGetCount( cursorTracer );
         return ktx.hasTxStateWithChanges() ? base + ktx.txState().addedAndRemovedRelationships().delta() : base;
     }
 
