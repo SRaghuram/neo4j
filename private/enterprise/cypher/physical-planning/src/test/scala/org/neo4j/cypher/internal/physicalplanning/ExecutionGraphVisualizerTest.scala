@@ -145,6 +145,47 @@ class ExecutionGraphVisualizerTest extends CypherFunSuite {
     assertPlanReturns(plan, ops, asms, bufs, pipes, rels)
   }
 
+  test("should return graph for anti") {
+    val plan = getExecutionPlan(new ExecutionGraphDefinitionBuilder()
+      .produceResults("n")
+      .anti().withBreak()
+      .allNodeScan("n").withBreak()
+      .build())
+
+    val ops = Seq(
+      TNode(Map("name" -> "ProduceResult", "id" -> (0: Integer)), "End", "Operator"),
+      TNode(Map("name" -> "Anti", "id" -> (1: Integer)), "Operator"),
+      TNode(Map("name" -> "AllNodesScan", "id" -> (2: Integer)), "Operator"),
+    )
+    val asms = Seq(
+      TNode(Map("name" -> "ASM[0]", "id" -> (0: Integer), "argumentSlotOffset" -> (-1: Integer)), "ASM"),
+    )
+    val bufs = Seq(
+      TNode(Map("name" -> "ApplyBuffer[0]", "id" -> (0: Integer), "argumentSlotOffset" -> (-1: Integer)), "Start", "Buffer"),
+      TNode(Map("name" -> "Buffer[1]", "id" -> (1: Integer)), "Buffer"),
+      TNode(Map("name" -> "AntiBuffer[2]", "id" -> (2: Integer)), "Buffer"),
+    )
+    val pipes = Seq(
+      TNode(Map("name" -> "Pipeline[0]", "id" -> (0: Integer), "serial" -> (false: lang.Boolean)), "Pipeline"),
+      TNode(Map("name" -> "Pipeline[1]", "id" -> (1: Integer), "serial" -> (true: lang.Boolean)), "Pipeline"),
+    )
+    val rels = Set(
+      TRel(bufs(0), asms(0), Map.empty, "HAS_REDUCER_ON_RHS"),
+      TRel(bufs(1), asms(0), Map.empty, "HAS_REDUCER"),
+      TRel(bufs(0), bufs(1), Map.empty, "DELEGATES_TO"),
+      TRel(bufs(1), pipes(0), Map.empty, "READ_BY"),
+      TRel(pipes(0), ops(2), Map("fused" -> (false: lang.Boolean)), "NEXT_OPERATOR"),
+      TRel(ops(2), bufs(2), Map("argumentSlotOffset" -> (-1: Integer)), "WRITES_TO"),
+      TRel(bufs(2), pipes(1), Map.empty, "READ_BY"),
+      TRel(pipes(1), ops(1), Map("fused" -> (false: lang.Boolean)), "NEXT_OPERATOR"),
+      TRel(ops(1), ops(0), Map("fused" -> (false: lang.Boolean)), "NEXT_OPERATOR"),
+      TRel(ops(1), asms(0), Map.empty, "USES_ASM"),
+      TRel(bufs(2), asms(0), Map.empty, "USES_ASM"),
+    )
+
+    assertPlanReturns(plan, ops, asms, bufs, pipes, rels)
+  }
+
   test("should return graph for fused single pipeline") {
     val plan = getExecutionPlan(new ExecutionGraphDefinitionBuilder()
       .produceResults("n")

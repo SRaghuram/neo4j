@@ -89,8 +89,10 @@ object ExecutionGraphVisualizer {
           bufs(id) = new VirtualNodeHack(Map("name" -> s"MrBuff[$id]", "id" -> (id: Integer)),  "Buffer")
         case ArgumentStateBufferVariant(_) =>
           bufs(id) = new VirtualNodeHack(Map("name" -> s"ArgumentStateBuffer[$id]", "id" -> (id: Integer)),  "Buffer")
-        case OptionalBufferVariant(_, _) =>
+        case OptionalBufferVariant(_, OptionalType) =>
           bufs(id) = new VirtualNodeHack(Map("name" -> s"OptionalBuffer[$id]", "id" -> (id: Integer)),  "Buffer")
+        case OptionalBufferVariant(_, AntiType) =>
+          bufs(id) = new VirtualNodeHack(Map("name" -> s"AntiBuffer[$id]", "id" -> (id: Integer)),  "Buffer")
         case AttachBufferVariant(_, _, argumentSlotOffset, _) =>
           bufs(id) = new VirtualNodeHack(Map("name" -> s"AttachBuffer[$id]", "id" -> (id: Integer), "argumentSlotOffset" -> (argumentSlotOffset: Integer)),  "Buffer")
       }
@@ -129,7 +131,9 @@ object ExecutionGraphVisualizer {
           rels += new VirtualRelationshipHack(bufs(id), asms(asmId), Map.empty, "USES_ASM")
         case ArgumentStateBufferVariant(ArgumentStateMapId(asmId)) =>
           rels += new VirtualRelationshipHack(bufs(id), asms(asmId), Map.empty, "USES_ASM")
-        case OptionalBufferVariant(ArgumentStateMapId(asmId), _) =>
+        case OptionalBufferVariant(ArgumentStateMapId(asmId), OptionalType) =>
+          rels += new VirtualRelationshipHack(bufs(id), asms(asmId), Map.empty, "USES_ASM")
+        case OptionalBufferVariant(ArgumentStateMapId(asmId), AntiType) =>
           rels += new VirtualRelationshipHack(bufs(id), asms(asmId), Map.empty, "USES_ASM")
         case AttachBufferVariant(applyBuffer, _, _, _) =>
           rels += new VirtualRelationshipHack(bufs(id), bufs(applyBuffer.id.x), Map.empty, "DELEGATES_TO")
