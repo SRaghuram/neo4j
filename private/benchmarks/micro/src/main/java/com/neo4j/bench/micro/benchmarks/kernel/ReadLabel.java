@@ -138,7 +138,7 @@ public class ReadLabel extends AbstractKernelBenchmark
         txState.read.singleNode( nodeId, txState.node );
 
         txState.node.next();
-        return txState.node.labels().numberOfLabels();
+        return txState.node.labels().numberOfTokens();
     }
 
     @Benchmark
@@ -152,9 +152,9 @@ public class ReadLabel extends AbstractKernelBenchmark
 
         txState.node.next();
         TokenSet nodeLabels = txState.node.labels();
-        for ( int i = 0; i < nodeLabels.numberOfLabels(); i++ )
+        for ( int i = 0; i < nodeLabels.numberOfTokens(); i++ )
         {
-            if ( nodeLabels.label( i ) == randomLabel )
+            if ( nodeLabels.token( i ) == randomLabel )
             {
                 return true;
             }
@@ -172,9 +172,9 @@ public class ReadLabel extends AbstractKernelBenchmark
 
         txState.node.next();
         TokenSet nodeLabels = txState.node.labels();
-        for ( int i = 0; i < nodeLabels.numberOfLabels(); i++ )
+        for ( int i = 0; i < nodeLabels.numberOfTokens(); i++ )
         {
-            if ( nodeLabels.label( i ) == txState.firstLabel )
+            if ( nodeLabels.token( i ) == txState.firstLabel )
             {
                 return true;
             }
@@ -192,9 +192,9 @@ public class ReadLabel extends AbstractKernelBenchmark
 
         txState.node.next();
         TokenSet nodeLabels = txState.node.labels();
-        for ( int i = 0; i < nodeLabels.numberOfLabels(); i++ )
+        for ( int i = 0; i < nodeLabels.numberOfTokens(); i++ )
         {
-            if ( nodeLabels.label( i ) == txState.lastLabel )
+            if ( nodeLabels.token( i ) == txState.lastLabel )
             {
                 return true;
             }

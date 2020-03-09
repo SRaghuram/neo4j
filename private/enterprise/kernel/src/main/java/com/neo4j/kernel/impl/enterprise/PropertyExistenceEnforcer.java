@@ -217,7 +217,7 @@ class PropertyExistenceEnforcer
             if ( nodeCursor.next() )
             {
                 labelIds = nodeCursor.labels();
-                if ( labelIds.numberOfLabels() == 0 )
+                if ( labelIds.numberOfTokens() == 0 )
                 {
                     return;
                 }
@@ -279,7 +279,7 @@ class PropertyExistenceEnforcer
     private void validateNodeProperties( long id, TokenSet labelIds, IntSet propertyKeyIds )
             throws NodePropertyExistenceException
     {
-        int numberOfLabels = labelIds.numberOfLabels();
+        int numberOfLabels = labelIds.numberOfTokens();
         if ( numberOfLabels > mandatoryNodePropertiesByLabel.size() )
         {
             for ( MutableLongIterator labels = mandatoryNodePropertiesByLabel.keySet().longIterator(); labels.hasNext(); )
@@ -295,7 +295,7 @@ class PropertyExistenceEnforcer
         {
             for ( int i = 0; i < numberOfLabels; i++ )
             {
-                final long label = labelIds.label( i );
+                final long label = labelIds.token( i );
                 int[] keys = mandatoryNodePropertiesByLabel.get( label );
                 if ( keys != null )
                 {
