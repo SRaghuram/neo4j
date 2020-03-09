@@ -143,6 +143,11 @@ class MutableNodeRecordData
         }
     }
 
+    boolean hasRelationships()
+    {
+        return !relationships.isEmpty();
+    }
+
     static class Relationship
     {
         // These two combined makes up the actual external relationship ID

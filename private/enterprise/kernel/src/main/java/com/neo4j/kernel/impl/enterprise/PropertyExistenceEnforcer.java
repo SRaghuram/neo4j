@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.function.Function;
 
 import org.neo4j.common.TokenNameLookup;
+import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.TokenSet;
 import org.neo4j.internal.kernel.api.NodeCursor;
@@ -201,7 +202,7 @@ class PropertyExistenceEnforcer
         }
 
         @Override
-        public void close()
+        public void close() throws KernelException
         {
             super.close();
             IOUtils.closeAllUnchecked( nodeCursor, relationshipCursor, propertyCursor );
