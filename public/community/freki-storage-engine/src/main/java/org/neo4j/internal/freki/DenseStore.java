@@ -340,8 +340,9 @@ class DenseStore extends LifecycleAdapter implements Closeable
                 return true;
             }
         };
+    }
 
-    }    EagerDegrees getDegrees( long nodeId, RelationshipSelection selection, PageCursorTracer cursorTracer )
+    EagerDegrees getDegrees( long nodeId, RelationshipSelection selection, PageCursorTracer cursorTracer )
     {
         try
         {

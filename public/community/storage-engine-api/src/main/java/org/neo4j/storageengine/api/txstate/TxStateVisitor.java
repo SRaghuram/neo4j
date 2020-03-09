@@ -73,7 +73,7 @@ public interface TxStateVisitor extends AutoCloseable
     void visitCreatedRelationshipTypeToken( long id, String name, boolean internal );
 
     @Override
-    void close();
+    void close() throws KernelException;
 
     class Adapter implements TxStateVisitor
     {
@@ -257,7 +257,7 @@ public interface TxStateVisitor extends AutoCloseable
         }
 
         @Override
-        public void close()
+        public void close() throws KernelException
         {
             actual.close();
         }

@@ -24,6 +24,7 @@ import org.eclipse.collections.api.set.primitive.LongSet;
 import java.util.function.LongConsumer;
 
 import org.neo4j.counts.CountsVisitor;
+import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.CountsDelta;
@@ -199,7 +200,7 @@ public class TransactionCountingStateVisitor extends TxStateVisitor.Delegator
     }
 
     @Override
-    public void close()
+    public void close() throws KernelException
     {
         super.close();
         closeAllUnchecked( nodeCursor );

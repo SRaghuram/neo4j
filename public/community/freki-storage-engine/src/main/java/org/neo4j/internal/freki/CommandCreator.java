@@ -40,6 +40,8 @@ import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.internal.freki.FrekiCommand.Mode;
 import org.neo4j.internal.freki.MutableNodeRecordData.Relationship;
+import org.neo4j.internal.kernel.api.exceptions.ConstraintViolationTransactionFailureException;
+import org.neo4j.internal.kernel.api.exceptions.DeletedNodeStillHasRelationships;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.io.pagecache.PageCursor;
@@ -61,11 +63,13 @@ import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFrom
 import static org.neo4j.internal.freki.PropertyUpdate.add;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.internal.helpers.collection.Iterators.loop;
+import static org.neo4j.storageengine.api.RelationshipSelection.ALL_RELATIONSHIPS;
 import static org.neo4j.storageengine.api.RelationshipSelection.selection;
 
 class CommandCreator implements TxStateVisitor
 {
     private final Collection<StorageCommand> bigValueCommands = new ArrayList<>();
+    private final Consumer<StorageCommand> bigValueCommandConsumer = bigValueCommands::add;
     private final Collection<StorageCommand> commands;
     private final Stores stores;
     private final PageCursorTracer cursorTracer;
@@ -214,10 +218,10 @@ class CommandCreator implements TxStateVisitor
     }
 
     @Override
-    public void close()
+    public void close() throws KernelException
     {
         List<StorageCommand> otherCommands = new ArrayList<>();
-        mutations.each( mutation ->
+        for ( Mutation mutation : mutations )
         {
             RecordAndData abandonedLargeRecord = null;
             while ( true )
@@ -260,7 +264,7 @@ class CommandCreator implements TxStateVisitor
             {
                 mutation.large.createCommands( otherCommands );
             }
-        } );
+        }
 
         commands.addAll( bigValueCommands );
         commands.addAll( otherCommands );
@@ -269,7 +273,7 @@ class CommandCreator implements TxStateVisitor
     private Mutation createNew( SimpleStore store, long id )
     {
         Mutation mutation = new Mutation();
-        mutation.small = new SparseRecordAndData( stores, store, id, null, bigValueCommands::add, cursorTracer );
+        mutation.small = new SparseRecordAndData( store, id, null );
         mutation.small.markInUse( true );
         mutation.small.markCreated();
         mutation.current = mutation.small;
@@ -282,7 +286,7 @@ class CommandCreator implements TxStateVisitor
         if ( mutation == null )
         {
             mutation = new Mutation();
-            mutation.small = new SparseRecordAndData( stores, stores.mainStore, nodeId, null, bigValueCommands::add, cursorTracer );
+            mutation.small = new SparseRecordAndData( stores.mainStore, nodeId, null );
             mutation.small.loadExistingData();
             mutation.current = mutation.small;
             long forwardPointer = mutation.small.getForwardPointer();
@@ -295,11 +299,11 @@ class CommandCreator implements TxStateVisitor
                     int fwSizeExp = sizeExponentialFromForwardPointer( forwardPointer );
                     long fwId = idFromForwardPointer( forwardPointer );
                     SimpleStore largeStore = stores.mainStore( fwSizeExp );
-                    mutation.large = new SparseRecordAndData( stores, largeStore, fwId, mutation.small, bigValueCommands::add, cursorTracer );
+                    mutation.large = new SparseRecordAndData( largeStore, fwId, mutation.small );
                 }
                 else
                 {
-                    mutation.large = new DenseRecordAndData( stores.denseStore, stores.bigPropertyValueStore, mutation.small, bigValueCommands::add );
+                    mutation.large = new DenseRecordAndData( mutation.small );
                 }
                 mutation.current = mutation.large;
                 mutation.current.loadExistingData();
@@ -342,7 +346,7 @@ class CommandCreator implements TxStateVisitor
 
         abstract void deleteRelationship( long internalId, int type, long otherNode, boolean outgoing );
 
-        abstract void prepareForCommandExtraction();
+        abstract void prepareForCommandExtraction() throws ConstraintViolationTransactionFailureException;
 
         abstract RecordAndData growAndRelocate();
 
@@ -351,13 +355,10 @@ class CommandCreator implements TxStateVisitor
         abstract void createCommands( Collection<StorageCommand> commands );
     }
 
-    private static class SparseRecordAndData extends RecordAndData
+    private class SparseRecordAndData extends RecordAndData
     {
-        private final MainStores stores;
         private final SimpleStore store;
         private final SparseRecordAndData smallRecord;
-        private final Consumer<StorageCommand> bigValueCommands;
-        private final PageCursorTracer cursorTracer;
 
         private boolean created;
         private Record before;
@@ -365,14 +366,10 @@ class CommandCreator implements TxStateVisitor
         // data here is really accidental state, a deserialized objectified version of the data found in the byte[] of the "after" record
         private MutableNodeRecordData data;
 
-        SparseRecordAndData( MainStores stores, SimpleStore store, long id, SparseRecordAndData smallRecord, Consumer<StorageCommand> bigValueCommands,
-                PageCursorTracer cursorTracer )
+        SparseRecordAndData( SimpleStore store, long id, SparseRecordAndData smallRecord )
         {
-            this.stores = stores;
             this.store = store;
             this.smallRecord = smallRecord != null ? smallRecord : this;
-            this.bigValueCommands = bigValueCommands;
-            this.cursorTracer = cursorTracer;
             int sizeExp = store.recordSizeExponential();
             before = new Record( sizeExp, id );
             after = new Record( sizeExp, id );
@@ -452,9 +449,15 @@ class CommandCreator implements TxStateVisitor
         }
 
         @Override
-        void prepareForCommandExtraction()
+        void prepareForCommandExtraction() throws ConstraintViolationTransactionFailureException
         {
-            data.serialize( after.dataForWriting(), stores.bigPropertyValueStore, bigValueCommands );
+            // Sanity-check so that, if this node has been deleted it cannot have any relationships left in it
+            if ( !after.hasFlag( FLAG_IN_USE ) && after.sizeExp() == 0 && data.hasRelationships() )
+            {
+                throw new DeletedNodeStillHasRelationships( after.id );
+            }
+
+            data.serialize( after.dataForWriting(), stores.bigPropertyValueStore, bigValueCommandConsumer );
             if ( data.id == -1 )
             {
                 acquireId();
@@ -468,14 +471,14 @@ class CommandCreator implements TxStateVisitor
             RecordAndData result;
             if ( largerStore != null )
             {
-                SparseRecordAndData largerRecord = new SparseRecordAndData( stores, largerStore, -1, smallRecord, bigValueCommands, cursorTracer );
+                SparseRecordAndData largerRecord = new SparseRecordAndData( largerStore, -1, smallRecord );
                 data.movePropertiesAndRelationshipsTo( largerRecord.data );
                 result = largerRecord;
             }
             else
             {
                 // Time to move over to GBPTree-style data
-                DenseRecordAndData denseRecord = new DenseRecordAndData( stores.denseStore, stores.bigPropertyValueStore, smallRecord, bigValueCommands );
+                DenseRecordAndData denseRecord = new DenseRecordAndData( smallRecord );
                 denseRecord.movePropertiesAndRelationshipsFrom( data );
                 result = denseRecord;
             }
@@ -503,13 +506,10 @@ class CommandCreator implements TxStateVisitor
         }
     }
 
-    private static class DenseRecordAndData extends RecordAndData
+    private class DenseRecordAndData extends RecordAndData
     {
         // meta
-        private final DenseStore store;
-        private final SimpleBigValueStore bigValueStore;
         private final SparseRecordAndData smallRecord;
-        private final Consumer<StorageCommand> bigValueCommands;
         private boolean created;
 
         // changes
@@ -517,12 +517,9 @@ class CommandCreator implements TxStateVisitor
         private MutableIntObjectMap<PropertyUpdate> propertyUpdates = IntObjectMaps.mutable.empty();
         private MutableIntObjectMap<DenseRelationships> relationshipUpdates = IntObjectMaps.mutable.empty();
 
-        DenseRecordAndData( DenseStore store, SimpleBigValueStore bigValueStore, SparseRecordAndData smallRecord, Consumer<StorageCommand> bigValueCommands )
+        DenseRecordAndData( SparseRecordAndData smallRecord )
         {
-            this.store = store;
-            this.bigValueStore = bigValueStore;
             this.smallRecord = smallRecord;
-            this.bigValueCommands = bigValueCommands;
         }
 
         private long nodeId()
@@ -547,7 +544,7 @@ class CommandCreator implements TxStateVisitor
         {
             if ( !inUse )
             {
-                store.loadAndRemoveNodeProperties( nodeId(), propertyUpdates );
+                stores.denseStore.loadAndRemoveNodeProperties( nodeId(), propertyUpdates );
             }
         }
 
@@ -573,7 +570,7 @@ class CommandCreator implements TxStateVisitor
         {
             return relationshipUpdates.getIfAbsentPutWithKey( type, t ->
             {
-                EagerDegrees degrees = store.getDegrees( nodeId(), selection( t, Direction.BOTH ), PageCursorTracer.NULL );
+                EagerDegrees degrees = stores.denseStore.getDegrees( nodeId(), selection( t, Direction.BOTH ), PageCursorTracer.NULL );
                 return new DenseRelationships( nodeId(), t,
                         degrees.rawOutgoingDegree( t ), degrees.rawIncomingDegree( t ), degrees.rawLoopDegree( t ) );
             } );
@@ -584,19 +581,42 @@ class CommandCreator implements TxStateVisitor
         {
             // TODO have some way of at least saying whether or not this relationship had properties, so that this loading can be skipped completely
             relationshipUpdatesForType( type ).delete( new DenseRelationships.DenseRelationship( internalId, otherNode, outgoing,
-                    store.loadRelationshipPropertiesForRemoval( nodeId(), internalId, type, otherNode, outgoing ) ) );
+                    stores.denseStore.loadRelationshipPropertiesForRemoval( nodeId(), internalId, type, otherNode, outgoing ) ) );
         }
 
         @Override
         void updateNodeProperties( Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
         {
-            store.prepareUpdateNodeProperties( nodeId(), added, changed, removed, bigValueCommands, propertyUpdates );
+            stores.denseStore.prepareUpdateNodeProperties( nodeId(), added, changed, removed, bigValueCommandConsumer, propertyUpdates );
         }
 
         @Override
-        void prepareForCommandExtraction()
+        void prepareForCommandExtraction() throws ConstraintViolationTransactionFailureException
         {
-            // Thoughts: no special preparation should be required here either
+            if ( !smallRecord.after.hasFlag( FLAG_IN_USE ) )
+            {
+                // This dense node has now been deleted, verify that all its relationships have also been removed in this transaction
+                // This is difficult to do efficiently, but we can at least compare degrees and see that an equal amount of deleted relationships
+                // exist in this transaction for this node.
+                if ( !allRelationshipsHaveBeenDeleted() )
+                {
+                    throw new DeletedNodeStillHasRelationships( nodeId() );
+                }
+            }
+        }
+
+        private boolean allRelationshipsHaveBeenDeleted()
+        {
+            EagerDegrees degrees = stores.denseStore.getDegrees( nodeId(), ALL_RELATIONSHIPS, cursorTracer );
+            for ( int type : degrees.types() )
+            {
+                DenseRelationships relationshipsOfType = relationshipUpdates.get( type );
+                if ( relationshipsOfType == null || relationshipsOfType.deleted.size() != degrees.totalDegree( type ) )
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         @Override
@@ -652,7 +672,7 @@ class CommandCreator implements TxStateVisitor
 
         ByteBuffer serializeValue( Value value )
         {
-            return CommandCreator.serializeValue( bigValueStore, value, bigValueCommands );
+            return CommandCreator.serializeValue( stores.bigPropertyValueStore, value, bigValueCommandConsumer );
         }
     }
 
