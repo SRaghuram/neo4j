@@ -9,7 +9,7 @@ import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 
 class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationCommandPlannerTestBase {
 
-  // Role privileges
+  // Role management privileges
 
   test("Grant show role") {
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -22,7 +22,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("GrantDbmsAction", "SHOW ROLE", "editor",
           dbmsPrivilegePlan("GrantDbmsAction", "SHOW ROLE", "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -39,7 +39,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     plan should include(
       logPlan(
         dbmsPrivilegePlan("DenyDbmsAction", "SHOW ROLE", "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -56,7 +56,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "SHOW ROLE", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "SHOW ROLE", "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
@@ -74,7 +74,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("GrantDbmsAction", "CREATE ROLE", "editor",
           dbmsPrivilegePlan("GrantDbmsAction", "CREATE ROLE", "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -91,7 +91,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     plan should include(
       logPlan(
         dbmsPrivilegePlan("DenyDbmsAction", "CREATE ROLE", "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -108,7 +108,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "CREATE ROLE", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "CREATE ROLE", "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
@@ -126,7 +126,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("GrantDbmsAction", "DROP ROLE", "editor",
           dbmsPrivilegePlan("GrantDbmsAction", "DROP ROLE", "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -143,7 +143,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     plan should include(
       logPlan(
         dbmsPrivilegePlan("DenyDbmsAction", "DROP ROLE", "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -160,7 +160,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "DROP ROLE", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "DROP ROLE", "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
@@ -178,7 +178,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("GrantDbmsAction", "ASSIGN ROLE", "editor",
           dbmsPrivilegePlan("GrantDbmsAction", "ASSIGN ROLE", "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -195,7 +195,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     plan should include(
       logPlan(
         dbmsPrivilegePlan("DenyDbmsAction", "ASSIGN ROLE", "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -212,7 +212,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "ASSIGN ROLE", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "ASSIGN ROLE", "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
@@ -230,7 +230,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("GrantDbmsAction", "REMOVE ROLE", "editor",
           dbmsPrivilegePlan("GrantDbmsAction", "REMOVE ROLE", "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -247,7 +247,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     plan should include(
       logPlan(
         dbmsPrivilegePlan("DenyDbmsAction", "REMOVE ROLE", "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -264,7 +264,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "REMOVE ROLE", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "REMOVE ROLE", "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
@@ -282,7 +282,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("GrantDbmsAction", "ROLE MANAGEMENT", "editor",
           dbmsPrivilegePlan("GrantDbmsAction", "ROLE MANAGEMENT", "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -299,7 +299,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     plan should include(
       logPlan(
         dbmsPrivilegePlan("DenyDbmsAction", "ROLE MANAGEMENT", "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -316,14 +316,14 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "ROLE MANAGEMENT", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "ROLE MANAGEMENT", "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
     )
   }
 
-  // User privileges
+  // User management privileges
 
   test("Grant show user") {
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -336,7 +336,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("GrantDbmsAction", "SHOW USER", "editor",
           dbmsPrivilegePlan("GrantDbmsAction", "SHOW USER", "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -353,7 +353,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     plan should include(
       logPlan(
         dbmsPrivilegePlan("DenyDbmsAction", "SHOW USER", "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -370,7 +370,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "SHOW USER", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "SHOW USER", "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
@@ -388,7 +388,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("GrantDbmsAction", "CREATE USER", "editor",
           dbmsPrivilegePlan("GrantDbmsAction", "CREATE USER", "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -405,7 +405,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     plan should include(
       logPlan(
         dbmsPrivilegePlan("DenyDbmsAction", "CREATE USER", "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -422,7 +422,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "CREATE USER", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "CREATE USER", "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
@@ -440,7 +440,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("GrantDbmsAction", "DROP USER", "editor",
           dbmsPrivilegePlan("GrantDbmsAction", "DROP USER", "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -457,7 +457,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     plan should include(
       logPlan(
         dbmsPrivilegePlan("DenyDbmsAction", "DROP USER", "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -474,7 +474,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "DROP USER", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "DROP USER", "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
@@ -492,7 +492,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("GrantDbmsAction", "ALTER USER", "editor",
           dbmsPrivilegePlan("GrantDbmsAction", "ALTER USER", "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -509,7 +509,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     plan should include(
       logPlan(
         dbmsPrivilegePlan("DenyDbmsAction", "ALTER USER", "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -526,7 +526,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "ALTER USER", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "ALTER USER", "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
@@ -544,7 +544,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("GrantDbmsAction", "USER MANAGEMENT", "editor",
           dbmsPrivilegePlan("GrantDbmsAction", "USER MANAGEMENT", "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -561,7 +561,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     plan should include(
       logPlan(
         dbmsPrivilegePlan("DenyDbmsAction", "USER MANAGEMENT", "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -578,12 +578,14 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "USER MANAGEMENT", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "USER MANAGEMENT", "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
     )
   }
+
+  // Database management privileges
 
   test("Grant create database") {
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -596,7 +598,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("GrantDbmsAction", "CREATE DATABASE", "editor",
           dbmsPrivilegePlan("GrantDbmsAction", "CREATE DATABASE", "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -613,7 +615,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     plan should include(
       logPlan(
         dbmsPrivilegePlan("DenyDbmsAction", "CREATE DATABASE", "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -630,7 +632,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "CREATE DATABASE", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "CREATE DATABASE", "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
@@ -648,7 +650,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("GrantDbmsAction", "DROP DATABASE", "editor",
           dbmsPrivilegePlan("GrantDbmsAction", "DROP DATABASE", "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -665,7 +667,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     plan should include(
       logPlan(
         dbmsPrivilegePlan("DenyDbmsAction", "DROP DATABASE", "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -682,7 +684,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "DROP DATABASE", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "DROP DATABASE", "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
@@ -700,7 +702,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("GrantDbmsAction", "DATABASE MANAGEMENT", "editor",
           dbmsPrivilegePlan("GrantDbmsAction", "DATABASE MANAGEMENT", "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -717,7 +719,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     plan should include(
       logPlan(
         dbmsPrivilegePlan("DenyDbmsAction", "DATABASE MANAGEMENT", "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -734,7 +736,217 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "DATABASE MANAGEMENT", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "DATABASE MANAGEMENT", "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  // Privilege management privileges
+
+  test("Grant show privilege") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN GRANT SHOW PRIVILEGE ON DBMS TO reader, editor").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("GrantDbmsAction", "SHOW PRIVILEGE", "editor",
+          dbmsPrivilegePlan("GrantDbmsAction", "SHOW PRIVILEGE", "reader",
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Deny show privilege") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN DENY SHOW PRIVILEGE ON DBMS TO reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("DenyDbmsAction", "SHOW PRIVILEGE", "reader",
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke show privilege") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN REVOKE SHOW PRIVILEGE ON DBMS FROM reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "SHOW PRIVILEGE", "reader",
+          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "SHOW PRIVILEGE", "reader",
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Grant assign privilege") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN GRANT ASSIGN PRIVILEGE ON DBMS TO reader, editor").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("GrantDbmsAction", "ASSIGN PRIVILEGE", "editor",
+          dbmsPrivilegePlan("GrantDbmsAction", "ASSIGN PRIVILEGE", "reader",
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Deny assign privilege") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN DENY ASSIGN PRIVILEGE ON DBMS TO reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("DenyDbmsAction", "ASSIGN PRIVILEGE", "reader",
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke assign privilege") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN REVOKE ASSIGN PRIVILEGE ON DBMS FROM reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "ASSIGN PRIVILEGE", "reader",
+          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "ASSIGN PRIVILEGE", "reader",
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Grant remove privilege") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN GRANT REMOVE PRIVILEGE ON DBMS TO reader, editor").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("GrantDbmsAction", "REMOVE PRIVILEGE", "editor",
+          dbmsPrivilegePlan("GrantDbmsAction", "REMOVE PRIVILEGE", "reader",
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Deny remove privilege") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN DENY REMOVE PRIVILEGE ON DBMS TO reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("DenyDbmsAction", "REMOVE PRIVILEGE", "reader",
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke remove privilege") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN REVOKE REMOVE PRIVILEGE ON DBMS FROM reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "REMOVE PRIVILEGE", "reader",
+          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "REMOVE PRIVILEGE", "reader",
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Grant privilege management") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN GRANT PRIVILEGE MANAGEMENT ON DBMS TO reader, editor").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("GrantDbmsAction", "PRIVILEGE MANAGEMENT", "editor",
+          dbmsPrivilegePlan("GrantDbmsAction", "PRIVILEGE MANAGEMENT", "reader",
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Deny privilege management") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN DENY PRIVILEGE MANAGEMENT ON DBMS TO reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("DenyDbmsAction", "PRIVILEGE MANAGEMENT", "reader",
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke privilege management") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN REVOKE PRIVILEGE MANAGEMENT ON DBMS FROM reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "PRIVILEGE MANAGEMENT", "reader",
+          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "PRIVILEGE MANAGEMENT", "reader",
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
