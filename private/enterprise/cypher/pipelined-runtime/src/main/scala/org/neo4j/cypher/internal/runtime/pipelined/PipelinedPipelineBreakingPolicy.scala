@@ -50,7 +50,6 @@ import org.neo4j.cypher.internal.logical.plans.Sort
 import org.neo4j.cypher.internal.logical.plans.Top
 import org.neo4j.cypher.internal.logical.plans.UndirectedRelationshipByIdSeek
 import org.neo4j.cypher.internal.logical.plans.UnwindCollection
-import org.neo4j.cypher.internal.logical.plans.ExpandAll
 import org.neo4j.cypher.internal.logical.plans.ExpandInto
 import org.neo4j.cypher.internal.logical.plans.MultiNodeIndexSeek
 import org.neo4j.cypher.internal.logical.plans.Union
@@ -58,11 +57,12 @@ import org.neo4j.cypher.internal.logical.plans.UpdatingPlan
 import org.neo4j.cypher.internal.logical.plans.VarExpand
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
 import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
 
 case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, interpretedPipesPolicy: InterpretedPipesFallbackPolicy) extends PipelineBreakingPolicy {
 
-  override def breakOn(lp: LogicalPlan): Boolean = {
+  override def breakOn(lp: LogicalPlan, outerApplyPlanId: Id): Boolean = {
 
     lp match {
       // leaf operators
@@ -85,9 +85,10 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, i
 
       // 1 child operators
       case e: OptionalExpand if e.mode == ExpandAll
-      => !canFuseOneChildOperator(e)
+      => !canFuseOneChildOperator(e, outerApplyPlanId)
 
       case _: Expand |
+           _: OptionalExpand |
            _: UnwindCollection |
            _: Sort |
            _: Top |
@@ -95,7 +96,7 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, i
            _: Optional |
            _: Anti |
            _: VarExpand
-      => !canFuseOneChildOperator(lp)
+      => !canFuseOneChildOperator(lp, outerApplyPlanId)
 
       case _: ProduceResult |
            _: Limit |
@@ -114,7 +115,7 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, i
       => true
 
       case plan =>
-        interpretedPipesPolicy.breakOn(plan) && !canFuseOneChildOperator(plan)
+        interpretedPipesPolicy.breakOn(plan) && !canFuseOneChildOperator(plan, outerApplyPlanId)
     }
   }
 
@@ -131,19 +132,19 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, i
    * `Expand` can't be fused and instead insert a pipeline break, whereas for `AllNodesScan -> Expand` we might be
    * able to fuse them together and don't have to insert a pipeline break.
    */
-  private def canFuseOneChildOperator(lp: LogicalPlan):Boolean = {
+  private def canFuseOneChildOperator(lp: LogicalPlan, outerApplyPlanId: Id): Boolean = {
     require(lp.rhs.isEmpty)
 
-    if (!fusionPolicy.canFuseOverPipeline(lp)) {
+    if (!fusionPolicy.canFuseOverPipeline(lp, outerApplyPlanId)) {
       return false
     }
     var current = lp.lhs.orNull
     while (current != null) {
-      if (!fusionPolicy.canFuse(current)) {
+      if (!fusionPolicy.canFuse(current, outerApplyPlanId)) {
         return false
       }
       //we made it all the way down to a pipeline break
-      if (breakOn(current)) {
+      if (breakOn(current, outerApplyPlanId)) {
         return true
       }
       current = current.lhs.orNull
@@ -155,7 +156,7 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, i
 /************************************************************************************
  * Policy that determines if a plan can be backed by an interpreted pull pipe or not.
  */
-sealed trait InterpretedPipesFallbackPolicy {
+trait InterpretedPipesFallbackPolicy {
   /**
    * True if the fallback only allows read-only plans
    */
@@ -280,6 +281,6 @@ object InterpretedPipesFallbackPolicy {
     }
   }
 
-  private def unsupported(thing: String): CantCompileQueryException =
+  def unsupported(thing: String): CantCompileQueryException =
     new CantCompileQueryException(s"Pipelined does not yet support the plans including `$thing`, use another runtime.")
 }

@@ -9,8 +9,10 @@ import java.lang
 
 import org.neo4j.cypher.internal.ExecutionPlan
 import org.neo4j.cypher.internal.logical.plans.Ascending
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphVisualizer.getExecutionPlan
 import org.neo4j.cypher.internal.runtime.TestSubscriber
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.graphdb.Node
 import org.neo4j.graphdb.Relationship
@@ -19,6 +21,7 @@ import org.neo4j.kernel.impl.util.DefaultValueMapper
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 import scala.collection.JavaConverters.mapAsScalaMapConverter
+import scala.collection.mutable.ArrayBuffer
 
 //noinspection ZeroIndexToHead
 class ExecutionGraphVisualizerTest extends CypherFunSuite {
@@ -187,12 +190,12 @@ class ExecutionGraphVisualizerTest extends CypherFunSuite {
   }
 
   test("should return graph for fused single pipeline") {
-    val plan = getExecutionPlan(new ExecutionGraphDefinitionBuilder()
+    val plan = getExecutionPlan(new ExecutionGraphDefinitionBuilder(fuseAllFactory)
       .produceResults("n")
       .filter("true")
       .expand("(n)--(m)").withBreak()
       .allNodeScan("n").withBreak()
-      .buildFused(readOnly = true, fusionEnabled = true, fusionOverPipelinesEnabled = true))
+      .build())
 
     val ops = Seq(
       TNode(Map("name" -> "ProduceResult", "id" -> (0: Integer)), "End", "Operator"),
@@ -455,4 +458,24 @@ class ExecutionGraphVisualizerTest extends CypherFunSuite {
 
   private def asTNode(node: Node): TNode = TNode(node.getAllProperties.asScala.toMap, node.getLabels.asScala.toSeq.map(_.name()): _*)
   private def asTRel(rel: Relationship): TRel = TRel(asTNode(rel.getStartNode), asTNode(rel.getEndNode), rel.getAllProperties.asScala.toMap, rel.getType.name())
+
+  val fuseAllFactory: OperatorFuserFactory =
+    (headPlanId: Id, inputSlotConfiguration: SlotConfiguration) =>
+      new OperatorFuser {
+        val plans = new ArrayBuffer[LogicalPlan]
+
+        override def fuseIn(plan: LogicalPlan): Boolean = {
+          plans += plan
+          true
+        }
+
+        override def fuseIn(output: OutputDefinition): Boolean =
+          output match {
+            case ProduceResultOutput(p) => fuseIn(p)
+            case ReduceOutput(_, p) => fuseIn(p)
+            case _ => false
+          }
+
+        override def fusedPlans: IndexedSeq[LogicalPlan] = plans
+      }
 }

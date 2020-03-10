@@ -88,7 +88,7 @@ class CallingThreadExecutingQueryTest extends CypherFunSuite {
 
   def getExecutingQuery(executionState: ExecutionState): CallingThreadExecutingQuery = {
     val executionGraphDefinition = ExecutionGraphDefinition(
-      null, null, null, Array(PipelineDefinition(PipelineId(0), PipelineId.NO_PIPELINE, PipelineId.NO_PIPELINE, null, null, null, null, null, serial = false)), null
+      null, null, null, Array(PipelineDefinition(PipelineId(0), PipelineId.NO_PIPELINE, PipelineId.NO_PIPELINE, null, null, null, null, serial = false)), null
     )
 
     new CallingThreadExecutingQuery(

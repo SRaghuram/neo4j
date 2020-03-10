@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.util.attribution.Id
 
 import scala.collection.mutable.ArrayBuffer
 
-class ExecutionGraphDefinitionBuilder()
+class ExecutionGraphDefinitionBuilder(operatorFuserFactory: OperatorFuserFactory = OperatorFuserFactory.NO_FUSION)
   extends AbstractLogicalPlanBuilder[ExecutionGraphDefinition, ExecutionGraphDefinitionBuilder](new NotImplementedTokenContext()) {
 
   private val plansToBreakOn = ArrayBuffer[Id]()
@@ -42,19 +42,15 @@ class ExecutionGraphDefinitionBuilder()
     this
   }
 
-  override def build(readOnly: Boolean = true): ExecutionGraphDefinition =
-    buildFused(readOnly, fusionEnabled = false, fusionOverPipelinesEnabled = false)
-
-  def buildFused(readOnly: Boolean, fusionEnabled: Boolean, fusionOverPipelinesEnabled: Boolean): ExecutionGraphDefinition = {
+  override def build(readOnly: Boolean = true): ExecutionGraphDefinition = {
     val logicalPlan = buildLogicalPlan()
     val breakingPolicy = PipelineBreakingPolicy.breakForIds(plansToBreakOn: _*)
-    val operatorFusionPolicy = OperatorFusionPolicy(fusionEnabled, fusionOverPipelinesEnabled)
     val physicalPlan = PhysicalPlanner.plan(tokenContext,
       logicalPlan,
       semanticTable,
       breakingPolicy,
       allocateArgumentSlots = true)
-    ExecutionGraphDefiner.defineFrom(breakingPolicy, operatorFusionPolicy, physicalPlan)
+    ExecutionGraphDefiner.defineFrom(breakingPolicy, operatorFuserFactory, physicalPlan)
   }
 }
 

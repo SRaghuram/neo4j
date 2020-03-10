@@ -637,7 +637,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
   }
 }
 
-// Used for innermost, e.g. to insert the `outputRow.moveToNextRow` of the start operator at the deepest nesting level
+// Used for innermost, e.g. to insert the `outputRow.next` of the start operator at the deepest nesting level
 // and also for providing demand operations
 class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
                                    var shouldCheckDemand: Boolean = false,

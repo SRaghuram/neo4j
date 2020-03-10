@@ -21,10 +21,11 @@ import org.neo4j.cypher.internal.logical.plans.UnwindCollection
 import org.neo4j.cypher.internal.logical.plans.ValueHashJoin
 import org.neo4j.cypher.internal.logical.plans.VarExpand
 import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy
+import org.neo4j.cypher.internal.util.attribution.Id
 
 object SlottedPipelineBreakingPolicy extends PipelineBreakingPolicy {
 
-  override def breakOn(lp: LogicalPlan): Boolean = {
+  override def breakOn(lp: LogicalPlan, outerApplyPlanId: Id): Boolean = {
 
     lp match {
       // leaf operators

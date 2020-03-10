@@ -294,16 +294,16 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           lazyTypes)(plan.id)
 
       case plans.VarExpand(_,
-      fromName,
-      dir,
-      projectedDir,
-      types,
-      toName,
-      relName,
-      length,
-      mode,
-      nodePredicate,
-      relationshipPredicate) =>
+                           fromName,
+                           dir,
+                           projectedDir,
+                           types,
+                           toName,
+                           relName,
+                           length,
+                           mode,
+                           nodePredicate,
+                           relationshipPredicate) =>
 
         val fromSlot = slots(fromName)
         val relOffset = slots.getReferenceOffsetFor(relName)
@@ -564,9 +564,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
     }
   }
 
-  // Overridden by test class
   // Returns Some new middle operator or None if the existing slotted pipe chain has been updated instead
-  protected def createMiddleOrUpdateSlottedPipeChain(plan: LogicalPlan, maybeSlottedPipeOperatorToChainOnTo: Option[SlottedPipeOperator]): Option[MiddleOperator] = {
+  private def createMiddleOrUpdateSlottedPipeChain(plan: LogicalPlan, maybeSlottedPipeOperatorToChainOnTo: Option[SlottedPipeOperator]): Option[MiddleOperator] = {
     val id = plan.id
     val slots = physicalPlan.slotConfigurations(id)
     generateSlotAccessorFunctions(slots)
@@ -604,7 +603,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException)
         interpretedPipesFallbackPolicy.breakOn(plan)
-        if (breakingPolicyForInterpretedPipesFallback.breakOn(plan)) {
+        if (breakingPolicyForInterpretedPipesFallback.breakOn(plan, physicalPlan.applyPlans(plan.id))) {
           // Plan is supported, but only as a head plan
           throw new CantCompileQueryException(s"Pipelined does not yet support using `$plan` as a fallback middle plan, use another runtime.")
         }
@@ -707,14 +706,14 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
     WorkIdentityMutableDescriptionImpl(plan.id, prefix, pipeDescription)
   }
 
-  protected def createSlottedPipeHeadOperator(plan: LogicalPlan): Operator = {
+  private def createSlottedPipeHeadOperator(plan: LogicalPlan): Operator = {
     val feedPipe = MorselFeedPipe()(Id.INVALID_ID)
     val pipe = slottedPipeBuilder.get.onOneChildPlan(plan, feedPipe)
     val workIdentity = workIdentityFromSlottedPipePlan("SlottedPipeHead", plan, pipe)
     new SlottedPipeHeadOperator(workIdentity, pipe)
   }
 
-  protected def createSlottedPipeMiddleOperator(plan: LogicalPlan, maybeSlottedPipeOperatorToChainOnTo: Option[SlottedPipeOperator]): Option[MiddleOperator] = {
+  private def createSlottedPipeMiddleOperator(plan: LogicalPlan, maybeSlottedPipeOperatorToChainOnTo: Option[SlottedPipeOperator]): Option[MiddleOperator] = {
     maybeSlottedPipeOperatorToChainOnTo match {
       case Some(slottedPipeOperator) =>
         // We chain the new pipe to the existing pipe in the previous operator

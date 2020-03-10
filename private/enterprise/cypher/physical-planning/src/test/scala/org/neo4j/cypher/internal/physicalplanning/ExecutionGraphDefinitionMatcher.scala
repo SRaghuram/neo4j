@@ -55,6 +55,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
 
   private case class MatchablePipeline(id: PipelineId,
                                        plans: Seq[Class[_ <: LogicalPlan]],
+                                       fusedPlans: Seq[Class[_ <: LogicalPlan]],
                                        inputBuffer: BufferId,
                                        outputDefinition: MatchableOutputDefinition,
                                        serial: Boolean)
@@ -215,8 +216,11 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
   }
 
   abstract class BufferBeforePipelineSequence(bufferDefinition: BufferDefinition) extends BufferSequence(bufferDefinition) {
-    def pipeline(id: Int, plans: Seq[Class[_ <: LogicalPlan]] = Seq.empty, serial: Boolean = false): PipelineSequence = {
-      val mp = pipelines.getOrElseUpdate(id, MatchablePipeline(PipelineId(id), plans, bufferDefinition.id, null, serial))
+    def pipeline(id: Int,
+                 plans: Seq[Class[_ <: LogicalPlan]] = Seq.empty,
+                 fusedPlans: Seq[Class[_ <: LogicalPlan]] = Seq.empty,
+                 serial: Boolean = false): PipelineSequence = {
+      val mp = pipelines.getOrElseUpdate(id, MatchablePipeline(PipelineId(id), plans, fusedPlans, bufferDefinition.id, null, serial))
       new PipelineSequence(mp)
     }
 
@@ -249,7 +253,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
       new MorselBufferSequence(bd)
     }
 
-    def argumentStateBuffer(id: Int, asmId: Int = -1, planId: Int = -1): ArgumentStateBufferSequence = {
+    def argumentStateBuffer(id: Int, asmId: Int = -1, planId: Int = -1, fusedOutput: Boolean = false): ArgumentStateBufferSequence = {
       val bd = buffers.getOrElseUpdate(id,
         BufferDefinition(
           BufferId(id),
@@ -258,8 +262,10 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
           NO_ARGUMENT_STATE_MAPS,
           NO_ARGUMENT_STATE_MAPS,
           ArgumentStateBufferVariant(ArgumentStateMapId(asmId)))(SlotConfiguration.empty))
-      val out = ReduceOutput(BufferId(id))
-      pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
+      pipelines(matchablePipeline.id.x) =
+        matchablePipeline.copy(outputDefinition =
+          if (fusedOutput) NoOutput
+          else ReduceOutput(BufferId(id)))
       new ArgumentStateBufferSequence(bd)
     }
 
@@ -369,6 +375,11 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = ProduceResultOutput)
       ExecutionGraphDefinitionMatcher.this
     }
+
+    def endFused: ExecutionGraphDefinitionMatcher = {
+      pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = NoOutput)
+      ExecutionGraphDefinitionMatcher.this
+    }
   }
 
   override def apply(graph: ExecutionGraphDefinition): MatchResult = {
@@ -386,8 +397,14 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
 
     val expectedPipelines = pipelines.values.toSeq.sortBy(_.id.x)
     val gotPipelines = graph.pipelines.map { got =>
+      val (interpretedHead, fusedHead) =
+        got.headPlan match {
+          case FusedHead(fuser) => (Nil, fuser.fusedPlans)
+          case InterpretedHead(plan) => (Seq(plan), Nil)
+        }
       MatchablePipeline(got.id,
-        (Seq(got.headPlan) ++ got.middlePlans ++ produceResult(got.outputDefinition)).map(_.getClass),
+        (interpretedHead ++ got.middlePlans ++ produceResult(got.outputDefinition)).map(_.getClass),
+        fusedHead.map(_.getClass),
         got.inputBuffer.id,
         out(got.outputDefinition),
         got.serial)

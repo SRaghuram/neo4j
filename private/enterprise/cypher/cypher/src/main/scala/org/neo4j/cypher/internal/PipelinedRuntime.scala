@@ -15,6 +15,8 @@ import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphVisualizer
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefiner
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
+import org.neo4j.cypher.internal.physicalplanning.FusedHead
+import org.neo4j.cypher.internal.physicalplanning.InterpretedHead
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanner
 import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
@@ -39,10 +41,11 @@ import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutablePipeline
-import org.neo4j.cypher.internal.runtime.pipelined.FuseOperators
+import org.neo4j.cypher.internal.runtime.pipelined.PipelineCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.InterpretedPipesFallbackPolicy
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorFactory
 import org.neo4j.cypher.internal.runtime.pipelined.PipelinedPipelineBreakingPolicy
+import org.neo4j.cypher.internal.runtime.pipelined.TemplateOperatorPolicy
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ExecutionGraphSchedulingPolicy
 import org.neo4j.cypher.internal.runtime.pipelined.execution.LazyScheduling
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ProfiledQuerySubscription
@@ -110,7 +113,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
         throw new CantCompileQueryException("Periodic commit is not supported by Pipelined runtime")
 
       val shouldFuseOperators = context.operatorEngine == CypherOperatorEngineOption.compiled
-      val operatorFusionPolicy = OperatorFusionPolicy(shouldFuseOperators, fusionOverPipelinesEnabled = !parallelExecution)
+      val operatorFusionPolicy = TemplateOperatorPolicy(shouldFuseOperators, fusionOverPipelinesEnabled = !parallelExecution, query.readOnly, parallelExecution)
 
       compilePlan(operatorFusionPolicy,
         query,
@@ -184,7 +187,16 @@ class PipelinedRuntime private(parallelExecution: Boolean,
     //=======================================================
 
     DebugLog.logDiff("PhysicalPlanner.plan")
-    val executionGraphDefinition = ExecutionGraphDefiner.defineFrom(breakingPolicy, operatorFusionPolicy, physicalPlan)
+    val executionGraphDefinition =
+      ExecutionGraphDefiner.defineFrom(
+        breakingPolicy,
+        operatorFusionPolicy.operatorFuserFactory(physicalPlan,
+                                                  context.tokenContext,
+                                                  query.readOnly,
+                                                  queryIndexRegistrator,
+                                                  parallelExecution,
+                                                  codeGenerationMode),
+        physicalPlan)
 
     if (context.debugOptions.contains("visualizepipelines")) {
       return ExecutionGraphVisualizer.getExecutionPlan(executionGraphDefinition)
@@ -209,7 +221,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
 
     DebugLog.logDiff("Scheduling")
     //=======================================================
-    val fuseOperators = new FuseOperators(operatorFactory, context.tokenContext, parallelExecution,
+    val fuseOperators = new PipelineCompiler(operatorFactory, context.tokenContext, parallelExecution,
       codeGenerationMode)
 
     try {
@@ -266,10 +278,10 @@ class PipelinedRuntime private(parallelExecution: Boolean,
         val nextOperatorFusionPolicy =
           if (operatorFusionPolicy.fusionOverPipelineEnabled)
           // Try again with fusion within pipeline enabled
-            OperatorFusionPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = false)
+            TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = false, query.readOnly, parallelExecution)
           else
           // Try again with fusion disabled
-            OperatorFusionPolicy(fusionEnabled = false, fusionOverPipelinesEnabled = false)
+            TemplateOperatorPolicy(fusionEnabled = false, fusionOverPipelinesEnabled = false, query.readOnly, parallelExecution)
 
         compilePlan(nextOperatorFusionPolicy, query, context, queryIndexRegistrator, warnings + warning)
     }
@@ -341,25 +353,26 @@ class PipelinedRuntime private(parallelExecution: Boolean,
     private def pipelineInfoForPlanInExecutionGraph(planId: Id): Option[PipelineInfo] = {
       // If this proves to be too costly we could maintain a map structure
       executionGraphDefinition.pipelines.foreach { pipeline =>
-        if (pipeline.fusedPlans.exists(_.id.x == planId.x)) {
-          return Some(PipelineInfo(pipeline.id.x, fused = true))
-        }
-        else if (pipeline.headPlan.id == planId) {
-          return Some(PipelineInfo(pipeline.id.x, fused = false))
-        }
-        else {
-          val middleIndex = pipeline.middlePlans.indexWhere(_.id.x == planId.x)
-          if (middleIndex >= 0) {
+        pipeline.headPlan match {
+          case InterpretedHead(plan) if plan.id == planId =>
             return Some(PipelineInfo(pipeline.id.x, fused = false))
-          } else {
-            pipeline.outputDefinition match {
-              case ProduceResultOutput(o) if o.id.x == planId.x =>
-                return Some(PipelineInfo(pipeline.id.x, fused = false))
 
-              case _ =>
+          case FusedHead(fuser) if fuser.fusedPlans.exists(_.id.x == planId.x) =>
+            return Some(PipelineInfo(pipeline.id.x, fused = true))
+
+          case _ =>
+            val middleIndex = pipeline.middlePlans.indexWhere(_.id.x == planId.x)
+            if (middleIndex >= 0) {
+              return Some(PipelineInfo(pipeline.id.x, fused = false))
+            } else {
+              pipeline.outputDefinition match {
+                case ProduceResultOutput(o) if o.id.x == planId.x =>
+                  return Some(PipelineInfo(pipeline.id.x, fused = false))
+
+                case _ =>
                 // Do nothing
+              }
             }
-          }
         }
       }
       None

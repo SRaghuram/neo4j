@@ -241,7 +241,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
           else argumentStack.top
           recordArgument(current, argument)
 
-          val slots = breakingPolicy.invoke(current, argument.slotConfiguration, argument.slotConfiguration)
+          val slots = breakingPolicy.invoke(current, argument.slotConfiguration, argument.slotConfiguration, applyPlans(current.id))
 
           allocateExpressions(current, nullable, slots, semanticTable)
           allocateLeaf(current, nullable, slots)
@@ -255,7 +255,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
 
           allocateExpressions(current, nullable, sourceSlots, semanticTable)
 
-          val slots = breakingPolicy.invoke(current, sourceSlots, argument.slotConfiguration)
+          val slots = breakingPolicy.invoke(current, sourceSlots, argument.slotConfiguration, applyPlans(current.id))
           allocateOneChild(current, nullable, sourceSlots, slots, recordArgument(_, argument), semanticTable)
           allocations.set(current.id, slots)
           resultStack.push(slots)
@@ -661,7 +661,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
       case _: CartesianProduct =>
         // A new pipeline is not strictly needed here unless we have batching/vectorization
         recordArgument(lp)
-        val result = breakingPolicy.invoke(lp, lhs, argument.slotConfiguration)
+        val result = breakingPolicy.invoke(lp, lhs, argument.slotConfiguration, applyPlans(lp.id))
         // For the implementation of the slotted pipe to use array copy
         // it is very important that we add the slots in the same order
         rhs.addAllSlotsInOrderTo(result, argument.argumentSize)
@@ -670,7 +670,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
       case RightOuterHashJoin(nodes, _, _) =>
         // A new pipeline is not strictly needed here unless we have batching/vectorization
         recordArgument(lp)
-        val result = breakingPolicy.invoke(lp, rhs, argument.slotConfiguration)
+        val result = breakingPolicy.invoke(lp, rhs, argument.slotConfiguration, applyPlans(lp.id))
 
         lhs.foreachSlotAndAliasesOrdered {
           case SlotWithKeyAndAliases(VariableSlotKey(key), slot, aliases) =>
@@ -691,7 +691,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
       case LeftOuterHashJoin(nodes, _, _) =>
         // A new pipeline is not strictly needed here unless we have batching/vectorization
         recordArgument(lp)
-        val result = breakingPolicy.invoke(lp, lhs, argument.slotConfiguration)
+        val result = breakingPolicy.invoke(lp, lhs, argument.slotConfiguration, applyPlans(lp.id))
 
         rhs.foreachSlotAndAliasesOrdered {
           case SlotWithKeyAndAliases(VariableSlotKey(key), slot, aliases) =>
@@ -712,7 +712,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
       case NodeHashJoin(nodes, _, _) =>
         // A new pipeline is not strictly needed here unless we have batching/vectorization
         recordArgument(lp)
-        val result = breakingPolicy.invoke(lp, lhs, argument.slotConfiguration)
+        val result = breakingPolicy.invoke(lp, lhs, argument.slotConfiguration, applyPlans(lp.id))
 
         rhs.foreachSlotAndAliasesOrdered {
           case SlotWithKeyAndAliases(VariableSlotKey(key), slot, aliases) =>
@@ -733,7 +733,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
       case _: ValueHashJoin =>
         // A new pipeline is not strictly needed here unless we have batching/vectorization
         recordArgument(lp)
-        val result = breakingPolicy.invoke(lp, lhs, argument.slotConfiguration)
+        val result = breakingPolicy.invoke(lp, lhs, argument.slotConfiguration, applyPlans(lp.id))
         // For the implementation of the slotted pipe to use array copy
         // it is very important that we add the slots in the same order
         rhs.foreachSlotAndAliasesOrdered({

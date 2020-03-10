@@ -143,23 +143,26 @@ object ExecutionGraphVisualizer {
     val pipes = mutable.Map[Int, VirtualNodeHack]()
 
     executionGraphDefinition.pipelines.foreach { pipeline =>
-      val PipelineDefinition(PipelineId(id), lhs, rhs, headPlan, fusedPlans, inputBuffer, outputDefinition, middlePlans, serial) = pipeline
+      val PipelineDefinition(PipelineId(id), lhs, rhs, headPlan, inputBuffer, outputDefinition, middlePlans, serial) = pipeline
       val pipe = new VirtualNodeHack(Map("name" -> s"Pipeline[$id]", "id" -> (id: Integer), "serial" -> (serial: lang.Boolean)), "Pipeline")
       pipes(id) = pipe
       rels += new VirtualRelationshipHack(bufs(inputBuffer.id.x), pipe, Map.empty, "READ_BY")
       // Operator chain
       var current = pipe
-      fusedPlans.foreach { fusedPlan =>
-        val next = ops(fusedPlan.id.x)
-        rels += new VirtualRelationshipHack(current, next, Map("fused" -> (true: lang.Boolean)), "NEXT_OPERATOR")
-        current = next
+      headPlan match {
+        case FusedHead(fuser) =>
+          fuser.fusedPlans.foreach { fusedPlan =>
+            val next = ops(fusedPlan.id.x)
+            rels += new VirtualRelationshipHack(current, next, Map("fused" -> (true: lang.Boolean)), "NEXT_OPERATOR")
+            current = next
+          }
+        case InterpretedHead(plan) if !plan.isInstanceOf[ProduceResult] =>
+          val next = ops(plan.id.x)
+          rels += new VirtualRelationshipHack(current, next, Map("fused" -> (false: lang.Boolean)), "NEXT_OPERATOR")
+          current = next
+
       }
-      // The head plan might be included in the fusedPlans are handled by the output. In these cases we skip here
-      if (!fusedPlans.contains(headPlan) && !headPlan.isInstanceOf[ProduceResult]) {
-        val next = ops(headPlan.id.x)
-        rels += new VirtualRelationshipHack(current, next, Map("fused" -> (false: lang.Boolean)), "NEXT_OPERATOR")
-        current = next
-      }
+
       middlePlans.foreach { middlePlan =>
         val next = ops(middlePlan.id.x)
         rels += new VirtualRelationshipHack(current, next, Map("fused" -> (false: lang.Boolean)), "NEXT_OPERATOR")

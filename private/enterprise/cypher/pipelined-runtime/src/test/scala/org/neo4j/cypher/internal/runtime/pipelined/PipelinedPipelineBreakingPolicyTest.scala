@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.cypher.CypherInterpretedPipesFallbackOption.disabled
 import org.neo4j.cypher.internal.compiler.helpers.LogicalPlanBuilder
-import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
 class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
@@ -17,11 +17,11 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
     val plan = given(_.expand("(x)-->(y)").allNodeScan("x"))
 
     // when
-    val policy = PipelinedPipelineBreakingPolicy(OperatorFusionPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true),
+    val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, readOnly = true, parallelExecution = false),
       InterpretedPipesFallbackPolicy(disabled, parallelExecution = false))
 
     //then
-    policy.breakOn(plan) shouldBe false
+    policy.breakOn(plan, Id.INVALID_ID) shouldBe false
   }
 
   test("should not fuse together scan and expand in parallel mode") {
@@ -29,11 +29,11 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
     val plan = given(_.expand("(x)-->(y)").allNodeScan("x"))
 
     // when
-    val policy = PipelinedPipelineBreakingPolicy(OperatorFusionPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = false),
+    val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = false, readOnly = true, parallelExecution = true),
       InterpretedPipesFallbackPolicy(disabled, parallelExecution = true))
 
     //then
-    policy.breakOn(plan) shouldBe true
+    policy.breakOn(plan, Id.INVALID_ID) shouldBe true
   }
 
   test("should not fuse expand over pipeline if head operator in pipeline is non-fusable") {
@@ -46,11 +46,11 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
       .allNodeScan("a"))
 
     // when
-    val policy = PipelinedPipelineBreakingPolicy(OperatorFusionPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true),
+    val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, readOnly = true, parallelExecution = false),
       InterpretedPipesFallbackPolicy(disabled, parallelExecution = false))
 
     //then
-    policy.breakOn(plan) shouldBe true
+    policy.breakOn(plan, Id.INVALID_ID) shouldBe true
   }
 
   test("should fuse expand over pipeline if head operator in pipeline is fusable") {
@@ -64,11 +64,11 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
       .allNodeScan("a"))
 
     // when
-    val policy = PipelinedPipelineBreakingPolicy(OperatorFusionPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true),
+    val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, readOnly = true, parallelExecution = false),
       InterpretedPipesFallbackPolicy(disabled, parallelExecution = false))
 
     //then
-    policy.breakOn(plan) shouldBe false
+    policy.breakOn(plan, Id.INVALID_ID) shouldBe false
   }
 
   private def given(subBuilder: LogicalPlanBuilder => LogicalPlanBuilder)= {

@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
+import org.neo4j.cypher.internal.logical.plans.Aggregation
 import org.neo4j.cypher.internal.logical.plans.AllNodesScan
 import org.neo4j.cypher.internal.logical.plans.Anti
 import org.neo4j.cypher.internal.logical.plans.Argument
@@ -12,10 +13,12 @@ import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
 import org.neo4j.cypher.internal.logical.plans.Expand
 import org.neo4j.cypher.internal.logical.plans.Limit
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NodeByLabelScan
 import org.neo4j.cypher.internal.logical.plans.NodeHashJoin
 import org.neo4j.cypher.internal.logical.plans.Optional
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
+import org.neo4j.cypher.internal.logical.plans.Projection
 import org.neo4j.cypher.internal.logical.plans.Selection
 import org.neo4j.cypher.internal.logical.plans.Sort
 import org.neo4j.cypher.internal.logical.plans.Union
@@ -26,7 +29,9 @@ import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
-class PipelineBuilderTest extends CypherFunSuite {
+import scala.collection.mutable.ArrayBuffer
+
+class ExecutionGraphDefinitionTest extends CypherFunSuite {
 
   test("should plan all node scan") {
     new ExecutionGraphDefinitionBuilder()
@@ -302,4 +307,112 @@ class PipelineBuilderTest extends CypherFunSuite {
       start(graph).morselBuffer(5).reducer(0)
     }
   }
+
+  test("should not fuse pipeline with single plan") {
+    new ExecutionGraphDefinitionBuilder(operatorFuserFactory(classOf[AllNodesScan]))
+      .produceResults("n")
+      .expand("(n)-[r]->(m)").withBreak()
+      .allNodeScan("n").withBreak()
+      .build() should plan {
+      start(newGraph)
+        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 2)
+        .delegateToMorselBuffer(1, 2)
+        .pipeline(0, Seq(classOf[AllNodesScan]), fusedPlans = Seq.empty)
+        .morselBuffer(2, 1)
+        .pipeline(1, Seq(classOf[Expand], classOf[ProduceResult]), serial = true)
+        .end
+    }
+  }
+
+  test("should fuse full pipeline, ending in produce results") {
+    new ExecutionGraphDefinitionBuilder(operatorFuserFactory(classOf[AllNodesScan], classOf[Selection], classOf[ProduceResult]))
+      .produceResults("n")
+      .filter("true")
+      .allNodeScan("n").withBreak()
+      .build() should plan {
+      start(newGraph)
+        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 2)
+        .delegateToMorselBuffer(1, 2)
+        .pipeline(0, Seq.empty, fusedPlans = Seq(classOf[AllNodesScan], classOf[Selection], classOf[ProduceResult]), serial = true)
+        .endFused
+    }
+  }
+
+  test("should fuse full pipeline, ending in aggregation") {
+    new ExecutionGraphDefinitionBuilder(operatorFuserFactory(classOf[AllNodesScan], classOf[Selection], classOf[Aggregation]))
+      .produceResults("count")
+      .aggregation(Seq.empty, Seq("count(*) AS count")).withBreak()
+      .filter("true")
+      .allNodeScan("n").withBreak()
+      .build() should plan {
+        val graph = newGraph
+        start(graph)
+          .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 3)
+          .delegateToMorselBuffer(1, 3)
+          .pipeline(0, Seq.empty, fusedPlans = Seq(classOf[AllNodesScan], classOf[Selection], classOf[Aggregation]))
+          .argumentStateBuffer(2, 0, 1, fusedOutput = true)
+          .pipeline(1, Seq(classOf[Aggregation], classOf[ProduceResult]), serial = true)
+          .end
+
+        start(graph).applyBuffer(0).reducerOnRHS(0, 1, TopLevelArgument.SLOT_OFFSET)
+        start(graph).morselBuffer(1).reducer(0)
+      }
+  }
+
+  test("should fuse partial pipeline, ending in produce results 1") {
+    new ExecutionGraphDefinitionBuilder(operatorFuserFactory(classOf[AllNodesScan], classOf[Selection], classOf[ProduceResult]))
+      .produceResults("x")
+      .projection("n AS x") // not fusable
+      .filter("true")
+      .allNodeScan("n").withBreak()
+      .build() should plan {
+      start(newGraph)
+        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 3)
+        .delegateToMorselBuffer(1, 3)
+        .pipeline(0, fusedPlans = Seq(classOf[AllNodesScan], classOf[Selection]), plans = Seq(classOf[Projection], classOf[ProduceResult]), serial = true)
+        .end
+    }
+  }
+
+  test("should fuse partial pipeline, ending in produce results 2") {
+    new ExecutionGraphDefinitionBuilder(operatorFuserFactory(classOf[AllNodesScan], classOf[Selection], classOf[ProduceResult]))
+      .produceResults("x")
+      .filter("true")
+      .projection("n AS x") // not fusable
+      .filter("true")
+      .allNodeScan("n").withBreak()
+      .build() should plan {
+      start(newGraph)
+        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 4)
+        .delegateToMorselBuffer(1, 4)
+        .pipeline(0, fusedPlans = Seq(classOf[AllNodesScan], classOf[Selection]), plans = Seq(classOf[Projection], classOf[Selection], classOf[ProduceResult]), serial = true)
+        .end
+    }
+  }
+
+  def operatorFuserFactory(fusablePlans: Class[_ <: LogicalPlan]*): OperatorFuserFactory =
+    new OperatorFuserFactory {
+      val fusable = fusablePlans.toSet
+      override def newOperatorFuser(headPlanId: Id,
+                                    inputSlotConfiguration: SlotConfiguration): OperatorFuser =
+        new OperatorFuser {
+          val plans = new ArrayBuffer[LogicalPlan]
+          override def fuseIn(plan: LogicalPlan): Boolean =
+            if (fusable.contains(plan.getClass)) {
+              plans += plan
+              true
+            } else {
+              false
+            }
+
+          override def fuseIn(output: OutputDefinition): Boolean =
+            output match {
+              case ProduceResultOutput(p) => fuseIn(p)
+              case ReduceOutput(_, p) => fuseIn(p)
+              case _ => false
+            }
+
+          override def fusedPlans: IndexedSeq[LogicalPlan] = plans
+        }
+    }
 }

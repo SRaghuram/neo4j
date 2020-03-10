@@ -35,8 +35,6 @@ object PipelineId {
  * @param lhs              The ID of the LHS pipeline of this pipeline, or NO_PIPELINE
  * @param rhs              The ID of the RHS pipeline of this pipeline, or NO_PIPELINE
  * @param headPlan         the first plan of the pipeline
- * @param fusedPlans       plans that can be fused together, contains head plan (if fuseable) and all consecutively fuseable middlePlans.
- *                         If a plan appears in the list of fuseable plans it will not appear in the list of middlePlans.
  * @param inputBuffer      The input buffer to the pipeline
  * @param outputDefinition The output of the pipeline
  * @param middlePlans      Contains all non-fused middle plans of the pipeline
@@ -45,8 +43,7 @@ object PipelineId {
 case class PipelineDefinition(id: PipelineId,
                               lhs: PipelineId,
                               rhs: PipelineId,
-                              headPlan: LogicalPlan,
-                              fusedPlans: IndexedSeq[LogicalPlan],
+                              headPlan: HeadPlan,
                               inputBuffer: BufferDefinition,
                               outputDefinition: OutputDefinition,
                               middlePlans: IndexedSeq[LogicalPlan],
