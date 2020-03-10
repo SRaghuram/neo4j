@@ -125,7 +125,7 @@ class TransactionBookmarkManagerTest
     private List<String> getGraphState( FabricBookmark fabricBookmark, Location graph )
     {
         List<FabricBookmark.GraphState> graphStates = fabricBookmark.getGraphStates().stream()
-                .filter( gs -> gs.getRemoteGraphId() == graph.getId() )
+                .filter( gs -> gs.getRemoteGraphId() == graph.getGraphId() )
                 .collect( Collectors.toList());
         assertEquals(1, graphStates.size());
         return graphStates.get( 0 ).getBookmarks().stream()

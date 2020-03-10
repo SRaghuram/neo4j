@@ -12,23 +12,31 @@ import org.neo4j.configuration.helpers.SocketAddress;
 
 public abstract class Location
 {
-    private final long id;
+    private final long graphId;
     private final String databaseName;
 
-    public Location( long id, String databaseName )
+    public Location( long graphId, String databaseName )
     {
-        this.id = id;
+        this.graphId = graphId;
         this.databaseName = databaseName;
     }
 
-    public long getId()
+    public long getGraphId()
     {
-        return id;
+        return graphId;
     }
 
     public String getDatabaseName()
     {
         return databaseName;
+    }
+
+    public static class Local extends Location
+    {
+        public Local( long id, String databaseName )
+        {
+            super( id, databaseName );
+        }
     }
 
     public static class Remote extends Location
@@ -65,14 +73,6 @@ public abstract class Location
         public int hashCode()
         {
             return Objects.hash( uri );
-        }
-    }
-
-    public static class Local extends Location
-    {
-        public Local( long id, String databaseName )
-        {
-            super( id, databaseName );
         }
     }
 

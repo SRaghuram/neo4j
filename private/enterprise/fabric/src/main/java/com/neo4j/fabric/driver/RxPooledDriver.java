@@ -49,7 +49,7 @@ class RxPooledDriver extends PooledDriver
         var transactionConfig = getTransactionConfig( transactionInfo );
         var rxResult = session.run( query, paramMap, transactionConfig );
 
-        return new StatementResultImpl( session, rxResult, location.getId() );
+        return new StatementResultImpl( session, rxResult, location.getGraphId() );
     }
 
     @Override

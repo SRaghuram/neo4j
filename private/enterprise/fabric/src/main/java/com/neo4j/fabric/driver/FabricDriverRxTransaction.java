@@ -54,7 +54,7 @@ class FabricDriverRxTransaction implements FabricDriverTransaction
     {
         var paramMap = (Map<String,Object>) parameterConverter.convertValue( params );
         var rxStatementResult = rxTransaction.run( query, paramMap );
-        return new StatementResultImpl( rxStatementResult, location.getId() );
+        return new StatementResultImpl( rxStatementResult, location.getGraphId() );
     }
 
     private static class StatementResultImpl extends AbstractRemoteStatementResult

@@ -7,6 +7,7 @@ package com.neo4j.fabric.executor;
 
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.eval.Catalog;
+import com.neo4j.fabric.eval.CatalogManager;
 import com.neo4j.fabric.eval.UseEvaluation;
 import com.neo4j.fabric.planning.FabricPlan;
 import com.neo4j.fabric.planning.FabricPlanner;
@@ -37,8 +38,6 @@ import org.neo4j.cypher.internal.CypherQueryObfuscator;
 import org.neo4j.cypher.internal.FullyParsedQuery;
 import org.neo4j.cypher.internal.ast.GraphSelection;
 import org.neo4j.exceptions.InvalidSemanticsException;
-import org.neo4j.cypher.internal.ast.UseGraph;
-import org.neo4j.exceptions.InvalidSemanticsException;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -59,16 +58,19 @@ public class FabricExecutor
     private final FabricConfig.DataStream dataStreamConfig;
     private final FabricPlanner planner;
     private final UseEvaluation useEvaluation;
+    private final CatalogManager catalogManager;
     private final Log log;
     private final FabricQueryMonitoring queryMonitoring;
     private final Executor fabricWorkerExecutor;
 
-    public FabricExecutor( FabricConfig config, FabricPlanner planner, UseEvaluation useEvaluation, LogProvider internalLog,
+    public FabricExecutor( FabricConfig config, FabricPlanner planner, UseEvaluation useEvaluation, CatalogManager catalogManager,
+                           LogProvider internalLog,
                            FabricQueryMonitoring queryMonitoring, Executor fabricWorkerExecutor )
     {
         this.dataStreamConfig = config.getDataStream();
         this.planner = planner;
         this.useEvaluation = useEvaluation;
+        this.catalogManager = catalogManager;
         this.log = internalLog.getLog( getClass() );
         this.queryMonitoring = queryMonitoring;
         this.fabricWorkerExecutor = fabricWorkerExecutor;
@@ -77,11 +79,13 @@ public class FabricExecutor
     public StatementResult run( FabricTransaction fabricTransaction, String queryString, MapValue queryParams )
     {
         Thread thread = Thread.currentThread();
-        FabricQueryMonitoring.QueryMonitor queryMonitor = queryMonitoring.queryMonitor( fabricTransaction.getTransactionInfo(), queryString, queryParams, thread );
+        FabricQueryMonitoring.QueryMonitor queryMonitor =
+                queryMonitoring.queryMonitor( fabricTransaction.getTransactionInfo(), queryString, queryParams, thread );
         queryMonitor.start();
 
         String defaultGraphName = fabricTransaction.getTransactionInfo().getDatabaseName();
         FabricPlanner.PlannerInstance plannerInstance = planner.instance( queryString, queryParams, defaultGraphName );
+        UseEvaluation.Instance useEvaluator = useEvaluation.instance( queryString );
         FabricPlan plan = plannerInstance.plan();
 
         queryMonitor.getMonitoredQuery().onObfuscatorReady( CypherQueryObfuscator.apply( plan.obfuscationMetadata() ) );
@@ -90,7 +94,7 @@ public class FabricExecutor
 
         if ( plan.debugOptions().logPlan() )
         {
-            log.debug( String.format( "Fabric fragments: %s", Fragment.pretty().asString( plan.query() ) ) );
+            log.debug( String.format( "Fabric plan: %s", Fragment.pretty().asString( plan.query() ) ) );
         }
         return fabricTransaction.execute(
                 ctx ->
@@ -98,20 +102,24 @@ public class FabricExecutor
                     FabricStatementExecution execution;
                     if ( plan.debugOptions().logRecords() )
                     {
-                        execution = new FabricLoggingStatementExecution( plan, plannerInstance, queryParams, accessMode, ctx, log, queryMonitor, dataStreamConfig );
+                        execution =
+                                new FabricLoggingStatementExecution( plan, plannerInstance, useEvaluator, queryParams, accessMode, ctx, log, queryMonitor,
+                                                                     dataStreamConfig );
                     }
                     else
                     {
-                        execution = new FabricStatementExecution( plan, plannerInstance, queryParams, accessMode, ctx, queryMonitor, dataStreamConfig );
+                        execution = new FabricStatementExecution( plan, plannerInstance, useEvaluator, queryParams, accessMode, ctx, queryMonitor,
+                                                                  dataStreamConfig );
                     }
                     return execution.run();
                 } );
     }
 
-    class FabricStatementExecution
+    private class FabricStatementExecution
     {
         private final FabricPlan plan;
         private final FabricPlanner.PlannerInstance plannerInstance;
+        private final UseEvaluation.Instance useEvaluator;
         private final MapValue queryParams;
         private final FabricTransaction.FabricExecutionContext ctx;
         private final MergedSummary mergedSummary;
@@ -122,6 +130,7 @@ public class FabricExecutor
         FabricStatementExecution(
                 FabricPlan plan,
                 FabricPlanner.PlannerInstance plannerInstance,
+                UseEvaluation.Instance useEvaluator,
                 MapValue queryParams,
                 AccessMode accessMode,
                 FabricTransaction.FabricExecutionContext ctx,
@@ -130,6 +139,7 @@ public class FabricExecutor
         {
             this.plan = plan;
             this.plannerInstance = plannerInstance;
+            this.useEvaluator = useEvaluator;
             this.queryParams = queryParams;
             this.ctx = ctx;
             this.mergedSummary = new MergedSummary( plan, accessMode );
@@ -166,7 +176,7 @@ public class FabricExecutor
         {
             if ( fragment instanceof Fragment.Init )
             {
-                return runInput( (Fragment.Init) fragment, argument );
+                return runInit( (Fragment.Init) fragment, argument );
             }
             else if ( fragment instanceof Fragment.Apply )
             {
@@ -186,7 +196,7 @@ public class FabricExecutor
             }
         }
 
-        Flux<Record> runInput( Fragment.Init input, Record argument )
+        Flux<Record> runInit( Fragment.Init input, Record argument )
         {
             return Flux.just( Records.empty() );
         }
@@ -196,7 +206,7 @@ public class FabricExecutor
             Flux<Record> input = run( apply.input(), null );
 
             return input.flatMap(
-                    record -> run( apply, record ).map( outputRecord -> Records.join( record, outputRecord ) ),
+                    record -> run( apply.inner(), record ).map( outputRecord -> Records.join( record, outputRecord ) ),
                     dataStreamConfig.getConcurrency(), 1
             );
         }
@@ -218,41 +228,46 @@ public class FabricExecutor
 
         Flux<Record> runLeaf( Fragment.Leaf leaf, Record argument )
         {
-            Flux<Record> input = run( leaf.input(), argument );
-
-            Map<String,AnyValue> argumentValues = argumentValues( leaf, argument);
-
-            FabricConfig.Graph graph = evalUse( leaf.use(), argumentValues );
-
+            Map<String,AnyValue> argumentValues = argumentValues( leaf, argument );
             MapValue parameters = addParamsFromRecord( queryParams, argumentValues, mapAsJavaMap( leaf.parameters() ) );
 
-            if ( isLocal( graph ) )
+            Catalog.Graph graph = evalUse( leaf.use(), argumentValues );
+            var transactionMode = getTransactionMode( leaf.queryType(), graph.toString() );
+            Location location = catalogManager.locationOf( graph, transactionMode.requiresWrite() );
+            if ( location instanceof Location.Local )
             {
+                Location.Local local = (Location.Local) location;
+                Flux<Record> input = run( leaf.input(), argument );
                 FabricQuery.LocalQuery localQuery = plannerInstance.asLocal( leaf );
-                return runLocalQueryAt( graph, localQuery.query(), parameters, input );
+                return runLocalQueryAt( local, transactionMode, localQuery.query(), parameters, input );
+            }
+            else if ( location instanceof Location.Remote )
+            {
+                Location.Remote remote = (Location.Remote) location;
+                FabricQuery.RemoteQuery remoteQuery = plannerInstance.asRemote( leaf );
+                return runRemoteQueryAt( remote, transactionMode, remoteQuery.query(), parameters );
             }
             else
             {
-                return null;
+                throw notImplemented( "Invalid graph location", location );
             }
         }
 
-        Flux<Record> runLocalQueryAt( FabricConfig.Graph graph, FullyParsedQuery query, MapValue parameters, Flux<Record> input )
+        Flux<Record> runLocalQueryAt( Location.Local location, TransactionMode transactionMode, FullyParsedQuery query, MapValue parameters,
+                                      Flux<Record> input )
         {
-            var location = new Location.Local( -1, localDatabaseName );
-            var transactionMode = getTransactionMode( location, query.queryType( ));
-            return ctx.getLocal().run( location, transactionMode, queryMonitor.getMonitoredQuery(), query, parameters, input ).records();
+            return ctx.getLocal()
+                      .run( location, transactionMode, queryMonitor.getMonitoredQuery(), query, parameters, input )
+                      .records();
         }
 
-        Flux<Record> runRemoteQueryAt( FabricConfig.Graph graph, String queryString, QueryType queryType, MapValue parameters )
+        Flux<Record> runRemoteQueryAt( Location.Remote location, TransactionMode transactionMode, String queryString, MapValue parameters )
         {
-            var uri = new Location.RemoteUri( graph.getUri().getScheme(), graph.getUri().getAddresses(), graph.getUri().getQuery() );
-            var location = new Location.Remote( graph.getId(), uri, graph.getDatabase() );
-            var transactionMode = getTransactionMode( location, queryType);
             Flux<Record> records = ctx.getRemote()
-                    .run( location, queryString, transactionMode, parameters )
-                    .flatMapMany( statementResult -> statementResult.records()
-                            .doOnComplete( () -> statementResult.summary().subscribe( this::updateSummary ) ) );
+                                      .run( location, queryString, transactionMode, parameters )
+                                      .flatMapMany( statementResult -> statementResult.records()
+                                                                                      .doOnComplete( () -> statementResult.summary().subscribe(
+                                                                                              this::updateSummary ) ) );
             // 'onComplete' signal coming from an inner stream might cause more data being requested from an upstream operator
             // and the request will be done using the thread that invoked 'onComplete'.
             // Since 'onComplete' is invoked by driver IO thread ( Netty event loop ), this might cause the driver thread to block
@@ -262,27 +277,14 @@ public class FabricExecutor
             return prefetcher.addPrefetch( recordsWithCompletionDelegation );
         }
 
-        private boolean isLocal(FabricConfig.Graph graph)
-        {
-            return true;
-        }
-
         private Map<String,AnyValue> argumentValues( Fragment fragment, Record argument )
         {
             return Records.asMap( argument, seqAsJavaList( fragment.argumentColumns() ) );
         }
 
-        private FabricConfig.Graph evalUse( GraphSelection selection, Map<String,AnyValue> record )
+        private Catalog.Graph evalUse( GraphSelection selection, Map<String,AnyValue> record )
         {
-            Catalog.Graph graph = useEvaluation.evaluate( plannerInstance.queryString(), selection, queryParams, record );
-            if ( graph instanceof Catalog.RemoteGraph )
-            {
-                return ((Catalog.RemoteGraph) graph).graph();
-            }
-            else
-            {
-                throw notImplemented( "Graph was not a ShardGraph", graph.toString() );
-            }
+            return useEvaluator.evaluate( selection, queryParams, record );
         }
 
         private MapValue addParamsFromRecord( MapValue params, Map<String,AnyValue> record, Map<String,String> bindings )
@@ -327,9 +329,9 @@ public class FabricExecutor
             }
         }
 
-        private RuntimeException notImplemented( String msg, Fragment fragment )
+        private RuntimeException notImplemented( String msg, Object object )
         {
-            return notImplemented( msg, fragment.toString() );
+            return notImplemented( msg, object.toString() );
         }
 
         private RuntimeException notImplemented( String msg, String info )
@@ -337,32 +339,36 @@ public class FabricExecutor
             return new InvalidSemanticsException( msg + ": " + info );
         }
 
-        private TransactionMode getTransactionMode( Location location, QueryType queryType )
+        private TransactionMode getTransactionMode( QueryType queryType, String graph )
         {
-            var effectiveMode = EffectiveQueryType.effectiveAccessMode( accessMode, queryType );
+            var queryMode = EffectiveQueryType.effectiveAccessMode( accessMode, queryType );
 
-            if ( accessMode == AccessMode.READ )
+            if ( accessMode == AccessMode.WRITE )
             {
-                if ( effectiveMode == AccessMode.WRITE )
+                if ( queryMode == AccessMode.WRITE )
                 {
-                    throw new FabricException( Status.Fabric.AccessMode, "Writing in read access mode not allowed. Attempted write to %s", location );
+                    return TransactionMode.DEFINITELY_WRITE;
                 }
-
-                return TransactionMode.DEFINITELY_READ;
-            }
-
-            if ( effectiveMode == AccessMode.WRITE )
-            {
-                return TransactionMode.DEFINITELY_WRITE;
+                else
+                {
+                    return TransactionMode.MAYBE_WRITE;
+                }
             }
             else
             {
-                return TransactionMode.MAYBE_WRITE;
+                if ( queryMode == AccessMode.WRITE )
+                {
+                    throw new FabricException( Status.Fabric.AccessMode, "Writing in read access mode not allowed. Attempted write to %s", graph );
+                }
+                else
+                {
+                    return TransactionMode.DEFINITELY_READ;
+                }
             }
         }
     }
 
-    class FabricLoggingStatementExecution extends FabricStatementExecution
+    private class FabricLoggingStatementExecution extends FabricStatementExecution
     {
         private final AtomicInteger step;
         private final Log log;
@@ -370,32 +376,33 @@ public class FabricExecutor
         FabricLoggingStatementExecution(
                 FabricPlan plan,
                 FabricPlanner.PlannerInstance plannerInstance,
-                MapValue params,
+                UseEvaluation.Instance useEvaluator, MapValue params,
                 AccessMode accessMode,
                 FabricTransaction.FabricExecutionContext ctx,
                 Log log,
                 FabricQueryMonitoring.QueryMonitor queryMonitor,
                 FabricConfig.DataStream dataStreamConfig )
         {
-            super( plan, plannerInstance, params, accessMode, ctx, queryMonitor, dataStreamConfig );
+            super( plan, plannerInstance, useEvaluator, params, accessMode, ctx, queryMonitor, dataStreamConfig );
             this.step = new AtomicInteger( 0 );
             this.log = log;
         }
 
         @Override
-        Flux<Record> runLocalQueryAt( FabricConfig.Graph graph, FullyParsedQuery query, MapValue parameters, Flux<Record> input )
+        Flux<Record> runLocalQueryAt( Location.Local location, TransactionMode transactionMode, FullyParsedQuery query, MapValue parameters,
+                                      Flux<Record> input )
         {
             String id = executionId();
-            trace( id, "local", compact( query.description() ) );
-            return traceRecords( id, super.runLocalQueryAt( graph, query, parameters, input ) );
+            trace( id, "local " + location.getGraphId(), compact( query.description() ) );
+            return traceRecords( id, super.runLocalQueryAt( location, transactionMode, query, parameters, input ) );
         }
 
         @Override
-        Flux<Record> runRemoteQueryAt( FabricConfig.Graph graph, String queryString, QueryType queryType, MapValue parameters )
+        Flux<Record> runRemoteQueryAt( Location.Remote location, TransactionMode transactionMode, String queryString, MapValue parameters )
         {
             String id = executionId();
-            trace( id, "remote " + graph.getId(), compact( queryString ) );
-            return traceRecords( id, super.runRemoteQueryAt( graph, queryString, queryType, parameters ) );
+            trace( id, "remote " + location.getGraphId(), compact( queryString ) );
+            return traceRecords( id, super.runRemoteQueryAt( location, transactionMode, queryString, parameters ) );
         }
 
         private String compact( String in )

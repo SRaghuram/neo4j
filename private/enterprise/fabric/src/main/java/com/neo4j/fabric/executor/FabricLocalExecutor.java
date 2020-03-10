@@ -82,14 +82,14 @@ public class FabricLocalExecutor
 
         private FabricKernelTransaction getOrCreateTx( Location.Local location, TransactionMode transactionMode, ExecutingQuery parentQuery )
         {
-            var existingTx = kernelTransactions.get( location.getId() );
+            var existingTx = kernelTransactions.get( location.getGraphId() );
             if ( existingTx != null )
             {
                 maybeUpgradeToWritingTransaction( existingTx, transactionMode );
                 return existingTx.fabricKernelTransaction;
             }
 
-            return kernelTransactions.computeIfAbsent( location.getId(), locationId ->
+            return kernelTransactions.computeIfAbsent( location.getGraphId(), locationId ->
             {
                 switch ( transactionMode )
                 {

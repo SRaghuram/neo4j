@@ -63,14 +63,14 @@ public class FabricRemoteExecutor
 
         private Mono<FabricDriverTransaction> getOrCreateTx( Location.Remote location, TransactionMode transactionMode )
         {
-            var existingTx = driverTransactions.get( location.getId() );
+            var existingTx = driverTransactions.get( location.getGraphId() );
             if ( existingTx != null )
             {
                 maybeUpgradeToWritingTransaction( existingTx, transactionMode );
                 return existingTx.driverTx;
             }
 
-            return driverTransactions.computeIfAbsent( location.getId(), locationId ->
+            return driverTransactions.computeIfAbsent( location.getGraphId(), locationId ->
             {
                 switch ( transactionMode )
                 {
@@ -123,7 +123,7 @@ public class FabricRemoteExecutor
 
         private PooledDriver getDriver( Location.Remote location )
         {
-            return usedDrivers.computeIfAbsent( location.getId(), gid -> driverPool.getDriver( location, transactionInfo.getLoginContext().subject() ) );
+            return usedDrivers.computeIfAbsent( location.getGraphId(), gid -> driverPool.getDriver( location, transactionInfo.getLoginContext().subject() ) );
         }
 
         private Mono<StatementResult> runInTx( Mono<FabricDriverTransaction> tx, String query, MapValue params )

@@ -8,6 +8,7 @@ package com.neo4j.fabric.eval
 import com.neo4j.fabric.config.FabricConfig
 import com.neo4j.fabric.util.Errors
 import com.neo4j.fabric.util.Errors.show
+import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.configuration.helpers.NormalizedGraphName
 import org.neo4j.cypher.internal.ast.CatalogName
 import org.neo4j.cypher.internal.util.InputPosition
@@ -20,9 +21,27 @@ object Catalog {
 
   sealed trait Entry
 
-  sealed trait Graph extends Entry
+  sealed trait Graph extends Entry {
+    def id: Long
+    def name: Option[String]
+  }
 
-  case class RemoteGraph(graph: FabricConfig.Graph) extends Graph
+  case class InternalGraph(
+    id: Long,
+    graphName: NormalizedGraphName,
+    databaseName: NormalizedDatabaseName
+  ) extends Graph {
+    def name: Option[String] = Some(graphName.name())
+    override def toString: String = s"internal graph $id" + name.map(n => s" ($n)")
+  }
+
+  case class ExternalGraph(
+    graph: FabricConfig.Graph
+  ) extends Graph {
+    def id: Long = graph.getId
+    def name: Option[String] = Option(graph.getName).map(_.name)
+    override def toString: String = s"external graph $id" + name.map(n => s" ($n)")
+  }
 
   trait View extends Entry {
     val arity: Int
@@ -52,30 +71,47 @@ object Catalog {
 
   case class Arg[T <: AnyValue](name: String, tpe: Class[T])
 
-  def fromConfig(config: FabricConfig): Catalog =
-    fromDatabase(config.getDatabase)
+  def create(config: FabricConfig, internalDatabases: Set[String]): Catalog = {
+    val fabricNamespace = config.getDatabase.getName.name()
+    val fabricGraphs = config.getDatabase.getGraphs.asScala.toSet
 
-  private def fromDatabase(database: FabricConfig.Database): Catalog = {
+    val external = asExternal(fabricGraphs)
+    val maxId = external.collect { case g: Catalog.Graph => g.id }.max
+    val internal = asInternal(maxId + 1, internalDatabases)
 
-    val namespace = database.getName.name
-    val graphs = database.getGraphs.asScala
+    val allGraphs = external ++ internal
+    val byId = byIdView(allGraphs, fabricNamespace)
+    val externalByName = byName(external, fabricNamespace)
+    val internalByName = byName(internal)
 
-    val byName = Catalog((for {
+    byId ++ externalByName ++ internalByName
+  }
+
+  private def asExternal(graphs: Set[FabricConfig.Graph]) = for {
+    graph <- graphs.toSeq
+  } yield ExternalGraph(graph)
+
+  private def asInternal(startId: Long, names: Set[String]) = for {
+    (name, id) <- names.toSeq.sorted.zip(Stream.iterate(startId)(_ + 1))
+    graphName = new NormalizedGraphName(name)
+    databaseName = new NormalizedDatabaseName(name)
+  } yield InternalGraph(id, graphName, databaseName)
+
+  private def byName(graphs: Seq[Catalog.Graph], namespace: String*): Catalog =
+    Catalog((for {
       graph <- graphs
-      name <- Option(graph.getName).map(_.name)
-    } yield CatalogName(namespace, name) -> RemoteGraph(graph)).toMap)
+      name <- graph.name
+      fqn = namespace :+ name
+    } yield CatalogName(fqn.toList) -> graph).toMap)
 
-    val byId = Catalog(Map(
-      CatalogName(namespace, "graph") -> View1(Arg("gid", classOf[IntegralValue]))(sid =>
-        RemoteGraph(graphs
-          .find(_.getId == sid.longValue())
-          .getOrElse(Errors.entityNotFound("Graph", show(sid)))
-        )
+  private def byIdView(lookupIn: Seq[Catalog.Graph], namespace: String): Catalog =
+    Catalog(Map(
+      CatalogName(namespace, "graph") -> View1(Arg("gid", classOf[IntegralValue]))(gid =>
+        lookupIn
+          .collectFirst { case g if g.id == gid.longValue() => g }
+          .getOrElse(Errors.entityNotFound("Graph", show(gid)))
       )
     ))
-
-    byName ++ byId
-  }
 }
 
 case class Catalog(entries: Map[CatalogName, Catalog.Entry]) {

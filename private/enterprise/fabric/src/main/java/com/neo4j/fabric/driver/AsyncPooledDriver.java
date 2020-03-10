@@ -50,7 +50,7 @@ public class AsyncPooledDriver extends PooledDriver
         var transactionConfig = getTransactionConfig( transactionInfo );
 
         var resultCursor = Mono.fromFuture( session.runAsync( query, paramMap, transactionConfig ).toCompletableFuture() );
-        return new StatementResultImpl( session, resultCursor, location.getId() );
+        return new StatementResultImpl( session, resultCursor, location.getGraphId() );
     }
 
     @Override

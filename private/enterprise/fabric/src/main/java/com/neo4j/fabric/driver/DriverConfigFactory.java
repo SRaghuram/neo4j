@@ -118,7 +118,7 @@ class DriverConfigFactory
 
     SecurityPlan createSecurityPlan( Location.Remote location )
     {
-        var graphDriverConfig = graphDriverConfigs.get( location.getId() );
+        var graphDriverConfig = graphDriverConfigs.get( location.getGraphId() );
 
         if ( sslPolicy == null || (graphDriverConfig != null && !graphDriverConfig.isSslEnabled()) )
         {
@@ -130,7 +130,7 @@ class DriverConfigFactory
 
     <T> T getProperty( Location.Remote location, Function<FabricConfig.DriverConfig,T> extractor )
     {
-        var graphDriverConfig = graphDriverConfigs.get( location.getId() );
+        var graphDriverConfig = graphDriverConfigs.get( location.getGraphId() );
 
         if ( graphDriverConfig != null )
         {

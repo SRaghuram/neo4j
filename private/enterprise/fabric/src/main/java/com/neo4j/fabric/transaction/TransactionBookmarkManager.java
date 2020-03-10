@@ -54,7 +54,7 @@ public class TransactionBookmarkManager
 
     public List<RemoteBookmark> getBookmarksForGraph( Location.Remote location )
     {
-        var bookmarkData = remoteGraphBookmarkData.get( location.getId() );
+        var bookmarkData = remoteGraphBookmarkData.get( location.getGraphId() );
 
         if ( bookmarkData != null )
         {
@@ -66,7 +66,7 @@ public class TransactionBookmarkManager
 
     public void recordBookmarkReceivedFromGraph( Location.Remote location, RemoteBookmark bookmark )
     {
-        var bookmarkData = remoteGraphBookmarkData.computeIfAbsent( location.getId(), g -> new GraphBookmarkData() );
+        var bookmarkData = remoteGraphBookmarkData.computeIfAbsent( location.getGraphId(), g -> new GraphBookmarkData() );
         bookmarkData.bookmarkReceivedFromGraph = bookmark;
     }
 

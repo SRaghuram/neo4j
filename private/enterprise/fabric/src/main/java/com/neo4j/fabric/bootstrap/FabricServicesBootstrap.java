@@ -8,7 +8,8 @@ package com.neo4j.fabric.bootstrap;
 import com.neo4j.fabric.auth.CredentialsProvider;
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.driver.DriverPool;
-import com.neo4j.fabric.eval.Catalog;
+import com.neo4j.fabric.eval.CatalogManager;
+import com.neo4j.fabric.eval.SingleCatalogManager;
 import com.neo4j.fabric.eval.UseEvaluation;
 import com.neo4j.fabric.executor.FabricExecutor;
 import com.neo4j.fabric.executor.FabricLocalExecutor;
@@ -22,10 +23,13 @@ import com.neo4j.fabric.transaction.TransactionManager;
 
 import java.time.Clock;
 import java.util.concurrent.Executor;
+import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.cypher.internal.CypherConfiguration;
+import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -57,6 +61,8 @@ public class FabricServicesBootstrap
 
         if ( fabricConfig.isEnabled() )
         {
+            Supplier<DatabaseManager<DatabaseContext>> databaseManagerProvider = () ->
+                    (DatabaseManager<DatabaseContext>) dependencies.resolveDependency( DatabaseManager.class );
             var jobScheduler = dependencies.resolveDependency( JobScheduler.class );
             var monitors = dependencies.resolveDependency( Monitors.class );
             var proceduresSupplier = dependencies.provideDependency( GlobalProcedures.class );
@@ -76,18 +82,19 @@ public class FabricServicesBootstrap
                     .registerService( new TransactionManager( dependencies ), TransactionManager.class );
 
             var cypherConfig = CypherConfiguration.fromConfig( config );
-            var catalog = Catalog.fromConfig( fabricConfig );
+            var catalogManager = serviceBootstrapper
+                    .registerService( new SingleCatalogManager( databaseManagerProvider, fabricConfig ), CatalogManager.class );
             var signatureResolver = new SignatureResolver( proceduresSupplier );
             var monitoring = new FabricQueryMonitoring( dependencies, monitors );
             var planner = serviceBootstrapper
                     .registerService( new FabricPlanner( fabricConfig, cypherConfig, monitors, signatureResolver ), FabricPlanner.class );
             var useEvaluation = serviceBootstrapper
-                    .registerService( new UseEvaluation( catalog, proceduresSupplier, signatureResolver ), UseEvaluation.class );
+                    .registerService( new UseEvaluation( catalogManager, proceduresSupplier, signatureResolver ), UseEvaluation.class );
 
             FabricReactorHooks.register( internalLogProvider );
 
             Executor fabricWorkerExecutor = jobScheduler.executor( FABRIC_WORKER );
-            var fabricExecutor = new FabricExecutor( fabricConfig, planner, useEvaluation, internalLogProvider, monitoring, fabricWorkerExecutor );
+            var fabricExecutor = new FabricExecutor( fabricConfig, planner, useEvaluation, catalogManager, internalLogProvider, monitoring, fabricWorkerExecutor );
             serviceBootstrapper.registerService( fabricExecutor, FabricExecutor.class );
         }
     }

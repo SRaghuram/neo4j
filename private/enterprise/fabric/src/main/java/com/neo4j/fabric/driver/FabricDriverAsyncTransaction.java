@@ -54,7 +54,7 @@ class FabricDriverAsyncTransaction implements FabricDriverTransaction
     {
         var paramMap = (Map<String,Object>) parameterConverter.convertValue( params );
         var statementResultCursor = Mono.fromFuture( asyncTransaction.runAsync( query, paramMap ).toCompletableFuture() );
-        return new StatementResultImpl( statementResultCursor, location.getId() );
+        return new StatementResultImpl( statementResultCursor, location.getGraphId() );
     }
 
     private static class StatementResultImpl extends AbstractRemoteStatementResult

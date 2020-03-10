@@ -13,15 +13,27 @@ public enum TransactionMode
     /**
      * The current statement is a read, but a write statement might be coming later.
      */
-    MAYBE_WRITE,
+    MAYBE_WRITE(true),
 
     /**
      * The current statement is a write.
      */
-    DEFINITELY_WRITE,
+    DEFINITELY_WRITE(true),
 
     /**
      * The current statement is a read and no write statement will follow.
      */
-    DEFINITELY_READ
+    DEFINITELY_READ(true);
+
+    private final boolean requiresWrite;
+
+    TransactionMode( boolean requiresWrite )
+    {
+        this.requiresWrite = requiresWrite;
+    }
+
+    public boolean requiresWrite()
+    {
+        return requiresWrite;
+    }
 }

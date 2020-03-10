@@ -63,6 +63,7 @@ object Fragment {
   ) extends Fragment.Segment {
     val parameters: Map[String, String] = importColumns.map(varName => varName -> Columns.paramName(varName)).toMap
     val description: Fragment.Description = Description.LeafDesc(this)
+    val queryType: QueryType = QueryType.of(clauses)
   }
 
   final case class Union(
