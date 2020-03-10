@@ -322,8 +322,8 @@ class ParallelRuntimeSemiApplyTest extends SemiApplyTestBase(FUSING, PARALLEL, S
 class ParallelRuntimeSemiApplyNoFusingTest extends SemiApplyTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 
 // ANTI SEMI APPLY
-//class ParallelAntiSemiApplyTest extends AntiSemiApplyTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
-//class ParallelAntiSemiApplyNoFusingTest extends AntiSemiApplyTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelAntiSemiApplyTest extends AntiSemiApplyTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelAntiSemiApplyNoFusingTest extends AntiSemiApplyTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 
 // GENERAL
 class ParallelRuntimeMiscTest extends MiscTestBase(FUSING, PARALLEL) with ParallelRuntimeSpecSuite
