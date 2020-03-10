@@ -99,20 +99,29 @@ class LogicalPlanFuzzTesting extends CypherFunSuite {
         runtime => Try(runtimeTestSupport.executeAndConsumeTransactionally(logicalQuery, runtime, parameters))
       }
 
-      results.zipWithIndex.tail.foreach {
-        case (Success(result), i) =>
-          withClue(s"Comparing ${runtimes(i).name} against ${runtimes.head.name}") {
+      results.zip(runtimes).foreach {
+        case (Failure(_: CantCompileQueryException), _) => // OK
+        case (Failure(e), runtime) =>
+          withClue(s"Error in ${runtime.name}") {
+            fail(e)
+          }
+        case (Success(_), _) => // checking `Failure`s first
+      }
+
+      val referenceResult = results.head
+
+      results.zip(runtimes).tail.foreach {
+        case (Success(result), runtime) if referenceResult.isSuccess =>
+          withClue(s"Comparing ${runtime.name} against ${runtimes.head.name}") {
             println(s"result.size = ${result.size}")
             if (result.size <= 1000)
-              result should (contain theSameElementsAs results.head.get)
+              result should (contain theSameElementsAs referenceResult.get)
             else
               println(s"skipping check")
           }
-        case (Failure(_: CantCompileQueryException), _) => // OK
-        case (Failure(e), i) =>
-          withClue(s"Error in ${runtimes(i).name}") {
-            throw e
-          }
+        case (Success(_), runtime) if referenceResult.isFailure =>
+          fail(s"Failed in ${runtimes.head.name}, but succeded in ${runtime.name}", referenceResult.failed.get)
+        case (Failure(_), _) => // already checked
       }
     } finally {
       runtimeTestSupport.stopTx()
