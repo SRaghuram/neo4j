@@ -179,12 +179,16 @@ public interface StorageEngineFactory
         return Services.loadAll( StorageEngineFactory.class );
     }
 
-    static StorageEngineFactory selectStorageEngine( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache )
+    /**
+     * @return the first {@link StorageEngineFactory} that says yes when asked about
+     * {@link StorageEngineFactory#storageExists(FileSystemAbstraction, DatabaseLayout, PageCache)} for the given {@code databaseLayout}.
+     * If there's no store there or none of the factories can see or load it then the {@code defaultFactory} will be returned.
+     */
+    static StorageEngineFactory selectStorageEngine( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache,
+            StorageEngineFactory defaultFactory )
     {
         Collection<StorageEngineFactory> storageEngineFactories = allAvailableStorageEngines();
-        Optional<StorageEngineFactory> first =
-                storageEngineFactories.stream().filter( engine -> engine.storageExists( fs, databaseLayout, pageCache ) ).findFirst();
-        return first.orElseGet( () -> selectDefaultStorageEngine( storageEngineFactories ) );
+        return storageEngineFactories.stream().filter( engine -> engine.storageExists( fs, databaseLayout, pageCache ) ).findFirst().orElse( defaultFactory );
     }
 
     static StorageEngineFactory selectDefaultStorageEngine( Collection<StorageEngineFactory> storageEngineFactories )

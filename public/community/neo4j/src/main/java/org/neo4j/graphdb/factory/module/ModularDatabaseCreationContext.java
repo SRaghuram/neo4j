@@ -71,6 +71,9 @@ import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.time.SystemNanoClock;
 import org.neo4j.token.TokenHolders;
 
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngine;
+
 public class ModularDatabaseCreationContext implements DatabaseCreationContext
 {
     private final NamedDatabaseId namedDatabaseId;
@@ -169,16 +172,25 @@ public class ModularDatabaseCreationContext implements DatabaseCreationContext
             return defaultStorageEngineFactory;
         }
 
-        if ( globalConfig.get( GraphDatabaseSettings.force_freki ) )
-        {
-            return StorageEngineFactory.selectStorageEngine( "Freki" );
-        }
+        // Priority of storage engine factory selection:
+        // 1. Does a store exist at this location (database layout)? - if so get the one able to load it
+        // 2. Is there a specific storage engine preference for creating new stores?
+        // 3. Does the database name give some hint about which storage engine to use?
+        // 4. Use the default one
+        String forcedStorageEngineName = globalConfig.get( GraphDatabaseSettings.storage_engine );
+        StorageEngineFactory defaultFactory = isNotEmpty( forcedStorageEngineName )
+                                              ? selectStorageEngine( forcedStorageEngineName )
+                                              : storageEngineFactoryByDatabaseName( defaultStorageEngineFactory, namedDatabaseId );
+        return selectStorageEngine( fs, databaseLayout, pageCache, defaultFactory );
+    }
 
+    private static StorageEngineFactory storageEngineFactoryByDatabaseName( StorageEngineFactory defaultStorageEngineFactory, NamedDatabaseId namedDatabaseId )
+    {
         int dotIndex = namedDatabaseId.name().indexOf( '.' );
         if ( dotIndex >= 0 )
         {
             String prefix = namedDatabaseId.name().substring( 0, dotIndex );
-            return StorageEngineFactory.selectStorageEngine( prefix );
+            return selectStorageEngine( prefix );
         }
         return defaultStorageEngineFactory;
     }
