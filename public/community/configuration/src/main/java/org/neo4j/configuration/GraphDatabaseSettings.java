@@ -1218,9 +1218,11 @@ public class GraphDatabaseSettings implements SettingsDeclaration
     public static final Setting<Boolean> consistency_check_on_apply =
             newBuilder( "unsupported.dbms.storage.consistency_check_on_apply", BOOL, Boolean.FALSE ).build();
 
+    @Description( "Name of storage engine to use when creating new databases (except system database). If null or empty string then a default will be used." +
+            "This setting will not be used for loading existing databases, where instead the appropriate storage engine for the specific database " +
+            "will be used" )
     @Internal
-    public static final Setting<Boolean> force_freki =
-            newBuilder( "unsupported.dbms.force_freki_storage_engine", BOOL, Boolean.TRUE ).build();
+    public static final Setting<String> storage_engine = newBuilder( "unsupported.dbms.storage_engine", STRING, "Freki" ).build();
 
     /**
      * Default settings for connectors. The default values are assumes to be default for embedded deployments through the code.

@@ -40,12 +40,12 @@ public class MigrateDataIntoOtherDatabase
         File fromHome = new File( args[0] );
         File toHome = new File( args[1] );
         DatabaseManagementService fromDbms = new EnterpriseDatabaseManagementServiceBuilder( fromHome )
-                .setConfig( GraphDatabaseSettings.force_freki, false )
+                .setConfig( GraphDatabaseSettings.storage_engine, "" )
                 .build();
         DatabaseManagementService toDbms = new EnterpriseDatabaseManagementServiceBuilder( toHome )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false )
                 .setConfig( GraphDatabaseSettings.default_database, DB_NAME )
-                .setConfig( GraphDatabaseSettings.force_freki, true )
+                .setConfig( GraphDatabaseSettings.storage_engine, "Freki" )
                 .build();
         try
         {
