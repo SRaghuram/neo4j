@@ -5,6 +5,7 @@
  */
 package com.neo4j;
 
+import com.neo4j.fabric.eval.CatalogManager;
 import com.neo4j.fabric.eval.UseEvaluation;
 import com.neo4j.fabric.localdb.FabricDatabaseManager;
 import org.junit.jupiter.api.AfterEach;
@@ -192,14 +193,14 @@ class FabricDatabaseManagementTest
         }
 
         GlobalProcedures procedures = testServer.getDependencies().resolveDependency( GlobalProcedures.class );
-        UseEvaluation useEvaluation = testServer.getDependencies().resolveDependency( UseEvaluation.class );
+        CatalogManager catalogManager = testServer.getDependencies().resolveDependency( CatalogManager.class );
 
         assertNotNull(
                 procedures.function( new QualifiedName( List.of( "mega" ), "graphIds" ) )
         );
 
         assertNotNull(
-                useEvaluation.catalog().resolve( CatalogName.apply( seq( "mega", "graph" ) ), seq( Values.longValue( 0 ) ) )
+                catalogManager.currentCatalog().resolve( CatalogName.apply( seq( "mega", "graph" ) ), seq( Values.longValue( 0 ) ) )
         );
 
         stopServer();

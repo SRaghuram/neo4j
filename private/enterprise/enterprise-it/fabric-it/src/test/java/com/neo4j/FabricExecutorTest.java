@@ -169,8 +169,8 @@ class FabricExecutorTest
     private void mockDriverPool( PooledDriver graph0, PooledDriver graph1 )
     {
         reset( driverPool );
-        doReturn( graph0 ).when( driverPool ).getDriver( argThat( g -> g.getId() == 0 ), any() );
-        doReturn( graph1 ).when( driverPool ).getDriver( argThat( g -> g.getId() == 1 ), any() );
+        doReturn( graph0 ).when( driverPool ).getDriver( argThat( g -> g.getGraphId() == 0 ), any() );
+        doReturn( graph1 ).when( driverPool ).getDriver( argThat( g -> g.getGraphId() == 1 ), any() );
     }
 
     private PooledDriver createMockDriver( AutoCommitStatementResult mockStatementResult )
@@ -504,38 +504,30 @@ class FabricExecutorTest
 
             assertThat( summary.hasPlan(), is( true ) );
             Plan plan = summary.plan();
-            assertThat( plan.operatorType(), is( "ChainedQuery" ) );
+            assertThat( plan.operatorType(), is( "Leaf" ) );
             assertThat( plan.identifiers(), contains( "y", "x" ) );
-            assertThat( plan.children().size(), is( 3 ) );
+            assertThat( plan.children().size(), is( 1 ) );
 
             Plan c0 = plan.children().get( 0 );
             assertThat( c0.operatorType(), is( "Apply" ) );
-            assertThat( c0.identifiers(), containsInAnyOrder( "x" ) );
+            assertThat( c0.identifiers(), contains( "x", "y" ) );
+            Plan c0c1 = c0.children().get( 1 );
+            assertThat( c0c1.operatorType(), is( "Leaf" ) );
+            assertThat( c0c1.identifiers(), contains( "y" ) );
+            assertThat( c0c1.arguments().get( "query" ), is( org.neo4j.driver.Values.value( joinAsLines("USE `mega`.`graph`((1))", "CREATE ()", "RETURN 1 AS `y`" ) ) ) );
+
             Plan c0c0 = c0.children().get( 0 );
-            assertThat( c0c0.operatorType(), is( "Direct" ) );
-            assertThat( c0c0.identifiers(), containsInAnyOrder( "x" ) );
+            assertThat( c0c0.operatorType(), is( "Apply" ) );
+            assertThat( c0c0.identifiers(), contains( "x" ) );
+            Plan c0c0c1 = c0c0.children().get( 1 );
+            assertThat( c0c0c1.operatorType(), is( "Leaf" ) );
+            assertThat( c0c0c1.identifiers(), contains( "x" ) );
+            assertThat( c0c0c1.arguments().get( "query" ), is( org.neo4j.driver.Values.value( joinAsLines("USE `mega`.`graph`((0))", "RETURN 1 AS `x`" ) ) ) );
+
             Plan c0c0c0 = c0c0.children().get( 0 );
-            assertThat( c0c0c0.operatorType(), is( "RemoteQuery" ) );
-            assertThat( c0c0c0.identifiers(), containsInAnyOrder( "x" ) );
-            assertThat( c0c0c0.arguments().get( "query" ), is( org.neo4j.driver.Values.value( "RETURN 1 AS `x`" ) ) );
+            assertThat( c0c0c0.operatorType(), is( "Init" ) );
+            assertThat( c0c0c0.identifiers().size(), is( 0 ) );
 
-            Plan c1 = plan.children().get( 1 );
-            assertThat( c1.operatorType(), is( "Apply" ) );
-            assertThat( c1.identifiers(), containsInAnyOrder( "x", "y" ) );
-            Plan c1c0 = c1.children().get( 0 );
-            assertThat( c1c0.operatorType(), is( "Direct" ) );
-            assertThat( c1c0.identifiers(), containsInAnyOrder( "y" ) );
-            Plan c1c0c0 = c1c0.children().get( 0 );
-            assertThat( c1c0c0.operatorType(), is( "RemoteQuery" ) );
-            assertThat( c1c0c0.arguments().get( "query" ), is( org.neo4j.driver.Values.value( joinAsLines( "CREATE ()", "RETURN 1 AS `y`" ) ) ) );
-            assertThat( c1c0c0.identifiers(), containsInAnyOrder( "y" ) );
-
-            Plan c2 = plan.children().get( 2 );
-            assertThat( c2.operatorType(), is( "Direct" ) );
-            assertThat( c2.identifiers(), containsInAnyOrder( "x", "y" ) );
-            Plan c2c0 = c2.children().get( 0 );
-            assertThat( c2c0.operatorType(), is( "LocalQuery" ) );
-            assertThat( c2c0.identifiers(), containsInAnyOrder( "x", "y" ) );
         } );
     }
 
@@ -570,10 +562,10 @@ class FabricExecutorTest
         ) ).consume() );
 
         assertThat( internalLogProvider ).forClass( FabricExecutor.class ).forLevel( DEBUG )
-                .containsMessages( "local", "UNWIND [0, 1] AS s",
-                                   "remote 0", "RETURN 2 AS `y`",
-                                   "remote 1", "RETURN 2 AS `y`",
-                                   "local", "RETURN s AS s, y AS y ORDER BY s ASCENDING, y ASCENDING" );
+                .containsMessages( "local 2: /* FullyParsedQuery */ UNWIND [0, 1] AS s RETURN s AS s",
+                                   "remote 0: RETURN 2 AS `y`",
+                                   "remote 1: RETURN 2 AS `y`",
+                                   "local 2: /* FullyParsedQuery */ InputDataStream(Vector(Variable(s), Variable(y))) RETURN s AS s, y AS y ORDER BY s ASCENDING, y ASCENDING" );
     }
 
     @Test

@@ -204,7 +204,7 @@ class ErrorsEndToEndTest
     void testSubqueryUseEvaluationError()
     {
         var query = joinAsLines(
-                "UNWIND [0, 1] AS gid",
+                "UNWIND [0, 1, 5] AS gid",
                 "CALL {",
                 "  USE mega.graph(gid)",
                 "  MATCH (c:Customer)",
@@ -217,7 +217,7 @@ class ErrorsEndToEndTest
         var e = run( query );
 
         assertEquals( EntityNotFound.code().serialize(), e.code() );
-        assertEquals( "Graph not found: 1", e.getMessage() );
+        assertEquals( "Graph not found: 5", e.getMessage() );
     }
 
     @Test

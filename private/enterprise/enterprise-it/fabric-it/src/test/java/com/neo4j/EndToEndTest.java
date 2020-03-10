@@ -519,9 +519,9 @@ class EndToEndTest
     }
 
     @Test
-    void testDisallowRemoteSubqueryInRemoteSubquery()
+    void testAllowSubqueryInRemoteSubquery()
     {
-        ClientException ex = assertThrows( ClientException.class, () -> doInMegaTx( tx ->
+        List<Record> r = inMegaTx( tx ->
         {
             var query = joinAsLines(
                     "UNWIND [1, 2, 3] AS x",
@@ -539,10 +539,18 @@ class EndToEndTest
                     "RETURN x, y, z, w"
             );
 
-            tx.run( query ).consume();
-        } ) );
+            return tx.run( query ).list();
+        } );
 
-        assertThat( ex.getMessage() ).containsIgnoringCase( "Nested subqueries in remote query-parts is not supported" );
+        assertThat( r.size() ).isEqualTo( 3 );
+        assertThat( r.get( 0 ).keys() ).containsExactly( "x", "y", "z", "w" );
+        assertThat( r.get( 1 ).keys() ).containsExactly( "x", "y", "z", "w" );
+        assertThat( r.get( 2 ).keys() ).containsExactly( "x", "y", "z", "w" );
+        assertThat( r.stream().map( Record::values ).collect( Collectors.toList()) ).containsExactlyInAnyOrder(
+                List.of(Values.value( 1 ), Values.value( 10 ), Values.value( 100 ), Values.value( 1000 )),
+                List.of(Values.value( 2 ), Values.value( 20 ), Values.value( 200 ), Values.value( 2000 )),
+                List.of(Values.value( 3 ), Values.value( 30 ), Values.value( 300 ), Values.value( 3000 ))
+        );
     }
 
     @Test

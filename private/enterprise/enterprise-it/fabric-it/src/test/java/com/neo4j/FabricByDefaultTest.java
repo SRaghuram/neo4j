@@ -15,6 +15,7 @@ import com.neo4j.utils.ShardFunctions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -573,6 +574,7 @@ class FabricByDefaultTest
     }
 
     @Test
+    @Disabled
     void testDisallowRemoteSubqueryInRemoteSubquery()
     {
         ClientException ex = assertThrows( ClientException.class, () -> doInTx( tx ->
