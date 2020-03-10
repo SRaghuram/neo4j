@@ -445,6 +445,53 @@ class DenseStore extends LifecycleAdapter implements Closeable
         tree.close();
     }
 
+    Stats gatherStats()
+    {
+        Stats stats = new Stats( tree.sizeInBytes() );
+        DenseStoreKey from = new DenseStoreKey();
+        DenseStoreKey to = new DenseStoreKey();
+        layout.initializeAsLowest( from );
+        layout.initializeAsHighest( to );
+        try ( Seeker<DenseStoreKey, DenseStoreValue> seek = tree.seek( from, to, PageCursorTracer.NULL ) )
+        {
+            long nodeId = -1;
+            int nodeNumberOfProperties = 0;
+            int nodeNumberOfRelationships = 0;
+            int nodeByteSize = 0;
+            while ( seek.next() )
+            {
+                DenseStoreKey key = seek.key();
+                if ( nodeId != key.nodeId )
+                {
+                    if ( nodeId != -1 )
+                    {
+                        stats.consume( nodeNumberOfProperties, nodeNumberOfRelationships, nodeByteSize );
+                    }
+                    nodeId = key.nodeId;
+                }
+
+                int entrySize = layout.keySize( key ) + layout.valueSize( seek.value() );
+                nodeByteSize += entrySize;
+                switch ( key.itemType )
+                {
+                case DenseStoreKey.TYPE_DEGREE:
+                    break;
+                case DenseStoreKey.TYPE_PROPERTY:
+                    nodeNumberOfProperties++;
+                    break;
+                case DenseStoreKey.TYPE_RELATIONSHIP:
+                    nodeNumberOfRelationships++;
+                    break;
+                }
+            }
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
+        return stats;
+    }
+
     interface Updater extends Closeable
     {
         void setProperty( long nodeId, int key, ByteBuffer value );
@@ -908,5 +955,52 @@ class DenseStore extends LifecycleAdapter implements Closeable
     private abstract static class RelationshipPropertyIterator extends PrefetchingIterator<StorageProperty> implements StorageProperty
     {
         abstract ByteBuffer serializedValue();
+    }
+
+    static class Stats
+    {
+        private final long totalTreeByteSize;
+        private long numberOfNodes;
+        private long numberOfProperties;
+        private long numberOfRelationships;
+        private long effectiveByteSize;
+
+        Stats( long totalTreeByteSize )
+        {
+            this.totalTreeByteSize = totalTreeByteSize;
+        }
+
+        private void consume( int nodeNumberOfProperties, int nodeNumberOfRelationships, int nodeByteSize )
+        {
+            this.numberOfNodes++;
+            this.numberOfProperties = nodeNumberOfProperties;
+            this.numberOfRelationships = nodeNumberOfRelationships;
+            this.effectiveByteSize = nodeByteSize;
+        }
+
+        long numberOfProperties()
+        {
+            return numberOfProperties;
+        }
+
+        long numberOfRelationships()
+        {
+            return numberOfRelationships;
+        }
+
+        long numberOfNodes()
+        {
+            return numberOfNodes;
+        }
+
+        long effectiveByteSize()
+        {
+            return effectiveByteSize;
+        }
+
+        long totalTreeByteSize()
+        {
+            return totalTreeByteSize;
+        }
     }
 }
