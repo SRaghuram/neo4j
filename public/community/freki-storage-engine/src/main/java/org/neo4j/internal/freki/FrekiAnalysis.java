@@ -261,7 +261,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
     public void dumpStats()
     {
         // Get the stats
-        System.out.println( "Calculating stats ..." );
+        System.out.println( "Calculating main store stats ..." );
         var storeStats = gatherStoreStats();
 
         var totalNumDenseNodes = of( storeStats ).mapToLong( s -> s.numDenseNodes ).sum();
@@ -283,6 +283,17 @@ public class FrekiAnalysis extends Life implements AutoCloseable
                 percent( totalVacantInUsedRecords, totalPossibleOccupied ) );
         System.out.printf( "Total occupied bytes %s (%.2f%%)%n", bytesToString( totalOccupied ), percent( totalOccupied, total ) );
         System.out.printf( "Total vacant bytes %s (%.2f%%)%n", bytesToString( totalVacant ), percent( totalVacant, total ) );
+
+        System.out.println();
+        System.out.println( "Calculating dense store stats ..." );
+        DenseStore.Stats denseStats = stores.denseStore.gatherStats();
+        System.out.printf( "  Total dense store file size: %s%n", bytesToString( denseStats.totalTreeByteSize() ) );
+        System.out.printf( "  Effective dense store data size: %s%n", bytesToString( denseStats.effectiveByteSize() ) );
+        System.out.printf( "  Number of dense nodes: %d%n", denseStats.numberOfNodes() );
+        System.out.printf( "  Avg number of properties per dense node: %.2f%n", (double) denseStats.numberOfProperties() / denseStats.numberOfNodes() );
+        System.out.printf( "  Avg number of relationships per dense node: %.2f%n", (double) denseStats.numberOfRelationships() / denseStats.numberOfNodes() );
+        System.out.printf( "  Avg effective data size per dense node: %.2f%n", (double) denseStats.effectiveByteSize() / denseStats.numberOfNodes() );
+        System.out.printf( "  Avg total size per dense node: %.2f%n", (double) denseStats.totalTreeByteSize() / denseStats.numberOfNodes() );
 
         // - TODO Number of big values
         // - TODO Avg size of big value
