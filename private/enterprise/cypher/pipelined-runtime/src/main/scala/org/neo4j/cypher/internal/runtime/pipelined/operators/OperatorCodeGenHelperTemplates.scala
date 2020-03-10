@@ -145,7 +145,7 @@ object OperatorCodeGenHelperTemplates {
       )
     )
   val INPUT_CURSOR: IntermediateRepresentation = loadField(INPUT_CURSOR_FIELD)
-  val SHOULD_BREAK: InstanceField = field[Boolean]("shouldBreak", constant(false))
+  val SHOULD_BREAK: LocalVariable = variable[Boolean]("shouldBreak", constant(false))
   val MEMORY_TRACKER: InstanceField  = field[QueryMemoryTracker]("memoryTracker",
     invokeStatic(method[QueryMemoryTracker , QueryMemoryTracker]("NO_MEMORY_TRACKER")))
 

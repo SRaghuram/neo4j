@@ -12,7 +12,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.equal
 import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
 import org.neo4j.codegen.api.IntermediateRepresentation.load
-import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.subtract
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
@@ -89,16 +88,13 @@ class SerialTopLevelSkipOperatorTaskTemplate(inner: OperatorTaskTemplate,
   extends SerialTopLevelCountingOperatorTaskTemplate(inner, id, innermost, argumentStateMapId, generateCountExpression, codeGen) {
 
   override def genOperate: IntermediateRepresentation = {
+    block(
     ifElse(equal(load(countLeftVar), constant(0)))(block(
       profileRow(id),
       inner.genOperateWithExpressions))(
-      doIfInnerCantContinue(
-        block(
-          if (innermost.shouldCheckOutputCounter) OperatorCodeGenHelperTemplates.UPDATE_OUTPUT_COUNTER else noop(),
-          assign(countLeftVar, subtract(load(countLeftVar), constant(1))),
-          )
-        )
-      )
+      doIfInnerCantContinue(assign(countLeftVar, subtract(load(countLeftVar), constant(1))))
+    )
+    )
   }
 }
 

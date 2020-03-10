@@ -12,11 +12,11 @@ import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.equal
 import org.neo4j.codegen.api.IntermediateRepresentation.greaterThan
-import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
+import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.load
-import org.neo4j.codegen.api.IntermediateRepresentation.noop
-import org.neo4j.codegen.api.IntermediateRepresentation.setField
+import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.subtract
+import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -30,6 +30,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.ConcurrentCountingState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.StandardCountingState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.evaluateCountValue
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_COUNTER
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_MORSEL
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.SHOULD_BREAK
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRows
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
@@ -113,21 +115,39 @@ class SerialTopLevelLimitOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                              (codeGen: OperatorExpressionCompiler)
   extends SerialTopLevelCountingOperatorTaskTemplate(inner, id, innermost, argumentStateMapId, generateCountExpression, codeGen) {
 
+  override def genOperateEnter: IntermediateRepresentation = block(
+    super.genOperateEnter
+  )
+
+  override def genLocalVariables: Seq[LocalVariable] = super.genLocalVariables :+ SHOULD_BREAK
+
   override def genOperate: IntermediateRepresentation = {
     block(
-      ifElse(greaterThan(load(countLeftVar), constant(0))) (
+      condition(greaterThan(load(countLeftVar), constant(0))) (
         block(
           inner.genOperateWithExpressions,
           doIfInnerCantContinue(
               assign(countLeftVar, subtract(load(countLeftVar), constant(1)))))
-        ) (
-        if (innermost.shouldCheckOutputCounter) OperatorCodeGenHelperTemplates.UPDATE_OUTPUT_COUNTER else noop()
-      ),
+        ) ,
       doIfInnerCantContinue(
         condition(equal(load(countLeftVar), constant(0)))(
-          setField(SHOULD_BREAK, constant(true)))
+          assign(SHOULD_BREAK, constant(true)))
         )
       )
+  }
+
+  override protected def howMuchToReserve: IntermediateRepresentation = {
+    if (innermost.shouldWriteToContext) {
+      // Use the available output morsel rows to determine our maximum chunk of the total limit
+      invoke(OUTPUT_MORSEL, method[Morsel, Int]("numberOfRows"))
+    } else if (innermost.shouldCheckOutputCounter) {
+      // Use the output counter to determine our maximum chunk of the total limit
+      load(OUTPUT_COUNTER)
+    } else {
+      // We do not seem to have any bound on the output of this task (i.e. we are the final produce result pipeline task)
+      // Reserve as much as we can get
+      constant(Int.MaxValue)
+    }
   }
 
   override def genOperateExit: IntermediateRepresentation = {

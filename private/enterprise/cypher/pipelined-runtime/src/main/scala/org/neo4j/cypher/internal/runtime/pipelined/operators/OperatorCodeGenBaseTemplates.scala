@@ -631,7 +631,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
         )
       ),
       // NOTE: This has to be called after genOperate!
-      genFields = () => staticFields ++ Seq(DATA_READ, INPUT_CURSOR_FIELD, SHOULD_BREAK) ++ flatMap[Field](op => op.genFields ++
+      genFields = () => staticFields ++ Seq(DATA_READ, INPUT_CURSOR_FIELD) ++ flatMap[Field](op => op.genFields ++
         op.genProfileEventField ++
         op.genExpressions.flatMap(_.fields)))
   }
@@ -707,7 +707,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
     }
 
     if (shouldCheckBreak) {
-      conditions += not(loadField(SHOULD_BREAK))
+      conditions += not(load(SHOULD_BREAK))
     }
 
     and(conditions)
