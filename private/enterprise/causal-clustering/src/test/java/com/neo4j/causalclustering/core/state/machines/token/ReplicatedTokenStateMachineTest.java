@@ -19,6 +19,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdGeneratorFactory;
+import org.neo4j.internal.recordstorage.BatchContext;
 import org.neo4j.internal.recordstorage.CacheAccessBackDoor;
 import org.neo4j.internal.recordstorage.CacheInvalidationTransactionApplier;
 import org.neo4j.internal.recordstorage.Command;
@@ -43,7 +44,6 @@ import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
 import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
-import org.neo4j.lock.LockGroup;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
@@ -236,7 +236,9 @@ public class ReplicatedTokenStateMachineTest
                 }
             };
             tta.accept( new HighIdTransactionApplier( stores ) );
-            tta.accept( new NeoStoreTransactionApplier( AFTER, stores, backdoor, NO_LOCK_SERVICE, 13, new LockGroup(), IdUpdateListener.DIRECT,
+            var batchContext = mock( BatchContext.class );
+            when( batchContext.getIdUpdateListener() ).thenReturn( IdUpdateListener.DIRECT );
+            tta.accept( new NeoStoreTransactionApplier( AFTER, stores, backdoor, NO_LOCK_SERVICE, 13, batchContext,
                     PageCursorTracer.NULL ) );
             tta.accept( new CacheInvalidationTransactionApplier( stores, backdoor, PageCursorTracer.NULL ) );
             return 13L;
