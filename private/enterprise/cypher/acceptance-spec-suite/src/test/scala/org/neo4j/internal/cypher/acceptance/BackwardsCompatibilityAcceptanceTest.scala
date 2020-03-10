@@ -351,68 +351,156 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     executeSingle("SHOW ROLE role PRIVILEGES").toList should not be List.empty
   }
 
-  test("grant user management is not supported in 3.5 or 4.0") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    executeSingle("CREATE ROLE role")
+  // Role management privilege commands should work in 4.0
+  Seq(
+    "ROLE MANAGEMENT",
+    "CREATE ROLE",
+    "DROP ROLE",
+    "SHOW ROLE",
+    "ASSIGN ROLE",
+    "REMOVE ROLE"
+  ).foreach {
+    command =>
+      test(s"GRANT $command is not supported in 3.5") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        executeSingle("CREATE ROLE role")
 
-    // WHEN 3.5
-    val exception_35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 GRANT USER MANAGEMENT ON DBMS TO role")
-    }
-    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+        // WHEN 3.5
+        val exception_35 = the[SyntaxException] thrownBy {
+          executeSingle(s"CYPHER 3.5 GRANT $command ON DBMS TO role")
+        }
+        exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
 
-    // WHEN 4.0
-    val exception_40 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.0 GRANT USER MANAGEMENT ON DBMS TO role")
-    }
-    exception_40.getMessage should include("User administration privileges are not supported in this Cypher version.")
+        // THEN
+        executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)
 
-    // THEN
-    executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)
+        // WHEN 4.0
+        executeSingle(s"CYPHER 4.0 GRANT $command ON DBMS TO role")
+
+        // THEN
+        executeSingle("SHOW ROLE role PRIVILEGES").toList should not be List.empty
+      }
+
+      test(s"DENY $command is not supported in 3.5") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        executeSingle("CREATE ROLE role")
+
+        // WHEN 3.5
+        val exception_35 = the[SyntaxException] thrownBy {
+          executeSingle(s"CYPHER 3.5 DENY $command ON DBMS TO role")
+        }
+        exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+        // THEN
+        executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)
+
+        // WHEN 4.0
+        executeSingle(s"CYPHER 4.0 DENY $command ON DBMS TO role")
+
+        // THEN
+        executeSingle("SHOW ROLE role PRIVILEGES").toList should not be List.empty
+      }
+
+      test(s"REVOKE $command is not supported in 3.5") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        executeSingle("CREATE ROLE role")
+        executeSingle(s"GRANT $command ON DBMS TO role")
+
+        // WHEN 3.5
+        val exception_35 = the[SyntaxException] thrownBy {
+          executeSingle(s"CYPHER 3.5 REVOKE $command ON DBMS FROM role")
+        }
+        exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+        // THEN
+        executeSingle("SHOW ROLE role PRIVILEGES").toList should not be List.empty
+
+        // WHEN 4.0
+        executeSingle(s"CYPHER 4.0 REVOKE $command ON DBMS FROM role")
+
+        // THEN
+        executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)
+      }
   }
 
-  test("deny user management is not supported in 3.5 or 4.0") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    executeSingle("CREATE ROLE role")
+  // Other dbms privilege commands than role management should not work
+  Seq(
+    "USER MANAGEMENT",
+    "CREATE USER",
+    "DROP USER",
+    "SHOW USER",
+    "ALTER USER",
+    "DATABASE MANAGEMENT",
+    "CREATE DATABASE",
+    "DROP DATABASE"
+  ).foreach {
+    command =>
+      test(s"GRANT $command is not supported in 3.5 or 4.0") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        executeSingle("CREATE ROLE role")
 
-    // WHEN 3.5
-    val exception_35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 DENY CREATE USER ON DBMS TO role")
-    }
-    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+        // WHEN 3.5
+        val exception_35 = the[SyntaxException] thrownBy {
+          executeSingle(s"CYPHER 3.5 GRANT $command ON DBMS TO role")
+        }
+        exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
 
-    // WHEN 4.0
-    val exception_40 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.0 DENY CREATE USER ON DBMS TO role")
-    }
-    exception_40.getMessage should include("User administration privileges are not supported in this Cypher version.")
+        // WHEN 4.0
+        val exception_40 = the[SyntaxException] thrownBy {
+          executeSingle(s"CYPHER 4.0 GRANT $command ON DBMS TO role")
+        }
+        exception_40.getMessage should include(s"$command privilege is not supported in this Cypher version.")
 
-    // THEN
-    executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)
-  }
+        // THEN
+        executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)
+      }
 
-  test("revoke user management is not supported in 3.5 or 4.0") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    executeSingle("CREATE ROLE role")
-    executeSingle("GRANT SHOW USER ON DBMS TO role")
+      test(s"DENY $command is not supported in 3.5 or 4.0") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        executeSingle("CREATE ROLE role")
 
-    // WHEN 3.5
-    val exception_35 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 3.5 REVOKE SHOW USER ON DBMS FROM role")
-    }
-    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+        // WHEN 3.5
+        val exception_35 = the[SyntaxException] thrownBy {
+          executeSingle(s"CYPHER 3.5 DENY $command ON DBMS TO role")
+        }
+        exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
 
-    // WHEN 4.0
-    val exception_40 = the[SyntaxException] thrownBy {
-      executeSingle("CYPHER 4.0 REVOKE SHOW USER ON DBMS FROM role")
-    }
-    exception_40.getMessage should include("User administration privileges are not supported in this Cypher version.")
+        // WHEN 4.0
+        val exception_40 = the[SyntaxException] thrownBy {
+          executeSingle(s"CYPHER 4.0 DENY $command ON DBMS TO role")
+        }
+        exception_40.getMessage should include(s"$command privilege is not supported in this Cypher version.")
 
-    // THEN
-    executeSingle("SHOW ROLE role PRIVILEGES").toList should not be List.empty
+        // THEN
+        executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)
+      }
+
+      test(s"REVOKE $command is not supported in 3.5 or 4.0") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        executeSingle("CREATE ROLE role")
+        executeSingle(s"GRANT $command ON DBMS TO role")
+
+        // WHEN 3.5
+        val exception_35 = the[SyntaxException] thrownBy {
+          executeSingle(s"CYPHER 3.5 REVOKE $command ON DBMS FROM role")
+        }
+        exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+        // WHEN 4.0
+        val exception_40 = the[SyntaxException] thrownBy {
+          executeSingle(s"CYPHER 4.0 REVOKE $command ON DBMS FROM role")
+        }
+        exception_40.getMessage should include(s"$command privilege is not supported in this Cypher version.")
+
+        // THEN
+        executeSingle("SHOW ROLE role PRIVILEGES").toList should not be List.empty
+      }
   }
 
   test("grant transaction management is not supported in 3.5 or 4.0") {
