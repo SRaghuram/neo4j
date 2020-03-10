@@ -111,6 +111,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   test("Should always show system even without access") {
     // GIVEN
     setup(defaultConfig)
+    clearPublicRole()
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
@@ -121,9 +122,27 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     }) should be (1)
   }
 
+  test("Should show database granted access through public role") {
+    // GIVEN
+    setup(defaultConfig)
+    clearPublicRole()
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("CREATE DATABASE baz")
+    execute("GRANT ACCESS ON DATABASE baz TO PUBLIC")
+
+    val expected = Seq("baz", "system")
+    executeOnSystem("foo","bar", "SHOW DATABASES", resultHandler = (row, index) => {
+      // THEN
+      row.get("name") should be(expected(index))
+    }) should be (2)
+  }
+
   test("Should show only databases that a user has been given access to") {
     // GIVEN
     setup(defaultConfig)
+    clearPublicRole()
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
@@ -132,15 +151,60 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("GRANT ROLE blub TO foo")
     execute("GRANT ACCESS ON DATABASE baz TO blub")
 
-    executeOnSystem("foo","bar", "SHOW DATABASES", resultHandler = (row, _) => {
+    val expected = Seq("baz", "system")
+    executeOnSystem("foo","bar", "SHOW DATABASES", resultHandler = (row, index) => {
       // THEN
-      row.get("name") should (be ("system") or be ("baz"))
+      row.get("name") should be(expected(index))
     }) should be (2)
+  }
+
+  test("Should show default database that a user has been given access to") {
+    // GIVEN
+    setup(defaultConfig)
+    clearPublicRole()
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("CREATE DATABASE baz")
+    execute("CREATE ROLE blub")
+    execute("GRANT ROLE blub TO foo")
+    execute("GRANT ACCESS ON DEFAULT DATABASE TO blub")
+
+    executeOnSystem("foo", "bar", "SHOW DATABASES", resultHandler = (row, _) => {
+      row.get("name") should (be ("system") or be ("neo4j"))
+    }) should be (2)
+
+    executeOnSystem("foo", "bar", "SHOW DEFAULT DATABASE", resultHandler = (row, _) => {
+      // THEN
+      row.get("name") should be("neo4j")
+    }) should be (1)
+  }
+
+  test("Should show default database that a user has explicit access on") {
+    // GIVEN
+    setup(defaultConfig)
+    clearPublicRole()
+
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("CREATE ROLE blub")
+    execute("GRANT ROLE blub TO foo")
+    execute("GRANT ACCESS ON DATABASE neo4j TO blub")
+
+    executeOnSystem("foo", "bar", "SHOW DATABASES", resultHandler = (row, _) => {
+      row.get("name") should (be ("system") or be ("neo4j"))
+    }) should be (2)
+
+    executeOnSystem("foo", "bar", "SHOW DEFAULT DATABASE", resultHandler = (row, _) => {
+      // THEN
+      row.get("name") should be("neo4j")
+    }) should be (1)
   }
 
   test("Should show all databases if user granted access on all") {
     // GIVEN
     setup(defaultConfig)
+    clearPublicRole()
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE baz")
@@ -160,6 +224,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   test("Should not show denied database") {
     // GIVEN
     setup(defaultConfig)
+    clearPublicRole()
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE baz")
@@ -180,6 +245,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   test("Should show databases granted through different roles") {
     // GIVEN
     setup(defaultConfig)
+    clearPublicRole()
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE baz")
@@ -202,6 +268,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   test("Should aggregate show databases over different roles") {
     // GIVEN
     setup(defaultConfig)
+    clearPublicRole()
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE baz")
@@ -224,6 +291,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   test("Should not show database if access both granted and denied") {
     // GIVEN
     setup(defaultConfig)
+    clearPublicRole()
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE baz")

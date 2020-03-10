@@ -60,7 +60,7 @@ public class ResourcePrivilege
     {
         if ( database.equals( SYSTEM_DATABASE_NAME ) )
         {
-            if ( ADMIN.satisfies( action ) || DATABASE_ACTIONS.satisfies( action ) )
+            if ( ADMIN.satisfies( action ) )
             {
                 return true;
             }
