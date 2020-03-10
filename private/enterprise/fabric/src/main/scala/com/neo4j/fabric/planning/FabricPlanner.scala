@@ -118,7 +118,11 @@ case class FabricPlanner(
         leaf.clauses,
         Ast.aliasedReturn(leaf.clauses.last, leaf.outputColumns, pos).toSeq,
       ).flatten
-      val query = Ast.withoutGraphSelection(Query(None, SingleQuery(clauses)(pos))(pos))
+      val rewrites: Query => Query = Ast.chain(
+        Ast.withoutGraphSelection,
+        Ast.unresolveCallables
+      )
+      val query = rewrites(Query(None, SingleQuery(clauses)(pos))(pos))
       val state = pipeline.checkAndFinalize.process(query)
 
       LocalQuery(
@@ -137,7 +141,8 @@ case class FabricPlanner(
     def asRemote(leaf: Fragment.Leaf): RemoteQuery = {
       val pos = InputPosition.NONE
       val part = stitch(leaf)
-      val query = Ast.unresolveCallables(Query(None, part)(pos))
+      val rewrites: Query => Query = Ast.unresolveCallables
+      val query = rewrites(Query(None, part)(pos))
 
       RemoteQuery(
         query = QueryRenderer.render(query),
@@ -265,8 +270,8 @@ case class FabricPlanner(
         )(pos)
       )(pos))(pos)
 
-    def unresolveCallables(query: Query): Query = {
-      query.rewritten.bottomUp {
+    def unresolveCallables[T <: AnyRef](tree: T): T = {
+      tree.rewritten.bottomUp {
         // Un-resolve procedures for rendering
         case rc: ResolvedCall =>
           val pos = rc.position
@@ -302,6 +307,9 @@ case class FabricPlanner(
           SingleQuery(clauses = withoutGraphSelection(sq.clauses))(sq.position)
       }
     }
+
+    def chain[T <: AnyRef](rewrites: (T => T)*): T => T =
+      rewrites.foldLeft(identity[T] _)(_ andThen _)
 
   }
 }
