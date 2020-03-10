@@ -70,9 +70,11 @@ object Errors {
 
   def openCypherUnknownFunction(qualifiedName : String, pos: InputPosition): Nothing = openCypherFailure(SemanticError(s"Unknown function '$qualifiedName'", pos))
 
-  def wrongType(exp: String, got: String): Nothing = throw new CypherTypeException(s"Expected: $exp, got: $got")
+  def wrongType(exp: String, got: String): Nothing = throw new CypherTypeException(s"Wrong type. Expected $exp, got $got")
 
-  def wrongArity(exp: Int, got: Int, pos: InputPosition): Nothing = syntax(s"$exp arguments", s"$got arguments", pos)
+  def wrongArity(exp: Int, got: Int, pos: InputPosition): Nothing = syntax(s"Wrong arity. Expected $exp argument(s), got $got argument(s)")
+
+  def syntax(msg: String): Nothing = throw new SyntaxException(msg)
 
   def syntax(msg: String, query: String, pos: InputPosition): Nothing = throw new SyntaxException(msg, query, pos.offset)
 
@@ -99,8 +101,6 @@ object Errors {
 
   def show(n: CatalogName): String = n.parts.mkString(".")
 
-  def show(t: CypherType): String = t.toNeoTypeString
-
   def show(av: AnyValue): String = av match {
     case v: Value => v.prettyPrint()
     case x        => x.getTypeName
@@ -111,5 +111,5 @@ object Errors {
   def show(seq: Seq[_]): String = seq.map {
     case v: AnyValue       => show(v)
     case a: Catalog.Arg[_] => show(a)
-  }.mkString("(", ",", ")")
+  }.mkString(",")
 }
