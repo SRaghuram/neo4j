@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.logical.generator.LogicalPlanGenerator.WithStat
 import org.neo4j.cypher.internal.util.Cost
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.exceptions.CantCompileQueryException
+import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.logging.AssertableLogProvider
 import org.neo4j.values.storable.RandomValues
 import org.scalacheck.Gen
@@ -101,6 +102,7 @@ class LogicalPlanFuzzTesting extends CypherFunSuite {
 
       results.zip(runtimes).foreach {
         case (Failure(_: CantCompileQueryException), _) => // OK
+        case (Failure(_: CypherTypeException), _) => // Ignore these for now, need to generate parameters of appropriate types first
         case (Failure(e), runtime) =>
           withClue(s"Error in ${runtime.name}") {
             fail(e)
