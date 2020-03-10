@@ -25,7 +25,6 @@ import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.TimeValue;
 import org.openjdk.jmh.runner.options.VerboseMode;
 
-import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -147,7 +146,7 @@ class BenchmarksRunner extends Runner
                                                        RunnerParams runnerParams,
                                                        ChainedOptionsBuilder optionsBuilder )
     {
-        return augmentOptions( optionsBuilder, runnerParams.workDir(), benchmark );
+        return augmentOptions( optionsBuilder, benchmark );
     }
 
     @Override
@@ -161,7 +160,7 @@ class BenchmarksRunner extends Runner
                                                           RunnerParams runnerParams,
                                                           ChainedOptionsBuilder optionsBuilder )
     {
-        return augmentOptions( optionsBuilder, runnerParams.workDir(), benchmark ).forks( forkCount );
+        return augmentOptions( optionsBuilder, benchmark ).forks( forkCount );
     }
 
     @Override
@@ -182,7 +181,7 @@ class BenchmarksRunner extends Runner
         return runnerParams.copyWithParam( PARAM_NEO4J_CONFIG, baseNeo4jConfig.toJson() );
     }
 
-    private ChainedOptionsBuilder augmentOptions( ChainedOptionsBuilder optionsBuilder, Path workDir, BenchmarkDescription benchmark )
+    private ChainedOptionsBuilder augmentOptions( ChainedOptionsBuilder optionsBuilder, BenchmarkDescription benchmark )
     {
         if ( extendedAnnotationSupport )
         {

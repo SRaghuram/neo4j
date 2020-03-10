@@ -35,6 +35,8 @@ public class JmhLifecycleTrackerTest
     private static final BenchmarkGroup GROUP = new BenchmarkGroup( "group" );
     private static final Benchmark BENCHMARK = Benchmark.benchmarkFor( "desc", "bench", Benchmark.Mode.LATENCY, new HashMap<>() );
 
+    // TODO test with fork count = 0 too
+
     @Test
     public void shouldInitAndReload() throws IOException
     {

@@ -81,7 +81,7 @@ public final class Validators
 
     private static boolean isExistingDatabase( FileSystemAbstraction fileSystem, DatabaseLayout layout )
     {
-        return fileSystem.fileExists( layout.metadataStore() );
+        return fileSystem.fileExists( layout.databaseLockFile() );
     }
 
     public static <T> Validator<T> emptyValidator()

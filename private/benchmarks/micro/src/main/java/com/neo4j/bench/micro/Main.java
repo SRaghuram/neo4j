@@ -64,7 +64,7 @@ public class Main
     {
         Path storesDir = Paths.get( "benchmark_stores" );
         Path profilerRecordingsOutputDir = Paths.get( "profiler_recordings" );
-        int forkCount = 0;
+        int forkCount = 1;
         List<ParameterizedProfiler> profilers = ParameterizedProfiler.defaultProfilers( ProfilerType.JFR );
         ErrorReporter.ErrorPolicy errorPolicy = ErrorReporter.ErrorPolicy.FAIL;
         Path jvmFile = null;

@@ -30,7 +30,7 @@ public class DataGeneratorConfigBuilder
     private RelationshipDefinition[] outRelationships = {};
     private Order relationshipOrder = Order.SHUFFLED;
     private RelationshipLocality relationshipLocality = RelationshipLocality.SCATTERED_BY_START_NODE;
-    private GraphWriter graphWriter = GraphWriter.BATCH;
+    private GraphWriter graphWriter = GraphWriter.TRANSACTIONAL;
     private PropertyDefinition[] nodeProperties = {};
     private PropertyDefinition[] relationshipProperties = {};
     private PropertyLocality propertyLocality = PropertyLocality.SCATTERED_BY_ELEMENT;
