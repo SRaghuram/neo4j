@@ -162,7 +162,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                     EmbeddedDatabase.recreateSchema( store, params.neo4jEdition(), neo4jConfig, workload.expectedSchema() );
                 }
                 System.out.println( "Store verified\n" );
-                EmbeddedDatabase.verifyStoreFormat( store );
+//                EmbeddedDatabase.verifyStoreFormat( store );
             }
 
             ErrorReporter errorReporter = new ErrorReporter( errorPolicy );

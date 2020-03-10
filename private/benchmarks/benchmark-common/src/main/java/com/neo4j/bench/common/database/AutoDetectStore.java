@@ -87,9 +87,17 @@ public class AutoDetectStore extends Store
 
     private static boolean isGraphDb( Path maybeGraphDb )
     {
-        try ( Stream<Path> files = Files.list( maybeGraphDb ) )
+        try
         {
-            return files.anyMatch( file -> file.getFileName().startsWith( "neostore" ) );
+            return Files.list( maybeGraphDb )
+                    .anyMatch( file ->
+                    {
+                        String fileName = file.getFileName().toString();
+                        boolean storefile = fileName.startsWith( "neostore" ) || fileName.startsWith( "main-store" );
+                        storefile &= !fileName.contains( "transaction" );
+                        storefile &= !fileName.contains( "cacheprof" );
+                        return storefile;
+                    } );
         }
         catch ( IOException e )
         {
