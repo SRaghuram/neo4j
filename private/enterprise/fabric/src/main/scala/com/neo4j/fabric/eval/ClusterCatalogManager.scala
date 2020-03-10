@@ -5,74 +5,59 @@
  */
 package com.neo4j.fabric.eval
 
-import java.util.function.Supplier
-
-import com.neo4j.causalclustering.discovery.TopologyService
-import com.neo4j.causalclustering.routing.load_balancing.LeaderService
 import com.neo4j.fabric.config.FabricConfig
 import com.neo4j.fabric.executor.FabricException
 import com.neo4j.fabric.executor.Location
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.configuration.helpers.SocketAddress
-import org.neo4j.dbms.database.DatabaseContext
-import org.neo4j.dbms.database.DatabaseManager
 import org.neo4j.kernel.api.exceptions.Status
 import org.neo4j.kernel.database.NamedDatabaseId
 
-import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 import scala.collection.JavaConverters.seqAsJavaListConverter
-import scala.compat.java8.OptionConverters.RichOptionalGeneric
 
 class ClusterCatalogManager(
-  databaseManager: Supplier[DatabaseManager[DatabaseContext]],
-  topologyService: TopologyService,
-  leaderService: LeaderService,
+  databaseLookup: DatabaseLookup,
+  leaderLookup: LeaderLookup,
   fabricConfig: FabricConfig,
-) extends SingleCatalogManager(databaseManager, fabricConfig) {
+) extends SingleCatalogManager(databaseLookup, fabricConfig) {
 
   override def locationOf(graph: Catalog.Graph, requireWritable: Boolean): Location = (graph, requireWritable) match {
-    case (Catalog.InternalGraph(id, _, databaseName), false) =>
-      new Location.Local(id, databaseName.name())
 
     case (Catalog.InternalGraph(id, _, databaseName), true) =>
       determineLeader(databaseName) match {
         case LeaderIsLocal           => new Location.Local(id, databaseName.name())
         case LeaderIsRemote(address) => new Location.Remote(id, internalRemoteUri(address), databaseName.name())
-        case LeaderNotFound          => throw new Exception
       }
 
-    case (Catalog.ExternalGraph(graphConfig), _) =>
-      new Location.Remote(graphConfig.getId, externalRemoteUri(graphConfig.getUri), graphConfig.getDatabase)
+    case _ =>
+      super.locationOf(graph, requireWritable)
   }
 
   private def internalRemoteUri(socketAddress: SocketAddress): Location.RemoteUri =
     new Location.RemoteUri("bolt", Seq(socketAddress).asJava, null)
 
-  private def externalRemoteUri(configUri: FabricConfig.RemoteUri): Location.RemoteUri =
-    new Location.RemoteUri(configUri.getScheme, configUri.getAddresses, configUri.getQuery)
-
   private sealed trait LeaderStatus
   private final case object LeaderIsLocal extends LeaderStatus
   private final case class LeaderIsRemote(socketAddress: SocketAddress) extends LeaderStatus
-  private final case object LeaderNotFound extends LeaderStatus
 
   private def determineLeader(databaseName: NormalizedDatabaseName): LeaderStatus = {
     val dbId = databaseId(databaseName)
-    val myId = topologyService.memberId()
-    leaderService.getLeaderId(dbId).asScala match {
+    val myId = leaderLookup.memberId
+    leaderLookup.leaderId(dbId) match {
       case Some(`myId`) => LeaderIsLocal
       case Some(_)      => LeaderIsRemote(leaderBoltAddress(dbId))
-      case None         => LeaderNotFound
+      case None         => routingFailed("Unable to get bolt address for database {}", databaseName.name())
     }
   }
 
-  private def leaderBoltAddress(databaseId: NamedDatabaseId) =
-    leaderService.getLeaderBoltAddress(databaseId)
-      .orElseThrow(() => new FabricException(Status.Fabric.RemoteExecutionFailed, "Unable to get bolt address for database {}", databaseId))
-
   private def databaseId(databaseName: NormalizedDatabaseName) =
-    databaseManager.get().databaseIdRepository().getByName(databaseName)
-      .orElseThrow(() => new FabricException(Status.Fabric.RemoteExecutionFailed, "Unable to get database id for database {}", databaseName))
+    databaseLookup.databaseId(databaseName)
+      .getOrElse(routingFailed("Unable to get database id for database {}", databaseName.name()))
 
+  private def leaderBoltAddress(databaseId: NamedDatabaseId) =
+    leaderLookup.leaderBoltAddress(databaseId)
+      .getOrElse(routingFailed("Unable to get bolt address of LEADER for database {}", databaseId.name()))
 
+  private def routingFailed(msg: String, dbName: String): Nothing =
+    throw new FabricException(Status.Fabric.Routing, msg, dbName)
 }

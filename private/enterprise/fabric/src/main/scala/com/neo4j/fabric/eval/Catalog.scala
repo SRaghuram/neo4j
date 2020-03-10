@@ -32,7 +32,7 @@ object Catalog {
     databaseName: NormalizedDatabaseName
   ) extends Graph {
     def name: Option[String] = Some(graphName.name())
-    override def toString: String = s"internal graph $id" + name.map(n => s" ($n)")
+    override def toString: String = s"internal graph $id" + name.map(n => s" ($n)").getOrElse("")
   }
 
   case class ExternalGraph(
@@ -40,7 +40,7 @@ object Catalog {
   ) extends Graph {
     def id: Long = graph.getId
     def name: Option[String] = Option(graph.getName).map(_.name)
-    override def toString: String = s"external graph $id" + name.map(n => s" ($n)")
+    override def toString: String = s"external graph $id" + name.map(n => s" ($n)").getOrElse("")
   }
 
   trait View extends Entry {

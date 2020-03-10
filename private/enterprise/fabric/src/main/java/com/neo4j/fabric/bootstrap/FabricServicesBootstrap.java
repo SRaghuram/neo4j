@@ -9,6 +9,7 @@ import com.neo4j.fabric.auth.CredentialsProvider;
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.driver.DriverPool;
 import com.neo4j.fabric.eval.CatalogManager;
+import com.neo4j.fabric.eval.DatabaseLookup;
 import com.neo4j.fabric.eval.SingleCatalogManager;
 import com.neo4j.fabric.eval.UseEvaluation;
 import com.neo4j.fabric.executor.FabricExecutor;
@@ -82,8 +83,9 @@ public class FabricServicesBootstrap
                     .registerService( new TransactionManager( dependencies ), TransactionManager.class );
 
             var cypherConfig = CypherConfiguration.fromConfig( config );
+            var databaseLookup = new DatabaseLookup.Default( databaseManagerProvider );
             var catalogManager = serviceBootstrapper
-                    .registerService( new SingleCatalogManager( databaseManagerProvider, fabricConfig ), CatalogManager.class );
+                    .registerService( new SingleCatalogManager( databaseLookup, fabricConfig ), CatalogManager.class );
             var signatureResolver = new SignatureResolver( proceduresSupplier );
             var monitoring = new FabricQueryMonitoring( dependencies, monitors );
             var planner = serviceBootstrapper

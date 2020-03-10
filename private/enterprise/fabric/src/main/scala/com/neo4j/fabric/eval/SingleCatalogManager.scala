@@ -5,21 +5,16 @@
  */
 package com.neo4j.fabric.eval
 
-import java.util.function.Supplier
-
 import com.neo4j.fabric.config.FabricConfig
 import com.neo4j.fabric.executor.Location
-import org.neo4j.dbms.database.DatabaseContext
-import org.neo4j.dbms.database.DatabaseManager
-
-import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 
 class SingleCatalogManager(
-  databaseManager: Supplier[DatabaseManager[DatabaseContext]],
+  databaseLookup: DatabaseLookup,
   fabricConfig: FabricConfig,
 ) extends CatalogManager {
 
-  def currentCatalog(): Catalog = Catalog.create(fabricConfig, internalDatabaseNames)
+  def currentCatalog(): Catalog =
+    Catalog.create(fabricConfig, internalDatabaseNames)
 
   def locationOf(graph: Catalog.Graph, requireWritable: Boolean): Location = (graph, requireWritable) match {
     case (Catalog.InternalGraph(id, _, databaseName), _) =>
@@ -33,5 +28,5 @@ class SingleCatalogManager(
     new Location.RemoteUri(configUri.getScheme, configUri.getAddresses, configUri.getQuery)
 
   private def internalDatabaseNames: Set[String] =
-    databaseManager.get().registeredDatabases.keySet.asScala.map(db => db.name()).toSet
+    databaseLookup.databaseIds.map(db => db.name())
 }
