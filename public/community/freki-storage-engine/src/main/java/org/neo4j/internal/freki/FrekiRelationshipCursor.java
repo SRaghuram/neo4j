@@ -29,9 +29,9 @@ abstract class FrekiRelationshipCursor extends FrekiMainStoreCursor implements S
 {
     Iterator<StorageProperty> densePropertiesItr;
 
-    FrekiRelationshipCursor( MainStores stores, PageCursorTracer cursorTracer )
+    FrekiRelationshipCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer )
     {
-        super( stores, cursorTracer );
+        super( stores, cursorAccessPatternTracer, cursorTracer );
     }
 
     @Override

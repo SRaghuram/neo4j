@@ -41,6 +41,8 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     static final int NULL_OFFSET = 0;
 
     final MainStores stores;
+    final CursorAccessPatternTracer cursorAccessPatternTracer;
+    final CursorAccessPatternTracer.ThreadAccess cursorAccessTracer;
     final PageCursorTracer cursorTracer;
 
     Record smallRecord;
@@ -58,9 +60,11 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     int[] relationshipTypeOffsets;
     int firstRelationshipTypeOffset;
 
-    FrekiMainStoreCursor( MainStores stores, PageCursorTracer cursorTracer )
+    FrekiMainStoreCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer )
     {
         this.stores = stores;
+        this.cursorAccessPatternTracer = cursorAccessPatternTracer;
+        this.cursorAccessTracer = cursorAccessPatternTracer.access();
         this.cursorTracer = cursorTracer;
         this.record = stores.mainStore.newRecord();
         this.smallRecord = record;

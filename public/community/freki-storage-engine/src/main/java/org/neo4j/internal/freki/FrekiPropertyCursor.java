@@ -38,7 +38,7 @@ import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValu
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
 import static org.neo4j.internal.freki.StreamVByte.readLongs;
 
-public class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropertyCursor
+class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropertyCursor
 {
     private boolean initializedFromEntity;
 
@@ -52,14 +52,15 @@ public class FrekiPropertyCursor extends FrekiMainStoreCursor implements Storage
     private Iterator<StorageProperty> denseProperties;
     private StorageProperty currentDenseProperty;
 
-    public FrekiPropertyCursor( MainStores stores, PageCursorTracer cursorTracer )
+    FrekiPropertyCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer )
     {
-        super( stores, cursorTracer );
+        super( stores, cursorAccessPatternTracer, cursorTracer );
     }
 
     @Override
     public void initNodeProperties( Reference reference )
     {
+        cursorAccessTracer.registerNodeToPropertyByReference();
         reset();
         this.referenceToLoad = (FrekiReference) reference;
     }
@@ -67,6 +68,7 @@ public class FrekiPropertyCursor extends FrekiMainStoreCursor implements Storage
     @Override
     public void initNodeProperties( StorageNodeCursor nodeCursor )
     {
+        cursorAccessTracer.registerNodeToPropertyDirect();
         if ( ((FrekiMainStoreCursor) nodeCursor).initializeOtherCursorFromStateOfThisCursor( this ) && readNodePropertyKeys() )
         {
             initializedFromEntity = true;
@@ -80,6 +82,7 @@ public class FrekiPropertyCursor extends FrekiMainStoreCursor implements Storage
     @Override
     public void initRelationshipProperties( Reference reference )
     {
+        cursorAccessTracer.registerRelationshipToPropertyByReference();
         reset();
         this.referenceToLoad = (FrekiReference) reference;
     }
@@ -87,6 +90,7 @@ public class FrekiPropertyCursor extends FrekiMainStoreCursor implements Storage
     @Override
     public void initRelationshipProperties( StorageRelationshipCursor relationshipCursor )
     {
+        cursorAccessTracer.registerRelationshipToPropertyDirect();
         if ( relationshipCursor.hasProperties() )
         {
             FrekiRelationshipCursor relCursor = (FrekiRelationshipCursor) relationshipCursor;

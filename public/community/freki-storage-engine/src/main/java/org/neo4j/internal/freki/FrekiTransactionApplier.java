@@ -82,8 +82,8 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     private final FrekiCommand.SparseNode[] currentSparseNodeCommands = new FrekiCommand.SparseNode[4];
     private FrekiCommand.DenseNode currentDenseNodeCommand;
 
-    FrekiTransactionApplier( Stores stores, SchemaState schemaState, IndexUpdateListener indexUpdateListener, TransactionApplicationMode mode,
-            IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync, LabelIndexUpdatesWorkSync labelIndexUpdatesWorkSync,
+    FrekiTransactionApplier( Stores stores, FrekiCursorFactory cursorFactory, SchemaState schemaState, IndexUpdateListener indexUpdateListener,
+            TransactionApplicationMode mode, IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync, LabelIndexUpdatesWorkSync labelIndexUpdatesWorkSync,
             IndexUpdatesWorkSync indexUpdatesWorkSync )
     {
         this.stores = stores;
@@ -92,9 +92,9 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         this.labelIndexUpdates = mode == REVERSE_RECOVERY || labelIndexUpdatesWorkSync == null ? null : labelIndexUpdatesWorkSync.newBatch();
         this.idUpdates = mode == REVERSE_RECOVERY ? null : idGeneratorUpdatesWorkSync.newBatch();
         this.indexUpdates = mode == REVERSE_RECOVERY || indexUpdatesWorkSync == null ? null : indexUpdatesWorkSync.newBatch();
-        this.nodeCursor = new FrekiNodeCursor( stores, PageCursorTracer.NULL );
-        this.propertyCursorBefore = new FrekiPropertyCursor( stores, PageCursorTracer.NULL );
-        this.propertyCursorAfter = new FrekiPropertyCursor( stores, PageCursorTracer.NULL );
+        this.nodeCursor = cursorFactory.allocateNodeCursor( PageCursorTracer.NULL );
+        this.propertyCursorBefore = cursorFactory.allocatePropertyCursor( PageCursorTracer.NULL );
+        this.propertyCursorAfter = cursorFactory.allocatePropertyCursor( PageCursorTracer.NULL );
     }
 
     void beginTx( long transactionId )
