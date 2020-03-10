@@ -63,9 +63,9 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     private DenseStore.RelationshipData currentDenseRelationship;
     private int selectionCriterionIndex;
 
-    public FrekiRelationshipTraversalCursor( MainStores stores, PageCursorTracer cursorTracer )
+    public FrekiRelationshipTraversalCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer )
     {
-        super( stores, cursorTracer );
+        super( stores, cursorAccessPatternTracer, cursorTracer );
     }
 
     @Override
@@ -335,6 +335,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     @Override
     public void init( long nodeId, long reference, RelationshipSelection selection )
     {
+        cursorAccessTracer.registerNodeToRelationshipsByReference();
         //We dont use reference, is that a problem?
         init( nodeId, selection );
     }
@@ -349,7 +350,8 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     @Override
     public void init( StorageNodeCursor nodeCursor, RelationshipSelection selection )
     {
-        init( nodeCursor.entityReference(), nodeCursor.relationshipsReference(), selection );
+        cursorAccessTracer.registerNodeToRelationshipsDirect();
+        init( nodeCursor.entityReference(), selection );
         ((FrekiMainStoreCursor) nodeCursor).initializeOtherCursorFromStateOfThisCursor( this );
         startIterationAfterLoad();
         readRelationshipTypesAndOffsets();

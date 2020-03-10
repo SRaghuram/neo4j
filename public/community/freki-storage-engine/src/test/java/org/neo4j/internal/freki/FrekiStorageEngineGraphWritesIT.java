@@ -65,6 +65,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.lock.ResourceLocker;
@@ -167,11 +168,11 @@ class FrekiStorageEngineGraphWritesIT
         DatabaseHealth databaseHealth = new DatabaseHealth( new DatabasePanicEventGenerator(
                 new DatabaseEventListeners( NullLog.getInstance() ), DEFAULT_DATABASE_NAME ), NullLog.getInstance() );
         life = new LifeSupport();
-        storageEngine = life.add(
-                factory.instantiate( fs, layout, Config.defaults(), pageCache, tokenHolders, mock( SchemaState.class ), new StandardConstraintRuleAccessor(),
+        storageEngine = life.add( new FrekiStorageEngine(
+                fs, layout, Config.defaults(), pageCache, tokenHolders, mock( SchemaState.class ), new StandardConstraintRuleAccessor(),
                         new NoopIndexConfigCompletor(), NO_LOCK_SERVICE, new DefaultIdGeneratorFactory( fs, RecoveryCleanupWorkCollector.immediate() ),
                         new DefaultIdController(), databaseHealth, NullLogProvider.getInstance(), RecoveryCleanupWorkCollector.immediate(),
-                        PageCacheTracer.NULL, true ) );
+                        true, PageCacheTracer.NULL, DefaultPageCursorTracerSupplier.TRACER_SUPPLIER, CursorAccessPatternTracer.NO_TRACING ) );
         nodeLabelUpdateListener = new RecordingNodeLabelUpdateListener();
         storageEngine.addNodeLabelUpdateListener( nodeLabelUpdateListener );
         indexUpdateListener = new RecordingIndexUpdatesListener();

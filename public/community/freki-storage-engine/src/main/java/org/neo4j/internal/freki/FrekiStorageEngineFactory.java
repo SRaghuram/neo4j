@@ -93,7 +93,7 @@ public class FrekiStorageEngineFactory implements StorageEngineFactory
     {
         return new FrekiStorageEngine( fs, databaseLayout, config, pageCache, tokenHolders, schemaState, constraintSemantics, indexConfigCompleter, lockService,
                 idGeneratorFactory, idController, databaseHealth, logProvider, recoveryCleanupWorkCollector, createStoreIfNotExists, pageCacheTracer,
-                DefaultPageCursorTracerSupplier.TRACER_SUPPLIER );
+                DefaultPageCursorTracerSupplier.TRACER_SUPPLIER, CursorAccessPatternTracer.decidedByFeatureToggle() );
     }
 
     @Override
