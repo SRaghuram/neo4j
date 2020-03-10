@@ -21,7 +21,6 @@ import org.neo4j.exceptions.DatabaseAdministrationException
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.DatabaseShutdownException
-import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.internal.kernel.api.security.LoginContext
 import org.neo4j.kernel.DeadlockDetectedException
@@ -687,6 +686,21 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     executeOn("foo", "baz", "bar", "MATCH (n) RETURN n") should be(0)
+  }
+
+  test("should be able to drop and recreate the same database") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("SHOW DATABASE foo").toList should be(List(db("foo")))
+
+    // WHEN
+    execute("DROP DATABASE foo")
+    execute("SHOW DATABASE foo").toList should be(List.empty)
+
+    // WHEN
+    execute("CREATE DATABASE foo")
+    execute("SHOW DATABASE foo").toList should be(List(db("foo")))
   }
 
   test("should have no access on a re-created database") {

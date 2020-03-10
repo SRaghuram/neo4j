@@ -164,6 +164,21 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     testUserLogin("foo", "bar", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
+  test("should create user with username and password as parameter") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+
+    // WHEN
+    execute("CREATE USER $user SET PASSWORD $password CHANGE REQUIRED", Map("user" -> "foo", "password" -> "bar"))
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo"))
+    testUserLogin("user", "bar", AuthenticationResult.FAILURE)
+    testUserLogin("foo", "wrong", AuthenticationResult.FAILURE)
+    testUserLogin("foo", "bar", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+  }
+
   test("should use query cache when creating multiple users with parameterized passwords") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -376,11 +391,11 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("ALTER USER neo4j SET PASSWORD 'bar' CHANGE NOT REQUIRED")
     execute("SHOW USERS").toSet should be(Set(neo4jUserActive))
 
-    the[InvalidArgumentsException] thrownBy {
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
       // WHEN
       executeOnSystem("neo4j", "bar", "CREATE OR REPLACE USER neo4j SET PASSWORD 'baz'")
       // THEN
-    } should have message "Failed to delete the specified user 'neo4j': Deleting yourself is not allowed."
+    } should have message "Failed to replace the specified user 'neo4j': Deleting yourself is not allowed."
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive)
@@ -480,7 +495,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
     execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive)
 
-    the[InvalidArgumentsException] thrownBy {
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
       // WHEN
       executeOnSystem("neo4j", "neo", "DROP USER neo4j")
       // THEN
@@ -489,7 +504,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive)
 
-    the[InvalidArgumentsException] thrownBy {
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
       // WHEN
       executeOnSystem("neo4j", "neo", "DROP USER neo4j IF EXISTS")
       // THEN
@@ -782,7 +797,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("ALTER USER neo4j SET PASSWORD 'potato' CHANGE NOT REQUIRED")
 
     // WHEN
-    the[AuthorizationViolationException] thrownBy {
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
       executeOnSystem("neo4j", "potato", "ALTER USER neo4j SET STATUS SUSPENDED")
     } should have message "Failed to alter the specified user 'neo4j': Changing your own activation status is not allowed."
 
@@ -796,7 +811,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("ALTER USER neo4j SET PASSWORD 'potato' CHANGE NOT REQUIRED")
 
     // WHEN
-    the[AuthorizationViolationException] thrownBy {
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
       executeOnSystem("neo4j", "potato", "ALTER USER neo4j SET STATUS ACTIVE")
     } should have message "Failed to alter the specified user 'neo4j': Changing your own activation status is not allowed."
 
@@ -1302,8 +1317,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     parameter.put("currentPassword", "bar")
     parameter.put("newPassword", "bar")
 
-    // WHEN
-    // WHEN
     the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
       // WHEN
       executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM $currentPassword TO $newPassword", params = parameter)
@@ -1326,9 +1339,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val parameter = new util.HashMap[String, Object]()
     parameter.put("currentPassword", "bar")
 
-    // WHEN
-    // WHEN
-    the[InvalidArgumentsException] thrownBy { // the InvalidArgumentsException exception is not wrapped due to been thrown at planning time
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
       // WHEN
       executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM $currentPassword TO $currentPassword", params = parameter)
       // THEN

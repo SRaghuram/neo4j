@@ -96,6 +96,7 @@ import org.neo4j.exceptions.DatabaseAdministrationOnFollowerException
 import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.security.PrivilegeAction
 import org.neo4j.internal.kernel.api.security.SecurityContext
+import org.neo4j.kernel.api.KernelTransaction
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.kernel.api.exceptions.Status
 import org.neo4j.kernel.api.exceptions.Status.HasStatus
@@ -136,7 +137,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // Either the logical plan is a command that the partial function logicalToExecutable provides/understands OR we delegate to communitys version of it (which supports common things like procedures)
     // If neither we throw an error
-    fullLogicalToExecutable.applyOrElse(planWithSlottedParameters, throwCantCompile).apply(context, parameterMapping, securityContext)
+    fullLogicalToExecutable.applyOrElse(planWithSlottedParameters, throwCantCompile).apply(context, parameterMapping)
   }
 
   private lazy val authManager = {
@@ -146,27 +147,28 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
   // This allows both community and enterprise commands to be considered together, and chained together
   private def fullLogicalToExecutable = logicalToExecutable orElse communityCommandRuntime.logicalToExecutable
 
-  private def logicalToExecutable: PartialFunction[LogicalPlan, (RuntimeContext, ParameterMapping, SecurityContext) => ExecutionPlan] = {
+  private def logicalToExecutable: PartialFunction[LogicalPlan, (RuntimeContext, ParameterMapping) => ExecutionPlan] = {
     // SHOW USERS
-    case ShowUsers(source) => (context, parameterMapping, securityContext) =>
+    case ShowUsers(source) => (context, parameterMapping) =>
       SystemCommandExecutionPlan("ShowUsers", normalExecutionEngine,
         """MATCH (u:User)
           |OPTIONAL MATCH (u)-[:HAS_ROLE]->(r:Role)
           |WITH u, r.name as roleNames ORDER BY roleNames
           |WITH u, collect(roleNames) as roles
           |RETURN u.name as user, roles + 'PUBLIC' as roles, u.passwordChangeRequired AS passwordChangeRequired, u.suspended AS suspended""".stripMargin,
-        VirtualValues.EMPTY_MAP, source = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
+        VirtualValues.EMPTY_MAP, source = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
       )
 
     // CREATE [OR REPLACE] USER foo [IF NOT EXISTS] SET PASSWORD password
     // CREATE [OR REPLACE] USER foo [IF NOT EXISTS] SET PASSWORD $password
-    case CreateUser(source, userName, password, requirePasswordChange, suspendedOptional) => (context, parameterMapping, securityContext) =>
+    case CreateUser(source, userName, password, requirePasswordChange, suspendedOptional) => (context, parameterMapping) =>
       val suspended = suspendedOptional.getOrElse(false)
-      val sourcePlan: Option[ExecutionPlan] = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
+      val sourcePlan: Option[ExecutionPlan] = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
       makeCreateUserExecutionPlan(userName, password, requirePasswordChange, suspended)(sourcePlan, normalExecutionEngine)
 
     // ALTER USER foo
-    case AlterUser(source, userName, password, requirePasswordChange, suspended) => (context, parameterMapping, securityContext) =>
+    case AlterUser(source, userName, password, requirePasswordChange, suspended) => (context, parameterMapping) =>
+      val userNameValue = makeParameterValue(userName)
       val params: Seq[(String, String, Value, MapValue => MapValue, Option[(String, Value)])] = Seq(
         password -> "credentials",
         requirePasswordChange -> "passwordChangeRequired",
@@ -201,39 +203,39 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       val returnVals: Seq[Value] = values.toSeq ++ returnItems.map(_._2)
       UpdatingSystemCommandExecutionPlan("AlterUser", normalExecutionEngine,
         s"$query RETURN [$returnText] AS credentials",
-        VirtualValues.map(returnKeys.toArray :+ "name", returnVals.toArray :+ Values.utf8Value(userName)),
+        VirtualValues.map(returnKeys.toArray :+ "name", returnVals.toArray :+ userNameValue),
         QueryHandler
-          .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to alter the specified user '$userName': User does not exist.")))
+          .handleNoResult(p => Some(new InvalidArgumentsException(s"Failed to alter the specified user '${runtimeValue(userName, p)}': User does not exist.")))
           .handleError {
-            case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
-              new DatabaseAdministrationOnFollowerException(s"Failed to alter the specified user '$userName': $followerError", error)
-            case error => new IllegalStateException(s"Failed to alter the specified user '$userName'.", error)
+            case (error: HasStatus, p) if error.status() == Status.Cluster.NotALeader =>
+              new DatabaseAdministrationOnFollowerException(s"Failed to alter the specified user '${runtimeValue(userName, p)}': $followerError", error)
+            case (error, p) => new IllegalStateException(s"Failed to alter the specified user '${runtimeValue(userName, p)}'.", error)
           }
-          .handleResult((_, value) => {
+          .handleResult((_, value, p) => {
             val result = value.asInstanceOf[ListValue].asArray()
             val oldCredentials = SystemGraphCredential.deserialize(result(0).asInstanceOf[TextValue].stringValue(), secureHasher)
             val maybeThrowable = password match {
               case Some(Left(password: Array[Byte])) =>
                 if (oldCredentials.matchesPassword(password))
-                  Some(new InvalidArgumentsException(s"Failed to alter the specified user '$userName': Old password and new password cannot be the same."))
+                  Some(new InvalidArgumentsException(s"Failed to alter the specified user '${runtimeValue(userName, p)}': Old password and new password cannot be the same."))
                 else
                   None
               case Some(Right(_)) =>
                 val userNew: Array[Byte] = result(1).asInstanceOf[ByteArray].asObjectCopy()
                 if (oldCredentials.matchesPassword(userNew))
-                  Some(new InvalidArgumentsException(s"Failed to alter the specified user '$userName': Old password and new password cannot be the same."))
+                  Some(new InvalidArgumentsException(s"Failed to alter the specified user '${runtimeValue(userName, p)}': Old password and new password cannot be the same."))
                 else
                   None
               case None => None
             }
             maybeThrowable
           }),
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)),
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
         parameterConverter = m => mapper(m)
       )
 
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
-    case ShowRoles(source, withUsers, showAll) => (context, parameterMapping, securityContext) =>
+    case ShowRoles(source, withUsers, showAll) => (context, parameterMapping) =>
       val predefinedRoles = Values.stringArray(PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
         PredefinedRoles.EDITOR, PredefinedRoles.READER)
       val userColumns = if (withUsers) ", u.name as member" else ""
@@ -263,46 +265,46 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
            |$userColumns
         """.stripMargin,
         VirtualValues.map(Array("predefined"), Array(predefinedRoles)),
-        source = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
+        source = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
       )
 
     // CREATE [OR REPLACE] ROLE foo [IF NOT EXISTS] AS COPY OF bar
-    case CreateRole(source, roleName) => (context, parameterMapping, securityContext) =>
+    case CreateRole(source, roleName) => (context, parameterMapping) =>
       UpdatingSystemCommandExecutionPlan("CreateRole", normalExecutionEngine,
         """CREATE (new:Role {name: $name})
           |RETURN new.name
         """.stripMargin,
         VirtualValues.map(Array("name"), Array(Values.utf8Value(roleName))),
         QueryHandler
-          .handleNoResult(() => Some(new IllegalStateException(s"Failed to create the specified role '$roleName'.")))
-          .handleError(error => (error, error.getCause) match {
+          .handleNoResult(_ => Some(new IllegalStateException(s"Failed to create the specified role '$roleName'.")))
+          .handleError((error, _) => (error, error.getCause) match {
             case (_, _: UniquePropertyValueValidationException) =>
               new InvalidArgumentsException(s"Failed to create the specified role '$roleName': Role already exists.", error)
             case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
               new DatabaseAdministrationOnFollowerException(s"Failed to create the specified role '$roleName': $followerError", error)
             case _ => new IllegalStateException(s"Failed to create the specified role '$roleName'.", error)
           }),
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
       )
 
     // Used to split the requirement from the source role before copying privileges
-    case RequireRole(source, roleName) => (context, parameterMapping, securityContext) =>
+    case RequireRole(source, roleName) => (context, parameterMapping) =>
       UpdatingSystemCommandExecutionPlan("RequireRole", normalExecutionEngine,
         """MATCH (role:Role {name: $name})
           |RETURN role.name""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.utf8Value(roleName))),
         QueryHandler
-          .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to create a role as copy of '$roleName': Role does not exist.")))
+          .handleNoResult(_ => Some(new InvalidArgumentsException(s"Failed to create a role as copy of '$roleName': Role does not exist.")))
           .handleError {
-            case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
+            case (error: HasStatus, _) if error.status() == Status.Cluster.NotALeader =>
               new DatabaseAdministrationOnFollowerException(s"Failed to create a role as copy of '$roleName': $followerError", error)
-            case error => new IllegalStateException(s"Failed to create a role as copy of '$roleName'.", error) // should not get here but need a default case
+            case (error, _) => new IllegalStateException(s"Failed to create a role as copy of '$roleName'.", error) // should not get here but need a default case
           },
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
       )
 
     // COPY PRIVILEGES FROM role1 TO role2
-    case CopyRolePrivileges(source, to, from, grantDeny) => (context, parameterMapping, securityContext) =>
+    case CopyRolePrivileges(source, to, from, grantDeny) => (context, parameterMapping) =>
       // This operator expects CreateRole(to) and RequireRole(from) to run as source, so we do not check for those
       UpdatingSystemCommandExecutionPlan("CopyPrivileges", normalExecutionEngine,
         s"""MATCH (to:Role {name: $$to})
@@ -310,27 +312,27 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
            |MERGE (to)-[g:$grantDeny]->(p)
            |RETURN from.name, to.name, count(g)""".stripMargin,
         VirtualValues.map(Array("from", "to"), Array(Values.utf8Value(from), Values.utf8Value(to))),
-        QueryHandler.handleError(e => new IllegalStateException(s"Failed to create role '$to' as copy of '$from': Failed to copy privileges.", e)),
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
+        QueryHandler.handleError((e, _) => new IllegalStateException(s"Failed to create role '$to' as copy of '$from': Failed to copy privileges.", e)),
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
       )
 
     // DROP ROLE foo [IF EXISTS]
-    case DropRole(source, roleName) => (context, parameterMapping, securityContext) =>
+    case DropRole(source, roleName) => (context, parameterMapping) =>
       UpdatingSystemCommandExecutionPlan("DropRole", normalExecutionEngine,
         """MATCH (role:Role {name: $name}) DETACH DELETE role
           |RETURN 1 AS ignore""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.utf8Value(roleName))),
         QueryHandler
           .handleError {
-            case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
+            case (error: HasStatus, _) if error.status() == Status.Cluster.NotALeader =>
               new DatabaseAdministrationOnFollowerException(s"Failed to delete the specified role '$roleName': $followerError", error)
-            case error => new IllegalStateException(s"Failed to delete the specified role '$roleName'.", error)
+            case (error, _) => new IllegalStateException(s"Failed to delete the specified role '$roleName'.", error)
           },
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
       )
 
     // GRANT ROLE foo TO user
-    case GrantRoleToUser(source, roleName, userName) => (context, parameterMapping, securityContext) =>
+    case GrantRoleToUser(source, roleName, userName) => (context, parameterMapping) =>
       UpdatingSystemCommandExecutionPlan("GrantRoleToUser", normalExecutionEngine,
         """MATCH (r:Role {name: $role})
           |OPTIONAL MATCH (u:User {name: $user})
@@ -339,19 +341,19 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |RETURN u.name AS user""".stripMargin,
         VirtualValues.map(Array("role","user"), Array(Values.utf8Value(roleName), Values.utf8Value(userName))),
         QueryHandler
-          .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to grant role '$roleName' to user '$userName': Role does not exist.")))
+          .handleNoResult(_ => Some(new InvalidArgumentsException(s"Failed to grant role '$roleName' to user '$userName': Role does not exist.")))
           .handleError {
-            case e: InternalException if e.getMessage.contains("ignore rows where a relationship node is missing") =>
+            case (e: InternalException, _) if e.getMessage.contains("ignore rows where a relationship node is missing") =>
               new InvalidArgumentsException(s"Failed to grant role '$roleName' to user '$userName': User does not exist.", e)
-            case e: HasStatus if e.status() == Status.Cluster.NotALeader =>
+            case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
               new DatabaseAdministrationOnFollowerException(s"Failed to grant role '$roleName' to user '$userName': $followerError", e)
-            case e => new IllegalStateException(s"Failed to grant role '$roleName' to user '$userName'.", e)
+            case (e, _) => new IllegalStateException(s"Failed to grant role '$roleName' to user '$userName'.", e)
           },
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
       )
 
     // REVOKE ROLE foo FROM user
-    case RevokeRoleFromUser(source, roleName, userName) => (context, parameterMapping, securityContext) =>
+    case RevokeRoleFromUser(source, roleName, userName) => (context, parameterMapping) =>
       UpdatingSystemCommandExecutionPlan("RevokeRoleFromUser", normalExecutionEngine,
         """MATCH (r:Role {name: $role})
           |OPTIONAL MATCH (u:User {name: $user})
@@ -361,99 +363,99 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |RETURN u.name AS user""".stripMargin,
         VirtualValues.map(Array("role", "user"), Array(Values.utf8Value(roleName), Values.utf8Value(userName))),
         QueryHandler.handleError {
-          case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
+          case (error: HasStatus, _) if error.status() == Status.Cluster.NotALeader =>
             new DatabaseAdministrationOnFollowerException(s"Failed to revoke role '$roleName' from user '$userName': $followerError", error)
-          case error => new IllegalStateException(s"Failed to revoke role '$roleName' from user '$userName'.", error)
+          case (error, _) => new IllegalStateException(s"Failed to revoke role '$roleName' from user '$userName'.", error)
         },
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
       )
 
     // GRANT/DENY/REVOKE _ ON DBMS TO role
-    case GrantDbmsAction(source, action, roleName) => (context, parameterMapping, securityContext) =>
+    case GrantDbmsAction(source, action, roleName) => (context, parameterMapping) =>
       val dbmsAction = AdminActionMapper.asKernelAction(action).toString
       makeGrantOrDenyExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), AllQualifier()(InputPosition.NONE), roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant $dbmsAction privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, s"Failed to grant $dbmsAction privilege to role '$roleName'")
 
-    case DenyDbmsAction(source, action, roleName) => (context, parameterMapping, securityContext) =>
+    case DenyDbmsAction(source, action, roleName) => (context, parameterMapping) =>
       val dbmsAction = AdminActionMapper.asKernelAction(action).toString
       makeGrantOrDenyExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), AllQualifier()(InputPosition.NONE), roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny $dbmsAction privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, s"Failed to deny $dbmsAction privilege to role '$roleName'")
 
-    case RevokeDbmsAction(source, action, roleName, revokeType) => (context, parameterMapping, securityContext) =>
+    case RevokeDbmsAction(source, action, roleName, revokeType) => (context, parameterMapping) =>
       val dbmsAction = AdminActionMapper.asKernelAction(action).toString
       makeRevokeExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), AllQualifier()(InputPosition.NONE), roleName, revokeType,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke $dbmsAction privilege from role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), s"Failed to revoke $dbmsAction privilege from role '$roleName'")
 
     // GRANT/DENY/REVOKE _ ON DATABASE foo TO role
-    case GrantDatabaseAction(source, action, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
+    case GrantDatabaseAction(source, action, database, qualifier, roleName) => (context, parameterMapping) =>
       val databaseAction = AdminActionMapper.asKernelAction(action).toString
       makeGrantOrDenyExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant $databaseAction privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, s"Failed to grant $databaseAction privilege to role '$roleName'")
 
-    case DenyDatabaseAction(source, action, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
+    case DenyDatabaseAction(source, action, database, qualifier, roleName) => (context, parameterMapping) =>
       val databaseAction = AdminActionMapper.asKernelAction(action).toString
       makeGrantOrDenyExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny $databaseAction privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, s"Failed to deny $databaseAction privilege to role '$roleName'")
 
-    case RevokeDatabaseAction(source, action, database, qualifier, roleName, revokeType) => (context, parameterMapping, securityContext) =>
+    case RevokeDatabaseAction(source, action, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
       val databaseAction = AdminActionMapper.asKernelAction(action).toString
       makeRevokeExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke $databaseAction privilege from role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), s"Failed to revoke $databaseAction privilege from role '$roleName'")
 
     // GRANT/DENY/REVOKE TRAVERSE ON GRAPH foo NODES A (*) TO role
-    case GrantTraverse(source, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
+    case GrantTraverse(source, database, qualifier, roleName) => (context, parameterMapping) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.TRAVERSE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant traversal privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, s"Failed to grant traversal privilege to role '$roleName'")
 
-    case DenyTraverse(source, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
+    case DenyTraverse(source, database, qualifier, roleName) => (context, parameterMapping) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.TRAVERSE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny traversal privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, s"Failed to deny traversal privilege to role '$roleName'")
 
-    case RevokeTraverse(source, database, qualifier, roleName, revokeType) => (context, parameterMapping, securityContext) =>
+    case RevokeTraverse(source, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
       makeRevokeExecutionPlan(PrivilegeAction.TRAVERSE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke traversal privilege from role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), s"Failed to revoke traversal privilege from role '$roleName'")
 
     // GRANT/DENY/REVOKE READ {prop} ON GRAPH foo NODES A (*) TO role
-    case GrantRead(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
+    case GrantRead(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.READ.toString, resource, database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant read privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, s"Failed to grant read privilege to role '$roleName'")
 
-    case DenyRead(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
+    case DenyRead(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.READ.toString, resource, database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny read privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, s"Failed to deny read privilege to role '$roleName'")
 
-    case RevokeRead(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping, securityContext) =>
+    case RevokeRead(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
       makeRevokeExecutionPlan(PrivilegeAction.READ.toString, resource, database, qualifier, roleName, revokeType,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke read privilege from role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), s"Failed to revoke read privilege from role '$roleName'")
 
     // GRANT/DENY/REVOKE MATCH {prop} ON GRAPH foo NODES A (*) TO role
-    case GrantMatch(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
+    case GrantMatch(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.MATCH.toString, resource, database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant match privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, s"Failed to grant match privilege to role '$roleName'")
 
-    case DenyMatch(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
+    case DenyMatch(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.MATCH.toString, resource, database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny match privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, s"Failed to deny match privilege to role '$roleName'")
 
-    case RevokeMatch(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping, securityContext) =>
+    case RevokeMatch(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
       makeRevokeExecutionPlan(PrivilegeAction.MATCH.toString, resource, database, qualifier, roleName, revokeType,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke match privilege from role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), s"Failed to revoke match privilege from role '$roleName'")
 
     // GRANT/DENY/REVOKE WRITE ON GRAPH foo NODES * (*) TO role
-    case GrantWrite(source, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
+    case GrantWrite(source, database, qualifier, roleName) => (context, parameterMapping) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.WRITE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, currentUser)), GRANT, s"Failed to grant write privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, s"Failed to grant write privilege to role '$roleName'")
 
-    case DenyWrite(source, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
+    case DenyWrite(source, database, qualifier, roleName) => (context, parameterMapping) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.WRITE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, currentUser)), DENY, s"Failed to deny write privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, s"Failed to deny write privilege to role '$roleName'")
 
-    case RevokeWrite(source, database, qualifier, roleName, revokeType) => (context, parameterMapping, currentUser) =>
+    case RevokeWrite(source, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
       makeRevokeExecutionPlan(PrivilegeAction.WRITE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, currentUser)), s"Failed to revoke write privilege from role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), s"Failed to revoke write privilege from role '$roleName'")
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES
-    case ShowPrivileges(source, scope) => (context, parameterMapping, securityContext) =>
+    case ShowPrivileges(source, scope) => (context, parameterMapping) =>
       val privilegeMatch =
         """
           |MATCH (r)-[g]->(p:Privilege)-[:SCOPE]->(s:Segment),
@@ -489,7 +491,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
            |ORDER BY role, graph, segment, resource, action
         """.stripMargin
 
-      val (grantee: Value, query, updatedSource) = scope match {
+      val (grantee: Value, query) = scope match {
         case ShowRolePrivileges(name) => (Values.utf8Value(name),
           s"""
              |OPTIONAL MATCH (r:Role) WHERE r.name = $$grantee WITH r
@@ -497,14 +499,11 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
              |WITH g, p, res, d, $segmentColumn AS segment, r ORDER BY d.name, r.name, segment
              |$returnColumns
              |$orderBy
-          """.stripMargin,
-          Some(source)
+          """.stripMargin
         )
         case ShowUserPrivileges(name) =>
-          val currentUser = securityContext.subject().username()
-          val requestedUser = name.getOrElse(currentUser)
-          // Should be able to see your own privileges without admin privilege, source is check for admin privilege
-          val newSource = if (requestedUser.equals(currentUser)) None else Some(source)
+          // TODO: fix so we get the actual current user
+          val requestedUser = name.getOrElse("currentUser")
           (Values.utf8Value(requestedUser),
           s"""
              |OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r:Role) WHERE u.name = $$grantee WITH r, u
@@ -518,8 +517,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
              |WITH g, p, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, r.name, segment
              |$returnColumns, u.name AS user
              |$orderBy
-          """.stripMargin,
-          newSource
+          """.stripMargin
         )
         case ShowAllPrivileges() => (Values.NO_VALUE,
           s"""
@@ -528,41 +526,45 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
              |WITH g, p, res, d, $segmentColumn AS segment, r ORDER BY d.name, r.name, segment
              |$returnColumns
              |$orderBy
-          """.stripMargin,
-          Some(source)
+          """.stripMargin
         )
         case _ => throw new IllegalStateException(s"Invalid show privilege scope '$scope'")
       }
       SystemCommandExecutionPlan("ShowPrivileges", normalExecutionEngine, query, VirtualValues.map(Array("grantee"), Array(grantee)),
-        source = updatedSource.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)))
+        source = source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping)))
 
     // CREATE [OR REPLACE] DATABASE foo [IF NOT EXISTS]
-    case CreateDatabase(source, normalizedName) => (context, parameterMapping, securityContext) =>
+    case CreateDatabase(source, normalizedName) => (context, parameterMapping) =>
       // Ensuring we don't exceed the max number of databases is a separate step
       val dbName = normalizedName.name
       val defaultDbName = resolver.resolveDependency(classOf[Config]).get(GraphDatabaseSettings.default_database)
       val default = dbName.equals(defaultDbName)
-
-      val clusterOptions = Try(resolver.resolveDependency(classOf[RaftMachine])) match {
-        case Success(raftMachine) =>
-          val initialMembersSet = raftMachine.coreState.committed.members.asScala
-          val opts = (initialMembersSet.map(_.getUuid.toString).toArray, System.currentTimeMillis(),
-            ThreadLocalRandom.current().nextLong(), Standard.LATEST_STORE_VERSION)
-          Some(opts)
-
-        case Failure(_) => None
-      }
 
       val virtualKeys: Array[String] = Array(
         "name",
         "status",
         "default",
         "uuid")
-      val virtualValues: Array[AnyValue] = Array(
+      def virtualValues(): Array[AnyValue] = Array(
         Values.utf8Value(dbName),
         DatabaseStatus.Online,
         Values.booleanValue(default),
         Values.utf8Value(UUID.randomUUID().toString))
+
+      def virtualMapClusterGenerator(raftMachine: RaftMachine)(ktx: KernelTransaction): MapValue = {
+        val initialMembersSet = raftMachine.coreState.committed.members.asScala
+        val initial = initialMembersSet.map(_.getUuid.toString).toArray
+        val creation = System.currentTimeMillis()
+        val randomId = ThreadLocalRandom.current().nextLong()
+        val storeVersion = Standard.LATEST_STORE_VERSION
+        VirtualValues.map(
+          virtualKeys ++ Array("initialMembers", "creationTime", "randomId", "storeVersion"),
+          virtualValues() ++ Array(Values.stringArray(initial: _*), Values.longValue(creation), Values.longValue(randomId), Values.utf8Value(storeVersion)))
+      }
+
+      def virtualMapStandaloneGenerator()(ktx: KernelTransaction): MapValue = {
+        VirtualValues.map(virtualKeys, virtualValues())
+      }
 
       val clusterProperties =
         """
@@ -572,15 +574,11 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |  d.store_random_id = $randomId,
           |  d.store_version = $storeVersion """.stripMargin
 
-      val (queryAdditions, virtualMap) = clusterOptions match {
-        case Some(opts) =>
-          val (initial, creation, randomId, storeVersion) = opts
+      val (queryAdditions, virtualMapGenerator) = Try(resolver.resolveDependency(classOf[RaftMachine])) match {
+        case Success(raftMachine) =>
+          (clusterProperties, virtualMapClusterGenerator(raftMachine) _)
 
-          (clusterProperties, VirtualValues.map(
-            virtualKeys ++ Array("initialMembers", "creationTime", "randomId", "storeVersion"),
-            virtualValues ++ Array(Values.stringArray(initial:_*), Values.longValue(creation), Values.longValue(randomId), Values.utf8Value(storeVersion))))
-
-        case None => ("",VirtualValues.map(virtualKeys, virtualValues))
+        case Failure(_) => ("", virtualMapStandaloneGenerator() _)
       }
 
       UpdatingSystemCommandExecutionPlan("CreateDatabase", normalExecutionEngine,
@@ -592,39 +590,40 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
            |  d.uuid = $$uuid
            |  $queryAdditions
            |RETURN d.name as name, d.status as status, d.uuid as uuid
-        """.stripMargin, virtualMap,
+        """.stripMargin, MapValue.EMPTY,
         QueryHandler
-          .handleError(error => (error, error.getCause) match {
+          .handleError((error, _) => (error, error.getCause) match {
             case (_, _: UniquePropertyValueValidationException) =>
               new DatabaseExistsException(s"Failed to create the specified database '$dbName': Database already exists.", error)
             case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
               new DatabaseAdministrationOnFollowerException(s"Failed to create the specified database '$dbName': $followerError", error)
             case _ => new IllegalStateException(s"Failed to create the specified database '$dbName'.", error)
           }),
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
+        parameterGenerator = virtualMapGenerator
       )
 
     // Used to ensure we don't create to many databases,
     // this by first creating/replacing (source) and then check we didn't exceed the allowed number
-    case EnsureValidNumberOfDatabases(source) =>  (context, parameterMapping, securityContext) =>
+    case EnsureValidNumberOfDatabases(source) =>  (context, parameterMapping) =>
       val dbName = source.normalizedName.name // database to be created, needed for error message
       val query =
         """MATCH (d:Database)
           |RETURN count(d) as numberOfDatabases
         """.stripMargin
       UpdatingSystemCommandExecutionPlan("EnsureValidNumberOfDatabases", normalExecutionEngine, query, VirtualValues.EMPTY_MAP,
-        QueryHandler.handleResult((_, numberOfDatabases) =>
+        QueryHandler.handleResult((_, numberOfDatabases, _) =>
           if (numberOfDatabases.asInstanceOf[LongValue].longValue() > maxDBLimit) {
             Some(new DatabaseLimitReachedException(s"Failed to create the specified database '$dbName':"))
           } else {
             None
           }
         ),
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
       )
 
     // DROP DATABASE foo [IF EXISTS]
-    case DropDatabase(source, normalizedName) => (context, parameterMapping, securityContext) =>
+    case DropDatabase(source, normalizedName) => (context, parameterMapping) =>
       val dbName = normalizedName.name
       UpdatingSystemCommandExecutionPlan("DropDatabase", normalExecutionEngine,
         """MATCH (d:Database {name: $name})
@@ -634,15 +633,15 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |RETURN d.name as name, d.status as status""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.utf8Value(dbName))),
         QueryHandler.handleError {
-          case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
+          case (error: HasStatus, _) if error.status() == Status.Cluster.NotALeader =>
             new DatabaseAdministrationOnFollowerException(s"Failed to delete the specified database '$dbName': $followerError", error)
-          case error => new IllegalStateException(s"Failed to delete the specified database '$dbName'.", error)
+          case (error, _) => new IllegalStateException(s"Failed to delete the specified database '$dbName'.", error)
         },
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
       )
 
     // START DATABASE foo
-    case StartDatabase(source, normalizedName) => (context, parameterMapping, securityContext) =>
+    case StartDatabase(source, normalizedName) => (context, parameterMapping) =>
       val dbName = normalizedName.name
       UpdatingSystemCommandExecutionPlan("StartDatabase", normalExecutionEngine,
         """OPTIONAL MATCH (d:Database {name: $name})
@@ -658,20 +657,20 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           )
         ),
         QueryHandler
-          .handleResult((offset, value) => {
+          .handleResult((offset, value, _) => {
             if (offset == 2 && (value eq Values.NO_VALUE)) Some(new DatabaseNotFoundException(s"Failed to start the specified database '$dbName': Database does not exist."))
             else None
           })
           .handleError {
-            case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
+            case (error: HasStatus, _) if error.status() == Status.Cluster.NotALeader =>
               new DatabaseAdministrationOnFollowerException(s"Failed to start the specified database '$dbName': $followerError", error)
-            case error => new IllegalStateException(s"Failed to start the specified database '$dbName'.", error)
+            case (error, _) => new IllegalStateException(s"Failed to start the specified database '$dbName'.", error)
           },
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
       )
 
     // STOP DATABASE foo
-    case StopDatabase(source, normalizedName) => (context, parameterMapping, securityContext) =>
+    case StopDatabase(source, normalizedName) => (context, parameterMapping) =>
       val dbName = normalizedName.name
       UpdatingSystemCommandExecutionPlan("StopDatabase", normalExecutionEngine,
         """OPTIONAL MATCH (d2:Database {name: $name, status: $oldStatus})
@@ -686,16 +685,16 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           )
         ),
         QueryHandler.handleError {
-          case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
+          case (error: HasStatus, _) if error.status() == Status.Cluster.NotALeader =>
             new DatabaseAdministrationOnFollowerException(s"Failed to stop the specified database '$dbName': $followerError", error)
-          case error => new IllegalStateException(s"Failed to stop the specified database '$dbName'.", error)
+          case (error, _) => new IllegalStateException(s"Failed to stop the specified database '$dbName'.", error)
         },
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
       )
 
     // Used to check whether a database is present and not the system database,
     // which means it can be dropped and stopped.
-    case EnsureValidNonSystemDatabase(source, normalizedName, action) => (context, parameterMapping, securityContext) =>
+    case EnsureValidNonSystemDatabase(source, normalizedName, action) => (context, parameterMapping) =>
       val dbName = normalizedName.name
       if (dbName.equals(SYSTEM_DATABASE_NAME))
         throw new DatabaseAdministrationException(s"Not allowed to $action system database.")
@@ -705,21 +704,20 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |RETURN db.name AS name""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.utf8Value(dbName))),
         QueryHandler
-          .handleNoResult(() => Some(new DatabaseNotFoundException(s"Failed to $action the specified database '$dbName': Database does not exist.")))
+          .handleNoResult(_ => Some(new DatabaseNotFoundException(s"Failed to $action the specified database '$dbName': Database does not exist.")))
           .handleError {
-            case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
+            case (error: HasStatus, _) if error.status() == Status.Cluster.NotALeader =>
               new DatabaseAdministrationOnFollowerException(s"Failed to $action the specified database '$dbName': $followerError", error)
-            case error => new IllegalStateException(s"Failed to $action the specified database '$dbName'.", error) // should not get here but need a default case
+            case (error, _) => new IllegalStateException(s"Failed to $action the specified database '$dbName'.", error) // should not get here but need a default case
           },
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
       )
 
     // Used to log commands
-    case LogSystemCommand(source, command) => (context, parameterMapping, securityContext) =>
+    case LogSystemCommand(source, command) => (context, parameterMapping) =>
       LoggingSystemCommandExecutionPlan(
-        fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext),
+        fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping),
         command,
-        securityContext,
         (message, securityContext) => authManager.log(message, securityContext)
       )
   }
@@ -790,13 +788,13 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |RETURN '${grant.prefix}' AS grant, p.action AS action, d.name AS database, q.label AS label, r.name AS role""".stripMargin,
       VirtualValues.map(Array("action", "resource", "property", "database", "label", "role"), Array(action, resourceType, property, dbName, label, role)),
       QueryHandler
-        .handleNoResult(() => Some(new DatabaseNotFoundException(s"$startOfErrorMessage: Database '$db' does not exist."))) // needs to have the database name here since it is not in the startOfErrorMessage
+        .handleNoResult(_ => Some(new DatabaseNotFoundException(s"$startOfErrorMessage: Database '$db' does not exist."))) // needs to have the database name here since it is not in the startOfErrorMessage
         .handleError {
-          case e: InternalException if e.getMessage.contains("ignore rows where a relationship node is missing") =>
+          case (e: InternalException, _) if e.getMessage.contains("ignore rows where a relationship node is missing") =>
             new InvalidArgumentsException(s"$startOfErrorMessage: Role does not exist.", e) // the rolename is included in the startOfErrorMessage so not needed here (consistent with the other commands)
-          case e: HasStatus if e.status() == Status.Cluster.NotALeader =>
+          case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
             new DatabaseAdministrationOnFollowerException(s"$startOfErrorMessage: $followerError", e)
-          case e => new IllegalStateException(s"$startOfErrorMessage.", e)
+          case (e, _) => new IllegalStateException(s"$startOfErrorMessage.", e)
         },
       source
     )
@@ -837,9 +835,9 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |RETURN r.name AS role, g AS grant""".stripMargin,
       VirtualValues.map(Array("action", "resource", "property", "database", "label", "role"), Array(action, resourceType, property, dbName, label, role)),
       QueryHandler.handleError {
-        case e: HasStatus if e.status() == Status.Cluster.NotALeader =>
+        case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
           new DatabaseAdministrationOnFollowerException(s"$startOfErrorMessage: $followerError", e)
-        case e => new IllegalStateException(s"$startOfErrorMessage.", e)
+        case (e, _) => new IllegalStateException(s"$startOfErrorMessage.", e)
       },
       source
     )
