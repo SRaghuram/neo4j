@@ -38,15 +38,15 @@ import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.internal.freki.StreamVByte.nonEmptyIntDeltas;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
 
-public class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
+class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
 {
     private long singleId;
     private boolean inScan;
     private FrekiRelationshipTraversalCursor relationshipsCursor;
 
-    public FrekiNodeCursor( MainStores stores, PageCursorTracer cursorTracer )
+    FrekiNodeCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer )
     {
-        super( stores, cursorTracer );
+        super( stores, cursorAccessPatternTracer, cursorTracer );
     }
 
     @Override
@@ -107,7 +107,7 @@ public class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNode
         // Sparse
         if ( relationshipsCursor == null )
         {
-            relationshipsCursor = new FrekiRelationshipTraversalCursor( stores, cursorTracer );
+            relationshipsCursor = new FrekiRelationshipTraversalCursor( stores, cursorAccessPatternTracer, cursorTracer );
         }
         EagerDegrees degrees = new EagerDegrees();
         relationshipsCursor.init( this, selection );
@@ -188,6 +188,7 @@ public class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNode
         else if ( singleId != NULL )
         {
             loadMainRecord( singleId );
+            cursorAccessTracer.registerNode( singleId );
             singleId = NULL;
             return smallRecord.hasFlag( FLAG_IN_USE );
         }

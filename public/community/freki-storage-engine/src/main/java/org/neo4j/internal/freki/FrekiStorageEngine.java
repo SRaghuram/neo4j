@@ -91,9 +91,11 @@ public class FrekiStorageEngine extends Life implements StorageEngine
     private final boolean createStoreIfNotExists;
     private final PageCacheTracer pageCacheTracer;
     private final PageCursorTracerSupplier cursorTracerSupplier;
+    private final CursorAccessPatternTracer cursorAccessPatternTracer;
 
     private final Stores stores;
     private final IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync;
+    private final FrekiStorageReader singleReader;
     private LabelIndexUpdatesWorkSync labelIndexUpdatesWorkSync;
     private IndexUpdatesWorkSync indexUpdatesWorkSync;
     private IndexUpdateListener indexUpdateListener;
@@ -103,7 +105,8 @@ public class FrekiStorageEngine extends Life implements StorageEngine
             SchemaState schemaState, ConstraintRuleAccessor constraintSemantics, IndexConfigCompleter indexConfigCompleter, LockService lockService,
             IdGeneratorFactory idGeneratorFactory, IdController idController, DatabaseHealth databaseHealth, LogProvider logProvider,
             RecoveryCleanupWorkCollector recoveryCleanupWorkCollector, boolean createStoreIfNotExists,
-            PageCacheTracer pageCacheTracer, PageCursorTracerSupplier cursorTracerSupplier ) throws IOException
+            PageCacheTracer pageCacheTracer, PageCursorTracerSupplier cursorTracerSupplier, CursorAccessPatternTracer cursorAccessPatternTracer )
+            throws IOException
     {
         this.fs = fs;
         this.databaseLayout = databaseLayout;
@@ -122,9 +125,11 @@ public class FrekiStorageEngine extends Life implements StorageEngine
         this.createStoreIfNotExists = createStoreIfNotExists;
         this.pageCacheTracer = pageCacheTracer;
         this.cursorTracerSupplier = cursorTracerSupplier;
+        this.cursorAccessPatternTracer = cursorAccessPatternTracer;
         this.idGeneratorUpdatesWorkSync = new IdGeneratorUpdatesWorkSync();
         this.stores = new Stores( fs, databaseLayout, pageCache, idGeneratorFactory, pageCacheTracer, cursorTracerSupplier, recoveryCleanupWorkCollector,
                 createStoreIfNotExists, constraintSemantics, indexConfigCompleter, tokenHolders );
+        this.singleReader = new FrekiStorageReader( stores, cursorAccessPatternTracer, tokenHolders );
         life.add( stores );
     }
 
@@ -189,8 +194,8 @@ public class FrekiStorageEngine extends Life implements StorageEngine
         // point between closing this and the locks above
         CommandsToApply initialBatch = batch;
         try ( LockGroup locks = new LockGroup();
-                FrekiTransactionApplier txApplier = new FrekiTransactionApplier( stores, schemaState, indexUpdateListener, mode, idGeneratorUpdatesWorkSync,
-                        labelIndexUpdatesWorkSync, indexUpdatesWorkSync ) )
+                FrekiTransactionApplier txApplier = new FrekiTransactionApplier( stores, singleReader, schemaState, indexUpdateListener, mode,
+                        idGeneratorUpdatesWorkSync, labelIndexUpdatesWorkSync, indexUpdatesWorkSync ) )
         {
             while ( batch != null )
             {
@@ -285,7 +290,7 @@ public class FrekiStorageEngine extends Life implements StorageEngine
     @Override
     public StorageReader newReader()
     {
-        return new FrekiStorageReader( stores, tokenHolders );
+        return singleReader;
     }
 
     Stores stores()
@@ -299,5 +304,12 @@ public class FrekiStorageEngine extends Life implements StorageEngine
         super.init();
         // Now that all stores have been initialized and all id generators are opened then register them at the work-sync
         stores.idGenerators( idGeneratorUpdatesWorkSync::add );
+    }
+
+    @Override
+    public void shutdown()
+    {
+        super.shutdown();
+        cursorAccessPatternTracer.printSummary();
     }
 }

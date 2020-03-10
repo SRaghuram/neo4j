@@ -40,10 +40,10 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
 
     private final FrekiRelationshipTraversalCursor traversalCursor;
 
-    FrekiRelationshipScanCursor( MainStores stores, PageCursorTracer cursorTracer )
+    FrekiRelationshipScanCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer )
     {
-        super( stores, cursorTracer );
-        traversalCursor = new FrekiRelationshipTraversalCursor( stores, cursorTracer );
+        super( stores, cursorAccessPatternTracer, cursorTracer );
+        traversalCursor = new FrekiRelationshipTraversalCursor( stores, cursorAccessPatternTracer, cursorTracer );
     }
 
     @Override
@@ -73,6 +73,7 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
             if ( needsLoading )
             {
                 needsLoading = false;
+                cursorAccessTracer.registerRelationshipByReference();
                 traversalCursor.init( MutableNodeRecordData.nodeIdFromRelationshipId( singleId ), selection );
             }
             while ( traversalCursor.next() )

@@ -76,7 +76,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
     {
         // given
         Record node = node().inUse( false ).store();
-        FrekiNodeCursor cursor = new FrekiNodeCursor( stores, NULL );
+        FrekiNodeCursor cursor = cursorFactory.allocateNodeCursor( NULL );
 
         // when
         cursor.single( node.id );
@@ -141,7 +141,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         assertFalse( cursor.hasProperties() );
 
         // when
-        FrekiPropertyCursor propertyCursor = new FrekiPropertyCursor( stores, NULL );
+        FrekiPropertyCursor propertyCursor = cursorFactory.allocatePropertyCursor( NULL );
         connector.connect( cursor, propertyCursor );
 
         // then
@@ -157,7 +157,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         Value value = intValue( 999123 );
         FrekiNodeCursor cursor = node().property( propertyKeyId, value ).storeAndPlaceNodeCursorAt();
         assertTrue( cursor.hasProperties() );
-        FrekiPropertyCursor propertyCursor = new FrekiPropertyCursor( stores, NULL );
+        FrekiPropertyCursor propertyCursor = cursorFactory.allocatePropertyCursor( NULL );
         connector.connect( cursor, propertyCursor );
 
         // when/then
@@ -178,7 +178,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         properties.put( 3, stringValue( "abc" ) );
         FrekiNodeCursor cursor = node().properties( properties ).storeAndPlaceNodeCursorAt();
         assertTrue( cursor.hasProperties() );
-        FrekiPropertyCursor propertyCursor = new FrekiPropertyCursor( stores, NULL );
+        FrekiPropertyCursor propertyCursor = cursorFactory.allocatePropertyCursor( NULL );
         connector.connect( cursor, propertyCursor );
 
         // when
@@ -199,7 +199,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         properties.put( 3, stringValue( "abc" ) );
         FrekiNodeCursor cursor = node().properties( properties ).storeAndPlaceNodeCursorAt();
         assertTrue( cursor.hasProperties() );
-        FrekiPropertyCursor propertyCursor = new FrekiPropertyCursor( stores, NULL );
+        FrekiPropertyCursor propertyCursor = cursorFactory.allocatePropertyCursor( NULL );
         connector.connect( cursor, propertyCursor );
 
         // when
@@ -231,7 +231,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         FrekiNodeCursor cursor = node().storeAndPlaceNodeCursorAt();
 
         // when
-        try ( FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL ) )
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL ) )
         {
             connector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
 
@@ -253,7 +253,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         Record otherNodeRecord = otherNode.store();
 
         // when
-        try ( FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL ) )
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL ) )
         {
             connector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
 
@@ -283,7 +283,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
 
         // when
         MutableLongSet otherNodes;
-        try ( FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL ) )
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL ) )
         {
             connector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
 
@@ -316,7 +316,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         Record node3Record = node3.store();
 
         // when
-        try ( FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL ) )
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL ) )
         {
             connector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
 
@@ -357,7 +357,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
 
         // when
         MutableIntObjectMap<MutableLongSet> otherNodes;
-        try ( FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL ) )
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL ) )
         {
             connector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
 
@@ -389,13 +389,13 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         otherNode.store();
 
         // when
-        try ( FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL ) )
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL ) )
         {
             relationshipsConnector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
             assertTrue( relationshipCursor.next() );
 
             // then
-            FrekiPropertyCursor propertyCursor = new FrekiPropertyCursor( stores, NULL );
+            FrekiPropertyCursor propertyCursor = cursorFactory.allocatePropertyCursor( NULL );
             propertyConnector.connect( relationshipCursor, propertyCursor );
             assertEquals( properties, readProperties( propertyCursor ) );
 
@@ -419,13 +419,13 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         otherNode.store();
 
         // when
-        try ( FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL ) )
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL ) )
         {
             relationshipsConnector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
             assertTrue( relationshipCursor.next() );
 
             // then
-            FrekiPropertyCursor propertyCursor = new FrekiPropertyCursor( stores, NULL );
+            FrekiPropertyCursor propertyCursor = cursorFactory.allocatePropertyCursor( NULL );
             propertyConnector.connect( relationshipCursor, propertyCursor );
             assertEquals( properties, readProperties( propertyCursor ) );
 
@@ -450,12 +450,12 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         FrekiNodeCursor cursor = node.storeAndPlaceNodeCursorAt();
         otherNode.store();
         int numRelationships;
-        try ( FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL ) )
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL ) )
         {
             relationshipsConnector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
 
             // when/then
-            FrekiPropertyCursor propertyCursor = new FrekiPropertyCursor( stores, NULL );
+            FrekiPropertyCursor propertyCursor = cursorFactory.allocatePropertyCursor( NULL );
             numRelationships = 0;
             while ( relationshipCursor.next() )
             {
@@ -485,12 +485,12 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         Record otherNodeRecord = otherNode.store();
         thirdNode.store();
         int numRelationships;
-        try ( FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL ) )
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL ) )
         {
             relationshipsConnector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
 
             // when/then
-            FrekiPropertyCursor propertyCursor = new FrekiPropertyCursor( stores, NULL );
+            FrekiPropertyCursor propertyCursor = cursorFactory.allocatePropertyCursor( NULL );
             numRelationships = 0;
             while ( relationshipCursor.next() )
             {
@@ -517,7 +517,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         otherNode.store();
         FrekiNodeCursor cursor = node.storeAndPlaceNodeCursorAt();
         Set<RelationshipDirection> expectedDirections;
-        try ( FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL ) )
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL ) )
         {
             relationshipsConnector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
 
@@ -556,7 +556,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         createdRels.put( otherNode.id(), node.id() );
 
         MutableMultimap<Long,Long> actualRels = Multimaps.mutable.set.empty();
-        try ( FrekiRelationshipScanCursor relationshipCursor = new FrekiRelationshipScanCursor( stores, NULL ) )
+        try ( FrekiRelationshipScanCursor relationshipCursor = cursorFactory.allocateRelationshipScanCursor( NULL ) )
         {
             relationshipCursor.scan();
             while ( relationshipCursor.next() )
@@ -577,7 +577,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
             node().store();
         }
 
-        try ( FrekiRelationshipScanCursor relationshipCursor = new FrekiRelationshipScanCursor( stores, NULL ) )
+        try ( FrekiRelationshipScanCursor relationshipCursor = cursorFactory.allocateRelationshipScanCursor( NULL ) )
         {
             relationshipCursor.scan();
             assertFalse( relationshipCursor.next() );
@@ -605,7 +605,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         createdRels.put( otherNode.id(), node.id() );
 
         MutableMultimap<Long,Long> actualRels = Multimaps.mutable.set.empty();
-        try ( FrekiRelationshipScanCursor relationshipCursor = new FrekiRelationshipScanCursor( stores, NULL ) )
+        try ( FrekiRelationshipScanCursor relationshipCursor = cursorFactory.allocateRelationshipScanCursor( NULL ) )
         {
             relationshipCursor.scan( type2 );
             while ( relationshipCursor.next() )
@@ -634,7 +634,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         node.store();
         otherNode.store();
 
-        try ( FrekiRelationshipScanCursor relationshipCursor = new FrekiRelationshipScanCursor( stores, NULL ) )
+        try ( FrekiRelationshipScanCursor relationshipCursor = cursorFactory.allocateRelationshipScanCursor( NULL ) )
         {
             relationshipCursor.single( relId );
             assertTrue( relationshipCursor.next() );
@@ -655,7 +655,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         long relId = node.relationship( type, otherNode );
         // dont store the nodes (so relationship doesnt exist)
 
-        try ( FrekiRelationshipScanCursor relationshipCursor = new FrekiRelationshipScanCursor( stores, NULL ) )
+        try ( FrekiRelationshipScanCursor relationshipCursor = cursorFactory.allocateRelationshipScanCursor( NULL ) )
         {
             relationshipCursor.single( relId );
             assertFalse( relationshipCursor.next() );
@@ -671,7 +671,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         FrekiNodeCursor node = createNodeWithRandomRelationships( numRelationshipTypes, 1, 5, relationships );
 
         // when
-        try ( FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL ) )
+        try ( FrekiRelationshipTraversalCursor relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL ) )
         {
             for ( int type = 0; type < numRelationshipTypes; type++ )
             {
@@ -887,7 +887,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
 
             private void checkProperties( FrekiNodeCursor cursor )
             {
-                FrekiPropertyCursor propertyCursor = new FrekiPropertyCursor( stores, NULL );
+                FrekiPropertyCursor propertyCursor = cursorFactory.allocatePropertyCursor( NULL );
                 EntityAndPropertyConnector.DIRECT.connect( cursor, propertyCursor );
                 MutableIntObjectMap<Value> readProperties = IntObjectMaps.mutable.empty();
                 while ( propertyCursor.next() )
@@ -935,9 +935,9 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
 
             private void checkRelationships( FrekiNodeCursor cursor, int typeToCheck, int expectedNum, int expectedNumWithProps, boolean expectedOutgoing )
             {
-                FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL );
+                FrekiRelationshipTraversalCursor relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL );
                 AllRelationshipsConnector.DIRECT_REFERENCE.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
-                FrekiPropertyCursor propertyCursor = new FrekiPropertyCursor( stores, NULL );
+                FrekiPropertyCursor propertyCursor = cursorFactory.allocatePropertyCursor( NULL );
 
                 int numRelationsRead = 0;
                 int numRelationsWithPropsRead = 0;

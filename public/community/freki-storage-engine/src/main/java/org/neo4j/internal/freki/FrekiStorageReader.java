@@ -38,12 +38,8 @@ import org.neo4j.internal.schema.constraints.IndexBackedConstraintDescriptor;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.AllNodeScan;
-import org.neo4j.storageengine.api.AllRelationshipsScan;
-import org.neo4j.storageengine.api.StorageNodeCursor;
-import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageReader;
 import org.neo4j.storageengine.api.StorageRelationshipScanCursor;
-import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 import org.neo4j.storageengine.api.StorageSchemaReader;
 import org.neo4j.token.TokenHolders;
 
@@ -51,15 +47,16 @@ import static org.neo4j.collection.PrimitiveLongCollections.EMPTY_LONG_ARRAY;
 import static org.neo4j.token.api.TokenConstants.ANY_LABEL;
 import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 
-class FrekiStorageReader implements StorageReader
+class FrekiStorageReader extends FrekiCursorFactory implements StorageReader
 {
     private final Stores stores;
     private final SchemaCache schemaCache;
     private final GBPTreeCountsStore counts;
     private final TokenHolders tokenHolders;
 
-    FrekiStorageReader( Stores stores, TokenHolders tokenHolders )
+    FrekiStorageReader( Stores stores, CursorAccessPatternTracer cursorAccessPatternTracer, TokenHolders tokenHolders )
     {
+        super( stores, cursorAccessPatternTracer );
         this.stores = stores;
         this.schemaCache = stores.schemaCache;
         this.counts = stores.countsStore;
@@ -280,36 +277,6 @@ class FrekiStorageReader implements StorageReader
     public AllNodeScan allNodeScan()
     {
         throw new UnsupportedOperationException( "Not implemented yet" );
-    }
-
-    @Override
-    public AllRelationshipsScan allRelationshipScan()
-    {
-        throw new UnsupportedOperationException( "Not implemented yet" );
-    }
-
-    @Override
-    public StorageNodeCursor allocateNodeCursor( PageCursorTracer cursorTracer )
-    {
-        return new FrekiNodeCursor( stores, cursorTracer );
-    }
-
-    @Override
-    public StoragePropertyCursor allocatePropertyCursor( PageCursorTracer cursorTracer )
-    {
-        return new FrekiPropertyCursor( stores, cursorTracer );
-    }
-
-    @Override
-    public StorageRelationshipTraversalCursor allocateRelationshipTraversalCursor( PageCursorTracer cursorTracer )
-    {
-        return new FrekiRelationshipTraversalCursor( stores, cursorTracer );
-    }
-
-    @Override
-    public StorageRelationshipScanCursor allocateRelationshipScanCursor( PageCursorTracer cursorTracer )
-    {
-        return new FrekiRelationshipScanCursor( stores, cursorTracer );
     }
 
     @Override

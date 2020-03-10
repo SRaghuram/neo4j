@@ -56,6 +56,7 @@ abstract class FrekiCursorsTest
     InMemoryTestStore store = new InMemoryTestStore( 0 );
     InMemoryTestStore largeStore = new InMemoryTestStore( 3 );
     MainStores stores = new MainStores( new SimpleStore[]{store, null, null, largeStore}, new InMemoryBigValueTestStore(), null );
+    FrekiCursorFactory cursorFactory = new FrekiCursorFactory( stores, CursorAccessPatternTracer.NO_TRACING );
 
     static long[] toLongArray( int[] labelIds )
     {
@@ -122,7 +123,7 @@ abstract class FrekiCursorsTest
         FrekiNodeCursor storeAndPlaceNodeCursorAt()
         {
             Record record = store();
-            FrekiNodeCursor nodeCursor = new FrekiNodeCursor( stores, PageCursorTracer.NULL );
+            FrekiNodeCursor nodeCursor = cursorFactory.allocateNodeCursor( PageCursorTracer.NULL );
             nodeCursor.single( record.id );
             assertTrue( nodeCursor.next() );
             return nodeCursor;
