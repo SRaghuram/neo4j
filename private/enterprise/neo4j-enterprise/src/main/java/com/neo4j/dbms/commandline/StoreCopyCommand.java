@@ -120,6 +120,12 @@ public class StoreCopyCommand extends AbstractCommand
     )
     private List<String> skipRelationships = new ArrayList<>();
 
+    @Option( names = "--from-pagecache", paramLabel = "<size>", defaultValue = "8m", description = "The size of the page cache to use for reading." )
+    private String fromPageCacheMemory;
+
+    @Option( names = "--to-pagecache", paramLabel = "<size>", defaultValue = "8m", description = "The size of the page cache to use for writing." )
+    private String toPageCacheMemory;
+
     public StoreCopyCommand( ExecutionContext ctx )
     {
         super( ctx );
@@ -149,7 +155,7 @@ public class StoreCopyCommand extends AbstractCommand
                         verbose, ctx.out(), pageCacheTracer );
                 try
                 {
-                    copy.copyTo( toDatabaseLayout );
+                    copy.copyTo( toDatabaseLayout, fromPageCacheMemory, toPageCacheMemory );
                 }
                 catch ( Exception e )
                 {

@@ -43,10 +43,14 @@ import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.mem.MemoryAllocator;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
+import org.neo4j.io.pagecache.impl.SingleFilePageSwapperFactory;
+import org.neo4j.io.pagecache.impl.muninn.MuninnPageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
+import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.impl.store.CommonAbstractStore;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.NodeStore;
@@ -65,8 +69,10 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.SimpleLogService;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.procedure.builtin.SchemaStatementProcedure;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.time.Clocks;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.token.api.TokenConstants;
 import org.neo4j.token.api.TokenHolder;
@@ -122,7 +128,7 @@ public class StoreCopy
         this.pageCacheTracer = pageCacheTracer;
     }
 
-    public void copyTo( DatabaseLayout toDatabaseLayout ) throws Exception
+    public void copyTo( DatabaseLayout toDatabaseLayout, String fromPageCacheMemory, String toPageCacheMemory ) throws Exception
     {
         Path logFilePath = getLogFilePath( config );
         try ( OutputStream logFile = new BufferedOutputStream( Files.newOutputStream( logFilePath ) ) )
@@ -132,8 +138,9 @@ public class StoreCopy
             try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( STORE_COPY_TAG );
                   FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
                   JobScheduler scheduler = createInitialisedScheduler();
-                  PageCache pageCache = StandalonePageCacheFactory.createPageCache( fs, scheduler, pageCacheTracer );
-                  NeoStores neoStores = new StoreFactory( from, config, new ScanOnOpenReadOnlyIdGeneratorFactory(), pageCache, fs,
+                  PageCache fromPageCache = createPageCache( fs, fromPageCacheMemory, scheduler );
+                    PageCache toPageCache = createPageCache( fs, toPageCacheMemory, scheduler );
+                  NeoStores neoStores = new StoreFactory( from, config, new ScanOnOpenReadOnlyIdGeneratorFactory(), fromPageCache, fs,
                           NullLogProvider.getInstance(), pageCacheTracer ).openAllNeoStores() )
             {
                 out.println( "Starting to copy store, output will be saved to: " + logFilePath.toAbsolutePath() );
@@ -152,11 +159,11 @@ public class StoreCopy
                         SpectrumExecutionMonitor.DEFAULT_WIDTH ) : ExecutionMonitors.defaultVisible();
 
                 log.info( "### Copy Data ###" );
-                log.info( "Source: %s", from.databaseDirectory() );
-                log.info( "Target: %s", toDatabaseLayout.databaseDirectory() );
+                log.info( "Source: %s (page cache %s)", from.databaseDirectory(), fromPageCacheMemory );
+                log.info( "Target: %s (page cache %s)", toDatabaseLayout.databaseDirectory(), toPageCacheMemory );
                 log.info( "Empty database created, will start importing readable data from the source." );
 
-                BatchImporter batchImporter = BatchImporterFactory.withHighestPriority().instantiate( toDatabaseLayout, fs, pageCache, PageCacheTracer.NULL,
+                BatchImporter batchImporter = BatchImporterFactory.withHighestPriority().instantiate( toDatabaseLayout, fs, toPageCache, PageCacheTracer.NULL,
                         Configuration.DEFAULT,
                         new SimpleLogService( logProvider ), executionMonitor, AdditionalInitialIds.EMPTY, config, recordFormats, NO_MONITOR, null,
                         Collector.EMPTY, TransactionLogsInitializer.INSTANCE );
@@ -171,8 +178,18 @@ public class StoreCopy
                 Map<String,String> schemaStatements = getSchemaStatements( stats, schemaStore, tokenHolders, cursorTracer );
                 log.info( "... found %d schema definition. The following can be used to recreate the schema:", schemaStatements.size() );
                 log.info( System.lineSeparator() + System.lineSeparator() + String.join( ";" + System.lineSeparator(), schemaStatements.values() ) );
+                log.info( "You have to manually apply the above commands to the database when it is stared to recreate the indexes and constraints. " +
+                        "The commands are saved to " + logFilePath.toAbsolutePath() + " as well for reference.");
             }
         }
+    }
+
+    private static PageCache createPageCache( FileSystemAbstraction fileSystem, String memory, JobScheduler jobScheduler )
+    {
+        VersionContextSupplier versionContextSupplier = EmptyVersionContextSupplier.EMPTY;
+        SingleFilePageSwapperFactory factory = new SingleFilePageSwapperFactory( fileSystem );
+        MemoryAllocator memoryAllocator = MemoryAllocator.createAllocator( memory, EmptyMemoryTracker.INSTANCE );
+        return new MuninnPageCache( factory, memoryAllocator, PageCacheTracer.NULL, versionContextSupplier, jobScheduler, Clocks.nanoClock() );
     }
 
     private LogProvider getLog( OutputStream out )

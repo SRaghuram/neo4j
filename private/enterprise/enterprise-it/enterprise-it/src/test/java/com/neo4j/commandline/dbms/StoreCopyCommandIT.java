@@ -407,6 +407,35 @@ class StoreCopyCommandIT extends AbstractCommandIT
         suppressOutput.getOutputVoice().containsMessage( "CALL db.createIndex('myIndex'" );
     }
 
+    @Test
+    void specifyPageCacheSize() throws Exception
+    {
+        // Create some data
+        try ( Transaction tx = databaseAPI.beginTx() )
+        {
+            Node a = tx.createNode( NUMBER_LABEL );
+            a.setProperty( "name", "Uno" );
+            Node b = tx.createNode( NUMBER_LABEL );
+            b.setProperty( "name", "Dos" );
+            Node c = tx.createNode( NUMBER_LABEL );
+            c.setProperty( "name", "Tres" );
+
+            a.createRelationshipTo( b, RelationshipType.withName( "KNOWS" ) );
+            tx.commit();
+        }
+        String databaseName = databaseAPI.databaseName();
+        String copyName = getCopyName( databaseName, "copy" );
+        managementService.shutdownDatabase( databaseName );
+
+        copyDatabase( "--from-database=" + databaseName,
+                "--to-database=" + copyName,
+                "--from-pagecache=6m",
+                "--to-pagecache=7m" );
+
+        suppressOutput.getOutputVoice().containsMessage( "(page cache 6m)" );
+        suppressOutput.getOutputVoice().containsMessage( "(page cache 7m)" );
+    }
+
     private void copyDatabase( String... args ) throws Exception
     {
         copyDatabase( NULL, args );
