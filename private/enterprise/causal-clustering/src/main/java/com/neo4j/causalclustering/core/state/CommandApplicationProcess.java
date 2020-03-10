@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.core.CoreState;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.consensus.log.cache.InFlightCache;
+import com.neo4j.causalclustering.core.consensus.log.monitoring.RaftLogAppliedIndexMonitor;
 import com.neo4j.causalclustering.core.consensus.log.monitoring.RaftLogCommitIndexMonitor;
 import com.neo4j.causalclustering.core.replication.DistributedOperation;
 import com.neo4j.causalclustering.core.replication.ProgressTracker;
@@ -41,6 +42,7 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
     private final InFlightCache inFlightCache;
     private final Log log;
     private final RaftLogCommitIndexMonitor commitIndexMonitor;
+    private final RaftLogAppliedIndexMonitor appliedIndexMonitor;
     private final CommandBatcher batcher;
     private final DatabasePanicker panicker;
     private final StatUtil.StatContext batchStat;
@@ -61,6 +63,7 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
         this.coreState = coreState;
         this.inFlightCache = inFlightCache;
         this.commitIndexMonitor = monitors.newMonitor( RaftLogCommitIndexMonitor.class, getClass().getName() );
+        this.appliedIndexMonitor = monitors.newMonitor( RaftLogAppliedIndexMonitor.class, getClass().getName() );
         this.batcher = new CommandBatcher( maxBatchSize, this::applyBatch );
         this.panicker = panicker;
         this.batchStat = StatUtil.create( "BatchSize", log, 4096, true );
@@ -128,6 +131,12 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
                 notifyAll();
             }
         }
+
+        void setLastApplied( long lastApplied )
+        {
+            this.lastApplied = lastApplied;
+            appliedIndexMonitor.appliedIndex( lastApplied );
+        }
     }
 
     private void applyJob()
@@ -169,7 +178,7 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
                 {
                     batcher.flush();
                     // since this last entry didn't get in the batcher we need to update the lastApplied:
-                    applierState.lastApplied = logIndex;
+                    applierState.setLastApplied( logIndex );
                 }
             }
             batcher.flush();
@@ -189,7 +198,8 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
     void installSnapshot( CoreSnapshot coreSnapshot )
     {
         assert pauseCount > 0;
-        applierState.lastApplied = lastFlushed = coreSnapshot.prevIndex();
+        lastFlushed = coreSnapshot.prevIndex();
+        applierState.setLastApplied( lastFlushed );
     }
 
     synchronized long lastFlushed()
@@ -209,7 +219,7 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
         long startIndex = lastIndex - batch.size() + 1;
         long lastHandledIndex = handleOperations( startIndex, batch );
         assert lastHandledIndex == lastIndex;
-        applierState.lastApplied = lastIndex;
+        applierState.setLastApplied( lastIndex );
 
         maybeFlushToDisk();
     }
@@ -259,7 +269,7 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
         {
             lastFlushed = coreState.getLastFlushed();
         }
-        applierState.lastApplied = lastFlushed;
+        applierState.setLastApplied( lastFlushed );
 
         log.info( format( "Restoring last applied index to %d", lastFlushed ) );
         sessionTracker.start();

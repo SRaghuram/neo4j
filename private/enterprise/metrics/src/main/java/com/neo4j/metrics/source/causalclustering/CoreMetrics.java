@@ -29,6 +29,8 @@ public class CoreMetrics extends LifecycleAdapter
     private static final String APPEND_INDEX_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "append_index" );
     @Documented( "Commit index of the RAFT log." )
     private static final String COMMIT_INDEX_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "commit_index" );
+    @Documented( "Commit index of the RAFT log." )
+    private static final String APPLIED_INDEX_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "applied_index" );
     @Documented( "RAFT Term of this server." )
     private static final String TERM_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "term" );
     @Documented( "Transaction retries." )
@@ -72,6 +74,7 @@ public class CoreMetrics extends LifecycleAdapter
 
     private final String appendIndex;
     private final String commitIndex;
+    private final String appliedIndex;
     private final String term;
     private final String txRetries;
     private final String isLeader;
@@ -99,6 +102,7 @@ public class CoreMetrics extends LifecycleAdapter
 
     private final RaftLogCommitIndexMetric raftLogCommitIndexMetric = new RaftLogCommitIndexMetric();
     private final RaftLogAppendIndexMetric raftLogAppendIndexMetric = new RaftLogAppendIndexMetric();
+    private final RaftLogAppliedIndexMetric raftLogAppliedIndexMetric = new RaftLogAppliedIndexMetric();
     private final RaftTermMetric raftTermMetric = new RaftTermMetric();
     private final TxPullRequestsMetric txPullRequestsMetric = new TxPullRequestsMetric();
     private final TxRetryMetric txRetryMetric = new TxRetryMetric();
@@ -112,6 +116,7 @@ public class CoreMetrics extends LifecycleAdapter
     {
         this.appendIndex = name( metricsPrefix, APPEND_INDEX_TEMPLATE );
         this.commitIndex = name( metricsPrefix, COMMIT_INDEX_TEMPLATE );
+        this.appliedIndex = name( metricsPrefix, APPLIED_INDEX_TEMPLATE );
         this.term = name( metricsPrefix, TERM_TEMPLATE );
         this.txRetries = name( metricsPrefix, TX_RETRIES_TEMPLATE );
         this.isLeader = name( metricsPrefix, IS_LEADER_TEMPLATE );
@@ -142,6 +147,7 @@ public class CoreMetrics extends LifecycleAdapter
     {
         monitors.addMonitorListener( raftLogCommitIndexMetric );
         monitors.addMonitorListener( raftLogAppendIndexMetric );
+        monitors.addMonitorListener( raftLogAppliedIndexMetric );
         monitors.addMonitorListener( raftTermMetric );
         monitors.addMonitorListener( txPullRequestsMetric );
         monitors.addMonitorListener( txRetryMetric );
@@ -153,6 +159,7 @@ public class CoreMetrics extends LifecycleAdapter
 
         registry.register( commitIndex, (Gauge<Long>) raftLogCommitIndexMetric::commitIndex );
         registry.register( appendIndex, (Gauge<Long>) raftLogAppendIndexMetric::appendIndex );
+        registry.register( appliedIndex, (Gauge<Long>) raftLogAppliedIndexMetric::appliedIndex );
         registry.register( term, (Gauge<Long>) raftTermMetric::term );
         registry.register( txRetries, new MetricsCounter( txRetryMetric::transactionsRetries ) );
         registry.register( isLeader, new LeaderGauge() );
@@ -190,6 +197,7 @@ public class CoreMetrics extends LifecycleAdapter
     {
         registry.remove( commitIndex );
         registry.remove( appendIndex );
+        registry.remove( appliedIndex );
         registry.remove( term );
         registry.remove( txRetries );
         registry.remove( isLeader );
@@ -223,6 +231,7 @@ public class CoreMetrics extends LifecycleAdapter
 
         monitors.removeMonitorListener( raftLogCommitIndexMetric );
         monitors.removeMonitorListener( raftLogAppendIndexMetric );
+        monitors.removeMonitorListener( raftLogAppliedIndexMetric );
         monitors.removeMonitorListener( raftTermMetric );
         monitors.removeMonitorListener( txPullRequestsMetric );
         monitors.removeMonitorListener( txRetryMetric );

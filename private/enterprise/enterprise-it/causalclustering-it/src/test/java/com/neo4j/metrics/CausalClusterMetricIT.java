@@ -119,6 +119,9 @@ class CausalClusterMetricIT
         assertEventually( "commit index eventually accurate",
                 () -> readLongGaugeValue( metricsFile( coreMember, "core.commit_index" ) ), value -> value > 0L, TIMEOUT, SECONDS );
 
+        assertEventually( "applied index eventually accurate",
+                () -> readLongGaugeValue( metricsFile( coreMember, "core.applied_index" ) ), value -> value > 0L, TIMEOUT, SECONDS );
+
         assertEventually( "term eventually accurate",
                 () -> readLongGaugeValue( metricsFile( coreMember, "core.term" ) ), value -> value >= 0L, TIMEOUT, SECONDS );
 
