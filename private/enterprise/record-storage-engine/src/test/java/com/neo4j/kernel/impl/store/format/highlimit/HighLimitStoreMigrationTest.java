@@ -30,6 +30,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.StoreType;
@@ -171,14 +172,14 @@ class HighLimitStoreMigrationTest
 
         @Override
         public BatchImporter instantiate( DatabaseLayout directoryStructure, FileSystemAbstraction fileSystem, PageCache externalPageCache,
-                Configuration config, LogService logService, ExecutionMonitor executionMonitor, AdditionalInitialIds additionalInitialIds, Config dbConfig,
-                RecordFormats recordFormats, ImportLogic.Monitor monitor, JobScheduler jobScheduler, Collector badCollector,
-                LogFilesInitializer logFilesInitializer )
+                PageCacheTracer pageCacheTracer, Configuration config, LogService logService, ExecutionMonitor executionMonitor,
+                AdditionalInitialIds additionalInitialIds, Config dbConfig, RecordFormats recordFormats, ImportLogic.Monitor monitor, JobScheduler jobScheduler,
+                Collector badCollector, LogFilesInitializer logFilesInitializer )
         {
             this.configuration = config;
             return delegate
-                    .instantiate( directoryStructure, fileSystem, externalPageCache, config, logService, executionMonitor, additionalInitialIds, dbConfig,
-                            recordFormats, monitor, jobScheduler, badCollector, logFilesInitializer );
+                    .instantiate( directoryStructure, fileSystem, externalPageCache, pageCacheTracer, config, logService, executionMonitor,
+                            additionalInitialIds, dbConfig, recordFormats, monitor, jobScheduler, badCollector, logFilesInitializer );
         }
 
         @Override
