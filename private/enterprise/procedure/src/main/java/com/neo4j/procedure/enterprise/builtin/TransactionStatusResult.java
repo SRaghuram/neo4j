@@ -16,6 +16,7 @@ import org.neo4j.kernel.api.KernelTransactionHandle;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.impl.api.TransactionExecutionStatistic;
+import org.neo4j.procedure.builtin.ProceduresTimeFormatHelper;
 
 import static java.lang.String.format;
 

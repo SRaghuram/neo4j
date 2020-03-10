@@ -9,6 +9,7 @@ import java.time.ZoneId;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.api.net.TrackedNetworkConnection;
+import org.neo4j.procedure.builtin.ProceduresTimeFormatHelper;
 
 public class ListConnectionResult
 {
