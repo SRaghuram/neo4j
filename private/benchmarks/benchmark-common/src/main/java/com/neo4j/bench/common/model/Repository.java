@@ -46,10 +46,10 @@ public enum Repository
                     "^master$",
                     "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
     ALGOS_JMH( "Graph Algorithms",
-            "graph-analytics",
-            "neo-technology",
-            "^master$",
-            "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}(\\.\\d{1,2})?$" ),
+               "graph-analytics",
+               "neo-technology",
+               "^(master)|(\\d{1,2}\\.\\d{1,2})$",
+               "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
     QUALITY_TASK( "Quality Task",
                   "quality-tasks",
                   "neo-technology",
@@ -71,10 +71,10 @@ public enum Repository
           "^master$",
           "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
     ALGOS( "Graph Algorithms",
-            "graph-analytics",
-            "neo4j",
-            "^master$",
-            "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}(\\.\\d{1,2})?$" );
+           "graph-analytics",
+           "neo4j",
+           "^(master)|(\\d{1,2}\\.\\d{1,2})$",
+           "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" );
 
     public static Repository forName( String projectName )
     {
@@ -112,6 +112,11 @@ public enum Repository
     public String defaultOwner()
     {
         return defaultOwner;
+    }
+
+    public String standardBranchPattern()
+    {
+        return standardBranch.toString();
     }
 
     public boolean isDefaultOwner( String owner )
