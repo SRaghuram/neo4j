@@ -18,6 +18,6 @@ public class OutcomeTestBuilder
 
     public static OutcomeBuilder builder()
     {
-        return new OutcomeBuilder( Role.FOLLOWER, 0, DEFAULT_LEADER, -1, null, false, false, -1, Set.of(), Set.of(), Set.of(), -1, new FollowerStates<>(), -1 );
+        return new OutcomeBuilder( Role.FOLLOWER, 0, DEFAULT_LEADER, -1, null, null, false, -1, Set.of(), Set.of(), Set.of(), -1, new FollowerStates<>(), -1 );
     }
 }

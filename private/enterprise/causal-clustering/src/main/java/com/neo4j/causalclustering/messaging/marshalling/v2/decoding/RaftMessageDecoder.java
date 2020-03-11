@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
+import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.v2.ContentType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -20,6 +21,7 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.io.IOException;
 import java.time.Clock;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
@@ -124,6 +126,19 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
             long prevIndex = channel.getLong();
 
             composer = new SimpleMessageComposer( new RaftMessages.LogCompactionInfo( from, leaderTerm, prevIndex ) );
+        }
+        else if ( messageType.equals( RaftMessages.Type.LEADERSHIP_TRANSFER_REQUEST ) )
+        {
+            long previousIndex = channel.getLong();
+            long term = channel.getLong();
+            int groupSize = channel.getInt();
+            var groups = new HashSet<String>();
+            for ( var i = 0; i < groupSize; i++ )
+            {
+                groups.add( StringMarshal.unmarshal( channel ) );
+            }
+
+            composer = new SimpleMessageComposer( new RaftMessages.LeadershipTransfer.Request( from, previousIndex, term, groups ) );
         }
         else
         {

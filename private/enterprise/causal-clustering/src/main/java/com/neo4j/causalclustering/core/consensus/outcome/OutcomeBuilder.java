@@ -58,11 +58,11 @@ public class OutcomeBuilder
     private boolean electedLeader;
     private long steppingDownInTerm;
     private Set<MemberId> heartbeatResponses;
+    private RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection;
 
     @VisibleForTesting
-    OutcomeBuilder( Role currentRole, long term, MemberId leader, long leaderCommit, MemberId votedFor, boolean renewElectionTimeout,
-            boolean isPreElection,
-            long steppingDownInTerm, Set<MemberId> preVotesForMe, Set<MemberId> votesForMe, Set<MemberId> heartbeatResponses,
+    OutcomeBuilder( Role currentRole, long term, MemberId leader, long leaderCommit, MemberId votedFor, ElectionTimerMode electionTimerMode,
+            boolean isPreElection, long steppingDownInTerm, Set<MemberId> preVotesForMe, Set<MemberId> votesForMe, Set<MemberId> heartbeatResponses,
             long lastLogIndexBeforeWeBecameLeader, FollowerStates<MemberId> followerStates, long commitIndex )
     {
         this.role = currentRole;
@@ -89,7 +89,7 @@ public class OutcomeBuilder
         Set<MemberId> heartbeatResponses = (currentRole == Role.LEADER) ? new HashSet<>( ctx.heartbeatResponses() ) : emptySet();
         var lastLogIndexBeforeWeBecameLeader = (currentRole == Role.LEADER) ? ctx.lastLogIndexBeforeWeBecameLeader() : -1;
         FollowerStates<MemberId> followerStates = (currentRole == Role.LEADER) ? ctx.followerStates() : new FollowerStates<>();
-        return new OutcomeBuilder( currentRole, ctx.term(), ctx.leader(), ctx.leaderCommit(), ctx.votedFor(), false, isPreElection, -1,
+        return new OutcomeBuilder( currentRole, ctx.term(), ctx.leader(), ctx.leaderCommit(), ctx.votedFor(), null, isPreElection, -1,
                 preVotesForMe, votesForMe, heartbeatResponses, lastLogIndexBeforeWeBecameLeader, followerStates, ctx.commitIndex() );
     }
 
@@ -239,6 +239,12 @@ public class OutcomeBuilder
         return this;
     }
 
+    public OutcomeBuilder addLeaderTransferRejection( RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection )
+    {
+        this.leadershipTransferRejection = leadershipTransferRejection;
+        return this;
+    }
+
     @Override
     public boolean equals( Object o )
     {
@@ -275,6 +281,6 @@ public class OutcomeBuilder
 
         return new Outcome( role, term, leader, leaderCommit, votedFor, votesForMe, preVotesForMe, lastLogIndexBeforeWeBecameLeader, followerStates,
                 electionTimerMode, logCommands, outgoingMessages, shipCommands, commitIndex, heartbeatResponses, isPreElection, electedLeader,
-                steppingDownInTerm, snapshotRequirement );
+                steppingDownInTerm, snapshotRequirement, leadershipTransferRejection );
     }
 }

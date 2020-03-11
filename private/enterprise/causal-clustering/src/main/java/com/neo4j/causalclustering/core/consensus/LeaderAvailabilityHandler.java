@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import java.util.function.LongSupplier;
 
 import static com.neo4j.causalclustering.core.consensus.ElectionTimerMode.FAILURE_DETECTION;
+import static java.lang.Boolean.FALSE;
 
 public class LeaderAvailabilityHandler implements LifecycleMessageHandler<RaftMessages.InboundRaftMessageContainer<?>>
 {
@@ -87,73 +88,91 @@ public class LeaderAvailabilityHandler implements LifecycleMessageHandler<RaftMe
         @Override
         public Boolean handle( RaftMessages.Vote.Request request )
         {
-            return Boolean.FALSE;
+            return FALSE;
         }
 
         @Override
         public Boolean handle( RaftMessages.Vote.Response response )
         {
-            return Boolean.FALSE;
+            return FALSE;
         }
 
         @Override
         public Boolean handle( RaftMessages.PreVote.Request request )
         {
-            return Boolean.FALSE;
+            return FALSE;
         }
 
         @Override
         public Boolean handle( RaftMessages.PreVote.Response response )
         {
-            return Boolean.FALSE;
+            return FALSE;
         }
 
         @Override
         public Boolean handle( RaftMessages.AppendEntries.Response response )
         {
-            return Boolean.FALSE;
+            return FALSE;
         }
 
         @Override
         public Boolean handle( RaftMessages.LogCompactionInfo logCompactionInfo )
         {
-            return Boolean.FALSE;
+            return FALSE;
         }
 
         @Override
         public Boolean handle( RaftMessages.HeartbeatResponse heartbeatResponse )
         {
-            return Boolean.FALSE;
+            return FALSE;
         }
 
         @Override
         public Boolean handle( RaftMessages.Timeout.Election election )
         {
-            return Boolean.FALSE;
+            return FALSE;
         }
 
         @Override
         public Boolean handle( RaftMessages.Timeout.Heartbeat heartbeat )
         {
-            return Boolean.FALSE;
+            return FALSE;
         }
 
         @Override
         public Boolean handle( RaftMessages.NewEntry.Request request )
         {
-            return Boolean.FALSE;
+            return FALSE;
         }
 
         @Override
         public Boolean handle( RaftMessages.NewEntry.BatchRequest batchRequest )
         {
-            return Boolean.FALSE;
+            return FALSE;
         }
 
         @Override
         public Boolean handle( RaftMessages.PruneRequest pruneRequest )
         {
-            return Boolean.FALSE;
+            return FALSE;
+        }
+
+        @Override
+        public Boolean handle( RaftMessages.LeadershipTransfer.Request leadershipTransferRequest )
+        {
+            return FALSE;
+        }
+
+        @Override
+        public Boolean handle( RaftMessages.LeadershipTransfer.Proposal leadershipTransferProposal )
+        {
+            return FALSE;
+        }
+
+        @Override
+        public Boolean handle( RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection )
+        {
+            return FALSE;
         }
     }
 }

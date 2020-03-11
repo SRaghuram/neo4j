@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 import static com.neo4j.causalclustering.core.consensus.RaftMessages.Type.HEARTBEAT_RESPONSE;
 import static com.neo4j.causalclustering.core.consensus.RaftMessages.Type.PRUNE_REQUEST;
@@ -28,16 +29,32 @@ public interface RaftMessages
         T handle( Vote.Response response ) throws E;
         T handle( PreVote.Request request ) throws E;
         T handle( PreVote.Response response ) throws E;
+
         T handle( AppendEntries.Request request ) throws E;
+
         T handle( AppendEntries.Response response ) throws E;
+
         T handle( Heartbeat heartbeat ) throws E;
+
         T handle( HeartbeatResponse heartbeatResponse ) throws E;
+
         T handle( LogCompactionInfo logCompactionInfo ) throws E;
+
         T handle( Timeout.Election election ) throws E;
+
         T handle( Timeout.Heartbeat heartbeat ) throws E;
+
         T handle( NewEntry.Request request ) throws E;
+
         T handle( NewEntry.BatchRequest batchRequest ) throws E;
+
         T handle( PruneRequest pruneRequest ) throws E;
+
+        T handle( LeadershipTransfer.Proposal leadershipTransferProposal ) throws E;
+
+        T handle( LeadershipTransfer.Request leadershipTransferRequest ) throws E;
+
+        T handle( LeadershipTransfer.Rejection leadershipTransferRejection ) throws E;
     }
 
     abstract class HandlerAdaptor<T, E extends Exception> implements Handler<T,E>
@@ -125,6 +142,24 @@ public interface RaftMessages
         {
             return null;
         }
+
+        @Override
+        public T handle( LeadershipTransfer.Proposal leadershipTransferProposal ) throws E
+        {
+            return null;
+        }
+
+        @Override
+        public T handle( LeadershipTransfer.Request leadershipTransferRequest ) throws E
+        {
+            return null;
+        }
+
+        @Override
+        public T handle( LeadershipTransfer.Rejection leadershipTransferRejection ) throws E
+        {
+            return null;
+        }
     }
 
     // Position is used to identify messages. Changing order will break upgrade paths.
@@ -153,6 +188,10 @@ public interface RaftMessages
 
         PRE_VOTE_REQUEST,
         PRE_VOTE_RESPONSE,
+
+        LEADERSHIP_TRANSFER_REQUEST,
+        LEADERSHIP_TRANSFER_PROPOSAL,
+        LEADERSHIP_TRANSFER_REJECTION
     }
 
     class Directed
@@ -1103,34 +1142,191 @@ public interface RaftMessages
         }
 
         @Override
-        public <T,E extends Exception> T dispatch( Handler<T,E> handler ) throws E
+        public <T, E extends Exception> T dispatch( Handler<T,E> handler ) throws E
         {
             return handler.handle( this );
         }
+    }
 
-        @Override
-        public boolean equals( Object o )
+    interface LeadershipTransfer
+    {
+        class Request extends RaftMessage
         {
-            if ( this == o )
+            private final long previousIndex;
+            private final long term;
+            private final Set<String> groups;
+
+            public Request( MemberId from, long previousIndex, long term, Set<String> groups )
             {
-                return true;
+                super( from, Type.LEADERSHIP_TRANSFER_REQUEST );
+                this.previousIndex = previousIndex;
+                this.term = term;
+                this.groups = groups;
             }
-            if ( o == null || getClass() != o.getClass() )
+
+            @Override
+            public <T, E extends Exception> T dispatch( Handler<T,E> handler ) throws E
             {
-                return false;
+                return handler.handle( this );
             }
-            if ( !super.equals( o ) )
+
+            @Override
+            public boolean equals( Object object )
             {
-                return false;
+                if ( this == object )
+                {
+                    return true;
+                }
+                if ( object == null || getClass() != object.getClass() )
+                {
+                    return false;
+                }
+                if ( !super.equals( object ) )
+                {
+                    return false;
+                }
+                Request request = (Request) object;
+                return previousIndex == request.previousIndex &&
+                       term == request.term &&
+                       Objects.equals( groups, request.groups );
             }
-            PruneRequest that = (PruneRequest) o;
-            return pruneIndex == that.pruneIndex;
+
+            @Override
+            public int hashCode()
+            {
+                return Objects.hash( super.hashCode(), previousIndex, term, groups );
+            }
+
+            public long term()
+            {
+                return term;
+            }
+
+            public long previousIndex()
+            {
+                return previousIndex;
+            }
+
+            public Set<String> groups()
+            {
+                return groups;
+            }
         }
 
-        @Override
-        public int hashCode()
+        class Rejection extends RaftMessage
         {
-            return Objects.hash( super.hashCode(), pruneIndex );
+            private final long previousIndex;
+            private final long term;
+            private final Set<String> groups;
+
+            public Rejection( MemberId from, long previousIndex, long term, Set<String> groups )
+            {
+                super( from, Type.LEADERSHIP_TRANSFER_REJECTION );
+                this.previousIndex = previousIndex;
+                this.term = term;
+                this.groups = groups;
+            }
+
+            @Override
+            public <T, E extends Exception> T dispatch( Handler<T,E> handler ) throws E
+            {
+                return handler.handle( this );
+            }
+
+            @Override
+            public boolean equals( Object object )
+            {
+                if ( this == object )
+                {
+                    return true;
+                }
+                if ( object == null || getClass() != object.getClass() )
+                {
+                    return false;
+                }
+                if ( !super.equals( object ) )
+                {
+                    return false;
+                }
+                Rejection rejection = (Rejection) object;
+                return previousIndex == rejection.previousIndex &&
+                       term == rejection.term &&
+                       Objects.equals( groups, rejection.groups );
+            }
+
+            @Override
+            public int hashCode()
+            {
+                return Objects.hash( super.hashCode(), previousIndex, term, groups );
+            }
+
+            public Set<String> groups()
+            {
+                return groups;
+            }
+
+            public long term()
+            {
+                return term;
+            }
+
+            public long previousIndex()
+            {
+                return previousIndex;
+            }
+        }
+
+        class Proposal extends RaftMessage
+        {
+            private final MemberId proposed;
+
+            public Proposal( MemberId from, MemberId proposed )
+            {
+                super( from, Type.LEADERSHIP_TRANSFER_PROPOSAL );
+                this.proposed = proposed;
+            }
+
+            public MemberId proposed()
+            {
+                return proposed;
+            }
+
+            @Override
+            public <T, E extends Exception> T dispatch( Handler<T,E> handler ) throws E
+            {
+                return handler.handle( this );
+            }
+
+            @Override
+            public String toString()
+            {
+                return String.format( "Timeout.LeadershipTransfer{proposed=%s}", proposed );
+            }
+
+            @Override
+            public boolean equals( Object o )
+            {
+                if ( this == o )
+                {
+                    return true;
+                }
+                if ( o == null || getClass() != o.getClass() )
+                {
+                    return false;
+                }
+                if ( !super.equals( o ) )
+                {
+                    return false;
+                }
+                Proposal that = (Proposal) o;
+                return Objects.equals( proposed, that.proposed );
+            }
+
+            @Override
+            public int hashCode()
+            {
+                return Objects.hash( super.hashCode(), proposed );
+            }
         }
     }
 

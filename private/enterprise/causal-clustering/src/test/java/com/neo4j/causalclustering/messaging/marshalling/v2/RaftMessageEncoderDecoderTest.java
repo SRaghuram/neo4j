@@ -43,6 +43,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -99,7 +100,9 @@ class RaftMessageEncoderDecoderTest
                 new RaftMessages.Vote.Response( MEMBER_ID, 1, true ),
                 new RaftMessages.PreVote.Request( MEMBER_ID, Long.MAX_VALUE, MEMBER_ID, Long.MIN_VALUE, 1 ),
                 new RaftMessages.PreVote.Response( MEMBER_ID, 1, true ),
-                new RaftMessages.LogCompactionInfo( MEMBER_ID, Long.MAX_VALUE, Long.MIN_VALUE )} );
+                new RaftMessages.LogCompactionInfo( MEMBER_ID, Long.MAX_VALUE, Long.MIN_VALUE ),
+                new RaftMessages.LeadershipTransfer.Request( MEMBER_ID, 2, 1, Set.of( "EU", "US" ) ),
+                new RaftMessages.LeadershipTransfer.Rejection( MEMBER_ID, 2, 1, Set.of( "EU" ) ) } );
     }
 
     private static Stream<Arguments> setUpParams( RaftMessage[] messages )

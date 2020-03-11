@@ -20,11 +20,13 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Set;
 
 import org.neo4j.internal.helpers.collection.FilteringIterable;
 import org.neo4j.logging.Log;
 
 import static java.lang.Math.max;
+import static org.neo4j.internal.helpers.collection.Iterables.stream;
 
 public class Leader implements RaftMessageHandler
 {
@@ -298,7 +300,52 @@ public class Leader implements RaftMessageHandler
             return outcomeBuilder;
         }
 
-        private void stepDownToFollower( OutcomeBuilder outcomeBuilder, ReadableRaftState raftState )
+        @Override
+        public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Request leadershipTransferRequest ) throws IOException
+        {
+            if ( leadershipTransferRequest.term() > ctx.term() )
+            {
+                stepDownToFollower( outcomeBuilder, ctx );
+                log.info( "Moving to FOLLOWER state after receiving leadership transfer request from %s at term %d (I am at %d)",
+                          leadershipTransferRequest.from(), leadershipTransferRequest.term(), ctx.term() );
+            }
+            //TODO: Add my groups
+            Set<String> myGroups = Set.of();
+            var rejection = new RaftMessages.LeadershipTransfer.Rejection( leadershipTransferRequest.from(), ctx.commitIndex(), ctx.term(), myGroups );
+            outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( leadershipTransferRequest.from(), rejection ) );
+            return outcomeBuilder;
+        }
+
+        @Override
+        public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Proposal leadershipTransferProposal ) throws IOException
+        {
+            long commitIndex = ctx.commitIndex();
+            long commitIndexTerm = ctx.entryLog().readEntryTerm( commitIndex );
+            var proposed = leadershipTransferProposal.proposed();
+
+            var proposedKnown = stream( replicationTargets( ctx ) )
+                    .anyMatch( member -> member.equals( proposed ) );
+
+            if ( !proposedKnown )
+            {
+                // TODO : I don't think we need to add groups here because its a local response
+                handle( new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), commitIndex, commitIndexTerm, Set.of() ) );
+            }
+
+            // TODO : add groups
+            var request = new RaftMessages.LeadershipTransfer.Request( ctx.myself(), commitIndex, commitIndexTerm, Set.of() );
+            outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( proposed, request ) );
+            return outcomeBuilder;
+        }
+
+        @Override
+        public OutcomeBuilder handle(RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection) throws IOException
+        {
+            outcomeBuilder.addLeaderTransferRejection( leadershipTransferRejection );
+            return outcomeBuilder;
+        }
+
+        private void stepDownToFollower(OutcomeBuilder outcomeBuilder, ReadableRaftState raftState )
         {
             outcomeBuilder.steppingDown( raftState.term() )
                     .setRole( Role.FOLLOWER )

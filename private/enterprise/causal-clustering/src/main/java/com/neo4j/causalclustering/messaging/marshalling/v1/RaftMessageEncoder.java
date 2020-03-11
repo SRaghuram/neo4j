@@ -162,6 +162,12 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
         }
 
         @Override
+        public Void handle( RaftMessages.LeadershipTransfer.Request leadershipTransferRequest ) throws Exception
+        {
+            throw new UnsupportedOperationException( "Raft v1 does not support leadership transfer" );
+        }
+
+        @Override
         public Void handle( RaftMessages.Timeout.Election election )
         {
             return null; // Not network
@@ -183,6 +189,17 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
         public Void handle( RaftMessages.PruneRequest pruneRequest )
         {
             return null; // Not network
+        }
+
+        @Override
+        public Void handle( RaftMessages.LeadershipTransfer.Proposal leadershipTransferProposal ) throws Exception
+        {
+            throw new UnsupportedOperationException( "Raft v1 does not support leadership transfer" );
+        }
+
+        @Override
+        public Void handle(RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection) throws Exception {
+            throw new UnsupportedOperationException( "Raft v1 does not support leadership transfer" );
         }
     }
 }

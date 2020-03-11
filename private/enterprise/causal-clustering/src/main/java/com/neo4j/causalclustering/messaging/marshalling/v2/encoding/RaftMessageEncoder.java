@@ -9,10 +9,14 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
+import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.v2.ContentType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
+
+import java.io.IOException;
+import java.util.Set;
 
 public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.OutboundRaftMessageContainer>
 {
@@ -159,6 +163,38 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
         public Void handle( RaftMessages.PruneRequest pruneRequest )
         {
             return null; // Not network
+        }
+
+        @Override
+        public Void handle( RaftMessages.LeadershipTransfer.Request leadershipTransferRequest ) throws Exception
+        {
+            encodeLeadershipTransferMessage( leadershipTransferRequest.previousIndex(), leadershipTransferRequest.term(), leadershipTransferRequest.groups() );
+            return null;
+        }
+
+        @Override
+        public Void handle( RaftMessages.LeadershipTransfer.Proposal leadershipTransferProposal ) throws Exception
+        {
+            return null; // Not network
+        }
+
+        @Override
+        public Void handle(RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection) throws Exception {
+
+            encodeLeadershipTransferMessage( leadershipTransferRejection.previousIndex(), leadershipTransferRejection.term(),
+                                             leadershipTransferRejection.groups() );
+            return null;
+        }
+
+        private void encodeLeadershipTransferMessage( long previousIndex, long term, Set<String> groups ) throws IOException
+        {
+            channel.putLong( previousIndex );
+            channel.putLong( term );
+            channel.putInt( groups.size() );
+            for ( var group : groups )
+            {
+                StringMarshal.marshal( channel, group );
+            }
         }
     }
 }
