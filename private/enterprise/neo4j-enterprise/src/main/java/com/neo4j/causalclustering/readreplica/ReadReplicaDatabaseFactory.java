@@ -33,6 +33,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -59,11 +60,12 @@ class ReadReplicaDatabaseFactory
     private final ClusterStateStorageFactory clusterStateFactory;
     private final PanicService panicService;
     private final DatabaseStartAborter databaseStartAborter;
+    private final PageCacheTracer pageCacheTracer;
 
     ReadReplicaDatabaseFactory( Config config, SystemNanoClock clock, JobScheduler jobScheduler, TopologyService topologyService, MemberId myIdentity,
             CatchupComponentsRepository catchupComponentsRepository,
             CatchupClientFactory catchupClientFactory, ReplicatedDatabaseEventService databaseEventService, ClusterStateStorageFactory clusterStateFactory,
-            PanicService panicService, DatabaseStartAborter databaseStartAborter )
+            PanicService panicService, DatabaseStartAborter databaseStartAborter, PageCacheTracer pageCacheTracer )
     {
         this.config = config;
         this.clock = clock;
@@ -76,6 +78,7 @@ class ReadReplicaDatabaseFactory
         this.panicService = panicService;
         this.clusterStateFactory = clusterStateFactory;
         this.databaseStartAborter = databaseStartAborter;
+        this.pageCacheTracer = pageCacheTracer;
     }
 
     ReadReplicaDatabase createDatabase( ReadReplicaDatabaseContext databaseContext, ClusterInternalDbmsOperator clusterInternalOperator )
@@ -101,7 +104,7 @@ class ReadReplicaDatabaseFactory
         ReplicatedDatabaseEventDispatch databaseEventDispatch = databaseEventService.getDatabaseEventDispatch( namedDatabaseId );
         CatchupProcessManager catchupProcess = new CatchupProcessManager( catchupExecutor, catchupComponentsRepository, databaseContext, panicker,
                 topologyService, catchupClientFactory, upstreamDatabaseStrategySelector, timerService, commandIndexTracker, internalLogProvider,
-                config, databaseEventDispatch );
+                config, databaseEventDispatch, pageCacheTracer );
 
         var raftIdStorage = clusterStateFactory.createRaftIdStorage( databaseContext.databaseId().name(), internalLogProvider );
 

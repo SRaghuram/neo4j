@@ -66,6 +66,7 @@ import static org.neo4j.configuration.Config.defaults;
 import static org.neo4j.configuration.GraphDatabaseSettings.logical_log_rotation_threshold;
 import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
+import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.kernel.impl.transaction.log.TestLogEntryReader.logEntryReader;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
@@ -134,7 +135,7 @@ public class TransactionLogCatchUpWriterTest
         LongRange validRange = LongRange.range( fromTxId, fromTxId );
         TransactionLogCatchUpWriter subject =
                 new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
-                        storageEngineFactory, validRange, partOfStoreCopy, false, true );
+                        storageEngineFactory, validRange, partOfStoreCopy, false, true, NULL );
 
         // when a bunch of transactions received
         LongStream.range( fromTxId, MANY_TRANSACTIONS )
@@ -158,7 +159,7 @@ public class TransactionLogCatchUpWriterTest
         Config config = defaults();
         simulateStoreCopy();
         try ( TransactionLogCatchUpWriter writer = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
-                storageEngineFactory, LongRange.range( BASE_TX_ID, BASE_TX_ID ), partOfStoreCopy, true, true ) )
+                storageEngineFactory, LongRange.range( BASE_TX_ID, BASE_TX_ID ), partOfStoreCopy, true, true, NULL ) )
         {
             // empty
         }
@@ -179,7 +180,7 @@ public class TransactionLogCatchUpWriterTest
         Config config = defaults();
         simulateStoreCopy();
         try ( TransactionLogCatchUpWriter writer = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
-                storageEngineFactory, LongRange.range( BASE_TX_ID, BASE_TX_ID ), partOfStoreCopy, true, true ) )
+                storageEngineFactory, LongRange.range( BASE_TX_ID, BASE_TX_ID ), partOfStoreCopy, true, true, NULL ) )
         {
             // empty
         }
@@ -200,7 +201,7 @@ public class TransactionLogCatchUpWriterTest
         LongRange validRange = LongRange.range( fromTxId, fromTxId );
         TransactionLogCatchUpWriter subject =
                 new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(), storageEngineFactory,
-                        validRange, partOfStoreCopy, false, false );
+                        validRange, partOfStoreCopy, false, false, NULL );
 
         // when 1M tx received
         LongStream.range( fromTxId, MANY_TRANSACTIONS )
@@ -225,7 +226,7 @@ public class TransactionLogCatchUpWriterTest
         LongRange validRange = LongRange.range( fromTxId, fromTxId );
 
         TransactionLogCatchUpWriter catchUpWriter = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
-                storageEngineFactory, validRange, partOfStoreCopy, logsInStoreDir, true );
+                storageEngineFactory, validRange, partOfStoreCopy, logsInStoreDir, true, NULL );
 
         // when
         for ( int i = fromTxId; i <= endTxId; i++ )

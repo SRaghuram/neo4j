@@ -48,6 +48,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
 
@@ -278,7 +279,8 @@ class ReadReplicaBootstrapTest
         when( kernelDatabase.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
 
         LogFiles txLogs = mock( LogFiles.class );
-        return new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, txLogs, new ClusterInternalDbmsOperator() );
+        return new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, txLogs, new ClusterInternalDbmsOperator(),
+                NULL );
     }
 
     private ReadReplicaDatabaseContext failToReadLocalStoreId( NamedDatabaseId namedDatabaseId, Class<? extends Throwable> throwableClass ) throws IOException
@@ -291,7 +293,8 @@ class ReadReplicaBootstrapTest
         when( kernelDatabase.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
 
         LogFiles txLogs = mock( LogFiles.class );
-        return new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, txLogs, new ClusterInternalDbmsOperator() );
+        return new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, txLogs, new ClusterInternalDbmsOperator(),
+                NULL );
     }
 
     private UpstreamDatabaseStrategySelector chooseFirstMember( TopologyService topologyService )

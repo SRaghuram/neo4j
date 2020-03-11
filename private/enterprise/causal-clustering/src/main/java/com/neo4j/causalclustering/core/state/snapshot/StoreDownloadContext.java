@@ -11,32 +11,35 @@ import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import java.io.IOException;
 
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.Log;
 import org.neo4j.storageengine.api.StoreId;
 
-import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
-
 public class StoreDownloadContext
 {
+    private static final String STORE_DOWNLOAD_STORE_ID_READER_TAG = "storeDownloadStoreIdReader";
     private final Database kernelDatabase;
     private final StoreFiles storeFiles;
     private final LogFiles transactionLogs;
     private final Log log;
     private final ClusterInternalDbmsOperator internalOperator;
+    private final PageCacheTracer pageCacheTracer;
 
     private volatile StoreId storeId;
 
     //TODO: Merge this and ReadReplicaDatabaseContext into StoreCopyContext
-    public StoreDownloadContext( Database kernelDatabase, StoreFiles storeFiles, LogFiles transactionLogs, ClusterInternalDbmsOperator internalOperator )
+    public StoreDownloadContext( Database kernelDatabase, StoreFiles storeFiles, LogFiles transactionLogs, ClusterInternalDbmsOperator internalOperator,
+            PageCacheTracer pageCacheTracer )
     {
         this.kernelDatabase = kernelDatabase;
         this.storeFiles = storeFiles;
         this.transactionLogs = transactionLogs;
         this.log = kernelDatabase.getInternalLogProvider().getLog( getClass() );
         this.internalOperator = internalOperator;
+        this.pageCacheTracer = pageCacheTracer;
     }
 
     NamedDatabaseId databaseId()
@@ -60,9 +63,9 @@ public class StoreDownloadContext
 
     private StoreId readStoreIdFromDisk()
     {
-        try
+        try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( STORE_DOWNLOAD_STORE_ID_READER_TAG ) )
         {
-            return storeFiles.readStoreId( databaseLayout(), TRACER_SUPPLIER.get() );
+            return storeFiles.readStoreId( databaseLayout(), cursorTracer );
         }
         catch ( IOException e )
         {

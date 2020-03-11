@@ -27,6 +27,7 @@ import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.impl.store.MetaDataStore;
@@ -50,7 +51,6 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.TEMP_BOOT
 import static java.lang.System.currentTimeMillis;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
-import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_COMMIT_TIMESTAMP;
 
@@ -75,6 +75,7 @@ public class RaftBootstrapper
 {
     private static final long FIRST_INDEX = 0L;
     private static final long FIRST_TERM = 0L;
+    private static final String RAFT_BOOTSTRAP_TAG = "raftBootstrap";
 
     private final BootstrapContext bootstrapContext;
     private final TemporaryDatabaseFactory tempDatabaseFactory;
@@ -85,10 +86,11 @@ public class RaftBootstrapper
     private final StorageEngineFactory storageEngineFactory;
     private final Config config;
     private final BootstrapSaver bootstrapSaver;
+    private final PageCacheTracer pageCacheTracer;
 
     public RaftBootstrapper( BootstrapContext bootstrapContext, TemporaryDatabaseFactory tempDatabaseFactory, DatabaseInitializer databaseInitializer,
             PageCache pageCache, FileSystemAbstraction fs, LogProvider logProvider, StorageEngineFactory storageEngineFactory, Config config,
-            BootstrapSaver bootstrapSaver )
+            BootstrapSaver bootstrapSaver, PageCacheTracer pageCacheTracer )
     {
         this.bootstrapContext = bootstrapContext;
         this.tempDatabaseFactory = tempDatabaseFactory;
@@ -99,6 +101,7 @@ public class RaftBootstrapper
         this.storageEngineFactory = storageEngineFactory;
         this.config = config;
         this.bootstrapSaver = bootstrapSaver;
+        this.pageCacheTracer = pageCacheTracer;
     }
 
     public CoreSnapshot bootstrap( Set<MemberId> members )
@@ -108,9 +111,8 @@ public class RaftBootstrapper
 
     public CoreSnapshot bootstrap( Set<MemberId> members, StoreId storeId )
     {
-        try
+        try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( RAFT_BOOTSTRAP_TAG ) )
         {
-            var cursorTracer = TRACER_SUPPLIER.get();
             log.info( "Bootstrapping database " + bootstrapContext.databaseId().name() + " for members " + members );
             if ( isStorePresent() )
             {

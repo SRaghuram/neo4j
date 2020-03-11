@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
 import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
@@ -68,6 +69,7 @@ public class CatchupProcessManager extends SafeLifecycle
     private final CatchupComponentsRepository catchupComponents;
     private final DatabasePanicker panicker;
     private final ReplicatedDatabaseEventDispatch databaseEventDispatch;
+    private final PageCacheTracer pageCacheTracer;
 
     private CatchupPollingProcess catchupProcess;
     private volatile boolean isPanicked;
@@ -76,7 +78,7 @@ public class CatchupProcessManager extends SafeLifecycle
     CatchupProcessManager( Executor executor, CatchupComponentsRepository catchupComponents, ReadReplicaDatabaseContext databaseContext,
             DatabasePanicker panicker, TopologyService topologyService, CatchupClientFactory catchUpClient,
             UpstreamDatabaseStrategySelector selectionStrategyPipeline, TimerService timerService, CommandIndexTracker commandIndexTracker,
-            LogProvider logProvider, Config config, ReplicatedDatabaseEventDispatch databaseEventDispatch )
+            LogProvider logProvider, Config config, ReplicatedDatabaseEventDispatch databaseEventDispatch, PageCacheTracer pageCacheTracer )
     {
         this.logProvider = logProvider;
         this.log = logProvider.getLog( this.getClass() );
@@ -92,6 +94,7 @@ public class CatchupProcessManager extends SafeLifecycle
         this.selectionStrategyPipeline = selectionStrategyPipeline;
         this.txPullIntervalMillis = config.get( CausalClusteringSettings.pull_interval ).toMillis();
         this.databaseEventDispatch = databaseEventDispatch;
+        this.pageCacheTracer = pageCacheTracer;
         this.txPulling = new LifeSupport();
         this.isPanicked = false;
     }
@@ -134,7 +137,7 @@ public class CatchupProcessManager extends SafeLifecycle
         BatchingTxApplier batchingTxApplier = new BatchingTxApplier( maxBatchSize,
                 () -> databaseContext.kernelDatabase().getDependencyResolver().resolveDependency( TransactionIdStore.class ), writableCommitProcess,
                 databaseContext.monitors(), databaseContext.kernelDatabase().getVersionContextSupplier(), commandIndexTracker,
-                logProvider, databaseEventDispatch );
+                logProvider, databaseEventDispatch, pageCacheTracer );
 
         CatchupPollingProcess catchupProcess = new CatchupPollingProcess( executor, databaseContext, catchupClient,
                 batchingTxApplier, databaseEventDispatch, dbCatchupComponents.storeCopyProcess(), logProvider, this::panic,

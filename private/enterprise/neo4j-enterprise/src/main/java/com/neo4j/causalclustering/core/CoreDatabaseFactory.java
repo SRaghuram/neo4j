@@ -25,11 +25,11 @@ import com.neo4j.causalclustering.core.replication.session.GlobalSession;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
 import com.neo4j.causalclustering.core.replication.session.LocalSessionPool;
 import com.neo4j.causalclustering.core.state.BootstrapContext;
+import com.neo4j.causalclustering.core.state.BootstrapSaver;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreEditionKernelComponents;
 import com.neo4j.causalclustering.core.state.CoreKernelResolvers;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
-import com.neo4j.causalclustering.core.state.BootstrapSaver;
 import com.neo4j.causalclustering.core.state.RaftBootstrapper;
 import com.neo4j.causalclustering.core.state.RaftLogPruner;
 import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
@@ -137,10 +137,10 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.neo4j.graphdb.factory.EditionLocksFactories.createLockFactory;
 import static org.neo4j.graphdb.factory.module.DatabaseInitializer.NO_INITIALIZATION;
 import static org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder.defaultIdGeneratorFactoryProvider;
-import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 
 class CoreDatabaseFactory
 {
+    private static final String ID_CACHE_CLUSTER_CLEANUP_TAG = "idCacheClusterCleanup";
     private final Config config;
     private final SystemNanoClock clock;
     private final JobScheduler jobScheduler;
@@ -249,7 +249,7 @@ class CoreDatabaseFactory
         Replicator replicator = raftContext.replicator();
         DatabaseLogProvider debugLog = logService.getInternalLogProvider();
 
-        ReplicatedLeaseStateMachine replicatedLeaseStateMachine = createLeaseStateMachine( namedDatabaseId, life, debugLog, kernelResolvers );
+        ReplicatedLeaseStateMachine replicatedLeaseStateMachine = createLeaseStateMachine( namedDatabaseId, life, debugLog, kernelResolvers, pageCacheTracer );
 
         DatabaseIdContext idContext = createIdContext( namedDatabaseId );
 
@@ -257,19 +257,19 @@ class CoreDatabaseFactory
 
         TokenRegistry relationshipTypeTokenRegistry = new TokenRegistry( TokenHolder.TYPE_RELATIONSHIP_TYPE );
         ReplicatedRelationshipTypeTokenHolder relationshipTypeTokenHolder = new ReplicatedRelationshipTypeTokenHolder( namedDatabaseId,
-                relationshipTypeTokenRegistry, replicator, idContext.getIdGeneratorFactory(), storageEngineSupplier );
+                relationshipTypeTokenRegistry, replicator, idContext.getIdGeneratorFactory(), storageEngineSupplier, pageCacheTracer );
 
         TokenRegistry propertyKeyTokenRegistry = new TokenRegistry( TokenHolder.TYPE_PROPERTY_KEY );
         ReplicatedPropertyKeyTokenHolder propertyKeyTokenHolder = new ReplicatedPropertyKeyTokenHolder( namedDatabaseId, propertyKeyTokenRegistry, replicator,
-                idContext.getIdGeneratorFactory(), storageEngineSupplier );
+                idContext.getIdGeneratorFactory(), storageEngineSupplier, pageCacheTracer );
 
         TokenRegistry labelTokenRegistry = new TokenRegistry( TokenHolder.TYPE_LABEL );
         ReplicatedLabelTokenHolder labelTokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, labelTokenRegistry, replicator,
-                idContext.getIdGeneratorFactory(), storageEngineSupplier );
+                idContext.getIdGeneratorFactory(), storageEngineSupplier, pageCacheTracer );
 
         ReplicatedDatabaseEventDispatch databaseEventDispatch = databaseEventService.getDatabaseEventDispatch( namedDatabaseId );
         StateMachineCommitHelper commitHelper = new StateMachineCommitHelper( raftContext.commandIndexTracker(), versionContextSupplier,
-                databaseEventDispatch );
+                databaseEventDispatch, pageCacheTracer );
 
         ReplicatedTokenStateMachine labelTokenStateMachine = new ReplicatedTokenStateMachine( commitHelper, labelTokenRegistry, debugLog );
         ReplicatedTokenStateMachine propertyKeyTokenStateMachine = new ReplicatedTokenStateMachine( commitHelper, propertyKeyTokenRegistry, debugLog );
@@ -357,7 +357,7 @@ class CoreDatabaseFactory
     {
         DatabasePageCache pageCache = new DatabasePageCache( this.pageCache, EmptyVersionContextSupplier.EMPTY );
         var raftBootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer, pageCache, fileSystem, debugLog,
-                storageEngineFactory, config, bootstrapSaver );
+                storageEngineFactory, config, bootstrapSaver, pageCacheTracer );
 
         int minimumCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
         Duration clusterBindingTimeout = config.get( CausalClusteringSettings.cluster_binding_timeout );
@@ -447,10 +447,16 @@ class CoreDatabaseFactory
     }
 
     private ReplicatedLeaseStateMachine createLeaseStateMachine( NamedDatabaseId namedDatabaseId, LifeSupport life,
-            DatabaseLogProvider databaseLogProvider, CoreKernelResolvers resolvers )
+            DatabaseLogProvider databaseLogProvider, CoreKernelResolvers resolvers, PageCacheTracer pageCacheTracer )
     {
         StateStorage<ReplicatedLeaseState> leaseStorage = storageFactory.createLeaseStorage( namedDatabaseId.name(), life, databaseLogProvider );
-        return new ReplicatedLeaseStateMachine( leaseStorage, () -> resolvers.idGeneratorFactory().get().clearCache( TRACER_SUPPLIER.get() ) );
+        return new ReplicatedLeaseStateMachine( leaseStorage, () ->
+        {
+            try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( ID_CACHE_CLUSTER_CLEANUP_TAG ) )
+            {
+                resolvers.idGeneratorFactory().get().clearCache( cursorTracer );
+            }
+        } );
     }
 
     private Locks createLockManager( final Config config, Clock clock, LogService logService )

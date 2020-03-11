@@ -16,6 +16,7 @@ import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -30,11 +31,11 @@ import org.neo4j.storageengine.api.StorageReader;
 import org.neo4j.token.AbstractTokenHolderBase;
 import org.neo4j.token.TokenRegistry;
 
-import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 import static org.neo4j.storageengine.api.txstate.TxStateVisitor.NO_DECORATION;
 
 public class ReplicatedTokenHolder extends AbstractTokenHolderBase
 {
+    private static final String REPLICATED_TOKEN_HOLDER_CREATOR_TAG = "replicatedTokenHolderCreator";
     private final Replicator replicator;
     private final IdGeneratorFactory idGeneratorFactory;
     private final IdType tokenIdType;
@@ -42,11 +43,12 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
     private final Supplier<StorageEngine> storageEngineSupplier;
     private final ReplicatedTokenCreator tokenCreator;
     private final DatabaseId databaseId;
+    private final PageCacheTracer pageCacheTracer;
 
     ReplicatedTokenHolder( NamedDatabaseId namedDatabaseId, TokenRegistry tokenRegistry, Replicator replicator,
                            IdGeneratorFactory idGeneratorFactory, IdType tokenIdType,
                            Supplier<StorageEngine> storageEngineSupplier, TokenType type,
-                           ReplicatedTokenCreator tokenCreator )
+                           ReplicatedTokenCreator tokenCreator, PageCacheTracer pageCacheTracer )
     {
         super( tokenRegistry );
         this.replicator = replicator;
@@ -56,6 +58,7 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
         this.storageEngineSupplier = storageEngineSupplier;
         this.tokenCreator = tokenCreator;
         this.databaseId = namedDatabaseId.databaseId();
+        this.pageCacheTracer = pageCacheTracer;
     }
 
     @Override
@@ -103,17 +106,19 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
         StorageEngine storageEngine = storageEngineSupplier.get();
         Collection<StorageCommand> commands = new ArrayList<>();
         TransactionState txState = new TxState( OnHeapCollectionsFactory.INSTANCE, EmptyMemoryTracker.INSTANCE );
-        var cursorTracer = TRACER_SUPPLIER.get();
-        int tokenId = Math.toIntExact( idGeneratorFactory.get( tokenIdType ).nextId( cursorTracer ) );
-        tokenCreator.createToken( txState, tokenName, internal, tokenId );
-        try ( StorageReader reader = storageEngine.newReader();
-              CommandCreationContext creationContext = storageEngine.newCommandCreationContext( cursorTracer ) )
+        try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( REPLICATED_TOKEN_HOLDER_CREATOR_TAG ) )
         {
-            storageEngine.createCommands( commands, txState, reader, creationContext, ResourceLocker.PREVENT, Long.MAX_VALUE, NO_DECORATION, cursorTracer );
-        }
-        catch ( KernelException e )
-        {
-            throw new RuntimeException( "Unable to create token '" + tokenName + "' for " + databaseId, e );
+            int tokenId = Math.toIntExact( idGeneratorFactory.get( tokenIdType ).nextId( cursorTracer ) );
+            tokenCreator.createToken( txState, tokenName, internal, tokenId );
+            try ( StorageReader reader = storageEngine.newReader();
+                    CommandCreationContext creationContext = storageEngine.newCommandCreationContext( cursorTracer ) )
+            {
+                storageEngine.createCommands( commands, txState, reader, creationContext, ResourceLocker.PREVENT, Long.MAX_VALUE, NO_DECORATION, cursorTracer );
+            }
+            catch ( KernelException e )
+            {
+                throw new RuntimeException( "Unable to create token '" + tokenName + "' for " + databaseId, e );
+            }
         }
 
         return StorageCommandMarshal.commandsToBytes( commands );

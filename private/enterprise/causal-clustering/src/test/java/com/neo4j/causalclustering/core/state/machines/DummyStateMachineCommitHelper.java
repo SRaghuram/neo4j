@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state.machines;
 
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 
 import static com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
@@ -15,11 +15,11 @@ public class DummyStateMachineCommitHelper extends StateMachineCommitHelper
 {
     public DummyStateMachineCommitHelper()
     {
-        this( new CommandIndexTracker(), PageCursorTracer.NULL );
+        this( new CommandIndexTracker(), PageCacheTracer.NULL );
     }
 
-    public DummyStateMachineCommitHelper( CommandIndexTracker commandIndexTracker, PageCursorTracer pageCursorTracer )
+    public DummyStateMachineCommitHelper( CommandIndexTracker commandIndexTracker, PageCacheTracer cacheTracer )
     {
-        super( commandIndexTracker, EmptyVersionContextSupplier.EMPTY, mock( ReplicatedDatabaseEventDispatch.class ) );
+        super( commandIndexTracker, EmptyVersionContextSupplier.EMPTY, mock( ReplicatedDatabaseEventDispatch.class ), cacheTracer );
     }
 }

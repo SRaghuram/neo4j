@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
@@ -19,5 +20,6 @@ import org.neo4j.monitoring.Monitors;
 public interface ClusteredDatabaseContextFactory
 {
     ClusteredDatabaseContext create( Database database, GraphDatabaseFacade facade, LogFiles txLogs, StoreFiles storeFiles,
-            LogProvider logProvider, CatchupComponentsFactory factory, ClusteredDatabase clusterDatabase, Monitors clusterDatabaseMonitors );
+            LogProvider logProvider, CatchupComponentsFactory factory, ClusteredDatabase clusterDatabase, Monitors clusterDatabaseMonitors,
+            PageCacheTracer cacheTracer );
 }

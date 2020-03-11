@@ -16,6 +16,7 @@ import java.io.IOException;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -24,8 +25,6 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
-
-import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 
 /**
  * Instances extending this class represent individual clustered databases in Neo4j.
@@ -36,6 +35,7 @@ import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSuppl
  */
 public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
 {
+    private static final String CLUSTERED_CONTEXT_STORE_ID_READER_TAG = "clusteredConstextStoreIdReader";
     private final DatabaseLayout databaseLayout;
     private final StoreFiles storeFiles;
     private final Log log;
@@ -45,13 +45,15 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
     private final GraphDatabaseFacade facade;
     private volatile Throwable failureCause;
     private final CatchupComponents catchupComponents;
+    private final PageCacheTracer cacheTracer;
     private final ClusteredDatabase clusterDatabase;
     private final Monitors clusterDatabaseMonitors;
 
     private volatile StoreId storeId;
 
     DefaultClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles txLogs, StoreFiles storeFiles, LogProvider logProvider,
-            CatchupComponentsFactory catchupComponentsFactory, ClusteredDatabase clusterDatabase, Monitors clusterDatabaseMonitors )
+            CatchupComponentsFactory catchupComponentsFactory, ClusteredDatabase clusterDatabase, Monitors clusterDatabaseMonitors,
+            PageCacheTracer cacheTracer )
     {
         this.database = database;
         this.facade = facade;
@@ -63,6 +65,7 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
         this.clusterDatabase = clusterDatabase;
         this.clusterDatabaseMonitors = clusterDatabaseMonitors;
         this.catchupComponents = catchupComponentsFactory.createDatabaseComponents( this );
+        this.cacheTracer = cacheTracer;
     }
 
     /**
@@ -82,9 +85,9 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
 
     private StoreId readStoreIdFromDisk()
     {
-        try
+        try ( var cursorTracer = cacheTracer.createPageCursorTracer( CLUSTERED_CONTEXT_STORE_ID_READER_TAG ) )
         {
-            return storeFiles.readStoreId( databaseLayout, TRACER_SUPPLIER.get() );
+            return storeFiles.readStoreId( databaseLayout, cursorTracer );
         }
         catch ( IOException e )
         {

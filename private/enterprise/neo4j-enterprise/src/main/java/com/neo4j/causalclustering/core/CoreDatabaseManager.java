@@ -60,6 +60,7 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         DatabaseLogService coreDatabaseLogService = new DatabaseLogService( new DatabaseNameLogContext( namedDatabaseId ), globalModule.getLogService() );
         Monitors coreDatabaseMonitors = ClusterMonitors.create( globalModule.getGlobalMonitors(), coreDatabaseDependencies );
 
+        var pageCacheTracer = globalModule.getTracers().getPageCacheTracer();
         DatabaseLayout databaseLayout = globalModule.getNeo4jLayout().databaseLayout( namedDatabaseId.name() );
 
         LogFiles transactionLogs = buildTransactionLogs( databaseLayout );
@@ -79,13 +80,13 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
                 coreDatabaseMonitors, kernelContext, versionContextSupplier, databaseConfig, coreDatabaseLogService );
         var kernelDatabase = new Database( databaseCreationContext );
 
-        var downloadContext = new StoreDownloadContext( kernelDatabase, storeFiles, transactionLogs, internalDbmsOperator() );
+        var downloadContext = new StoreDownloadContext( kernelDatabase, storeFiles, transactionLogs, internalDbmsOperator(), pageCacheTracer );
 
         var coreDatabase = edition.coreDatabaseFactory().createDatabase( namedDatabaseId, clusterComponents, coreDatabaseMonitors, coreDatabaseDependencies,
                 downloadContext, kernelDatabase, kernelContext, raftContext, internalDbmsOperator() );
 
         var ctx = contextFactory.create( kernelDatabase, kernelDatabase.getDatabaseFacade(), transactionLogs,
-                storeFiles, logProvider, catchupComponentsFactory, coreDatabase, coreDatabaseMonitors );
+                storeFiles, logProvider, catchupComponentsFactory, coreDatabase, coreDatabaseMonitors, pageCacheTracer );
 
         kernelResolvers.registerDatabase( ctx.database() );
         return ctx;

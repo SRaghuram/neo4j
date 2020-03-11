@@ -19,6 +19,7 @@ import org.neo4j.internal.helpers.collection.LongRange;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -29,13 +30,13 @@ import org.neo4j.storageengine.api.StoreId;
 import static com.neo4j.causalclustering.catchup.storecopy.TxPullRequestContext.createContextFromCatchingUp;
 import static com.neo4j.causalclustering.catchup.storecopy.TxPullRequestContext.createContextFromStoreCopy;
 import static com.neo4j.causalclustering.catchup.storecopy.TxPuller.createTxPuller;
-import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 
 /**
  * Entry point for remote store related RPC.
  */
 public class RemoteStore
 {
+    private static final String STORE_STATE_READER_TAG = "storeStateReader";
     private final Log log;
     private final Monitors monitors;
     private final Config config;
@@ -49,10 +50,11 @@ public class RemoteStore
     private final StoreCopyClientMonitor storeCopyClientMonitor;
     private final StorageEngineFactory storageEngineFactory;
     private final NamedDatabaseId namedDatabaseId;
+    private final PageCacheTracer pageCacheTracer;
 
     public RemoteStore( LogProvider logProvider, FileSystemAbstraction fs, PageCache pageCache, StoreCopyClient storeCopyClient, TxPullClient txPullClient,
             TransactionLogCatchUpFactory transactionLogFactory, Config config, Monitors monitors, StorageEngineFactory storageEngineFactory,
-            NamedDatabaseId namedDatabaseId )
+            NamedDatabaseId namedDatabaseId, PageCacheTracer pageCacheTracer )
     {
         this.logProvider = logProvider;
         this.storeCopyClient = storeCopyClient;
@@ -66,6 +68,7 @@ public class RemoteStore
         this.storeCopyClientMonitor = monitors.newMonitor( StoreCopyClientMonitor.class );
         this.storageEngineFactory = storageEngineFactory;
         this.namedDatabaseId = namedDatabaseId;
+        this.pageCacheTracer = pageCacheTracer;
         this.commitStateHelper = new CommitStateHelper( pageCache, fs, config, storageEngineFactory );
     }
 
@@ -73,11 +76,18 @@ public class RemoteStore
             boolean forceTransactionLogRotation )
             throws StoreCopyFailedException, IOException
     {
-        CommitState commitState = commitStateHelper.getStoreState( databaseLayout, TRACER_SUPPLIER.get() );
+        CommitState commitState = getCommitState( databaseLayout );
         log.info( "Store commit state: " + commitState );
-
         TxPullRequestContext txPullRequestContext = createContextFromCatchingUp( expectedStoreId, commitState );
         pullTransactions( catchupAddressProvider, databaseLayout, txPullRequestContext, false, keepTxLogsInDir, forceTransactionLogRotation );
+    }
+
+    private CommitState getCommitState( DatabaseLayout databaseLayout ) throws IOException
+    {
+        try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( STORE_STATE_READER_TAG ) )
+        {
+            return commitStateHelper.getStoreState( databaseLayout, cursorTracer );
+        }
     }
 
     public void copy( CatchupAddressProvider addressProvider, StoreId expectedStoreId, DatabaseLayout destinationLayout, boolean rotateTransactionsManually )
@@ -105,7 +115,7 @@ public class RemoteStore
     {
         storeCopyClientMonitor.startReceivingTransactions( context.startTxIdExclusive() );
         try ( TransactionLogCatchUpWriter writer = transactionLogFactory.create( databaseLayout, fs, pageCache, config, logProvider, storageEngineFactory,
-                validInitialTxRange( context ), asPartOfStoreCopy, keepTxLogsInStoreDir, rotateTransactionsManually ) )
+                validInitialTxRange( context ), asPartOfStoreCopy, keepTxLogsInStoreDir, rotateTransactionsManually, pageCacheTracer ) )
         {
             TxPuller txPuller = createTxPuller( catchupAddressProvider, logProvider, config, namedDatabaseId );
 

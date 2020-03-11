@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.readreplica;
 import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.common.ClusterMonitors;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
-import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.dbms.database.ClusteredMultiDatabaseManager;
 
@@ -46,19 +45,20 @@ public class ReadReplicaDatabaseManager extends ClusteredMultiDatabaseManager
     {
         Dependencies readReplicaDependencies = new Dependencies( globalModule.getGlobalDependencies() );
         Monitors readReplicaMonitors = ClusterMonitors.create( globalModule.getGlobalMonitors(), readReplicaDependencies );
+        var pageCacheTracer = globalModule.getTracers().getPageCacheTracer();
 
         DatabaseCreationContext databaseCreationContext = newDatabaseCreationContext( namedDatabaseId, readReplicaDependencies, readReplicaMonitors );
         Database kernelDatabase = new Database( databaseCreationContext );
 
         LogFiles transactionLogs = buildTransactionLogs( kernelDatabase.getDatabaseLayout() );
         ReadReplicaDatabaseContext databaseContext = new ReadReplicaDatabaseContext( kernelDatabase, readReplicaMonitors, readReplicaDependencies, storeFiles,
-                transactionLogs, internalDbmsOperator() );
+                transactionLogs, internalDbmsOperator(), pageCacheTracer );
 
         ReadReplicaDatabase readReplicaDatabase = edition.readReplicaDatabaseFactory().createDatabase(
                 databaseContext, internalDbmsOperator() );
 
         return contextFactory.create( kernelDatabase, kernelDatabase.getDatabaseFacade(), transactionLogs, storeFiles, logProvider, catchupComponentsFactory,
-                readReplicaDatabase, readReplicaMonitors );
+                readReplicaDatabase, readReplicaMonitors, pageCacheTracer );
     }
 
     @Override

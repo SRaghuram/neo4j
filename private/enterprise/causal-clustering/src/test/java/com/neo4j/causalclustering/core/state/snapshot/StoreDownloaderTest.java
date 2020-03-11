@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -162,7 +163,7 @@ class StoreDownloaderTest
 
         LogFiles transactionLogs = mock( LogFiles.class );
 
-        return new StoreDownloadContext( database, storeFiles, transactionLogs, new ClusterInternalDbmsOperator() );
+        return new StoreDownloadContext( database, storeFiles, transactionLogs, new ClusterInternalDbmsOperator(), PageCacheTracer.NULL );
     }
 
     private RemoteStore mockRemoteSuccessfulStore( NamedDatabaseId namedDatabaseId ) throws StoreIdDownloadFailedException

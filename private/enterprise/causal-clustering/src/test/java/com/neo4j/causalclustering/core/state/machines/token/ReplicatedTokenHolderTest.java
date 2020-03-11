@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.core.state.machines.token;
 
 import com.neo4j.causalclustering.core.replication.ReplicationResult;
 import com.neo4j.causalclustering.core.state.StateMachineResult;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.function.Supplier;
@@ -17,6 +17,7 @@ import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.internal.recordstorage.Command;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -34,7 +35,7 @@ import org.neo4j.token.api.NamedToken;
 import static java.util.Arrays.asList;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.hasItems;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -45,15 +46,16 @@ import static org.mockito.Mockito.when;
 public class ReplicatedTokenHolderTest
 {
     private StorageEngine storageEngine;
-    private Supplier<StorageEngine> storageEngineSupplier = () -> storageEngine;
-    private NamedDatabaseId namedDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
+    private final Supplier<StorageEngine> storageEngineSupplier = () -> storageEngine;
+    private final NamedDatabaseId namedDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
 
     @Test
     public void shouldStoreInitialTokens()
     {
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
-        ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, registry, null, null, storageEngineSupplier );
+        ReplicatedTokenHolder tokenHolder =
+                new ReplicatedLabelTokenHolder( namedDatabaseId, registry, null, null, storageEngineSupplier, PageCacheTracer.NULL );
 
         // when
         tokenHolder.setInitialTokens( asList( new NamedToken( "name1", 1 ), new NamedToken( "name2", 2 ) ) );
@@ -68,7 +70,7 @@ public class ReplicatedTokenHolderTest
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
         ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, registry, null,
-                null, storageEngineSupplier );
+                null, storageEngineSupplier, PageCacheTracer.NULL );
         tokenHolder.setInitialTokens( asList( new NamedToken( "name1", 1 ), new NamedToken( "name2", 2 ) ) );
 
         // when
@@ -93,7 +95,8 @@ public class ReplicatedTokenHolderTest
         TokenRegistry registry = new TokenRegistry( "Label" );
         int generatedTokenId = 1;
         ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, registry,
-                content -> ReplicationResult.applied( StateMachineResult.of( generatedTokenId ) ), idGeneratorFactory, storageEngineSupplier );
+                content -> ReplicationResult.applied( StateMachineResult.of( generatedTokenId ) ), idGeneratorFactory, storageEngineSupplier,
+                PageCacheTracer.NULL );
 
         // when
         Integer tokenId = tokenHolder.getOrCreateId( "name1" );

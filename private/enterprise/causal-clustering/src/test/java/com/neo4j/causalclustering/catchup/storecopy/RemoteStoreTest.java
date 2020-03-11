@@ -27,6 +27,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.LogProvider;
@@ -54,11 +55,11 @@ class RemoteStoreTest
 {
     private static final NamedDatabaseId DATABASE_ID = TestDatabaseIdRepository.randomNamedDatabaseId();
 
-    private StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
-    private SocketAddress localhost = new SocketAddress( "127.0.0.1", 1234 );
-    private DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( new File( "destination" ) );
-    private CatchupAddressProvider catchupAddressProvider = new CatchupAddressProvider.SingleAddressProvider( localhost );
-    private TransactionLogCatchUpWriter writer = mock( TransactionLogCatchUpWriter.class );
+    private final StoreId storeId = new StoreId( 1, 2, 3, 4, 5 );
+    private final SocketAddress localhost = new SocketAddress( "127.0.0.1", 1234 );
+    private final DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( new File( "destination" ) );
+    private final CatchupAddressProvider catchupAddressProvider = new CatchupAddressProvider.SingleAddressProvider( localhost );
+    private final TransactionLogCatchUpWriter writer = mock( TransactionLogCatchUpWriter.class );
 
     @Test
     void shouldCopyStoreFilesAndPullTransactions() throws Exception
@@ -235,7 +236,7 @@ class RemoteStoreTest
             throws IOException, StoreCopyFailedException
     {
         RemoteStore remoteStore = new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ), null,
-                storeCopyClient, txPullClient, factory( writer ), config, new Monitors(), selectStorageEngine(), DATABASE_ID );
+                storeCopyClient, txPullClient, factory( writer ), config, new Monitors(), selectStorageEngine(), DATABASE_ID, PageCacheTracer.NULL );
 
         remoteStore.copy( catchupAddressProvider, storeId, databaseLayout, true );
     }
@@ -255,7 +256,7 @@ class RemoteStoreTest
     {
         TransactionLogCatchUpFactory factory = mock( TransactionLogCatchUpFactory.class );
         when( factory.create( any(), any( FileSystemAbstraction.class ), isNull(), any( Config.class ), any( LogProvider.class ), any(),
-                any(), anyBoolean(), anyBoolean(), anyBoolean() ) ).thenReturn( writer );
+                any(), anyBoolean(), anyBoolean(), anyBoolean(), any() ) ).thenReturn( writer );
         return factory;
     }
 }

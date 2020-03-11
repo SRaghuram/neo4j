@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
@@ -27,7 +28,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.transaction.log.Commitment.NO_COMMITMENT;
 
 class StateMachineCommitHelperTest
@@ -37,7 +37,7 @@ class StateMachineCommitHelperTest
     private final ReplicatedDatabaseEventDispatch databaseEventDispatch = mock( ReplicatedDatabaseEventDispatch.class );
 
     private final StateMachineCommitHelper commitHelper = new StateMachineCommitHelper( commandIndexTracker, versionContextSupplier,
-            databaseEventDispatch );
+            databaseEventDispatch, PageCacheTracer.NULL );
 
     @Test
     void shouldUpdateLastAppliedCommandIndex()
@@ -53,7 +53,7 @@ class StateMachineCommitHelperTest
     void shouldCommitTransaction() throws Exception
     {
         var commitProcess = newCommitProcessMock( 1 );
-        var tx = new TransactionToApply( new PhysicalTransactionRepresentation( emptyList() ), NULL );
+        var tx = new TransactionToApply( new PhysicalTransactionRepresentation( emptyList() ), PageCursorTracer.NULL );
 
         commitHelper.commit( commitProcess, tx );
 

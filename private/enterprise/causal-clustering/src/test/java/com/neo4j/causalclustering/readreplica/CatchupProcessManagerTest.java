@@ -26,6 +26,7 @@ import java.util.Optional;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
@@ -71,7 +72,7 @@ class CatchupProcessManagerTest
         //Construct the manager under test
         catchupProcessManager = spy( new CatchupProcessManager( new CallingThreadExecutor(), catchupComponents, databaseContext,
                 databasePanicker, topologyService, catchUpClient, strategyPipeline, timerService, new CommandIndexTracker(),
-                NullLogProvider.getInstance(), Config.defaults(), mock( ReplicatedDatabaseEventDispatch.class ) ) );
+                NullLogProvider.getInstance(), Config.defaults(), mock( ReplicatedDatabaseEventDispatch.class ), PageCacheTracer.NULL ) );
     }
 
     private ClusteredDatabaseContext getMockDatabase( NamedDatabaseId namedDatabaseId )

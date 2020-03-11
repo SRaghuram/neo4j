@@ -77,13 +77,14 @@ public class BackupSupportingClassesFactory
         PageCacheTracer pageCacheTracer = PageCacheTracer.NULL;
         PageCache pageCache = createPageCache( fileSystemAbstraction, context.getConfig(), jobScheduler, pageCacheTracer );
         return new BackupSupportingClasses(
-                backupDelegatorFromConfig( pageCache, context, jobScheduler ),
+                backupDelegatorFromConfig( pageCache, context, jobScheduler, pageCacheTracer ),
                 pageCache,
                 pageCacheTracer,
                 Arrays.asList( pageCache, jobScheduler ) );
     }
 
-    private BackupDelegator backupDelegatorFromConfig( PageCache pageCache, OnlineBackupContext onlineBackupContext, JobScheduler jobScheduler )
+    private BackupDelegator backupDelegatorFromConfig( PageCache pageCache, OnlineBackupContext onlineBackupContext, JobScheduler jobScheduler,
+            PageCacheTracer pageCacheTracer )
     {
         Config config = onlineBackupContext.getConfig();
         CatchupClientFactory catchUpClient = catchUpClient( onlineBackupContext, jobScheduler );
@@ -97,7 +98,7 @@ public class BackupSupportingClassesFactory
 
         Function<NamedDatabaseId,RemoteStore> remoteStore = databaseId -> new RemoteStore( logProvider, fileSystemAbstraction, pageCache,
                 storeCopyClient.apply( databaseId ), txPullClient.apply( databaseId ), transactionLogCatchUpFactory, config, monitors, storageEngineFactory,
-                databaseId );
+                databaseId, pageCacheTracer );
 
         return backupDelegator( remoteStore, storeCopyClient, catchUpClient, logProvider );
     }

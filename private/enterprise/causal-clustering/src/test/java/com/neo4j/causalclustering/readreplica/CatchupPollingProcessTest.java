@@ -30,6 +30,7 @@ import java.util.concurrent.Future;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -98,7 +99,7 @@ class CatchupPollingProcessTest
         when( storeFiles.readStoreId( any(), any() ) ).thenReturn( storeId );
 
         databaseContext = spy( new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, mock( LogFiles.class ),
-                new ClusterInternalDbmsOperator() ) );
+                new ClusterInternalDbmsOperator(), PageCacheTracer.NULL ) );
 
         when( idStore.getLastCommittedTransactionId() ).thenReturn( BASE_TX_ID + 1 );
         when( clusteredDatabaseContext.storeId() ).thenReturn( storeId );

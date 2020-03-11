@@ -15,6 +15,7 @@ import org.neo4j.internal.helpers.collection.LongRange;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChecksumChannel;
@@ -37,13 +38,12 @@ import static java.lang.System.currentTimeMillis;
 import static org.neo4j.configuration.GraphDatabaseSettings.logical_log_rotation_threshold;
 import static org.neo4j.configuration.GraphDatabaseSettings.preallocate_logical_logs;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
-import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
-import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeaderReader.readLogHeader;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
 
 public class TransactionLogCatchUpWriter implements TxPullResponseListener, AutoCloseable
 {
+    private static final String TRANSACTION_LOG_CATCHUP_TAG = "transactionLogCatchup";
     private final Lifespan lifespan = new Lifespan();
     private final Log log;
     private final boolean asPartOfStoreCopy;
@@ -52,6 +52,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
     private final TransactionMetaDataStore metaDataStore;
     private final DatabasePageCache databasePageCache;
     private final boolean rotateTransactionsManually;
+    private final PageCacheTracer pageCacheTracer;
     private final LongRange validInitialTxId;
     private final FlushablePositionAwareChecksumChannel logChannel;
     private final LogPositionMarker logPositionMarker = new LogPositionMarker();
@@ -61,16 +62,18 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
 
     TransactionLogCatchUpWriter( DatabaseLayout databaseLayout, FileSystemAbstraction fs, PageCache pageCache, Config config, LogProvider logProvider,
             StorageEngineFactory storageEngineFactory, LongRange validInitialTxId, boolean asPartOfStoreCopy, boolean keepTxLogsInStoreDir,
-            boolean forceTransactionRotations ) throws IOException
+            boolean forceTransactionRotations, PageCacheTracer pageCacheTracer ) throws IOException
     {
         this.log = logProvider.getLog( getClass() );
         this.asPartOfStoreCopy = asPartOfStoreCopy;
         this.rotateTransactionsManually = forceTransactionRotations;
+        this.pageCacheTracer = pageCacheTracer;
         final Config configWithoutSpecificStoreFormat = configWithoutSpecificStoreFormat( config );
         databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY );
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependencies( databaseLayout, fs, databasePageCache, configWithoutSpecificStoreFormat );
-        metaDataStore = storageEngineFactory.transactionMetaDataStore( fs, databaseLayout, configWithoutSpecificStoreFormat, databasePageCache, NULL );
+        metaDataStore =
+                storageEngineFactory.transactionMetaDataStore( fs, databaseLayout, configWithoutSpecificStoreFormat, databasePageCache, pageCacheTracer );
         LogPosition startPosition = getLastClosedTransactionPosition( databaseLayout, metaDataStore, fs );
         LogFilesBuilder logFilesBuilder = LogFilesBuilder
                 .builder( databaseLayout, fs ).withDependencies( dependencies ).withLastCommittedTransactionIdSupplier( () -> validInitialTxId.from() - 1 )
@@ -192,6 +195,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
     @Override
     public synchronized void close() throws IOException
     {
+        var cursorTracer = pageCacheTracer.createPageCursorTracer( TRANSACTION_LOG_CATCHUP_TAG );
         if ( asPartOfStoreCopy )
         {
             /* A checkpoint which points to the beginning of all the log files, meaning that
@@ -212,7 +216,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
             // impossible for recovery process to restore the store
             TransactionId lastCommittedTx = metaDataStore.getLastCommittedTransaction();
             metaDataStore.setLastCommittedAndClosedTransactionId( lastCommittedTx.transactionId(), lastCommittedTx.checksum(),
-                    lastCommittedTx.commitTimestamp(), checkPointPosition.getByteOffset(), logVersion, TRACER_SUPPLIER.get() );
+                    lastCommittedTx.commitTimestamp(), checkPointPosition.getByteOffset(), logVersion, cursorTracer );
         }
 
         lifespan.close();
@@ -221,9 +225,10 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         {
             metaDataStore.setLastCommittedAndClosedTransactionId( lastTxId,
                     0, currentTimeMillis(), // <-- we don't seem to care about these fields anymore
-                    logPositionMarker.getByteOffset(), logPositionMarker.getLogVersion(), TRACER_SUPPLIER.get() );
+                    logPositionMarker.getByteOffset(), logPositionMarker.getLogVersion(), cursorTracer );
         }
         metaDataStore.close();
+        cursorTracer.close();
         databasePageCache.close();
     }
 }

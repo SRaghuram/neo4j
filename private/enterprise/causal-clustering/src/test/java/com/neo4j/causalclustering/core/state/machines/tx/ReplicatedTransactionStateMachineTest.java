@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -37,7 +37,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 class ReplicatedTransactionStateMachineTest
 {
@@ -55,7 +54,7 @@ class ReplicatedTransactionStateMachineTest
 
         TransactionCommitProcess localCommitProcess = mock( TransactionCommitProcess.class );
 
-        ReplicatedTransactionStateMachine stateMachine = newTransactionStateMachine( leaseState( leaseId ), NULL );
+        ReplicatedTransactionStateMachine stateMachine = newTransactionStateMachine( leaseState( leaseId ), PageCacheTracer.NULL );
         stateMachine.installCommitProcess( localCommitProcess, -1L );
 
         // when
@@ -189,13 +188,13 @@ class ReplicatedTransactionStateMachineTest
 
     private ReplicatedTransactionStateMachine newTransactionStateMachine( ReplicatedLeaseStateMachine leaseState )
     {
-        return newTransactionStateMachine( leaseState, NULL );
+        return newTransactionStateMachine( leaseState, PageCacheTracer.NULL );
     }
 
-    private ReplicatedTransactionStateMachine newTransactionStateMachine( ReplicatedLeaseStateMachine lockState, PageCursorTracer pageCursorTracer )
+    private ReplicatedTransactionStateMachine newTransactionStateMachine( ReplicatedLeaseStateMachine lockState, PageCacheTracer pageCacheTracer )
     {
         var batchSize = 16;
-        var commitHelper = new DummyStateMachineCommitHelper( commandIndexTracker, pageCursorTracer );
+        var commitHelper = new DummyStateMachineCommitHelper( commandIndexTracker, pageCacheTracer );
         return new ReplicatedTransactionStateMachine( commitHelper, lockState, batchSize, logProvider );
     }
 }

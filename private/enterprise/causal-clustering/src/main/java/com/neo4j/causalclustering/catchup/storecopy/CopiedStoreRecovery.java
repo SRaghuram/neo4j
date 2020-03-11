@@ -13,6 +13,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.DatabaseTracers;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -25,11 +26,11 @@ import org.neo4j.storageengine.migration.UpgradeNotAllowedException;
 import static java.lang.String.format;
 import static org.apache.commons.lang3.exception.ExceptionUtils.indexOfThrowable;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
-import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 import static org.neo4j.kernel.recovery.Recovery.performRecovery;
 
 public class CopiedStoreRecovery extends LifecycleAdapter
 {
+    private static final String STORE_RECOVERY_VERSION_CHECKER_TAG = "storeRecoveryVersionChecker";
     private final PageCache pageCache;
     private final DatabaseTracers databaseTracers;
     private final FileSystemAbstraction fs;
@@ -61,7 +62,7 @@ public class CopiedStoreRecovery extends LifecycleAdapter
         var pageCacheTracer = databaseTracers.getPageCacheTracer();
         StoreVersionCheck storeVersionCheck = storageEngineFactory.versionCheck( fs, databaseLayout, config, pageCache, NullLogService.getInstance(),
                 pageCacheTracer );
-        Optional<String> storeVersion = storeVersionCheck.storeVersion( TRACER_SUPPLIER.get() );
+        Optional<String> storeVersion = getStoreVersion( storeVersionCheck, pageCacheTracer );
         if ( databaseLayout.getDatabaseName().equals( GraphDatabaseSettings.SYSTEM_DATABASE_NAME ) )
         {
             // TODO: System database does not support older formats, remove this when it does!
@@ -89,6 +90,14 @@ public class CopiedStoreRecovery extends LifecycleAdapter
                 throw new RuntimeException( failedToStartMessage( config ), e );
             }
             throw e;
+        }
+    }
+
+    private Optional<String> getStoreVersion( StoreVersionCheck storeVersionCheck, PageCacheTracer pageCacheTracer )
+    {
+        try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( STORE_RECOVERY_VERSION_CHECKER_TAG ) )
+        {
+            return storeVersionCheck.storeVersion( cursorTracer );
         }
     }
 

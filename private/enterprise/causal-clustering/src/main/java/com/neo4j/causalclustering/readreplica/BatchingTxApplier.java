@@ -12,6 +12,7 @@ import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDisp
 
 import java.util.function.Supplier;
 
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionQueue;
@@ -23,7 +24,6 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
-import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 import static org.neo4j.kernel.impl.transaction.tracing.CommitEvent.NULL;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
 
@@ -32,6 +32,7 @@ import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
  */
 public class BatchingTxApplier extends LifecycleAdapter
 {
+    private static final String CLUSTERING_BATCHING_TRANSACTION_TAG = "clusteringBatchingTransaction";
     private final int maxBatchSize;
     private final Supplier<TransactionIdStore> txIdStoreSupplier;
     private final Supplier<TransactionCommitProcess> commitProcessSupplier;
@@ -41,6 +42,7 @@ public class BatchingTxApplier extends LifecycleAdapter
     private final CommandIndexTracker commandIndexTracker;
     private final Log log;
     private final ReplicatedDatabaseEventDispatch databaseEventDispatch;
+    private final PageCacheTracer pageCacheTracer;
 
     private TransactionQueue txQueue;
     private TransactionCommitProcess commitProcess;
@@ -50,7 +52,8 @@ public class BatchingTxApplier extends LifecycleAdapter
 
     BatchingTxApplier( int maxBatchSize, Supplier<TransactionIdStore> txIdStoreSupplier, Supplier<TransactionCommitProcess> commitProcessSupplier,
             Monitors monitors, VersionContextSupplier versionContextSupplier,
-            CommandIndexTracker commandIndexTracker, LogProvider logProvider, ReplicatedDatabaseEventDispatch databaseEventDispatch )
+            CommandIndexTracker commandIndexTracker, LogProvider logProvider, ReplicatedDatabaseEventDispatch databaseEventDispatch,
+            PageCacheTracer pageCacheTracer )
     {
         this.maxBatchSize = maxBatchSize;
         this.txIdStoreSupplier = txIdStoreSupplier;
@@ -60,6 +63,7 @@ public class BatchingTxApplier extends LifecycleAdapter
         this.versionContextSupplier = versionContextSupplier;
         this.commandIndexTracker = commandIndexTracker;
         this.databaseEventDispatch = databaseEventDispatch;
+        this.pageCacheTracer = pageCacheTracer;
     }
 
     @Override
@@ -70,7 +74,6 @@ public class BatchingTxApplier extends LifecycleAdapter
         txQueue = new TransactionQueue( maxBatchSize, ( first, last ) ->
         {
             commitProcess.commit( first, NULL, EXTERNAL );
-            TRACER_SUPPLIER.get().reportEvents();
             long lastAppliedRaftLogIndex = LogIndexTxHeaderEncoding.decodeLogIndexFromTxHeader( last.transactionRepresentation().additionalHeader() );
             commandIndexTracker.setAppliedCommandIndex( lastAppliedRaftLogIndex );
         } );
@@ -106,9 +109,13 @@ public class BatchingTxApplier extends LifecycleAdapter
             return;
         }
 
-        var toApply = new TransactionToApply( tx.getTransactionRepresentation(), receivedTxId, versionContextSupplier.getVersionContext(),
-                TRACER_SUPPLIER.get() );
-        toApply.onClose( databaseEventDispatch::fireTransactionCommitted );
+        var cursorTracer = pageCacheTracer.createPageCursorTracer( CLUSTERING_BATCHING_TRANSACTION_TAG );
+        var toApply = new TransactionToApply( tx.getTransactionRepresentation(), receivedTxId, versionContextSupplier.getVersionContext(), cursorTracer );
+        toApply.onClose( txId ->
+        {
+            databaseEventDispatch.fireTransactionCommitted( txId );
+            cursorTracer.close();
+        } );
         txQueue.queue( toApply );
 
         if ( !stopped )

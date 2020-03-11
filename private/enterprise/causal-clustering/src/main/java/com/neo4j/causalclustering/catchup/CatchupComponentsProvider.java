@@ -64,6 +64,7 @@ public final class CatchupComponentsProvider
     private final FileSystemAbstraction fileSystem;
     private final StorageEngineFactory storageEngineFactory;
     private final ExponentialBackoffStrategy storeCopyBackoffStrategy;
+    private final DatabaseTracers databaseTracers;
 
     public CatchupComponentsProvider( GlobalModule globalModule, PipelineBuilders pipelineBuilders )
     {
@@ -81,8 +82,9 @@ public final class CatchupComponentsProvider
         this.catchupClientFactory = createCatchupClientFactory();
         this.portRegister = globalModule.getConnectorPortRegister();
         this.storageEngineFactory = globalModule.getStorageEngineFactory();
+        this.databaseTracers = new DatabaseTracers( globalModule.getTracers() );
         this.copiedStoreRecovery = globalLife.add(
-                new CopiedStoreRecovery( pageCache, new DatabaseTracers( globalModule.getTracers() ), fileSystem, globalModule.getStorageEngineFactory() ) );
+                new CopiedStoreRecovery( pageCache, databaseTracers, fileSystem, globalModule.getStorageEngineFactory() ) );
         this.storeCopyBackoffStrategy = new ExponentialBackoffStrategy( 1,
                 config.get( CausalClusteringSettings.store_copy_backoff_max_wait ).toMillis(), TimeUnit.MILLISECONDS );
     }
@@ -164,8 +166,8 @@ public final class CatchupComponentsProvider
         TransactionLogCatchUpFactory transactionLogFactory = new TransactionLogCatchUpFactory();
         TxPullClient txPullClient = new TxPullClient( catchupClientFactory, clusteredDatabaseContext.databaseId(), () -> monitors, databaseLogProvider );
 
-        RemoteStore remoteStore = new RemoteStore( databaseLogProvider, fileSystem, pageCache,
-                storeCopyClient, txPullClient, transactionLogFactory, config, monitors, storageEngineFactory, clusteredDatabaseContext.databaseId() );
+        RemoteStore remoteStore = new RemoteStore( databaseLogProvider, fileSystem, pageCache, storeCopyClient, txPullClient, transactionLogFactory, config,
+                monitors, storageEngineFactory, clusteredDatabaseContext.databaseId(), databaseTracers.getPageCacheTracer() );
 
         StoreCopyProcess storeCopy = new StoreCopyProcess( fileSystem, pageCache, clusteredDatabaseContext,
                 copiedStoreRecovery, remoteStore, databaseLogProvider );

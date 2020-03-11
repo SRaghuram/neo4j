@@ -11,6 +11,7 @@ import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import java.io.IOException;
 
 import org.neo4j.collection.Dependencies;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
@@ -18,10 +19,9 @@ import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 
-import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
-
 public class ReadReplicaDatabaseContext
 {
+    private static final String READ_REPLICA_STORE_ID_READER_TAG = "readReplicaStoreIdReader";
     private final Database kernelDatabase;
     private final Monitors monitors;
     private final Dependencies dependencies;
@@ -29,9 +29,10 @@ public class ReadReplicaDatabaseContext
     private final LogFiles transactionLogs;
     private final Log log;
     private final ClusterInternalDbmsOperator internalOperator;
+    private final PageCacheTracer pageCacheTracer;
 
     ReadReplicaDatabaseContext( Database kernelDatabase, Monitors monitors, Dependencies dependencies, StoreFiles storeFiles, LogFiles transactionLogs,
-            ClusterInternalDbmsOperator internalOperator )
+            ClusterInternalDbmsOperator internalOperator, PageCacheTracer pageCacheTracer )
     {
         this.kernelDatabase = kernelDatabase;
         this.monitors = monitors;
@@ -40,6 +41,7 @@ public class ReadReplicaDatabaseContext
         this.transactionLogs = transactionLogs;
         this.log = kernelDatabase.getInternalLogProvider().getLog( getClass() );
         this.internalOperator = internalOperator;
+        this.pageCacheTracer = pageCacheTracer;
     }
 
     public NamedDatabaseId databaseId()
@@ -54,9 +56,9 @@ public class ReadReplicaDatabaseContext
 
     private StoreId readStoreIdFromDisk()
     {
-        try
+        try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( READ_REPLICA_STORE_ID_READER_TAG ) )
         {
-            return storeFiles.readStoreId( kernelDatabase.getDatabaseLayout(), TRACER_SUPPLIER.get() );
+            return storeFiles.readStoreId( kernelDatabase.getDatabaseLayout(), cursorTracer );
         }
         catch ( IOException e )
         {
