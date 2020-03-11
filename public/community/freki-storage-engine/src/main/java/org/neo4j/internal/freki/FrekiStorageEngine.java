@@ -159,7 +159,7 @@ public class FrekiStorageEngine extends Life implements StorageEngine
             PageCursorTracer cursorTracer )
             throws KernelException
     {
-        TxStateVisitor main = new CommandCreator( target, stores, cursorTracer );
+        TxStateVisitor main = new CommandCreator( target, stores, constraintSemantics, cursorTracer );
         TxStateVisitor withCounts = trackCounts( target, main, state, storageReader, cursorTracer );
         try ( TxStateVisitor visitor = additionalTxStateVisitor.apply( withCounts ) )
         {

@@ -43,9 +43,11 @@ import org.neo4j.internal.freki.MutableNodeRecordData.Relationship;
 import org.neo4j.internal.kernel.api.exceptions.ConstraintViolationTransactionFailureException;
 import org.neo4j.internal.kernel.api.exceptions.DeletedNodeStillHasRelationships;
 import org.neo4j.internal.schema.ConstraintDescriptor;
+import org.neo4j.internal.schema.ConstraintType;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.storageengine.api.ConstraintRuleAccessor;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
@@ -72,13 +74,15 @@ class CommandCreator implements TxStateVisitor
     private final Consumer<StorageCommand> bigValueCommandConsumer = bigValueCommands::add;
     private final Collection<StorageCommand> commands;
     private final Stores stores;
+    private final ConstraintRuleAccessor constraintSemantics;
     private final PageCursorTracer cursorTracer;
     private final MutableLongObjectMap<Mutation> mutations = LongObjectMaps.mutable.empty();
 
-    CommandCreator( Collection<StorageCommand> commands, Stores stores, PageCursorTracer cursorTracer )
+    CommandCreator( Collection<StorageCommand> commands, Stores stores, ConstraintRuleAccessor constraintSemantics, PageCursorTracer cursorTracer )
     {
         this.commands = commands;
         this.stores = stores;
+        this.constraintSemantics = constraintSemantics;
         this.cursorTracer = cursorTracer;
     }
 
@@ -164,10 +168,20 @@ class CommandCreator implements TxStateVisitor
         case UNIQUE:
             // This also means updating the index to have this constraint as owner
             IndexDescriptor index = (IndexDescriptor) stores.schemaStore.loadRule( constraint.asUniquenessConstraint().ownedIndexId(), cursorTracer );
-            commands.add( new FrekiCommand.Schema( index.withOwningConstraintId( constraint.getId() ), Mode.UPDATE ) );
+            commands.add( new FrekiCommand.Schema(
+                    constraintSemantics.createUniquenessConstraintRule( constraint.getId(), constraint.asUniquenessConstraint(), index.getId() ),
+                    Mode.UPDATE ) );
+            break;
+        case UNIQUE_EXISTS:
+            IndexDescriptor indexRule = (IndexDescriptor) stores.schemaStore.loadRule( constraint.asNodeKeyConstraint().ownedIndexId(), cursorTracer );
+            commands.add( new FrekiCommand.Schema(
+                    constraintSemantics.createNodeKeyConstraintRule( constraint.getId(), constraint.asNodeKeyConstraint(), indexRule.getId() ), Mode.UPDATE ) );
+            break;
+        case EXISTS:
+            commands.add( new FrekiCommand.Schema( constraintSemantics.createExistenceConstraint( constraint.getId(), constraint ), Mode.CREATE ) );
             break;
         default:
-            throw new UnsupportedOperationException( "Not implemented yet" );
+            throw new UnsupportedOperationException( "Unknown constraint type " + constraint.type() );
         }
     }
 
@@ -176,9 +190,8 @@ class CommandCreator implements TxStateVisitor
     {
         constraint = stores.schemaStore.loadRule( constraint, cursorTracer );
         commands.add( new FrekiCommand.Schema( constraint, Mode.DELETE ) );
-        switch ( constraint.type() )
+        if ( constraint.type() == ConstraintType.UNIQUE )
         {
-        case UNIQUE:
             // Remove the index for the constraint as well
             Iterator<IndexDescriptor> indexes = stores.schemaCache.indexesForSchema( constraint.schema() );
             for ( IndexDescriptor index : loop( indexes ) )
@@ -193,9 +206,6 @@ class CommandCreator implements TxStateVisitor
                 // constraints on the same schema, they could also be constraint indexes that are currently populating for other constraints, and if that's
                 // the case, then we cannot remove them, since that would ruin the constraint they are being built for.
             }
-            break;
-        default:
-            throw new UnsupportedOperationException( "Not implemented yet" );
         }
     }
 
