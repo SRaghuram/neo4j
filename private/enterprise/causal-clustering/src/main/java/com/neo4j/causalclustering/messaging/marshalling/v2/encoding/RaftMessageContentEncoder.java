@@ -141,7 +141,7 @@ public class RaftMessageContentEncoder extends MessageToMessageEncoder<RaftMessa
             return illegalOutbound( pruneRequest );
         }
 
-        private Void illegalOutbound( RaftMessages.BaseRaftMessage raftMessage )
+        private Void illegalOutbound( RaftMessages.RaftMessage raftMessage )
         {
             // not network
             throw new IllegalStateException( "Illegal outbound call: " + raftMessage.getClass() );

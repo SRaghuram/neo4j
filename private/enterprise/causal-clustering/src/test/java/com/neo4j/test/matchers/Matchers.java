@@ -22,9 +22,9 @@ public final class Matchers
     {
     }
 
-    public static Matcher<? super List<RaftMessages.RaftMessage>> hasMessage( RaftMessages.BaseRaftMessage message )
+    public static Matcher<? super List<RaftMessages.RaftMessage>> hasMessage( RaftMessages.RaftMessage message )
     {
-        return new TypeSafeMatcher<List<RaftMessages.RaftMessage>>()
+        return new TypeSafeMatcher<>()
         {
             @Override
             protected boolean matchesSafely( List<RaftMessages.RaftMessage> messages )
@@ -43,7 +43,7 @@ public final class Matchers
     public static Matcher<? super List<RaftMessages.RaftMessage>> hasRaftLogEntries( Collection<RaftLogEntry>
             expectedEntries )
     {
-        return new TypeSafeMatcher<List<RaftMessages.RaftMessage>>()
+        return new TypeSafeMatcher<>()
         {
             @Override
             protected boolean matchesSafely( List<RaftMessages.RaftMessage> messages )
@@ -55,7 +55,6 @@ public final class Matchers
                         .collect( Collectors.toList() );
 
                 return entries.containsAll( expectedEntries );
-
             }
 
             @Override

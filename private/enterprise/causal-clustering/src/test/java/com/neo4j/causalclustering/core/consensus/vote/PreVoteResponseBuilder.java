@@ -6,11 +6,40 @@
 package com.neo4j.causalclustering.core.consensus.vote;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
+import com.neo4j.causalclustering.identity.MemberId;
 
-public class PreVoteResponseBuilder extends AnyVoteResponseBuilder<RaftMessages.PreVote.Response>
+public class PreVoteResponseBuilder
 {
-    public PreVoteResponseBuilder()
+    private MemberId from;
+    private long term;
+    private boolean voteGranted;
+
+    public RaftMessages.PreVote.Response build()
     {
-        super( RaftMessages.PreVote.Response::new );
+        return new RaftMessages.PreVote.Response( from, term, voteGranted );
+    }
+
+    public PreVoteResponseBuilder from( MemberId from )
+    {
+        this.from = from;
+        return this;
+    }
+
+    public PreVoteResponseBuilder term( long term )
+    {
+        this.term = term;
+        return this;
+    }
+
+    public PreVoteResponseBuilder grant()
+    {
+        this.voteGranted = true;
+        return this;
+    }
+
+    public PreVoteResponseBuilder deny()
+    {
+        this.voteGranted = false;
+        return this;
     }
 }

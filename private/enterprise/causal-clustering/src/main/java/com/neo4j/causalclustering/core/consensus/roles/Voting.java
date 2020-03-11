@@ -32,7 +32,7 @@ public class Voting
         }
 
         boolean votedForAnother = outcome.getVotedFor() != null && !outcome.getVotedFor().equals( voteRequest.candidate() );
-        boolean willVoteForCandidate = shouldVoteFor( state, outcome, voteRequest, votedForAnother, log, false );
+        boolean willVoteForCandidate = shouldVoteFor( state, outcome, voteRequest, votedForAnother, log );
 
         if ( willVoteForCandidate )
         {
@@ -49,7 +49,7 @@ public class Voting
             RaftMessages.PreVote.Request voteRequest, Log log ) throws IOException
     {
         ThrowingBooleanSupplier<IOException> willVoteForCandidate =
-                () -> shouldVoteFor( state, outcome, voteRequest, false, log, true );
+                () -> shouldVoteFor( state, outcome, voteRequest, log );
         respondToPreVoteRequest( state, outcome, voteRequest, willVoteForCandidate );
     }
 
@@ -71,14 +71,29 @@ public class Voting
                 state.myself(), outcome.getTerm(), willVoteFor.getAsBoolean() ) ) );
     }
 
-    private static boolean shouldVoteFor( ReadableRaftState state, Outcome outcome, RaftMessages.AnyVote.Request voteRequest,
-            boolean committedToVotingForAnother, Log log, boolean isPreVote )
+    private static boolean shouldVoteFor( ReadableRaftState state, Outcome outcome, RaftMessages.Vote.Request voteRequest,
+            boolean committedToVotingForAnother, Log log )
             throws IOException
     {
         long requestTerm = voteRequest.term();
         MemberId candidate = voteRequest.candidate();
         long requestLastLogTerm = voteRequest.lastLogTerm();
         long requestLastLogIndex = voteRequest.lastLogIndex();
+        return shouldVoteFor( requestTerm, candidate, requestLastLogTerm, requestLastLogIndex, outcome, state, log, committedToVotingForAnother, false );
+    }
+
+    private static boolean shouldVoteFor( ReadableRaftState state, Outcome outcome, RaftMessages.PreVote.Request voteRequest, Log log ) throws IOException
+    {
+        long requestTerm = voteRequest.term();
+        MemberId candidate = voteRequest.candidate();
+        long requestLastLogTerm = voteRequest.lastLogTerm();
+        long requestLastLogIndex = voteRequest.lastLogIndex();
+        return shouldVoteFor( requestTerm, candidate, requestLastLogTerm, requestLastLogIndex, outcome, state, log, false, true );
+    }
+
+    private static boolean shouldVoteFor( long requestTerm, MemberId candidate, long requestLastLogTerm, long requestLastLogIndex, Outcome outcome,
+            ReadableRaftState state, Log log, boolean committedToVotingForAnother, boolean isPreVote ) throws IOException
+    {
         long contextTerm = outcome.getTerm();
         long contextLastAppended = state.entryLog().appendIndex();
         long contextLastLogTerm = state.entryLog().readEntryTerm( contextLastAppended );

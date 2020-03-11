@@ -9,13 +9,13 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.logging.RaftMessageLogger;
 
-public class LoggingInbound<M extends RaftMessages.RaftMessage> implements Inbound<M>
+public class LoggingInbound implements Inbound<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>>
 {
-    private final Inbound<M> inbound;
+    private final Inbound<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> inbound;
     private final RaftMessageLogger<MemberId> raftMessageLogger;
     private final MemberId me;
 
-    public LoggingInbound( Inbound<M> inbound, RaftMessageLogger<MemberId> raftMessageLogger, MemberId me )
+    public LoggingInbound( Inbound<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> inbound, RaftMessageLogger<MemberId> raftMessageLogger, MemberId me )
     {
         this.inbound = inbound;
         this.raftMessageLogger = raftMessageLogger;
@@ -23,16 +23,11 @@ public class LoggingInbound<M extends RaftMessages.RaftMessage> implements Inbou
     }
 
     @Override
-    public void registerHandler( final MessageHandler<M> handler )
+    public void registerHandler( MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> handler )
     {
-        inbound.registerHandler( new MessageHandler<>()
-        {
-            @Override
-            public synchronized void handle( M message )
-            {
-                raftMessageLogger.logInbound( message.from(), message, me );
-                handler.handle( message );
-            }
+        inbound.registerHandler( message -> {
+            raftMessageLogger.logInbound( message.message().from(), message.message(), me );
+            handler.handle( message );
         } );
     }
 }

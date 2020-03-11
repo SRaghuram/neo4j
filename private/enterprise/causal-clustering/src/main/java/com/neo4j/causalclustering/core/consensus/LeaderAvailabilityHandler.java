@@ -54,7 +54,7 @@ public class LeaderAvailabilityHandler implements LifecycleMessageHandler<RaftMe
 
     private void handleTimeouts( RaftMessages.ReceivedInstantRaftIdAwareMessage<?> message )
     {
-        if ( message.dispatch( shouldRenewElectionTimeout ) )
+        if ( message.message().dispatch( shouldRenewElectionTimeout ) )
         {
             raftMessageTimerResetMonitor.timerReset();
             leaderAvailabilityTimers.renewElection();

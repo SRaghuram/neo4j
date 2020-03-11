@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessageNettyHandler;
-import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantRaftIdAwareMessage;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.logging.RaftMessageLogger;
@@ -97,8 +96,7 @@ public class RaftServerFactory
                 globalModule.getLogService().getUserLogProvider(), raftListenAddress, RAFT_SERVER_NAME, raftServerExecutor,
                 globalModule.getConnectorPortRegister(), BootstrapConfiguration.serverConfig( config ) );
 
-        LoggingInbound<ReceivedInstantRaftIdAwareMessage<?>> loggingRaftInbound =
-                new LoggingInbound<>( nettyHandler, raftMessageLogger, identityModule.myself() );
+        LoggingInbound loggingRaftInbound = new LoggingInbound( nettyHandler, raftMessageLogger, identityModule.myself() );
         loggingRaftInbound.registerHandler( raftMessageDispatcher );
 
         return raftServer;

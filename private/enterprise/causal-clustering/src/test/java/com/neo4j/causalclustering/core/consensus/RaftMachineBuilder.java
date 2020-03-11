@@ -47,7 +47,7 @@ public class RaftMachineBuilder
     private RaftLog raftLog = new InMemoryRaftLog();
     private TimerService timerService;
 
-    private Inbound<RaftMessages.RaftMessage> inbound = handler -> {};
+    private Inbound<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> inbound = handler -> {};
     private Outbound<MemberId, RaftMessages.RaftMessage> outbound = ( to, message, block ) -> {};
 
     private LogProvider logProvider = NullLogProvider.getInstance();
@@ -105,7 +105,7 @@ public class RaftMachineBuilder
         {
             try
             {
-                ConsensusOutcome outcome = raft.handle( incomingMessage );
+                ConsensusOutcome outcome = raft.handle( incomingMessage.message() );
                 commitListener.notifyCommitted( outcome.getCommitIndex() );
             }
             catch ( IOException e )
@@ -150,7 +150,7 @@ public class RaftMachineBuilder
         return this;
     }
 
-    public RaftMachineBuilder inbound( Inbound<RaftMessages.RaftMessage> inbound )
+    public RaftMachineBuilder inbound( Inbound<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> inbound )
     {
         this.inbound = inbound;
         return this;

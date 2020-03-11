@@ -53,7 +53,7 @@ public class RaftMessageMonitoringHandler implements LifecycleMessageHandler<Raf
         finally
         {
             Duration duration = Duration.between( start, clock.instant() );
-            raftMessageDelayMonitor.updateTimer( incomingMessage.type(), duration );
+            raftMessageDelayMonitor.updateTimer( incomingMessage.message().type(), duration );
         }
     }
 

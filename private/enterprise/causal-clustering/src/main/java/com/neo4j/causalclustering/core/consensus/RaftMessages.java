@@ -7,8 +7,8 @@ package com.neo4j.causalclustering.core.consensus;
 
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.Message;
 
 import java.time.Instant;
@@ -156,13 +156,6 @@ public interface RaftMessages
         PRE_VOTE_RESPONSE,
     }
 
-    interface RaftMessage extends Message
-    {
-        MemberId from();
-        Type type();
-        <T, E extends Exception> T dispatch( Handler<T, E> handler ) throws E;
-    }
-
     class Directed
     {
         MemberId to;
@@ -212,30 +205,9 @@ public interface RaftMessages
         }
     }
 
-    interface AnyVote
-    {
-        interface Request
-        {
-            long term();
-
-            long lastLogTerm();
-
-            long lastLogIndex();
-
-            MemberId candidate();
-        }
-
-        interface Response
-        {
-            long term();
-
-            boolean voteGranted();
-        }
-    }
-
     interface Vote
     {
-        class Request extends BaseRaftMessage implements AnyVote.Request
+        class Request extends RaftMessage
         {
             private long term;
             private MemberId candidate;
@@ -251,7 +223,6 @@ public interface RaftMessages
                 this.lastLogTerm = lastLogTerm;
             }
 
-            @Override
             public long term()
             {
                 return term;
@@ -298,26 +269,23 @@ public interface RaftMessages
                         from, term, candidate, lastLogIndex, lastLogTerm );
             }
 
-            @Override
             public long lastLogTerm()
             {
                 return lastLogTerm;
             }
 
-            @Override
             public long lastLogIndex()
             {
                 return lastLogIndex;
             }
 
-            @Override
             public MemberId candidate()
             {
                 return candidate;
             }
         }
 
-        class Response extends BaseRaftMessage implements AnyVote.Response
+        class Response extends RaftMessage
         {
             private long term;
             private boolean voteGranted;
@@ -367,13 +335,11 @@ public interface RaftMessages
                 return format( "Vote.Response from %s {term=%d, voteGranted=%s}", from, term, voteGranted );
             }
 
-            @Override
             public long term()
             {
                 return term;
             }
 
-            @Override
             public boolean voteGranted()
             {
                 return voteGranted;
@@ -383,7 +349,7 @@ public interface RaftMessages
 
     interface PreVote
     {
-        class Request extends BaseRaftMessage implements AnyVote.Request
+        class Request extends RaftMessage
         {
             private long term;
             private MemberId candidate;
@@ -399,7 +365,6 @@ public interface RaftMessages
                 this.lastLogTerm = lastLogTerm;
             }
 
-            @Override
             public long term()
             {
                 return term;
@@ -446,26 +411,23 @@ public interface RaftMessages
                         from, term, candidate, lastLogIndex, lastLogTerm );
             }
 
-            @Override
             public long lastLogTerm()
             {
                 return lastLogTerm;
             }
 
-            @Override
             public long lastLogIndex()
             {
                 return lastLogIndex;
             }
 
-            @Override
             public MemberId candidate()
             {
                 return candidate;
             }
         }
 
-        class Response extends BaseRaftMessage implements AnyVote.Response
+        class Response extends RaftMessage
         {
             private long term;
             private boolean voteGranted;
@@ -515,13 +477,11 @@ public interface RaftMessages
                 return format( "PreVote.Response from %s {term=%d, voteGranted=%s}", from, term, voteGranted );
             }
 
-            @Override
             public long term()
             {
                 return term;
             }
 
-            @Override
             public boolean voteGranted()
             {
                 return voteGranted;
@@ -531,7 +491,7 @@ public interface RaftMessages
 
     interface AppendEntries
     {
-        class Request extends BaseRaftMessage
+        class Request extends RaftMessage
         {
             private long leaderTerm;
             private long prevLogIndex;
@@ -617,7 +577,7 @@ public interface RaftMessages
             }
         }
 
-        class Response extends BaseRaftMessage
+        class Response extends RaftMessage
         {
             private long term;
             private boolean success;
@@ -696,7 +656,7 @@ public interface RaftMessages
         }
     }
 
-    class Heartbeat extends BaseRaftMessage
+    class Heartbeat extends RaftMessage
     {
         private long leaderTerm;
         private long commitIndex;
@@ -772,7 +732,7 @@ public interface RaftMessages
         }
     }
 
-    class HeartbeatResponse extends BaseRaftMessage
+    class HeartbeatResponse extends RaftMessage
     {
 
         public HeartbeatResponse( MemberId from )
@@ -793,7 +753,7 @@ public interface RaftMessages
         }
     }
 
-    class LogCompactionInfo extends BaseRaftMessage
+    class LogCompactionInfo extends RaftMessage
     {
         private long leaderTerm;
         private long prevIndex;
@@ -861,7 +821,7 @@ public interface RaftMessages
 
     interface Timeout
     {
-        class Election extends BaseRaftMessage
+        class Election extends RaftMessage
         {
             public Election( MemberId from )
             {
@@ -881,7 +841,7 @@ public interface RaftMessages
             }
         }
 
-        class Heartbeat extends BaseRaftMessage
+        class Heartbeat extends RaftMessage
         {
             public Heartbeat( MemberId from )
             {
@@ -904,7 +864,7 @@ public interface RaftMessages
 
     interface NewEntry
     {
-        class Request extends BaseRaftMessage
+        class Request extends RaftMessage
         {
             private ReplicatedContent content;
 
@@ -955,7 +915,7 @@ public interface RaftMessages
             }
         }
 
-        class BatchRequest extends BaseRaftMessage
+        class BatchRequest extends RaftMessage
         {
             private final List<ReplicatedContent> batch;
 
@@ -1011,31 +971,10 @@ public interface RaftMessages
         }
     }
 
-    interface EnrichedRaftMessage<RM extends RaftMessage> extends RaftMessage
+    interface RaftIdAwareMessage<RM extends RaftMessage> extends Message
     {
         RM message();
 
-        @Override
-        default MemberId from()
-        {
-            return message().from();
-        }
-
-        @Override
-        default Type type()
-        {
-            return message().type();
-        }
-
-        @Override
-        default <T, E extends Exception> T dispatch( Handler<T, E> handler ) throws E
-        {
-            return message().dispatch( handler );
-        }
-    }
-
-    interface RaftIdAwareMessage<RM extends RaftMessage> extends EnrichedRaftMessage<RM>
-    {
         RaftId raftId();
 
         static <RM extends RaftMessage> RaftIdAwareMessage<RM> of( RaftId raftId, RM message )
@@ -1044,18 +983,10 @@ public interface RaftMessages
         }
     }
 
-    interface ReceivedInstantAwareMessage<RM extends RaftMessage> extends EnrichedRaftMessage<RM>
+    interface ReceivedInstantRaftIdAwareMessage<RM extends RaftMessage> extends RaftIdAwareMessage<RM>
     {
         Instant receivedAt();
 
-        static <RM extends RaftMessage> ReceivedInstantAwareMessage<RM> of( Instant receivedAt, RM message )
-        {
-            return new ReceivedInstantAwareMessageImpl<>( receivedAt, message );
-        }
-    }
-
-    interface ReceivedInstantRaftIdAwareMessage<RM extends RaftMessage> extends ReceivedInstantAwareMessage<RM>, RaftIdAwareMessage<RM>
-    {
         static <RM extends RaftMessage> ReceivedInstantRaftIdAwareMessage<RM> of( Instant receivedAt, RaftId raftId, RM message )
         {
             return new ReceivedInstantRaftIdAwareMessageImpl<>( receivedAt, raftId, message );
@@ -1111,58 +1042,6 @@ public interface RaftMessages
         public String toString()
         {
             return format( "{raftId: %s, message: %s}", raftId, message() );
-        }
-    }
-
-    class ReceivedInstantAwareMessageImpl<RM extends RaftMessage> implements ReceivedInstantAwareMessage<RM>
-    {
-        private final Instant receivedAt;
-        private final RM message;
-
-        private ReceivedInstantAwareMessageImpl( Instant receivedAt, RM message )
-        {
-            Objects.requireNonNull( message );
-            this.receivedAt = receivedAt;
-            this.message = message;
-        }
-
-        @Override
-        public Instant receivedAt()
-        {
-            return receivedAt;
-        }
-
-        @Override
-        public RM message()
-        {
-            return message;
-        }
-
-        @Override
-        public boolean equals( Object o )
-        {
-            if ( this == o )
-            {
-                return true;
-            }
-            if ( o == null || getClass() != o.getClass() )
-            {
-                return false;
-            }
-            ReceivedInstantAwareMessageImpl<?> that = (ReceivedInstantAwareMessageImpl<?>) o;
-            return Objects.equals( receivedAt, that.receivedAt ) && Objects.equals( message(), that.message() );
-        }
-
-        @Override
-        public int hashCode()
-        {
-            return Objects.hash( receivedAt, message() );
-        }
-
-        @Override
-        public String toString()
-        {
-            return format( "{receivedAt: %s, message: %s}", receivedAt, message() );
         }
     }
 
@@ -1226,7 +1105,7 @@ public interface RaftMessages
         }
     }
 
-    class PruneRequest extends BaseRaftMessage
+    class PruneRequest extends RaftMessage
     {
         private final long pruneIndex;
 
@@ -1273,28 +1152,28 @@ public interface RaftMessages
         }
     }
 
-    abstract class BaseRaftMessage implements RaftMessage
+    abstract class RaftMessage implements Message
     {
         protected final MemberId from;
         private final Type type;
 
-        BaseRaftMessage( MemberId from, Type type )
+        RaftMessage( MemberId from, Type type )
         {
             this.from = from;
             this.type = type;
         }
 
-        @Override
         public MemberId from()
         {
             return from;
         }
 
-        @Override
         public Type type()
         {
             return type;
         }
+
+        public abstract <T, E extends Exception> T dispatch( Handler<T, E> handler ) throws E;
 
         @Override
         public boolean equals( Object o )
@@ -1307,7 +1186,7 @@ public interface RaftMessages
             {
                 return false;
             }
-            BaseRaftMessage that = (BaseRaftMessage) o;
+            RaftMessage that = (RaftMessage) o;
             return Objects.equals( from, that.from ) && type == that.type;
         }
 

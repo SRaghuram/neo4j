@@ -292,7 +292,7 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Receiv
 
         static long of( ReceivedInstantRaftIdAwareMessage<?> message )
         {
-            Long dispatch = message.dispatch( INSTANCE );
+            Long dispatch = message.message().dispatch( INSTANCE );
             return dispatch == null ? 0L : dispatch;
         }
 
@@ -348,7 +348,7 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Receiv
 
         private int getPriority( ReceivedInstantRaftIdAwareMessage<?> message )
         {
-            Integer priority = message.dispatch( this );
+            Integer priority = message.message().dispatch( this );
             return priority == null ? BASE_PRIORITY : priority;
         }
     }
