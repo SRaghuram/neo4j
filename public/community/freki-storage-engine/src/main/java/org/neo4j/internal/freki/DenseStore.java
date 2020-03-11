@@ -458,6 +458,8 @@ class DenseStore extends LifecycleAdapter implements Closeable
             int nodeNumberOfProperties = 0;
             int nodeNumberOfRelationships = 0;
             int nodeByteSize = 0;
+            int nodePropertiesByteSize = 0;
+            int nodeRelationshipsByteSize = 0;
             while ( seek.next() )
             {
                 DenseStoreKey key = seek.key();
@@ -465,7 +467,12 @@ class DenseStore extends LifecycleAdapter implements Closeable
                 {
                     if ( nodeId != -1 )
                     {
-                        stats.consume( nodeNumberOfProperties, nodeNumberOfRelationships, nodeByteSize );
+                        stats.consume( nodeNumberOfProperties, nodeNumberOfRelationships, nodeByteSize, nodePropertiesByteSize, nodeRelationshipsByteSize );
+                        nodeNumberOfProperties = 0;
+                        nodeNumberOfRelationships = 0;
+                        nodeByteSize = 0;
+                        nodePropertiesByteSize = 0;
+                        nodeRelationshipsByteSize = 0;
                     }
                     nodeId = key.nodeId;
                 }
@@ -478,9 +485,11 @@ class DenseStore extends LifecycleAdapter implements Closeable
                     break;
                 case DenseStoreKey.TYPE_PROPERTY:
                     nodeNumberOfProperties++;
+                    nodePropertiesByteSize += entrySize;
                     break;
                 case DenseStoreKey.TYPE_RELATIONSHIP:
                     nodeNumberOfRelationships++;
+                    nodeRelationshipsByteSize += entrySize;
                     break;
                 }
             }
@@ -963,6 +972,8 @@ class DenseStore extends LifecycleAdapter implements Closeable
         private long numberOfNodes;
         private long numberOfProperties;
         private long numberOfRelationships;
+        private long effectivePropertiesByteSize;
+        private long effectiveRelationshipsByteSize;
         private long effectiveByteSize;
 
         Stats( long totalTreeByteSize )
@@ -970,12 +981,15 @@ class DenseStore extends LifecycleAdapter implements Closeable
             this.totalTreeByteSize = totalTreeByteSize;
         }
 
-        private void consume( int nodeNumberOfProperties, int nodeNumberOfRelationships, int nodeByteSize )
+        private void consume( int nodeNumberOfProperties, int nodeNumberOfRelationships, int nodeByteSize, int nodePropertyByteSize,
+                int nodeRelationshipsByteSize )
         {
             this.numberOfNodes++;
-            this.numberOfProperties = nodeNumberOfProperties;
-            this.numberOfRelationships = nodeNumberOfRelationships;
-            this.effectiveByteSize = nodeByteSize;
+            this.numberOfProperties += nodeNumberOfProperties;
+            this.numberOfRelationships += nodeNumberOfRelationships;
+            this.effectivePropertiesByteSize += nodePropertyByteSize;
+            this.effectiveRelationshipsByteSize += nodeRelationshipsByteSize;
+            this.effectiveByteSize += nodeByteSize;
         }
 
         long numberOfProperties()
@@ -991,6 +1005,16 @@ class DenseStore extends LifecycleAdapter implements Closeable
         long numberOfNodes()
         {
             return numberOfNodes;
+        }
+
+        long effectivePropertiesByteSize()
+        {
+            return effectivePropertiesByteSize;
+        }
+
+        long effectiveRelationshipsByteSize()
+        {
+            return effectiveRelationshipsByteSize;
         }
 
         long effectiveByteSize()
