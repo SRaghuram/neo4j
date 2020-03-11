@@ -224,6 +224,18 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     result.toSet should be(defaultRoles)
   }
 
+  test("should allow create role with parameter that looks like reserved name") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    execute("CREATE ROLE $PUBLIC", Map("PUBLIC" -> "allowed"))
+
+    // THEN
+    val result = execute("SHOW ROLES")
+    result.toSet should be(defaultRoles ++ Set(role("allowed").map))
+  }
+
   test("should fail when creating already existing role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -619,6 +631,18 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     result.toSet should be(defaultRoles)
   }
 
+  test("should allow drop role with parameter that looks like reserved name") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE foo")
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
+
+    // WHEN
+    execute("DROP ROLE $PUBLIC", Map("PUBLIC" -> "foo"))
+
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
+  }
+
   test("should drop existing role using if exists") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -749,6 +773,23 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     )
   }
 
+  test("should grant role to user using parameters") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER user SET PASSWORD 'neo'")
+
+    // WHEN
+    execute("GRANT ROLE $role TO $name", Map("role" -> "custom", "name" -> "user"))
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(
+      defaultRolesWithUsers +
+        role("custom").member("user").map ++
+        publicRole("user")
+    )
+  }
+
   test("should not fail granting reserved role to user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -756,6 +797,18 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // WHEN
     execute("GRANT ROLE PUBLIC TO neo4j")
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+  }
+
+  test("should not fail granting reserved role as parameter to user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+
+    // WHEN
+    execute("GRANT ROLE $role TO neo4j", Map("role" -> "PUBLIC"))
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
@@ -860,6 +913,27 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     )
   }
 
+  test("should grant multiple roles to several users using parameters") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom1")
+    execute("CREATE ROLE custom2")
+    execute("CREATE USER userA SET PASSWORD 'neo'")
+    execute("CREATE USER userB SET PASSWORD 'neo'")
+
+    // WHEN
+    execute("GRANT ROLE $a, $b TO $x, $y", Map("a" -> "custom1", "b" -> "custom2", "x" -> "userA", "y" -> "userB"))
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(
+      publicRole("userA", "userB") ++ defaultRolesWithUsers +
+        role("custom1").member("userA").map +
+        role("custom1").member("userB").map +
+        role("custom2").member("userA").map +
+        role("custom2").member("userB").map
+    )
+  }
+
   test("should be able to grant already granted role to user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -892,10 +966,32 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers ++ publicRole("Bar")
 
+    // and with parameters
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT ROLE $role TO Bar", Map("role" -> "dragon"))
+      // THEN
+    } should have message "Failed to grant role 'dragon' to user 'Bar': Role does not exist."
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
+    execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers ++ publicRole("Bar")
+
     // and an invalid (non-existing) one
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("GRANT ROLE `` TO Bar")
+      // THEN
+    } should have message "Failed to grant role '' to user 'Bar': Role does not exist."
+
+    // AND
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
+    execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers ++ publicRole("Bar")
+
+    // and an invalid (non-existing) one with parameter
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT ROLE $role TO Bar", Map("role" -> ""))
       // THEN
     } should have message "Failed to grant role '' to user 'Bar': Role does not exist."
 
@@ -922,11 +1018,32 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
 
-    // and an invalid (non-existing) one
+    // and with parameters
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT ROLE dragon TO $user", Map("user" -> "Bar"))
+      // THEN
+    } should have message "Failed to grant role 'dragon' to user 'Bar': User does not exist."
 
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
+
+    // and an invalid (non-existing) one
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("GRANT ROLE dragon TO ``")
+      // THEN
+    } should have message "Failed to grant role 'dragon' to user '': User does not exist."
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+    execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
+
+    // and an invalid (non-existing) one with parameters
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT ROLE dragon TO $user", Map("user" -> ""))
       // THEN
     } should have message "Failed to grant role 'dragon' to user '': User does not exist."
 
@@ -1002,6 +1119,23 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     )
   }
 
+  test("should revoke role from user with parameters") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER user SET PASSWORD 'neo'")
+    execute("GRANT ROLE custom TO user")
+
+    // WHEN
+    execute("REVOKE ROLE $role FROM $user", Map("role" -> "custom", "user" -> "user"))
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(
+      publicRole("user") ++ defaultRolesWithUsers +
+        role("custom").noMember().map
+    )
+  }
+
   test("should fail revoking reserved role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -1009,6 +1143,22 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // WHEN
     val exception = the[InvalidArgumentException] thrownBy execute("REVOKE ROLE PUBLIC FROM user")
+    // THEN
+    exception.getMessage should startWith("Failed to revoke the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
+
+    // THEN
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(
+      Set(role(ADMIN).builtIn().member("neo4j").map) ++ publicRole("neo4j","user")
+    )
+  }
+
+  test("should fail revoking reserved role using parameter") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER user SET PASSWORD 'neo'")
+
+    // WHEN
+    val exception = the[InvalidArgumentException] thrownBy execute("REVOKE ROLE $role FROM user", Map("role" -> "PUBLIC"))
     // THEN
     exception.getMessage should startWith("Failed to revoke the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
 
@@ -1100,6 +1250,34 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     )
   }
 
+  test("should revoke multiple roles from several users using parameters") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom1")
+    execute("CREATE ROLE custom2")
+    execute("CREATE USER userA SET PASSWORD 'neo'")
+    execute("CREATE USER userB SET PASSWORD 'neo'")
+    execute("CREATE USER userC SET PASSWORD 'neo'")
+    execute("CREATE USER userD SET PASSWORD 'neo'")
+    execute("GRANT ROLE custom1 TO userA")
+    execute("GRANT ROLE custom1 TO userB")
+    execute("GRANT ROLE custom1 TO userC")
+    execute("GRANT ROLE custom2 TO userA")
+    execute("GRANT ROLE custom2 TO userB")
+    execute("GRANT ROLE custom2 TO userD")
+
+    // WHEN
+    execute("REVOKE ROLE $one, $two FROM $a, $b, $c, $d",
+      Map("one" -> "custom1", "two" -> "custom2", "a" -> "userA", "b" -> "userB", "c" -> "userC", "d" -> "userD"))
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(
+      publicRole("userA", "userB", "userC", "userD") ++ defaultRolesWithUsers +
+        role("custom1").noMember().map +
+        role("custom2").noMember().map
+    )
+  }
+
   test("should be able to revoke already revoked role from user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -1143,7 +1321,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW POPULATED ROLES WITH USERS").toSet should be(publicRoles ++ Set(admin))
 
     // WHEN granting with multiple users and roles version
-    execute("GRANT ROLE foo, fum TO Bar, Baz")
+    execute("GRANT ROLE foo, $fum TO Bar, $Baz", Map("fum" -> "fum", "Baz" -> "Baz"))
 
     // THEN
     execute("SHOW POPULATED ROLES WITH USERS").toSet should be(publicRoles ++ Set(admin, role("foo").member("Bar").map, role("foo").member("Baz").map, role("fum").member("Bar").map, role("fum").member("Baz").map))
@@ -1155,7 +1333,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW POPULATED ROLES WITH USERS").toSet should be(publicRoles ++ Set(admin, role("foo").member("Baz").map, role("fum").member("Bar").map, role("fum").member("Baz").map))
 
     // WHEN revoking with multiple users and roles version
-    execute("REVOKE ROLE foo, fum FROM Bar, Baz")
+    execute("REVOKE ROLE foo, $fum FROM Bar, $Baz", Map("fum" -> "fum", "Baz" -> "Baz"))
 
     // THEN
     execute("SHOW POPULATED ROLES WITH USERS").toSet should be(publicRoles ++ Set(admin))

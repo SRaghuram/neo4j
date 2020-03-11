@@ -350,42 +350,51 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // GRANT ROLE foo TO user
     case GrantRoleToUser(source, roleName, userName) => (context, parameterMapping) =>
+      val (roleNamekey, roleNameValue, roleNameConverter) = getNameFields("role", roleName)
+      val (userNamekey, userNameValue, userNameConverter) = getNameFields("user", userName)
       UpdatingSystemCommandExecutionPlan("GrantRoleToUser", normalExecutionEngine,
-        """MATCH (r:Role {name: $role})
-          |OPTIONAL MATCH (u:User {name: $user})
+        s"""MATCH (r:Role {name: $$$roleNamekey})
+          |OPTIONAL MATCH (u:User {name: $$$userNamekey})
           |WITH r, u
           |MERGE (u)-[a:HAS_ROLE]->(r)
           |RETURN u.name AS user""".stripMargin,
-        VirtualValues.map(Array("role","user"), Array(Values.utf8Value(roleName), Values.utf8Value(userName))),
+        VirtualValues.map(Array(roleNamekey, userNamekey), Array(roleNameValue, userNameValue)),
         QueryHandler
-          .handleNoResult(_ => Some(new InvalidArgumentsException(s"Failed to grant role '$roleName' to user '$userName': Role does not exist.")))
+          .handleNoResult(p => Some(new InvalidArgumentsException(s"Failed to grant role '${runtimeValue(roleName, p)}' to user '${runtimeValue(userName, p)}': Role does not exist.")))
           .handleError {
-            case (e: InternalException, _) if e.getMessage.contains("ignore rows where a relationship node is missing") =>
-              new InvalidArgumentsException(s"Failed to grant role '$roleName' to user '$userName': User does not exist.", e)
-            case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
-              new DatabaseAdministrationOnFollowerException(s"Failed to grant role '$roleName' to user '$userName': $followerError", e)
-            case (e, _) => new IllegalStateException(s"Failed to grant role '$roleName' to user '$userName'.", e)
+            case (e: InternalException, p) if e.getMessage.contains("ignore rows where a relationship node is missing") =>
+              new InvalidArgumentsException(s"Failed to grant role '${runtimeValue(roleName, p)}' to user '${runtimeValue(userName, p)}': User does not exist.", e)
+            case (e: HasStatus, p) if e.status() == Status.Cluster.NotALeader =>
+              new DatabaseAdministrationOnFollowerException(s"Failed to grant role '${runtimeValue(roleName, p)}' to user '${runtimeValue(userName, p)}': $followerError", e)
+            case (e, p) => new IllegalStateException(s"Failed to grant role '${runtimeValue(roleName, p)}' to user '${runtimeValue(userName, p)}'.", e)
           },
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
+        initFunction = (p, _) => {
+          runtimeValue(roleName, p) != "PUBLIC"
+        },
+        parameterConverter = p => userNameConverter(roleNameConverter(p))
       )
 
     // REVOKE ROLE foo FROM user
     case RevokeRoleFromUser(source, roleName, userName) => (context, parameterMapping) =>
+      val (roleNamekey, roleNameValue, roleNameConverter) = getNameFields("role", roleName)
+      val (userNamekey, userNameValue, userNameConverter) = getNameFields("user", userName)
       UpdatingSystemCommandExecutionPlan("RevokeRoleFromUser", normalExecutionEngine,
-        """MATCH (r:Role {name: $role})
-          |OPTIONAL MATCH (u:User {name: $user})
+        s"""MATCH (r:Role {name: $$$roleNamekey})
+          |OPTIONAL MATCH (u:User {name: $$$userNamekey})
           |WITH r, u
           |OPTIONAL MATCH (u)-[a:HAS_ROLE]->(r)
           |DELETE a
           |RETURN u.name AS user""".stripMargin,
-        VirtualValues.map(Array("role", "user"), Array(Values.utf8Value(roleName), Values.utf8Value(userName))),
+        VirtualValues.map(Array(roleNamekey, userNamekey), Array(roleNameValue, userNameValue)),
         QueryHandler.handleError {
-          case (error: HasStatus, _) if error.status() == Status.Cluster.NotALeader =>
-            new DatabaseAdministrationOnFollowerException(s"Failed to revoke role '$roleName' from user '$userName': $followerError", error)
-          case (error, _) => new IllegalStateException(s"Failed to revoke role '$roleName' from user '$userName'.", error)
+          case (error: HasStatus, p) if error.status() == Status.Cluster.NotALeader =>
+            new DatabaseAdministrationOnFollowerException(s"Failed to revoke role '${runtimeValue(roleName, p)}' from user '${runtimeValue(userName, p)}': $followerError", error)
+          case (error, p) => new IllegalStateException(s"Failed to revoke role '${runtimeValue(roleName, p)}' from user '${runtimeValue(userName, p)}'.", error)
         },
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
-        initFunction = (params, _) => NameValidator.assertUnreservedRoleName("revoke", runtimeValue(Left(roleName), params))
+        parameterConverter = p => userNameConverter(roleNameConverter(p)),
+        initFunction = (params, _) => NameValidator.assertUnreservedRoleName("revoke", runtimeValue(roleName, params))
       )
 
     // GRANT/DENY/REVOKE _ ON DBMS TO role
