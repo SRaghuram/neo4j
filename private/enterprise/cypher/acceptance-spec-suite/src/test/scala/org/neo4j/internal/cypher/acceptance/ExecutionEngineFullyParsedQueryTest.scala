@@ -21,7 +21,7 @@ class ExecutionEngineFullyParsedQueryTest
   // Using these just to get a sample of queries
   LdbcQueries.LDBC_QUERIES.foreach { query =>
 
-    test(query.name + " (fully parsed)") {
+    ignore(query.name + " (fully parsed)") {
       execute(parse(query.createQuery), query.createParams, NoInput)
       for (q <- query.constraintQueries)
         execute(parse(q), noParams, NoInput)
