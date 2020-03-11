@@ -32,7 +32,7 @@ class AntiMorselBuffer(id: BufferId,
   override def take(): Seq[MorselData] = {
     // To keep input order (i.e., place the null rows at the right position), we give the data out in ascending argument row id order.
 
-    var data = getNextEmptyArgumentState
+    var data = getNextEmptyArgumentState()
     val result =
       if (null == data) {
         null.asInstanceOf[Seq[MorselData]]
@@ -40,8 +40,8 @@ class AntiMorselBuffer(id: BufferId,
         val datas = new ArrayBuffer[MorselData]()
         datas += data
         var i = morselSize
-        while (null != data && i > 0) {
-          data = getNextEmptyArgumentState
+        while (null != data && i > 1) {
+          data = getNextEmptyArgumentState()
           if (null != data) {
             datas += data
           }
@@ -55,7 +55,7 @@ class AntiMorselBuffer(id: BufferId,
     result
   }
 
-  private def getNextEmptyArgumentState: MorselData = {
+  private def getNextEmptyArgumentState(): MorselData = {
     var argumentState = argumentStateMap.takeNextIfCompleted()
     while (argumentState != null) {
       if (argumentState.didReceiveData) {
