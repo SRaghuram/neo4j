@@ -8,6 +8,9 @@ package com.neo4j.bench.common.database;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Objects;
@@ -21,6 +24,7 @@ public class Neo4jStore extends Store
     private final boolean isTemporaryCopy;
     private final Neo4jLayout layout;
     private final DatabaseName databaseName;
+    private final boolean isFreki;
 
     private Neo4jStore( Path homeDir, DatabaseName databaseName, boolean isTemporaryCopy )
     {
@@ -29,6 +33,15 @@ public class Neo4jStore extends Store
         this.databaseName = Objects.requireNonNull( databaseName );
         this.isTemporaryCopy = isTemporaryCopy;
         this.layout = Neo4jLayout.of( homeDir.toFile() );
+        try
+        {
+            this.isFreki = Files.list( layout.databaseLayout( databaseName.name() ).databaseDirectory().toPath() )
+                    .anyMatch( path -> path.getFileName().toString().startsWith( "main-store" ) );
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
     }
 
     public static Neo4jStore createFrom( Path originalTopLevelDir )
@@ -102,6 +115,12 @@ public class Neo4jStore extends Store
     boolean isTemporaryCopy()
     {
         return isTemporaryCopy;
+    }
+
+    @Override
+    public boolean isFreki()
+    {
+        return isFreki;
     }
 
     @Override
