@@ -17,12 +17,24 @@ public class BranchAndVersion
         if ( isDefaultOwner && !isStandardBranch )
         {
             throw new RuntimeException(
-                    format( "Branch of repository '%s' owned by '%s' must be named 'x.y' but was '%s'", repository.projectName(), owner, branch ) );
+                    format(
+                            "Branch of repository '%s' owned by '%s' must follow the pattern '%s' but was '%s'",
+                            repository.projectName(),
+                            owner,
+                            repository.standardBranchPattern(),
+                            branch
+                    ) );
         }
         if ( !isDefaultOwner && isStandardBranch )
         {
             throw new RuntimeException(
-                    format( "Forks of repository '%s' owned by '%s' must not repository branch 'x.y' but was '%s'", repository.projectName(), owner, branch ) );
+                    format(
+                            "Forks of repository '%s' owned by '%s' must not follow the pattern '%s' but was '%s",
+                            repository.projectName(),
+                            owner,
+                            repository.standardBranchPattern(),
+                            branch
+                    ) );
         }
     }
 
