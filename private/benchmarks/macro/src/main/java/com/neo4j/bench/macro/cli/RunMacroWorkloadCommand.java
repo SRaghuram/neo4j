@@ -45,8 +45,12 @@ import com.neo4j.bench.macro.execution.process.ForkFailureException;
 import com.neo4j.bench.macro.execution.process.ForkRunner;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
+import com.neo4j.tools.migration.MigrateDataIntoOtherDatabase;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -56,6 +60,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.io.fs.FileUtils;
 
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_BATCH_JOB_ID;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_DB_PATH;
@@ -151,6 +156,38 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
             Neo4jConfig neo4jConfig = neo4jConfigBuilder.build();
 
             System.out.println( "Running with Neo4j configuration:\n" + neo4jConfig.toString() );
+
+            System.out.println( "Checking store format..." );
+            try ( Store store = Neo4jStore.createFrom( storeDir.toPath() ) )
+            {
+                if ( !store.isFreki() )
+                {
+                    System.out.println( "Record store detected, migrating to freki." );
+                    Path tmpFrekiStoreDir = null;
+                    try
+                    {
+                        tmpFrekiStoreDir = Files.createTempDirectory( "freki" );
+                        MigrateDataIntoOtherDatabase.migrate( storeDir.toPath(), tmpFrekiStoreDir );
+                        FileUtils.deleteRecursively( storeDir );
+                        FileUtils.moveFile( tmpFrekiStoreDir.toFile(), storeDir );
+                    }
+                    finally
+                    {
+                        if ( tmpFrekiStoreDir != null )
+                        {
+                            FileUtils.deleteRecursively( tmpFrekiStoreDir.toFile() );
+                        }
+                    }
+                }
+                else
+                {
+                    System.out.println( "Already freki format, no migration needed." );
+                }
+            }
+            catch ( IOException e )
+            {
+                throw new UncheckedIOException( e );
+            }
 
             System.out.println( "Verifying store..." );
             try ( Store store = Neo4jStore.createFrom( storeDir.toPath(), workload.getDatabaseName() ) )
