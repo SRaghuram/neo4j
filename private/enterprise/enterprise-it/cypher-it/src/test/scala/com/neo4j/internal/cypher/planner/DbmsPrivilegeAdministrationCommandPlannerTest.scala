@@ -952,4 +952,56 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       ).toString
     )
   }
+
+  test("Grant all dbms privileges") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN GRANT ALL DBMS PRIVILEGES ON DBMS TO reader, editor").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("GrantDbmsAction", "ALL DBMS PRIVILEGES", "editor",
+          dbmsPrivilegePlan("GrantDbmsAction", "ALL DBMS PRIVILEGES", "reader",
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Deny all dbms privileges") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN DENY ALL DBMS PRIVILEGES ON DBMS TO reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("DenyDbmsAction", "ALL DBMS PRIVILEGES", "reader",
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke all dbms privileges") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN REVOKE ALL DBMS PRIVILEGES ON DBMS FROM reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "ALL DBMS PRIVILEGES", "reader",
+          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "ALL DBMS PRIVILEGES", "reader",
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
 }
