@@ -24,6 +24,7 @@ public class AutoDetectStore extends Store
     private final Path topLevelDir;
     private final Path graphDbDir;
     private final boolean isTemporaryCopy;
+    private final boolean isFreki;
 
     /**
      * Store directory will not be deleted on close, must be deleted manually by caller.
@@ -53,6 +54,14 @@ public class AutoDetectStore extends Store
         this.isTemporaryCopy = isTemporaryCopy;
         BenchmarkUtil.assertDirectoryExists( topLevelDir );
         this.graphDbDir = discoverGraphDbOrFail( topLevelDir );
+        try
+        {
+            this.isFreki = Files.list( graphDbDir ).anyMatch( path -> path.getFileName().toString().startsWith( "main-store" ) );
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
     }
 
     private static Path discoverGraphDbOrFail( Path topLevelDir )
@@ -173,6 +182,12 @@ public class AutoDetectStore extends Store
         {
             throw new UncheckedIOException( e );
         }
+    }
+
+    @Override
+    public boolean isFreki()
+    {
+        return isFreki;
     }
 
     @Override

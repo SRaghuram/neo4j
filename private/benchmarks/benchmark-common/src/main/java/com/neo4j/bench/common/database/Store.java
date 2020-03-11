@@ -49,6 +49,8 @@ public abstract class Store implements AutoCloseable
         return BenchmarkUtil.bytes( topLevelDirectory() );
     }
 
+    public abstract boolean isFreki();
+
     @Override
     public void close()
     {

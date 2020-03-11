@@ -10,7 +10,7 @@ import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.eclipse.collections.api.map.primitive.MutableIntIntMap;
 import org.eclipse.collections.impl.factory.primitive.IntIntMaps;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -37,12 +37,18 @@ public class MigrateDataIntoOtherDatabase
 
     public static void main( String[] args )
     {
-        File fromHome = new File( args[0] );
-        File toHome = new File( args[1] );
-        DatabaseManagementService fromDbms = new EnterpriseDatabaseManagementServiceBuilder( fromHome )
+        Path fromHome = Path.of( args[0] );
+        Path toHome = Path.of( args[1] );
+        migrate( fromHome, toHome );
+    }
+
+    public static void migrate( Path fromHome, Path toHome )
+    {
+        assert !(fromHome.equals( toHome ));
+        DatabaseManagementService fromDbms = new EnterpriseDatabaseManagementServiceBuilder( fromHome.toFile() )
                 .setConfig( GraphDatabaseSettings.storage_engine, "" )
                 .build();
-        DatabaseManagementService toDbms = new EnterpriseDatabaseManagementServiceBuilder( toHome )
+        DatabaseManagementService toDbms = new EnterpriseDatabaseManagementServiceBuilder( toHome.toFile() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false )
                 .setConfig( GraphDatabaseSettings.default_database, DB_NAME )
                 .setConfig( GraphDatabaseSettings.storage_engine, "Freki" )
