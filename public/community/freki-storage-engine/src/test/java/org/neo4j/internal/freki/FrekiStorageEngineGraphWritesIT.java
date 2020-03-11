@@ -54,12 +54,16 @@ import org.neo4j.internal.helpers.collection.Visitor;
 import org.neo4j.internal.id.DefaultIdController;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
+import org.neo4j.internal.schema.ConstraintDescriptor;
+import org.neo4j.internal.schema.ConstraintType;
 import org.neo4j.internal.schema.IndexConfigCompleter;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.IndexPrototype;
 import org.neo4j.internal.schema.IndexProviderDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
+import org.neo4j.internal.schema.SchemaRule;
 import org.neo4j.internal.schema.SchemaState;
+import org.neo4j.internal.schema.constraints.ConstraintDescriptorFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
@@ -839,6 +843,74 @@ class FrekiStorageEngineGraphWritesIT
 
         // then
         assertThat( storageEngine.stores().bigPropertyValueStore.position() ).isEqualTo( bigValuePosition );
+    }
+
+    @Test
+    void shouldCreateUniquenessConstraint() throws Exception
+    {
+        // given
+        long indexId = commandCreationContext.reserveSchema();
+        createAndApplyTransaction( target ->
+        {
+            target.visitAddedIndex( IndexPrototype.uniqueForSchema( SCHEMA_DESCRIPTOR ).withName( "My index" ).materialise( indexId ) );
+        } );
+
+        // when
+        createAndApplyTransaction( target ->
+        {
+            target.visitAddedConstraint( ConstraintDescriptorFactory.uniqueForLabel( SCHEMA_DESCRIPTOR.getLabelId(), SCHEMA_DESCRIPTOR.getPropertyIds() )
+                    .withName( "Kid A" ).withOwnedIndexId( indexId ) );
+        } );
+
+        // then
+        List<SchemaRule> schemaRules = storageEngine.stores().schemaStore.loadRules( NULL );
+        SchemaRule constraintRule = schemaRules.stream().filter( rule -> rule.getName().equals( "Kid A" ) ).findFirst().get();
+        assertThat( constraintRule ).isInstanceOf( ConstraintDescriptor.class );
+        ConstraintDescriptor constraintDescriptor = (ConstraintDescriptor) constraintRule;
+        assertThat( constraintDescriptor.type() ).isEqualTo( ConstraintType.UNIQUE );
+    }
+
+    @Test
+    void shouldCreateNodeKeyConstraint() throws Exception
+    {
+        // given
+        long indexId = commandCreationContext.reserveSchema();
+        createAndApplyTransaction( target ->
+        {
+            target.visitAddedIndex( IndexPrototype.uniqueForSchema( SCHEMA_DESCRIPTOR ).withName( "My index" ).materialise( indexId ) );
+        } );
+
+        // when
+        createAndApplyTransaction( target ->
+        {
+            target.visitAddedConstraint( ConstraintDescriptorFactory.nodeKeyForLabel( SCHEMA_DESCRIPTOR.getLabelId(), SCHEMA_DESCRIPTOR.getPropertyIds() )
+                    .withName( "Kid A" ).withOwnedIndexId( indexId ) );
+        } );
+
+        // then
+        List<SchemaRule> schemaRules = storageEngine.stores().schemaStore.loadRules( NULL );
+        SchemaRule constraintRule = schemaRules.stream().filter( rule -> rule.getName().equals( "Kid A" ) ).findFirst().get();
+        assertThat( constraintRule ).isInstanceOf( ConstraintDescriptor.class );
+        ConstraintDescriptor constraintDescriptor = (ConstraintDescriptor) constraintRule;
+        assertThat( constraintDescriptor.type() ).isEqualTo( ConstraintType.UNIQUE_EXISTS );
+    }
+
+    @Test
+    void shouldCreateNodePropertyExistenceConstraint() throws Exception
+    {
+        // given
+        createAndApplyTransaction( target ->
+        {
+            target.visitAddedConstraint( ConstraintDescriptorFactory.existsForLabel( SCHEMA_DESCRIPTOR.getLabelId(), SCHEMA_DESCRIPTOR.getPropertyIds() )
+                    .withName( "Kid A" ) );
+        } );
+
+        // then
+        List<SchemaRule> schemaRules = storageEngine.stores().schemaStore.loadRules( NULL );
+        SchemaRule constraintRule = schemaRules.stream().filter( rule -> rule.getName().equals( "Kid A" ) ).findFirst().get();
+        assertThat( constraintRule ).isInstanceOf( ConstraintDescriptor.class );
+        ConstraintDescriptor constraintDescriptor = (ConstraintDescriptor) constraintRule;
+        assertThat( constraintDescriptor.type() ).isEqualTo( ConstraintType.EXISTS );
     }
 
     // TODO: 2020-03-06 addingBigValueRelationshipPropertyShouldOnlyCreateOneShared (sparse/dense)
