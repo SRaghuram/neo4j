@@ -181,6 +181,8 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     def user(user: String) = PrivilegeMapBuilder(map + ("user" -> user))
 
     def property(property: String) = PrivilegeMapBuilder(map + ("resource" -> s"property($property)"))
+
+    def privType(grant: String)  = PrivilegeMapBuilder(map + ("access" -> grant))
   }
 
   def baseMap(grant: String = GRANTED): Map[String, String] = Map("access" -> grant, "graph" -> "*", "segment" -> "database")

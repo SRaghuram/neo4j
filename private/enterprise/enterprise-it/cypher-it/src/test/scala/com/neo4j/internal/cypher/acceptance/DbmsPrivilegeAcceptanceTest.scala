@@ -232,6 +232,62 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
           adminAction("database_management", relType).role("custom").map
         ))
       }
+
+      test(s"should $grant show privilege privilege") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"$grant SHOW PRIVILEGE ON DBMS TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          adminAction("show_privilege", relType).role("custom").map
+        ))
+      }
+
+      test(s"should $grant assign privilege privilege") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"$grant ASSIGN PRIVILEGE ON DBMS TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          adminAction("assign_privilege", relType).role("custom").map
+        ))
+      }
+
+      test(s"should $grant remove privilege privilege") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"$grant REMOVE PRIVILEGE ON DBMS TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          adminAction("remove_privilege", relType).role("custom").map
+        ))
+      }
+
+      test(s"should $grant privilege management privilege") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"$grant PRIVILEGE MANAGEMENT ON DBMS TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          adminAction("privilege_management", relType).role("custom").map
+        ))
+      }
   }
 
   test("should not revoke other role management privileges when revoking role management") {
@@ -303,7 +359,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     ))
   }
 
-    test("should not revoke other database management privileges when revoking database management") {
+  test("should not revoke other database management privileges when revoking database management") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     createRoleWithOnlyAdminPrivilege()
@@ -327,6 +383,36 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
       grantAdmin().role("custom").map,
       adminAction("create_database").role("custom").map,
       adminAction("drop_database").role("custom").map
+    ))
+  }
+
+  test("should not revoke other privilege management privileges when revoking privilege management") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    createRoleWithOnlyAdminPrivilege()
+    execute("CREATE ROLE custom AS COPY OF adminOnly")
+    execute("GRANT SHOW PRIVILEGE ON DBMS TO custom")
+    execute("GRANT ASSIGN PRIVILEGE ON DBMS TO custom")
+    execute("GRANT REMOVE PRIVILEGE ON DBMS TO custom")
+    execute("GRANT PRIVILEGE MANAGEMENT ON DBMS TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantAdmin().role("custom").map,
+      adminAction("show_privilege").role("custom").map,
+      adminAction("assign_privilege").role("custom").map,
+      adminAction("remove_privilege").role("custom").map,
+      adminAction("privilege_management").role("custom").map
+    ))
+
+    // WHEN
+    execute("REVOKE PRIVILEGE MANAGEMENT ON DBMS FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantAdmin().role("custom").map,
+      adminAction("show_privilege").role("custom").map,
+      adminAction("assign_privilege").role("custom").map,
+      adminAction("remove_privilege").role("custom").map
     ))
   }
 
@@ -403,7 +489,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     ))
   }
 
-    test("Should revoke sub-privilege even if database management exists") {
+  test("Should revoke sub-privilege even if database management exists") {
     // Given
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
@@ -427,6 +513,36 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     // Then
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       adminAction("database_management").role("custom").map
+    ))
+  }
+
+  test("Should revoke sub-privilege even if privilege management exists") {
+    // Given
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("GRANT SHOW PRIVILEGE ON DBMS TO custom")
+    execute("GRANT ASSIGN PRIVILEGE ON DBMS TO custom")
+    execute("GRANT REMOVE PRIVILEGE ON DBMS TO custom")
+    execute("GRANT PRIVILEGE MANAGEMENT ON DBMS TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      adminAction("show_privilege").role("custom").map,
+      adminAction("assign_privilege").role("custom").map,
+      adminAction("remove_privilege").role("custom").map,
+      adminAction("privilege_management").role("custom").map
+    ))
+
+    // When
+    // Now revoke each sub-privilege in turn
+    Seq(
+      "SHOW PRIVILEGE",
+      "ASSIGN PRIVILEGE",
+      "REMOVE PRIVILEGE"
+    ).foreach(privilege => execute(s"REVOKE $privilege ON DBMS FROM custom"))
+
+    // Then
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      adminAction("privilege_management").role("custom").map
     ))
   }
 
@@ -460,6 +576,16 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     execute("REVOKE DATABASE MANAGEMENT ON DBMS FROM wrongRole")
   }
 
+  test("should do nothing when revoking privilege management privilege from non-existing role") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE role")
+    execute("DENY PRIVILEGE MANAGEMENT ON DBMS TO role")
+
+    // WHEN
+    execute("REVOKE PRIVILEGE MANAGEMENT ON DBMS FROM wrongRole")
+  }
+
   test("Should do nothing when revoking a non-existing subset of a compound (mostly dbms) admin privilege") {
     // Given
     setup()
@@ -483,6 +609,10 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
       "CREATE DATABASE ON DBMS",
       "DROP DATABASE ON DBMS",
       "DATABASE MANAGEMENT ON DBMS",
+      "SHOW PRIVILEGE ON DBMS",
+      "ASSIGN PRIVILEGE ON DBMS",
+      "REMOVE PRIVILEGE ON DBMS",
+      "PRIVILEGE MANAGEMENT ON DBMS",
       "SHOW TRANSACTION (*) ON DATABASES *",
       "TERMINATE TRANSACTION (*) ON DATABASES *",
       "TRANSACTION MANAGEMENT ON DATABASES *",
@@ -983,7 +1113,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     } should have message "Permission denied."
   }
 
-    // CREATE DATABASE
+  // CREATE DATABASE
 
   test("should enforce create database privilege") {
     // GIVEN
@@ -1077,7 +1207,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     execute("SHOW DATABASE baz").toSet should be(Set(db("baz")))
   }
 
-    // DATABASE MANAGEMENT
+  // DATABASE MANAGEMENT
 
   test("should enforce database management privilege") {
     // GIVEN
@@ -1127,6 +1257,349 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "DROP DATABASE baz")
     } should have message "Permission denied."
+  }
+
+  // SHOW PRIVILEGE
+
+  val showPrivilegeCommands = Seq(
+    "SHOW PRIVILEGES",
+    "SHOW ALL PRIVILEGES",
+    "SHOW ROLE custom PRIVILEGES",
+    "SHOW USER neo4j PRIVILEGES"
+  )
+
+  test("should enforce show privilege privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO foo")
+
+    // WHEN
+    execute("GRANT SHOW PRIVILEGE ON DBMS TO custom")
+
+    // THEN
+    showPrivilegeCommands.foreach(command =>
+      withClue(command) {
+        executeOnSystem("foo", "bar", command)
+      }
+    )
+
+    // WHEN
+    execute("REVOKE SHOW PRIVILEGE ON DBMS FROM custom")
+
+    // THEN
+    showPrivilegeCommands.foreach(command =>
+      withClue(command) {
+        the[AuthorizationViolationException] thrownBy {
+          executeOnSystem("foo", "bar", command)
+        } should have message "Permission denied."
+      }
+    )
+  }
+
+  test("should fail when showing privileges when denied show privilege privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom AS COPY OF admin")
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO foo")
+
+    // WHEN
+    execute("DENY SHOW PRIVILEGE ON DBMS TO custom")
+
+    // THEN
+    showPrivilegeCommands.foreach(command =>
+      withClue(command) {
+        the[AuthorizationViolationException] thrownBy {
+          executeOnSystem("foo", "bar", command)
+        } should have message "Permission denied."
+
+      }
+    )
+  }
+
+  test("should be able to show your own privileges even if denied show privilege privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom AS COPY OF admin")
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO foo")
+
+    // WHEN
+    execute("DENY SHOW PRIVILEGE ON DBMS TO custom")
+
+    // THEN
+    executeOnSystem("foo", "bar", "SHOW USER foo PRIVILEGES")
+  }
+
+  // ASSIGN & REMOVE PRIVILEGE
+
+  Seq(
+    // Graph commands
+    ("TRAVERSE", "TRAVERSE ON GRAPH * NODES A", Set(traverse().node("A"))),
+    ("READ", "READ {prop} ON GRAPH * NODES *", Set(read().node("*").property("prop"))),
+    ("MATCH", "MATCH {prop} ON GRAPH * NODES A", Set(matchPrivilege().node("A").property("prop"))),
+    ("WRITE", "WRITE ON GRAPH *", Set(write().node("*"), write().relationship("*"))),
+
+    // Database commands
+    ("ACCESS", "ACCESS ON DATABASE *", Set(access())),
+    ("START", "START ON DATABASE *", Set(startDatabase())),
+    ("STOP", "STOP ON DATABASE *", Set(stopDatabase())),
+    ("CREATE INDEX", "CREATE INDEX ON DATABASE *", Set(createIndex())),
+    ("DROP INDEX", "DROP INDEX ON DATABASE *", Set(dropIndex())),
+    ("INDEX MANAGEMENT", "INDEX MANAGEMENT ON DATABASE *", Set(indexManagement())),
+    ("CREATE CONSTRAINT", "CREATE CONSTRAINT ON DATABASE *", Set(createConstraint())),
+    ("DROP CONSTRAINT", "DROP CONSTRAINT ON DATABASE *", Set(dropConstraint())),
+    ("CONSTRAINT MANAGEMENT", "CONSTRAINT MANAGEMENT ON DATABASE *", Set(constraintManagement())),
+    ("CREATE NEW LABEL", "CREATE NEW LABEL ON DATABASE *", Set(createNodeLabel())),
+    ("CREATE NEW TYPE", "CREATE NEW TYPE ON DATABASE *", Set(createRelationshipType())),
+    ("CREATE NEW NAME", "CREATE NEW NAME ON DATABASE *", Set(createPropertyKey())),
+    ("NAME MANAGEMENT", "NAME MANAGEMENT ON DATABASE *", Set(nameManagement())),
+    ("ALL DATABASE", "ALL ON DATABASE *", Set(allDatabasePrivilege())),
+    ("SHOW TRANSACTION", "SHOW TRANSACTION ON DATABASE *", Set(showTransaction("*"))),
+    ("TERMINATE TRANSACTION", "TERMINATE TRANSACTION ON DATABASE *", Set(terminateTransaction("*"))),
+    ("TRANSACTION MANAGEMENT", "TRANSACTION MANAGEMENT ON DATABASE *", Set(transaction("*"))),
+
+    // Dbms commands
+    ("CREATE ROLE", "CREATE ROLE ON DBMS", Set(adminAction("create_role"))),
+    ("DROP ROLE", "DROP ROLE ON DBMS", Set(adminAction("drop_role"))),
+    ("ASSIGN ROLE", "ASSIGN ROLE ON DBMS", Set(adminAction("assign_role"))),
+    ("REMOVE ROLE", "REMOVE ROLE ON DBMS", Set(adminAction("remove_role"))),
+    ("SHOW ROLE", "SHOW ROLE ON DBMS", Set(adminAction("show_role"))),
+    ("ROLE MANAGEMENT", "ROLE MANAGEMENT ON DBMS", Set(adminAction("role_management"))),
+    ("CREATE USER", "CREATE USER ON DBMS", Set(adminAction("create_user"))),
+    ("DROP USER", "DROP USER ON DBMS", Set(adminAction("drop_user"))),
+    ("ALTER USER", "ALTER USER ON DBMS", Set(adminAction("alter_user"))),
+    ("SHOW USER", "SHOW USER ON DBMS", Set(adminAction("show_user"))),
+    ("USER MANAGEMENT", "USER MANAGEMENT ON DBMS", Set(adminAction("user_management"))),
+    ("CREATE DATABASE", "CREATE DATABASE ON DBMS", Set(adminAction("create_database"))),
+    ("DROP DATABASE", "DROP DATABASE ON DBMS", Set(adminAction("drop_database"))),
+    ("DATABASE MANAGEMENT", "DATABASE MANAGEMENT ON DBMS", Set(adminAction("database_management"))),
+    ("SHOW PRIVILEGE", "SHOW PRIVILEGE ON DBMS", Set(adminAction("show_privilege"))),
+    ("ASSIGN PRIVILEGE", "ASSIGN PRIVILEGE ON DBMS", Set(adminAction("assign_privilege"))),
+    ("REMOVE PRIVILEGE", "REMOVE PRIVILEGE ON DBMS", Set(adminAction("remove_privilege"))),
+    ("PRIVILEGE MANAGEMENT", "PRIVILEGE MANAGEMENT ON DBMS", Set(adminAction("privilege_management"))),
+  ).foreach {
+    case (privilege, command, showPrivileges) =>
+
+      test(s"should enforce assign privilege privilege for GRANT $privilege") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE ROLE otherRole")
+        execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+        execute("GRANT ROLE custom TO foo")
+
+        // WHEN
+        execute("GRANT ASSIGN PRIVILEGE ON DBMS TO custom")
+
+        // THEN
+        executeOnSystem("foo", "bar", s"GRANT $command TO otherRole")
+        execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(showPrivileges.map(p => p.role("otherRole").map))
+
+        // WHEN
+        execute("REVOKE ASSIGN PRIVILEGE ON DBMS FROM custom")
+        execute(s"REVOKE $command FROM otherRole")
+
+        // THEN
+        the[AuthorizationViolationException] thrownBy {
+          executeOnSystem("foo", "bar", s"GRANT $command TO otherRole")
+        } should have message "Permission denied."
+
+        execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(empty)
+      }
+
+      test(s"should enforce assign privilege privilege for DENY $privilege") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE ROLE otherRole")
+        execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+        execute("GRANT ROLE custom TO foo")
+
+        // WHEN
+        execute("GRANT ASSIGN PRIVILEGE ON DBMS TO custom")
+
+        // THEN
+        executeOnSystem("foo", "bar", s"DENY $command TO otherRole")
+        execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(showPrivileges.map(p => p.role("otherRole").privType("DENIED").map))
+
+        // WHEN
+        execute("REVOKE ASSIGN PRIVILEGE ON DBMS FROM custom")
+        execute(s"REVOKE $command FROM otherRole")
+
+        // THEN
+        the[AuthorizationViolationException] thrownBy {
+          executeOnSystem("foo", "bar", s"DENY $command TO otherRole")
+        } should have message "Permission denied."
+
+        execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(empty)
+      }
+
+      test(s"should fail when granting and denying $privilege privileges when denied assign privilege privilege") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom AS COPY OF admin")
+        execute("CREATE ROLE otherRole")
+        execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+        execute("GRANT ROLE custom TO foo")
+
+        // WHEN
+        execute("DENY ASSIGN PRIVILEGE ON DBMS TO custom")
+
+        // THEN
+        the[AuthorizationViolationException] thrownBy {
+          executeOnSystem("foo", "bar", s"GRANT $command TO otherRole")
+        } should have message "Permission denied."
+
+        the[AuthorizationViolationException] thrownBy {
+          executeOnSystem("foo", "bar", s"DENY $command TO otherRole")
+        } should have message "Permission denied."
+
+        execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set.empty)
+      }
+
+      test(s"should enforce remove privilege privilege for $privilege") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE ROLE otherRole")
+        execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+        execute("GRANT ROLE custom TO foo")
+
+        // WHEN
+        execute("GRANT REMOVE PRIVILEGE ON DBMS TO custom")
+        execute(s"GRANT $command TO otherRole")
+
+        // THEN
+        executeOnSystem("foo", "bar", s"REVOKE $command FROM otherRole")
+        execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set.empty)
+
+        // WHEN
+        execute("REVOKE REMOVE PRIVILEGE ON DBMS FROM custom")
+        execute(s"GRANT $command TO otherRole")
+
+        // THEN
+        the[AuthorizationViolationException] thrownBy {
+          executeOnSystem("foo", "bar", s"REVOKE $command FROM otherRole")
+        } should have message "Permission denied."
+
+        execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(showPrivileges.map(p => p.role("otherRole").map))
+      }
+
+      test(s"should fail when revoking $privilege privileges when denied remove privilege privilege") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom AS COPY OF admin")
+        execute("CREATE ROLE otherRole")
+        execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+        execute("GRANT ROLE custom TO foo")
+
+        // WHEN
+        execute("DENY REMOVE PRIVILEGE ON DBMS TO custom")
+        execute(s"GRANT $command TO otherRole")
+
+        // THEN
+        the[AuthorizationViolationException] thrownBy {
+          executeOnSystem("foo", "bar", s"REVOKE $command FROM otherRole")
+        } should have message "Permission denied."
+
+        execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(showPrivileges.map(p => p.role("otherRole").map))
+      }
+  }
+
+  // PRIVILEGE MANAGEMENT
+
+  test("should enforce privilege management privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE ROLE otherRole")
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO foo")
+
+    // WHEN
+    execute("GRANT PRIVILEGE MANAGEMENT ON DBMS TO custom")
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO otherRole")
+
+    // THEN
+    executeOnSystem("foo", "bar", "SHOW ROLE otherRole PRIVILEGES")
+    executeOnSystem("foo", "bar", "GRANT TRAVERSE ON GRAPH * NODES B TO otherRole")
+    executeOnSystem("foo", "bar", "DENY TRAVERSE ON GRAPH * NODES C TO otherRole")
+    executeOnSystem("foo", "bar", "REVOKE TRAVERSE ON GRAPH * NODES A FROM otherRole")
+
+    execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(
+      Set(
+        traverse().node("B").role("otherRole").database("*").map,
+        traverse("DENIED").node("C").role("otherRole").database("*").map
+      )
+    )
+
+    // WHEN
+    execute("REVOKE PRIVILEGE MANAGEMENT ON DBMS FROM custom")
+    execute("REVOKE TRAVERSE ON GRAPH * NODES B FROM otherRole")
+    execute("REVOKE TRAVERSE ON GRAPH * NODES C FROM otherRole")
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO otherRole")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "SHOW ROLE otherRole PRIVILEGES")
+    } should have message "Permission denied."
+
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "GRANT TRAVERSE ON GRAPH * NODES B TO otherRole")
+    } should have message "Permission denied."
+
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "DENY TRAVERSE ON GRAPH * NODES C TO otherRole")
+    } should have message "Permission denied."
+
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "REVOKE TRAVERSE ON GRAPH * NODES A FROM otherRole")
+    } should have message "Permission denied."
+
+    execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(
+      Set(traverse().node("A").role("otherRole").database("*").map)
+    )
+  }
+
+  test("should fail privilege management when denied privilege management privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom AS COPY OF admin")
+    execute("CREATE ROLE otherRole")
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO foo")
+
+    // WHEN
+    execute("GRANT SHOW PRIVILEGE ON DBMS TO custom")
+    execute("GRANT ASSIGN PRIVILEGE ON DBMS TO custom")
+    execute("GRANT REMOVE PRIVILEGE ON DBMS TO custom")
+    execute("DENY PRIVILEGE MANAGEMENT ON DBMS TO custom")
+
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO otherRole")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "SHOW ROLE otherRole PRIVILEGES")
+    } should have message "Permission denied."
+
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "GRANT TRAVERSE ON GRAPH * NODES B TO otherRole")
+    } should have message "Permission denied."
+
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "DENY TRAVERSE ON GRAPH * NODES C TO otherRole")
+    } should have message "Permission denied."
+
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "REVOKE TRAVERSE ON GRAPH * NODES A FROM otherRole")
+    } should have message "Permission denied."
+
+    execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(
+      Set(traverse().node("A").role("otherRole").database("*").map)
+    )
   }
 
   // helper methods
