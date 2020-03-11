@@ -79,6 +79,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipCountFromCountStoreTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RightOuterHashJoinTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.RollupApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ShortestPathTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SortTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SubscriberErrorTestBase
@@ -176,3 +177,4 @@ class SlottedSemiApplyTest extends SemiApplyTestBase(ENTERPRISE.DEFAULT, Slotted
 class SlottedAntiSemiApplyTest extends AntiSemiApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 
 class SlottedNestedPlanExpressionTest extends NestedPlanExpressionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedRollupApplyTest extends RollupApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
