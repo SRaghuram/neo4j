@@ -12,7 +12,6 @@ import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.exceptions.DatabaseAdministrationException
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.exceptions.SyntaxException
-import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
@@ -179,6 +178,16 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
   }
 
+  test("should create role with parameter") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    execute("CREATE ROLE $role", Map("role" -> "foo"))
+
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
+  }
+
   test("should create role using if not exists") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -194,8 +203,21 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
     // WHEN
-    val exception = the[SyntaxException] thrownBy execute("CREATE ROLE PUBLIC")
-    exception.getMessage should startWith("Failed to create the specified role 'PUBLIC': 'PUBLIC' is a reserved role name and cannot be created.")
+    val exception = the[InvalidArgumentException] thrownBy execute("CREATE ROLE PUBLIC")
+    exception.getMessage should startWith("Failed to create the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
+
+    // THEN
+    val result = execute("SHOW ROLES")
+    result.toSet should be(defaultRoles)
+  }
+
+  test("should not create role with reserved name using parameter") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    val exception = the[InvalidArgumentException] thrownBy execute("CREATE ROLE $role", Map("role" -> "PUBLIC"))
+    exception.getMessage should startWith("Failed to create the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
 
     // THEN
     val result = execute("SHOW ROLES")
@@ -283,6 +305,32 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set.empty)
   }
 
+  test("should create role from existing role with parameter") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE foo")
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
+
+    // WHEN
+    execute("CREATE ROLE bar AS COPY OF $other", Map("other" -> "foo"))
+
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map, role("bar").map))
+    execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set.empty)
+  }
+
+  test("should create role with parameter from existing role with parameter") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE foo")
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
+
+    // WHEN
+    execute("CREATE ROLE $role AS COPY OF $other", Map("role" -> "bar", "other" -> "foo"))
+
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map, role("bar").map))
+    execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set.empty)
+  }
+
   test("should create role from existing role using if not exists") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -343,6 +391,13 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles ++ baseRoles ++ Set(role("bar").map))
     execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set(traverse().role("bar").node("B").map))
+
+    // WHEN: replacing with parameters
+    execute("CREATE OR REPLACE ROLE $role1 AS COPY OF $role2", Map("role1" -> "bar", "role2" -> "base1"))
+
+    // THEN
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ baseRoles ++ Set(role("bar").map))
+    execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set(traverse().role("bar").node("A").map))
   }
 
   test("should fail when creating from non-existing role") {
@@ -390,9 +445,26 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "The provided role name is empty."
 
+    // and with parameter
+    the[InvalidArgumentException] thrownBy {
+      // WHEN
+      execute("CREATE ROLE $role AS COPY OF foo", Map("role" -> ""))
+      // THEN
+    } should have message "The provided role name is empty."
+
+    // and using illegal characters
     the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE ROLE `my%role` AS COPY OF foo")
+      // THEN
+    } should have message
+      """Role name 'my%role' contains illegal characters.
+        |Use simple ascii characters, numbers and underscores.""".stripMargin
+
+    // and using illegal characters with parameter
+    the[InvalidArgumentException] thrownBy {
+      // WHEN
+      execute("CREATE ROLE $role AS COPY OF foo", Map("role" -> "my%role"))
       // THEN
     } should have message
       """Role name 'my%role' contains illegal characters.
@@ -509,13 +581,38 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
   }
 
+  test("should drop role with parameter") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE foo")
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
+
+    // WHEN
+    execute("DROP ROLE $role", Map("role" -> "foo"))
+
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
+  }
+
   test("should not drop role with reserved name") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
     // WHEN
-    val exception = the[SyntaxException] thrownBy execute("DROP ROLE PUBLIC")
-    exception.getMessage should startWith("Failed to drop the specified role 'PUBLIC': 'PUBLIC' is a reserved role and cannot be dropped.")
+    val exception = the[InvalidArgumentException] thrownBy execute("DROP ROLE PUBLIC")
+    exception.getMessage should startWith("Failed to delete the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
+
+    // THEN
+    val result = execute("SHOW ROLES")
+    result.toSet should be(defaultRoles)
+  }
+
+  test("should not drop role with reserved name using parameter") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    val exception = the[InvalidArgumentException] thrownBy execute("DROP ROLE $role", Map("role" -> "PUBLIC"))
+    exception.getMessage should startWith("Failed to delete the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
 
     // THEN
     val result = execute("SHOW ROLES")
@@ -576,6 +673,13 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "Failed to delete the specified role 'foo': Role does not exist."
 
+    // and with parameter
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("DROP ROLE $role", Map("role" -> "foo"))
+      // THEN
+    } should have message "Failed to delete the specified role 'foo': Role does not exist."
+
     // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles)
 
@@ -583,6 +687,13 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("DROP ROLE ``")
+      // THEN
+    } should have message "Failed to delete the specified role '': Role does not exist."
+
+    // and an invalid (non-existing) one with parameter
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("DROP ROLE $role", Map("role" -> ""))
       // THEN
     } should have message "Failed to delete the specified role '': Role does not exist."
 
@@ -897,9 +1008,9 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE USER user SET PASSWORD 'neo'")
 
     // WHEN
-    val exception = the[SyntaxException] thrownBy execute("REVOKE ROLE PUBLIC FROM user")
+    val exception = the[InvalidArgumentException] thrownBy execute("REVOKE ROLE PUBLIC FROM user")
     // THEN
-    exception.getMessage should startWith("Failed to revoke the specified role 'PUBLIC': 'PUBLIC' is a reserved role and cannot be revoked.")
+    exception.getMessage should startWith("Failed to revoke the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
 
     // THEN
     execute("SHOW POPULATED ROLES WITH USERS").toSet should be(
@@ -915,9 +1026,9 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("GRANT ROLE custom TO user")
 
     // WHEN
-    val exception = the[SyntaxException] thrownBy execute("REVOKE ROLE PUBLIC, custom FROM user")
+    val exception = the[InvalidArgumentException] thrownBy execute("REVOKE ROLE PUBLIC, custom FROM user")
     // THEN
-    exception.getMessage should startWith("Failed to revoke the specified role 'PUBLIC': 'PUBLIC' is a reserved role and cannot be revoked.")
+    exception.getMessage should startWith("Failed to revoke the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
 
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(publicRole("user") ++ defaultRolesWithUsers + role("custom").member("user").map)

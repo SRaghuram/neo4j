@@ -85,6 +85,6 @@ class AdministrationCommandPlannerTestBase extends AdministrationCommandAcceptan
   def helperPlan(name: String, arguments: Seq[Argument], source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, arguments, SingleChild(source))
   def helperPlan(name: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, children = SingleChild(source))
 
-  def assertDbmsAdminPlan(action: String): PlanDescriptionImpl = planDescription("AssertDbmsAdmin", Seq(DbmsAction(action)))
+  def assertDbmsAdminPlan(actions: String*): PlanDescriptionImpl = planDescription("AssertDbmsAdmin", actions.map(a => DbmsAction(a)))
   def assertDatabaseAdminPlan(action: String, database: String): PlanDescriptionImpl = planDescription("AssertDatabaseAdmin", Seq(DatabaseAction(action), databaseArg(database)))
 }

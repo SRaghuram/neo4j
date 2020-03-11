@@ -340,9 +340,32 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
+    // and using parameter
+    the[InvalidArgumentException] thrownBy {
+      // WHEN
+      execute("CREATE USER $user SET PASSWORD 'password' SET PASSWORD CHANGE REQUIRED", Map("user" -> ""))
+      // THEN
+    } should have message "The provided username is empty."
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+
+    // and with invalid username
     the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE USER `neo:4j` SET PASSWORD 'password' SET PASSWORD CHANGE REQUIRED")
+      // THEN
+    } should have message
+      """Username 'neo:4j' contains illegal characters.
+        |Use ascii characters that are not ',', ':' or whitespaces.""".stripMargin
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+
+    // and with invalid username as parameter
+    the[InvalidArgumentException] thrownBy {
+      // WHEN
+      execute("CREATE USER $user SET PASSWORD 'password' SET PASSWORD CHANGE REQUIRED", Map("user" -> "neo:4j"))
       // THEN
     } should have message
       """Username 'neo:4j' contains illegal characters.
@@ -525,6 +548,13 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "Failed to delete the specified user 'foo': User does not exist."
 
+    // and with parameter
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("DROP USER $user", Map("user" -> "foo"))
+      // THEN
+    } should have message "Failed to delete the specified user 'foo': User does not exist."
+
     // THEN
     execute("SHOW USERS").toSet should be(Set(neo4jUser))
 
@@ -532,6 +562,13 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("DROP USER `:foo`")
+      // THEN
+    } should have message "Failed to delete the specified user ':foo': User does not exist."
+
+    // and an invalid (non-existing) one with parameter
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("DROP USER $user", Map("user" -> ":foo"))
       // THEN
     } should have message "Failed to delete the specified user ':foo': User does not exist."
 
@@ -1028,6 +1065,17 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET STATUS SUSPENDED")
+      // THEN
+    } should have message "Failed to alter the specified user 'foo': User does not exist."
+  }
+
+  test("should fail when altering a non-existing parameterized user: status") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("ALTER USER $user SET STATUS SUSPENDED", Map("user" -> "foo"))
       // THEN
     } should have message "Failed to alter the specified user 'foo': User does not exist."
   }

@@ -65,6 +65,7 @@ import org.neo4j.cypher.internal.logical.plans.GrantTraverse
 import org.neo4j.cypher.internal.logical.plans.GrantWrite
 import org.neo4j.cypher.internal.logical.plans.LogSystemCommand
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.NameValidator
 import org.neo4j.cypher.internal.logical.plans.RequireRole
 import org.neo4j.cypher.internal.logical.plans.RevokeDatabaseAction
 import org.neo4j.cypher.internal.logical.plans.RevokeDbmsAction
@@ -270,65 +271,81 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // CREATE [OR REPLACE] ROLE foo [IF NOT EXISTS] AS COPY OF bar
     case CreateRole(source, roleName) => (context, parameterMapping) =>
+      val (roleNameKey, roleNameValue, roleNameConverter) = getNameFields("rolename", roleName)
       UpdatingSystemCommandExecutionPlan("CreateRole", normalExecutionEngine,
-        """CREATE (new:Role {name: $name})
+        s"""CREATE (new:Role {name: $$$roleNameKey})
           |RETURN new.name
         """.stripMargin,
-        VirtualValues.map(Array("name"), Array(Values.utf8Value(roleName))),
+        VirtualValues.map(Array(roleNameKey), Array(roleNameValue)),
         QueryHandler
-          .handleNoResult(_ => Some(new IllegalStateException(s"Failed to create the specified role '$roleName'.")))
-          .handleError((error, _) => (error, error.getCause) match {
+          .handleNoResult(p => Some(new IllegalStateException(s"Failed to create the specified role '${runtimeValue(roleName, p)}'.")))
+          .handleError((error, p) => (error, error.getCause) match {
             case (_, _: UniquePropertyValueValidationException) =>
-              new InvalidArgumentsException(s"Failed to create the specified role '$roleName': Role already exists.", error)
+              new InvalidArgumentsException(s"Failed to create the specified role '${runtimeValue(roleName, p)}': Role already exists.", error)
             case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
-              new DatabaseAdministrationOnFollowerException(s"Failed to create the specified role '$roleName': $followerError", error)
-            case _ => new IllegalStateException(s"Failed to create the specified role '$roleName'.", error)
+              new DatabaseAdministrationOnFollowerException(s"Failed to create the specified role '${runtimeValue(roleName, p)}': $followerError", error)
+            case _ => new IllegalStateException(s"Failed to create the specified role '${runtimeValue(roleName, p)}'.", error)
           }),
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
+        initFunction = (params, _) => {
+          val name = runtimeValue(roleName, params)
+          NameValidator.assertValidRoleName(name)
+          NameValidator.assertUnreservedRoleName("create", name)
+        },
+        parameterConverter = roleNameConverter
       )
 
     // Used to split the requirement from the source role before copying privileges
     case RequireRole(source, roleName) => (context, parameterMapping) =>
+      val (roleNameKey, roleNameValue, roleNameConverter) = getNameFields("rolename", roleName)
       UpdatingSystemCommandExecutionPlan("RequireRole", normalExecutionEngine,
-        """MATCH (role:Role {name: $name})
+        s"""MATCH (role:Role {name: $$$roleNameKey})
           |RETURN role.name""".stripMargin,
-        VirtualValues.map(Array("name"), Array(Values.utf8Value(roleName))),
+        VirtualValues.map(Array(roleNameKey), Array(roleNameValue)),
         QueryHandler
-          .handleNoResult(_ => Some(new InvalidArgumentsException(s"Failed to create a role as copy of '$roleName': Role does not exist.")))
+          .handleNoResult(p => Some(new InvalidArgumentsException(s"Failed to create a role as copy of '${runtimeValue(roleName, p)}': Role does not exist.")))
           .handleError {
-            case (error: HasStatus, _) if error.status() == Status.Cluster.NotALeader =>
-              new DatabaseAdministrationOnFollowerException(s"Failed to create a role as copy of '$roleName': $followerError", error)
-            case (error, _) => new IllegalStateException(s"Failed to create a role as copy of '$roleName'.", error) // should not get here but need a default case
+            case (error: HasStatus, p) if error.status() == Status.Cluster.NotALeader =>
+              new DatabaseAdministrationOnFollowerException(s"Failed to create a role as copy of '${runtimeValue(roleName, p)}': $followerError", error)
+            case (error, p) => new IllegalStateException(s"Failed to create a role as copy of '${runtimeValue(roleName, p)}'.", error) // should not get here but need a default case
           },
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
+        parameterConverter = roleNameConverter
       )
 
     // COPY PRIVILEGES FROM role1 TO role2
     case CopyRolePrivileges(source, to, from, grantDeny) => (context, parameterMapping) =>
+      val (toNameKey, toNameValue, toNameConverter) = getNameFields("toRole", to)
+      val (fromNameKey, fromNameValue, fromNameConverter) = getNameFields("fromRole", from)
+      val mapValueConverter: MapValue => MapValue = p => toNameConverter(fromNameConverter(p))
       // This operator expects CreateRole(to) and RequireRole(from) to run as source, so we do not check for those
       UpdatingSystemCommandExecutionPlan("CopyPrivileges", normalExecutionEngine,
-        s"""MATCH (to:Role {name: $$to})
-           |MATCH (from:Role {name: $$from})-[:$grantDeny]->(p:Privilege)
+        s"""MATCH (to:Role {name: $$$toNameKey})
+           |MATCH (from:Role {name: $$$fromNameKey})-[:$grantDeny]->(p:Privilege)
            |MERGE (to)-[g:$grantDeny]->(p)
            |RETURN from.name, to.name, count(g)""".stripMargin,
-        VirtualValues.map(Array("from", "to"), Array(Values.utf8Value(from), Values.utf8Value(to))),
-        QueryHandler.handleError((e, _) => new IllegalStateException(s"Failed to create role '$to' as copy of '$from': Failed to copy privileges.", e)),
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
+        VirtualValues.map(Array(fromNameKey, toNameKey), Array(fromNameValue, toNameValue)),
+        QueryHandler.handleError((e, p) => new IllegalStateException(s"Failed to create role '${runtimeValue(to, p)}' as copy of '${runtimeValue(from, p)}': Failed to copy privileges.", e)),
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
+        parameterConverter = mapValueConverter
       )
 
     // DROP ROLE foo [IF EXISTS]
     case DropRole(source, roleName) => (context, parameterMapping) =>
+      val (roleNameKey, roleNameValue, roleNameConverter) = getNameFields("rolename", roleName)
       UpdatingSystemCommandExecutionPlan("DropRole", normalExecutionEngine,
-        """MATCH (role:Role {name: $name}) DETACH DELETE role
+        s"""MATCH (role:Role {name: $$$roleNameKey}) DETACH DELETE role
           |RETURN 1 AS ignore""".stripMargin,
-        VirtualValues.map(Array("name"), Array(Values.utf8Value(roleName))),
+        VirtualValues.map(Array(roleNameKey), Array(roleNameValue)),
         QueryHandler
           .handleError {
-            case (error: HasStatus, _) if error.status() == Status.Cluster.NotALeader =>
-              new DatabaseAdministrationOnFollowerException(s"Failed to delete the specified role '$roleName': $followerError", error)
-            case (error, _) => new IllegalStateException(s"Failed to delete the specified role '$roleName'.", error)
+            case (error: HasStatus, p) if error.status() == Status.Cluster.NotALeader =>
+              new DatabaseAdministrationOnFollowerException(s"Failed to delete the specified role '${runtimeValue(roleName, p)}': $followerError", error)
+            case (error, p) => new IllegalStateException(s"Failed to delete the specified role '${runtimeValue(roleName, p)}'.", error)
           },
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
+        initFunction = (params, _) => NameValidator.assertUnreservedRoleName("delete", runtimeValue(roleName, params)),
+        parameterConverter = roleNameConverter
       )
 
     // GRANT ROLE foo TO user
@@ -367,7 +384,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             new DatabaseAdministrationOnFollowerException(s"Failed to revoke role '$roleName' from user '$userName': $followerError", error)
           case (error, _) => new IllegalStateException(s"Failed to revoke role '$roleName' from user '$userName'.", error)
         },
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
+        initFunction = (params, _) => NameValidator.assertUnreservedRoleName("revoke", runtimeValue(Left(roleName), params))
       )
 
     // GRANT/DENY/REVOKE _ ON DBMS TO role

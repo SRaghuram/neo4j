@@ -735,6 +735,53 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     } should have message "Permission denied."
   }
 
+  test("should fail when replacing role with denied create role privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom AS COPY OF admin")
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO foo")
+
+    // WHEN
+    execute("DENY CREATE ROLE ON DBMS TO custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "CREATE OR REPLACE ROLE myRole")
+    } should have message "Permission denied."
+  }
+
+  test("should fail when replacing role with denied drop role privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom AS COPY OF admin")
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO foo")
+
+    // WHEN
+    execute("DENY DROP ROLE ON DBMS TO custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "CREATE OR REPLACE ROLE myRole")
+    } should have message "Permission denied."
+  }
+
+  test("should fail when replacing role without drop role privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO foo")
+    execute("GRANT CREATE ROLE ON DBMS TO custom")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnSystem("foo", "bar", "CREATE OR REPLACE ROLE myRole")
+      // THEN
+    } should have message "Permission denied."
+  }
+
   // DROP ROLE
 
   test("should enforce drop role privilege") {
@@ -1022,7 +1069,8 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
     execute("GRANT ROLE custom TO foo")
     execute("GRANT CREATE USER ON DBMS TO custom")
-    the[Exception] thrownBy {
+
+    the[AuthorizationViolationException] thrownBy {
       // WHEN
       executeOnSystem("foo", "bar", "CREATE OR REPLACE USER bar SET PASSWORD 'firstPassword'")
       // THEN

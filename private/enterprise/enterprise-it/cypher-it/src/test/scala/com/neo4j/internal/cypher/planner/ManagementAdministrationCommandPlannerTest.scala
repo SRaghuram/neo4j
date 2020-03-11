@@ -9,6 +9,7 @@ import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.cypher.internal.ast.prettifier.Prettifier
 import org.neo4j.cypher.internal.plandescription.Arguments.Role
+import org.neo4j.cypher.internal.plandescription.Arguments.User
 
 class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPlannerTestBase {
 
@@ -202,6 +203,22 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     )
   }
 
+  test("Create user as parameter") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN CREATE USER $foo SET PASSWORD 'secret'", Map("foo" -> "bar")).executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        managementPlan("CreateUser", Seq(User("$foo")),
+          assertDbmsAdminPlan("CREATE USER")
+        )
+      ).toString
+    )
+  }
+
   test("Create or replace user") {
     selectDatabase(SYSTEM_DATABASE_NAME)
 
@@ -213,7 +230,9 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
       logPlan(
         managementPlan("CreateUser", Seq(userArg("foo")),
           managementPlan("DropUser", Seq(userArg("foo")),
-            assertDbmsAdminPlan("CREATE USER")
+            helperPlan("AssertNotCurrentUser", Seq(userArg("foo")),
+              assertDbmsAdminPlan("DROP USER", "CREATE USER")
+            )
           )
         )
       ).toString
@@ -252,7 +271,32 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
       logPlan(
         managementPlan("DropUser", Seq(userArg("foo")),
           helperPlan("EnsureNodeExists(User)", Seq(userArg("foo")),
-            assertDbmsAdminPlan("DROP USER")
+            helperPlan("AssertNotCurrentUser", Seq(userArg("foo")),
+              assertDbmsAdminPlan("DROP USER")
+            )
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Drop user as parameter") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // Given
+    execute("CREATE USER foo SET PASSWORD 'secret'")
+
+    // When
+    val plan = execute("EXPLAIN DROP USER $foo", Map("foo" -> "foo")).executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        managementPlan("DropUser", Seq(User("$foo")),
+          helperPlan("EnsureNodeExists(User)", Seq(User("$foo")),
+            helperPlan("AssertNotCurrentUser", Seq(User("$foo")),
+              assertDbmsAdminPlan("DROP USER")
+            )
           )
         )
       ).toString
@@ -270,7 +314,9 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
       logPlan(
         managementPlan("DropUser", Seq(userArg("foo")),
           helperPlan("DoNothingIfNotExists(User)", Seq(userArg("foo")),
-            assertDbmsAdminPlan("DROP USER")
+            helperPlan("AssertNotCurrentUser", Seq(userArg("foo")),
+              assertDbmsAdminPlan("DROP USER")
+            )
           )
         )
       ).toString
@@ -290,6 +336,25 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     plan should include(
       logPlan(
         managementPlan("AlterUser", Seq(userArg("foo")),
+          assertDbmsAdminPlan("ALTER USER")
+        )
+      ).toString
+    )
+  }
+
+  test("Alter user as parameter") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // Given
+    execute("CREATE USER foo SET PASSWORD 'secret'")
+
+    // When
+    val plan = execute("EXPLAIN ALTER USER $foo SET PASSWORD CHANGE NOT REQUIRED", Map("foo" -> "foo")).executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        managementPlan("AlterUser", Seq(User("$foo")),
           assertDbmsAdminPlan("ALTER USER")
         )
       ).toString
@@ -377,6 +442,22 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     )
   }
 
+  test("Create role as parameter") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN CREATE ROLE $foo").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        managementPlan("CreateRole", Seq(Role("$foo")),
+          assertDbmsAdminPlan("CREATE ROLE")
+        )
+      ).toString
+    )
+  }
+
   test("Create or replace role") {
     selectDatabase(SYSTEM_DATABASE_NAME)
 
@@ -388,7 +469,7 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
       logPlan(
         managementPlan("CreateRole", Seq(roleArg("foo")),
           managementPlan("DropRole", Seq(roleArg("foo")),
-            assertDbmsAdminPlan("CREATE ROLE")
+            assertDbmsAdminPlan("DROP ROLE", "CREATE ROLE")
           )
         )
       ).toString
@@ -435,6 +516,76 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     )
   }
 
+  test("Create role as copy with parameter") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN CREATE ROLE foo AS COPY OF $bar", Map("bar" -> "reader")).executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        helperPlan("CopyRolePrivileges(DENIED)", Seq(Role("FROM ROLE $bar"), Role(s"TO ROLE ${Prettifier.escapeName("foo")}")),
+          helperPlan("CopyRolePrivileges(GRANTED)", Seq(Role("FROM ROLE $bar"), Role(s"TO ROLE ${Prettifier.escapeName("foo")}")),
+            managementPlan("CreateRole", Seq(roleArg("foo")),
+              helperPlan("RequireRole", Seq(Role("$bar")),
+                assertDbmsAdminPlan("CREATE ROLE")
+              )
+            )
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Create or replace role as copy") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN CREATE OR REPLACE ROLE foo AS COPY OF reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        helperPlan("CopyRolePrivileges(DENIED)", Seq(Role(s"FROM ROLE ${Prettifier.escapeName("reader")}"), Role(s"TO ROLE ${Prettifier.escapeName("foo")}")),
+          helperPlan("CopyRolePrivileges(GRANTED)", Seq(Role(s"FROM ROLE ${Prettifier.escapeName("reader")}"), Role(s"TO ROLE ${Prettifier.escapeName("foo")}")),
+            managementPlan("CreateRole", Seq(roleArg("foo")),
+              helperPlan("RequireRole", Seq(roleArg("reader")),
+                managementPlan("DropRole", Seq(roleArg("foo")),
+                  assertDbmsAdminPlan("DROP ROLE", "CREATE ROLE")
+                )
+              )
+            )
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Create role if not exists as copy") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN CREATE ROLE foo IF NOT EXISTS AS COPY OF reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        helperPlan("CopyRolePrivileges(DENIED)", Seq(Role(s"FROM ROLE ${Prettifier.escapeName("reader")}"), Role(s"TO ROLE ${Prettifier.escapeName("foo")}")),
+          helperPlan("CopyRolePrivileges(GRANTED)", Seq(Role(s"FROM ROLE ${Prettifier.escapeName("reader")}"), Role(s"TO ROLE ${Prettifier.escapeName("foo")}")),
+            managementPlan("CreateRole", Seq(roleArg("foo")),
+              helperPlan("RequireRole", Seq(roleArg("reader")),
+                helperPlan("DoNothingIfExists(Role)", Seq(roleArg("foo")),
+                  assertDbmsAdminPlan("CREATE ROLE")
+                )
+              )
+            )
+          )
+        )
+      ).toString
+    )
+  }
+
   test("Drop role") {
     selectDatabase(SYSTEM_DATABASE_NAME)
 
@@ -449,6 +600,27 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
       logPlan(
         managementPlan("DropRole", Seq(roleArg("foo")),
           helperPlan("EnsureNodeExists(Role)", Seq(roleArg("foo")),
+            assertDbmsAdminPlan("DROP ROLE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Drop role as parameter") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // Given
+    execute("CREATE ROLE foo")
+
+    // When
+    val plan = execute("EXPLAIN DROP ROLE $foo", Map("foo" -> "foo")).executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        managementPlan("DropRole", Seq(Role("$foo")),
+          helperPlan("EnsureNodeExists(Role)", Seq(Role("$foo")),
             assertDbmsAdminPlan("DROP ROLE")
           )
         )
