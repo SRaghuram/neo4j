@@ -66,6 +66,7 @@ import static org.neo4j.storageengine.util.IdUpdateListener.IGNORE;
 class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements Visitor<StorageCommand,IOException>, AutoCloseable
 {
     private final Stores stores;
+    private final FrekiStorageReader reader;
     private final SchemaState schemaState;
     private final IndexUpdateListener indexUpdateListener;
     private List<IndexDescriptor> createdIndexes;
@@ -82,19 +83,20 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     private final FrekiCommand.SparseNode[] currentSparseNodeCommands = new FrekiCommand.SparseNode[4];
     private FrekiCommand.DenseNode currentDenseNodeCommand;
 
-    FrekiTransactionApplier( Stores stores, FrekiCursorFactory cursorFactory, SchemaState schemaState, IndexUpdateListener indexUpdateListener,
+    FrekiTransactionApplier( Stores stores, FrekiStorageReader reader, SchemaState schemaState, IndexUpdateListener indexUpdateListener,
             TransactionApplicationMode mode, IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync, LabelIndexUpdatesWorkSync labelIndexUpdatesWorkSync,
             IndexUpdatesWorkSync indexUpdatesWorkSync )
     {
         this.stores = stores;
+        this.reader = reader;
         this.schemaState = schemaState;
         this.indexUpdateListener = indexUpdateListener;
         this.labelIndexUpdates = mode == REVERSE_RECOVERY || labelIndexUpdatesWorkSync == null ? null : labelIndexUpdatesWorkSync.newBatch();
         this.idUpdates = mode == REVERSE_RECOVERY ? null : idGeneratorUpdatesWorkSync.newBatch();
         this.indexUpdates = mode == REVERSE_RECOVERY || indexUpdatesWorkSync == null ? null : indexUpdatesWorkSync.newBatch();
-        this.nodeCursor = cursorFactory.allocateNodeCursor( PageCursorTracer.NULL );
-        this.propertyCursorBefore = cursorFactory.allocatePropertyCursor( PageCursorTracer.NULL );
-        this.propertyCursorAfter = cursorFactory.allocatePropertyCursor( PageCursorTracer.NULL );
+        this.nodeCursor = reader.allocateNodeCursor( PageCursorTracer.NULL );
+        this.propertyCursorBefore = reader.allocatePropertyCursor( PageCursorTracer.NULL );
+        this.propertyCursorAfter = reader.allocatePropertyCursor( PageCursorTracer.NULL );
     }
 
     void beginTx( long transactionId )
@@ -159,7 +161,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
                 Set<IndexDescriptor> relatedIndexes = stores.schemaCache.getIndexesRelatedTo( entityUpdates, EntityType.NODE );
                 if ( !relatedIndexes.isEmpty() )
                 {
-                    indexUpdates.add( entityUpdates.forIndexKeys( relatedIndexes, null, EntityType.NODE, PageCursorTracer.NULL ) );
+                    indexUpdates.add( entityUpdates.forIndexKeys( relatedIndexes, reader, EntityType.NODE, PageCursorTracer.NULL ) );
                 }
             }
 
