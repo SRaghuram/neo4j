@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.plandescription.Arguments.DbmsAction
 import org.neo4j.cypher.internal.plandescription.Arguments.Qualifier
 import org.neo4j.cypher.internal.plandescription.Arguments.Resource
 import org.neo4j.cypher.internal.plandescription.Arguments.Role
+import org.neo4j.cypher.internal.plandescription.Arguments.Scope
 import org.neo4j.cypher.internal.plandescription.Arguments.User
 import org.neo4j.cypher.internal.plandescription.Children
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
@@ -35,6 +36,8 @@ class AdministrationCommandPlannerTestBase extends AdministrationCommandAcceptan
   def roleArg(name: String) = Role(Prettifier.escapeName(name))
 
   def qualifierArg(label: String, name: String) = Qualifier(s"$label ${Prettifier.escapeName(name)}")
+
+  def scopeArg(label: String, name: String) = Scope(s"$label ${Prettifier.escapeName(name)}")
 
   def resourceArg(name: String) = Resource(s"PROPERTY ${Prettifier.escapeName(name)}")
   def allResourceArg() = Resource("ALL PROPERTIES")
@@ -86,5 +89,6 @@ class AdministrationCommandPlannerTestBase extends AdministrationCommandAcceptan
   def helperPlan(name: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, children = SingleChild(source))
 
   def assertDbmsAdminPlan(actions: String*): PlanDescriptionImpl = planDescription("AssertDbmsAdmin", actions.map(a => DbmsAction(a)))
+  def assertDbmsAdminOrSelfPlan(user: String, actions: String*): PlanDescriptionImpl = planDescription("AssertDbmsAdminOrSelf", actions.map(a => DbmsAction(a)) :+ userPrivilegeArg(user))
   def assertDatabaseAdminPlan(action: String, database: String): PlanDescriptionImpl = planDescription("AssertDatabaseAdmin", Seq(DatabaseAction(action), databaseArg(database)))
 }

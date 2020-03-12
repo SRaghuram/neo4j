@@ -5,10 +5,12 @@
  */
 package com.neo4j.internal.cypher.planner
 
+import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.cypher.internal.ast.prettifier.Prettifier
 import org.neo4j.cypher.internal.plandescription.Arguments.Role
+import org.neo4j.cypher.internal.plandescription.Arguments.Scope
 import org.neo4j.cypher.internal.plandescription.Arguments.User
 
 class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPlannerTestBase {
@@ -743,5 +745,45 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
 
   // SHOW _ PRIVILEGES
 
-  // TODO
+  test("Show all privileges") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN SHOW PRIVILEGES").executionPlanString()
+
+    // Then
+    plan should include(
+      managementPlan("ShowPrivileges", Seq(Scope("ALL")),
+        assertDbmsAdminPlan("SHOW PRIVILEGES")
+      ).toString
+    )
+  }
+
+  test("Show role privileges") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN SHOW ROLE PUBLIC PRIVILEGES").executionPlanString()
+
+    // Then
+    plan should include(
+      managementPlan("ShowPrivileges", Seq(scopeArg("ROLE", PUBLIC)),
+        assertDbmsAdminPlan("SHOW PRIVILEGES")
+      ).toString
+    )
+  }
+
+  test("Show user privileges") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN SHOW USER neo4j PRIVILEGES").executionPlanString()
+
+    // Then
+    plan should include(
+      managementPlan("ShowPrivileges", Seq(scopeArg("USER", "neo4j")),
+        assertDbmsAdminOrSelfPlan("neo4j", "SHOW PRIVILEGES")
+      ).toString
+    )
+  }
 }

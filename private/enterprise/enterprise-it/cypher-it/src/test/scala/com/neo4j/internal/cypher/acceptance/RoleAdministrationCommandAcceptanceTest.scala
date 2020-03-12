@@ -5,9 +5,9 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
+import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.exceptions.DatabaseAdministrationException
 import org.neo4j.exceptions.InvalidArgumentException
@@ -216,7 +216,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
     // WHEN
-    val exception = the[InvalidArgumentException] thrownBy execute("CREATE ROLE $role", Map("role" -> "PUBLIC"))
+    val exception = the[InvalidArgumentException] thrownBy execute("CREATE ROLE $role", Map("role" -> PUBLIC))
     exception.getMessage should startWith("Failed to create the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
 
     // THEN
@@ -229,7 +229,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
     // WHEN
-    execute("CREATE ROLE $PUBLIC", Map("PUBLIC" -> "allowed"))
+    execute(s"CREATE ROLE $$$PUBLIC", Map(PUBLIC -> "allowed"))
 
     // THEN
     val result = execute("SHOW ROLES")
@@ -623,7 +623,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
     // WHEN
-    val exception = the[InvalidArgumentException] thrownBy execute("DROP ROLE $role", Map("role" -> "PUBLIC"))
+    val exception = the[InvalidArgumentException] thrownBy execute("DROP ROLE $role", Map("role" -> PUBLIC))
     exception.getMessage should startWith("Failed to delete the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
 
     // THEN
@@ -638,7 +638,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
 
     // WHEN
-    execute("DROP ROLE $PUBLIC", Map("PUBLIC" -> "foo"))
+    execute(s"DROP ROLE $$$PUBLIC", Map(PUBLIC -> "foo"))
 
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
   }
@@ -662,28 +662,28 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES").toSet should be(defaultRoles)
 
     // WHEN
-    execute(s"DROP ROLE ${PredefinedRoles.READER}")
+    execute(s"DROP ROLE $READER")
 
     // THEN
-    execute("SHOW ROLES").toSet should be(defaultRoles -- Set(role(PredefinedRoles.READER).builtIn().map))
+    execute("SHOW ROLES").toSet should be(defaultRoles -- Set(role(READER).builtIn().map))
   }
 
   test("should lose admin rights when dropping the admin role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute(s"CREATE USER alice SET PASSWORD 'secret' CHANGE NOT REQUIRED")
-    execute(s"GRANT ROLE ${PredefinedRoles.ADMIN} TO alice")
+    execute(s"GRANT ROLE $ADMIN TO alice")
 
     //WHEN
-    executeOnSystem("alice", "secret", s"DROP ROLE ${PredefinedRoles.ADMIN}")
+    executeOnSystem("alice", "secret", s"DROP ROLE $ADMIN")
 
     // WHEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("alice", "secret",  s"DROP ROLE ${PredefinedRoles.READER}")
+      executeOnSystem("alice", "secret",  s"DROP ROLE $READER")
     } should have message "Permission denied."
 
     // THEN
-    execute("SHOW ROLES").toSet should be(defaultRoles -- Set(role(PredefinedRoles.ADMIN).builtIn().map))
+    execute("SHOW ROLES").toSet should be(defaultRoles -- Set(role(ADMIN).builtIn().map))
   }
 
   test("should fail when dropping non-existing role") {
@@ -808,7 +808,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
     // WHEN
-    execute("GRANT ROLE $role TO neo4j", Map("role" -> "PUBLIC"))
+    execute("GRANT ROLE $role TO neo4j", Map("role" -> PUBLIC))
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
@@ -1158,7 +1158,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE USER user SET PASSWORD 'neo'")
 
     // WHEN
-    val exception = the[InvalidArgumentException] thrownBy execute("REVOKE ROLE $role FROM user", Map("role" -> "PUBLIC"))
+    val exception = the[InvalidArgumentException] thrownBy execute("REVOKE ROLE $role FROM user", Map("role" -> PUBLIC))
     // THEN
     exception.getMessage should startWith("Failed to revoke the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
 

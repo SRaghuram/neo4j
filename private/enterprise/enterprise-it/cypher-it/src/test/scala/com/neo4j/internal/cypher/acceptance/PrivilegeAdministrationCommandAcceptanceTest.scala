@@ -5,6 +5,7 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
+import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.dbms.api.DatabaseNotFoundException
 import org.neo4j.exceptions.DatabaseAdministrationException
@@ -235,7 +236,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
     // THEN
     val expected = Set(
-      access().database(DEFAULT).role("PUBLIC").user("neo4j").map,
+      access().database(DEFAULT).role(PUBLIC).user("neo4j").map,
       access().role("admin").user("neo4j").map,
       matchPrivilege().role("admin").user("neo4j").node("*").map,
       matchPrivilege().role("admin").user("neo4j").relationship("*").map,
@@ -267,7 +268,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         "role" -> row.get("role"),
         "user" -> row.get("user")
       )
-      res should be(access().database(DEFAULT).role("PUBLIC").user("joe").map)
+      res should be(access().database(DEFAULT).role(PUBLIC).user("joe").map)
     }) should be(1)
   }
 
@@ -318,7 +319,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("GRANT ROLE custom TO bar")
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
     val grantForCustom = Set(traverse().node("*").role("custom").user("bar").map)
-    execute("SHOW USER bar PRIVILEGES").toSet should be(grantForCustom + access().role("PUBLIC").database(DEFAULT).user("bar").map)
+    execute("SHOW USER bar PRIVILEGES").toSet should be(grantForCustom + access().role(PUBLIC).database(DEFAULT).user("bar").map)
 
     // WHEN
     execute("DROP USER bar")
@@ -336,13 +337,13 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("CREATE DATABASE foo")
     execute("GRANT TRAVERSE ON GRAPH foo NODES * TO custom")
     val grantOnFoo = Set(traverse().node("*").role("custom").user("bar").database("foo").map)
-    execute("SHOW USER bar PRIVILEGES").toSet should be(grantOnFoo + access().role("PUBLIC").database(DEFAULT).user("bar").map)
+    execute("SHOW USER bar PRIVILEGES").toSet should be(grantOnFoo + access().role(PUBLIC).database(DEFAULT).user("bar").map)
 
     // WHEN
     execute("DROP DATABASE foo")
 
     // THEN
-    execute("SHOW USER bar PRIVILEGES").toSet should be(Set(access().role("PUBLIC").database(DEFAULT).user("bar").map))
+    execute("SHOW USER bar PRIVILEGES").toSet should be(Set(access().role(PUBLIC).database(DEFAULT).user("bar").map))
   }
 
   test("should not show user privileges on a dropped role") {
@@ -353,13 +354,13 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("GRANT ROLE custom TO bar")
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
     val grantForCustom = Set(traverse().node("*").role("custom").user("bar").map)
-    execute("SHOW USER bar PRIVILEGES").toSet should be(grantForCustom + access().role("PUBLIC").database(DEFAULT).user("bar").map)
+    execute("SHOW USER bar PRIVILEGES").toSet should be(grantForCustom + access().role(PUBLIC).database(DEFAULT).user("bar").map)
 
     // WHEN
     execute("DROP ROLE custom")
 
     // THEN
-    execute("SHOW USER bar PRIVILEGES").toSet should be(Set(access().role("PUBLIC").database(DEFAULT).user("bar").map))
+    execute("SHOW USER bar PRIVILEGES").toSet should be(Set(access().role(PUBLIC).database(DEFAULT).user("bar").map))
   }
 
   test("should fail when showing privileges for users when not on system database") {
