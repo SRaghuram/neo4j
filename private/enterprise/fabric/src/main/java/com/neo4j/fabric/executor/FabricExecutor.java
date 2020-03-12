@@ -203,7 +203,7 @@ public class FabricExecutor
 
         Flux<Record> runApply( Fragment.Apply apply, Record argument )
         {
-            Flux<Record> input = run( apply.input(), null );
+            Flux<Record> input = run( apply.input(), argument );
 
             return input.flatMap(
                     record -> run( apply.inner(), record ).map( outputRecord -> Records.join( record, outputRecord ) ),
