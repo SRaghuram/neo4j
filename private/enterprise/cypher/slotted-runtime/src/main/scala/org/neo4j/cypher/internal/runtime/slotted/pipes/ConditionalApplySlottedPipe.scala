@@ -39,10 +39,11 @@ case class ConditionalApplySlottedPipe(lhs: Pipe,
         }
     }
 
-  private def condition(context: CypherRow) = {
-    val cond = longOffsets.exists(offset => !NullChecker.entityIsNull(context.getLongAt(offset))) ||
-      refOffsets.exists(x => !(context.getRefAt(x) eq Values.NO_VALUE))
-    if (negated) !cond else cond
+  private def condition(context: CypherRow): Boolean = {
+    val hasNull =
+      longOffsets.exists(offset => NullChecker.entityIsNull(context.getLongAt(offset))) ||
+      refOffsets.exists(x => context.getRefAt(x) eq Values.NO_VALUE)
+    if (negated) hasNull else !hasNull
   }
 
 }
