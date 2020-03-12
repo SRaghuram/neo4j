@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
 import com.neo4j.causalclustering.core.consensus.state.ReadableRaftState;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.messaging.Message;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,14 +22,12 @@ import java.util.Set;
 import static java.util.Collections.emptySet;
 
 /**
- * Holds the outcome of a RAFT role's handling of a message. The role handling logic is stateless
- * and responds to RAFT messages in the context of a supplied state. The outcome is later consumed
- * to update the state and do operations embedded as commands within the outcome.
- *
- * A state update could be to change role, change term, etc.
- * A command could be to append to the RAFT log, tell the log shipper that there was a mismatch, etc.
+ * Holds the outcome of a RAFT role's handling of a message. The role handling logic is stateless and responds to RAFT messages in the context of a supplied
+ * state. The outcome is later consumed to update the state and do operations embedded as commands within the outcome.
+ * <p>
+ * A state update could be to change role, change term, etc. A command could be to append to the RAFT log, tell the log shipper that there was a mismatch, etc.
  */
-public class Outcome implements Message, ConsensusOutcome
+public class Outcome implements ConsensusOutcome
 {
     /* Common */
     private Role nextRole;

@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.messaging;
 
+import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.net.ChannelPoolService;
 import com.neo4j.causalclustering.net.PooledChannel;
 import io.netty.channel.ChannelFuture;
@@ -19,7 +20,7 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-public class RaftSender implements Outbound<SocketAddress,Message>
+public class RaftSender implements Outbound<SocketAddress,RaftMessages.RaftIdAwareMessage<?>>
 {
     private final ChannelPoolService channels;
     private final Log log;
@@ -31,7 +32,7 @@ public class RaftSender implements Outbound<SocketAddress,Message>
     }
 
     @Override
-    public void send( SocketAddress to, Message message, boolean block )
+    public void send( SocketAddress to, RaftMessages.RaftIdAwareMessage<?> message, boolean block )
     {
         CompletableFuture<Void> fOperation = channels.acquire( to )
                 .thenCompose( pooledChannel -> sendMessage( pooledChannel, message ) );
@@ -64,7 +65,7 @@ public class RaftSender implements Outbound<SocketAddress,Message>
         }
     }
 
-    private CompletableFuture<Void> sendMessage( PooledChannel pooledChannel, Message message )
+    private CompletableFuture<Void> sendMessage( PooledChannel pooledChannel, RaftMessages.RaftIdAwareMessage<?> message )
     {
         CompletableFuture<Void> fOperation; // write + release
         try

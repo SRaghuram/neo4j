@@ -5,11 +5,11 @@
  */
 package com.neo4j.causalclustering.messaging;
 
-public interface Inbound<M extends Message>
+public interface Inbound<M>
 {
     void registerHandler( MessageHandler<M> handler );
 
-    interface MessageHandler<M extends Message>
+    interface MessageHandler<M>
     {
         void handle( M message );
     }

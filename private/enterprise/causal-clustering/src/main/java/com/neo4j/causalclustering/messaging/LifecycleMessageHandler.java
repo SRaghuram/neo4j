@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.identity.RaftId;
  * It is required that if this MessageHandler delegates to another MessageHandler to handle messages
  * then the delegate will also have lifecycle methods called
  */
-public interface LifecycleMessageHandler<M extends Message> extends Inbound.MessageHandler<M>
+public interface LifecycleMessageHandler<M> extends Inbound.MessageHandler<M>
 {
     void start( RaftId raftId ) throws Exception;
 

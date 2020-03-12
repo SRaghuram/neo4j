@@ -18,7 +18,6 @@ import com.neo4j.causalclustering.core.consensus.schedule.OnDemandTimerService;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftTestMemberSetBuilder;
-import com.neo4j.causalclustering.messaging.Inbound;
 import org.junit.Test;
 
 import org.neo4j.time.Clocks;
@@ -383,10 +382,9 @@ public class RaftMachineTest
         // Given
         DirectNetworking network = new DirectNetworking();
         final MemberId newMember = member( 99 );
-        DirectNetworking.Inbound<RaftMessages.RaftMessage> newMemberInbound = network.new Inbound<>( newMember );
+        DirectNetworking.Inbound newMemberInbound = network.new Inbound( newMember );
         final OutboundMessageCollector messages = new OutboundMessageCollector();
-        newMemberInbound.registerHandler(
-                (Inbound.MessageHandler<RaftMessages.RaftMessage>) message -> messages.send( newMember, message ) );
+        newMemberInbound.registerHandler( message -> messages.send( newMember, message.message() ) );
 
         FakeClock fakeClock = Clocks.fakeClock();
         OnDemandTimerService timerService = new OnDemandTimerService( fakeClock );

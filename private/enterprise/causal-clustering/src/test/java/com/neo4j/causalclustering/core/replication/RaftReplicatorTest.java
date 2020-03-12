@@ -15,7 +15,6 @@ import com.neo4j.causalclustering.core.replication.session.GlobalSession;
 import com.neo4j.causalclustering.core.replication.session.LocalSessionPool;
 import com.neo4j.causalclustering.core.state.StateMachineResult;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.messaging.Message;
 import com.neo4j.causalclustering.messaging.Outbound;
 import org.assertj.core.api.Condition;
 import org.hamcrest.Matchers;
@@ -414,7 +413,7 @@ class RaftReplicatorTest
         }
     }
 
-    private static class CapturingOutbound<MESSAGE extends Message> implements Outbound<MemberId, MESSAGE>
+    private static class CapturingOutbound<MESSAGE> implements Outbound<MemberId,MESSAGE>
     {
         private MemberId lastTo;
         private int count;

@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
-import com.neo4j.causalclustering.messaging.Message;
 
 import java.time.Instant;
 import java.util.Arrays;
@@ -971,7 +970,7 @@ public interface RaftMessages
         }
     }
 
-    interface RaftIdAwareMessage<RM extends RaftMessage> extends Message
+    interface RaftIdAwareMessage<RM extends RaftMessage>
     {
         RM message();
 
@@ -1059,7 +1058,6 @@ public interface RaftMessages
             this.message = message;
         }
 
-        @Override
         public Instant receivedAt()
         {
             return receivedAt;
@@ -1152,7 +1150,7 @@ public interface RaftMessages
         }
     }
 
-    abstract class RaftMessage implements Message
+    abstract class RaftMessage
     {
         protected final MemberId from;
         private final Type type;

@@ -5,11 +5,9 @@
  */
 package com.neo4j.causalclustering.catchup;
 
-import com.neo4j.causalclustering.messaging.Message;
-
 import static java.lang.String.format;
 
-public enum RequestMessageType implements Message
+public enum RequestMessageType
 {
     TX_PULL_REQUEST( (byte) 1 ),
     STORE( (byte) 2 ),

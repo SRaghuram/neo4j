@@ -6,8 +6,8 @@
 package com.neo4j.causalclustering.core.consensus;
 
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.messaging.Message;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -18,21 +18,22 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class DirectNetworking
 {
-    private final Map<MemberId, com.neo4j.causalclustering.messaging.Inbound.MessageHandler> handlers = new HashMap<>();
-    private final Map<MemberId, Queue<Message>> messageQueues = new HashMap<>();
+    private final Map<MemberId,com.neo4j.causalclustering.messaging.Inbound.MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>>> handlers =
+            new HashMap<>();
+    private final Map<MemberId,Queue<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>>> messageQueues = new HashMap<>();
     private final Set<MemberId> disconnectedMembers = Collections.newSetFromMap( new ConcurrentHashMap<>() );
 
     public void processMessages()
     {
         while ( messagesToBeProcessed() )
         {
-            for ( Map.Entry<MemberId, Queue<Message>> entry : messageQueues.entrySet() )
+            for ( Map.Entry<MemberId,Queue<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>>> entry : messageQueues.entrySet() )
             {
                 MemberId id = entry.getKey();
-                Queue<Message> queue = entry.getValue();
+                Queue<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> queue = entry.getValue();
                 if ( !queue.isEmpty() )
                 {
-                    Message message = queue.remove();
+                    var message = queue.remove();
                     handlers.get( id ).handle( message );
                 }
             }
@@ -41,7 +42,7 @@ public class DirectNetworking
 
     private boolean messagesToBeProcessed()
     {
-        for ( Queue<Message> queue : messageQueues.values() )
+        for ( Queue<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> queue : messageQueues.values() )
         {
             if ( !queue.isEmpty() )
             {
@@ -75,7 +76,7 @@ public class DirectNetworking
         {
             if ( canDeliver( to ) )
             {
-                messageQueues.get( to ).add( message );
+                messageQueues.get( to ).add( RaftMessages.ReceivedInstantRaftIdAwareMessage.of( Instant.now(), null, message ) );
             }
         }
 
@@ -87,7 +88,7 @@ public class DirectNetworking
         }
     }
 
-    public class Inbound<M extends Message> implements com.neo4j.causalclustering.messaging.Inbound<M>
+    public class Inbound implements com.neo4j.causalclustering.messaging.Inbound<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>>
     {
         private final MemberId id;
 
@@ -97,7 +98,7 @@ public class DirectNetworking
         }
 
         @Override
-        public void registerHandler( MessageHandler handler )
+        public void registerHandler( MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> handler )
         {
             handlers.put( id, handler );
             messageQueues.put( id, new LinkedList<>() );

@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.messaging;
 
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -162,7 +161,7 @@ public class TestNetwork<T>
         {
             private volatile boolean done;
 
-            private final TreeSet<MessageContext> msgQueue = new TreeSet<>( (Comparator<MessageContext>) ( o1, o2 ) ->
+            private final TreeSet<MessageContext> msgQueue = new TreeSet<>( ( o1, o2 ) ->
             {
                 int res = Long.compare( o1.atMillis, o2.atMillis );
 
@@ -352,5 +351,9 @@ public class TestNetwork<T>
                 }
             }
         }
+    }
+
+    interface Message
+    {
     }
 }

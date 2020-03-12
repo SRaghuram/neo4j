@@ -12,7 +12,7 @@ package com.neo4j.causalclustering.messaging;
  *
  * @param <MEMBER> The type of members that messages will be sent to.
  */
-public interface Outbound<MEMBER, MESSAGE extends Message>
+public interface Outbound<MEMBER, MESSAGE>
 {
     /**
      * Asynchronous, best effort delivery to destination.

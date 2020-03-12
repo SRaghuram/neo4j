@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.RaftGroup;
 import com.neo4j.causalclustering.core.consensus.RaftGroupFactory;
+import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantRaftIdAwareMessage;
 import com.neo4j.causalclustering.core.consensus.log.pruning.PruningScheduler;
@@ -64,7 +65,6 @@ import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.logging.RaftMessageLogger;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import com.neo4j.causalclustering.messaging.LoggingOutbound;
-import com.neo4j.causalclustering.messaging.Message;
 import com.neo4j.causalclustering.messaging.Outbound;
 import com.neo4j.causalclustering.messaging.RaftOutbound;
 import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
@@ -166,7 +166,7 @@ class CoreDatabaseFactory
 
     private final PageCacheTracer pageCacheTracer;
     private final RecoveryFacade recoveryFacade;
-    private final Outbound<SocketAddress,Message> raftSender;
+    private final Outbound<SocketAddress,RaftMessages.RaftIdAwareMessage<?>> raftSender;
     private final ReplicatedDatabaseEventService databaseEventService;
     private final ClusterSystemGraphDbmsModel dbmsModel;
     private final DatabaseStartAborter databaseStartAborter;
@@ -176,7 +176,8 @@ class CoreDatabaseFactory
             CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, TemporaryDatabaseFactory temporaryDatabaseFactory,
             Map<NamedDatabaseId,DatabaseInitializer> databaseInitializers, MemberId myIdentity, RaftGroupFactory raftGroupFactory,
             RaftMessageDispatcher raftMessageDispatcher, CatchupComponentsProvider catchupComponentsProvider, RecoveryFacade recoveryFacade,
-            RaftMessageLogger<MemberId> raftLogger, Outbound<SocketAddress,Message> raftSender, ReplicatedDatabaseEventService databaseEventService,
+            RaftMessageLogger<MemberId> raftLogger, Outbound<SocketAddress,RaftMessages.RaftIdAwareMessage<?>> raftSender,
+            ReplicatedDatabaseEventService databaseEventService,
             ClusterSystemGraphDbmsModel dbmsModel, DatabaseStartAborter databaseStartAborter )
     {
         this.config = globalModule.getGlobalConfig();
