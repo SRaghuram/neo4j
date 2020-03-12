@@ -106,7 +106,7 @@ import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.IndexQuery
 import org.neo4j.internal.schema.IndexOrder
 
-abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean) {
+abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, fuseOverPipelines: Boolean) {
 
   case class TemplateAndArgumentStateFactory(template: OperatorTaskTemplate, argumentStateFactory: Option[(ArgumentStateMapId, ArgumentStateFactory[_ <: ArgumentState])])
   type NewTemplate = TemplateContext => TemplateAndArgumentStateFactory
@@ -285,7 +285,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean) 
               ctx.argumentSizes(plan.id),
               ctx.expressionCompiler)
 
-        case plan@plans.Expand(_, fromName, dir, types, to, relName, mode) =>
+        case plan@plans.Expand(_, fromName, dir, types, to, relName, mode) if isHeadOperator || fuseOverPipelines =>
           ctx: TemplateContext =>
             val fromSlot = ctx.slots(fromName)
             val relOffset = ctx.slots.getLongOffsetFor(relName)
@@ -331,7 +331,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean) 
                   missingTypes.toArray)(ctx.expressionCompiler)
             }
 
-        case plan@plans.OptionalExpand(_, fromName, dir, types, to, relName, mode, maybePredicate) =>
+        case plan@plans.OptionalExpand(_, fromName, dir, types, to, relName, mode, maybePredicate) if isHeadOperator || fuseOverPipelines =>
           ctx: TemplateContext =>
             val fromSlot = ctx.slots(fromName)
             val relOffset = ctx.slots.getLongOffsetFor(relName)
@@ -389,7 +389,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean) 
                                   length,
                                   mode,
                                   nodePredicate,
-                                  relationshipPredicate) if isHeadOperator || noPredicate(nodePredicate, relationshipPredicate) =>
+                                  relationshipPredicate) if isHeadOperator || noPredicate(nodePredicate, relationshipPredicate) && fuseOverPipelines =>
           ctx: TemplateContext =>
 
             val fromSlot = ctx.slots(fromName)
@@ -448,7 +448,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean) 
               relationships.map(v => ctx.slots.getLongOffsetFor(v)).toArray,
               variables.map(v => ctx.slots.getReferenceOffsetFor(v)).toArray, nullable)(ctx.expressionCompiler)
 
-        case plan@plans.UnwindCollection(_, variable, collection) =>
+        case plan@plans.UnwindCollection(_, variable, collection) if isHeadOperator || fuseOverPipelines =>
           ctx: TemplateContext =>
             val offset = ctx.slots.get(variable) match {
               case Some(RefSlot(idx, _, _)) => idx

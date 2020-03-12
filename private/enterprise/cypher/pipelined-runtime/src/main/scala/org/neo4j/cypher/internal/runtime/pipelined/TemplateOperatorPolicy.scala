@@ -28,7 +28,7 @@ object TemplateOperatorPolicy {
 class TemplateOperatorPolicy(override val fusionOverPipelineEnabled: Boolean,
                              readOnly: Boolean,
                              parallelExecution: Boolean)
-  extends TemplateOperators(readOnly, parallelExecution) with OperatorFusionPolicy {
+  extends TemplateOperators(readOnly, parallelExecution, fusionOverPipelineEnabled) with OperatorFusionPolicy {
 
   override def fusionEnabled: Boolean = true
 
@@ -40,10 +40,10 @@ class TemplateOperatorPolicy(override val fusionOverPipelineEnabled: Boolean,
     fusionOverPipelineEnabled && createTemplate(lp, isHeadOperator = false, hasNoNestedArguments = outerApplyPlanId == Id.INVALID_ID).isDefined
 
   override def operatorFuserFactory(physicalPlan: PhysicalPlan,
-                           tokenContext: TokenContext,
-                           readOnly: Boolean,
-                           indexRegistrator: QueryIndexRegistrator,
-                           parallelExecution: Boolean,
-                           codeGenerationMode: CodeGeneration.CodeGenerationMode): OperatorFuserFactory =
-    new TemplateOperatorFuserFactory(physicalPlan, tokenContext, readOnly, indexRegistrator, parallelExecution, codeGenerationMode)
+                                    tokenContext: TokenContext,
+                                    readOnly: Boolean,
+                                    indexRegistrator: QueryIndexRegistrator,
+                                    parallelExecution: Boolean,
+                                    codeGenerationMode: CodeGeneration.CodeGenerationMode): OperatorFuserFactory =
+    new TemplateOperatorFuserFactory(physicalPlan, tokenContext, readOnly, indexRegistrator, parallelExecution, fusionOverPipelineEnabled, codeGenerationMode)
 }

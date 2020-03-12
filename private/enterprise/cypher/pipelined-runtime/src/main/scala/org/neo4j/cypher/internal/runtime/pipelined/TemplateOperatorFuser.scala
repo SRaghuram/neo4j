@@ -48,9 +48,10 @@ class TemplateOperatorFuserFactory(physicalPlan: PhysicalPlan,
                                    readOnly: Boolean,
                                    indexRegistrator: QueryIndexRegistrator,
                                    parallelExecution: Boolean,
+                                   fusionOverPipelineEnabled: Boolean,
                                    codeGenerationMode: CodeGeneration.CodeGenerationMode) extends OperatorFuserFactory {
   override def newOperatorFuser(headPlanId: Id, inputSlotConfiguration: SlotConfiguration): OperatorFuser =
-    new TemplateOperatorFuser(physicalPlan, tokenContext, readOnly, indexRegistrator, parallelExecution, codeGenerationMode, headPlanId, inputSlotConfiguration)
+    new TemplateOperatorFuser(physicalPlan, tokenContext, readOnly, indexRegistrator, parallelExecution, fusionOverPipelineEnabled, codeGenerationMode, headPlanId, inputSlotConfiguration)
 }
 
 class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
@@ -58,9 +59,10 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
                             val readOnly: Boolean,
                             indexRegistrator: QueryIndexRegistrator,
                             parallelExecution: Boolean,
+                            fusionOverPipelineEnabled: Boolean,
                             codeGenerationMode: CodeGeneration.CodeGenerationMode,
                             headPlanId: Id,
-                            inputSlotConfiguration: SlotConfiguration) extends TemplateOperators(readOnly, parallelExecution) with OperatorFuser {
+                            inputSlotConfiguration: SlotConfiguration) extends TemplateOperators(readOnly, parallelExecution, fusionOverPipelineEnabled) with OperatorFuser {
 
   private val slots = physicalPlan.slotConfigurations(headPlanId)
   generateSlotAccessorFunctions(slots)
