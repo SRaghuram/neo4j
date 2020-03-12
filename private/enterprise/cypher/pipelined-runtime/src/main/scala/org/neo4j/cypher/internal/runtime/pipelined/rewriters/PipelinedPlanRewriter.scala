@@ -27,11 +27,14 @@ case class PipelinedPlanRewriter(rewriterSequencer: String => RewriterStepSequen
               providedOrders: ProvidedOrders,
               leveragedOrders: LeveragedOrders,
               idGen: IdGen): AnyRef => AnyRef = {
-    fixedPoint(rewriterSequencer("PipelinedPlanRewriter")(
-      combineCartesianProductOfMultipleIndexSeeks(cardinalities, leveragedOrders),
+    org.neo4j.cypher.internal.util.inSequence(
+      fixedPoint(
+        combineCartesianProductOfMultipleIndexSeeks(cardinalities, leveragedOrders)
+      ),
       semiApplyToLimitApply(cardinalities, providedOrders, idGen),
-      antiSemiApplyToAntiLimitApply(cardinalities, providedOrders, idGen)
-      ).rewriter)
+      antiSemiApplyToAntiLimitApply(cardinalities, providedOrders, idGen),
+      rollupApplyToAggregationApply(cardinalities, providedOrders, idGen)
+    )
   }
 
   def apply(query: LogicalQuery): LogicalPlan = {
