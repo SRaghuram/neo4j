@@ -940,7 +940,6 @@ class FuseOperators(operatorFactory: OperatorFactory,
             val newTemplate = new SerialTopLevelDistinctOperatorTaskTemplate(acc.template,
                                                                              plan.id,
                                                                              argumentStateMapId,
-                                                                             innermostTemplate,
                                                                              groupMapping)(expressionCompiler)
             acc.copy(
               template = newTemplate,

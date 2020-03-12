@@ -1641,7 +1641,7 @@ object LdbcQueries {
   val LDBC_QUERIES = Seq(
     Query1,
     Query2,
-    //Query3,
+    Query3,
     Query4,
     Query5,
     Query6,

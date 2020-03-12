@@ -129,7 +129,6 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
 class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate,
                                                  override val id: Id,
                                                  argumentStateMapId: ArgumentStateMapId,
-                                                 innermost: DelegateOperatorTaskTemplate,
                                                  groupings: Seq[(Slot, Expression)])
                                                 (protected val codeGen: OperatorExpressionCompiler)
   extends OperatorTaskTemplate {
