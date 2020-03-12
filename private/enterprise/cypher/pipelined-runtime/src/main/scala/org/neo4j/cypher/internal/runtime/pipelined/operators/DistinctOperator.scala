@@ -15,6 +15,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
 import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
+import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.or
@@ -163,7 +164,7 @@ class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate
       condition(or(innerCanContinue,
                    invoke(loadField(distinctStateField),
                           method[SerialTopLevelDistinctState, Boolean, AnyValue, QueryMemoryTracker]("distinct"),
-                          nullCheckIfRequired(groupingExpression.computeKey), loadField(MEMORY_TRACKER)))) {
+                          load(keyVar), loadField(MEMORY_TRACKER)))) {
         block(
           profileRow(id),
           nullCheckIfRequired(groupingExpression.projectKey),
