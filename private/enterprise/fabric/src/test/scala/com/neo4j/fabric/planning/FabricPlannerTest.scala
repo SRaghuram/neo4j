@@ -617,6 +617,440 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
       )
   }
 
+  "Offending USE:" - {
+
+    def defaultGraphQueries = Table(
+      "query",
+
+      s"""MATCH (n) RETURN n
+         |""".stripMargin,
+
+      s"""USE $defaultGraphName
+         |MATCH (n) RETURN n
+         |""".stripMargin,
+
+      s"""MATCH (n) RETURN n
+         |  UNION
+         |MATCH (n) RETURN n
+         |""".stripMargin,
+
+      s"""USE $defaultGraphName
+         |MATCH (n) RETURN n
+         |  UNION
+         |MATCH (n) RETURN n
+         |""".stripMargin,
+
+      s"""MATCH (n) RETURN n
+         |  UNION
+         |USE $defaultGraphName
+         |MATCH (n) RETURN n
+         |""".stripMargin,
+
+      s"""USE $defaultGraphName
+         |MATCH (n) RETURN n
+         |  UNION
+         |USE $defaultGraphName
+         |MATCH (n) RETURN n
+         |""".stripMargin,
+
+      s"""MATCH (n)
+         |CALL {
+         |  RETURN 1 AS a
+         |}
+         |RETURN n, a
+         |""".stripMargin,
+
+      s"""USE $defaultGraphName
+         |MATCH (n)
+         |CALL {
+         |  RETURN 1 AS a
+         |}
+         |RETURN n, a
+         |""".stripMargin,
+
+      s"""MATCH (n)
+         |CALL {
+         |  USE $defaultGraphName
+         |  RETURN 1 AS a
+         |}
+         |RETURN n, a
+         |""".stripMargin,
+
+      s"""USE $defaultGraphName
+         |MATCH (n)
+         |CALL {
+         |  USE $defaultGraphName
+         |  RETURN 1 AS a
+         |}
+         |RETURN n, a
+         |""".stripMargin,
+    )
+
+    def singleGraphQueries(graphName: String) = Table(
+      "query",
+
+      s"""USE $graphName
+         |MATCH (n) RETURN n
+         |""".stripMargin,
+
+      s"""USE $graphName
+         |MATCH (n)
+         |CALL {
+         |  RETURN 1 AS a
+         |}
+         |RETURN n, a
+         |""".stripMargin,
+
+      s"""USE $graphName
+         |MATCH (n)
+         |CALL {
+         |  CALL {
+         |    RETURN 1 AS a
+         |  }
+         |  RETURN a AS b
+         |}
+         |RETURN n, b
+         |""".stripMargin,
+    )
+
+    def singlePlusDefaultGraphQueries(graphName: String) = Table(
+      "query",
+
+      s"""USE $graphName
+         |MATCH (n) RETURN n
+         |  UNION
+         |MATCH (n) RETURN n
+         |""".stripMargin,
+    )
+
+    def defaultPlusSingleGraphQueries(graphName: String) = Table(
+      "query",
+
+      s"""MATCH (n)
+         |CALL {
+         |  USE $graphName
+         |  RETURN 1 AS a
+         |}
+         |RETURN n, a
+         |""".stripMargin,
+    )
+
+    def doubleGraphQueries(graphName1: String, graphName2: String) = Table(
+      "query",
+
+      s"""USE $graphName1
+         |MATCH (n) RETURN n
+         |  UNION
+         |USE $graphName2
+         |MATCH (n) RETURN n
+         |""".stripMargin,
+
+      s"""USE $graphName1
+         |MATCH (n)
+         |CALL {
+         |  USE $graphName2
+         |  RETURN 1 AS a
+         |}
+         |RETURN n, a
+         |""".stripMargin,
+
+      s"""USE $graphName1
+         |MATCH (n)
+         |CALL {
+         |  USE $graphName2
+         |  WITH 1 AS x
+         |  CALL {
+         |    RETURN 1 AS a
+         |  }
+         |  RETURN a AS b
+         |}
+         |RETURN n, b
+         |""".stripMargin,
+    )
+
+    def tripleGraphQueries(graphName1: String, graphName2: String, graphName3: String) = Table(
+      "query",
+
+      s"""USE $graphName1
+         |MATCH (n) RETURN n
+         |  UNION
+         |USE $graphName2
+         |MATCH (n) RETURN n
+         |  UNION
+         |USE $graphName3
+         |MATCH (n) RETURN n
+         |""".stripMargin,
+
+      s"""USE $graphName1
+         |MATCH (n)
+         |CALL {
+         |  USE $graphName2
+         |  WITH 1 AS a
+         |  CALL {
+         |    USE $graphName3
+         |    RETURN 1 AS b
+         |  }
+         |  RETURN a
+         |}
+         |RETURN n, a
+         |""".stripMargin,
+
+      s"""USE $graphName1
+         |MATCH (n)
+         |CALL {
+         |  USE $graphName2
+         |  WITH 1 AS a
+         |  CALL {
+         |    USE $graphName3
+         |    RETURN 1 AS b
+         |  }
+         |  RETURN a
+         |}
+         |RETURN n, a
+         |""".stripMargin,
+    )
+
+    def offendingGraphSelections(query: String, singleGraph: Boolean, params: MapValue = params) = {
+      val inst = instance(query, params)
+      inst.offendingGraphSelections(inst.plan.query, singleGraph)
+    }
+
+    "Single graph mode" - {
+
+      val singleGraph = true
+
+      "allows single graph queries" in {
+
+        forAll(defaultGraphQueries) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(singleGraphQueries(graphName = "foo")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(singleGraphQueries(graphName = "foo.bar")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(singlePlusDefaultGraphQueries(graphName = defaultGraphName)) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(defaultPlusSingleGraphQueries(graphName = defaultGraphName)) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(doubleGraphQueries(graphName1 = "foo", graphName2 = "foo")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(doubleGraphQueries(graphName1 = "foo.bar", graphName2 = "foo.bar")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(doubleGraphQueries(graphName1 = "foo", graphName2 = "foo")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(tripleGraphQueries(graphName1 = "foo.bar", graphName2 = "foo.bar", graphName3 = "foo.bar")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+      }
+
+      "foo" in {
+        offendingGraphSelections(
+          """USE f(1)
+            |MATCH (n)
+            |CALL {
+            |  CALL {
+            |    RETURN 1 AS a
+            |  }
+            |  RETURN a AS b
+            |}
+            |RETURN n, b
+            |""".stripMargin, true)
+          .shouldEqual(Seq(use(function("f", literal(1)))))
+      }
+
+      "disallows dynamic USE" in {
+
+        forAll(singleGraphQueries(graphName = "f(1)")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq(use(function("f", literal(1)))))
+        }
+
+        forAll(singleGraphQueries(graphName = "$p")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq(use(parameter("p", any))))
+        }
+
+        forAll(singlePlusDefaultGraphQueries(graphName = "f(1)")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq(use(function("f", literal(1)))))
+        }
+
+        forAll(defaultPlusSingleGraphQueries(graphName = "f(1)")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq(use(function("f", literal(1)))))
+        }
+
+        forAll(doubleGraphQueries(graphName1 = "foo", graphName2 = "f(1)")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq(use(function("f", literal(1)))))
+        }
+
+        forAll(tripleGraphQueries(graphName1 = "foo.bar", graphName2 = "f(1)", graphName3 = "foo.bar")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq(use(function("f", literal(1)))))
+        }
+      }
+
+      "disallows multi-graph" in {
+
+        forAll(singlePlusDefaultGraphQueries(graphName = "foo")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq(defaultGraph))
+        }
+
+        forAll(defaultPlusSingleGraphQueries(graphName = "foo")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq(use(varFor("foo"))))
+        }
+
+        forAll(doubleGraphQueries(graphName1 = "foo", graphName2 = "bar")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq(use(varFor("bar"))))
+        }
+
+        forAll(tripleGraphQueries(graphName1 = "foo.bar", graphName2 = "foo", graphName3 = "foo.bar")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq(use(varFor("foo"))))
+        }
+      }
+    }
+
+
+    "Multi graph mode" - {
+
+      val singleGraph = false
+
+      "allows single graph queries" in {
+
+        forAll(defaultGraphQueries) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(singleGraphQueries(graphName = "foo")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(singleGraphQueries(graphName = "foo.bar")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(singlePlusDefaultGraphQueries(graphName = defaultGraphName)) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(defaultPlusSingleGraphQueries(graphName = defaultGraphName)) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(doubleGraphQueries(graphName1 = "foo", graphName2 = "foo")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(doubleGraphQueries(graphName1 = "foo.bar", graphName2 = "foo.bar")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(doubleGraphQueries(graphName1 = "foo", graphName2 = "foo")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(tripleGraphQueries(graphName1 = "foo.bar", graphName2 = "foo.bar", graphName3 = "foo.bar")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+      }
+
+      "allows dynamic USE" in {
+
+        forAll(singleGraphQueries(graphName = "f(1)")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(singleGraphQueries(graphName = "$p")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(singlePlusDefaultGraphQueries(graphName = "f(1)")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(defaultPlusSingleGraphQueries(graphName = "f(1)")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(doubleGraphQueries(graphName1 = "foo", graphName2 = "f(1)")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(tripleGraphQueries(graphName1 = "foo.bar", graphName2 = "f(1)", graphName3 = "foo.bar")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+      }
+
+      "allows multi-graph" in {
+
+        forAll(singlePlusDefaultGraphQueries(graphName = "foo")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(defaultPlusSingleGraphQueries(graphName = "foo")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(doubleGraphQueries(graphName1 = "foo", graphName2 = "bar")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+
+        forAll(tripleGraphQueries(graphName1 = "foo.bar", graphName2 = "foo", graphName3 = "foo.bar")) { query =>
+          offendingGraphSelections(query, singleGraph)
+            .shouldEqual(Seq())
+        }
+      }
+    }
+
+  }
+
   object ClauseOps {
     def pretty = Prettifier(ExpressionStringifier())
   }

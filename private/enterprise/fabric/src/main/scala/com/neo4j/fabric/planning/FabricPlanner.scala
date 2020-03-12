@@ -147,6 +147,28 @@ case class FabricPlanner(
       )
     }
 
+    def offendingGraphSelections(fragment: Fragment, singleGraphMode: Boolean): Seq[GraphSelection] = {
+      if (singleGraphMode) {
+        val all = allGraphSelections(fragment).distinct
+        val (static, nonStatic) = all.partition(UseEvaluation.isStatic)
+        if (nonStatic.nonEmpty) {
+          nonStatic
+        } else {
+          static.filterNot(_ == all.head)
+        }
+      } else {
+        Seq()
+      }
+    }
+
+    private def allGraphSelections(fragment: Fragment): Seq[GraphSelection] =
+      fragment match {
+        case Fragment.Init(use, _, _)              => Seq(use.graphSelection)
+        case f: Fragment.Leaf                      => allGraphSelections(f.input)
+        case f: Fragment.Apply                     => allGraphSelections(f.input) ++ allGraphSelections(f.inner)
+        case f: Fragment.Union                     => allGraphSelections(f.lhs) ++ allGraphSelections(f.rhs)
+      }
+
     private def stitch(leaf: Fragment.Leaf): QueryPart =
       stitch(leaf, nested = false)
 
