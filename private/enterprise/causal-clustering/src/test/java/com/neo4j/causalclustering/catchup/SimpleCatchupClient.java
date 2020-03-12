@@ -26,6 +26,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StoreId;
+import org.neo4j.storageengine.api.StoreIdProvider;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 /**
@@ -57,7 +58,7 @@ class SimpleCatchupClient implements AutoCloseable
         this.namedDatabaseId = namedDatabaseId;
 
         from = getCatchupServerAddress();
-        correctStoreId = graphDb.storeId();
+        correctStoreId = graphDb.getDependencyResolver().resolveDependency( StoreIdProvider.class ).getStoreId();
         jobScheduler = new ThreadPoolJobScheduler();
         clientPageCache = createPageCache();
         streamToDiskProvider = new StreamToDiskProvider( temporaryDirectory, fsa, new Monitors() );
