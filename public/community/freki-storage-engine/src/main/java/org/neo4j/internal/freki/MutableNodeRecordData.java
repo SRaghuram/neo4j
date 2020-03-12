@@ -37,6 +37,7 @@ import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.util.Preconditions;
 import org.neo4j.values.storable.Value;
 
+import static java.lang.Long.max;
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
 import static org.neo4j.internal.freki.Record.recordXFactor;
 import static org.neo4j.internal.freki.StreamVByte.intArrayTarget;
@@ -59,7 +60,11 @@ class MutableNodeRecordData
     static final int ARRAY_ENTRIES_PER_RELATIONSHIP = 2;
     static final int FIRST_RELATIONSHIP_ID = 1;
 
-    long id;
+    static final int FLAG_LABELS = 0x1;
+    static final int FLAG_PROPERTIES = 0x2;
+    static final int FLAG_RELATIONSHIPS = 0x4;
+
+    long nodeId;
     final MutableIntSet labels = IntSets.mutable.empty();
     final MutableIntObjectMap<Value> properties = IntObjectMaps.mutable.empty();
     final MutableIntObjectMap<Relationships> relationships = IntObjectMaps.mutable.empty();
@@ -67,9 +72,9 @@ class MutableNodeRecordData
     private long forwardPointer = NULL;
     private long backPointer = NULL;
 
-    MutableNodeRecordData( long id )
+    MutableNodeRecordData( long nodeId )
     {
-        this.id = id;
+        this.nodeId = nodeId;
     }
 
     @Override
@@ -84,7 +89,7 @@ class MutableNodeRecordData
             return false;
         }
         MutableNodeRecordData that = (MutableNodeRecordData) o;
-        return id == that.id && nextInternalRelationshipId == that.nextInternalRelationshipId &&
+        return nodeId == that.nodeId && nextInternalRelationshipId == that.nextInternalRelationshipId &&
                 forwardPointer == that.forwardPointer && backPointer == that.backPointer &&
                 labels.equals( that.labels ) && Objects.equals( properties, that.properties ) && Objects.equals( relationships, that.relationships );
     }
@@ -92,7 +97,7 @@ class MutableNodeRecordData
     @Override
     public int hashCode()
     {
-        int result = Objects.hash( id, properties, relationships, nextInternalRelationshipId, forwardPointer, backPointer );
+        int result = Objects.hash( nodeId, properties, relationships, nextInternalRelationshipId, forwardPointer, backPointer );
         result = 31 * result + labels.hashCode();
         return result;
     }
@@ -100,27 +105,42 @@ class MutableNodeRecordData
     @Override
     public String toString()
     {
-        return String.format( "ID:%s, labels:%s, properties:%s, relationships:%s, fw:%d, bw:%d, nextRelId:%d",
-                id, labels, properties, relationships, forwardPointer, backPointer, nextInternalRelationshipId );
+        return String.format( "ID:%s, labels:%s, properties:%s, relationships:%s, fw:%s, bw:%d, nextRelId:%d", nodeId, labels, properties, relationships,
+                forwardPointerToString( forwardPointer ), backPointer, nextInternalRelationshipId );
     }
 
-    /**
-     * Moves properties and relationships (keeps labels in the small record for now)
-     */
-    void movePropertiesAndRelationshipsTo( MutableNodeRecordData otherData )
+    void copyDataFrom( int flags, MutableNodeRecordData from )
     {
-        otherData.properties.putAll( properties );
-        otherData.relationships.putAll( relationships );
-        otherData.nextInternalRelationshipId = nextInternalRelationshipId;
-        clearPropertiesAndRelationships();
+        if ( (flags & FLAG_LABELS) != 0 )
+        {
+            labels.addAll( labels );
+        }
+        if ( (flags & FLAG_PROPERTIES) != 0 )
+        {
+            properties.putAll( from.properties );
+        }
+        if ( (flags & FLAG_RELATIONSHIPS) != 0 )
+        {
+            relationships.putAll( from.relationships );
+            nextInternalRelationshipId = max( from.nextInternalRelationshipId, nextInternalRelationshipId );
+        }
+        // pointers and nodeId are left untouched
     }
 
-    void clearPropertiesAndRelationships()
+    void clearData( int flags )
     {
-        // Doesn't clear entity/identity things like id and forwardPointer
-        properties.clear();
-        relationships.clear();
-        nextInternalRelationshipId = 1;
+        if ( (flags & FLAG_LABELS) != 0 )
+        {
+            labels.clear();
+        }
+        if ( (flags & FLAG_PROPERTIES) != 0 )
+        {
+            properties.clear();
+        }
+        if ( (flags & FLAG_RELATIONSHIPS) != 0 )
+        {
+            relationships.clear();
+        }
     }
 
     long nextInternalRelationshipId()
@@ -130,14 +150,14 @@ class MutableNodeRecordData
 
     void registerInternalRelationshipId( long internalId )
     {
-        nextInternalRelationshipId = Long.max( this.nextInternalRelationshipId, internalId + 1 );
+        nextInternalRelationshipId = max( this.nextInternalRelationshipId, internalId + 1 );
     }
 
     void deleteRelationship( long internalId, int type, long otherNode, boolean outgoing )
     {
         Relationships relationships = this.relationships.get( type );
-        checkState( relationships != null, "No such relationship (%d)-[:%d]->(%d)", id, type, otherNode );
-        if ( relationships.remove( internalId, id, otherNode, outgoing ) )
+        checkState( relationships != null, "No such relationship (%d)-[:%d]->(%d)", nodeId, type, otherNode );
+        if ( relationships.remove( internalId, nodeId, otherNode, outgoing ) )
         {
             this.relationships.remove( type );
         }
@@ -319,7 +339,7 @@ class MutableNodeRecordData
         {
             registerInternalRelationshipId( internalId );
         }
-        return relationships.getIfAbsentPut( type, () -> new MutableNodeRecordData.Relationships( type ) ).add( internalId, id, otherNode, type, outgoing );
+        return relationships.getIfAbsentPut( type, () -> new MutableNodeRecordData.Relationships( type ) ).add( internalId, nodeId, otherNode, type, outgoing );
     }
 
     // [ssff,ffff][ffff,ffff][ffff,ffff][ffff,ffff] [ffff,ffff][ffff,ffff][ffff,ffff][ffff,ffff]
@@ -416,10 +436,10 @@ class MutableNodeRecordData
 
         if ( forwardPointer != NULL )
         {
-            buffer.putLong( forwardPointer );
-            if ( isDenseFromForwardPointer( forwardPointer ) )
+            writeLongs( new long[]{forwardPointer}, buffer );
+            if ( forwardPointerPointsToDense( forwardPointer ) )
             {
-                buffer.putLong( nextInternalRelationshipId );
+                writeLongs( new long[]{nextInternalRelationshipId}, buffer );
             }
         }
         else if ( backPointer != NULL )
@@ -478,6 +498,7 @@ class MutableNodeRecordData
 
     void deserialize( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore /*temporary, should not be necessary in this scenario*/ )
     {
+        assert buffer.position() == 0 : buffer.position();
         int offsetHeader = buffer.getInt(); // [_fee][eeee][eeee][rrrr][rrrr][rrpp][pppp][pppp]
         int propertiesOffset = propertyOffset( offsetHeader );
         int relationshipOffset = relationshipOffset( offsetHeader );
@@ -490,7 +511,7 @@ class MutableNodeRecordData
         properties.clear();
         if ( propertiesOffset != 0 )
         {
-            checkState( buffer.position() == propertiesOffset, "Mismatching properties offset and expected offset" );
+            checkState( buffer.position() == propertiesOffset, "Mismatching properties offset:%d and expected offset:%d", buffer.position(), propertiesOffset );
             readProperties( properties, buffer, bigPropertyValueStore );
         }
 
@@ -514,7 +535,7 @@ class MutableNodeRecordData
                     {
                         nextInternalRelationshipId = internalId + 1;
                     }
-                    Relationship relationship = relationships.add( internalId, id, otherNodeOf( otherNodeRaw ), relationshipType, outgoing );
+                    Relationship relationship = relationships.add( internalId, nodeId, otherNodeOf( otherNodeRaw ), relationshipType, outgoing );
                     if ( relationshipHasProperties( otherNodeRaw ) )
                     {
                         buffer.get(); //blocksize
@@ -536,10 +557,11 @@ class MutableNodeRecordData
 
         if ( containsForwardPointer )
         {
-            forwardPointer = buffer.getLong();
-            if ( isDenseFromForwardPointer( forwardPointer ) )
+            // TODO perhaps these can be combined into one vbyte and save una bytos
+            forwardPointer = readLongs( buffer )[0];
+            if ( forwardPointerPointsToDense( forwardPointer ) )
             {
-                nextInternalRelationshipId = buffer.getLong();
+                nextInternalRelationshipId = readLongs( buffer )[0];
             }
         }
         if ( containsBackPointer )
@@ -609,28 +631,40 @@ class MutableNodeRecordData
         return relationshipId >>> 40;
     }
 
-    // Forward pointer: [dssi,iiii][iiii,iiii][iiii,iiii][iiii,iiii]  [iiii,iiii][iiii,iiii][iiii,iiii][iiii,iiii]
-
-    static boolean isDenseFromForwardPointer( long forwardPointer )
+    // Forward pointer: [    ,    ][iiii,iiii][iiii,iiii][iiii,iiii]  [iiii,iiii][iiii,iiii][iiii,iiii][iiii,issd]
+    // i: id of the record to point to
+    // s: size exponential of the record id
+    // d: 1 if this node has data in dense store, otherwise 0
+    // examples:
+    // NULL (-1): no forward pointer at all
+    // i=5, s=1, d=0: fw pointer to x2 w/ id 5
+    // i=3, s=2, d=1: fw pointer to x4 w/ id 3 and more data is in dense store too
+    // i=0, s=0, d=1: more data is in dense store
+    static boolean forwardPointerPointsToDense( long forwardPointer )
     {
-        return forwardPointer != NULL && (forwardPointer & 0x80000000_00000000L) != 0;
+        return forwardPointer != NULL && (forwardPointer & 0x1) != 0;
+    }
+
+    static boolean forwardPointerPointsToXRecord( long forwardPointer )
+    {
+        return forwardPointer != NULL && (forwardPointer & 0x6L) != 0;
     }
 
     static int sizeExponentialFromForwardPointer( long forwardPointer )
     {
         Preconditions.checkArgument( forwardPointer != NULL, "NULL FW pointer" );
-        return (int) ((forwardPointer >>> 61) & 0x3);
+        return (int) ((forwardPointer >>> 1) & 0x3);
     }
 
     static long idFromForwardPointer( long forwardPointer )
     {
         Preconditions.checkArgument( forwardPointer != NULL, "NULL FW pointer" );
-        return forwardPointer & 0x1FFFFFFF_FFFFFFFFL;
+        return forwardPointer >>> 3;
     }
 
-    static long forwardPointer( int sizeExp, boolean isDense, long id )
+    static long buildForwardPointer( int sizeExp, long id, boolean hasDense )
     {
-        return id | (((long) sizeExp) << 61) | (isDense ? 0x80000000_00000000L : 0);
+        return (id << 3) | (sizeExp << 1) | (hasDense ? 0x1 : 0);
     }
 
     static String forwardPointerToString( long forwardPointer )
@@ -639,10 +673,16 @@ class MutableNodeRecordData
         {
             return "NULL";
         }
-        if ( isDenseFromForwardPointer( forwardPointer ) )
+        StringBuilder builder = new StringBuilder();
+        if ( forwardPointerPointsToXRecord( forwardPointer ) )
         {
-            return "->DENSE";
+            builder.append( String.format( "->[x%d]%d",
+                    recordXFactor( sizeExponentialFromForwardPointer( forwardPointer ) ), idFromForwardPointer( forwardPointer ) ) );
         }
-        return String.format( "->[x%d]%d", recordXFactor( sizeExponentialFromForwardPointer( forwardPointer ) ), nodeIdFromRelationshipId( forwardPointer ) );
+        if ( forwardPointerPointsToDense( forwardPointer ) )
+        {
+            builder.append( "->DENSE" );
+        }
+        return builder.toString();
     }
 }

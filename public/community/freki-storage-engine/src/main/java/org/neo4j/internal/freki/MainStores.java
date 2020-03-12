@@ -128,7 +128,7 @@ class MainStores extends Life
         idGeneratorsToRegisterOnTheWorkSync.forEach( idGenerator -> visitor.accept( idGenerator.getKey().get( idGenerator.getValue() ) ) );
     }
 
-    public SimpleStore mainStore( int sizeExp )
+    SimpleStore mainStore( int sizeExp )
     {
         return sizeExp >= mainStores.length ? null : mainStores[sizeExp];
     }
@@ -141,6 +141,32 @@ class MainStores extends Life
             {
                 return mainStores[i];
             }
+        }
+        return null;
+    }
+
+    SimpleStore largestMainStore()
+    {
+        for ( int i = mainStores.length - 1; i >= 0; i-- )
+        {
+            if ( mainStores[i] != null )
+            {
+                return mainStores[i];
+            }
+        }
+        throw new IllegalStateException( "No stores" );
+    }
+
+    SimpleStore storeSuitableForRecordSize( int recordSize, int atLeastSizeExp )
+    {
+        SimpleStore candidate = mainStore;
+        while ( candidate != null )
+        {
+            if ( candidate.recordSizeExponential() >= atLeastSizeExp && recordSize <= candidate.recordSize() )
+            {
+                return candidate;
+            }
+            candidate = nextLargerMainStore( candidate.recordSizeExponential() );
         }
         return null;
     }

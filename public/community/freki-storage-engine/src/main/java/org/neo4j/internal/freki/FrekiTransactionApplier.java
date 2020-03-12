@@ -55,6 +55,7 @@ import org.neo4j.values.storable.Value;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_LONG_ARRAY;
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
+import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPointsToXRecord;
 import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromForwardPointer;
 import static org.neo4j.internal.freki.PropertyValueFormat.read;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
@@ -173,21 +174,21 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
 
     public EntityUpdates extractIndexUpdates()
     {
-        boolean propertiesHandledByDenseNode = currentDenseNodeCommand != null;
+        boolean propertiesHandledByDenseNode = false;
         long[] labelsBefore;
         long[] labelsAfter;
-        FrekiCommand.SparseNode smallNode = currentSparseNodeCommands[0];
+        FrekiCommand.SparseNode x1 = currentSparseNodeCommands[0];
         boolean nodeIsCreatedRightNow = false;
-        if ( smallNode != null )
+        if ( x1 != null )
         {
-            labelsBefore = parseLabels( smallNode.before );
-            labelsAfter = parseLabels( smallNode.after );
+            labelsBefore = parseLabels( x1.before );
+            labelsAfter = parseLabels( x1.after );
             if ( !propertiesHandledByDenseNode )
             {
                 initializePropertyCursorOnRecord( propertyCursorBefore, findRelevantUsedRecord( node -> node.before ) );
                 initializePropertyCursorOnRecord( propertyCursorAfter, findRelevantUsedRecord( node -> node.after ) );
             }
-            nodeIsCreatedRightNow = !smallNode.before.hasFlag( FLAG_IN_USE );
+            nodeIsCreatedRightNow = !x1.before.hasFlag( FLAG_IN_USE );
         }
         else
         {
@@ -336,13 +337,9 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         if ( smallRecord.hasFlag( FLAG_IN_USE ) )
         {
             nodeCursor.initializeFromRecord( smallRecord );
-            if ( nodeCursor.headerState.isDense )
-            {
-                return null;
-            }
-            return !nodeCursor.headerState.containsForwardPointer
+            return !forwardPointerPointsToXRecord( nodeCursor.data.forwardPointer )
                    ? smallRecord
-                   : recordFunction.apply( currentSparseNodeCommands[sizeExponentialFromForwardPointer( nodeCursor.headerState.forwardPointer )] );
+                   : recordFunction.apply( currentSparseNodeCommands[sizeExponentialFromForwardPointer( nodeCursor.data.forwardPointer )] );
         }
         return null;
     }

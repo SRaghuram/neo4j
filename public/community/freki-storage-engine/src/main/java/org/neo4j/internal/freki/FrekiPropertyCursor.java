@@ -19,6 +19,7 @@
  */
 package org.neo4j.internal.freki;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;
 
@@ -33,8 +34,10 @@ import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
 
 import static java.util.Collections.emptyIterator;
+import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPointsToDense;
 import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipHasProperties;
 import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValueSizeIncludingTypeHeader;
+import static org.neo4j.internal.freki.PropertyValueFormat.readEagerly;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
 import static org.neo4j.internal.freki.StreamVByte.readLongs;
 
@@ -47,6 +50,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     private int[] propertyKeyArray;
     private int propertyKeyIndex;
     private Value readValue;
+    private ByteBuffer buffer;
 
     // ... or they are in the dense form, where these fields come into play
     private Iterator<StorageProperty> denseProperties;
@@ -69,14 +73,16 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     public void initNodeProperties( StorageNodeCursor nodeCursor )
     {
         cursorAccessTracer.registerNodeToPropertyDirect();
-        if ( ((FrekiMainStoreCursor) nodeCursor).initializeOtherCursorFromStateOfThisCursor( this ) && readNodePropertyKeys() )
+        if ( ((FrekiMainStoreCursor) nodeCursor).initializeOtherCursorFromStateOfThisCursor( this ) )
         {
-            initializedFromEntity = true;
+            buffer = data.propertyBuffer();
+            if ( readPropertyKeys( buffer ) )
+            {
+                initializedFromEntity = true;
+                return;
+            }
         }
-        else
-        {
-            reset();
-        }
+        reset();
     }
 
     @Override
@@ -96,30 +102,32 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
             FrekiRelationshipCursor relCursor = (FrekiRelationshipCursor) relationshipCursor;
             if ( relCursor.initializeOtherCursorFromStateOfThisCursor( this ) )
             {
-                if ( headerState.isDense )
+                if ( forwardPointerPointsToDense( data.forwardPointer ) )
                 {
                     denseProperties = relCursor.denseProperties();
-                    return;
                 }
                 else
                 {
+                    buffer = data.relationshipBuffer();
                     int offset = relCursor.currentRelationshipPropertiesOffset();
                     if ( offset != NULL_OFFSET )
                     {
-                        readPropertyKeys( offset );
+                        readPropertyKeys( buffer.position( offset ) );
                         initializedFromEntity = true;
-                        return;
                     }
                 }
             }
         }
-        reset();
+        else
+        {
+            reset();
+        }
     }
 
     @Override
     public int propertyKey()
     {
-        return headerState.isDense
+        return denseProperties != null
                ? currentDenseProperty.propertyKeyId()
                : propertyKeyArray[propertyKeyIndex];
     }
@@ -133,13 +141,13 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     @Override
     public Value propertyValue()
     {
-        if ( headerState.isDense )
+        if ( currentDenseProperty != null )
         {
             return currentDenseProperty.value();
         }
         if ( readValue == null )
         {
-            readValue = PropertyValueFormat.readEagerly( data, stores.bigPropertyValueStore );
+            readValue = readEagerly( buffer, stores.bigPropertyValueStore );
         }
         return readValue;
     }
@@ -147,7 +155,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     @Override
     public boolean next()
     {
-        if ( loadedNodeId != NULL && headerState.isDense )
+        if ( denseProperties != null )
         {
             return nextDense();
         }
@@ -161,39 +169,36 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
                 FrekiReference reference = referenceToLoad;
                 referenceToLoad = null;
 
-                boolean inUse = loadMainRecord( reference.sourceNodeId );
+                boolean inUse = load( reference.sourceNodeId );
                 if ( !inUse )
                 {
                     return false;
                 }
 
-                if ( headerState.isDense )
+                if ( reference.relationship )
                 {
-                    // TODO would be nice to not have to load this x1 record if this is a dense reference. Or we could also consider
-                    //      always trying to reference a sparse node in our reference if possible (if it's cheaper to lookup).
-                    DenseStore.RelationshipData relationship =
-                            stores.denseStore.getRelationship( reference.sourceNodeId, reference.type, Direction.OUTGOING, reference.endNodeId,
-                                    reference.internalId, cursorTracer );
-                    denseProperties = relationship != null ? relationship.properties() : emptyIterator();
-                    return nextDense();
-                }
-                else
-                {
-                    int offset;
-                    if ( !reference.relationship )
+                    if ( forwardPointerPointsToDense( data.forwardPointer ) )
                     {
-                        // This is properties for a node
-                        offset = headerState.nodePropertiesOffset;
+                        DenseStore.RelationshipData denseRelationship =
+                                stores.denseStore.getRelationship( reference.sourceNodeId, reference.type, Direction.OUTGOING, reference.endNodeId,
+                                        reference.internalId, cursorTracer );
+                        denseProperties = denseRelationship != null ? denseRelationship.properties() : emptyIterator();
+                        return nextDense();
                     }
-                    else
-                    {
-                        // This is properties for a relationship
-                        offset = findRelationshipPropertiesOffset( reference );
-                    }
-                    if ( !readPropertyKeys( offset ) )
+                    buffer = data.relationshipBuffer();
+                    if ( !placeAtRelationshipPropertiesOffset( buffer, reference ) )
                     {
                         return false;
                     }
+                }
+                else
+                {
+                    // This is properties for a node
+                    buffer = data.propertyBuffer();
+                }
+                if ( !readPropertyKeys( buffer ) )
+                {
+                    return false;
                 }
             }
 
@@ -205,8 +210,8 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
             }
             if ( readValue == null && propertyKeyIndex > 0 )
             {
-                // We didn't read the value, which means we'll have to figure out this position ourselves right here
-                data.position( data.position() + calculatePropertyValueSizeIncludingTypeHeader( data ) );
+                // We didn't read the value, which means we'll have to figure out the position of the next value ourselves right here
+                buffer.position( buffer.position() + calculatePropertyValueSizeIncludingTypeHeader( buffer ) );
             }
             readValue = null;
             return true;
@@ -224,16 +229,16 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
         return false;
     }
 
-    private int findRelationshipPropertiesOffset( FrekiReference reference )
+    private boolean placeAtRelationshipPropertiesOffset( ByteBuffer buffer, FrekiReference reference )
     {
         readRelationshipTypesAndOffsets();
         int searchIndex = Arrays.binarySearch( relationshipTypesInNode, reference.type );
         if ( searchIndex >= 0 )
         {
-            data.position( relationshipTypeOffset( searchIndex ) );
+            buffer.position( relationshipTypeOffset( searchIndex ) );
             int hasPropertiesIndex = -1;
-            long[] relationshipGroupData = readLongs( data );
-            int relationshipGroupPropertiesOffset = data.position();
+            long[] relationshipGroupData = readLongs( buffer );
+            int relationshipGroupPropertiesOffset = buffer.position();
             for ( int d = 0; d < relationshipGroupData.length; d += 2 )
             {
                 boolean hasProperties = relationshipHasProperties( relationshipGroupData[d] );
@@ -244,35 +249,32 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
                 long internalId = relationshipGroupData[d + 1];
                 if ( internalId == reference.internalId )
                 {
-                    return hasProperties ? relationshipPropertiesOffset( relationshipGroupPropertiesOffset, hasPropertiesIndex ) : NULL_OFFSET;
+                    int offset = hasProperties ? relationshipPropertiesOffset( buffer, relationshipGroupPropertiesOffset, hasPropertiesIndex ) : NULL_OFFSET;
+                    if ( offset != NULL_OFFSET )
+                    {
+                        buffer.position( offset );
+                        return true;
+                    }
                 }
             }
         }
-        return NULL_OFFSET;
+        return false;
     }
 
     private boolean readNodePropertyKeys()
     {
-        if ( headerState.isDense )
-        {
-            denseProperties = stores.denseStore.getProperties( loadedNodeId, cursorTracer );
-            return true;
-        }
-        else
-        {
-            return readPropertyKeys( headerState.nodePropertiesOffset );
-        }
+        // For the time being we're not quite using the dense store node property feature
+        return readPropertyKeys( data.propertyBuffer() );
     }
 
-    private boolean readPropertyKeys( int offset )
+    private boolean readPropertyKeys( ByteBuffer buffer )
     {
-        if ( offset == NULL_OFFSET )
+        if ( buffer == null )
         {
             return false;
         }
 
-        data.position( offset );
-        propertyKeyArray = readIntDeltas( new StreamVByte.IntArrayTarget(), data ).array();
+        propertyKeyArray = readIntDeltas( new StreamVByte.IntArrayTarget(), buffer ).array();
         propertyKeyIndex = -1;
         return true;
     }
@@ -286,5 +288,6 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
         initializedFromEntity = false;
         denseProperties = null;
         readValue = null;
+        buffer = null;
     }
 }
