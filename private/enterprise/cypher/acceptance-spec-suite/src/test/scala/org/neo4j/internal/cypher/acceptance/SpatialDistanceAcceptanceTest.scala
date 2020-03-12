@@ -681,7 +681,8 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("Filter").containingArgumentRegex("distance.*".r)
-    plan should includeSomewhere.aPlan("NodeUniqueIndexSeekByRange").containingArgumentRegex((":Place\\(location\\) WHERE distance\\(.+?\\) " +  "< " + ".*").r)
+    plan should includeSomewhere.aPlan("NodeUniqueIndexSeekByRange")
+      .containingArgumentRegex(("p:Place UNIQUE\\(location\\) WHERE distance\\(.+?\\) " +  "< " + ".*").r)
 
     result.toList should equal(List(Map("count(p)" -> 100)))
   }
@@ -848,13 +849,15 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   private def expectResultsAndIndexUsage(query: String, expectedResults: Set[_ <: Any], inclusiveRange: Boolean,
                                          config: TestConfiguration = Configs.CachedProperty): Unit = {
     val result = executeWith(config, query)
+    println(result.executionPlanDescription())
 
     // Then
     val plan = result.executionPlanDescription()
     plan should includeSomewhere
       .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
       .onTopOf(aPlan("Filter").containingArgumentRegex("distance.*".r)
-        .onTopOf(includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgumentRegex((":Place\\(location\\) WHERE distance\\(.+?\\) " + (if (inclusiveRange) "<= " else "< ") + ".*").r)))
+        .onTopOf(includeSomewhere.aPlan("NodeIndexSeekByRange")
+          .containingArgumentRegex(("p:Place\\(location\\) WHERE distance\\(.+?\\) " + (if (inclusiveRange) "<= " else "< ") + ".*").r)))
     result.toList.toSet should equal(expectedResults)
   }
 }

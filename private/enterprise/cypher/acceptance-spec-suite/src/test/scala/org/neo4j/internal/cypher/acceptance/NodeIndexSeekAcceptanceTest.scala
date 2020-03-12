@@ -468,7 +468,8 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgument(":L1(prop3) < m.prop4")))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange")
+        .containingArgument("n:L1(prop3) WHERE prop3 < m.prop4")))
 
     // Then
     result.toList should equal(List(Map("n" -> node1), Map("n" -> node2)))

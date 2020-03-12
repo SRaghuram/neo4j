@@ -127,7 +127,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
 
   test("should be able to plan index use for inequality") {
     val aNodes = (0 to 125).map(i => createLabeledNode(Map("prop" -> i), "Foo"))
-    val bNode = createLabeledNode(Map("prop2" -> 122), "Bar")
+    createLabeledNode(Map("prop2" -> 122), "Bar")
     graph.createIndex("Foo", "prop")
     val query =
       """ MATCH (a:Foo), (b:Bar) WHERE a.prop > b.prop2
@@ -135,14 +135,15 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
       """.stripMargin
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgument(":Foo(prop) > b.prop2")))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere
+        .aPlan("NodeIndexSeekByRange").containingArgument("a:Foo(prop) WHERE prop > b.prop2")))
 
     result.columnAs[Node]("a").toList should equal(List(aNodes(123), aNodes(124), aNodes(125)))
   }
 
   test("should be able to plan index use for starts with") {
     val aNodes = (0 to 125).map(i => createLabeledNode(Map("prop" -> s"${i}string"), "Foo"))
-    val bNode = createLabeledNode(Map("prop2" -> "12"), "Bar")
+    createLabeledNode(Map("prop2" -> "12"), "Bar")
     graph.createIndex("Foo", "prop")
     val query =
       """ MATCH (a:Foo), (b:Bar) WHERE a.prop STARTS WITH b.prop2
@@ -150,7 +151,8 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
       """.stripMargin
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgument(":Foo(prop STARTS WITH b.prop2)")))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere
+        .aPlan("NodeIndexSeekByRange").containingArgument("a:Foo(prop) WHERE prop STARTS WITH b.prop2")))
 
     result.columnAs[Node]("a").toSet should equal(Set(aNodes(12), aNodes(120), aNodes(121), aNodes(122), aNodes(123), aNodes(124), aNodes(125)))
   }

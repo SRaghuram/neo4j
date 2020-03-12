@@ -54,7 +54,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
     val result = executeWith(Configs.All, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek")
-        .containingVariables("f").containingArgument(":Foo(id)"))))
+        .containingVariables("f").containingArgumentRegex("f:Foo\\(id\\).*".r))))
 
     result.columnAs[Node]("f").toList should equal(List(node))
   }
@@ -971,7 +971,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek(equality,equality)")
-          .containingVariables("f").containingArgument(":Foo(bar,baz)"))
+          .containingVariables("f").containingArgumentRegex("f:Foo\\(bar, baz\\).*".r))
       }))
 
     result.columnAs[Node]("f").toList should equal(List(node))
@@ -995,7 +995,9 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     val result = executeWith(Configs.All, query)
 
     // Then
-    result.executionPlanDescription() should includeSomewhere.aPlan("NodeIndexSeek").containingVariables("o2").containingArgument(":Object(name)")
+    result.executionPlanDescription() should includeSomewhere.aPlan("NodeIndexSeek")
+      .containingVariables("o2")
+      .containingArgumentRegex("o2:Object\\(name\\).*".r)
     result.toComparableResult should be(Seq(Map("o1.name" -> "a")))
   }
 

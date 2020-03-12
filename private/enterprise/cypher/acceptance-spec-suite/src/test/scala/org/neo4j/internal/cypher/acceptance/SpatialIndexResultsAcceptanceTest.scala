@@ -49,8 +49,10 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere
           .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
-          .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Place\\(location\\).*".r))
+          .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("p:Place\\(location\\).*".r))
       }))
+
+    println(result.executionPlanDescription())
 
     // Then
     val point = result.columnAs("point").toList.head.asInstanceOf[Point]
@@ -70,7 +72,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere
           .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
-          .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Place\\(location\\).*".r))
+          .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("p:Place\\(location\\).*".r))
 
       }),
       params = immutable.Map("param" -> wgsPoint(12.78, 56.7)))
@@ -93,7 +95,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere
           .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
-          .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Place\\(location\\).*".r))
+          .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("p:Place\\(location\\).*".r))
       }),
       params = immutable.Map("param" -> Array(wgsPoint(12.78, 56.7))))
 
@@ -119,7 +121,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere
           .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
-          .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Place\\(location\\).*".r))
+          .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("p:Place\\(location\\).*".r))
       }),
       params = immutable.Map("param" ->
         Array(wgsPoint(12.78, 56.7),
@@ -151,7 +153,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere
           .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
-          .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Place\\(location\\).*".r))
+          .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("p:Place\\(location\\).*".r))
       }),
       params = immutable.Map("param" ->
         List(wgsPoint(12.78, 56.7),
@@ -199,7 +201,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere
           .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
-          .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Place\\(location\\).*".r))
+          .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("p:Place\\(location\\).*".r))
       }))
 
     // Then
@@ -218,7 +220,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere
           .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
-          .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Place\\(location\\).*".r))
+          .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("p:Place\\(location\\).*".r))
       }))
 
     // Then
@@ -241,7 +243,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere
           .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
-          .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Place\\(location\\).*".r))
+          .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("p:Place\\(location\\).*".r))
       }))
 
     // Then
@@ -263,7 +265,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     val plan = result.executionPlanDescription()
     plan should includeSomewhere
       .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
-      .onTopOf(aPlan("NodeIndexSeekByRange").containingArgumentRegex(":Place\\(location\\) > point.*".r))
+      .onTopOf(aPlan("NodeIndexSeekByRange").containingArgumentRegex("p:Place\\(location\\) WHERE location > point.*".r))
     result.toList should equal(List(Map("point" -> cartesianPoint(100000, 100000))))
   }
 
@@ -282,7 +284,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     val plan = result.executionPlanDescription()
     plan should includeSomewhere
       .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
-      .onTopOf(aPlan("NodeIndexSeekByRange").containingArgumentRegex(":Place\\(location\\) < point.*".r))
+      .onTopOf(aPlan("NodeIndexSeekByRange").containingArgumentRegex("p:Place\\(location\\) WHERE location < point.*".r))
     result.toList should equal(List(Map("point" -> cartesianPoint(-100000, -100000))))
   }
 
@@ -302,7 +304,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     val plan = result.executionPlanDescription()
     plan should includeSomewhere
       .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
-      .onTopOf(aPlan("NodeIndexSeekByRange").containingArgumentRegex(":Place\\(location\\) > point.* AND :Place\\(location\\) < point.*".r))
+      .onTopOf(aPlan("NodeIndexSeekByRange").containingArgumentRegex("p:Place\\(location\\) WHERE location > point.* AND location < point.*".r))
     result.toList should equal(List(Map("point" -> cartesianPoint(100000, 100000))))
   }
 
@@ -322,7 +324,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
     plan should includeSomewhere
       .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
-      .onTopOf(aPlan("NodeIndexSeekByRange").containingArgumentRegex(":Place\\(location\\) > point.*".r))
+      .onTopOf(aPlan("NodeIndexSeekByRange").containingArgumentRegex("p:Place\\(location\\) WHERE location > point.*".r))
     result.toList should equal(List(Map("point" -> wgsPoint(12.78, 56.7))))
   }
 
@@ -337,7 +339,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
     // Then
     val plan = result.executionPlanDescription()
-    plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentRegex("\\:Place\\(location\\).*".r)
+    plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentRegex("p:Place\\(location\\).*".r)
     result.toList should equal(List(Map("point" -> wgsPoint(12.78, 56.7))))
   }
 
@@ -352,7 +354,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
     // Then
     val plan = result.executionPlanDescription()
-    plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentRegex("\\:Place\\(location\\).*".r)
+    plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentRegex("p:Place\\(location\\).*".r)
     result.toList should equal(List(Map("point" -> wgsPoint(12.78, 56.7))))
 
     //  And when creating in merge
@@ -360,7 +362,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
     // Then
     val plan2 = result2.executionPlanDescription()
-    plan2 should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentRegex("\\:Place\\(location\\).*".r)
+    plan2 should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentRegex("p:Place\\(location\\).*".r)
     result2.toList should equal(List(Map("point" -> wgsPoint(longitude = 65.78, latitude = 56.7))))
   }
 
@@ -380,7 +382,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
     plan should includeSomewhere
       .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
-      .onTopOf(aPlan("NodeIndexSeekByRange").containingArgumentRegex(":Place\\(location\\) > point.*".r))
+      .onTopOf(aPlan("NodeIndexSeekByRange").containingArgumentRegex("p:Place\\(location\\) WHERE location > point.*".r))
     result.toList should equal(List(Map("point" -> wgsPoint(12.78, 56.7))))
   }
 
@@ -400,7 +402,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
     plan should includeSomewhere
       .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
-      .onTopOf(aPlan("NodeIndexSeekByRange").containingArgumentRegex(":Place\\(location\\) >= point.*".r))
+      .onTopOf(aPlan("NodeIndexSeekByRange").containingArgumentRegex("p:Place\\(location\\) WHERE location >= point.*".r))
     result.toList should equal(List(Map("point" -> wgsPoint(12.78, 56.7))))
   }
 
@@ -419,7 +421,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     val plan = result.executionPlanDescription()
     plan should includeSomewhere
       .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
-      .onTopOf(aPlan("NodeIndexSeekByRange").containingArgumentRegex(":Place\\(location\\) > point.*".r))
+      .onTopOf(aPlan("NodeIndexSeekByRange").containingArgumentRegex("p:Place\\(location\\) WHERE location > point.*".r))
     assert(result.isEmpty)
   }
 
@@ -439,7 +441,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     val plan = result.executionPlanDescription()
     plan should includeSomewhere
       .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
-      .onTopOf(aPlan("NodeIndexSeekByRange").containingArgumentRegex(":Place\\(location\\) >= point.*".r))
+      .onTopOf(aPlan("NodeIndexSeekByRange").containingArgumentRegex("p:Place\\(location\\) WHERE location >= point.*".r))
     result.toList should equal(List(Map("point" -> wgsPoint(12.78, 56.7))))
   }
 
@@ -459,7 +461,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     val plan = result.executionPlanDescription()
     plan should includeSomewhere
       .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
-      .onTopOf(aPlan("NodeIndexSeekByRange").containingArgumentRegex(":Place\\(location\\) >= point.* AND :Place\\(location\\) < point.*".r))
+      .onTopOf(aPlan("NodeIndexSeekByRange").containingArgumentRegex("p:Place\\(location\\) WHERE location >= point.* AND location < point.*".r))
     result.toList should equal(List(Map("point" -> wgsPoint(11.78, 55.7))))
   }
 
@@ -649,7 +651,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
         Configs.CartesianProduct - Configs.Compiled,
         query,
         planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange")
-          .containingArgument(s":$LABEL($PROPERTY) > min AND :$LABEL($PROPERTY) < max"))
+          .containingArgument(s"p:$LABEL($PROPERTY) WHERE $PROPERTY > min AND $PROPERTY < max"))
       )
     val nodes = result.columnAs[Node]("p").toSet
     expected.foreach(p => assert(nodes.contains(p)))
@@ -679,7 +681,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
         Configs.InterpretedAndSlottedAndPipelined,
         query,
         planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange")
-          .containingArgument(s":$LABEL($PROPERTY) > point({x: min.x, y: min.y}) AND :$LABEL($PROPERTY) < max"))
+          .containingArgument(s"p:$LABEL($PROPERTY) WHERE $PROPERTY > point({x: min.x, y: min.y}) AND $PROPERTY < max"))
       )
     val nodes = result.columnAs[Node]("p").toSet
     expected.foreach(p => assert(nodes.contains(p)))
