@@ -25,6 +25,7 @@ import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.api.TestCommand;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
@@ -185,6 +186,40 @@ public class TransactionLogCatchUpWriterTest
             // empty
         }
         assertThat(sizeOf( databaseLayout.getTransactionLogsDirectory() ), lessThanOrEqualTo( 100L ) );
+    }
+
+    @Test
+    public void tracePageCacheAccessInCatchupWriter() throws IOException
+    {
+        Config config = defaults( GraphDatabaseSettings.logical_log_rotation_threshold, ByteUnit.mebiBytes( 1 ) );
+        StoreId storeId = simulateStoreCopy();
+
+        long fromTxId = BASE_TX_ID;
+        LongRange validRange = LongRange.range( fromTxId, fromTxId );
+        var pageCacheTracer = new DefaultPageCacheTracer();
+        try ( TransactionLogCatchUpWriter subject = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
+                storageEngineFactory, validRange, partOfStoreCopy, false, false, pageCacheTracer ) )
+        {
+            LongStream.range( fromTxId, MANY_TRANSACTIONS )
+                    .mapToObj( TransactionLogCatchUpWriterTest::tx )
+                    .map( tx -> new TxPullResponse( storeId, tx ) )
+                    .forEach( subject::onTxReceived );
+        }
+
+        if ( partOfStoreCopy )
+        {
+            assertEquals( 17L, pageCacheTracer.pins() );
+            assertEquals( 17L, pageCacheTracer.unpins() );
+            assertEquals( 12L, pageCacheTracer.hits() );
+            assertEquals( 5L, pageCacheTracer.faults() );
+        }
+        else
+        {
+            assertEquals( 12L, pageCacheTracer.pins() );
+            assertEquals( 12L, pageCacheTracer.unpins() );
+            assertEquals( 7L, pageCacheTracer.hits() );
+            assertEquals( 5L, pageCacheTracer.faults() );
+        }
     }
 
     @Test

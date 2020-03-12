@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.core.state.machines.token;
 
 import com.neo4j.causalclustering.core.replication.ReplicationResult;
+import com.neo4j.causalclustering.core.replication.Replicator;
 import com.neo4j.causalclustering.core.state.StateMachineResult;
 import org.junit.jupiter.api.Test;
 
@@ -36,11 +37,13 @@ import static java.util.Arrays.asList;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.mockito.Answers.RETURNS_MOCKS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class ReplicatedTokenHolderTest
@@ -50,7 +53,7 @@ public class ReplicatedTokenHolderTest
     private final NamedDatabaseId namedDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
 
     @Test
-    public void shouldStoreInitialTokens()
+    void shouldStoreInitialTokens()
     {
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
@@ -65,7 +68,29 @@ public class ReplicatedTokenHolderTest
     }
 
     @Test
-    public void shouldReturnExistingTokenId() throws KernelException
+    void tracePageCacheAccessInReplicatedTokenHolder() throws Exception
+    {
+        storageEngine = mockedStorageEngine();
+        var registry = new TokenRegistry( "Label" );
+        var cacheTracer = mock( PageCacheTracer.class );
+        var pageCursorTracer = mock( PageCursorTracer.class );
+        when( cacheTracer.createPageCursorTracer( any() ) ).thenReturn( pageCursorTracer );
+        var factory = mock( IdGeneratorFactory.class, RETURNS_MOCKS );
+        var replicator = mock( Replicator.class );
+        var stateMachineResult = mock( StateMachineResult.class );
+        when( stateMachineResult.consume() ).thenReturn( 1 );
+        var replicationResult = ReplicationResult.applied( stateMachineResult );
+        when( replicator.replicate( any() ) ).thenReturn( replicationResult );
+
+        var tokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, registry, replicator, factory, storageEngineSupplier, cacheTracer );
+        tokenHolder.createToken( "foo", false );
+
+        verify( cacheTracer ).createPageCursorTracer( any() );
+        verify( pageCursorTracer ).close();
+    }
+
+    @Test
+    void shouldReturnExistingTokenId() throws KernelException
     {
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
@@ -81,7 +106,7 @@ public class ReplicatedTokenHolderTest
     }
 
     @Test
-    public void shouldReplicateTokenRequestForNewToken() throws Exception
+    void shouldReplicateTokenRequestForNewToken() throws Exception
     {
         // given
         storageEngine = mockedStorageEngine();

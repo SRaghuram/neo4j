@@ -32,6 +32,7 @@ import org.neo4j.internal.recordstorage.ReadOnlyTransactionIdStore;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -96,7 +97,7 @@ class RaftBootstrapperIT
     private Config defaultConfig;
     private StorageEngineFactory storageEngineFactory;
     private final BootstrapSaver bootstrapSaver = new BootstrapSaver( fileSystem, nullLogProvider() );
-    private final PageCacheTracer pageCacheTracer = PageCacheTracer.NULL;
+    private final PageCacheTracer pageCacheTracer = new DefaultPageCacheTracer();
 
     @BeforeEach
     void setup()
@@ -106,6 +107,25 @@ class RaftBootstrapperIT
         this.defaultConfig = Config.defaults( GraphDatabaseSettings.neo4j_home, neo4jHome.toPath() );
         this.dataDirectory = defaultConfig.get( GraphDatabaseSettings.data_directory ).toFile();
         this.storageEngineFactory = StorageEngineFactory.selectStorageEngine();
+    }
+
+    @Test
+    void tracePageCacheAccessOnBootstrap() throws IOException
+    {
+        StoreFiles storeFiles = new StoreFiles( fileSystem, pageCache );
+        LogFiles transactionLogs = buildLogFiles( databaseLayout );
+        BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, databaseLayout, storeFiles, transactionLogs );
+
+        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
+                pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer );
+
+        CoreSnapshot snapshot = bootstrapper.bootstrap( membership, storeId );
+        verifySnapshot( snapshot, membership, defaultConfig );
+
+        assertEquals( 21, pageCacheTracer.pins() );
+        assertEquals( 21, pageCacheTracer.unpins() );
+        assertEquals( 5, pageCacheTracer.hits() );
+        assertEquals( 16, pageCacheTracer.faults() );
     }
 
     @Test

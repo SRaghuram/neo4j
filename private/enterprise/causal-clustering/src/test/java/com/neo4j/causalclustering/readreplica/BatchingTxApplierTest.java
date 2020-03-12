@@ -12,11 +12,14 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
@@ -28,6 +31,8 @@ import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding.encodeLogIndexAsTxHeader;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -46,13 +51,23 @@ public class BatchingTxApplierTest
     private final int maxBatchSize = 16;
 
     private final ReplicatedDatabaseEventDispatch databaseEventDispatch = mock( ReplicatedDatabaseEventDispatch.class );
+    private final TrackingPageCacheTracer pageCacheTracer = new TrackingPageCacheTracer();
     private final BatchingTxApplier txApplier = new BatchingTxApplier( maxBatchSize, () -> idStore, () -> commitProcess,
             new Monitors(), EmptyVersionContextSupplier.EMPTY, commandIndexTracker,
-            nullLogProvider(), databaseEventDispatch, PageCacheTracer.NULL );
+            nullLogProvider(), databaseEventDispatch, pageCacheTracer );
 
     @Before
-    public void before()
+    public void before() throws TransactionFailureException
     {
+        when( commitProcess.commit( any(), any(), any() ) ).thenAnswer( invocation ->
+        {
+            TransactionToApply tx = invocation.getArgument( 0 );
+            while ( tx != null ) {
+                tx.close();
+                tx = tx.next();
+            }
+            return -1L;
+        } );
         when( idStore.getLastCommittedTransactionId() ).thenReturn( startTxId );
         when( idStore.getLastClosedTransactionId() ).thenReturn( startTxId );
         txApplier.start();
@@ -158,6 +173,18 @@ public class BatchingTxApplierTest
         thread.join();
     }
 
+    @Test
+    public void tracePageCacheAccessOnTransactionApply() throws Exception
+    {
+        txApplier.queue( createTxWithId( startTxId + 1 ) );
+        txApplier.queue( createTxWithId( startTxId + 2 ) );
+        txApplier.queue( createTxWithId( startTxId + 3 ) );
+
+        txApplier.applyBatch();
+
+        pageCacheTracer.checkAllCursorsAreClosed();
+    }
+
     private CommittedTransactionRepresentation createTxWithId( long txId )
     {
         CommittedTransactionRepresentation tx = mock( CommittedTransactionRepresentation.class );
@@ -187,5 +214,28 @@ public class BatchingTxApplierTest
             count++;
         }
         assertEquals( expectedCount, count );
+    }
+
+    private static class TrackingPageCacheTracer extends DefaultPageCacheTracer {
+
+        private final List<PageCursorTracer> cursorTracers = new ArrayList<>();
+
+        @Override
+        public PageCursorTracer createPageCursorTracer( String tag )
+        {
+            var cursorTracer = mock( PageCursorTracer.class );
+            cursorTracers.add( cursorTracer );
+            return cursorTracer;
+        }
+
+        void checkAllCursorsAreClosed()
+        {
+            assertFalse( cursorTracers.isEmpty() );
+            for ( PageCursorTracer cursorTracer : cursorTracers )
+            {
+                verify( cursorTracer ).close();
+            }
+        }
+
     }
 }
