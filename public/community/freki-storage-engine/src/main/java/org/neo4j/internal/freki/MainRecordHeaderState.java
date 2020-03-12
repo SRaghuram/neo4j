@@ -28,12 +28,14 @@ class MainRecordHeaderState
     boolean containsForwardPointer;
     boolean containsBackPointer;
     long forwardPointer;
-    boolean isDense;
+    boolean hasXLData;
+    boolean hasDenseData;
     long backPointer;
 
     void reset()
     {
-        isDense = false;
+        hasXLData = false;
+        hasDenseData = false;
         containsForwardPointer = false;
         containsBackPointer = false;
     }
@@ -56,6 +58,7 @@ class MainRecordHeaderState
     {
         return "MainRecordHeaderState{" + "labelsOffset=" + labelsOffset + ", nodePropertiesOffset=" + nodePropertiesOffset + ", relationshipsOffset=" +
                 relationshipsOffset + ", endOffset=" + endOffset + ", containsForwardPointer=" + containsForwardPointer + ", containsBackPointer=" +
-                containsBackPointer + ", forwardPointer=" + forwardPointer + ", isDense=" + isDense + ", backPointer=" + backPointer + '}';
+                containsBackPointer + ", forwardPointer=" + forwardPointer + ", hasXLData=" + hasXLData + ", hasDenseData=" + hasDenseData + ", backPointer=" +
+                backPointer + '}';
     }
 }

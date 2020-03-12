@@ -19,6 +19,7 @@
  */
 package org.neo4j.internal.freki;
 
+import java.nio.ByteBuffer;
 import java.util.Iterator;
 
 import org.neo4j.graphdb.ResourceIterator;
@@ -33,9 +34,11 @@ import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 
 import static org.neo4j.internal.freki.MutableNodeRecordData.ARRAY_ENTRIES_PER_RELATIONSHIP;
 import static org.neo4j.internal.freki.MutableNodeRecordData.externalRelationshipId;
+import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPointsToDense;
 import static org.neo4j.internal.freki.MutableNodeRecordData.otherNodeOf;
 import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipHasProperties;
 import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipIsOutgoing;
+import static org.neo4j.internal.freki.StreamVByte.readLongs;
 import static org.neo4j.storageengine.api.RelationshipDirection.INCOMING;
 import static org.neo4j.storageengine.api.RelationshipDirection.LOOP;
 import static org.neo4j.storageengine.api.RelationshipDirection.OUTGOING;
@@ -71,7 +74,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     @Override
     public boolean hasProperties()
     {
-        if ( headerState.isDense )
+        if ( currentDenseRelationship != null )
         {
             return denseProperties().hasNext();
         }
@@ -100,7 +103,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     @Override
     int currentRelationshipPropertiesOffset()
     {
-        return relationshipPropertiesOffset( currentTypePropertiesOffset, currentTypePropertiesIndex );
+        return relationshipPropertiesOffset( data.relationshipBuffer(), currentTypePropertiesOffset, currentTypePropertiesIndex );
     }
 
     @Override
@@ -116,7 +119,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     @Override
     public long entityReference()
     {
-        return externalRelationshipId( loadedNodeId, currentRelationshipInternalId, currentRelationshipOtherNode, currentRelationshipDirection.isOutgoing() );
+        return externalRelationshipId( data.nodeId, currentRelationshipInternalId, currentRelationshipOtherNode, currentRelationshipDirection.isOutgoing() );
     }
 
     @Override
@@ -131,7 +134,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     {
         if ( !loadedCorrectNode )
         {
-            if ( !loadMainRecord( nodeId ) || (!headerState.isDense && headerState.relationshipsOffset == 0) )
+            if ( !load( nodeId ) || (!forwardPointerPointsToDense( data.forwardPointer ) && data.relationshipOffset == 0) )
             {
                 return false;
             }
@@ -140,7 +143,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
             readRelationshipTypesAndOffsets();
         }
 
-        if ( headerState.isDense )
+        if ( forwardPointerPointsToDense( data.forwardPointer ) )
         {
             // TODO We could be clever and place a type[] in the quick access record so that we know which types even exist for this node
             //      if we do this we don't have to make a tree seek for every relationship type when there will be nothing there
@@ -149,7 +152,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
                 if ( denseRelationships == null )
                 {
                     RelationshipSelection.Criterion criterion = selection.criterion( selectionCriterionIndex );
-                    denseRelationships = stores.denseStore.getRelationships( loadedNodeId, criterion.type(), criterion.direction(), cursorTracer );
+                    denseRelationships = stores.denseStore.getRelationships( data.nodeId, criterion.type(), criterion.direction(), cursorTracer );
                 }
 
                 if ( denseRelationships.hasNext() )
@@ -184,9 +187,9 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
                         continue;
                     }
 
-                    data.position( relationshipTypeOffset( currentTypeIndex ) ); //update position to ensure we read from correct offset
-                    currentTypeData = StreamVByte.readLongs( data );
-                    currentTypePropertiesOffset = data.position();
+                    ByteBuffer relationshipBuffer = data.relationshipBuffer( relationshipTypeOffset( currentTypeIndex ) );
+                    currentTypeData = readLongs( relationshipBuffer );
+                    currentTypePropertiesOffset = relationshipBuffer.position();
                     currentTypeRelationshipIndex = 0;
                     currentTypePropertiesIndex = -1;
                 }
@@ -205,11 +208,13 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     {
         currentTypeIndex++;
         currentTypeRelationshipIndex = -1;
-        if ( currentTypePropertiesIndex >= 0 && currentTypeIndex < relationshipTypesInNode.length )
-        {
-            //Skipping the properties
-            data.position( relationshipTypeOffset( currentTypeIndex ) );
-        }
+
+        // TODO why was this ever needed?
+//        if ( currentTypePropertiesIndex >= 0 && currentTypeIndex < relationshipTypesInNode.length )
+//        {
+//            //Skipping the properties
+//            data.position( relationshipTypeOffset( currentTypeIndex ) );
+//        }
     }
 
     private boolean sparseNextFromCurrentType()
@@ -282,7 +287,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     @Override
     public int type()
     {
-        return headerState.isDense
+        return currentDenseRelationship != null
                ? currentDenseRelationship.type()
                : relationshipTypesInNode[currentTypeIndex];
     }
@@ -292,9 +297,9 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     {
         if ( currentRelationshipDirection == OUTGOING )
         {
-            return loadedNodeId;
+            return data.nodeId;
         }
-        return headerState.isDense
+        return currentDenseRelationship != null
                ? currentDenseRelationship.neighbourNodeId()
                : currentRelationshipOtherNode;
     }
@@ -304,9 +309,9 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     {
         if ( currentRelationshipDirection == INCOMING )
         {
-            return loadedNodeId;
+            return data.nodeId;
         }
-        return headerState.isDense
+        return currentDenseRelationship != null
                ? currentDenseRelationship.neighbourNodeId()
                : currentRelationshipOtherNode;
     }
@@ -314,7 +319,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     @Override
     public long neighbourNodeReference()
     {
-        return headerState.isDense
+        return currentDenseRelationship != null
                ? currentDenseRelationship.neighbourNodeId()
                : currentRelationshipOtherNode;
     }
@@ -327,7 +332,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
 
     RelationshipDirection currentDirection()
     {
-        return headerState.isDense
+        return currentDenseRelationship != null
                 ? currentDenseRelationship.direction()
                 : currentRelationshipDirection;
     }
@@ -336,7 +341,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     public void init( long nodeId, long reference, RelationshipSelection selection )
     {
         cursorAccessTracer.registerNodeToRelationshipsByReference();
-        //We dont use reference, is that a problem?
+        //We don't use reference, is that a problem?
         init( nodeId, selection );
     }
 

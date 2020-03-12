@@ -19,20 +19,30 @@
  */
 package org.neo4j.internal.freki;
 
+import org.apache.commons.lang3.mutable.MutableObject;
 import org.eclipse.collections.api.map.primitive.IntObjectMap;
+import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
+import org.eclipse.collections.impl.factory.primitive.IntSets;
+import org.eclipse.collections.impl.factory.primitive.LongSets;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.nio.BufferOverflowException;
-import java.util.function.Consumer;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.stream.IntStream;
 
+import org.neo4j.internal.freki.GraphUpdates.NodeUpdates;
+import org.neo4j.internal.kernel.api.exceptions.ConstraintViolationTransactionFailureException;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.storageengine.api.PropertyKeyValue;
 import org.neo4j.storageengine.api.RelationshipSelection;
-import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEntityCursor;
 import org.neo4j.storageengine.api.StorageNodeCursor;
+import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipCursor;
 import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
@@ -43,9 +53,11 @@ import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.values.storable.Value;
 
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singleton;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointer;
-import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
+import static org.neo4j.internal.freki.InMemoryBigValueTestStore.applyToStoreImmediately;
+import static org.neo4j.internal.freki.MutableNodeRecordData.externalRelationshipId;
 
 @ExtendWith( {RandomExtension.class, EphemeralFileSystemExtension.class} )
 abstract class FrekiCursorsTest
@@ -70,54 +82,50 @@ abstract class FrekiCursorsTest
 
     class Node
     {
-        private final Record record;
-        private final MutableNodeRecordData data;
-        private final Consumer<StorageCommand> bigValueApplier = InMemoryBigValueTestStore.applyToStoreImmediately( stores.bigPropertyValueStore );
+        private final NodeUpdates updates;
+        private long nextInternalId = 1;
 
         Node( long id )
         {
-            this( 0, id );
-        }
-
-        Node( int sizeExp, long id )
-        {
-            this.record = new Record( sizeExp, id );
-            data = new MutableNodeRecordData( id );
-            record.setFlag( FLAG_IN_USE, true );
+            updates = new NodeUpdates( id, stores, applyToStoreImmediately( stores.bigPropertyValueStore ), PageCursorTracer.NULL );
         }
 
         long id()
         {
-            return record.id;
+            return updates.nodeId();
         }
 
         Record store()
         {
-            try ( PageCursor cursor = store.openWriteCursor() )
+            try
             {
-                try
-                {
-                    data.serialize( record.dataForWriting(), stores.bigPropertyValueStore, bigValueApplier );
-                }
-                catch ( BufferOverflowException | ArrayIndexOutOfBoundsException e )
-                {
-                    InMemoryTestStore largeStore = (InMemoryTestStore) stores.nextLargerMainStore( record.sizeExp() );
-                    MutableNodeRecordData largeData = new MutableNodeRecordData( largeStore.nextId( PageCursorTracer.NULL ) );
-                    data.movePropertiesAndRelationshipsTo( largeData );
-                    try ( PageCursor largeCursor = largeStore.openWriteCursor() )
-                    {
-                        Record largeRecord = largeStore.newRecord( largeData.id );
-                        largeRecord.setFlag( FLAG_IN_USE, true );
-                        largeData.serialize( largeRecord.dataForWriting(), stores.bigPropertyValueStore, bigValueApplier );
-                        largeStore.write( largeCursor, largeRecord, IdUpdateListener.IGNORE, PageCursorTracer.NULL );
-                    }
-
-                    data.setForwardPointer( forwardPointer( largeStore.recordSizeExponential(), false, largeData.id ) );
-                    data.serialize( record.dataForWriting(), stores.bigPropertyValueStore, bigValueApplier );
-                }
-                store.write( cursor, record, IdUpdateListener.IGNORE, PageCursorTracer.NULL );
+                MutableObject<Record> x1 = new MutableObject<>();
+                updates.serialize(
+                        ByteBuffer.wrap( new byte[stores.mainStore.recordDataSize()] ),
+                        ByteBuffer.wrap( new byte[stores.largestMainStore().recordDataSize()] ), command ->
+                        {
+                            FrekiCommand.SparseNode sparseNode = (FrekiCommand.SparseNode) command;
+                            Record record = sparseNode.after;
+                            SimpleStore store = stores.mainStore( record.sizeExp() );
+                            try ( PageCursor cursor = store.openWriteCursor() )
+                            {
+                                store.write( cursor, record, IdUpdateListener.IGNORE, PageCursorTracer.NULL );
+                            }
+                            catch ( IOException e )
+                            {
+                                throw new UncheckedIOException( e );
+                            }
+                            if ( record.sizeExp() == 0 )
+                            {
+                                x1.setValue( record );
+                            }
+                        } );
+                return x1.getValue();
             }
-            return record;
+            catch ( ConstraintViolationTransactionFailureException e )
+            {
+                throw new RuntimeException( e );
+            }
         }
 
         FrekiNodeCursor storeAndPlaceNodeCursorAt()
@@ -129,27 +137,29 @@ abstract class FrekiCursorsTest
             return nodeCursor;
         }
 
-        Node inUse( boolean inUse )
+        Node delete()
         {
-            record.setFlag( FLAG_IN_USE, inUse );
+            updates.delete();
             return this;
         }
 
         Node labels( int... labelIds )
         {
-            data.labels.addAll( labelIds );
+            MutableLongSet addedLabels = LongSets.mutable.empty();
+            IntStream.of( labelIds ).forEach( addedLabels::add );
+            updates.updateLabels( addedLabels, LongSets.immutable.empty() );
             return this;
         }
 
         Node property( int propertyKeyId, Value value )
         {
-            data.setNodeProperty( propertyKeyId, value );
+            updates.updateNodeProperties( singleton( new PropertyKeyValue( propertyKeyId, value ) ), emptyList(), IntSets.immutable.empty() );
             return this;
         }
 
         Node properties( IntObjectMap<Value> properties )
         {
-            properties.forEachKeyValue( data::setNodeProperty );
+            updates.updateNodeProperties( convertPropertiesMap( properties ), emptyList(), IntSets.immutable.empty() );
             return this;
         }
 
@@ -160,16 +170,21 @@ abstract class FrekiCursorsTest
 
         long relationship( int type, Node otherNode, IntObjectMap<Value> properties )
         {
-            long internalId = data.nextInternalRelationshipId();
-            MutableNodeRecordData.Relationship relationship = data.createRelationship( internalId, otherNode.record.id, type, true );
-
-            properties.forEachKeyValue( relationship::addProperty );
-            if ( record.id != otherNode.record.id )
+            long internalId = nextInternalId++;
+            Collection<StorageProperty> addedProperties = convertPropertiesMap( properties );
+            updates.createRelationship( internalId, otherNode.id(), type, true, addedProperties );
+            if ( id() != otherNode.id() )
             {
-                relationship = otherNode.data.createRelationship( internalId, record.id, type, false );
-                properties.forEachKeyValue( relationship::addProperty );
+                otherNode.updates.createRelationship( internalId, id(), type, false, addedProperties );
             }
-            return MutableNodeRecordData.externalRelationshipId( record.id, internalId );
+            return externalRelationshipId( id(), internalId );
+        }
+
+        private Collection<StorageProperty> convertPropertiesMap( IntObjectMap<Value> properties )
+        {
+            Collection<StorageProperty> addedProperties = new ArrayList<>();
+            properties.forEachKeyValue( ( key, value ) -> addedProperties.add( new PropertyKeyValue( key, value ) ) );
+            return addedProperties;
         }
     }
 

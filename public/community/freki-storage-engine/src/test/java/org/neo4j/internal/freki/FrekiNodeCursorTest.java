@@ -75,11 +75,12 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
     void shouldNotSeeUnusedNode()
     {
         // given
-        Record node = node().inUse( false ).store();
+        Node node = node();
+        node.delete().store();
         FrekiNodeCursor cursor = cursorFactory.allocateNodeCursor( NULL );
 
         // when
-        cursor.single( node.id );
+        cursor.single( node.id() );
         boolean hasNext = cursor.next();
 
         // then
@@ -821,7 +822,6 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
                         numLabels, numProperties, numRelationsType1, numRelationsType1WithProperties, numRelationsType2, numRelationsType2WithProperties );
             }
 
-            private static final int RECORD_SIZE_MULTIPLE = 2; //ensure we fit everything in one record until overflow is handled!
             private static final int REL_TYPE_1 = 2;
             private static final int REL_TYPE_2 = 3;
 
@@ -835,7 +835,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
             private void init()
             {
                 createdNodeIdCounter = 0;
-                node = new Node( RECORD_SIZE_MULTIPLE, createdNodeIdCounter++ );
+                node = new Node( createdNodeIdCounter++ );
                 labels = new int[numLabels];
                 relationships = LongSets.mutable.empty();
                 properties = IntObjectMaps.mutable.empty();
@@ -903,7 +903,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
             {
                 for ( int i = 0; i < num; i++ )
                 {
-                    Node otherNode = new Node( RECORD_SIZE_MULTIPLE, createdNodeIdCounter++ );
+                    Node otherNode = new Node( createdNodeIdCounter++ );
                     Node sourceNode = outgoing ? node : otherNode;
                     Node targetNode = outgoing ? otherNode : node;
 

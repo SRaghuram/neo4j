@@ -160,7 +160,8 @@ interface CursorAccessPatternTracer
             print( "Relationship by reference", a -> a.relationshipByReference );
 
             LongObjectMap<MutableLong> aggregatedNodeAccesses = aggregateNodeAccesses();
-            LongObjectPair<MutableLong>[] nodesAccessesArray = aggregatedNodeAccesses.keyValuesView().toArray( new LongObjectPair[aggregatedNodeAccesses.size()] );
+            LongObjectPair<MutableLong>[] nodesAccessesArray =
+                    aggregatedNodeAccesses.keyValuesView().toArray( new LongObjectPair[aggregatedNodeAccesses.size()] );
             Arrays.sort( nodesAccessesArray, ( p1, p2 ) -> Long.compare( p2.getTwo().longValue(), p1.getTwo().longValue() ) );
             System.out.println( "Most accessed nodes:" );
             for ( int i = 0; i < nodesAccessesArray.length && i < 10; i++ )

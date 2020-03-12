@@ -31,6 +31,9 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.storageengine.util.IdUpdateListener;
 
+import static java.lang.String.format;
+import static org.neo4j.internal.freki.Record.recordXFactor;
+
 class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
 {
     private final MutableLongObjectMap<Record> data = LongObjectMaps.mutable.empty();
@@ -40,12 +43,6 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
     InMemoryTestStore( int sizeExp )
     {
         this.sizeExp = sizeExp;
-    }
-
-    @Override
-    public int recordSize()
-    {
-        return Record.recordSize( sizeExp );
     }
 
     @Override
@@ -119,6 +116,12 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
     public boolean exists( PageCursor cursor, long id )
     {
         return data.contains( id );
+    }
+
+    @Override
+    public String toString()
+    {
+        return format( "TestStore[x%d,highId:%d]", recordXFactor( sizeExp ), nextId.get() );
     }
 
     // Basically this isn't used, it's just something to call close()

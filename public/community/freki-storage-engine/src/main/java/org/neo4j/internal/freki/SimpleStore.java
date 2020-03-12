@@ -27,7 +27,15 @@ import org.neo4j.storageengine.util.IdUpdateListener;
 
 public interface SimpleStore extends SingleFileStore
 {
-    int recordSize();
+    default int recordSize()
+    {
+        return Record.recordSize( recordSizeExponential() );
+    }
+
+    default int recordDataSize()
+    {
+        return Record.recordDataSize( recordSizeExponential() );
+    }
 
     int recordSizeExponential();
 
@@ -41,7 +49,7 @@ public interface SimpleStore extends SingleFileStore
 
     long nextId( PageCursorTracer cursorTracer );
 
-    boolean exists( PageCursor cursor, long id ) throws IOException;
+    boolean exists( PageCursor cursor, long id );
 
     long getHighId();
 }
