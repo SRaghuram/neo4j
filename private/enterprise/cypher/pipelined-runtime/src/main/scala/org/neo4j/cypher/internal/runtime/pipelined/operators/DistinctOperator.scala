@@ -17,6 +17,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.or
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.expressions.Expression
@@ -127,6 +128,7 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
 class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate,
                                                  override val id: Id,
                                                  argumentStateMapId: ArgumentStateMapId,
+                                                 innermost: DelegateOperatorTaskTemplate,
                                                  groupings: Seq[(Slot, Expression)])
                                                 (protected val codeGen: OperatorExpressionCompiler)
   extends OperatorTaskTemplate {
@@ -158,9 +160,10 @@ class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate
       */
     block(
       declareAndAssign(typeRefOf[AnyValue], keyVar, nullCheckIfRequired(groupingExpression.computeKey)),
-      condition(invoke(loadField(distinctStateField),
-                       method[SerialTopLevelDistinctState, Boolean, AnyValue, QueryMemoryTracker]("distinct"),
-                       nullCheckIfRequired(groupingExpression.computeKey), loadField(MEMORY_TRACKER))) {
+      condition(or(innerCanContinue,
+                   invoke(loadField(distinctStateField),
+                          method[SerialTopLevelDistinctState, Boolean, AnyValue, QueryMemoryTracker]("distinct"),
+                          nullCheckIfRequired(groupingExpression.computeKey), loadField(MEMORY_TRACKER)))) {
         block(
           profileRow(id),
           nullCheckIfRequired(groupingExpression.projectKey),
