@@ -23,7 +23,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("GrantDatabaseAction", "ACCESS", allDatabases = true, "editor",
           databasePrivilegePlan("GrantDatabaseAction", "ACCESS", allDatabases = true, "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -40,7 +40,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("DenyDatabaseAction", "ACCESS", SYSTEM_DATABASE_NAME, "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -57,7 +57,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "ACCESS", allDatabases = false, "reader",
           databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "ACCESS", allDatabases = false, "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
@@ -74,7 +74,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "ACCESS", allDatabases = false, "reader",
-          assertDbmsAdminPlan("REVOKE PRIVILEGE")
+          assertDbmsAdminPlan("REMOVE PRIVILEGE")
         )
       ).toString
     )
@@ -90,7 +90,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "ACCESS", allDatabases = false, "reader",
-          assertDbmsAdminPlan("REVOKE PRIVILEGE")
+          assertDbmsAdminPlan("REMOVE PRIVILEGE")
         )
       ).toString
     )
@@ -107,7 +107,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("GrantDatabaseAction", "START", allDatabases = true, "editor",
           databasePrivilegePlan("GrantDatabaseAction", "START", allDatabases = true, "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -124,7 +124,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("DenyDatabaseAction", "START", SYSTEM_DATABASE_NAME, "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -141,7 +141,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "START", allDatabases = false, "reader",
           databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "START", allDatabases = false, "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
@@ -159,7 +159,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("GrantDatabaseAction", "STOP", allDatabases = true, "editor",
           databasePrivilegePlan("GrantDatabaseAction", "STOP", allDatabases = true, "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -176,7 +176,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("DenyDatabaseAction", "STOP", SYSTEM_DATABASE_NAME, "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -193,7 +193,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "STOP", allDatabases = false, "reader",
           databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "STOP", allDatabases = false, "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
@@ -213,7 +213,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("GrantDatabaseAction", "CREATE INDEX", allDatabases = true, "editor",
           databasePrivilegePlan("GrantDatabaseAction", "CREATE INDEX", allDatabases = true, "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -230,7 +230,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("DenyDatabaseAction", "CREATE INDEX", SYSTEM_DATABASE_NAME, "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -246,7 +246,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "CREATE INDEX", allDatabases = false, "reader",
-          assertDbmsAdminPlan("REVOKE PRIVILEGE")
+          assertDbmsAdminPlan("REMOVE PRIVILEGE")
         )
       ).toString
     )
@@ -263,7 +263,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("GrantDatabaseAction", "DROP INDEX", allDatabases = true, "editor",
           databasePrivilegePlan("GrantDatabaseAction", "DROP INDEX", allDatabases = true, "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -280,7 +280,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("DenyDatabaseAction", "DROP INDEX", SYSTEM_DATABASE_NAME, "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -296,7 +296,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "DROP INDEX", allDatabases = false, "reader",
-          assertDbmsAdminPlan("REVOKE PRIVILEGE")
+          assertDbmsAdminPlan("REMOVE PRIVILEGE")
         )
       ).toString
     )
@@ -313,7 +313,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("GrantDatabaseAction", "INDEX MANAGEMENT", allDatabases = true, "editor",
           databasePrivilegePlan("GrantDatabaseAction", "INDEX MANAGEMENT", allDatabases = true, "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -330,7 +330,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("DenyDatabaseAction", "INDEX MANAGEMENT", SYSTEM_DATABASE_NAME, "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -347,7 +347,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "INDEX MANAGEMENT", allDatabases = false, "reader",
           databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "INDEX MANAGEMENT", allDatabases = false, "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
@@ -365,7 +365,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("GrantDatabaseAction", "CREATE CONSTRAINT", allDatabases = true, "editor",
           databasePrivilegePlan("GrantDatabaseAction", "CREATE CONSTRAINT", allDatabases = true, "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -382,7 +382,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("DenyDatabaseAction", "CREATE CONSTRAINT", SYSTEM_DATABASE_NAME, "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -398,7 +398,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "CREATE CONSTRAINT", allDatabases = false, "reader",
-          assertDbmsAdminPlan("REVOKE PRIVILEGE")
+          assertDbmsAdminPlan("REMOVE PRIVILEGE")
         )
       ).toString
     )
@@ -415,7 +415,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("GrantDatabaseAction", "DROP CONSTRAINT", allDatabases = true, "editor",
           databasePrivilegePlan("GrantDatabaseAction", "DROP CONSTRAINT", allDatabases = true, "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -432,7 +432,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("DenyDatabaseAction", "DROP CONSTRAINT", SYSTEM_DATABASE_NAME, "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -448,7 +448,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "DROP CONSTRAINT", allDatabases = false, "reader",
-          assertDbmsAdminPlan("REVOKE PRIVILEGE")
+          assertDbmsAdminPlan("REMOVE PRIVILEGE")
         )
       ).toString
     )
@@ -465,7 +465,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
           databasePrivilegePlan("GrantDatabaseAction", "CONSTRAINT MANAGEMENT", allDatabases = true, "editor",
             databasePrivilegePlan("GrantDatabaseAction", "CONSTRAINT MANAGEMENT", allDatabases = true, "reader",
-                assertDbmsAdminPlan("GRANT PRIVILEGE")
+                assertDbmsAdminPlan("ASSIGN PRIVILEGE")
               )
         )
       ).toString
@@ -482,7 +482,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("DenyDatabaseAction", "CONSTRAINT MANAGEMENT", SYSTEM_DATABASE_NAME, "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -499,7 +499,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "CONSTRAINT MANAGEMENT", allDatabases = false, "reader",
           databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "CONSTRAINT MANAGEMENT", allDatabases = false, "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
@@ -519,7 +519,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("GrantDatabaseAction", "CREATE NEW NODE LABEL", allDatabases = true, "editor",
           databasePrivilegePlan("GrantDatabaseAction", "CREATE NEW NODE LABEL", allDatabases = true, "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -536,7 +536,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("DenyDatabaseAction", "CREATE NEW NODE LABEL", SYSTEM_DATABASE_NAME, "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -552,7 +552,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "CREATE NEW NODE LABEL", allDatabases = false, "reader",
-          assertDbmsAdminPlan("REVOKE PRIVILEGE")
+          assertDbmsAdminPlan("REMOVE PRIVILEGE")
         )
       ).toString
     )
@@ -569,7 +569,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("GrantDatabaseAction", "CREATE NEW RELATIONSHIP TYPE", allDatabases = true, "editor",
           databasePrivilegePlan("GrantDatabaseAction", "CREATE NEW RELATIONSHIP TYPE", allDatabases = true, "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -586,7 +586,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("DenyDatabaseAction", "CREATE NEW RELATIONSHIP TYPE", SYSTEM_DATABASE_NAME, "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -602,7 +602,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "CREATE NEW RELATIONSHIP TYPE", allDatabases = false, "reader",
-          assertDbmsAdminPlan("REVOKE PRIVILEGE")
+          assertDbmsAdminPlan("REMOVE PRIVILEGE")
         )
       ).toString
     )
@@ -619,7 +619,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("GrantDatabaseAction", "CREATE NEW PROPERTY NAME", allDatabases = true, "editor",
           databasePrivilegePlan("GrantDatabaseAction", "CREATE NEW PROPERTY NAME", allDatabases = true, "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -636,7 +636,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("DenyDatabaseAction", "CREATE NEW PROPERTY NAME", SYSTEM_DATABASE_NAME, "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -653,7 +653,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "CREATE NEW PROPERTY NAME", allDatabases = false, "reader",
           databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "CREATE NEW PROPERTY NAME", allDatabases = false, "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
@@ -671,7 +671,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("GrantDatabaseAction", "NAME MANAGEMENT", allDatabases = true, "editor",
           databasePrivilegePlan("GrantDatabaseAction", "NAME MANAGEMENT", allDatabases = true, "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -688,7 +688,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("DenyDatabaseAction", "NAME MANAGEMENT", SYSTEM_DATABASE_NAME, "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -705,7 +705,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "NAME MANAGEMENT", allDatabases = false, "reader",
           databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "NAME MANAGEMENT", allDatabases = false, "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
@@ -725,7 +725,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("GrantDatabaseAction", "ALL DATABASE PRIVILEGES", allDatabases = true, "editor",
           databasePrivilegePlan("GrantDatabaseAction", "ALL DATABASE PRIVILEGES", allDatabases = true, "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -742,7 +742,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("DenyDatabaseAction", "ALL DATABASE PRIVILEGES", SYSTEM_DATABASE_NAME, "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -759,7 +759,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "ALL DATABASE PRIVILEGES", allDatabases = false, "reader",
           databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "ALL DATABASE PRIVILEGES", allDatabases = false, "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
@@ -779,7 +779,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("GrantDatabaseAction", "SHOW TRANSACTION", allDatabases = true, Qualifier("ALL USERS"), "editor",
           databasePrivilegePlan("GrantDatabaseAction", "SHOW TRANSACTION", allDatabases = true, Qualifier("ALL USERS"), "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -796,7 +796,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("DenyDatabaseAction", "SHOW TRANSACTION", SYSTEM_DATABASE_NAME, Qualifier("ALL USERS"), "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -813,7 +813,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "SHOW TRANSACTION", allDatabases = false, Qualifier("ALL USERS"), "reader",
           databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "SHOW TRANSACTION", allDatabases = false, Qualifier("ALL USERS"), "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
@@ -830,7 +830,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "SHOW TRANSACTION", allDatabases = false, qualifierArg("USER", "username"), "reader",
-          assertDbmsAdminPlan("REVOKE PRIVILEGE")
+          assertDbmsAdminPlan("REMOVE PRIVILEGE")
         )
       ).toString
     )
@@ -847,7 +847,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "SHOW TRANSACTION", allDatabases = false, qualifierArg("USER", "user2"), "reader",
           databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "SHOW TRANSACTION", allDatabases = false, qualifierArg("USER", "user1"), "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
@@ -865,7 +865,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("GrantDatabaseAction", "TERMINATE TRANSACTION", allDatabases = true, Qualifier("ALL USERS"), "editor",
           databasePrivilegePlan("GrantDatabaseAction", "TERMINATE TRANSACTION", allDatabases = true, Qualifier("ALL USERS"), "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -882,7 +882,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("DenyDatabaseAction", "TERMINATE TRANSACTION", SYSTEM_DATABASE_NAME, Qualifier("ALL USERS"), "reader",
-          assertDbmsAdminPlan("DENY PRIVILEGE")
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )
@@ -899,7 +899,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "TERMINATE TRANSACTION", allDatabases = false, Qualifier("ALL USERS"), "reader",
           databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "TERMINATE TRANSACTION", allDatabases = false, Qualifier("ALL USERS"), "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
@@ -916,7 +916,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     plan should include(
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "TERMINATE TRANSACTION", allDatabases = false, qualifierArg("USER", "username"), "reader",
-          assertDbmsAdminPlan("REVOKE PRIVILEGE")
+          assertDbmsAdminPlan("REMOVE PRIVILEGE")
         )
       ).toString
     )
@@ -933,7 +933,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "TERMINATE TRANSACTION", allDatabases = false, qualifierArg("USER", "user2"), "reader",
           databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "TERMINATE TRANSACTION", allDatabases = false, qualifierArg("USER", "user1"), "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
@@ -951,7 +951,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("GrantDatabaseAction", "TRANSACTION MANAGEMENT", allDatabases = true, Qualifier("ALL USERS"), "editor",
           databasePrivilegePlan("GrantDatabaseAction", "TRANSACTION MANAGEMENT", allDatabases = true, Qualifier("ALL USERS"), "reader",
-            assertDbmsAdminPlan("GRANT PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -969,7 +969,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("DenyDatabaseAction", "TRANSACTION MANAGEMENT", SYSTEM_DATABASE_NAME, qualifierArg("USER", "user2"), "reader",
           databasePrivilegePlan("DenyDatabaseAction", "TRANSACTION MANAGEMENT", SYSTEM_DATABASE_NAME, qualifierArg("USER", "user1"), "reader",
-            assertDbmsAdminPlan("DENY PRIVILEGE")
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
       ).toString
@@ -987,7 +987,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "TRANSACTION MANAGEMENT", allDatabases = false, Qualifier("ALL USERS"), "reader",
           databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "TRANSACTION MANAGEMENT", allDatabases = false, Qualifier("ALL USERS"), "reader",
-            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString

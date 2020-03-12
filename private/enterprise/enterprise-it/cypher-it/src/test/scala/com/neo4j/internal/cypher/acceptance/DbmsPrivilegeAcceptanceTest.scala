@@ -13,7 +13,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   // Privilege tests
 
-  Seq(("GRANT", "GRANTED"), ("DENY", "DENIED")).foreach {
+  Seq(("GRANT", GRANTED), ("DENY", DENIED)).foreach {
     case (grant, relType) =>
       test(s"should $grant create role privilege") {
         // GIVEN
@@ -1314,7 +1314,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
         the[AuthorizationViolationException] thrownBy {
           executeOnSystem("foo", "bar", command)
         } should have message "Permission denied."
-
       }
     )
   }
@@ -1407,7 +1406,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
           executeOnSystem("foo", "bar", s"GRANT $command TO otherRole")
         } should have message "Permission denied."
 
-        execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(empty)
+        execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set.empty)
       }
 
       test(s"should enforce assign privilege privilege for DENY $privilege") {
@@ -1423,7 +1422,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
         // THEN
         executeOnSystem("foo", "bar", s"DENY $command TO otherRole")
-        execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(showPrivileges.map(p => p.role("otherRole").privType("DENIED").map))
+        execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(showPrivileges.map(p => p.role("otherRole").privType(DENIED).map))
 
         // WHEN
         execute("REVOKE ASSIGN PRIVILEGE ON DBMS FROM custom")
@@ -1434,7 +1433,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
           executeOnSystem("foo", "bar", s"DENY $command TO otherRole")
         } should have message "Permission denied."
 
-        execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(empty)
+        execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set.empty)
       }
 
       test(s"should fail when granting and denying $privilege privileges when denied assign privilege privilege") {
@@ -1524,7 +1523,18 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     execute("GRANT TRAVERSE ON GRAPH * NODES A TO otherRole")
 
     // THEN
-    executeOnSystem("foo", "bar", "SHOW ROLE otherRole PRIVILEGES")
+    executeOnSystem("foo", "bar", "SHOW ROLE otherRole PRIVILEGES", resultHandler = (row,_) => {
+        val res = Map(
+        "access" -> row.get("access"),
+        "action" -> row.get("action"),
+        "resource" -> row.get("resource"),
+        "graph" -> row.get("graph"),
+        "segment" -> row.get("segment"),
+        "role" -> row.get("role"),
+      )
+      res should be(traverse().node("A").role("otherRole").map)
+    } ) should be(1)
+
     executeOnSystem("foo", "bar", "GRANT TRAVERSE ON GRAPH * NODES B TO otherRole")
     executeOnSystem("foo", "bar", "DENY TRAVERSE ON GRAPH * NODES C TO otherRole")
     executeOnSystem("foo", "bar", "REVOKE TRAVERSE ON GRAPH * NODES A FROM otherRole")
@@ -1532,7 +1542,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(
       Set(
         traverse().node("B").role("otherRole").database("*").map,
-        traverse("DENIED").node("C").role("otherRole").database("*").map
+        traverse(DENIED).node("C").role("otherRole").database("*").map
       )
     )
 
