@@ -23,7 +23,7 @@ public enum TransactionMode
     /**
      * The current statement is a read and no write statement will follow.
      */
-    DEFINITELY_READ(true);
+    DEFINITELY_READ(false);
 
     private final boolean requiresWrite;
 
