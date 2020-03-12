@@ -101,4 +101,10 @@ object UseEvaluation {
       CatalogName(func.namespace.parts :+ func.functionName.name)
     }
   }
+
+  def isStatic(graphSelection: GraphSelection): Boolean =
+    graphSelection.expression match {
+      case _: Variable | _: Property => true
+      case _                         => false
+    }
 }

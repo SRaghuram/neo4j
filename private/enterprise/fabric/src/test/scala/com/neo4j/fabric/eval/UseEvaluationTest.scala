@@ -48,7 +48,7 @@ class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport wit
     new FabricConfig.DataStream(300, 1000, 50, 10)
   )
 
-  private val internalDbs = Set("neo4j", "test")
+  private val internalDbs = Set("neo4j", "test", "mega")
 
   "Correctly evaluates:" - {
     "USE mega.graph(0)" in eval().shouldEqual(external(mega0))
@@ -67,10 +67,12 @@ class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport wit
     "USE mega.GRAPH(y)" in eval("y" -> Values.intValue(1)).shouldEqual(external(mega1))
     "USE mega.sOuRce_Of_aLL_tRuTH" in eval().shouldEqual(external(mega0))
     "USE Mega.MEGA" in eval().shouldEqual(external(mega2))
-    "USE internal.neo4j" in eval().shouldEqual(internal(3, "neo4j"))
-    "USE INTERNAL.Neo4j" in eval().shouldEqual(internal(3, "neo4j"))
-    "USE internal.test" in eval().shouldEqual(internal(4, "test"))
-    "USE mega.graph(4)" in eval().shouldEqual(internal(4, "test"))
+    "USE mega" in eval().shouldEqual(internal(3, "mega"))
+    "USE MeGa" in eval().shouldEqual(internal(3, "mega"))
+    "USE neo4j" in eval().shouldEqual(internal(4, "neo4j"))
+    "USE Neo4j" in eval().shouldEqual(internal(4, "neo4j"))
+    "USE test" in eval().shouldEqual(internal(5, "test"))
+    "USE mega.graph(4)" in eval().shouldEqual(internal(4, "neo4j"))
   }
 
   "Fails for:" - {
@@ -81,8 +83,7 @@ class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport wit
     "USE mega.graph(1, 2)" in the[SyntaxException].thrownBy(eval()).getMessage.should(include("Wrong arity"))
     "USE mega.GRAph0" in the[EntityNotFoundException].thrownBy(eval()).getMessage.should(include("not found: mega.GRAph0"))
     "USE MEGA.graph1" in the[EntityNotFoundException].thrownBy(eval()).getMessage.should(include("not found: MEGA.graph1"))
-    "USE internal.foo" in the[EntityNotFoundException].thrownBy(eval()).getMessage.should(include("not found: internal.foo"))
-    "USE mega" in the[EntityNotFoundException].thrownBy(eval()).getMessage.should(include("not found: mega"))
+    "USE foo" in the[EntityNotFoundException].thrownBy(eval()).getMessage.should(include("not found: foo"))
     "USE internal" in the[EntityNotFoundException].thrownBy(eval()).getMessage.should(include("not found: internal"))
   }
 

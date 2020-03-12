@@ -17,6 +17,7 @@ import com.neo4j.fabric.config.FabricConfig.Graph
 import com.neo4j.fabric.pipeline.Pipeline
 import com.neo4j.fabric.pipeline.SignatureResolver
 import com.neo4j.fabric.planning.FabricPlan.DebugOptions
+import com.neo4j.fabric.planning.Use.Declared
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.configuration.helpers.NormalizedGraphName
@@ -37,12 +38,13 @@ import org.neo4j.values.virtual.MapValue
 import org.neo4j.values.virtual.VirtualValues
 import org.scalatest.Assertion
 import org.scalatest.exceptions.TestFailedException
+import org.scalatest.prop.TableDrivenPropertyChecks
 
 import scala.collection.JavaConverters.setAsJavaSetConverter
 import scala.reflect.ClassTag
 
 //noinspection ZeroIndexToHead
-class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with ProcedureRegistryTestSupport with FragmentTestUtils {
+class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with ProcedureRegistryTestSupport with FragmentTestUtils with TableDrivenPropertyChecks {
 
   private val shardFoo0 = new Graph(0, FabricConfig.RemoteUri.create("bolt://foo:1234"), "s0", new NormalizedGraphName("shard-name-0"), null)
   private val shardFoo1 = new Graph(1, FabricConfig.RemoteUri.create("bolt://foo:1234"), "s1", new NormalizedGraphName("shard-name-1"), null)
@@ -61,7 +63,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
   def pipeline(query: String): Pipeline.Instance =
     Pipeline.Instance(monitors, query, signatures)
 
-  private def instance(query: String, params: MapValue) =
+  private def instance(query: String, params: MapValue = params) =
     planner.instance(query, params, defaultGraphName)
 
   private def plan(query: String, params: MapValue) =
@@ -73,8 +75,8 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
   "asLocal: " - {
 
     "single query" in {
-      instance("", params)
-        .asLocal(init(defaultGraph)
+      instance("")
+        .asLocal(init(defaultUse)
           .leaf(Seq(return_(literal(1).as("x"))), Seq("x")))
         .check(_.query.asSingleQuery.clauses.shouldEqual(Seq(
           return_(literal(1).as("x")),
@@ -82,8 +84,8 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
     }
 
     "single query with USE" in {
-      instance("", params)
-        .asLocal(init(defaultGraph)
+      instance("")
+        .asLocal(init(defaultUse)
           .leaf(Seq(use(varFor("foo")), return_(literal(1).as("x"))), Seq("x")))
         .check(_.query.asSingleQuery.clauses.shouldEqual(Seq(
           return_(literal(1).as("x")),
@@ -91,8 +93,8 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
     }
 
     "single query with imports" in {
-      instance("", params)
-        .asLocal(init(defaultGraph, Seq(), Seq("p", "q"))
+      instance("")
+        .asLocal(init(defaultUse, Seq(), Seq("p", "q"))
           .leaf(Seq(return_(literal(1).as("x"))), Seq("x")))
         .check(_.query.asSingleQuery.clauses.shouldEqual(Seq(
           with_(parameter("@@p", any).as("p"), parameter("@@q", any).as("q")),
@@ -101,8 +103,8 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
     }
 
     "single query with input and imports" in {
-      instance("", params)
-        .asLocal(init(defaultGraph, Seq(), Seq("p", "q"))
+      instance("")
+        .asLocal(init(defaultUse, Seq(), Seq("p", "q"))
           .leaf(Seq(), Seq("a", "b"))
           .leaf(Seq(return_(literal(1).as("x"))), Seq("x")))
         .check(_.query.asSingleQuery.clauses.shouldEqual(Seq(
@@ -115,9 +117,9 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
 
   "asRemote: " - {
     "single query" in {
-      val inst = instance("", params)
+      val inst = instance("")
       val remote = inst.asRemote(
-        init(defaultGraph)
+        init(defaultUse)
           .leaf(Seq(return_(literal(1).as("x"))), Seq("x")))
 
       parse(remote.query).as[Query].part.as[SingleQuery].clauses
@@ -127,9 +129,9 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
     }
 
     "single query with USE" in {
-      val inst = instance("", params)
+      val inst = instance("")
       val remote = inst.asRemote(
-        init(defaultGraph)
+        init(defaultUse)
           .leaf(Seq(use(varFor("foo")), return_(literal(1).as("x"))), Seq("x")))
 
       parse(remote.query).as[Query].part.as[SingleQuery].clauses
@@ -139,12 +141,12 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
     }
 
     "single query with subquery" in {
-      val inst = instance("", params)
+      val inst = instance("")
       val remote = inst.asRemote(
-        init(defaultGraph)
+        init(defaultUse)
           .leaf(Seq(with_(literal(1).as("a"))), Seq("a"))
-          .apply(
-            init(defaultGraph)
+          .apply(u =>
+            init(Use.Inherited(u))
               .leaf(Seq(use(varFor("foo")), return_(literal(1).as("y"))), Seq("y")))
           .leaf(Seq(return_(literal(1).as("x"))), Seq("x")))
 
@@ -159,12 +161,12 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
     }
 
     "single query with subquery with imports and USE" in {
-      val inst = instance("", params)
+      val inst = instance("")
       val remote = inst.asRemote(
-        init(defaultGraph, Seq(), Seq("p"))
+        init(defaultUse, Seq(), Seq("p"))
           .leaf(Seq(with_(literal(1).as("a"))), Seq("a"))
-          .apply(
-            init(defaultGraph, Seq("a", "b"), Seq("q"))
+          .apply(_ =>
+            init(Declared(use(varFor("foo"))), Seq("a", "b"), Seq("q"))
               .leaf(Seq(use(varFor("foo")), return_(literal(1).as("y"))), Seq("y")))
           .leaf(Seq(return_(literal(1).as("x"))), Seq("x")))
 
@@ -194,7 +196,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |}
           |RETURN a, b, c
           |
-          |""".stripMargin, params)
+          |""".stripMargin)
 
       val inner = inst.plan
         .query.as[Fragment.Leaf]
@@ -250,7 +252,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |  RETURN b, c, d
           |}
           |RETURN a, b, c, d
-          |""".stripMargin, params)
+          |""".stripMargin)
 
       val fooRemote = parse(
         inst.asRemote(inst.plan
@@ -364,9 +366,9 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
 
       val leafs = Stream
         .iterate(Option(pln.query)) {
-          case Some(l: Fragment.Leaf) => Some(l.input)
+          case Some(l: Fragment.Leaf)  => Some(l.input)
           case Some(a: Fragment.Apply) => Some(a.input)
-          case _                      => None
+          case _                       => None
         }
         .takeWhile(_.isDefined)
         .collect { case Some(f) => f }
@@ -532,7 +534,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
       plan(q, params)
         .check(_.executionType.shouldEqual(FabricPlan.EXPLAIN))
         .check(_.query.shouldEqual(
-          init(defaultGraph).leaf(Seq(return_(literal(1).as("x"))), Seq("x"))
+          init(defaultUse).leaf(Seq(return_(literal(1).as("x"))), Seq("x"))
         ))
     }
 
@@ -555,7 +557,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
       plan(q, params)
         .check(_.debugOptions.shouldEqual(DebugOptions(true, true)))
         .check(_.query.shouldEqual(
-          init(defaultGraph).leaf(Seq(return_(literal(1).as("x"))), Seq("x"))
+          init(defaultUse).leaf(Seq(return_(literal(1).as("x"))), Seq("x"))
         ))
     }
 

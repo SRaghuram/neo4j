@@ -29,18 +29,18 @@ object Fragment {
 
   sealed trait Chain extends Fragment {
     /** Graph selection for this fragment */
-    def use: ast.GraphSelection
+    def use: Use
   }
 
   sealed trait Segment extends Fragment.Chain {
     def input: Fragment.Chain
-    val use: ast.GraphSelection = input.use
+    val use: Use = input.use
     val argumentColumns: Seq[String] = input.argumentColumns
     val importColumns: Seq[String] = input.importColumns
   }
 
   final case class Init(
-    use: ast.GraphSelection,
+    use: Use,
     argumentColumns: Seq[String] = Seq.empty,
     importColumns: Seq[String] = Seq.empty,
   ) extends Fragment.Chain {
@@ -122,7 +122,7 @@ object Fragment {
       case f: Init => node(
         name = "init",
         fields = Seq(
-          "use" -> expr(f.use.expression),
+          "use" -> use(f.use),
           "arg" -> list(f.argumentColumns),
           "imp" -> list(f.importColumns),
         )
@@ -148,7 +148,7 @@ object Fragment {
       case f: Fragment.Leaf => node(
         name = "leaf",
         fields = Seq(
-          "use" -> expr(f.use.expression),
+          "use" -> use(f.use),
           "arg" -> list(f.argumentColumns),
           "imp" -> list(f.importColumns),
           "out" -> list(f.outputColumns),
@@ -156,6 +156,11 @@ object Fragment {
         ),
         children = Seq(f.input)
       )
+    }
+
+    private def use(u: Use) = u match {
+      case d: Use.Declared  => "declared " + expr(d.graphSelection.expression)
+      case i: Use.Inherited => "inherited" + expr(i.graphSelection.expression)
     }
   }
 }

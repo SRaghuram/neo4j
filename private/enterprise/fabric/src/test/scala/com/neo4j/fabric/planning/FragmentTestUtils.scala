@@ -13,23 +13,26 @@ import com.neo4j.fabric.planning.Fragment.Leaf
 import com.neo4j.fabric.planning.Fragment.Union
 import org.neo4j.cypher.internal.ast
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
+import org.neo4j.cypher.internal.ast.UseGraph
 
 trait FragmentTestUtils {
 
-  def init(graph: ast.GraphSelection, argumentColumns: Seq[String] = Seq(), importColumns: Seq[String] = Seq()): Init = Init(graph, argumentColumns, importColumns)
+  def init(use: Use, argumentColumns: Seq[String] = Seq(), importColumns: Seq[String] = Seq()): Init =
+    Init(use, argumentColumns, importColumns)
 
   def unionAll(lhs: Fragment, rhs: Chain): Union = Union(false, lhs, rhs)
   def union(lhs: Fragment, rhs: Chain): Union = Union(true, lhs, rhs)
 
   implicit class FragBuilder(input: Chain) {
-    def apply(fragment: Fragment): Apply = Apply(input, fragment)
+    def apply(fragmentInheritUse: Use => Fragment): Apply = Apply(input, fragmentInheritUse(input.use))
     def leaf(clauses: Seq[ast.Clause], outputColumns: Seq[String]): Leaf = Leaf(input, clauses, outputColumns)
   }
 
   private object AstUtils extends AstConstructionTestSupport
 
   val defaultGraphName: String = "default"
-  val defaultGraph = AstUtils.use(AstUtils.varFor(defaultGraphName))
+  val defaultGraph: UseGraph = AstUtils.use(AstUtils.varFor(defaultGraphName))
+  val defaultUse: Use.Inherited = Use.Inherited(Use.Declared(defaultGraph))
 
   def pipeline(query: String): Pipeline.Instance
 

@@ -11,6 +11,8 @@ import com.neo4j.fabric.pipeline.Pipeline
 import com.neo4j.fabric.pipeline.SignatureResolver
 import com.neo4j.fabric.planning.Fragment.Apply
 import com.neo4j.fabric.planning.Fragment.Leaf
+import com.neo4j.fabric.planning.Use.Declared
+import com.neo4j.fabric.planning.Use.Inherited
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.ast.UnresolvedCall
 import org.neo4j.cypher.internal.ast.UseGraph
@@ -57,8 +59,38 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
           |RETURN x
           |""".stripMargin)
 
-      frag.as[Fragment.Leaf].use.shouldEqual(defaultGraph)
-      frag.as[Fragment.Leaf].input.as[Fragment.Apply].inner.as[Fragment.Leaf].use.shouldEqual(use("g"))
+      frag.as[Fragment.Leaf].use.shouldEqual(defaultUse)
+      frag.as[Fragment.Leaf].input.as[Fragment.Apply].inner.as[Fragment.Leaf].use.shouldEqual(Declared(use("g")))
+      frag.as[Fragment.Leaf].input.as[Fragment.Apply].input.as[Fragment.Leaf].use.shouldEqual(defaultUse)
+    }
+
+    "inherited from default in subquery" in {
+      val frag = fragment(
+        """WITH 1 AS x
+          |CALL {
+          |  RETURN 2 AS y
+          |}
+          |RETURN x
+          |""".stripMargin)
+
+      frag.as[Fragment.Leaf].use.shouldEqual(defaultUse)
+      frag.as[Fragment.Leaf].input.as[Fragment.Apply].inner.as[Fragment.Leaf].use.shouldEqual(Inherited(defaultUse))
+      frag.as[Fragment.Leaf].input.as[Fragment.Apply].input.as[Fragment.Leaf].use.shouldEqual(defaultUse)
+    }
+
+    "inherited from declared in subquery" in {
+      val frag = fragment(
+        """USE g
+          |WITH 1 AS x
+          |CALL {
+          |  RETURN 2 AS y
+          |}
+          |RETURN x
+          |""".stripMargin)
+
+      frag.as[Fragment.Leaf].use.shouldEqual(Declared(use("g")))
+      frag.as[Fragment.Leaf].input.as[Fragment.Apply].inner.as[Fragment.Leaf].use.shouldEqual(Inherited(Declared(use("g"))))
+      frag.as[Fragment.Leaf].input.as[Fragment.Apply].input.as[Fragment.Leaf].use.shouldEqual(Declared(use("g")))
     }
 
     "disallow USE at start of non-initial fragment" in {
@@ -85,7 +117,7 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
           |""".stripMargin)
 
       inside(frag) { case Leaf(Apply(_, inner: Leaf), _, _) =>
-        inner.use.shouldEqual(use(function("g", varFor("x"))))
+        inner.use.shouldEqual(Declared(use(function("g", varFor("x")))))
       }
     }
 
@@ -101,7 +133,7 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
           |""".stripMargin)
 
       inside(frag) { case Leaf(Apply(_, inner: Leaf), _, _) =>
-        inner.use.shouldEqual(use(function("g", varFor("x"))))
+        inner.use.shouldEqual(Declared(use(function("g", varFor("x")))))
       }
     }
 
@@ -151,7 +183,7 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
           |RETURN a
           |""".stripMargin
       ).shouldEqual(
-        init(defaultGraph)
+        init(defaultUse)
           .leaf(Seq(withLit(1, "a"), returnVars("a")), Seq("a"))
       )
     }
@@ -163,7 +195,7 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
           |RETURN a
           |""".stripMargin
       ).shouldEqual(
-        init(use("bar"))
+        init(Declared(use("bar")))
           .leaf(Seq(use("bar"), withLit(1, "a"), returnVars("a")), Seq("a"))
       )
     }
@@ -178,9 +210,9 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
           |RETURN a, b
           |""".stripMargin
       ).shouldEqual(
-        init(defaultGraph)
+        init(defaultUse)
           .leaf(Seq(withLit(1, "a")), Seq("a"))
-          .apply(init(use("g"), Seq("a"), Seq())
+          .apply(_ => init(Declared(use("g")), Seq("a"), Seq())
             .leaf(Seq(use("g"), returnLit(2 -> "b")), Seq("b"))
           )
           .leaf(Seq(returnVars("a", "b")), Seq("a", "b"))
@@ -197,9 +229,9 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
           |RETURN a, b
           |""".stripMargin
       ).shouldEqual(
-        init(defaultGraph)
+        init(defaultUse)
           .leaf(Seq(withLit(1, "a")), Seq("a"))
-          .apply(init(defaultGraph, Seq("a"), Seq("a"))
+          .apply(use => init(Inherited(use), Seq("a"), Seq("a"))
             .leaf(Seq(withVar("a"), returnAliased("a" -> "b")), Seq("b"))
           )
           .leaf(Seq(returnVars("a", "b")), Seq("a", "b"))
@@ -224,14 +256,14 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
           |RETURN x, w, y, z
           |""".stripMargin
       ).shouldEqual(
-        init(defaultGraph)
+        init(defaultUse)
           .leaf(Seq(withLit(1, "x")), Seq("x"))
-          .apply(init(defaultGraph, Seq("x"))
+          .apply(u => init(Inherited(u), Seq("x"))
             .leaf(Seq(withLit(2, "y")), Seq("y"))
-            .apply(init(use("foo"), Seq("y"))
+            .apply(_ => init(Declared(use("foo")), Seq("y"))
               .leaf(Seq(use("foo"), returnLit(3 -> "z")), Seq("z"))
             )
-            .apply(init(defaultGraph, Seq("y", "z"), Seq("y"))
+            .apply(u => init(Inherited(u), Seq("y", "z"), Seq("y"))
               .leaf(Seq(withVar("y"), returnLit(4 -> "w")), Seq("w"))
             )
             .leaf(Seq(returnVars("w", "y", "z")), Seq("w", "y", "z"))
@@ -250,8 +282,8 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
           |""".stripMargin
       ).shouldEqual(
           union(
-            init(use("foo")).leaf(Seq(use("foo"), returnLit(1 -> "y")), Seq("y")),
-            init(use("bar")).leaf(Seq(use("bar"), returnLit(2 -> "y")), Seq("y")),
+            init(Declared(use("foo"))).leaf(Seq(use("foo"), returnLit(1 -> "y")), Seq("y")),
+            init(Declared(use("bar"))).leaf(Seq(use("bar"), returnLit(2 -> "y")), Seq("y")),
           )
       )
     }
@@ -269,13 +301,13 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
           |RETURN x, y
           |""".stripMargin
       ).shouldEqual(
-        init(defaultGraph)
+        init(defaultUse)
           .leaf(Seq(withLit(1, "x")), Seq("x"))
-          .apply(
+          .apply(u =>
             union(
-              init(use("foo"), Seq("x"))
+              init(Declared(use("foo")), Seq("x"))
                 .leaf(Seq(use("foo"), returnLit(1 -> "y")), Seq("y")),
-              init(defaultGraph, Seq("x"), Seq("x"))
+              init(Inherited(u), Seq("x"), Seq("x"))
                 .leaf(Seq(withVar("x"), returnLit(2 -> "y")), Seq("y")),
             )
           )
@@ -294,10 +326,10 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
           |RETURN x, y, z
           |""".stripMargin
       ).shouldEqual(
-        init(defaultGraph)
+        init(defaultUse)
           .leaf(Seq(withLit(1, "x")), Seq("x"))
-          .apply(
-            init(use("g"), Seq("x"))
+          .apply(_ =>
+            init(Declared(use("g")), Seq("x"))
               .leaf(Seq(
                 use("g"),
                 call(Seq("some"), "procedure", yields = Some(Seq(varFor("z"), varFor("y")))),
@@ -319,7 +351,7 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
         """CALL my.ns.myProcedure()
           |""".stripMargin
       ).shouldEqual(
-        init(defaultGraph)
+        init(defaultUse)
           .leaf(Seq(
             resolved(call(Seq("my", "ns"), "myProcedure", Some(Seq()), Some(Seq(varFor("a"), varFor("b"))))),
             returnVars("a", "b"),
@@ -332,7 +364,7 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
         """CALL my.ns.myProcedure
           |""".stripMargin
       ).shouldEqual(
-        init(defaultGraph)
+        init(defaultUse)
           .leaf(Seq(
             resolved(call(Seq("my", "ns"), "myProcedure", Some(Seq()), Some(Seq(varFor("a"), varFor("b"))))),
             returnVars("a", "b"),
@@ -345,7 +377,7 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
         """CALL my.ns.myProcedure2(1)
           |""".stripMargin
       ).shouldEqual(
-        init(defaultGraph)
+        init(defaultUse)
           .leaf(Seq(
             resolved(call(Seq("my", "ns"), "myProcedure2", Some(Seq(literal(1))), Some(Seq(varFor("a"), varFor("b"))))),
             returnVars("a", "b"),
@@ -358,7 +390,7 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
         """CALL unknownProcedure() YIELD x, y
           |""".stripMargin
       ).shouldEqual(
-        init(defaultGraph)
+        init(defaultUse)
           .leaf(Seq(call(Seq(), "unknownProcedure", Some(Seq()), Some(Seq(varFor("x"), varFor("y"))))), Seq("x", "y"))
       )
     }
@@ -368,7 +400,7 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
         """RETURN const0() AS x
           |""".stripMargin
       ).shouldEqual(
-        init(defaultGraph)
+        init(defaultUse)
           .leaf(Seq(return_(resolved(function("const0")).as("x"))), Seq("x"))
       )
     }
@@ -378,7 +410,7 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
         """RETURN my.ns.const0(1) AS x
           |""".stripMargin
       ).shouldEqual(
-        init(defaultGraph)
+        init(defaultUse)
           .leaf(Seq(return_(resolved(function(Seq("my", "ns"), "const0", literal(1))).as("x"))), Seq("x"))
       )
     }
@@ -388,7 +420,7 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
         """RETURN my.unknown() AS x
           |""".stripMargin
       ).shouldEqual(
-        init(defaultGraph)
+        init(defaultUse)
           .leaf(Seq(return_(function(Seq("my"), "unknown").as("x"))), Seq("x"))
       )
     }

@@ -7,13 +7,12 @@ package com.neo4j.fabric.planning
 
 import com.neo4j.fabric.cache.FabricQueryCache
 import com.neo4j.fabric.config.FabricConfig
+import com.neo4j.fabric.eval.UseEvaluation
 import com.neo4j.fabric.executor.FabricException
 import com.neo4j.fabric.pipeline.Pipeline
 import com.neo4j.fabric.planning.FabricPlan.DebugOptions
 import com.neo4j.fabric.planning.FabricQuery.LocalQuery
 import com.neo4j.fabric.planning.FabricQuery.RemoteQuery
-import com.neo4j.fabric.planning.Fragment.Chain
-import com.neo4j.fabric.planning.Fragment.Leaf
 import com.neo4j.fabric.util.Errors
 import com.neo4j.fabric.util.Rewritten.RewritingOps
 import org.neo4j.cypher.CypherExecutionMode
@@ -37,13 +36,10 @@ import org.neo4j.cypher.internal.ast.Return
 import org.neo4j.cypher.internal.ast.ReturnItems
 import org.neo4j.cypher.internal.ast.SingleQuery
 import org.neo4j.cypher.internal.ast.SubQuery
-import org.neo4j.cypher.internal.ast.Union
 import org.neo4j.cypher.internal.ast.UnionAll
 import org.neo4j.cypher.internal.ast.UnionDistinct
 import org.neo4j.cypher.internal.ast.UnresolvedCall
 import org.neo4j.cypher.internal.ast.With
-import org.neo4j.cypher.internal.ast.prettifier.ExpressionStringifier
-import org.neo4j.cypher.internal.ast.prettifier.Prettifier
 import org.neo4j.cypher.internal.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.expressions.FunctionName
 import org.neo4j.cypher.internal.expressions.Namespace
@@ -53,6 +49,7 @@ import org.neo4j.cypher.internal.logical.plans.ResolvedCall
 import org.neo4j.cypher.internal.logical.plans.ResolvedFunctionInvocation
 import org.neo4j.cypher.internal.planner.spi.ProcedureSignatureResolver
 import org.neo4j.cypher.internal.util.InputPosition
+import org.neo4j.cypher.internal.util.NonEmptyList
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.kernel.api.exceptions.Status.Statement.SemanticError
 import org.neo4j.monitoring.Monitors
@@ -171,7 +168,7 @@ case class FabricPlanner(
       }
     }
 
-    private def stitchChain(fragment: Chain, nested: Boolean): Seq[Clause] = {
+    private def stitchChain(fragment: Fragment.Chain, nested: Boolean): Seq[Clause] = {
       val pos = InputPosition.NONE
 
       fragment match {
@@ -181,7 +178,7 @@ case class FabricPlanner(
         case init: Fragment.Init =>
           Seq(Ast.paramBindings(init.importColumns, pos)).flatten
 
-        case leaf: Leaf =>
+        case leaf: Fragment.Leaf =>
           val before = stitchChain(leaf.input, nested)
           val clauses = if (nested) leaf.clauses else Ast.withoutGraphSelection(leaf.clauses)
           before ++ clauses

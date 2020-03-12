@@ -23,10 +23,10 @@ class FabricFragmenter(
   semantics: ast.semantics.SemanticState,
 ) {
 
-  private val defaultGraphSelection = defaultUse(defaultGraphName, InputPosition.NONE)
+  private val start = Init(defaultUse(defaultGraphName, InputPosition.NONE))
 
   def fragment: Fragment = queryStatement match {
-    case ast.Query(_, part)  => fragment(Init(defaultGraphSelection), part)
+    case ast.Query(_, part)  => fragment(start, part)
     case ddl: ast.CatalogDDL => Errors.ddlNotSupported(ddl)
     case _: ast.Command      => Errors.notSupported("Commands")
   }
@@ -44,20 +44,27 @@ class FabricFragmenter(
     sq: ast.SingleQuery,
   ): Fragment.Chain = {
     val parts = partitioned(sq.clauses)
-    parts.foldLeft(input) {
+    parts.foldLeft(input) { case (previous, part) =>
 
-      case (in: Init, Right(clauses)) =>
-        // Input is Init which means that we are at the start of a chain
-        val use = leadingUse(sq).getOrElse(in.use)
-        Leaf(Init(use, in.argumentColumns, sq.importColumns), clauses, produced(clauses))
+      val input = previous match {
+        case init: Init =>
+          // Previous is Init which means that we are at the start of a chain
+          // Inherit or declare new Use
+          val use = leadingUse(sq).map(Use.Declared).getOrElse(Use.Inherited(init.use))
+          Init(use, previous.argumentColumns, sq.importColumns)
 
-      case (in, Right(clauses)) =>
-        // Section of clauses in the middle of a query
-        Leaf(in, clauses, produced(clauses))
+        case other => other
+      }
 
-      case (in, Left(subquery)) =>
-        // Recurse and start the child chain with Init
-        Apply(in, fragment(Init(in.use, in.outputColumns, Seq.empty), subquery.part))
+      part match {
+        case Right(clauses) =>
+          // Section of normal clauses
+          Leaf(input, clauses, produced(clauses))
+
+        case Left(subquery) =>
+          // Subquery: Recurse and start the child chain with Init
+          Apply(input, fragment(Init(input.use, input.outputColumns, Seq.empty), subquery.part))
+      }
     }
   }
 
@@ -80,8 +87,8 @@ class FabricFragmenter(
     use
   }
 
-  def defaultUse(graphName: String, pos: InputPosition) =
-    UseGraph(Variable(graphName)(pos))(pos)
+  private def defaultUse(graphName: String, pos: InputPosition) =
+    Use.Declared(UseGraph(Variable(graphName)(pos))(pos))
 
   private def produced(clauses: Seq[ast.Clause]): Seq[String] =
     produced(clauses.last)

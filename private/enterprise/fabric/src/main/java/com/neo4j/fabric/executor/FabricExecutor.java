@@ -231,7 +231,7 @@ public class FabricExecutor
             Map<String,AnyValue> argumentValues = argumentValues( leaf, argument );
             MapValue parameters = addParamsFromRecord( queryParams, argumentValues, mapAsJavaMap( leaf.parameters() ) );
 
-            Catalog.Graph graph = evalUse( leaf.use(), argumentValues );
+            Catalog.Graph graph = evalUse( leaf.use().graphSelection(), argumentValues );
             var transactionMode = getTransactionMode( leaf.queryType(), graph.toString() );
             Location location = catalogManager.locationOf( graph, transactionMode.requiresWrite() );
             if ( location instanceof Location.Local )
