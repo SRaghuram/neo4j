@@ -58,7 +58,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.LazyScheduling
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ProfiledQuerySubscription
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryExecutor
 import org.neo4j.cypher.internal.runtime.pipelined.expressions.PipelinedBlacklist
-import org.neo4j.cypher.internal.runtime.pipelined.rewriters.PipelinedPlanRewriter
+import org.neo4j.cypher.internal.runtime.pipelined.rewriters.pipelinedPrePhysicalPlanRewriter
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter
@@ -101,11 +101,6 @@ class PipelinedRuntime private(parallelExecution: Boolean,
   override val PRINT_REWRITTEN_LOGICAL_PLAN = true
   override val PRINT_PIPELINE_INFO = false
   override val PRINT_FAILURE_STACK_TRACE = true
-
-  private val rewriterSequencer: String => RewriterStepSequencer =
-    if (Assertion.assertionsEnabled()) RewriterStepSequencer.newValidating else RewriterStepSequencer.newPlain
-
-  private val optimizingRewriter = PipelinedPlanRewriter(rewriterSequencer)
 
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlan = {
     DebugLog.log("PipelinedRuntime.compileToExecutable()")
@@ -152,15 +147,16 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                           queryIndexRegistrator: QueryIndexRegistrator,
                           warnings: Set[InternalNotification]): ExecutionPlan = {
     val batchSize = selectBatchSize(query, context)
-    val optimizedLogicalPlan = optimizingRewriter(query)
 
-    PipelinedBlacklist.throwOnUnsupportedPlan(optimizedLogicalPlan, parallelExecution, query.leveragedOrders)
+    val logicalPlan = pipelinedPrePhysicalPlanRewriter(query)
+
+    PipelinedBlacklist.throwOnUnsupportedPlan(logicalPlan, parallelExecution, query.leveragedOrders)
 
     val interpretedPipesFallbackPolicy = InterpretedPipesFallbackPolicy(context.interpretedPipesFallback, parallelExecution)
     val breakingPolicy = PipelinedPipelineBreakingPolicy(operatorFusionPolicy, interpretedPipesFallbackPolicy)
 
     var physicalPlan = PhysicalPlanner.plan(context.tokenContext,
-                                            optimizedLogicalPlan,
+                                            logicalPlan,
                                             query.semanticTable,
                                             breakingPolicy,
                                             allocateArgumentSlots = true)
@@ -275,7 +271,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                                  metadata,
                                  warnings,
                                  executionGraphSchedulingPolicy,
-                                 optimizedLogicalPlan)
+                                 logicalPlan)
     } catch {
       case e:Exception if operatorFusionPolicy.fusionEnabled =>
         // We failed to compile all the pipelines. Retry physical planning with fusing disabled.

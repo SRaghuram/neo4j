@@ -10,16 +10,14 @@ import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
-import org.neo4j.cypher.internal.rewriting.RewriterStepSequencer
 import org.neo4j.cypher.internal.util.attribution.IdGen
 import org.neo4j.cypher.internal.util.helpers.fixedPoint
 
 /*
- * Rewriters that live here are required to adhere to the contract of
- * receiving a valid plan and producing a valid plan. It should be possible
- * to disable any and all of these rewriters, and still produce correct behavior.
+ * Rewriters that live here are used to either improve performance, or rewrite specialized
+ * operators into a composition of simpler ones, to provide coverage in pipelined.
  */
-case class PipelinedPlanRewriter(rewriterSequencer: String => RewriterStepSequencer) {
+case object pipelinedPrePhysicalPlanRewriter {
 
   def description: String = "optimize logical plans for pipelined execution using heuristic rewriting"
 
