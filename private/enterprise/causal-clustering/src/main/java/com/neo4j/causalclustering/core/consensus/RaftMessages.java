@@ -982,17 +982,7 @@ public interface RaftMessages
         }
     }
 
-    interface ReceivedInstantRaftIdAwareMessage<RM extends RaftMessage> extends RaftIdAwareMessage<RM>
-    {
-        Instant receivedAt();
-
-        static <RM extends RaftMessage> ReceivedInstantRaftIdAwareMessage<RM> of( Instant receivedAt, RaftId raftId, RM message )
-        {
-            return new ReceivedInstantRaftIdAwareMessageImpl<>( receivedAt, raftId, message );
-        }
-    }
-
-    class RaftIdAwareMessageImpl<RM extends RaftMessage> implements RaftIdAwareMessage<RM>
+    final class RaftIdAwareMessageImpl<RM extends RaftMessage> implements RaftIdAwareMessage<RM>
     {
         private final RaftId raftId;
         private final RM message;
@@ -1044,13 +1034,18 @@ public interface RaftMessages
         }
     }
 
-    class ReceivedInstantRaftIdAwareMessageImpl<RM extends RaftMessage> implements ReceivedInstantRaftIdAwareMessage<RM>
+    final class ReceivedInstantRaftIdAwareMessage<RM extends RaftMessage> implements RaftIdAwareMessage<RM>
     {
         private final Instant receivedAt;
         private final RaftId raftId;
         private final RM message;
 
-        private ReceivedInstantRaftIdAwareMessageImpl( Instant receivedAt, RaftId raftId, RM message )
+        public static <RM extends RaftMessage> ReceivedInstantRaftIdAwareMessage<RM> of( Instant receivedAt, RaftId raftId, RM message )
+        {
+            return new ReceivedInstantRaftIdAwareMessage<>( receivedAt, raftId, message );
+        }
+
+        private ReceivedInstantRaftIdAwareMessage( Instant receivedAt, RaftId raftId, RM message )
         {
             Objects.requireNonNull( message );
             this.raftId = raftId;
@@ -1086,7 +1081,7 @@ public interface RaftMessages
             {
                 return false;
             }
-            ReceivedInstantRaftIdAwareMessageImpl<?> that = (ReceivedInstantRaftIdAwareMessageImpl<?>) o;
+            ReceivedInstantRaftIdAwareMessage<?> that = (ReceivedInstantRaftIdAwareMessage<?>) o;
             return Objects.equals( receivedAt, that.receivedAt ) && Objects.equals( raftId, that.raftId ) && Objects.equals( message(), that.message() );
         }
 
