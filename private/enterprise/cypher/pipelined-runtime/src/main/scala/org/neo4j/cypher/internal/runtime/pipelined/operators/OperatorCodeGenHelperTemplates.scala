@@ -239,15 +239,16 @@ object OperatorCodeGenHelperTemplates {
   private val TRACE_DB_HITS: Method = method[OperatorProfileEvent, Unit, Int]("dbHits")
   val CALL_CAN_CONTINUE: IntermediateRepresentation = invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue"))
 
-  def peekState[STATE_TYPE](argumentStateMapId: ArgumentStateMapId)(implicit to: Manifest[STATE_TYPE]) : IntermediateRepresentation =
+  def peekState[STATE_TYPE](argumentStateMapId: ArgumentStateMapId)(implicit to: Manifest[STATE_TYPE]): IntermediateRepresentation =
     cast[STATE_TYPE](
-     invoke(
-      invoke(load(
-        ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name),
-             method[ArgumentStateMaps, ArgumentStateMap[_ <: ArgumentState], Int]("applyByIntId"),
-             constant(argumentStateMapId.x)),
-      method[UnorderedArgumentStateMapReader[_ <: ArgumentState], ArgumentState, Long]("peek"),
-      constant(TopLevelArgument.VALUE)
+      invoke(
+        cast[UnorderedArgumentStateMapReader[_ <: ArgumentState]](
+          invoke(load(
+            ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name),
+            method[ArgumentStateMaps, ArgumentStateMap[_ <: ArgumentState], Int]("applyByIntId"),
+            constant(argumentStateMapId.x))),
+        method[UnorderedArgumentStateMapReader[_ <: ArgumentState], ArgumentState, Long]("peek"),
+        constant(TopLevelArgument.VALUE)
       )
     )
 
