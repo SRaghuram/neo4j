@@ -120,9 +120,11 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean) 
     Some((ctx: TemplateContext) => TemplateAndArgumentStateFactory(operator(ctx), None))
   protected implicit def injectMissingOption(operator: NewTemplate): Option[NewTemplate] = Some(operator)
 
-  // These conditions can be checked to see if we can specialize some simple cases
-  // TODO: think about pipeline.serial some more
-  val serialExecutionOnly: Boolean = !parallelExecution // || pipeline.serial << this has to be assumed here, to fail on fixation
+  // NOTE: Ideally this flag would also be true for any serial pipelines in the parallel runtime, but
+  //       since we make the call on whether to fuse or not as we walk the logical plan, we do not yet
+  //       know whether the pipeline will be executed in serial (this is only known once we've seen the
+  //       last plan currently (ProduceResults)).
+  val serialExecutionOnly: Boolean = !parallelExecution
 
   case class TemplateContext(slots: SlotConfiguration,
                              slotConfigurations: SlotConfigurations,

@@ -64,6 +64,9 @@ object OperatorFusionPolicy {
   }
 }
 
+/**
+  * Factory for constructing [[OperatorFuser]]s.
+  */
 trait OperatorFuserFactory {
   def newOperatorFuser(headPlanId: Id, inputSlotConfiguration: SlotConfiguration): OperatorFuser
 }
@@ -77,8 +80,22 @@ object OperatorFuserFactory {
     }
 }
 
+/**
+  * An OperatorFuser represents the ongoing fusion of operators into a fused operator.
+  */
 trait OperatorFuser {
+  /**
+    * Fuse in `plan` after any previously fused in operators.
+    */
   def fuseIn(plan: LogicalPlan): Boolean
+
+  /**
+    * Fuse in `output` after any previously fused in operators.
+    */
   def fuseIn(output: OutputDefinition): Boolean
+
+  /**
+    * Return plans for all the fused in operators so far. This includes the plan of any fused in [[OutputDefinition]].
+    */
   def fusedPlans: IndexedSeq[LogicalPlan]
 }
