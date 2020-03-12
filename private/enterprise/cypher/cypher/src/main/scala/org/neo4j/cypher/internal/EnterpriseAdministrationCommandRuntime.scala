@@ -95,9 +95,9 @@ import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.DatabaseAdministrationException
 import org.neo4j.exceptions.DatabaseAdministrationOnFollowerException
 import org.neo4j.exceptions.InternalException
+import org.neo4j.graphdb.Transaction
 import org.neo4j.internal.kernel.api.security.PrivilegeAction
 import org.neo4j.internal.kernel.api.security.SecurityContext
-import org.neo4j.kernel.api.KernelTransaction
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.kernel.api.exceptions.Status
 import org.neo4j.kernel.api.exceptions.Status.HasStatus
@@ -578,7 +578,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         Values.booleanValue(default),
         Values.utf8Value(UUID.randomUUID().toString))
 
-      def virtualMapClusterGenerator(raftMachine: RaftMachine)(ktx: KernelTransaction): MapValue = {
+      def virtualMapClusterGenerator(raftMachine: RaftMachine): (Transaction, SecurityContext) => MapValue = (_, _) => {
         val initialMembersSet = raftMachine.coreState.committed.members.asScala
         val initial = initialMembersSet.map(_.getUuid.toString).toArray
         val creation = System.currentTimeMillis()
@@ -589,7 +589,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           virtualValues() ++ Array(Values.stringArray(initial: _*), Values.longValue(creation), Values.longValue(randomId), Values.utf8Value(storeVersion)))
       }
 
-      def virtualMapStandaloneGenerator()(ktx: KernelTransaction): MapValue = {
+      def virtualMapStandaloneGenerator(): (Transaction, SecurityContext) => MapValue = (_, _) => {
         VirtualValues.map(virtualKeys, virtualValues())
       }
 
@@ -603,9 +603,9 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
       val (queryAdditions, virtualMapGenerator) = Try(resolver.resolveDependency(classOf[RaftMachine])) match {
         case Success(raftMachine) =>
-          (clusterProperties, virtualMapClusterGenerator(raftMachine) _)
+          (clusterProperties, virtualMapClusterGenerator(raftMachine))
 
-        case Failure(_) => ("", virtualMapStandaloneGenerator() _)
+        case Failure(_) => ("", virtualMapStandaloneGenerator())
       }
 
       UpdatingSystemCommandExecutionPlan("CreateDatabase", normalExecutionEngine,
