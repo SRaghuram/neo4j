@@ -18,7 +18,6 @@ import org.neo4j.cypher.internal.runtime.compiled.removeCachedProperties
 import org.neo4j.cypher.internal.util.InternalNotification
 import org.neo4j.cypher.result.RuntimeResult
 import org.neo4j.exceptions.CantCompileQueryException
-import org.neo4j.internal.kernel.api.security.SecurityContext
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.virtual.MapValue
 
@@ -26,7 +25,7 @@ object CompiledRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
   override def name: String = "legacy_compiled"
 
   @throws[CantCompileQueryException]
-  override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext, securityContext: SecurityContext): ExecutionPlan = {
+  override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlan = {
     val (newPlan, newSemanticTable) = removeCachedProperties(query.logicalPlan, query.semanticTable)
 
     val codeGen = new CodeGenerator(context.codeStructure, context.clock, CodeGenConfiguration(context.debugOptions))

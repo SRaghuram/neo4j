@@ -132,7 +132,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       s"Plan is not a recognized database administration command: ${unknownPlan.getClass.getSimpleName}")
   }
 
-  override def compileToExecutable(state: LogicalQuery, context: RuntimeContext, securityContext: SecurityContext): ExecutionPlan = {
+  override def compileToExecutable(state: LogicalQuery, context: RuntimeContext): ExecutionPlan = {
 
     val (planWithSlottedParameters, parameterMapping) = slottedParameters(state.logicalPlan)
 

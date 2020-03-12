@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.compiler.ExperimentalFeatureNotification
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefiner
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
+import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphVisualizer
 import org.neo4j.cypher.internal.physicalplanning.FusedHead
 import org.neo4j.cypher.internal.physicalplanning.InterpretedHead
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphVisualizer
@@ -41,9 +42,9 @@ import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutablePipeline
-import org.neo4j.cypher.internal.runtime.pipelined.PipelineCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.InterpretedPipesFallbackPolicy
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorFactory
+import org.neo4j.cypher.internal.runtime.pipelined.PipelineCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.PipelinedPipelineBreakingPolicy
 import org.neo4j.cypher.internal.runtime.pipelined.TemplateOperatorPolicy
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ExecutionGraphSchedulingPolicy
@@ -65,7 +66,6 @@ import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.IndexReadSession
-import org.neo4j.internal.kernel.api.security.SecurityContext
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.kernel.impl.query.QuerySubscription
 import org.neo4j.values.AnyValue
@@ -101,7 +101,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
 
   private val optimizingRewriter = PipelinedPlanRewriter(rewriterSequencer)
 
-  override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext, securityContext: SecurityContext): ExecutionPlan = {
+  override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlan = {
     DebugLog.log("PipelinedRuntime.compileToExecutable()")
 
     if (ENABLE_DEBUG_PRINTS && PRINT_PLAN_INFO_EARLY) {
