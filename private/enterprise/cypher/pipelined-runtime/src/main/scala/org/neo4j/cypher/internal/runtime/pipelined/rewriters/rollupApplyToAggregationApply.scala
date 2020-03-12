@@ -9,7 +9,6 @@ import org.neo4j.cypher.internal.expressions.Ands
 import org.neo4j.cypher.internal.expressions.IsNull
 import org.neo4j.cypher.internal.expressions.Not
 import org.neo4j.cypher.internal.expressions.Variable
-import org.neo4j.cypher.internal.expressions.functions.Collect
 import org.neo4j.cypher.internal.logical.plans.Aggregation
 import org.neo4j.cypher.internal.logical.plans.Apply
 import org.neo4j.cypher.internal.logical.plans.Argument
@@ -17,6 +16,7 @@ import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.Optional
 import org.neo4j.cypher.internal.logical.plans.RollUpApply
 import org.neo4j.cypher.internal.logical.plans.Selection
+import org.neo4j.cypher.internal.physicalplanning.ast.CollectAll
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
 import org.neo4j.cypher.internal.util.InputPosition.NONE
@@ -57,7 +57,7 @@ case class rollupApplyToAggregationApply(cardinalities: Cardinalities,
   private val instance: Rewriter = bottomUp(Rewriter.lift {
     case o @ RollUpApply(lhs: LogicalPlan, rhs: LogicalPlan, collectionName, variableToCollect, nullableVariables) =>
       val toCollect = Variable(variableToCollect)(NONE)
-      val aggregation = Aggregation(rhs, Map.empty, Map(collectionName -> Collect.asInvocation(toCollect)(NONE)))(idGen)
+      val aggregation = Aggregation(rhs, Map.empty, Map(collectionName -> CollectAll(toCollect)(NONE)))(idGen)
       cardinalities.copy(lhs.id, aggregation.id)
       providedOrders.copy(lhs.id, aggregation.id)
 

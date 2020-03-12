@@ -22,15 +22,22 @@ import scala.collection.mutable.ArrayBuffer
  */
 case object CollectAggregator extends Aggregator {
 
-  override def newUpdater: Updater = new CollectUpdater
+  override def newUpdater: Updater = new CollectUpdater(preserveNulls = false)
   override def newStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id): Reducer = new CollectStandardReducer(memoryTracker, operatorId)
   override def newConcurrentReducer: Reducer = new CollectConcurrentReducer()
 }
 
-class CollectUpdater() extends Updater {
+case object CollectAllAggregator extends Aggregator {
+
+  override def newUpdater: Updater = new CollectUpdater(preserveNulls = true)
+  override def newStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id): Reducer = new CollectStandardReducer(memoryTracker, operatorId)
+  override def newConcurrentReducer: Reducer = new CollectConcurrentReducer()
+}
+
+class CollectUpdater(preserveNulls: Boolean) extends Updater {
   private[aggregators] val collection = ListValueBuilder.newListBuilder()
   override def update(value: AnyValue): Unit =
-    if (!(value eq Values.NO_VALUE)) {
+    if (preserveNulls || !(value eq Values.NO_VALUE)) {
       collection.add(value)
     }
 }

@@ -19,4 +19,5 @@ public class Aggregators
     public static final Aggregator MAX = MaxAggregator$.MODULE$;
     public static final Aggregator MIN = MinAggregator$.MODULE$;
     public static final Aggregator COLLECT = CollectAggregator$.MODULE$;
+    public static final Aggregator COLLECT_ALL = CollectAllAggregator$.MODULE$;
 }
