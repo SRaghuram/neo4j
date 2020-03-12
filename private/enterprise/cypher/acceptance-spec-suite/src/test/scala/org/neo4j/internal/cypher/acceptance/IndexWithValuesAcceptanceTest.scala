@@ -462,7 +462,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
       executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should (
         not(includeSomewhere.aPlan("Projection").withDBHits()) and
-          includeSomewhere.aPlan("NodeIndexSeek(equality,equality)")
+          includeSomewhere.aPlan("NodeIndexSeek")
             .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\], cache\\[n.prop2\\]".r))))
 
     result.toList should equal(List(Map("n.prop1" -> 42, "n.prop2" -> 3), Map("n.prop1" -> 42, "n.prop2" -> 3)))
@@ -473,7 +473,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
       executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should (
         not(includeSomewhere.aPlan("Projection").withDBHits()) and
-          includeSomewhere.aPlan("NodeIndexSeek(equality,equality)")
+          includeSomewhere.aPlan("NodeIndexSeek")
             .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))))
 
     result.toList should equal(List(Map("n.prop1" -> 42), Map("n.prop1" -> 42)))

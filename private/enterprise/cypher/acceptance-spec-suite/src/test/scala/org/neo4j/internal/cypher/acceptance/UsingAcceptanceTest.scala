@@ -952,7 +952,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
       """.stripMargin
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
-        planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek(equality,equality)").containingVariables("f"))
+        planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("f"))
       }))
 
     result.columnAs[Node]("f").toList should equal(List(node))
@@ -970,7 +970,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
       """.stripMargin
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
-        planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek(equality,equality)")
+        planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek")
           .containingVariables("f").containingArgumentRegex("f:Foo\\(bar, baz\\).*".r))
       }))
 
