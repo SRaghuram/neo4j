@@ -60,7 +60,7 @@ class Record
         this.id = id;
     }
 
-    Record( byte flags, long id )
+    private Record( byte flags, long id )
     {
         this.flags = flags;
         this.id = id;
@@ -69,6 +69,11 @@ class Record
     static int recordSize( int sizeExp )
     {
         return SIZE_BASE << sizeExp;
+    }
+
+    static int recordDataSize( int sizeExp )
+    {
+        return recordSize( sizeExp ) - HEADER_SIZE;
     }
 
     static int recordXFactor( int sizeExp )
@@ -83,7 +88,7 @@ class Record
 
     private void createNewDataBuffer()
     {
-        data = ByteBuffer.wrap( new byte[recordSize( sizeExp() ) - HEADER_SIZE] );
+        data = ByteBuffer.wrap( new byte[recordDataSize( sizeExp() )] );
     }
 
     ByteBuffer dataForReading( int position )
@@ -174,7 +179,7 @@ class Record
         if ( record.hasFlag( FLAG_IN_USE ) )
         {
             short length = channel.getShort();
-            assert length <= recordSize( record.sizeExp() ) - HEADER_SIZE; // if incorrect, fail here instead of OOM
+            assert length <= recordDataSize( record.sizeExp() ); // if incorrect, fail here instead of OOM
             ByteBuffer data = record.dataForWriting();
             channel.get( data.array(), length );
         }
@@ -185,9 +190,16 @@ class Record
 
     void serialize( PageCursor cursor )
     {
-        int length = data.limit();
         cursor.putByte( flags );
-        cursor.putBytes( data.array(), 0, length );
+        if ( data != null )
+        {
+            int length = data.limit();
+            cursor.putBytes( data.array(), 0, length );
+        }
+        else
+        {
+            assert !hasFlag( FLAG_IN_USE );
+        }
     }
 
     void clear()
@@ -204,7 +216,7 @@ class Record
         // First read the header byte in its own shouldRetry-loop because how we read the data depends on this
         flags = safelyReadFlags( cursor, offset );
         int sizeExp = sizeExp( flags );
-        int length = recordSize( sizeExp ) - HEADER_SIZE;
+        int length = recordDataSize( sizeExp );
         if ( length > cursor.getCurrentPageSize() || length <= 0 )
         {
             cursor.setCursorException( "Invalid length " + length );

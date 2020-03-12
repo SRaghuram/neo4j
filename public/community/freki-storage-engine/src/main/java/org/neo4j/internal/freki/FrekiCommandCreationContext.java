@@ -34,9 +34,9 @@ import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
 import static org.neo4j.internal.freki.MutableNodeRecordData.ARTIFICIAL_MAX_RELATIONSHIP_COUNTER;
 import static org.neo4j.internal.freki.MutableNodeRecordData.FIRST_RELATIONSHIP_ID;
 import static org.neo4j.internal.freki.MutableNodeRecordData.externalRelationshipId;
+import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPointsToDense;
 import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerToString;
 import static org.neo4j.internal.freki.MutableNodeRecordData.idFromForwardPointer;
-import static org.neo4j.internal.freki.MutableNodeRecordData.isDenseFromForwardPointer;
 import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromForwardPointer;
 import static org.neo4j.util.Preconditions.checkState;
 
@@ -84,7 +84,7 @@ class FrekiCommandCreationContext implements CommandCreationContext
             }
 
             long forwardPointer = data.getForwardPointer();
-            if ( forwardPointer != NULL && !isDenseFromForwardPointer( forwardPointer ) )
+            if ( forwardPointer != NULL && !forwardPointerPointsToDense( forwardPointer ) )
             {
                 int sizeExp = sizeExponentialFromForwardPointer( forwardPointer );
                 long id = idFromForwardPointer( forwardPointer );

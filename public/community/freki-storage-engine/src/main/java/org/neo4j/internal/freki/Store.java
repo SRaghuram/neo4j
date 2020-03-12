@@ -34,6 +34,9 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.storageengine.util.IdUpdateListener;
 
+import static java.lang.String.format;
+import static org.neo4j.internal.freki.Record.recordXFactor;
+
 public class Store extends BareBoneSingleFileStore implements SimpleStore
 {
     private final IdGeneratorFactory idGeneratorFactory;
@@ -147,12 +150,6 @@ public class Store extends BareBoneSingleFileStore implements SimpleStore
     }
 
     @Override
-    public int recordSize()
-    {
-        return recordSize;
-    }
-
-    @Override
     public int recordSizeExponential()
     {
         return sizeExp;
@@ -199,15 +196,22 @@ public class Store extends BareBoneSingleFileStore implements SimpleStore
     }
 
     @Override
-    public boolean exists( PageCursor cursor, long id ) throws IOException
+    public boolean exists( PageCursor cursor, long id )
     {
         long pageId = id / recordsPerPage;
-        int offset = (int) ((id % recordsPerPage) * Record.SIZE_BASE);
-        if ( !cursor.next( pageId ) )
+        int offset = (int) ((id % recordsPerPage) * recordSize);
+        try
         {
-            return false;
+            if ( !cursor.next( pageId ) )
+            {
+                return false;
+            }
+            return Record.isInUse( cursor, offset );
         }
-        return Record.isInUse( cursor, offset );
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
     }
 
     @Override
@@ -221,5 +225,11 @@ public class Store extends BareBoneSingleFileStore implements SimpleStore
     {
         super.flush( ioLimiter, cursorTracer );
         idGenerator.checkpoint( ioLimiter, cursorTracer );
+    }
+
+    @Override
+    public String toString()
+    {
+        return format( "Store[x%d,highId:%d,%s]", recordXFactor( sizeExp ), getHighId(), file.getName() );
     }
 }

@@ -41,7 +41,8 @@ import org.neo4j.kernel.lifecycle.Life;
 import static java.util.stream.Stream.of;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.internal.freki.CursorAccessPatternTracer.NO_TRACING;
-import static org.neo4j.internal.freki.MutableNodeRecordData.isDenseFromForwardPointer;
+import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPointsToDense;
+import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPointsToXRecord;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.internal.freki.Record.recordSize;
 import static org.neo4j.internal.freki.Record.recordXFactor;
@@ -165,17 +166,18 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         dumpLogicalRepresentation( nodeCursor, propertyCursor, relationshipCursor );
 
         // More physical
-        System.out.printf( "x1: %s%s%n", nodeCursor.smallRecord, nodeCursor.headerState.isDense ? " (DENSE)" : "" );
-        if ( nodeCursor.headerState.containsForwardPointer )
+        System.out.println( nodeCursor.toString() );
+        System.out.println( "TODO print x1 raw bytes" );
+        if ( forwardPointerPointsToXRecord( nodeCursor.data.forwardPointer ) )
         {
-            System.out.printf( "x%d: %s%n", recordXFactor( nodeCursor.record.sizeExp() ), nodeCursor.record );
+            System.out.println( "TODO print xL raw bytes" );
         }
     }
 
     public void dumpLogicalRepresentation( FrekiNodeCursor nodeCursor, FrekiPropertyCursor propertyCursor,
             FrekiRelationshipTraversalCursor relationshipCursor )
     {
-        var nodeId = nodeCursor.loadedNodeId;
+        var nodeId = nodeCursor.entityReference();
         System.out.printf( "Node[%d] %s%n", nodeId, nodeCursor );
         System.out.printf( "  labels:%s%n", Arrays.toString( nodeCursor.labels() ) );
 
@@ -247,14 +249,14 @@ public class FrekiAnalysis extends Life implements AutoCloseable
               var propertyCursor = cursorFactory.allocatePropertyCursor( PageCursorTracer.NULL );
               var relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( PageCursorTracer.NULL ) )
         {
+            System.out.println( record );
             if ( !nodeCursor.initializeFromRecord( record ) )
             {
                 System.out.println( "Not in use" );
                 return;
             }
             dumpLogicalRepresentation( nodeCursor, propertyCursor, relationshipCursor );
-            System.out.println( nodeCursor.record.dataForReading() );
-            System.out.println( nodeCursor.headerState );
+            System.out.println( nodeCursor );
         }
     }
 
@@ -353,7 +355,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
                                 }
                                 stats.bytesOccupiedInUsedRecords += Record.HEADER_SIZE + buffer.position();
                                 stats.bytesVacantInUsedRecords += recordSize - Record.HEADER_SIZE - buffer.position();
-                                if ( isDenseFromForwardPointer( data.getForwardPointer() ) )
+                                if ( forwardPointerPointsToDense( data.getForwardPointer() ) )
                                 {
                                     stats.numDenseNodes++;
                                 }
@@ -378,7 +380,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         {
             var data = new MutableNodeRecordData( nodeId );
             data.deserialize( record.dataForReading(), stores.bigPropertyValueStore );
-            return isDenseFromForwardPointer( data.getForwardPointer() );
+            return forwardPointerPointsToDense( data.getForwardPointer() );
         }
         return false;
     }

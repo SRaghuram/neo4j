@@ -48,6 +48,8 @@ import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
 import org.neo4j.values.storable.Values;
 
+import static java.lang.String.format;
+import static org.neo4j.internal.freki.Record.recordXFactor;
 import static org.neo4j.internal.helpers.Numbers.safeCastIntToShort;
 
 abstract class FrekiCommand implements StorageCommand
@@ -98,6 +100,12 @@ abstract class FrekiCommand implements StorageCommand
             channel.putLong( after.id );
             before.serialize( channel );
             after.serialize( channel );
+        }
+
+        @Override
+        public String toString()
+        {
+            return format( "SparseNode[%d,x%d%n  -%s%n  +%s]", nodeId, recordXFactor( after.sizeExp() ), before, after );
         }
 
         static SparseNode deserialize( ReadableChannel channel ) throws IOException

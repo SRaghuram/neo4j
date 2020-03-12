@@ -26,8 +26,14 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_INT_ARRAY;
+import static org.neo4j.internal.freki.MutableNodeRecordData.containsBackPointer;
+import static org.neo4j.internal.freki.MutableNodeRecordData.containsForwardPointer;
+import static org.neo4j.internal.freki.MutableNodeRecordData.endOffset;
+import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPointsToXRecord;
 import static org.neo4j.internal.freki.MutableNodeRecordData.idFromForwardPointer;
-import static org.neo4j.internal.freki.MutableNodeRecordData.isDenseFromForwardPointer;
+import static org.neo4j.internal.freki.MutableNodeRecordData.propertyOffset;
+import static org.neo4j.internal.freki.MutableNodeRecordData.readOffsetsHeader;
+import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipOffset;
 import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromForwardPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.internal.freki.StreamVByte.SKIP;
@@ -45,20 +51,15 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     final CursorAccessPatternTracer.ThreadAccess cursorAccessTracer;
     final PageCursorTracer cursorTracer;
 
-    Record smallRecord;
-    Record record;
-    ByteBuffer data;
-    private PageCursor cursor;
-    long loadedNodeId = NULL;
-
-    // state from record data header
-    MainRecordHeaderState headerState;
-    boolean sharedHeaderState;
-
-    // state from relationship section, it's here because both relationship cursors as well as property cursor makes use of them
+    FrekiCursorData data;
+    boolean sharedData;
+    // State from relationship section, it's here because both relationship cursors as well as property cursor makes use of them
     int[] relationshipTypesInNode;
     int[] relationshipTypeOffsets;
     int firstRelationshipTypeOffset;
+
+    Record x1Record;
+    PageCursor x1Cursor;
 
     FrekiMainStoreCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer )
     {
@@ -66,110 +67,143 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         this.cursorAccessPatternTracer = cursorAccessPatternTracer;
         this.cursorAccessTracer = cursorAccessPatternTracer.access();
         this.cursorTracer = cursorTracer;
-        this.record = stores.mainStore.newRecord();
-        this.smallRecord = record;
         reset();
     }
 
     void reset()
     {
-        data = null;
+        if ( data != null )
+        {
+            if ( sharedData )
+            {
+                data = null;
+            }
+            else
+            {
+                data.reset();
+            }
+        }
         relationshipTypeOffsets = null;
         relationshipTypesInNode = null;
-        loadedNodeId = NULL;
-        if ( sharedHeaderState )
-        {
-            headerState = null;
-            sharedHeaderState = false;
-        }
-        else if ( headerState != null )
-        {
-            headerState.reset();
-        }
+        firstRelationshipTypeOffset = 0;
     }
 
-    PageCursor cursor()
+    PageCursor x1Cursor()
     {
-        if ( cursor == null )
+        if ( x1Cursor == null )
         {
-            cursor = stores.mainStore.openReadCursor();
+            x1Cursor = stores.mainStore.openReadCursor();
         }
-        return cursor;
+        return x1Cursor;
+    }
+
+    Record x1Record()
+    {
+        if ( x1Record == null )
+        {
+            x1Record = stores.mainStore.newRecord();
+        }
+        return x1Record;
     }
 
     /**
-     * Loads a record from {@link Store}, starting with the "small" record, which corresponds to the given id.
-     * The record header, i.e. offsets and such is read and if it looks like this record points to a larger record
-     * then the larger record is also loaded. They will live in {@link #smallRecord} and {@link #record} respectively,
-     * but {@link #data} will point to the large record data, which for the time being holds the majority of the data.
+     * Loads raw byte contents and does minimal parsing of higher-level offsets of the given node into {@link #data}.
+     * @param nodeId node id to load.
+     * @return {@code true} if the node exists, otherwise {@code false}.
      */
-    boolean loadMainRecord( long id )
+    boolean load( long nodeId )
     {
-        stores.mainStore.read( cursor(), smallRecord, id );
-        if ( !smallRecord.hasFlag( FLAG_IN_USE ) )
+        if ( !stores.mainStore.read( x1Cursor(), x1Record(), nodeId ) || !x1Record.hasFlag( FLAG_IN_USE ) )
         {
             return false;
         }
-        data = smallRecord.dataForReading();
-        readOffsets( true );
-        if ( headerState.containsForwardPointer && !headerState.isDense )
+
+        // From x1 read forward pointer, labels offset and potentially other offsets too
+        ensureFreshDataInstance();
+        data.nodeId = nodeId;
+        gatherDataFromX1( x1Record );
+        if ( forwardPointerPointsToXRecord( data.forwardPointer ) )
         {
-            // Let's load the larger record
-            int sizeExp = sizeExponentialFromForwardPointer( headerState.forwardPointer );
-            SimpleStore largeStore = stores.mainStore( sizeExp );
-            if ( record == null || record.sizeExp() != sizeExp )
+            SimpleStore xLStore = stores.mainStore( sizeExponentialFromForwardPointer( data.forwardPointer ) );
+            Record xLRecord = xLStore.newRecord();
+            try ( PageCursor xLCursor = xLStore.openReadCursor() )
             {
-                record = largeStore.newRecord();
-            }
-            try ( PageCursor largeCursor = largeStore.openReadCursor() )
-            {
-                largeStore.read( largeCursor, record, idFromForwardPointer( headerState.forwardPointer ) );
-                if ( !record.hasFlag( FLAG_IN_USE ) )
+                if ( !xLStore.read( xLCursor, xLRecord, idFromForwardPointer( data.forwardPointer ) ) || !xLRecord.hasFlag( FLAG_IN_USE ) )
                 {
+                    // TODO depending on whether we're strict about it we should throw here perhaps?
                     return false;
                 }
-                data = record.dataForReading();
-                readOffsets( false );
-                if ( headerState.backPointer != id )
-                {
-                    throw new IllegalStateException( "Loaded X1 record for node:" + id + " with a linked record " + headerState.forwardPointer +
-                            " that didn't point back, instead pointing to " + headerState.backPointer );
-                }
             }
+            gatherDataFromXL( xLRecord );
+            assert data.backwardPointer == data.nodeId;
         }
-        loadedNodeId = id;
         return true;
     }
 
-    /**
-     * Initializes another cursor with the state of this cursor, starting with the "small" record, which corresponds to the given id.
-     * If a larger record is also involved then that too will be transferred. They will live in {@link #smallRecord} and
-     * {@link #record} respectively, but {@link #data} will point to the large record data, which for the time being holds the majority of the data.
-     */
+    private void ensureFreshDataInstance()
+    {
+        if ( data == null )
+        {
+            data = new FrekiCursorData();
+        }
+        else
+        {
+            data.reset();
+        }
+    }
+
+    private void gatherDataFromX1( Record x1Record )
+    {
+        data.x1Loaded = true;
+        ByteBuffer x1Buffer = x1Record.dataForReading( 0 );
+        int x1OffsetsHeader = readOffsetsHeader( x1Buffer );
+        data.assignLabelOffset( x1Buffer.position(), x1Buffer );
+        data.assignPropertyOffset( propertyOffset( x1OffsetsHeader ), x1Buffer );
+        data.assignRelationshipOffset( relationshipOffset( x1OffsetsHeader ), x1Buffer );
+        data.endOffset = endOffset( x1OffsetsHeader );
+
+        // Check if there's more data to load from a larger x record
+        // TODO an optimization would be to load xL lazily instead (e.g. if you would only need labels)
+        if ( containsForwardPointer( x1OffsetsHeader ) )
+        {
+            x1Buffer.position( endOffset( x1OffsetsHeader ) );
+            if ( data.relationshipOffset > 0 )
+            {
+                readIntDeltas( SKIP, x1Buffer );
+            }
+            data.forwardPointer = readLongs( x1Buffer )[0];
+            assert data.forwardPointer != NULL;
+        }
+    }
+
+    private void gatherDataFromXL( Record xLRecord )
+    {
+        data.xLLoaded = true;
+        ByteBuffer xLBuffer = xLRecord.dataForReading( 0 );
+        int xLOffsetsHeader = readOffsetsHeader( xLBuffer );
+        data.assignPropertyOffset( propertyOffset( xLOffsetsHeader ), xLBuffer );
+        data.assignRelationshipOffset( relationshipOffset( xLOffsetsHeader ), xLBuffer );
+        if ( containsBackPointer( xLOffsetsHeader ) )
+        {
+            xLBuffer.position( endOffset( xLOffsetsHeader ) );
+            if ( data.relationshipOffset > 0 )
+            {
+                data.endOffset = endOffset( xLOffsetsHeader );
+                readIntDeltas( SKIP, xLBuffer );
+            }
+            data.backwardPointer = readLongs( xLBuffer )[0];
+        }
+    }
+
     boolean initializeOtherCursorFromStateOfThisCursor( FrekiMainStoreCursor otherCursor )
     {
-        if ( smallRecord.hasFlag( FLAG_IN_USE ) )
+        if ( !data.x1Loaded )
         {
-            otherCursor.smallRecord.initializeFromSharedData( smallRecord );
-            otherCursor.data = otherCursor.smallRecord.dataForReading();
-            otherCursor.headerState = headerState;
-            otherCursor.sharedHeaderState = true;
-            this.sharedHeaderState = true;
-            otherCursor.loadedNodeId = loadedNodeId;
-            if ( headerState.containsForwardPointer && !headerState.isDense )
-            {
-                int sizeExp = sizeExponentialFromForwardPointer( headerState.forwardPointer );
-                SimpleStore largeStore = stores.mainStore( sizeExp );
-                if ( otherCursor.record == null || otherCursor.record.sizeExp() != sizeExp )
-                {
-                    otherCursor.record = largeStore.newRecord();
-                }
-                otherCursor.record.initializeFromSharedData( record );
-                otherCursor.data = otherCursor.record.dataForReading();
-            }
-            return true;
+            return false;
         }
-        return false;
+        otherCursor.ensureFreshDataInstance();
+        otherCursor.data.copyFrom( data );
+        return true;
     }
 
     boolean initializeFromRecord( Record record )
@@ -179,89 +213,42 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
             return false;
         }
 
+        ensureFreshDataInstance();
         if ( record.sizeExp() == 0 )
         {
-            smallRecord = record;
-            data = record.dataForReading( 0 );
-            readOffsets( true );
-            loadedNodeId = record.id;
+            gatherDataFromX1( record );
+            data.nodeId = record.id;
         }
         else
         {
-            this.record = record;
-            data = record.dataForReading( 0 );
-            readOffsets( false );
-            loadedNodeId = headerState.backPointer;
+            gatherDataFromXL( record );
+            data.nodeId = data.backwardPointer;
         }
         return true;
     }
 
-    private void readOffsets( boolean forSmallRecord )
-    {
-        int offsetsHeader = MutableNodeRecordData.readOffsetsHeader( data );
-        if ( headerState == null )
-        {
-            headerState = new MainRecordHeaderState();
-        }
-        if ( forSmallRecord )
-        {
-            headerState.initializeForSmallRecord( data.position() );
-        }
-        headerState.initialize( offsetsHeader );
-        if ( forSmallRecord )
-        {
-            headerState.containsForwardPointer = MutableNodeRecordData.containsForwardPointer( offsetsHeader );
-            if ( headerState.containsForwardPointer )
-            {
-                setDataPositionAfterTypeOffsets();
-                headerState.forwardPointer = data.getLong();
-                headerState.isDense = isDenseFromForwardPointer( headerState.forwardPointer );
-            }
-        }
-        else
-        {
-            headerState.containsBackPointer = MutableNodeRecordData.containsBackPointer( offsetsHeader );
-            if ( headerState.containsBackPointer )
-            {
-                data.position( headerState.endOffset );
-                setDataPositionAfterTypeOffsets();
-                headerState.backPointer = readLongs( data )[0];
-            }
-        }
-    }
-
-    private void setDataPositionAfterTypeOffsets()
-    {
-        data.position( headerState.endOffset );
-        if ( headerState.relationshipsOffset != 0 )
-        {
-            // skip the type offsets array
-            StreamVByte.readIntDeltas( SKIP, data );
-        }
-    }
-
     void readRelationshipTypesAndOffsets()
     {
-        if ( headerState.relationshipsOffset == 0 )
+        if ( data.relationshipOffset == 0 )
         {
             relationshipTypesInNode = EMPTY_INT_ARRAY;
             relationshipTypeOffsets = EMPTY_INT_ARRAY;
             return;
         }
 
-        data.position( headerState.relationshipsOffset );
-        relationshipTypesInNode = readIntDeltas( new IntArrayTarget(), data ).array();
+        ByteBuffer buffer = data.relationshipBuffer();
+        relationshipTypesInNode = readIntDeltas( new IntArrayTarget(), buffer ).array();
         // Right after the types array the relationship group data starts, so this is the offset for the first type
-        firstRelationshipTypeOffset = data.position();
+        firstRelationshipTypeOffset = buffer.position();
 
         // Then read the rest of the offsets for type indexes > 0 after all the relationship data groups, i.e. at endOffset
         // The values in the typeOffsets array are relative to the firstTypeOffset
         IntArrayTarget typeOffsetsTarget = new IntArrayTarget();
-        readIntDeltas( typeOffsetsTarget, data.array(), headerState.endOffset );
+        readIntDeltas( typeOffsetsTarget, buffer.array(), data.endOffset );
         relationshipTypeOffsets = typeOffsetsTarget.array();
     }
 
-    int relationshipPropertiesOffset( int relationshipGroupPropertiesOffset, int relationshipIndexInGroup )
+    int relationshipPropertiesOffset( ByteBuffer buffer, int relationshipGroupPropertiesOffset, int relationshipIndexInGroup )
     {
         if ( relationshipIndexInGroup == -1 )
         {
@@ -272,7 +259,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         int offset = relationshipGroupPropertiesOffset;
         for ( int i = 0; i < relationshipIndexInGroup; i++ )
         {
-            int blockSize = data.get( offset );
+            int blockSize = buffer.get( offset );
             offset += blockSize;
         }
         return offset + 1;
@@ -286,10 +273,16 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     @Override
     public void close()
     {
-        if ( cursor != null )
+        if ( x1Cursor != null )
         {
-            cursor.close();
-            cursor = null;
+            x1Cursor.close();
+            x1Cursor = null;
         }
+    }
+
+    @Override
+    public String toString()
+    {
+        return String.format( "%s,%s", getClass().getSimpleName(), data );
     }
 }

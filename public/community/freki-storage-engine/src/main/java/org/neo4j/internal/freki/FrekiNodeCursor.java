@@ -31,10 +31,8 @@ import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 import org.neo4j.storageengine.util.EagerDegrees;
 
-import static org.neo4j.internal.freki.MutableNodeRecordData.idFromForwardPointer;
-import static org.neo4j.internal.freki.MutableNodeRecordData.isDenseFromForwardPointer;
-import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromForwardPointer;
-import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
+import static org.apache.commons.lang3.ArrayUtils.EMPTY_LONG_ARRAY;
+import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPointsToDense;
 import static org.neo4j.internal.freki.StreamVByte.nonEmptyIntDeltas;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
 
@@ -52,8 +50,8 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public long[] labels()
     {
-        ByteBuffer smallRecordData = smallRecord.dataForReading( headerState.labelsOffset );
-        return readIntDeltas( new StreamVByte.LongArrayTarget(), smallRecordData ).array();
+        ByteBuffer buffer = data.labelBuffer();
+        return buffer != null ? readIntDeltas( new StreamVByte.LongArrayTarget(), buffer ).array() : EMPTY_LONG_ARRAY;
     }
 
     @Override
@@ -72,7 +70,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public long relationshipsReference()
     {
-        return loadedNodeId;
+        return data.nodeId;
     }
 
     @Override
@@ -85,9 +83,9 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     public int[] relationshipTypes()
     {
         // Dense
-        if ( headerState.isDense )
+        if ( forwardPointerPointsToDense( data.forwardPointer ) )
         {
-            return stores.denseStore.getDegrees( loadedNodeId, RelationshipSelection.ALL_RELATIONSHIPS, cursorTracer ).types();
+            return stores.denseStore.getDegrees( data.nodeId, RelationshipSelection.ALL_RELATIONSHIPS, cursorTracer ).types();
         }
 
         // Sparse
@@ -99,9 +97,9 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     public Degrees degrees( RelationshipSelection selection )
     {
         // Dense
-        if ( headerState.isDense )
+        if ( forwardPointerPointsToDense( data.forwardPointer ) )
         {
-            return stores.denseStore.getDegrees( loadedNodeId, selection, cursorTracer );
+            return stores.denseStore.getDegrees( data.nodeId, selection, cursorTracer );
         }
 
         // Sparse
@@ -149,7 +147,8 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public boolean hasProperties()
     {
-        return nonEmptyIntDeltas( data.array(), headerState.nodePropertiesOffset );
+        ByteBuffer buffer = data.propertyBuffer();
+        return buffer != null && nonEmptyIntDeltas( buffer.array(), buffer.position() );
     }
 
     @Override
@@ -167,7 +166,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public long entityReference()
     {
-        return loadedNodeId;
+        return data.nodeId;
     }
 
     @Override
@@ -177,7 +176,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
         {
             while ( singleId < stores.mainStore.getHighId() )
             {
-                if ( loadMainRecord( singleId++ ) )
+                if ( load( singleId++ ) )
                 {
                     return true;
                 }
@@ -187,10 +186,10 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
         }
         else if ( singleId != NULL )
         {
-            loadMainRecord( singleId );
+            boolean loaded = load( singleId );
             cursorAccessTracer.registerNode( singleId );
             singleId = NULL;
-            return smallRecord.hasFlag( FLAG_IN_USE );
+            return loaded;
         }
         return false;
     }
@@ -216,14 +215,5 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
             relationshipsCursor = null;
         }
         super.close();
-    }
-
-    @Override
-    public String toString()
-    {
-        long fw = headerState.forwardPointer;
-        return String.format( "{nodeId:%d,fw:%s,pOff:%d,rOff:%d}", loadedNodeId, headerState.containsForwardPointer
-                ? isDenseFromForwardPointer( fw ) ? "DENSE" : idFromForwardPointer( fw ) + "(" + sizeExponentialFromForwardPointer( fw ) + ")" : "-",
-                headerState.nodePropertiesOffset, headerState.relationshipsOffset );
     }
 }

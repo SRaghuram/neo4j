@@ -19,8 +19,6 @@
  */
 package org.neo4j.internal.freki;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.OptionalLong;
@@ -244,16 +242,9 @@ class FrekiStorageReader extends FrekiCursorFactory implements StorageReader
     @Override
     public boolean nodeExists( long id, PageCursorTracer cursorTracer )
     {
-        try
+        try ( PageCursor cursor = stores.mainStore.openReadCursor() )
         {
-            try ( PageCursor cursor = stores.mainStore.openReadCursor() )
-            {
-                return stores.mainStore.exists( cursor, id );
-            }
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException( e );
+            return stores.mainStore.exists( cursor, id );
         }
     }
 

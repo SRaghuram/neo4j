@@ -62,7 +62,7 @@ import org.neo4j.storageengine.util.EagerDegrees;
 import org.neo4j.values.storable.Value;
 
 import static java.lang.String.format;
-import static org.neo4j.internal.freki.CommandCreator.serializeValue;
+import static org.neo4j.internal.freki.GraphUpdates.serializeValue;
 import static org.neo4j.internal.freki.MutableNodeRecordData.externalRelationshipId;
 import static org.neo4j.internal.freki.PropertyUpdate.add;
 import static org.neo4j.internal.freki.PropertyUpdate.change;
@@ -491,6 +491,8 @@ class DenseStore extends LifecycleAdapter implements Closeable
                     nodeNumberOfRelationships++;
                     nodeRelationshipsByteSize += entrySize;
                     break;
+                default:
+                    throw new UnsupportedOperationException( "Unknown key type: " + key.itemType );
                 }
             }
         }
