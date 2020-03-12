@@ -439,7 +439,8 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     "PRIVILEGE MANAGEMENT",
     "SHOW PRIVILEGE",
     "ASSIGN PRIVILEGE",
-    "REMOVE PRIVILEGE"
+    "REMOVE PRIVILEGE",
+    "ALL DBMS PRIVILEGES"
   ).foreach {
     command =>
       test(s"GRANT $command is not supported in 3.5 or 4.0") {
