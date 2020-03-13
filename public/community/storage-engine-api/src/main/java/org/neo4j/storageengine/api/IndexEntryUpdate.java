@@ -134,6 +134,31 @@ public class IndexEntryUpdate<INDEX_KEY extends SchemaDescriptorSupplier>
                 Arrays.toString( before ), Arrays.toString( values ) );
     }
 
+    @Override
+    public String toString()
+    {
+        return describe( new TokenNameLookup()
+        {
+            @Override
+            public String labelGetName( int labelId )
+            {
+                return Integer.toString( labelId );
+            }
+
+            @Override
+            public String relationshipTypeGetName( int relationshipTypeId )
+            {
+                return Integer.toString( relationshipTypeId );
+            }
+
+            @Override
+            public String propertyKeyGetName( int propertyKeyId )
+            {
+                return Integer.toString( propertyKeyId );
+            }
+        } );
+    }
+
     public static <INDEX_KEY extends SchemaDescriptorSupplier> IndexEntryUpdate<INDEX_KEY> add(
             long entityId, INDEX_KEY indexKey, Value... values )
     {
