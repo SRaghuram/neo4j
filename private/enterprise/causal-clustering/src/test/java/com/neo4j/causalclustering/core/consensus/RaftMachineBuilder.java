@@ -47,7 +47,7 @@ public class RaftMachineBuilder
     private RaftLog raftLog = new InMemoryRaftLog();
     private TimerService timerService;
 
-    private Inbound<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> inbound = handler -> {};
+    private Inbound<RaftMessages.ReceivedDistributedRaftMessage<?>> inbound = handler -> {};
     private Outbound<MemberId, RaftMessages.RaftMessage> outbound = ( to, message, block ) -> {};
 
     private LogProvider logProvider = NullLogProvider.getInstance();
@@ -150,7 +150,7 @@ public class RaftMachineBuilder
         return this;
     }
 
-    public RaftMachineBuilder inbound( Inbound<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> inbound )
+    public RaftMachineBuilder inbound( Inbound<RaftMessages.ReceivedDistributedRaftMessage<?>> inbound )
     {
         this.inbound = inbound;
         return this;

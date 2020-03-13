@@ -126,8 +126,8 @@ class RaftMessageEncoderDecoderTest
         setupChannels( raftProtocol );
 
         RaftId raftId = RaftIdFactory.random();
-        RaftMessages.ReceivedInstantRaftIdAwareMessage<RaftMessage> idAwareMessage =
-                RaftMessages.ReceivedInstantRaftIdAwareMessage.of( Instant.now(), raftId, raftMessage );
+        RaftMessages.ReceivedDistributedRaftMessage<RaftMessage> idAwareMessage =
+                RaftMessages.ReceivedDistributedRaftMessage.of( Instant.now(), raftId, raftMessage );
 
         outbound.writeOutbound( idAwareMessage );
 
@@ -136,7 +136,7 @@ class RaftMessageEncoderDecoderTest
         {
             inbound.writeInbound( o );
         }
-        RaftMessages.ReceivedInstantRaftIdAwareMessage<RaftMessage> message = handler.getRaftMessage();
+        RaftMessages.ReceivedDistributedRaftMessage<RaftMessage> message = handler.getRaftMessage();
         assertEquals( raftId, message.raftId() );
         raftMessageEquals( raftMessage, message.message() );
         assertNull( inbound.readInbound() );
@@ -217,18 +217,18 @@ class RaftMessageEncoderDecoderTest
         }
     }
 
-    class RaftMessageHandler extends SimpleChannelInboundHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<RaftMessage>>
+    class RaftMessageHandler extends SimpleChannelInboundHandler<RaftMessages.ReceivedDistributedRaftMessage<RaftMessage>>
     {
 
-        private RaftMessages.ReceivedInstantRaftIdAwareMessage<RaftMessage> msg;
+        private RaftMessages.ReceivedDistributedRaftMessage<RaftMessage> msg;
 
         @Override
-        protected void channelRead0( ChannelHandlerContext ctx, RaftMessages.ReceivedInstantRaftIdAwareMessage<RaftMessage> msg )
+        protected void channelRead0( ChannelHandlerContext ctx, RaftMessages.ReceivedDistributedRaftMessage<RaftMessage> msg )
         {
             this.msg = msg;
         }
 
-        RaftMessages.ReceivedInstantRaftIdAwareMessage<RaftMessage> getRaftMessage()
+        RaftMessages.ReceivedDistributedRaftMessage<RaftMessage> getRaftMessage()
         {
             return msg;
         }

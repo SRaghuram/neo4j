@@ -24,7 +24,7 @@ import static org.mockito.Mockito.verify;
 public class LeaderAvailabilityHandlerTest
 {
     @SuppressWarnings( "unchecked" )
-    private LifecycleMessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> delegate = Mockito.mock( LifecycleMessageHandler.class );
+    private LifecycleMessageHandler<RaftMessages.ReceivedDistributedRaftMessage<?>> delegate = Mockito.mock( LifecycleMessageHandler.class );
     private LeaderAvailabilityTimers leaderAvailabilityTimers = Mockito.mock( LeaderAvailabilityTimers.class );
     private RaftId raftId = RaftIdFactory.random();
     private RaftMessageTimerResetMonitor raftMessageTimerResetMonitor = new DurationSinceLastMessageMonitor( Clocks.nanoClock() );
@@ -33,14 +33,14 @@ public class LeaderAvailabilityHandlerTest
     private LeaderAvailabilityHandler handler = new LeaderAvailabilityHandler( delegate, leaderAvailabilityTimers, raftMessageTimerResetMonitor, term );
 
     private MemberId leader = new MemberId( UUID.randomUUID() );
-    private RaftMessages.ReceivedInstantRaftIdAwareMessage<?> heartbeat =
-            RaftMessages.ReceivedInstantRaftIdAwareMessage.of( Instant.now(), raftId, new RaftMessages.Heartbeat( leader, term.getAsLong(), 0, 0 ) );
-    private RaftMessages.ReceivedInstantRaftIdAwareMessage<?> appendEntries =
-            RaftMessages.ReceivedInstantRaftIdAwareMessage.of( Instant.now(), raftId,
-                    new RaftMessages.AppendEntries.Request( leader, term.getAsLong(), 0, 0, RaftLogEntry.empty, 0 )
+    private RaftMessages.ReceivedDistributedRaftMessage<?> heartbeat =
+            RaftMessages.ReceivedDistributedRaftMessage.of( Instant.now(), raftId, new RaftMessages.Heartbeat( leader, term.getAsLong(), 0, 0 ) );
+    private RaftMessages.ReceivedDistributedRaftMessage<?> appendEntries =
+            RaftMessages.ReceivedDistributedRaftMessage.of( Instant.now(), raftId,
+                                                            new RaftMessages.AppendEntries.Request( leader, term.getAsLong(), 0, 0, RaftLogEntry.empty, 0 )
             );
-    private RaftMessages.ReceivedInstantRaftIdAwareMessage<?> voteResponse =
-            RaftMessages.ReceivedInstantRaftIdAwareMessage.of( Instant.now(), raftId, new RaftMessages.Vote.Response( leader, term.getAsLong(), false ) );
+    private RaftMessages.ReceivedDistributedRaftMessage<?> voteResponse =
+            RaftMessages.ReceivedDistributedRaftMessage.of( Instant.now(), raftId, new RaftMessages.Vote.Response( leader, term.getAsLong(), false ) );
 
     @Test
     public void shouldRenewElectionForHeartbeats() throws Throwable
@@ -85,7 +85,7 @@ public class LeaderAvailabilityHandlerTest
     public void shouldNotRenewElectionTimeoutsForHeartbeatsFromEarlierTerm() throws Throwable
     {
         // given
-        RaftMessages.ReceivedInstantRaftIdAwareMessage<?> heartbeat =  RaftMessages.ReceivedInstantRaftIdAwareMessage.of(
+        RaftMessages.ReceivedDistributedRaftMessage<?> heartbeat =  RaftMessages.ReceivedDistributedRaftMessage.of(
                 Instant.now(), raftId, new RaftMessages.Heartbeat( leader, term.getAsLong() - 1, 0, 0 ) );
 
         handler.start( raftId );
@@ -100,7 +100,7 @@ public class LeaderAvailabilityHandlerTest
     @Test
     public void shouldNotRenewElectionTimeoutsForAppendEntriesRequestsFromEarlierTerms() throws Throwable
     {
-        RaftMessages.ReceivedInstantRaftIdAwareMessage<?> appendEntries = RaftMessages.ReceivedInstantRaftIdAwareMessage.of(
+        RaftMessages.ReceivedDistributedRaftMessage<?> appendEntries = RaftMessages.ReceivedDistributedRaftMessage.of(
                 Instant.now(), raftId,
                 new RaftMessages.AppendEntries.Request(
                         leader, term.getAsLong() - 1, 0, 0, RaftLogEntry.empty, 0 )

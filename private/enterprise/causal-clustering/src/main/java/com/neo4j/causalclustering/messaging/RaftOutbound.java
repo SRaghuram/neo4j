@@ -25,16 +25,16 @@ import org.neo4j.time.Clocks;
 public class RaftOutbound implements Outbound<MemberId,RaftMessages.RaftMessage>
 {
     private final CoreTopologyService coreTopologyService;
-    private final Outbound<SocketAddress,RaftMessages.RaftIdAwareMessage<?>> outbound;
+    private final Outbound<SocketAddress,RaftMessages.DistributedRaftMessage<?>> outbound;
     private final Supplier<Optional<RaftId>> boundRaftId;
     private final UnknownAddressMonitor unknownAddressMonitor;
     private final Log log;
     private final MemberId myself;
     private final Clock clock;
-    private final MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> localMessageHandler;
+    private final MessageHandler<RaftMessages.ReceivedDistributedRaftMessage<?>> localMessageHandler;
 
-    public RaftOutbound( CoreTopologyService coreTopologyService, Outbound<SocketAddress,RaftMessages.RaftIdAwareMessage<?>> outbound,
-            MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> localMessageHandler, Supplier<Optional<RaftId>> boundRaftId,
+    public RaftOutbound( CoreTopologyService coreTopologyService, Outbound<SocketAddress,RaftMessages.DistributedRaftMessage<?>> outbound,
+            MessageHandler<RaftMessages.ReceivedDistributedRaftMessage<?>> localMessageHandler, Supplier<Optional<RaftId>> boundRaftId,
             LogProvider logProvider, long logThresholdMillis, MemberId myself, Clock clock )
     {
         this.coreTopologyService = coreTopologyService;
@@ -59,14 +59,14 @@ public class RaftOutbound implements Outbound<MemberId,RaftMessages.RaftMessage>
 
         if ( to.equals( myself ) )
         {
-            localMessageHandler.handle( RaftMessages.ReceivedInstantRaftIdAwareMessage.of( clock.instant(), raftId.get(), message ) );
+            localMessageHandler.handle( RaftMessages.ReceivedDistributedRaftMessage.of( clock.instant(), raftId.get(), message ) );
         }
         else
         {
             CoreServerInfo targetCoreInfo = coreTopologyService.allCoreServers().get( to );
             if ( targetCoreInfo != null )
             {
-                outbound.send( targetCoreInfo.getRaftServer(), RaftMessages.RaftIdAwareMessage.of( raftId.get(), message ), block );
+                outbound.send( targetCoreInfo.getRaftServer(), RaftMessages.DistributedRaftMessage.of( raftId.get(), message ), block );
             }
             else
             {

@@ -11,7 +11,7 @@ import com.neo4j.causalclustering.core.consensus.LeaderAvailabilityHandler;
 import com.neo4j.causalclustering.core.consensus.RaftGroup;
 import com.neo4j.causalclustering.core.consensus.RaftMessageMonitoringHandler;
 import com.neo4j.causalclustering.core.consensus.RaftMessageTimerResetMonitor;
-import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantRaftIdAwareMessage;
+import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedDistributedRaftMessage;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.RaftMessageApplier;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
@@ -56,7 +56,7 @@ class RaftMessageHandlerChainFactory
         this.panicker = panicker;
     }
 
-    LifecycleMessageHandler<ReceivedInstantRaftIdAwareMessage<?>> createMessageHandlerChain( RaftGroup raftGroup, CoreDownloaderService downloaderService,
+    LifecycleMessageHandler<ReceivedDistributedRaftMessage<?>> createMessageHandlerChain( RaftGroup raftGroup, CoreDownloaderService downloaderService,
             CommandApplicationProcess commandApplicationProcess )
     {
         RaftMessageApplier messageApplier = new RaftMessageApplier( logProvider, raftGroup.raftMachine(), downloaderService, commandApplicationProcess,

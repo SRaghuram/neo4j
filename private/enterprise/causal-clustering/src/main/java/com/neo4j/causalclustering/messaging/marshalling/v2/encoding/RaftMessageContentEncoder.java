@@ -22,7 +22,7 @@ import static com.neo4j.causalclustering.messaging.marshalling.v2.encoding.RaftL
 /**
  * Serializes a raft messages content in the order Message, RaftLogTerms, ReplicatedContent.
  */
-public class RaftMessageContentEncoder extends MessageToMessageEncoder<RaftMessages.RaftIdAwareMessage>
+public class RaftMessageContentEncoder extends MessageToMessageEncoder<RaftMessages.DistributedRaftMessage>
 {
 
     private final Codec<ReplicatedContent> codec;
@@ -33,7 +33,7 @@ public class RaftMessageContentEncoder extends MessageToMessageEncoder<RaftMessa
     }
 
     @Override
-    protected void encode( ChannelHandlerContext ctx, RaftMessages.RaftIdAwareMessage msg, List<Object> out ) throws Exception
+    protected void encode( ChannelHandlerContext ctx, RaftMessages.DistributedRaftMessage msg, List<Object> out ) throws Exception
     {
         out.add( msg );
         Handler replicatedContentHandler = new Handler( out, ctx.alloc() );

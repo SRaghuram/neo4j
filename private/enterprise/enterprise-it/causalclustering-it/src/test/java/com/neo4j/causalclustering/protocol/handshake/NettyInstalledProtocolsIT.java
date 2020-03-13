@@ -102,8 +102,8 @@ class NettyInstalledProtocolsIT
 
         // given
         RaftMessages.Heartbeat raftMessage = new RaftMessages.Heartbeat( new MemberId( UUID.randomUUID() ), 1, 2, 3 );
-        RaftMessages.RaftIdAwareMessage<RaftMessages.Heartbeat> networkMessage =
-                RaftMessages.RaftIdAwareMessage.of( RaftIdFactory.random(), raftMessage );
+        RaftMessages.DistributedRaftMessage<RaftMessages.Heartbeat> networkMessage =
+                RaftMessages.DistributedRaftMessage.of( RaftIdFactory.random(), raftMessage );
 
         // when
         client.send( networkMessage ).syncUninterruptibly();
@@ -329,16 +329,16 @@ class NettyInstalledProtocolsIT
         }
     }
 
-    private Matcher<Object> messageMatches( RaftMessages.RaftIdAwareMessage<? extends RaftMessages.RaftMessage> expected )
+    private Matcher<Object> messageMatches( RaftMessages.DistributedRaftMessage<? extends RaftMessages.RaftMessage> expected )
     {
         return new MessageMatcher( expected );
     }
 
     class MessageMatcher extends BaseMatcher<Object>
     {
-        private final RaftMessages.RaftIdAwareMessage<? extends RaftMessages.RaftMessage> expected;
+        private final RaftMessages.DistributedRaftMessage<? extends RaftMessages.RaftMessage> expected;
 
-        MessageMatcher( RaftMessages.RaftIdAwareMessage<? extends RaftMessages.RaftMessage> expected )
+        MessageMatcher( RaftMessages.DistributedRaftMessage<? extends RaftMessages.RaftMessage> expected )
         {
             this.expected = expected;
         }
@@ -346,9 +346,9 @@ class NettyInstalledProtocolsIT
         @Override
         public boolean matches( Object item )
         {
-            if ( item instanceof RaftMessages.RaftIdAwareMessage<?> )
+            if ( item instanceof RaftMessages.DistributedRaftMessage<?> )
             {
-                RaftMessages.RaftIdAwareMessage<?> message = (RaftMessages.RaftIdAwareMessage<?>) item;
+                RaftMessages.DistributedRaftMessage<?> message = (RaftMessages.DistributedRaftMessage<?>) item;
                 return message.raftId().equals( expected.raftId() ) && message.message().equals( expected.message() );
             }
             return false;

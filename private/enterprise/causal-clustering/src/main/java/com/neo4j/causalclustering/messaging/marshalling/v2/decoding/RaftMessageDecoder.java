@@ -145,10 +145,10 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
             this.raftId = raftId;
         }
 
-        Optional<RaftMessages.RaftIdAwareMessage> maybeCompose( Clock clock, Queue<Long> terms, Queue<ReplicatedContent> contents )
+        Optional<RaftMessages.DistributedRaftMessage> maybeCompose( Clock clock, Queue<Long> terms, Queue<ReplicatedContent> contents )
         {
             return composer.maybeComplete( terms, contents )
-                    .map( m -> RaftMessages.ReceivedInstantRaftIdAwareMessage.of( clock.instant(), raftId, m ) );
+                    .map( m -> RaftMessages.ReceivedDistributedRaftMessage.of( clock.instant(), raftId, m ) );
         }
     }
 

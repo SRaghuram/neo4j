@@ -32,12 +32,12 @@ class ClusterBindingHandlerTest
 {
     private RaftId raftId = RaftIdFactory.random();
 
-    private RaftMessages.ReceivedInstantRaftIdAwareMessage<?> heartbeat =
-            RaftMessages.ReceivedInstantRaftIdAwareMessage.of( Instant.now(), raftId,
-                    new RaftMessages.Heartbeat( new MemberId( UUID.randomUUID() ), 0L, 0, 0 ) );
+    private RaftMessages.ReceivedDistributedRaftMessage<?> heartbeat =
+            RaftMessages.ReceivedDistributedRaftMessage.of( Instant.now(), raftId,
+                                                            new RaftMessages.Heartbeat( new MemberId( UUID.randomUUID() ), 0L, 0, 0 ) );
 
     @SuppressWarnings( "unchecked" )
-    private LifecycleMessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> delegate = Mockito.mock( LifecycleMessageHandler.class );
+    private LifecycleMessageHandler<RaftMessages.ReceivedDistributedRaftMessage<?>> delegate = Mockito.mock( LifecycleMessageHandler.class );
 
     private RaftMessageDispatcher messageDispatcher = Mockito.mock( RaftMessageDispatcher.class );
     private ClusterBindingHandler handler = new ClusterBindingHandler( messageDispatcher, delegate, NullLogProvider.getInstance() );
@@ -73,13 +73,13 @@ class ClusterBindingHandlerTest
         handler.start( raftId );
 
         // when
-        handler.handle( RaftMessages.ReceivedInstantRaftIdAwareMessage.of(
+        handler.handle( RaftMessages.ReceivedDistributedRaftMessage.of(
                 Instant.now(), RaftIdFactory.random(),
                 new RaftMessages.Heartbeat( new MemberId( UUID.randomUUID() ), 0L, 0, 0 )
         ) );
 
         // then
-        verify( delegate, Mockito.never() ).handle( any( RaftMessages.ReceivedInstantRaftIdAwareMessage.class ) );
+        verify( delegate, Mockito.never() ).handle( any( RaftMessages.ReceivedDistributedRaftMessage.class ) );
     }
 
     @Test

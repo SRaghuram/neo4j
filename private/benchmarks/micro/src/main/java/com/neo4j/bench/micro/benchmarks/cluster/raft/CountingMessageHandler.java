@@ -11,7 +11,7 @@ import com.neo4j.causalclustering.messaging.Inbound;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
-class CountingMessageHandler implements Inbound.MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>>
+class CountingMessageHandler implements Inbound.MessageHandler<RaftMessages.ReceivedDistributedRaftMessage<?>>
 {
     private final AtomicInteger expectedCount;
     private final CompletableFuture<Void> currentFuture = new CompletableFuture<>();
@@ -27,7 +27,7 @@ class CountingMessageHandler implements Inbound.MessageHandler<RaftMessages.Rece
     }
 
     @Override
-    public void handle( RaftMessages.ReceivedInstantRaftIdAwareMessage<?> message )
+    public void handle( RaftMessages.ReceivedDistributedRaftMessage<?> message )
     {
         int left = expectedCount.decrementAndGet();
         if ( left == 0 )

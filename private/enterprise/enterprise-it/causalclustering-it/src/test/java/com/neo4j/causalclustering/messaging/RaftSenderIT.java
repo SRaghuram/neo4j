@@ -252,7 +252,7 @@ class RaftSenderIT
         RaftId raftId = RaftIdFactory.random();
 
         RaftMessages.NewEntry.Request newEntryMessage = new RaftMessages.NewEntry.Request( memberId, new MemberIdSet( asSet( memberId ) ) );
-        RaftMessages.RaftIdAwareMessage<?> message = RaftMessages.RaftIdAwareMessage.of( raftId, newEntryMessage );
+        RaftMessages.DistributedRaftMessage<?> message = RaftMessages.DistributedRaftMessage.of( raftId, newEntryMessage );
 
         sender.send( to, message, blocking );
 

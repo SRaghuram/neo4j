@@ -11,14 +11,14 @@ import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 
 import java.util.function.LongSupplier;
 
-public class LeaderAvailabilityHandler implements LifecycleMessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>>
+public class LeaderAvailabilityHandler implements LifecycleMessageHandler<RaftMessages.ReceivedDistributedRaftMessage<?>>
 {
-    private final LifecycleMessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> delegateHandler;
+    private final LifecycleMessageHandler<RaftMessages.ReceivedDistributedRaftMessage<?>> delegateHandler;
     private final LeaderAvailabilityTimers leaderAvailabilityTimers;
     private final ShouldRenewElectionTimeout shouldRenewElectionTimeout;
     private final RaftMessageTimerResetMonitor raftMessageTimerResetMonitor;
 
-    public LeaderAvailabilityHandler( LifecycleMessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> delegateHandler,
+    public LeaderAvailabilityHandler( LifecycleMessageHandler<RaftMessages.ReceivedDistributedRaftMessage<?>> delegateHandler,
             LeaderAvailabilityTimers leaderAvailabilityTimers, RaftMessageTimerResetMonitor raftMessageTimerResetMonitor, LongSupplier term )
     {
         this.delegateHandler = delegateHandler;
@@ -46,13 +46,13 @@ public class LeaderAvailabilityHandler implements LifecycleMessageHandler<RaftMe
     }
 
     @Override
-    public void handle( RaftMessages.ReceivedInstantRaftIdAwareMessage<?> message )
+    public void handle( RaftMessages.ReceivedDistributedRaftMessage<?> message )
     {
         handleTimeouts( message );
         delegateHandler.handle( message );
     }
 
-    private void handleTimeouts( RaftMessages.ReceivedInstantRaftIdAwareMessage<?> message )
+    private void handleTimeouts( RaftMessages.ReceivedDistributedRaftMessage<?> message )
     {
         if ( message.message().dispatch( shouldRenewElectionTimeout ) )
         {

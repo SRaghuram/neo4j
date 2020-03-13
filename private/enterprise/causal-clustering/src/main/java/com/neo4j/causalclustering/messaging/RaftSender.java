@@ -20,7 +20,7 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-public class RaftSender implements Outbound<SocketAddress,RaftMessages.RaftIdAwareMessage<?>>
+public class RaftSender implements Outbound<SocketAddress,RaftMessages.DistributedRaftMessage<?>>
 {
     private final ChannelPoolService channels;
     private final Log log;
@@ -32,7 +32,7 @@ public class RaftSender implements Outbound<SocketAddress,RaftMessages.RaftIdAwa
     }
 
     @Override
-    public void send( SocketAddress to, RaftMessages.RaftIdAwareMessage<?> message, boolean block )
+    public void send( SocketAddress to, RaftMessages.DistributedRaftMessage<?> message, boolean block )
     {
         CompletableFuture<Void> fOperation = channels.acquire( to )
                 .thenCompose( pooledChannel -> sendMessage( pooledChannel, message ) );
@@ -65,7 +65,7 @@ public class RaftSender implements Outbound<SocketAddress,RaftMessages.RaftIdAwa
         }
     }
 
-    private CompletableFuture<Void> sendMessage( PooledChannel pooledChannel, RaftMessages.RaftIdAwareMessage<?> message )
+    private CompletableFuture<Void> sendMessage( PooledChannel pooledChannel, RaftMessages.DistributedRaftMessage<?> message )
     {
         CompletableFuture<Void> fOperation; // write + release
         try

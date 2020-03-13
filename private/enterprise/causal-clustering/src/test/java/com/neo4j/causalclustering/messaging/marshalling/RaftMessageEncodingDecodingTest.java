@@ -94,8 +94,8 @@ public class RaftMessageEncodingDecodingTest
 
         // When
         MemberId sender = new MemberId( UUID.randomUUID() );
-        RaftMessages.RaftIdAwareMessage<?> message = RaftMessages.ReceivedInstantRaftIdAwareMessage.of( now, raftId,
-        new RaftMessages.Heartbeat( sender, 1, 2, 3 ) );
+        RaftMessages.DistributedRaftMessage<?> message = RaftMessages.ReceivedDistributedRaftMessage.of( now, raftId,
+                                                                                                         new RaftMessages.Heartbeat( sender, 1, 2, 3 ) );
         ChannelHandlerContext ctx = setupContext();
         ByteBuf buffer = null;
         try
@@ -157,8 +157,8 @@ public class RaftMessageEncodingDecodingTest
         ArrayList<Object> thingsRead = new ArrayList<>( 1 );
 
         // When
-        RaftMessages.RaftIdAwareMessage<?> decoratedMessage =
-                RaftMessages.ReceivedInstantRaftIdAwareMessage.of( now, raftId, message );
+        RaftMessages.DistributedRaftMessage<?> decoratedMessage =
+                RaftMessages.ReceivedDistributedRaftMessage.of( now, raftId, message );
         ChannelHandlerContext ctx = setupContext();
         ByteBuf buffer = null;
         try

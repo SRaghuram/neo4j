@@ -23,7 +23,7 @@ import org.neo4j.scheduler.JobHandle;
 
 import static java.lang.String.format;
 
-public class RaftMessageApplier implements LifecycleMessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>>
+public class RaftMessageApplier implements LifecycleMessageHandler<RaftMessages.ReceivedDistributedRaftMessage<?>>
 {
     private final Log log;
     private final RaftMachine raftMachine;
@@ -46,7 +46,7 @@ public class RaftMessageApplier implements LifecycleMessageHandler<RaftMessages.
     }
 
     @Override
-    public synchronized void handle( RaftMessages.ReceivedInstantRaftIdAwareMessage<?> wrappedMessage )
+    public synchronized void handle( RaftMessages.ReceivedDistributedRaftMessage<?> wrappedMessage )
     {
         if ( stopped )
         {

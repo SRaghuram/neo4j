@@ -15,16 +15,16 @@ import java.util.Objects;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-public class ClusterBindingHandler implements LifecycleMessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>>
+public class ClusterBindingHandler implements LifecycleMessageHandler<RaftMessages.ReceivedDistributedRaftMessage<?>>
 {
-    private final LifecycleMessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> delegateHandler;
+    private final LifecycleMessageHandler<RaftMessages.ReceivedDistributedRaftMessage<?>> delegateHandler;
     private final RaftMessageDispatcher raftMessageDispatcher;
     private final Log log;
 
     private volatile RaftId boundRaftId;
 
     public ClusterBindingHandler( RaftMessageDispatcher raftMessageDispatcher,
-            LifecycleMessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> delegateHandler,
+            LifecycleMessageHandler<RaftMessages.ReceivedDistributedRaftMessage<?>> delegateHandler,
             LogProvider logProvider )
     {
         this.delegateHandler = delegateHandler;
@@ -63,7 +63,7 @@ public class ClusterBindingHandler implements LifecycleMessageHandler<RaftMessag
     }
 
     @Override
-    public void handle( RaftMessages.ReceivedInstantRaftIdAwareMessage<?> message )
+    public void handle( RaftMessages.ReceivedDistributedRaftMessage<?> message )
     {
         var raftId = boundRaftId;
         if ( Objects.isNull( raftId ) )

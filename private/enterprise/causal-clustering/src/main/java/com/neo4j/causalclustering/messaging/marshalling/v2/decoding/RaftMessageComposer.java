@@ -57,7 +57,7 @@ public class RaftMessageComposer extends MessageToMessageDecoder<Object>
         }
         if ( messageComposer != null )
         {
-            Optional<RaftMessages.RaftIdAwareMessage> raftIdAwareMessage = messageComposer.maybeCompose( clock, raftLogEntryTerms, replicatedContents );
+            Optional<RaftMessages.DistributedRaftMessage> raftIdAwareMessage = messageComposer.maybeCompose( clock, raftLogEntryTerms, replicatedContents );
             raftIdAwareMessage.ifPresent( message ->
             {
                 clear( message );
@@ -66,7 +66,7 @@ public class RaftMessageComposer extends MessageToMessageDecoder<Object>
         }
     }
 
-    private void clear( RaftMessages.RaftIdAwareMessage message )
+    private void clear( RaftMessages.DistributedRaftMessage message )
     {
         messageComposer = null;
         if ( !replicatedContents.isEmpty() || !raftLogEntryTerms.isEmpty() )

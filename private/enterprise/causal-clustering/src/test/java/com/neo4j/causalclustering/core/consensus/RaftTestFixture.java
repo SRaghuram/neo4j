@@ -57,7 +57,7 @@ public class RaftTestFixture
             fixtureMember.member = id;
 
             RaftTestFixtureLogger raftMessageLogger = new RaftTestFixtureLogger( id, new PrintWriter( writer ) );
-            Inbound<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> inbound =
+            Inbound<RaftMessages.ReceivedDistributedRaftMessage<?>> inbound =
                     new LoggingInbound( net.new Inbound( fixtureMember.member ), raftMessageLogger, fixtureMember.member );
             Outbound<MemberId,RaftMessages.RaftMessage> outbound = new LoggingOutbound<>( net.new Outbound( id ), fixtureMember.member, raftMessageLogger );
 

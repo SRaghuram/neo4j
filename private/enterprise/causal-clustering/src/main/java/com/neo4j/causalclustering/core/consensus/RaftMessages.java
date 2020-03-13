@@ -970,24 +970,24 @@ public interface RaftMessages
         }
     }
 
-    interface RaftIdAwareMessage<RM extends RaftMessage>
+    interface DistributedRaftMessage<RM extends RaftMessage>
     {
         RM message();
 
         RaftId raftId();
 
-        static <RM extends RaftMessage> RaftIdAwareMessage<RM> of( RaftId raftId, RM message )
+        static <RM extends RaftMessage> DistributedRaftMessage<RM> of( RaftId raftId, RM message )
         {
-            return new RaftIdAwareMessageImpl<>( raftId, message );
+            return new DistributedRaftMessageImpl<>( raftId, message );
         }
     }
 
-    final class RaftIdAwareMessageImpl<RM extends RaftMessage> implements RaftIdAwareMessage<RM>
+    final class DistributedRaftMessageImpl<RM extends RaftMessage> implements DistributedRaftMessage<RM>
     {
         private final RaftId raftId;
         private final RM message;
 
-        private RaftIdAwareMessageImpl( RaftId raftId, RM message )
+        private DistributedRaftMessageImpl( RaftId raftId, RM message )
         {
             Objects.requireNonNull( message );
             this.raftId = raftId;
@@ -1017,7 +1017,7 @@ public interface RaftMessages
             {
                 return false;
             }
-            RaftIdAwareMessageImpl<?> that = (RaftIdAwareMessageImpl<?>) o;
+            DistributedRaftMessageImpl<?> that = (DistributedRaftMessageImpl<?>) o;
             return Objects.equals( raftId, that.raftId ) && Objects.equals( message(), that.message() );
         }
 
@@ -1034,18 +1034,18 @@ public interface RaftMessages
         }
     }
 
-    final class ReceivedInstantRaftIdAwareMessage<RM extends RaftMessage> implements RaftIdAwareMessage<RM>
+    final class ReceivedDistributedRaftMessage<RM extends RaftMessage> implements DistributedRaftMessage<RM>
     {
         private final Instant receivedAt;
         private final RaftId raftId;
         private final RM message;
 
-        public static <RM extends RaftMessage> ReceivedInstantRaftIdAwareMessage<RM> of( Instant receivedAt, RaftId raftId, RM message )
+        public static <RM extends RaftMessage> ReceivedDistributedRaftMessage<RM> of( Instant receivedAt, RaftId raftId, RM message )
         {
-            return new ReceivedInstantRaftIdAwareMessage<>( receivedAt, raftId, message );
+            return new ReceivedDistributedRaftMessage<>( receivedAt, raftId, message );
         }
 
-        private ReceivedInstantRaftIdAwareMessage( Instant receivedAt, RaftId raftId, RM message )
+        private ReceivedDistributedRaftMessage( Instant receivedAt, RaftId raftId, RM message )
         {
             Objects.requireNonNull( message );
             this.raftId = raftId;
@@ -1081,7 +1081,7 @@ public interface RaftMessages
             {
                 return false;
             }
-            ReceivedInstantRaftIdAwareMessage<?> that = (ReceivedInstantRaftIdAwareMessage<?>) o;
+            ReceivedDistributedRaftMessage<?> that = (ReceivedDistributedRaftMessage<?>) o;
             return Objects.equals( receivedAt, that.receivedAt ) && Objects.equals( raftId, that.raftId ) && Objects.equals( message(), that.message() );
         }
 

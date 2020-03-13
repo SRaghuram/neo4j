@@ -14,10 +14,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
-public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.RaftIdAwareMessage>
+public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.DistributedRaftMessage>
 {
     @Override
-    protected void encode( ChannelHandlerContext ctx, RaftMessages.RaftIdAwareMessage decoratedMessage, ByteBuf out ) throws Exception
+    protected void encode( ChannelHandlerContext ctx, RaftMessages.DistributedRaftMessage decoratedMessage, ByteBuf out ) throws Exception
     {
         RaftMessages.RaftMessage message = decoratedMessage.message();
         RaftId raftId = decoratedMessage.raftId();

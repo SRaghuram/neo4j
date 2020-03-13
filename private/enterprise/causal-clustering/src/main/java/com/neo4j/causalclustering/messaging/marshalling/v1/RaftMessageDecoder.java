@@ -141,7 +141,7 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
             throw new IllegalArgumentException( "Unknown message type" );
         }
 
-        list.add( RaftMessages.ReceivedInstantRaftIdAwareMessage.of( clock.instant(), raftId, result ) );
+        list.add( RaftMessages.ReceivedDistributedRaftMessage.of( clock.instant(), raftId, result ) );
     }
 
     private MemberId retrieveMember( ReadableChannel buffer ) throws IOException, EndOfStreamException

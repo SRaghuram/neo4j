@@ -22,12 +22,12 @@ import static java.util.Collections.emptyList;
 public class RaftProtocolInstallers implements ProtocolInstallers
 {
     private final ProtocolVersion version;
-    private final Inbound.MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> handler;
+    private final Inbound.MessageHandler<RaftMessages.ReceivedDistributedRaftMessage<?>> handler;
     private final LogProvider logProvider;
     private final NettyPipelineBuilderFactory pipelineBuilderFactory;
 
     RaftProtocolInstallers( ProtocolVersion version,
-                            Inbound.MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> handler,
+                            Inbound.MessageHandler<RaftMessages.ReceivedDistributedRaftMessage<?>> handler,
                             LogProvider logProvider )
     {
         this.version = version;
