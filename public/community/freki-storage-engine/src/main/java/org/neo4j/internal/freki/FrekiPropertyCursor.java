@@ -135,7 +135,8 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     @Override
     public ValueGroup propertyType()
     {
-        throw new UnsupportedOperationException();
+        // TODO figure this out w/o deserializing the value
+        return propertyValue().valueGroup();
     }
 
     @Override
