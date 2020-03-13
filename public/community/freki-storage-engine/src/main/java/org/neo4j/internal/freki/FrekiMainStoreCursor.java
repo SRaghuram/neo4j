@@ -58,7 +58,6 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     int[] relationshipTypeOffsets;
     int firstRelationshipTypeOffset;
 
-    Record x1Record;
     PageCursor x1Cursor;
 
     FrekiMainStoreCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer )
@@ -99,11 +98,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
 
     Record x1Record()
     {
-        if ( x1Record == null )
-        {
-            x1Record = stores.mainStore.newRecord();
-        }
-        return x1Record;
+        return stores.mainStore.newRecord();
     }
 
     /**
@@ -113,7 +108,8 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
      */
     boolean load( long nodeId )
     {
-        if ( !stores.mainStore.read( x1Cursor(), x1Record(), nodeId ) || !x1Record.hasFlag( FLAG_IN_USE ) )
+        Record x1Record = x1Record();
+        if ( !stores.mainStore.read( x1Cursor(), x1Record, nodeId ) || !x1Record.hasFlag( FLAG_IN_USE ) )
         {
             return false;
         }
