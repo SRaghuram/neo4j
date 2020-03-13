@@ -62,7 +62,8 @@ public class BatchingTxApplierTest
         when( commitProcess.commit( any(), any(), any() ) ).thenAnswer( invocation ->
         {
             TransactionToApply tx = invocation.getArgument( 0 );
-            while ( tx != null ) {
+            while ( tx != null )
+            {
                 tx.close();
                 tx = tx.next();
             }
@@ -216,8 +217,8 @@ public class BatchingTxApplierTest
         assertEquals( expectedCount, count );
     }
 
-    private static class TrackingPageCacheTracer extends DefaultPageCacheTracer {
-
+    private static class TrackingPageCacheTracer extends DefaultPageCacheTracer
+    {
         private final List<PageCursorTracer> cursorTracers = new ArrayList<>();
 
         @Override
@@ -236,6 +237,5 @@ public class BatchingTxApplierTest
                 verify( cursorTracer ).close();
             }
         }
-
     }
 }
