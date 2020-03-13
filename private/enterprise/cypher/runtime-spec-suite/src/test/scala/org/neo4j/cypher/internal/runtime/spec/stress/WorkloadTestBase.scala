@@ -51,7 +51,7 @@ abstract class WorkloadTestBase[CONTEXT <: RuntimeContext](edition: Edition[CONT
       val resultSet = futureResultSet.get(1, TimeUnit.MINUTES)
       resultSet.size should be(QUERIES_PER_THREAD)
       for (result <- resultSet) {
-        expected.matches(Array("x"), result) shouldBe true
+        expected.matchesRaw(Array("x"), result) shouldBe true
       }
     }
 
