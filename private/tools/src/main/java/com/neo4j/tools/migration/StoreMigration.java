@@ -99,7 +99,8 @@ public final class StoreMigration
         // Add participants from kernel extensions...
         Log log = userLogProvider.getLog( StoreMigration.class );
         JobScheduler jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
-        try ( PageCache pageCache = createPageCache( fs, config, jobScheduler, PageCacheTracer.NULL ) )
+        var pageCacheTracer = PageCacheTracer.NULL;
+        try ( PageCache pageCache = createPageCache( fs, config, jobScheduler, pageCacheTracer ) )
         {
             Dependencies deps = new Dependencies();
             Monitors monitors = new Monitors();
@@ -124,7 +125,7 @@ public final class StoreMigration
 
             Stopwatch startTime = Stopwatch.start();
             DatabaseMigrator migrator = new DatabaseMigrator( fs, config, logService,
-                    indexProviderMap, pageCache, tailScanner, jobScheduler, databaseLayout, legacyLogsLocator, storageEngineFactory );
+                    indexProviderMap, pageCache, tailScanner, jobScheduler, databaseLayout, legacyLogsLocator, storageEngineFactory, pageCacheTracer );
             migrator.migrate();
 
             // Append checkpoint so the last log entry will have the latest version
