@@ -139,6 +139,11 @@ class FrekiCursorData
         this.endOffset = data.endOffset;
     }
 
+    boolean isLoaded()
+    {
+        return x1Loaded || xLLoaded;
+    }
+
     private ByteBuffer copyBufferData( ByteBuffer into, ByteBuffer from )
     {
         if ( from == null )
@@ -163,7 +168,7 @@ class FrekiCursorData
     @Override
     public String toString()
     {
-        if ( !x1Loaded )
+        if ( !isLoaded() )
         {
             return "<not loaded>";
         }
