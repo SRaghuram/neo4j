@@ -27,11 +27,6 @@ import org.neo4j.storageengine.util.IdUpdateListener;
 
 public interface SimpleStore extends SingleFileStore
 {
-    default int recordSize()
-    {
-        return Record.recordSize( recordSizeExponential() );
-    }
-
     default int recordDataSize()
     {
         return Record.recordDataSize( recordSizeExponential() );

@@ -333,7 +333,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
                     var stats = new StoreStats( sizeExp );
                     var highId = store.getHighId();
                     var record = store.newRecord();
-                    var recordSize = store.recordSize();
+                    var recordDataSize = store.recordDataSize();
                     try ( var cursor = store.openReadCursor() )
                     {
                         for ( var id = 0; id < highId; id++ )
@@ -354,7 +354,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
                                     throw e;
                                 }
                                 stats.bytesOccupiedInUsedRecords += Record.HEADER_SIZE + buffer.position();
-                                stats.bytesVacantInUsedRecords += recordSize - Record.HEADER_SIZE - buffer.position();
+                                stats.bytesVacantInUsedRecords += recordDataSize - buffer.position();
                                 if ( forwardPointerPointsToDense( data.getForwardPointer() ) )
                                 {
                                     stats.numDenseNodes++;

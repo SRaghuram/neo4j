@@ -162,7 +162,7 @@ class MainStores extends Life
         SimpleStore candidate = mainStore;
         while ( candidate != null )
         {
-            if ( candidate.recordSizeExponential() >= atLeastSizeExp && recordSize <= candidate.recordSize() )
+            if ( candidate.recordSizeExponential() >= atLeastSizeExp && recordSize <= candidate.recordDataSize() )
             {
                 return candidate;
             }

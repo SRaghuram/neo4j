@@ -197,7 +197,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
 
     boolean initializeOtherCursorFromStateOfThisCursor( FrekiMainStoreCursor otherCursor )
     {
-        if ( !data.x1Loaded )
+        if ( !data.isLoaded() )
         {
             return false;
         }
