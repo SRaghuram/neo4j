@@ -18,22 +18,27 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 public class ReconcilerExecutors
 {
     private final Executor standardExecutor;
-    private final Executor priorityExecutor;
+    private final Executor unboundExecutor;
 
     ReconcilerExecutors( JobScheduler scheduler, Config config )
     {
         int parallelism = config.get( GraphDatabaseSettings.reconciler_maximum_parallelism );
         scheduler.setParallelism( Group.DATABASE_RECONCILER , parallelism );
         this.standardExecutor = scheduler.executor( Group.DATABASE_RECONCILER );
-        // parallelism of the priority executor is unbounded as this executor is reserved for jobs triggered by administrators.
-        this.priorityExecutor = scheduler.executor( Group.DATABASE_RECONCILER_PRIORITY );
+        this.unboundExecutor = scheduler.executor( Group.DATABASE_RECONCILER_UNBOUND );
     }
 
-    public Executor executor( ReconcilerRequest request, String databaseName )
+    Executor unboundExecutor()
     {
+        return unboundExecutor;
+    }
+
+    Executor executor( ReconcilerRequest request, String databaseName )
+    {
+        // We use the unbound executor for priority and system database reconciliation jobs
         var isSystem = Objects.equals( databaseName, SYSTEM_DATABASE_NAME );
         var isHighPriority = request.isPriorityRequestForDatabase( databaseName );
 
-        return (isSystem || isHighPriority) ? priorityExecutor : standardExecutor;
+        return (isSystem || isHighPriority) ? unboundExecutor : standardExecutor;
     }
 }

@@ -59,7 +59,7 @@ public class ReconcilerExecutorsTest
 
         // then
         var activeGroups = jobScheduler.activeGroups().map( g -> g.group ).collect( Collectors.toSet() );
-        assertThat( "Priority group should be active", activeGroups, contains( Group.DATABASE_RECONCILER_PRIORITY ) );
+        assertThat( "Priority group should be active", activeGroups, contains( Group.DATABASE_RECONCILER_UNBOUND) );
         assertThat( "Normal group shouldn't be active", activeGroups, not( contains( Group.DATABASE_RECONCILER ) ) );
     }
 
@@ -76,7 +76,7 @@ public class ReconcilerExecutorsTest
         shouldBePriority.execute( this::job );
 
         var activeGroups = jobScheduler.activeGroups().map( g -> g.group ).collect( Collectors.toSet() );
-        assertThat( "Priority group should be active", activeGroups, hasItem( Group.DATABASE_RECONCILER_PRIORITY ) );
+        assertThat( "Priority group should be active", activeGroups, hasItem( Group.DATABASE_RECONCILER_UNBOUND) );
         assertThat( "Normal group shouldn't be active", activeGroups, not( hasItem( Group.DATABASE_RECONCILER ) ) );
 
         // when/then

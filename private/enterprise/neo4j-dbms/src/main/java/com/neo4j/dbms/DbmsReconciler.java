@@ -219,11 +219,15 @@ public class DbmsReconciler implements DatabaseStateService
         }
 
         var reconcilerJobHandle = new CompletableFuture<Void>();
-        var executor = executors.executor( request, databaseName );
+        var transitionExecutor = executors.executor( request, databaseName );
+        // Whilst the transitions step may take place on either the bound or unbound executor depending on the request
+        //  the preReconcile step will always take place on the unbound executor, as threads in this step only wait to
+        //  acquire locks.
+        var preReconcileExecutor = executors.unboundExecutor();
 
         var job = reconcilerJobHandle
-                .thenCompose( ignored -> preReconcile( databaseName, operators, request, executor ) )
-                .thenCompose( desiredState -> doTransitions( databaseName, desiredState, request, executor ) )
+                .thenCompose( ignored -> preReconcile( databaseName, operators, request, preReconcileExecutor ) )
+                .thenCompose( desiredState -> doTransitions( databaseName, desiredState, request, transitionExecutor ) )
                 .whenComplete( ( result, throwable ) -> postReconcile( databaseName, request, result, throwable ) );
 
         if ( jobCanBeCached )
