@@ -7,7 +7,6 @@ package com.neo4j.internal.cypher.planner
 
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
-import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.cypher.internal.ast.prettifier.Prettifier
 import org.neo4j.cypher.internal.plandescription.Arguments.Database
 import org.neo4j.cypher.internal.plandescription.Arguments.Role
@@ -19,8 +18,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   // Database commands
 
   test("Show databases") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN SHOW DATABASES").executionPlanString()
 
@@ -29,8 +26,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test(s"Show database $DEFAULT_DATABASE_NAME") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute(s"EXPLAIN SHOW DATABASE $DEFAULT_DATABASE_NAME").executionPlanString()
 
@@ -39,8 +34,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test(s"Show database $DEFAULT_DATABASE_NAME with parameter") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN SHOW DATABASE $db", Map("db" -> DEFAULT_DATABASE_NAME)).executionPlanString()
 
@@ -49,8 +42,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Show default database") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN SHOW DEFAULT DATABASE").executionPlanString()
 
@@ -59,8 +50,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Create database") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN CREATE DATABASE foo").executionPlanString()
 
@@ -75,8 +64,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Create database with parameter") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN CREATE DATABASE $db", Map("db" -> "foo")).executionPlanString()
 
@@ -91,8 +78,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Create or replace database") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN CREATE OR REPLACE DATABASE foo").executionPlanString()
 
@@ -109,8 +94,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Create database if not exists") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN CREATE DATABASE foo IF NOT EXISTS").executionPlanString()
 
@@ -127,8 +110,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Drop database") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // Given
     execute("CREATE DATABASE foo")
 
@@ -146,8 +127,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Drop database with parameter") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // Given
     execute("CREATE DATABASE foo")
 
@@ -165,8 +144,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Drop database if exists") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN DROP DATABASE foo IF EXISTS").executionPlanString()
 
@@ -183,8 +160,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Start database") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // Given
     execute("CREATE DATABASE foo")
     execute("STOP DATABASE foo")
@@ -201,8 +176,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Start database with parameter") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // Given
     execute("CREATE DATABASE foo")
     execute("STOP DATABASE foo")
@@ -219,8 +192,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Stop database") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // Given
     execute("CREATE DATABASE foo")
 
@@ -238,8 +209,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Stop database with parameter") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // Given
     execute("CREATE DATABASE foo")
 
@@ -259,8 +228,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   // User commands
 
   test("Show users") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN SHOW USERS").executionPlanString()
 
@@ -273,8 +240,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Create user") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN CREATE USER foo SET PASSWORD 'secret'").executionPlanString()
 
@@ -289,7 +254,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Create user as parameter") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
     val plan = execute("EXPLAIN CREATE USER $foo SET PASSWORD 'secret'", Map("foo" -> "bar")).executionPlanString()
@@ -305,8 +269,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Create or replace user") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN CREATE OR REPLACE USER foo SET PASSWORD 'secret' CHANGE NOT REQUIRED").executionPlanString()
 
@@ -325,8 +287,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Create user if not exists") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN CREATE USER foo IF NOT EXISTS SET PASSWORD 'secret' SET STATUS SUSPENDED").executionPlanString()
 
@@ -343,8 +303,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Drop user") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // Given
     execute("CREATE USER foo SET PASSWORD 'secret'")
 
@@ -366,8 +324,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Drop user as parameter") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // Given
     execute("CREATE USER foo SET PASSWORD 'secret'")
 
@@ -389,8 +345,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Drop user if exists") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN DROP USER foo IF EXISTS").executionPlanString()
 
@@ -409,8 +363,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Alter user") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // Given
     execute("CREATE USER foo SET PASSWORD 'secret'")
 
@@ -428,8 +380,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Alter user as parameter") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // Given
     execute("CREATE USER foo SET PASSWORD 'secret'")
 
@@ -447,8 +397,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Alter user to suspended") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // Given
     execute("CREATE USER foo SET PASSWORD 'secret'")
 
@@ -468,8 +416,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Alter current user") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN ALTER CURRENT USER SET PASSWORD FROM 'neo4j' TO 'secret'").executionPlanString()
 
@@ -484,8 +430,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   // Role commands
 
   test("Show roles") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN SHOW ROLES").executionPlanString()
 
@@ -498,8 +442,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Show populated roles with users") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN SHOW POPULATED ROLES WITH USERS").executionPlanString()
 
@@ -512,8 +454,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Create role") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN CREATE ROLE foo").executionPlanString()
 
@@ -528,8 +468,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Create role as parameter") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN CREATE ROLE $foo").executionPlanString()
 
@@ -544,8 +482,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Create or replace role") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN CREATE OR REPLACE ROLE foo").executionPlanString()
 
@@ -562,8 +498,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Create role if not exists") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN CREATE ROLE foo IF NOT EXISTS").executionPlanString()
 
@@ -580,8 +514,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Create role as copy") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN CREATE ROLE foo AS COPY OF reader").executionPlanString()
 
@@ -602,8 +534,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Create role as copy with parameter") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN CREATE ROLE foo AS COPY OF $bar", Map("bar" -> "reader")).executionPlanString()
 
@@ -624,8 +554,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Create or replace role as copy") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN CREATE OR REPLACE ROLE foo AS COPY OF reader").executionPlanString()
 
@@ -648,8 +576,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Create role if not exists as copy") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN CREATE ROLE foo IF NOT EXISTS AS COPY OF reader").executionPlanString()
 
@@ -672,8 +598,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Drop role") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // Given
     execute("CREATE ROLE foo")
 
@@ -693,8 +617,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Drop role as parameter") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // Given
     execute("CREATE ROLE foo")
 
@@ -714,8 +636,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Drop role if exists") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN DROP ROLE foo IF EXISTS").executionPlanString()
 
@@ -732,8 +652,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Grant role to user") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN GRANT ROLE reader TO neo4j").executionPlanString()
 
@@ -748,8 +666,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Grant multiple roles to multiple users") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // Given
     execute("CREATE USER foo SET PASSWORD 'secret'")
 
@@ -777,8 +693,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Revoke role from user") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // Given
     execute("GRANT ROLE reader TO neo4j")
 
@@ -796,8 +710,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Revoke multiple roles from multiple users") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // Given
     execute("CREATE USER foo SET PASSWORD 'secret'")
     execute("CREATE USER bar SET PASSWORD 'secret'")
@@ -829,8 +741,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   // SHOW _ PRIVILEGES
 
   test("Show all privileges") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN SHOW PRIVILEGES").executionPlanString()
 
@@ -843,8 +753,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Show role privileges") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN SHOW ROLE PUBLIC PRIVILEGES").executionPlanString()
 
@@ -857,8 +765,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Show role privileges with parameter") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN SHOW ROLE $role PRIVILEGES", Map("role" -> "PUBLIC")).executionPlanString()
 
@@ -871,8 +777,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Show user privileges") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN SHOW USER neo4j PRIVILEGES").executionPlanString()
 
@@ -885,8 +789,6 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
   }
 
   test("Show user privileges with parameter") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN SHOW USER $user PRIVILEGES", Map("user" -> "neo4j")).executionPlanString()
 

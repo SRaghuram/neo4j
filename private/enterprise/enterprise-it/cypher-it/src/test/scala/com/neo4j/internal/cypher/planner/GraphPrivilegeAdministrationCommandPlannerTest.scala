@@ -15,8 +15,6 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
   // Traverse
 
   test("Grant traverse") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute(s"EXPLAIN GRANT TRAVERSE ON GRAPH * TO reader, editor").executionPlanString()
 
@@ -37,8 +35,6 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
   }
 
   test("Grant traverse with parameter") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN GRANT TRAVERSE ON GRAPH $db TO $role1, $role2", Map("db" -> DEFAULT_DATABASE_NAME, "role1" -> "reader", "role2" -> "editor")).executionPlanString()
 
@@ -59,8 +55,6 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
   }
 
   test("Deny traverse") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute(s"EXPLAIN DENY TRAVERSE ON GRAPH $SYSTEM_DATABASE_NAME NODE A TO reader").executionPlanString()
 
@@ -75,8 +69,6 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
   }
 
   test("Revoke traverse") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute(s"EXPLAIN REVOKE TRAVERSE ON GRAPH $DEFAULT_DATABASE_NAME RELATIONSHIPS A, B FROM reader").executionPlanString()
 
@@ -99,8 +91,6 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
   // Read
 
   test("Grant read") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute(s"EXPLAIN GRANT READ {*} ON GRAPH $DEFAULT_DATABASE_NAME TO reader, editor").executionPlanString()
 
@@ -121,8 +111,6 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
   }
 
   test("Deny read") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute(s"EXPLAIN DENY READ {foo, prop} ON GRAPH * TO reader").executionPlanString()
 
@@ -143,8 +131,6 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
   }
 
   test("Deny read with parameter") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN DENY READ {foo, prop} ON GRAPH $db TO $role", Map("db" -> DEFAULT_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 
@@ -165,8 +151,6 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
   }
 
   test("Revoke read") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute(s"EXPLAIN REVOKE READ {prop} ON GRAPH $DEFAULT_DATABASE_NAME ELEMENTS A FROM reader").executionPlanString()
 
@@ -189,8 +173,6 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
   // Match
 
   test("Grant match") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute(s"EXPLAIN GRANT MATCH {*} ON GRAPH $DEFAULT_DATABASE_NAME TO reader").executionPlanString()
 
@@ -207,8 +189,6 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
   }
 
   test("Deny match all") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute(s"EXPLAIN DENY MATCH {*} ON GRAPH $SYSTEM_DATABASE_NAME TO reader").executionPlanString()
 
@@ -225,8 +205,6 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
   }
 
   test("Deny match prop") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute(s"EXPLAIN DENY MATCH {prop} ON GRAPH * TO reader").executionPlanString()
 
@@ -243,8 +221,6 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
   }
 
   test("Deny match prop with parameter") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN DENY MATCH {prop} ON GRAPH $db TO $role", Map("db" -> DEFAULT_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 
@@ -261,8 +237,6 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
   }
 
   test("Revoke match") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute(s"EXPLAIN REVOKE MATCH {prop} ON GRAPH $DEFAULT_DATABASE_NAME ELEMENTS A FROM reader").executionPlanString()
 
@@ -285,8 +259,6 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
   // Write
 
   test("Grant write") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN GRANT WRITE ON GRAPH * TO reader, editor").executionPlanString()
 
@@ -307,8 +279,6 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
   }
 
   test("Deny write") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute(s"EXPLAIN DENY WRITE ON GRAPH $SYSTEM_DATABASE_NAME TO reader, editor").executionPlanString()
 
@@ -329,8 +299,6 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
   }
 
   test("Revoke grant write") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute(s"EXPLAIN REVOKE GRANT WRITE ON GRAPH $DEFAULT_DATABASE_NAME FROM reader").executionPlanString()
 
@@ -347,8 +315,6 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
   }
 
   test("Revoke deny write") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute(s"EXPLAIN REVOKE DENY WRITE ON GRAPH $DEFAULT_DATABASE_NAME FROM reader").executionPlanString()
 
@@ -365,8 +331,6 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
   }
 
   test("Revoke write with parameter") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // When
     val plan = execute("EXPLAIN REVOKE WRITE ON GRAPH $db FROM $role", Map("db" -> DEFAULT_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 

@@ -6,6 +6,7 @@
 package com.neo4j.internal.cypher.planner
 
 import com.neo4j.internal.cypher.acceptance.AdministrationCommandAcceptanceTestBase
+import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.cypher.internal.ast.prettifier.Prettifier
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.plandescription.Arguments.Database
@@ -26,6 +27,11 @@ import org.neo4j.cypher.internal.util.test_helpers.WindowsStringSafe
 
 class AdministrationCommandPlannerTestBase extends AdministrationCommandAcceptanceTestBase {
   implicit val windowsSafe: WindowsStringSafe.type = WindowsStringSafe
+
+  override protected def initTest() {
+    super.initTest()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+  }
 
   // Argument helpers
 
