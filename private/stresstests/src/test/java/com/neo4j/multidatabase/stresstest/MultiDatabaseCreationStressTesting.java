@@ -17,6 +17,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 
 import static com.neo4j.helper.StressTestingHelper.ensureExistsAndEmpty;
@@ -45,6 +46,7 @@ class MultiDatabaseCreationStressTesting
 
         DatabaseManagementService managementService = new EnterpriseDatabaseManagementServiceBuilder( storeDirectory )
                 .setConfig( EnterpriseEditionSettings.maxNumberOfDatabases, Long.MAX_VALUE )
+                .setConfig( GraphDatabaseSettings.preallocate_logical_logs, false )
                 .build();
         ExecutorService executorPool = Executors.newFixedThreadPool( threads );
 
