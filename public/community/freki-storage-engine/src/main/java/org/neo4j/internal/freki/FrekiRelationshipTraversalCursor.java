@@ -281,6 +281,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
             denseRelationships.close();
             denseRelationships = null;
         }
+        currentDenseRelationship = null;
         densePropertiesItr = null;
     }
 
