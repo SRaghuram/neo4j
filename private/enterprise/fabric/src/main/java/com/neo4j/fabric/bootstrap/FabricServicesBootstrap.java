@@ -74,7 +74,7 @@ public class FabricServicesBootstrap
             var sslPolicyLoader = dependencies.resolveDependency( SslPolicyLoader.class );
             var driverPool = serviceBootstrapper
                     .registerService( new DriverPool( jobScheduler, fabricConfig, config, Clock.systemUTC(), credentialsProvider, sslPolicyLoader ),
-                            DriverPool.class );
+                                      DriverPool.class );
             serviceBootstrapper
                     .registerService( new FabricRemoteExecutor( driverPool ), FabricRemoteExecutor.class );
             serviceBootstrapper
@@ -96,7 +96,8 @@ public class FabricServicesBootstrap
             FabricReactorHooks.register( internalLogProvider );
 
             Executor fabricWorkerExecutor = jobScheduler.executor( FABRIC_WORKER );
-            var fabricExecutor = new FabricExecutor( fabricConfig, planner, useEvaluation, catalogManager, internalLogProvider, monitoring, fabricWorkerExecutor );
+            var fabricExecutor =
+                    new FabricExecutor( fabricConfig, planner, useEvaluation, catalogManager, internalLogProvider, monitoring, fabricWorkerExecutor );
             serviceBootstrapper.registerService( fabricExecutor, FabricExecutor.class );
         }
     }
