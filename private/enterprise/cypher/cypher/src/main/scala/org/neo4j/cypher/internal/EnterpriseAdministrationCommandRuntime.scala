@@ -350,15 +350,15 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // GRANT ROLE foo TO user
     case GrantRoleToUser(source, roleName, userName) => (context, parameterMapping) =>
-      val (roleNamekey, roleNameValue, roleNameConverter) = getNameFields("role", roleName)
-      val (userNamekey, userNameValue, userNameConverter) = getNameFields("user", userName)
+      val (roleNameKey, roleNameValue, roleNameConverter) = getNameFields("role", roleName)
+      val (userNameKey, userNameValue, userNameConverter) = getNameFields("user", userName)
       UpdatingSystemCommandExecutionPlan("GrantRoleToUser", normalExecutionEngine,
-        s"""MATCH (r:Role {name: $$$roleNamekey})
-          |OPTIONAL MATCH (u:User {name: $$$userNamekey})
+        s"""MATCH (r:Role {name: $$$roleNameKey})
+          |OPTIONAL MATCH (u:User {name: $$$userNameKey})
           |WITH r, u
           |MERGE (u)-[a:HAS_ROLE]->(r)
           |RETURN u.name AS user""".stripMargin,
-        VirtualValues.map(Array(roleNamekey, userNamekey), Array(roleNameValue, userNameValue)),
+        VirtualValues.map(Array(roleNameKey, userNameKey), Array(roleNameValue, userNameValue)),
         QueryHandler
           .handleNoResult(p => Some(new InvalidArgumentsException(s"Failed to grant role '${runtimeValue(roleName, p)}' to user '${runtimeValue(userName, p)}': Role does not exist.")))
           .handleError {
@@ -377,16 +377,16 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // REVOKE ROLE foo FROM user
     case RevokeRoleFromUser(source, roleName, userName) => (context, parameterMapping) =>
-      val (roleNamekey, roleNameValue, roleNameConverter) = getNameFields("role", roleName)
-      val (userNamekey, userNameValue, userNameConverter) = getNameFields("user", userName)
+      val (roleNameKey, roleNameValue, roleNameConverter) = getNameFields("role", roleName)
+      val (userNameKey, userNameValue, userNameConverter) = getNameFields("user", userName)
       UpdatingSystemCommandExecutionPlan("RevokeRoleFromUser", normalExecutionEngine,
-        s"""MATCH (r:Role {name: $$$roleNamekey})
-          |OPTIONAL MATCH (u:User {name: $$$userNamekey})
+        s"""MATCH (r:Role {name: $$$roleNameKey})
+          |OPTIONAL MATCH (u:User {name: $$$userNameKey})
           |WITH r, u
           |OPTIONAL MATCH (u)-[a:HAS_ROLE]->(r)
           |DELETE a
           |RETURN u.name AS user""".stripMargin,
-        VirtualValues.map(Array(roleNamekey, userNamekey), Array(roleNameValue, userNameValue)),
+        VirtualValues.map(Array(roleNameKey, userNameKey), Array(roleNameValue, userNameValue)),
         QueryHandler.handleError {
           case (error: HasStatus, p) if error.status() == Status.Cluster.NotALeader =>
             new DatabaseAdministrationOnFollowerException(s"Failed to revoke role '${runtimeValue(roleName, p)}' from user '${runtimeValue(userName, p)}': $followerError", error)
@@ -518,35 +518,52 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
            |ORDER BY role, graph, segment, resource, action
         """.stripMargin
 
-      val (grantee: Value, query) = scope match {
-        case ShowRolePrivileges(name) => (Values.utf8Value(name),
-          s"""
-             |OPTIONAL MATCH (r:Role) WHERE r.name = $$grantee WITH r
-             |$privilegeMatch
-             |WITH g, p, res, d, $segmentColumn AS segment, r ORDER BY d.name, r.name, segment
-             |$returnColumns
-             |$orderBy
+      val (nameKey: String, grantee: Value, converter: MapValueConverter, query) = scope match {
+        case ShowRolePrivileges(name) =>
+          val (roleNameKey, roleNameValue, roleNameConverter) = getNameFields("role", name)
+          (roleNameKey, roleNameValue, roleNameConverter,
+            s"""
+               |OPTIONAL MATCH (r:Role) WHERE r.name = $$$roleNameKey WITH r
+               |$privilegeMatch
+               |WITH g, p, res, d, $segmentColumn AS segment, r ORDER BY d.name, r.name, segment
+               |$returnColumns
+               |$orderBy
           """.stripMargin
-        )
-        case ShowUserPrivileges(name) =>
-          // TODO: fix so we get the actual current user
-          val requestedUser = name.getOrElse("currentUser")
-          (Values.utf8Value(requestedUser),
-          s"""
-             |OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r:Role) WHERE u.name = $$grantee WITH r, u
-             |$privilegeMatch
-             |WITH g, p, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, u.name, r.name, segment
-             |$returnColumns, u.name AS user
-             |UNION
-             |MATCH (u:User) WHERE u.name = $$grantee
-             |OPTIONAL MATCH (r:Role) WHERE r.name = 'PUBLIC' WITH u, r
-             |$privilegeMatch
-             |WITH g, p, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, r.name, segment
-             |$returnColumns, u.name AS user
-             |$orderBy
+          )
+        case ShowUserPrivileges(Some(name)) =>
+          val (userNameKey, userNameValue, userNameConverter) = getNameFields("user", name)
+          (userNameKey, userNameValue, userNameConverter,
+            s"""
+               |OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r:Role) WHERE u.name = $$$userNameKey WITH r, u
+               |$privilegeMatch
+               |WITH g, p, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, u.name, r.name, segment
+               |$returnColumns, u.name AS user
+               |UNION
+               |MATCH (u:User) WHERE u.name = $$$userNameKey
+               |OPTIONAL MATCH (r:Role) WHERE r.name = 'PUBLIC' WITH u, r
+               |$privilegeMatch
+               |WITH g, p, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, r.name, segment
+               |$returnColumns, u.name AS user
+               |$orderBy
           """.stripMargin
-        )
-        case ShowAllPrivileges() => (Values.NO_VALUE,
+          )
+        case ShowUserPrivileges(None) =>
+          ("grantee", Values.NO_VALUE, IdentityConverter, // will generate correct parameter name later and don't want to risk clash
+            s"""
+               |OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r:Role) WHERE u.name = $$currentUser WITH r, u
+               |$privilegeMatch
+               |WITH g, p, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, u.name, r.name, segment
+               |$returnColumns, u.name AS user
+               |UNION
+               |MATCH (u:User) WHERE u.name = $$currentUser
+               |OPTIONAL MATCH (r:Role) WHERE r.name = 'PUBLIC' WITH u, r
+               |$privilegeMatch
+               |WITH g, p, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, r.name, segment
+               |$returnColumns, u.name AS user
+               |$orderBy
+          """.stripMargin
+          )
+        case ShowAllPrivileges() => ("grantee", Values.NO_VALUE, IdentityConverter,
           s"""
              |OPTIONAL MATCH (r:Role) WITH r
              |$privilegeMatch
@@ -557,8 +574,10 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         )
         case _ => throw new IllegalStateException(s"Invalid show privilege scope '$scope'")
       }
-      SystemCommandExecutionPlan("ShowPrivileges", normalExecutionEngine, query, VirtualValues.map(Array("grantee"), Array(grantee)),
-        source = source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping)))
+      SystemCommandExecutionPlan("ShowPrivileges", normalExecutionEngine, query, VirtualValues.map(Array(nameKey), Array(grantee)),
+        source = source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping)),
+        parameterGenerator = (_, securityContext) => VirtualValues.map(Array("currentUser"), Array(Values.utf8Value(securityContext.subject().username()))),
+        parameterConverter = converter)
 
     // CREATE [OR REPLACE] DATABASE foo [IF NOT EXISTS]
     case CreateDatabase(source, normalizedName) => (context, parameterMapping) =>

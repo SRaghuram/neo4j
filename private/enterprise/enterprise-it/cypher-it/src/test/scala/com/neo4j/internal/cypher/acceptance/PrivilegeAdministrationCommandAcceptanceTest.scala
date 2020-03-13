@@ -158,6 +158,25 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     result.toSet should be(expected)
   }
 
+  test("should show privileges for specific role as parameter") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    val result = execute("SHOW ROLE $role PRIVILEGES", Map("role" -> "editor"))
+
+    // THEN
+    val expected = Set(
+      access().role("editor").map,
+      matchPrivilege().role("editor").node("*").map,
+      matchPrivilege().role("editor").relationship("*").map,
+      write().role("editor").node("*").map,
+      write().role("editor").relationship("*").map,
+    )
+
+    result.toSet should be(expected)
+  }
+
   test("should not show role privileges as non admin") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -233,6 +252,30 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
     // WHEN
     val result = execute("SHOW USER neo4j PRIVILEGES")
+
+    // THEN
+    val expected = Set(
+      access().database(DEFAULT).role(PUBLIC).user("neo4j").map,
+      access().role("admin").user("neo4j").map,
+      matchPrivilege().role("admin").user("neo4j").node("*").map,
+      matchPrivilege().role("admin").user("neo4j").relationship("*").map,
+      write().role("admin").user("neo4j").node("*").map,
+      write().role("admin").user("neo4j").relationship("*").map,
+      nameManagement().role("admin").user("neo4j").map,
+      indexManagement().role("admin").user("neo4j").map,
+      constraintManagement().role("admin").user("neo4j").map,
+      grantAdmin().role("admin").user("neo4j").map,
+    )
+
+    result.toSet should be(expected)
+  }
+
+  test("should show privileges for specific user as parameter") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    val result = execute("SHOW USER $user PRIVILEGES", Map("user" -> "neo4j"))
 
     // THEN
     val expected = Set(

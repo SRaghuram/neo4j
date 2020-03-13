@@ -754,7 +754,7 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     // Then
     plan should include(
       managementPlan("ShowPrivileges", Seq(Scope("ALL")),
-        assertDbmsAdminPlan("SHOW PRIVILEGES")
+        assertDbmsAdminPlan("SHOW PRIVILEGE")
       ).toString
     )
   }
@@ -768,7 +768,21 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     // Then
     plan should include(
       managementPlan("ShowPrivileges", Seq(scopeArg("ROLE", PUBLIC)),
-        assertDbmsAdminPlan("SHOW PRIVILEGES")
+        assertDbmsAdminPlan("SHOW PRIVILEGE")
+      ).toString
+    )
+  }
+
+  test("Show role privileges with parameter") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN SHOW ROLE $role PRIVILEGES", Map("role" -> "PUBLIC")).executionPlanString()
+
+    // Then
+    plan should include(
+      managementPlan("ShowPrivileges", Seq(Scope("ROLE $role")),
+        assertDbmsAdminPlan("SHOW PRIVILEGE")
       ).toString
     )
   }
@@ -782,7 +796,21 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     // Then
     plan should include(
       managementPlan("ShowPrivileges", Seq(scopeArg("USER", "neo4j")),
-        assertDbmsAdminOrSelfPlan("neo4j", "SHOW PRIVILEGES")
+        assertDbmsAdminOrSelfPlan(userPrivilegeArg("neo4j"), "SHOW PRIVILEGE")
+      ).toString
+    )
+  }
+
+  test("Show user privileges with parameter") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN SHOW USER $user PRIVILEGES", Map("user" -> "neo4j")).executionPlanString()
+
+    // Then
+    plan should include(
+      managementPlan("ShowPrivileges", Seq(Scope("USER $user")),
+        assertDbmsAdminOrSelfPlan(User("USER $user"), "SHOW PRIVILEGE")
       ).toString
     )
   }
