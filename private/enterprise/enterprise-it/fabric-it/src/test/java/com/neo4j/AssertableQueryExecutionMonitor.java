@@ -138,6 +138,12 @@ public class AssertableQueryExecutionMonitor
         }
 
         @Override
+        public void endFailure( ExecutingQuery query, String reason )
+        {
+            events.add( new Event( EventType.EndFailure, query, query.snapshot(), null ) );
+        }
+
+        @Override
         public void endSuccess( ExecutingQuery query )
         {
             events.add( new Event( EventType.EndSuccess, query, query.snapshot(), null ) );

@@ -65,12 +65,23 @@ class ConfiguredQueryLogger implements QueryLogger
     }
 
     @Override
+    public void failure( ExecutingQuery query, String reason )
+    {
+        log.error( logEntry( query.snapshot(), true, reason ) );
+    }
+
+    @Override
     public void success( ExecutingQuery query )
     {
         if ( NANOSECONDS.toMillis( query.elapsedNanos() ) >= thresholdMillis || verboseLogging )
         {
             log.info( logEntry( query.snapshot(), false ) );
         }
+    }
+
+    private String logEntry( QuerySnapshot query, Boolean fallbackToRaw, String reason )
+    {
+        return logEntry( query, fallbackToRaw ) + " - " + reason.split( System.getProperty( "line.separator" ) )[0];
     }
 
     private String logEntry( QuerySnapshot query, Boolean fallbackToRaw )

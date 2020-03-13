@@ -337,6 +337,7 @@ class QueryLoggerIT
         databaseManagementService.shutdown();
 
         List<String> logLines = readAllLines( logFilename );
+        assertEquals( 2, logLines.size() );
         assertThat( logLines.get( 0 ), containsString( "Query started:" ) );
     }
 
@@ -404,7 +405,8 @@ class QueryLoggerIT
     @Test
     void shouldLogNoSuchProcedureInQueryLog() throws Throwable
     {
-        databaseBuilder.setConfig( log_queries, LogQueryLevel.INFO )
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.VERBOSE )
+                       .setConfig( GraphDatabaseSettings.log_queries_early_raw_logging_enabled, true )
                        .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() );
         buildDatabase();
 
@@ -420,9 +422,9 @@ class QueryLoggerIT
 
         // THEN
         List<String> logLines = readAllLines( logFilename );
-        logLines.forEach( System.out::println );
+        assertEquals( 2, logLines.size() );
         String expectedMessage = "There is no procedure with the name `this.procedure.doesnt.exist` registered for this database instance.";
-        assertEquals( 3, logLines.stream().filter( line -> line.contains( expectedMessage ) ).count() ); //1 in log, 2 in stacktrace
+        assertEquals( 1, logLines.stream().filter( line -> line.contains( expectedMessage ) ).count() );
     }
 
     @Test
