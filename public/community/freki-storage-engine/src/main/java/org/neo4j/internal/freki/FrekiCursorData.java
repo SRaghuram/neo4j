@@ -20,7 +20,6 @@
 package org.neo4j.internal.freki;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
 import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerToString;
@@ -45,7 +44,6 @@ class FrekiCursorData
     int relationshipOffset;
     private ByteBuffer relationshipBuffer;
     int endOffset;
-    private ByteBuffer endBuffer;
 
     void reset()
     {
@@ -146,33 +144,14 @@ class FrekiCursorData
 
     private ByteBuffer copyBufferData( ByteBuffer into, ByteBuffer from )
     {
-        if ( from == null )
-        {
-            // Then leave the buffer as-is
-            return into;
-        }
-
-        if ( into == null || into.capacity() < from.limit() )
-        {
-            into = ByteBuffer.wrap( Arrays.copyOf( from.array(), from.limit() ) );
-        }
-        else
-        {
-            into.clear();
-            into.put( from.array(), 0, from.limit() );
-            into.flip();
-        }
-        return into;
+        return from == null ? into : from.duplicate();
     }
 
     @Override
     public String toString()
     {
-        if ( !isLoaded() )
-        {
-            return "<not loaded>";
-        }
-        return String.format( "NodeData[%d,fw:%s,lo:%d,po:%d,ro:%d,eo:%d]", nodeId, forwardPointerToString( forwardPointer ), labelOffset, propertyOffset,
-                relationshipOffset, endOffset );
+        return isLoaded() ? String.format( "NodeData[%d,fw:%s,lo:%d,po:%d,ro:%d,eo:%d]", nodeId, forwardPointerToString( forwardPointer ), labelOffset,
+                                propertyOffset, relationshipOffset, endOffset )
+                          : "<not loaded>";
     }
 }
