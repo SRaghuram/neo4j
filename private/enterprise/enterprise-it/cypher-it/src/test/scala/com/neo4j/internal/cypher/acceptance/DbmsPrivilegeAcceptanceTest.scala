@@ -773,12 +773,13 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     execute("CREATE ROLE custom")
     execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
     execute("GRANT ROLE custom TO foo")
+
+    // WHEN
     execute("GRANT CREATE ROLE ON DBMS TO custom")
 
+    // THEN
     the[AuthorizationViolationException] thrownBy {
-      // WHEN
       executeOnSystem("foo", "bar", "CREATE OR REPLACE ROLE myRole")
-      // THEN
     } should have message "Permission denied."
   }
 
@@ -1068,12 +1069,13 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     execute("CREATE ROLE custom")
     execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
     execute("GRANT ROLE custom TO foo")
+
+    // WHEN
     execute("GRANT CREATE USER ON DBMS TO custom")
 
+    // THEN
     the[AuthorizationViolationException] thrownBy {
-      // WHEN
       executeOnSystem("foo", "bar", "CREATE OR REPLACE USER bar SET PASSWORD 'firstPassword'")
-      // THEN
     } should have message "Permission denied."
   }
 
@@ -1318,6 +1320,54 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     } should have message "Permission denied."
 
     execute("SHOW DATABASE baz").toSet should be(Set.empty)
+  }
+
+  test("should fail when replacing database with denied create database privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom AS COPY OF admin")
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO foo")
+
+    // WHEN
+    execute("DENY CREATE DATABASE ON DBMS TO custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "CREATE OR REPLACE DATABASE myDb")
+    } should have message "Permission denied."
+  }
+
+  test("should fail when replacing database with denied drop database privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom AS COPY OF admin")
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO foo")
+
+    // WHEN
+    execute("DENY DROP DATABASE ON DBMS TO custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "CREATE OR REPLACE DATABASE myDb")
+    } should have message "Permission denied."
+  }
+
+  test("should fail when replacing database without drop database privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO foo")
+
+    // WHEN
+    execute("GRANT CREATE DATABASE ON DBMS TO custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "CREATE OR REPLACE DATABASE myDb")
+    } should have message "Permission denied."
   }
 
   // DROP DATABASE

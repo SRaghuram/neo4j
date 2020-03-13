@@ -1409,7 +1409,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val parameter = new util.HashMap[String, Object]()
     parameter.put("wrongPassword", "boo")
 
-    // WHEN
     the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
       // WHEN
       executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM $wrongPassword TO 'baz'", params = parameter)
@@ -1433,7 +1432,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     parameter.put("wrongPassword", "boo")
     parameter.put("newPassword", "baz")
 
-    // WHEN
     the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
       // WHEN
       executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM $wrongPassword TO $newPassword", params = parameter)
@@ -1456,7 +1454,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val parameter = new util.HashMap[String, Object]()
     parameter.put("newPassword", "baz")
 
-    // WHEN
     the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
       // WHEN
       executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM 'boo' TO $newPassword", params = parameter)

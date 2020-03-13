@@ -74,7 +74,7 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
       helperPlan("EnsureValidNumberOfDatabases",
         managementPlan("CreateDatabase", Seq(databaseArg("foo")),
           managementPlan("DropDatabase", Seq(databaseArg("foo")),
-            assertDbmsAdminPlan("CREATE DATABASE")
+            assertDbmsAdminPlan("DROP DATABASE", "CREATE DATABASE")
           )
         )
       ).toString
