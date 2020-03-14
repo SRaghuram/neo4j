@@ -514,7 +514,8 @@ class FabricExecutorTest
             Plan c0c1 = c0.children().get( 1 );
             assertThat( c0c1.operatorType(), is( "Leaf" ) );
             assertThat( c0c1.identifiers(), contains( "y" ) );
-            assertThat( c0c1.arguments().get( "query" ), is( org.neo4j.driver.Values.value( joinAsLines("USE `mega`.`graph`((1))", "CREATE ()", "RETURN 1 AS `y`" ) ) ) );
+            assertThat( c0c1.arguments().get( "query" ),
+                        is( org.neo4j.driver.Values.value( joinAsLines( "USE `mega`.`graph`((1))", "CREATE ()", "RETURN 1 AS `y`" ) ) ) );
 
             Plan c0c0 = c0.children().get( 0 );
             assertThat( c0c0.operatorType(), is( "Apply" ) );
@@ -522,7 +523,8 @@ class FabricExecutorTest
             Plan c0c0c1 = c0c0.children().get( 1 );
             assertThat( c0c0c1.operatorType(), is( "Leaf" ) );
             assertThat( c0c0c1.identifiers(), contains( "x" ) );
-            assertThat( c0c0c1.arguments().get( "query" ), is( org.neo4j.driver.Values.value( joinAsLines("USE `mega`.`graph`((0))", "RETURN 1 AS `x`" ) ) ) );
+            assertThat( c0c0c1.arguments().get( "query" ),
+                        is( org.neo4j.driver.Values.value( joinAsLines( "USE `mega`.`graph`((0))", "RETURN 1 AS `x`" ) ) ) );
 
             Plan c0c0c0 = c0c0.children().get( 0 );
             assertThat( c0c0c0.operatorType(), is( "Init" ) );
@@ -565,7 +567,8 @@ class FabricExecutorTest
                 .containsMessages( "local 2: /* FullyParsedQuery */ UNWIND [0, 1] AS s RETURN s AS s",
                                    "remote 0: RETURN 2 AS `y`",
                                    "remote 1: RETURN 2 AS `y`",
-                                   "local 2: /* FullyParsedQuery */ InputDataStream(Vector(Variable(s), Variable(y))) RETURN s AS s, y AS y ORDER BY s ASCENDING, y ASCENDING" );
+                                   "local 2: /* FullyParsedQuery */ InputDataStream(Vector(Variable(s), Variable(y))) " +
+                                           "RETURN s AS s, y AS y ORDER BY s ASCENDING, y ASCENDING" );
     }
 
     @Test
