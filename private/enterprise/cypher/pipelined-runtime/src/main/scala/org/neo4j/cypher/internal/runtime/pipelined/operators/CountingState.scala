@@ -122,7 +122,7 @@ object CountingState {
   *   }
   * }}}
   */
-abstract class SerialTopLevelCountingState extends CountingState {
+abstract class SerialCountingState extends CountingState {
 
   protected def getCount: Long
   protected def setCount(count: Long): Unit
@@ -177,11 +177,11 @@ abstract class SerialTopLevelCountingOperatorTaskTemplate(val inner: OperatorTas
   private var countExpression: IntermediateExpression = _
   protected val countLeftVar: LocalVariable = variable[Int](codeGen.namer.nextVariableName("countLeft"), constant(0))
   protected val reservedVar: LocalVariable = variable[Int](codeGen.namer.nextVariableName("reserved"), constant(0))
-  protected val countingStateField: InstanceField = field[SerialTopLevelCountingState](
+  protected val countingStateField: InstanceField = field[SerialCountingState](
     codeGen.namer.nextVariableName("countState"),
     // Get the skip operator state from the ArgumentStateMaps that is passed to the constructor
     // We do not generate any checks or error handling code, so the runtime compiler is responsible for this fitting together perfectly
-    peekState[SerialTopLevelCountingState](argumentStateMapId))
+    peekState[SerialCountingState](argumentStateMapId))
 
   override def genInit: IntermediateRepresentation = inner.genInit
 
@@ -196,8 +196,8 @@ abstract class SerialTopLevelCountingOperatorTaskTemplate(val inner: OperatorTas
     // NOTE: We would typically prefer to do this in the constructor, but that is called using reflection, and the error handling
     // does not work so well when exceptions are thrown from evaluateCountValue (which can be expected due to it performing user error checking!)
     block(
-      condition(invoke(loadField(countingStateField), method[SerialTopLevelCountingState, Boolean]("isUninitialized")))(
-        invoke(loadField(countingStateField), method[SerialTopLevelCountingState, Unit, Long]("initialize"),
+      condition(invoke(loadField(countingStateField), method[SerialCountingState, Boolean]("isUninitialized")))(
+        invoke(loadField(countingStateField), method[SerialCountingState, Unit, Long]("initialize"),
                invokeStatic(method[CountingState, Long, AnyValue]("evaluateCountValue"), nullCheckIfRequired(countExpression)))
         ),
       assign(reservedVar, invoke(loadField(countingStateField), method[CountingState, Int, Int]("reserve"), howMuchToReserve)),
@@ -208,7 +208,7 @@ abstract class SerialTopLevelCountingOperatorTaskTemplate(val inner: OperatorTas
 
   override def genOperateExit: IntermediateRepresentation = {
     block(
-      invoke(loadField(countingStateField), method[SerialTopLevelCountingState, Unit, Int]("update"),
+      invoke(loadField(countingStateField), method[SerialCountingState, Unit, Int]("update"),
         subtract(load(reservedVar), load(countLeftVar))),
       inner.genOperateExit)
   }

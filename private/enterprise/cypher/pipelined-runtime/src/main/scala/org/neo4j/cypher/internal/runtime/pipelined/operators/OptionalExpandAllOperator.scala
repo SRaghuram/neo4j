@@ -274,8 +274,8 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
             )),
           doIfPredicateOrElse(condition(load(shouldWriteRow))(innerBlock))(innerBlock),
           doIfInnerCantContinue(
-            setField(canContinue, and(loadField(canContinue),
-              cursorNext[RelationshipTraversalCursor](loadField(relationshipsField))))),
+            innermost.setToNextIfNotReachedLimit(canContinue,
+              and(loadField(canContinue), cursorNext[RelationshipTraversalCursor](loadField(relationshipsField))))),
           endInnerLoop
         )))
   }

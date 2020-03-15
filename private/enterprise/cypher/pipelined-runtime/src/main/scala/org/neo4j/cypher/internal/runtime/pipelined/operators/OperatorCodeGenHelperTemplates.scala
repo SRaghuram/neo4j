@@ -219,6 +219,7 @@ object OperatorCodeGenHelperTemplates {
   val OUTPUT_CURSOR_VAR: LocalVariable = variable[MorselFullCursor](ExpressionCompiler.CONTEXT, OUTPUT_FULL_CURSOR)
   val OUTPUT_CURSOR: IntermediateRepresentation = load(OUTPUT_CURSOR_VAR.name)
   val OUTPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(OUTPUT_CURSOR, method[MorselFullCursor, Boolean]("onValidRow"))
+  val LIMIT_NOT_REACHED: LocalVariable = variable[Boolean]("limitNotReached", constant(true))
 
   val OUTPUT_TRUNCATE: IntermediateRepresentation = invokeSideEffect(OUTPUT_CURSOR, method[MorselFullCursor, Unit]("truncate"))
   val UPDATE_DEMAND: IntermediateRepresentation =
@@ -250,6 +251,15 @@ object OperatorCodeGenHelperTemplates {
       method[UnorderedArgumentStateMapReader[_ <: ArgumentState], ArgumentState, Long]("peek"),
       constant(TopLevelArgument.VALUE)
       )
+    )
+
+  def argumentSlotOffset(argumentStateMapId: ArgumentStateMapId): IntermediateRepresentation =
+    invoke(
+      invoke(load(
+        ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name),
+        method[ArgumentStateMaps, ArgumentStateMap[_ <: ArgumentState], Int]("applyByIntId"),
+        constant(argumentStateMapId.x)),
+      method[ArgumentStateMap[_ <: ArgumentState], Int]("argumentSlotOffset")
     )
 
   def allocateCursor(cursorPools: CursorPoolsType): IntermediateRepresentation =

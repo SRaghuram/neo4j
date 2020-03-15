@@ -309,7 +309,8 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
       block(
         writeRow(getRelationship),
         inner.genOperateWithExpressions,
-        doIfInnerCantContinue(setField(canContinue, profilingCursorNext[RelationshipTraversalCursor](loadField(relationshipsField), id))),
+        doIfInnerCantContinue(
+          innermost.setToNextIfNotReachedLimit(canContinue, profilingCursorNext[RelationshipTraversalCursor](loadField(relationshipsField), id))),
         endInnerLoop
       )
     )

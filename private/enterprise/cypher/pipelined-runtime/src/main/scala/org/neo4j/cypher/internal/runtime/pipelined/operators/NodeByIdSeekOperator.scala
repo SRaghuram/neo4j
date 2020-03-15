@@ -189,7 +189,7 @@ class SingleNodeByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
         codeGen.setLongAt(offset, load(idVariable)),
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(profileRow(id)),
-        setField(canContinue, constant(false)),
+        innermost.setToNextIfNotReachedLimit(canContinue, constant(false)),
         endInnerLoop),
     )
   }
@@ -268,7 +268,7 @@ class ManyNodeByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
             inner.genOperateWithExpressions,
             doIfInnerCantContinue(profileRow(id))
           )),
-        doIfInnerCantContinue(block(setField(canContinue, cursorNext[IteratorCursor](loadField(idCursor))))),
+        doIfInnerCantContinue(innermost.setToNextIfNotReachedLimit(canContinue, cursorNext[IteratorCursor](loadField(idCursor)))),
         endInnerLoop)
     )
   }

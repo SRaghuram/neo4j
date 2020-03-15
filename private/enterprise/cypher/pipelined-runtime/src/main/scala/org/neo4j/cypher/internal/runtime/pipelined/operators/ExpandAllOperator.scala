@@ -316,7 +316,8 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
         writeRow(getRelationship, getOtherNode),
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(
-          setField(canContinue, profilingCursorNext[RelationshipTraversalCursor](loadField(relationshipsField), id))),
+          innermost.setToNextIfNotReachedLimit(canContinue,
+            profilingCursorNext[RelationshipTraversalCursor](loadField(relationshipsField), id))),
         endInnerLoop
       )
     )

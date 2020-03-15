@@ -101,17 +101,17 @@ class SerialTopLevelSkipOperatorTaskTemplate(inner: OperatorTaskTemplate,
 object SerialTopLevelSkipOperatorTaskTemplate {
 
   // This is used by fused skip in a serial pipeline, i.e. only safe to use in single-threaded execution or by a serial pipeline in parallel execution
-  object SerialTopLevelSkipStateFactory extends ArgumentStateFactory[SerialTopLevelCountingState] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): SerialTopLevelCountingState =
-      new StandardSerialTopLevelSkipState(argumentRowId, argumentRowIdsForReducers)
+  object SerialTopLevelSkipStateFactory extends ArgumentStateFactory[SerialCountingState] {
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): SerialCountingState =
+      new StandardSerialSkipState(argumentRowId, argumentRowIdsForReducers)
 
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): SerialTopLevelCountingState =
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): SerialCountingState =
     // NOTE: This is actually _not_ threadsafe and only safe to use in a serial pipeline!
-      new VolatileSerialTopLevelSkipState(argumentRowId, argumentRowIdsForReducers)
+      new VolatileSerialSkipState(argumentRowId, argumentRowIdsForReducers)
   }
 
-  class StandardSerialTopLevelSkipState(override val argumentRowId: Long,
-                                         override val argumentRowIdsForReducers: Array[Long]) extends SerialTopLevelCountingState {
+  class StandardSerialSkipState(override val argumentRowId: Long,
+                                override val argumentRowIdsForReducers: Array[Long]) extends SerialCountingState {
 
     private var countLeft: Long = -1L
 
@@ -126,8 +126,8 @@ object SerialTopLevelSkipOperatorTaskTemplate {
     * in `ParallelRuntime`. It provides thread-safe calls of `isCancelled`, while all other methods have
     * to be accessed in serial.
     */
-  class VolatileSerialTopLevelSkipState(override val argumentRowId: Long,
-                                         override val argumentRowIdsForReducers: Array[Long]) extends SerialTopLevelCountingState {
+  class VolatileSerialSkipState(override val argumentRowId: Long,
+                                override val argumentRowIdsForReducers: Array[Long]) extends SerialCountingState {
 
     @volatile private var countLeft: Long = -1L
 

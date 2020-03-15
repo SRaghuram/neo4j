@@ -155,7 +155,7 @@ class UnwindOperatorTaskTemplate(inner: OperatorTaskTemplate,
           codeGen.setRefAt(offset,
             invoke(loadField(cursorField), method[IteratorCursor, AnyValue]("value"))),
           inner.genOperateWithExpressions,
-          doIfInnerCantContinue(setField(canContinue, profilingCursorNext[IteratorCursor](loadField(cursorField), id))),
+          doIfInnerCantContinue(innermost.setToNextIfNotReachedLimit(canContinue, profilingCursorNext[IteratorCursor](loadField(cursorField), id))),
           endInnerLoop
         )
       )

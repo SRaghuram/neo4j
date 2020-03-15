@@ -31,6 +31,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
 import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.not
+import org.neo4j.codegen.api.IntermediateRepresentation.or
 import org.neo4j.codegen.api.IntermediateRepresentation.param
 import org.neo4j.codegen.api.IntermediateRepresentation.self
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
@@ -76,6 +77,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_RESOURCES
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_RESOURCE_PARAMETER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATE
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.LIMIT_NOT_REACHED
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.SET_TRACER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.SHOULD_BREAK
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.UPDATE_DEMAND
@@ -642,8 +644,10 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
 class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
                                    var shouldCheckDemand: Boolean = false,
                                    var shouldCheckOutputCounter: Boolean = false,
-                                   var shouldCheckBreak: Boolean = false)
+                                   var shouldCheckBreak: Boolean = false,
+                                   var shouldCheckLimitNotReached: Boolean = false)
                                   (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
+
   // Reset configuration to the default settings
   def reset(): Unit = {
     shouldWriteToContext = true
@@ -651,6 +655,12 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
     shouldCheckOutputCounter = false
     shouldCheckBreak = false
   }
+
+  def resetLimitNotReached: IntermediateRepresentation = if (shouldCheckLimitNotReached) assign(LIMIT_NOT_REACHED, constant(true)) else noop()
+
+  def setToNextIfNotReachedLimit(field: Field, next: IntermediateRepresentation): IntermediateRepresentation =
+    if (shouldCheckLimitNotReached) IntermediateRepresentation.ifElse(load(LIMIT_NOT_REACHED))(setField(field, next))(setField(field, constant(false)))
+    else setField(field, next)
 
   override def inner: OperatorTaskTemplate = null
 
@@ -743,6 +753,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
     val seq = Seq.newBuilder[LocalVariable]
     if (shouldCheckOutputCounter) seq += OUTPUT_COUNTER
     if (shouldWriteToContext) seq += OUTPUT_CURSOR_VAR
+    if (shouldCheckLimitNotReached) seq += LIMIT_NOT_REACHED
     seq.result()
   }
 

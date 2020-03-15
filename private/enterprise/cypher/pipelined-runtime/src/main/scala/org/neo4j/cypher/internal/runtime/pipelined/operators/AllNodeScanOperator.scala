@@ -256,7 +256,7 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, invoke(loadField(nodeCursorField), method[NodeCursor, Long]("nodeReference"))),
         inner.genOperateWithExpressions,
-        doIfInnerCantContinue(setField(canContinue, profilingCursorNext[NodeCursor](loadField(nodeCursorField), id))),
+        doIfInnerCantContinue(innermost.setToNextIfNotReachedLimit(canContinue, profilingCursorNext[NodeCursor](loadField(nodeCursorField), id))),
         endInnerLoop
       )
     )

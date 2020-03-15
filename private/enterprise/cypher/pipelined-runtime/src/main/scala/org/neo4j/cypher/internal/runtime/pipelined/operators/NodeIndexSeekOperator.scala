@@ -309,7 +309,7 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(override val inner: Operator
         codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
         property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_, getPropertyValue)).getOrElse(noop()),
         inner.genOperateWithExpressions,
-        doIfInnerCantContinue(setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id))),
+        doIfInnerCantContinue(innermost.setToNextIfNotReachedLimit(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id))),
         endInnerLoop
       )
     )
@@ -490,13 +490,13 @@ class ManyQueriesNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTempl
           getPropertyValueRepresentation)).getOrElse(noop()),
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(
-          block(setField(canContinue,
-            invokeStatic(nextMethod,
-              indexReadSession(queryIndexId),
-              loadField(nodeIndexCursorField),
-              loadField(queryIteratorField),
-              indexOrder(order),
-                                      constant(needsValues),loadField(DATA_READ))),
+          block(
+            innermost.setToNextIfNotReachedLimit(canContinue,
+              invokeStatic(nextMethod,
+                indexReadSession(queryIndexId),
+                loadField(nodeIndexCursorField),
+                loadField(queryIteratorField),
+                indexOrder(order), constant(needsValues), loadField(DATA_READ))),
             profileRow(id, loadField(canContinue))),
         ),
         endInnerLoop
@@ -611,16 +611,17 @@ class CompositeNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTemplat
         cacheProperties,
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(
-          block(setField(canContinue,
-                         invokeStatic(compositeNextMethod,
-                                      indexReadSession(queryIndexId),
-                                      loadField(nodeIndexCursorField),
-                                      loadField(queryIteratorField),
-                                      indexOrder(order),
-                                      constant(needsValues),
-                                      loadField(DATA_READ))),
-                profileRow(id, loadField(canContinue))),
-          ),
+          block(
+            innermost.setToNextIfNotReachedLimit(canContinue,
+              invokeStatic(compositeNextMethod,
+                indexReadSession(queryIndexId),
+                loadField(nodeIndexCursorField),
+                loadField(queryIteratorField),
+                indexOrder(order),
+                constant(needsValues),
+                loadField(DATA_READ))),
+            profileRow(id, loadField(canContinue))),
+        ),
         endInnerLoop
         )
       )
