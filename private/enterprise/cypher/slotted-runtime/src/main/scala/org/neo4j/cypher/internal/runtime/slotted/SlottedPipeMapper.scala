@@ -50,6 +50,7 @@ import org.neo4j.cypher.internal.logical.plans.NodeHashJoin
 import org.neo4j.cypher.internal.logical.plans.NodeIndexScan
 import org.neo4j.cypher.internal.logical.plans.NodeIndexSeek
 import org.neo4j.cypher.internal.logical.plans.NodeUniqueIndexSeek
+import org.neo4j.cypher.internal.logical.plans.NonFuseable
 import org.neo4j.cypher.internal.logical.plans.Optional
 import org.neo4j.cypher.internal.logical.plans.OptionalExpand
 import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
@@ -439,7 +440,8 @@ class SlottedPipeMapper(fallback: PipeMapper,
       case _: Selection |
            _: Limit |
            _: ErrorPlan |
-           _: Skip =>
+           _: Skip |
+           _: NonFuseable =>
         fallback.onOneChildPlan(plan, source)
 
       case Sort(_, sortItems) =>

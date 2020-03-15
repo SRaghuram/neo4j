@@ -385,7 +385,9 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
         if (shouldExpandAll) codeGen.setLongAt(toOffset, invoke(loadField(varExpandCursorField), method[VarExpandCursor, Long]("toNode")) )
         else noop(),
         inner.genOperateWithExpressions,
-        doIfInnerCantContinue(setField(canContinue, profilingCursorNext[VarExpandCursor](loadField(varExpandCursorField), id))),
+        doIfInnerCantContinue(
+          innermost.setToNextIfNotReachedLimit(canContinue, profilingCursorNext[VarExpandCursor](loadField(varExpandCursorField), id))
+        ),
         endInnerLoop
       )
     )

@@ -52,6 +52,7 @@ import org.neo4j.cypher.internal.logical.plans.UndirectedRelationshipByIdSeek
 import org.neo4j.cypher.internal.logical.plans.UnwindCollection
 import org.neo4j.cypher.internal.logical.plans.ExpandInto
 import org.neo4j.cypher.internal.logical.plans.MultiNodeIndexSeek
+import org.neo4j.cypher.internal.logical.plans.NonFuseable
 import org.neo4j.cypher.internal.logical.plans.Union
 import org.neo4j.cypher.internal.logical.plans.UpdatingPlan
 import org.neo4j.cypher.internal.logical.plans.VarExpand
@@ -104,7 +105,8 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, i
            _: Distinct |
            _: Projection |
            _: CacheProperties |
-           _: Selection
+           _: Selection |
+           _: NonFuseable
       => false
 
       // 2 child operators

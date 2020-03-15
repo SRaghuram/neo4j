@@ -63,6 +63,7 @@ import org.neo4j.cypher.internal.logical.plans.NestedPlanExpression
 import org.neo4j.cypher.internal.logical.plans.NodeCountFromCountStore
 import org.neo4j.cypher.internal.logical.plans.NodeHashJoin
 import org.neo4j.cypher.internal.logical.plans.NodeLogicalLeafPlan
+import org.neo4j.cypher.internal.logical.plans.NonFuseable
 import org.neo4j.cypher.internal.logical.plans.Optional
 import org.neo4j.cypher.internal.logical.plans.OptionalExpand
 import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
@@ -511,7 +512,8 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
            _: PartialSort |
            _: Top |
            _: PartialTop |
-           _: CacheProperties
+           _: CacheProperties |
+           _: NonFuseable
       =>
 
       case p: ProjectingPlan =>

@@ -80,6 +80,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexContainsSc
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexEndsWithScanOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexScanOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexSeekOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.NonFuseableOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.Operator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalExpandAllOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalExpandIntoOperator
@@ -573,6 +574,9 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
     plan match {
       case plans.Selection(predicate, _) =>
         Some(new FilterOperator(WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, predicate)))
+
+      case plans.NonFuseable(_) =>
+        Some(new NonFuseableOperator(WorkIdentity.fromPlan(plan)))
 
       case plans.Limit(_, count, DoNotIncludeTies) =>
         val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
