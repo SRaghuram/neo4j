@@ -2604,7 +2604,6 @@ MIT License
   jersey-media-jaxb
   scallop
   SLF4J API Module
-  SLF4J NOP Binding
 ------------------------------------------------------------------------------
 
 The MIT License

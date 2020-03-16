@@ -59,14 +59,14 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.neo4j.app</groupId>
-            <artifactId>neo4j-server-enterprise</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-enterprise</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-nop</artifactId>
+            <scope>runtime</scope>
         </dependency>
 
         <!-- Test dependencies -->
