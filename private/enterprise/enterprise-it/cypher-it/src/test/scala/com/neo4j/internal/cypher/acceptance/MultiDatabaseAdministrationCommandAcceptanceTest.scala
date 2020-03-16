@@ -108,6 +108,17 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     result.toList should be(List(db(DEFAULT_DATABASE_NAME, default = true)))
   }
 
+  test(s"should show database $DEFAULT_DATABASE_NAME with parameter") {
+    // GIVEN
+    setup()
+
+    // WHEN
+    val result = execute("SHOW DATABASE $db", Map("db" -> DEFAULT_DATABASE_NAME))
+
+    // THEN
+    result.toList should be(List(db(DEFAULT_DATABASE_NAME, default = true)))
+  }
+
   test("Should always show system even without access") {
     // GIVEN
     setup(defaultConfig)
@@ -579,6 +590,17 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     result.toList should be(List(db("f.o-o123")))
   }
 
+  test("should create database with parameter") {
+    setup()
+
+    // WHEN
+    execute("CREATE DATABASE $db", Map("db" -> "f.o-o123"))
+
+    // THEN
+    val result = execute("SHOW DATABASE `f.o-o123`")
+    result.toList should be(List(db("f.o-o123")))
+  }
+
   test("should create database using if not exists") {
     setup()
 
@@ -998,6 +1020,20 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("SHOW DATABASES").toList should contain allOf(db("foo"), db("bar"))
   }
 
+  test("should drop database with parameter") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    execute("DROP DATABASE $db", Map("db" -> "foo"))
+
+    // THEN
+    val result2 = execute("SHOW DATABASES")
+    val databaseNames: Set[String] = result2.columnAs("name").toSet
+    databaseNames should not contain "foo"
+  }
+
   test("should drop existing database using if exists") {
     // GIVEN
     setup()
@@ -1282,6 +1318,20 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     result3.toList should be(List(db("foo")))
   }
 
+  test("should re-start database with parameter") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("STOP DATABASE foo")
+
+    // WHEN
+    execute("START DATABASE $db", Map("db" -> "foo"))
+
+    // THEN
+    val result = execute("SHOW DATABASE foo")
+    result.toList should be(List(db("foo")))
+  }
+
   test("should re-start database using mixed case name") {
     setup()
 
@@ -1357,6 +1407,20 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     // THEN
     val result2 = execute("SHOW DATABASE foo")
     result2.toList should be(List(db("foo", status = offlineStatus)))
+  }
+
+  test("should stop database with parameter") {
+    setup()
+
+    // GIVEN
+    execute("CREATE DATABASE foo")
+
+    // WHEN
+    execute("STOP DATABASE $db", Map("db" -> "foo"))
+
+    // THEN
+    val result = execute("SHOW DATABASE foo")
+    result.toList should be(List(db("foo", status = offlineStatus)))
   }
 
   test("should stop database using mixed case name") {

@@ -90,5 +90,5 @@ class AdministrationCommandPlannerTestBase extends AdministrationCommandAcceptan
 
   def assertDbmsAdminPlan(actions: String*): PlanDescriptionImpl = planDescription("AssertDbmsAdmin", actions.map(a => DbmsAction(a)))
   def assertDbmsAdminOrSelfPlan(user: User, actions: String*): PlanDescriptionImpl = planDescription("AssertDbmsAdminOrSelf", actions.map(a => DbmsAction(a)) :+ user)
-  def assertDatabaseAdminPlan(action: String, database: String): PlanDescriptionImpl = planDescription("AssertDatabaseAdmin", Seq(DatabaseAction(action), databaseArg(database)))
+  def assertDatabaseAdminPlan(action: String, database: Database): PlanDescriptionImpl = planDescription("AssertDatabaseAdmin", Seq(DatabaseAction(action), database))
 }

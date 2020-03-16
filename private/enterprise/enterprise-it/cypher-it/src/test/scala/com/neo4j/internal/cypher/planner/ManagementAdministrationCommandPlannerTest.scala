@@ -9,6 +9,7 @@ import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBL
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.cypher.internal.ast.prettifier.Prettifier
+import org.neo4j.cypher.internal.plandescription.Arguments.Database
 import org.neo4j.cypher.internal.plandescription.Arguments.Role
 import org.neo4j.cypher.internal.plandescription.Arguments.Scope
 import org.neo4j.cypher.internal.plandescription.Arguments.User
@@ -37,6 +38,16 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     plan should include(managementPlan("ShowDatabase", Seq(databaseArg(DEFAULT_DATABASE_NAME))).toString)
   }
 
+  test(s"Show database $DEFAULT_DATABASE_NAME with parameter") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN SHOW DATABASE $db", Map("db" -> DEFAULT_DATABASE_NAME)).executionPlanString()
+
+    // Then
+    plan should include(managementPlan("ShowDatabase", Seq(Database("$db"))).toString)
+  }
+
   test("Show default database") {
     selectDatabase(SYSTEM_DATABASE_NAME)
 
@@ -57,6 +68,22 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     plan should include(
       helperPlan("EnsureValidNumberOfDatabases",
         managementPlan("CreateDatabase", Seq(databaseArg("foo")),
+          assertDbmsAdminPlan("CREATE DATABASE")
+        )
+      ).toString
+    )
+  }
+
+  test("Create database with parameter") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN CREATE DATABASE $db", Map("db" -> "foo")).executionPlanString()
+
+    // Then
+    plan should include(
+      helperPlan("EnsureValidNumberOfDatabases",
+        managementPlan("CreateDatabase", Seq(Database("$db")),
           assertDbmsAdminPlan("CREATE DATABASE")
         )
       ).toString
@@ -118,6 +145,25 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     )
   }
 
+  test("Drop database with parameter") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // Given
+    execute("CREATE DATABASE foo")
+
+    // When
+    val plan = execute("EXPLAIN DROP DATABASE $db", Map("db" -> "foo")).executionPlanString()
+
+    // Then
+    plan should include(
+      managementPlan("DropDatabase", Seq(Database("$db")),
+        helperPlan("EnsureValidNonSystemDatabase", Seq(Database("$db")),
+          assertDbmsAdminPlan("DROP DATABASE")
+        )
+      ).toString
+    )
+  }
+
   test("Drop database if exists") {
     selectDatabase(SYSTEM_DATABASE_NAME)
 
@@ -149,7 +195,25 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     // Then
     plan should include(
       managementPlan("StartDatabase", Seq(databaseArg("foo")),
-        assertDatabaseAdminPlan("START", "foo")
+        assertDatabaseAdminPlan("START", databaseArg("foo"))
+      ).toString
+    )
+  }
+
+  test("Start database with parameter") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // Given
+    execute("CREATE DATABASE foo")
+    execute("STOP DATABASE foo")
+
+    // When
+    val plan = execute("EXPLAIN START DATABASE $db", Map("db" -> "foo")).executionPlanString()
+
+    // Then
+    plan should include(
+      managementPlan("StartDatabase", Seq(Database("$db")),
+        assertDatabaseAdminPlan("START", Database("$db"))
       ).toString
     )
   }
@@ -167,7 +231,26 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     plan should include(
       managementPlan("StopDatabase", Seq(databaseArg("foo")),
         helperPlan("EnsureValidNonSystemDatabase", Seq(databaseArg("foo")),
-          assertDatabaseAdminPlan("STOP", "foo")
+          assertDatabaseAdminPlan("STOP", databaseArg("foo"))
+        )
+      ).toString
+    )
+  }
+
+  test("Stop database with parameter") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // Given
+    execute("CREATE DATABASE foo")
+
+    // When
+    val plan = execute("EXPLAIN STOP DATABASE $db", Map("db" -> "foo")).executionPlanString()
+
+    // Then
+    plan should include(
+      managementPlan("StopDatabase", Seq(Database("$db")),
+        helperPlan("EnsureValidNonSystemDatabase", Seq(Database("$db")),
+          assertDatabaseAdminPlan("STOP", Database("$db"))
         )
       ).toString
     )

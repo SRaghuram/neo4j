@@ -20,6 +20,8 @@ import org.neo4j.common.DependencyResolver
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
+import org.neo4j.configuration.helpers.DatabaseNameValidator
+import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.cypher.internal.ast.ActionResource
 import org.neo4j.cypher.internal.ast.AllGraphsScope
 import org.neo4j.cypher.internal.ast.AllQualifier
@@ -95,9 +97,8 @@ import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.DatabaseAdministrationException
 import org.neo4j.exceptions.DatabaseAdministrationOnFollowerException
 import org.neo4j.exceptions.InternalException
-import org.neo4j.graphdb.Transaction
+import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.internal.kernel.api.security.PrivilegeAction
-import org.neo4j.internal.kernel.api.security.SecurityContext
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.kernel.api.exceptions.Status
 import org.neo4j.kernel.api.exceptions.Status.HasStatus
@@ -580,24 +581,32 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         parameterConverter = converter)
 
     // CREATE [OR REPLACE] DATABASE foo [IF NOT EXISTS]
-    case CreateDatabase(source, normalizedName) => (context, parameterMapping) =>
+    case CreateDatabase(source, dbName) => (context, parameterMapping) =>
       // Ensuring we don't exceed the max number of databases is a separate step
-      val dbName = normalizedName.name
+      val (nameKey, nameValue, nameConverter) = getNameFields("databaseName", dbName, valueMapper = s => {
+        val normalizedName = new NormalizedDatabaseName(s)
+        try {
+          DatabaseNameValidator.validateExternalDatabaseName(normalizedName)
+        } catch {
+          case e: IllegalArgumentException => throw new InvalidArgumentException(e.getMessage)
+        }
+        normalizedName.name()
+      })
       val defaultDbName = resolver.resolveDependency(classOf[Config]).get(GraphDatabaseSettings.default_database)
-      val default = dbName.equals(defaultDbName)
+      def isDefault(dbName: String) = dbName.equals(defaultDbName)
 
       val virtualKeys: Array[String] = Array(
-        "name",
+        nameKey,
         "status",
         "default",
         "uuid")
-      def virtualValues(): Array[AnyValue] = Array(
-        Values.utf8Value(dbName),
+      def virtualValues(params: MapValue): Array[AnyValue] = Array(
+        params.get(nameKey),
         DatabaseStatus.Online,
-        Values.booleanValue(default),
+        Values.booleanValue(isDefault(params.get(nameKey).asInstanceOf[TextValue].stringValue())),
         Values.utf8Value(UUID.randomUUID().toString))
 
-      def virtualMapClusterGenerator(raftMachine: RaftMachine): (Transaction, SecurityContext) => MapValue = (_, _) => {
+      def virtualMapClusterConverter(raftMachine: RaftMachine): MapValue => MapValue = params => {
         val initialMembersSet = raftMachine.coreState.committed.members.asScala
         val initial = initialMembersSet.map(_.getUuid.toString).toArray
         val creation = System.currentTimeMillis()
@@ -605,11 +614,11 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         val storeVersion = Standard.LATEST_STORE_VERSION
         VirtualValues.map(
           virtualKeys ++ Array("initialMembers", "creationTime", "randomId", "storeVersion"),
-          virtualValues() ++ Array(Values.stringArray(initial: _*), Values.longValue(creation), Values.longValue(randomId), Values.utf8Value(storeVersion)))
+          virtualValues(params) ++ Array(Values.stringArray(initial: _*), Values.longValue(creation), Values.longValue(randomId), Values.utf8Value(storeVersion)))
       }
 
-      def virtualMapStandaloneGenerator(): (Transaction, SecurityContext) => MapValue = (_, _) => {
-        VirtualValues.map(virtualKeys, virtualValues())
+      def virtualMapStandaloneConverter(): MapValue => MapValue = params => {
+        VirtualValues.map(virtualKeys, virtualValues(params))
       }
 
       val clusterProperties =
@@ -620,15 +629,15 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |  d.store_random_id = $randomId,
           |  d.store_version = $storeVersion """.stripMargin
 
-      val (queryAdditions, virtualMapGenerator) = Try(resolver.resolveDependency(classOf[RaftMachine])) match {
+      val (queryAdditions, virtualMapConverter) = Try(resolver.resolveDependency(classOf[RaftMachine])) match {
         case Success(raftMachine) =>
-          (clusterProperties, virtualMapClusterGenerator(raftMachine))
+          (clusterProperties, virtualMapClusterConverter(raftMachine))
 
-        case Failure(_) => ("", virtualMapStandaloneGenerator())
+        case Failure(_) => ("", virtualMapStandaloneConverter())
       }
 
       UpdatingSystemCommandExecutionPlan("CreateDatabase", normalExecutionEngine,
-        s"""CREATE (d:Database {name: $$name})
+        s"""CREATE (d:Database {name: $$$nameKey})
            |SET
            |  d.status = $$status,
            |  d.default = $$default,
@@ -636,31 +645,31 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
            |  d.uuid = $$uuid
            |  $queryAdditions
            |RETURN d.name as name, d.status as status, d.uuid as uuid
-        """.stripMargin, MapValue.EMPTY,
+        """.stripMargin, VirtualValues.map(Array(nameKey), Array(nameValue)),
         QueryHandler
-          .handleError((error, _) => (error, error.getCause) match {
+          .handleError((error, params) => (error, error.getCause) match {
             case (_, _: UniquePropertyValueValidationException) =>
-              new DatabaseExistsException(s"Failed to create the specified database '$dbName': Database already exists.", error)
+              new DatabaseExistsException(s"Failed to create the specified database '${runtimeValue(dbName, params)}': Database already exists.", error)
             case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
-              new DatabaseAdministrationOnFollowerException(s"Failed to create the specified database '$dbName': $followerError", error)
-            case _ => new IllegalStateException(s"Failed to create the specified database '$dbName'.", error)
+              new DatabaseAdministrationOnFollowerException(s"Failed to create the specified database '${runtimeValue(dbName, params)}': $followerError", error)
+            case _ => new IllegalStateException(s"Failed to create the specified database '${runtimeValue(dbName, params)}'.", error)
           }),
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
-        parameterGenerator = virtualMapGenerator
+        parameterConverter = m => virtualMapConverter(nameConverter(m))
       )
 
     // Used to ensure we don't create to many databases,
     // this by first creating/replacing (source) and then check we didn't exceed the allowed number
     case EnsureValidNumberOfDatabases(source) =>  (context, parameterMapping) =>
-      val dbName = source.normalizedName.name // database to be created, needed for error message
+      val dbName = source.databaseName // database to be created, needed for error message
       val query =
         """MATCH (d:Database)
           |RETURN count(d) as numberOfDatabases
         """.stripMargin
       UpdatingSystemCommandExecutionPlan("EnsureValidNumberOfDatabases", normalExecutionEngine, query, VirtualValues.EMPTY_MAP,
-        QueryHandler.handleResult((_, numberOfDatabases, _) =>
+        QueryHandler.handleResult((_, numberOfDatabases, params) =>
           if (numberOfDatabases.asInstanceOf[LongValue].longValue() > maxDBLimit) {
-            Some(new DatabaseLimitReachedException(s"Failed to create the specified database '$dbName':"))
+            Some(new DatabaseLimitReachedException(s"Failed to create the specified database '${runtimeValue(dbName, params)}':"))
           } else {
             None
           }
@@ -669,94 +678,101 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       )
 
     // DROP DATABASE foo [IF EXISTS]
-    case DropDatabase(source, normalizedName) => (context, parameterMapping) =>
-      val dbName = normalizedName.name
+    case DropDatabase(source, dbName) => (context, parameterMapping) =>
+      val (key, value, converter) = getNameFields("databaseName", dbName, valueMapper = s => new NormalizedDatabaseName(s).name())
       UpdatingSystemCommandExecutionPlan("DropDatabase", normalExecutionEngine,
-        """MATCH (d:Database {name: $name})
+        s"""MATCH (d:Database {name: $$$key})
           |REMOVE d:Database
           |SET d:DeletedDatabase
           |SET d.deleted_at = datetime()
           |RETURN d.name as name, d.status as status""".stripMargin,
-        VirtualValues.map(Array("name"), Array(Values.utf8Value(dbName))),
+        VirtualValues.map(Array(key), Array(value)),
         QueryHandler.handleError {
-          case (error: HasStatus, _) if error.status() == Status.Cluster.NotALeader =>
-            new DatabaseAdministrationOnFollowerException(s"Failed to delete the specified database '$dbName': $followerError", error)
-          case (error, _) => new IllegalStateException(s"Failed to delete the specified database '$dbName'.", error)
+          case (error: HasStatus, params) if error.status() == Status.Cluster.NotALeader =>
+            new DatabaseAdministrationOnFollowerException(s"Failed to delete the specified database '${runtimeValue(dbName, params)}': $followerError", error)
+          case (error, params) => new IllegalStateException(s"Failed to delete the specified database '${runtimeValue(dbName, params)}'.", error)
         },
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
+        parameterConverter = converter
       )
 
     // START DATABASE foo
-    case StartDatabase(source, normalizedName) => (context, parameterMapping) =>
-      val dbName = normalizedName.name
+    case StartDatabase(source, dbName) => (context, parameterMapping) =>
+      val (key, value, converter) = getNameFields("databaseName", dbName, valueMapper = s => new NormalizedDatabaseName(s).name())
       UpdatingSystemCommandExecutionPlan("StartDatabase", normalExecutionEngine,
-        """OPTIONAL MATCH (d:Database {name: $name})
-          |OPTIONAL MATCH (d2:Database {name: $name, status: $oldStatus})
-          |SET d2.status = $status
+        s"""OPTIONAL MATCH (d:Database {name: $$$key})
+          |OPTIONAL MATCH (d2:Database {name: $$$key, status: $$oldStatus})
+          |SET d2.status = $$status
           |SET d2.started_at = datetime()
           |RETURN d2.name as name, d2.status as status, d.name as db""".stripMargin,
         VirtualValues.map(
-          Array("name", "oldStatus", "status"),
-          Array(Values.utf8Value(dbName),
+          Array(key, "oldStatus", "status"),
+          Array(value,
             DatabaseStatus.Offline,
             DatabaseStatus.Online
           )
         ),
         QueryHandler
-          .handleResult((offset, value, _) => {
-            if (offset == 2 && (value eq Values.NO_VALUE)) Some(new DatabaseNotFoundException(s"Failed to start the specified database '$dbName': Database does not exist."))
+          .handleResult((offset, value, params) => {
+            if (offset == 2 && (value eq Values.NO_VALUE)) Some(new DatabaseNotFoundException(s"Failed to start the specified database '${runtimeValue(dbName, params)}': Database does not exist."))
             else None
           })
           .handleError {
-            case (error: HasStatus, _) if error.status() == Status.Cluster.NotALeader =>
-              new DatabaseAdministrationOnFollowerException(s"Failed to start the specified database '$dbName': $followerError", error)
-            case (error, _) => new IllegalStateException(s"Failed to start the specified database '$dbName'.", error)
+            case (error: HasStatus, params) if error.status() == Status.Cluster.NotALeader =>
+              new DatabaseAdministrationOnFollowerException(s"Failed to start the specified database '${runtimeValue(dbName, params)}': $followerError", error)
+            case (error, params) => new IllegalStateException(s"Failed to start the specified database '${runtimeValue(dbName, params)}'.", error)
           },
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
+        parameterConverter = converter
       )
 
     // STOP DATABASE foo
-    case StopDatabase(source, normalizedName) => (context, parameterMapping) =>
-      val dbName = normalizedName.name
+    case StopDatabase(source, dbName) => (context, parameterMapping) =>
+      val (key, value, converter) = getNameFields("databaseName", dbName, valueMapper = s => new NormalizedDatabaseName(s).name())
       UpdatingSystemCommandExecutionPlan("StopDatabase", normalExecutionEngine,
-        """OPTIONAL MATCH (d2:Database {name: $name, status: $oldStatus})
-          |SET d2.status = $status
+        s"""OPTIONAL MATCH (d2:Database {name: $$$key, status: $$oldStatus})
+          |SET d2.status = $$status
           |SET d2.stopped_at = datetime()
           |RETURN d2.name as name, d2.status as status""".stripMargin,
         VirtualValues.map(
-          Array("name", "oldStatus", "status"),
-          Array(Values.utf8Value(dbName),
+          Array(key, "oldStatus", "status"),
+          Array(value,
             DatabaseStatus.Online,
             DatabaseStatus.Offline
           )
         ),
         QueryHandler.handleError {
-          case (error: HasStatus, _) if error.status() == Status.Cluster.NotALeader =>
-            new DatabaseAdministrationOnFollowerException(s"Failed to stop the specified database '$dbName': $followerError", error)
-          case (error, _) => new IllegalStateException(s"Failed to stop the specified database '$dbName'.", error)
+          case (error: HasStatus, params) if error.status() == Status.Cluster.NotALeader =>
+            new DatabaseAdministrationOnFollowerException(s"Failed to stop the specified database '${runtimeValue(dbName, params)}': $followerError", error)
+          case (error, params) => new IllegalStateException(s"Failed to stop the specified database '${runtimeValue(dbName, params)}'.", error)
         },
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
+        parameterConverter = converter
       )
 
     // Used to check whether a database is present and not the system database,
     // which means it can be dropped and stopped.
-    case EnsureValidNonSystemDatabase(source, normalizedName, action) => (context, parameterMapping) =>
-      val dbName = normalizedName.name
-      if (dbName.equals(SYSTEM_DATABASE_NAME))
-        throw new DatabaseAdministrationException(s"Not allowed to $action system database.")
-
+    case EnsureValidNonSystemDatabase(source, dbName, action) => (context, parameterMapping) =>
+      val (key, value, converter) = getNameFields("databaseName", dbName, valueMapper = s => new NormalizedDatabaseName(s).name())
       UpdatingSystemCommandExecutionPlan("EnsureValidNonSystemDatabase", normalExecutionEngine,
-        """MATCH (db:Database {name: $name})
+        s"""MATCH (db:Database {name: $$$key})
           |RETURN db.name AS name""".stripMargin,
-        VirtualValues.map(Array("name"), Array(Values.utf8Value(dbName))),
+        VirtualValues.map(Array(key), Array(value)),
         QueryHandler
-          .handleNoResult(_ => Some(new DatabaseNotFoundException(s"Failed to $action the specified database '$dbName': Database does not exist.")))
+          .handleNoResult(params => Some(new DatabaseNotFoundException(s"Failed to $action the specified database '${runtimeValue(dbName, params)}': Database does not exist.")))
+          .handleResult((_, _, params) =>
+            if (runtimeValue(dbName, params).equals(SYSTEM_DATABASE_NAME)) {
+              Some(new DatabaseAdministrationException(s"Not allowed to $action system database."))
+            } else {
+              None
+            })
           .handleError {
-            case (error: HasStatus, _) if error.status() == Status.Cluster.NotALeader =>
-              new DatabaseAdministrationOnFollowerException(s"Failed to $action the specified database '$dbName': $followerError", error)
-            case (error, _) => new IllegalStateException(s"Failed to $action the specified database '$dbName'.", error) // should not get here but need a default case
+            case (error: HasStatus, params) if error.status() == Status.Cluster.NotALeader =>
+              new DatabaseAdministrationOnFollowerException(s"Failed to $action the specified database '${runtimeValue(dbName, params)}': $followerError", error)
+            case (error, params) => new IllegalStateException(s"Failed to $action the specified database '${runtimeValue(dbName, params)}'.", error) // should not get here but need a default case
           },
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
+        parameterConverter = converter
       )
 
     // Used to log commands
