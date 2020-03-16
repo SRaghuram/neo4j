@@ -222,7 +222,7 @@ class SingleThreadedLabelScanTaskTemplate(inner: OperatorTaskTemplate,
         codeGen.setLongAt(offset, invoke(loadField(nodeLabelCursorField), method[NodeLabelIndexCursor, Long]("nodeReference"))),
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(
-          innermost.setToNextIfNotReachedLimit(canContinue, profilingCursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField), id))
+          innermost.setToNextIfBelowLimit(canContinue, profilingCursorNext[NodeLabelIndexCursor](loadField(nodeLabelCursorField), id))
         ),
         endInnerLoop
       )

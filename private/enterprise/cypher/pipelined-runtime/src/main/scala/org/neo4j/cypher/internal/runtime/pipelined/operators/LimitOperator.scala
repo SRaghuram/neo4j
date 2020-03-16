@@ -178,10 +178,10 @@ class SerialTopLevelLimitOperatorTaskTemplate(inner: OperatorTaskTemplate,
 }
 
 /**
- * Assumes that this is run on the RHS of an Apply. It works by controlling a local variable `limitNotReached` which is set here
+ * Assumes that this is run on the RHS of an Apply. It works by controlling a local variable `belowLimit` which is set here
  * once the limit has been reached for a given argument. All leaf operators then respects that and will check this variable before calling
- * `next` on its cursor. Something like `this.canContinue = limitNotReached && cursor.next`, which will force the iteration to go into the
- * initialize inner loop state where we take the next item of the input cursor and also set `limitNotReached` back to `true`
+ * `next` on its cursor. Something like `this.canContinue = belowLimit && cursor.next`, which will force the iteration to go into the
+ * initialize inner loop state where we take the next item of the input cursor and also set `belowLimit` back to `true`
  */
 class SerialLimitOnRhsOfApplyOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
                                                   override val id: Id,
@@ -237,7 +237,7 @@ class SerialLimitOnRhsOfApplyOperatorTaskTemplate(override val inner: OperatorTa
    *   }
    *   if (countLeftVar == 0) {
    *     flushToNextArgument(inputCursor, argument, argSlot)
-   *     limitNotReached = false
+   *     belowLimit = false
    *   }
    * }}}
    */
@@ -264,7 +264,7 @@ class SerialLimitOnRhsOfApplyOperatorTaskTemplate(override val inner: OperatorTa
             INPUT_CURSOR,
             load(argument),
             loadField(argumentSlotOffset)),
-          assign(OperatorCodeGenHelperTemplates.LIMIT_NOT_REACHED, constant(false))
+          assign(OperatorCodeGenHelperTemplates.BELOW_LIMIT, constant(false))
         )
       )
     )

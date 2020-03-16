@@ -386,7 +386,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
         else noop(),
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(
-          innermost.setToNextIfNotReachedLimit(canContinue, profilingCursorNext[VarExpandCursor](loadField(varExpandCursorField), id))
+          innermost.setToNextIfBelowLimit(canContinue, profilingCursorNext[VarExpandCursor](loadField(varExpandCursorField), id))
         ),
         endInnerLoop
       )

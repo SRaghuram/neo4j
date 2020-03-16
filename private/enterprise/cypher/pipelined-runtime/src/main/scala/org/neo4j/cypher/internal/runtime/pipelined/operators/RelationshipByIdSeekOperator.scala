@@ -399,7 +399,7 @@ class SingleDirectedRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTemplate
         codeGen.setLongAt(toOffset, invoke(loadField(cursor), method[RelationshipScanCursor, Long]("targetNodeReference"))),
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(profileRow(id)),
-        innermost.setToNextIfNotReachedLimit(canContinue, constant(false)))
+        innermost.setToNextIfBelowLimit(canContinue, constant(false)))
     )
   }
 }
@@ -469,7 +469,7 @@ class SingleUndirectedRelationshipByIdSeekTaskTemplate(inner: OperatorTaskTempla
         },
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(profileRow(id)),
-        innermost.setToNextIfNotReachedLimit(canContinue, not(loadField(forwardDirection)))))
+        innermost.setToNextIfBelowLimit(canContinue, not(loadField(forwardDirection)))))
   }
 }
 
@@ -579,7 +579,7 @@ class ManyDirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
             inner.genOperateWithExpressions,
             doIfInnerCantContinue(profileRow(id))
           )),
-        doIfInnerCantContinue(innermost.setToNextIfNotReachedLimit(canContinue, cursorNext[IteratorCursor](loadField(idCursor)))))
+        doIfInnerCantContinue(innermost.setToNextIfBelowLimit(canContinue, cursorNext[IteratorCursor](loadField(idCursor)))))
     )
   }
 }
@@ -668,7 +668,7 @@ class ManyUndirectedRelationshipByIdsSeekTaskTemplate(inner: OperatorTaskTemplat
             doIfInnerCantContinue(profileRow(id))
           )),
         doIfInnerCantContinue(
-          innermost.setToNextIfNotReachedLimit(canContinue,
+          innermost.setToNextIfBelowLimit(canContinue,
             or(not(loadField(forwardDirection)), cursorNext[IteratorCursor](loadField(idCursor))))))
     )
   }

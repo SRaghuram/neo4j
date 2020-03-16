@@ -77,7 +77,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_RESOURCES
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_RESOURCE_PARAMETER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATE
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.LIMIT_NOT_REACHED
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.BELOW_LIMIT
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.SET_TRACER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.SHOULD_BREAK
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.UPDATE_DEMAND
@@ -656,10 +656,10 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
     shouldCheckBreak = false
   }
 
-  def resetLimitNotReached: IntermediateRepresentation = if (shouldCheckLimitNotReached) assign(LIMIT_NOT_REACHED, constant(true)) else noop()
+  def resetBelowLimit: IntermediateRepresentation = if (shouldCheckLimitNotReached) assign(BELOW_LIMIT, constant(true)) else noop()
 
-  def setToNextIfNotReachedLimit(field: Field, next: IntermediateRepresentation): IntermediateRepresentation =
-    if (shouldCheckLimitNotReached) IntermediateRepresentation.ifElse(load(LIMIT_NOT_REACHED))(setField(field, next))(setField(field, constant(false)))
+  def setToNextIfBelowLimit(field: Field, next: IntermediateRepresentation): IntermediateRepresentation =
+    if (shouldCheckLimitNotReached) IntermediateRepresentation.ifElse(load(BELOW_LIMIT))(setField(field, next))(setField(field, constant(false)))
     else setField(field, next)
 
   override def inner: OperatorTaskTemplate = null
@@ -753,7 +753,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
     val seq = Seq.newBuilder[LocalVariable]
     if (shouldCheckOutputCounter) seq += OUTPUT_COUNTER
     if (shouldWriteToContext) seq += OUTPUT_CURSOR_VAR
-    if (shouldCheckLimitNotReached) seq += LIMIT_NOT_REACHED
+    if (shouldCheckLimitNotReached) seq += BELOW_LIMIT
     seq.result()
   }
 
