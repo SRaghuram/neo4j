@@ -203,11 +203,8 @@ object InterpretedPipesFallbackPolicy {
     val WHITELIST: PartialFunction[LogicalPlan, Boolean] = {
       //------------------------------------------------------------------------------------
       // Whitelisted breaking plans - All cardinality increasing plans need to break
-      case e: Expand if e.mode == ExpandInto =>
-        true
 
       case _: PruningVarExpand |
-           _: OptionalExpand |
            _: FindShortestPaths =>
         true
 
