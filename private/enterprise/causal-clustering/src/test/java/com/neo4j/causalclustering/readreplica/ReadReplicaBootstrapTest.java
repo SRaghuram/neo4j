@@ -78,7 +78,7 @@ class ReadReplicaBootstrapTest
             TimeoutStrategy timeoutStrategy )
     {
         return new ReadReplicaBootstrap( databaseContext, selectionStrategy, nullLogProvider(), nullLogProvider(), topologyService,
-                () -> catchupComponents, new ClusterInternalDbmsOperator(), aborter, timeoutStrategy );
+                () -> catchupComponents, new ClusterInternalDbmsOperator( nullLogProvider() ), aborter, timeoutStrategy );
     }
 
     @Test
@@ -332,8 +332,8 @@ class ReadReplicaBootstrapTest
         when( kernelDatabase.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
 
         LogFiles txLogs = mock( LogFiles.class );
-        return new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, txLogs, new ClusterInternalDbmsOperator(),
-                NULL );
+        return new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, txLogs,
+                                               new ClusterInternalDbmsOperator( nullLogProvider() ), NULL );
     }
 
     private ReadReplicaDatabaseContext failToReadLocalStoreId( NamedDatabaseId namedDatabaseId, Class<? extends Throwable> throwableClass ) throws IOException
@@ -346,8 +346,8 @@ class ReadReplicaBootstrapTest
         when( kernelDatabase.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
 
         LogFiles txLogs = mock( LogFiles.class );
-        return new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, txLogs, new ClusterInternalDbmsOperator(),
-                NULL );
+        return new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, txLogs,
+                                               new ClusterInternalDbmsOperator( nullLogProvider() ), NULL );
     }
 
     private UpstreamDatabaseStrategySelector chooseFirstMember( TopologyService topologyService )

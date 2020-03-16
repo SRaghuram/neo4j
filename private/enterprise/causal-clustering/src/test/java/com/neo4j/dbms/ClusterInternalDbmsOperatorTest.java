@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.neo4j.kernel.database.NamedDatabaseId;
+import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
@@ -31,7 +32,7 @@ import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedData
 class ClusterInternalDbmsOperatorTest
 {
     private OperatorConnector connector = mock( OperatorConnector.class );
-    private ClusterInternalDbmsOperator operator = new ClusterInternalDbmsOperator();
+    private ClusterInternalDbmsOperator operator = new ClusterInternalDbmsOperator( NullLogProvider.getInstance() );
 
     @BeforeEach
     void setup()

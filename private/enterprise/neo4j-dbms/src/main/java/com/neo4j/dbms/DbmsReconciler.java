@@ -455,7 +455,7 @@ public class DbmsReconciler implements DatabaseStateService
             }
             else
             {
-                reportErrorAndPanicDatabase( previousState.databaseId(), message, throwable );
+                log.error( message, throwable );
                 return Optional.of( previousState.failed( throwable ) );
             }
         }
@@ -472,23 +472,17 @@ public class DbmsReconciler implements DatabaseStateService
             // An exception occurred somewhere in the internal machinery of the database and was caught by the DatabaseManager
             var message = format( "Encountered error when attempting to reconcile database %s from state '%s' to state '%s'",
                     databaseName, result.state(), result.desiredState().operatorState().description() );
-            reportErrorAndPanicDatabase( result.state().databaseId(), message, result.error() );
+            log.error( message, result.error() );
             return Optional.of( result.state().failed( result.error() ) );
         }
         else
         {
-            // No exception occurred during this transition, but the request may still panic the database and mark it as failed anyway
+            // No exception occurred during this transition, but the request may still be for a panicked database.
+            //   In that case we should mark it as failed anyway
             var nextState = result.state();
             var failure =  shouldFailDatabaseWithCausePostSuccessfulReconcile( nextState.databaseId(), previousState, request );
             return failure.map( nextState::failed );
         }
-    }
-
-    private void reportErrorAndPanicDatabase( NamedDatabaseId namedDatabaseId, String message, Throwable error )
-    {
-        log.error( message, error );
-        var panicCause = new IllegalStateException( message, error );
-        panicDatabase( namedDatabaseId, panicCause );
     }
 
     private static Optional<Throwable> shouldFailDatabaseWithCausePostSuccessfulReconcile( NamedDatabaseId namedDatabaseId,
@@ -528,13 +522,6 @@ public class DbmsReconciler implements DatabaseStateService
     private Stream<Transition.Prepared> getLifecycleTransitionSteps( EnterpriseDatabaseState currentState, EnterpriseDatabaseState desiredState )
     {
         return transitionsTable.fromCurrent( currentState ).toDesired( desiredState );
-    }
-
-    protected void panicDatabase( NamedDatabaseId namedDatabaseId, Throwable error )
-    {
-        databaseManager.getDatabaseContext( namedDatabaseId )
-                .map( ctx -> ctx.database().getDatabaseHealth() )
-                .ifPresent( health -> health.panic( error ) );
     }
 
     /* DatabaseStateService implementation */

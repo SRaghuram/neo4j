@@ -303,7 +303,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var dbmsModel = new ClusterSystemGraphDbmsModel( systemDbSupplier );
 
         reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, databaseEventService, storageFactory,
-                reconciledTxTracker, panicService, dbmsModel );
+                reconciledTxTracker, dbmsModel );
 
         databaseStartAborter = new DatabaseStartAborter( globalModule.getGlobalAvailabilityGuard(), dbmsModel, globalModule.getGlobalClock(),
                 Duration.ofSeconds( 5 ) );

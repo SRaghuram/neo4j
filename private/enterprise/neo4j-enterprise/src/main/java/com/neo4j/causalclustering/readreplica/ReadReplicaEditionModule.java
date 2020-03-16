@@ -228,7 +228,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
                 .databaseFacade();
         var dbmsModel = new ClusterSystemGraphDbmsModel( systemDbSupplier );
         reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager,
-                databaseEventService, storageFactory, reconciledTxTracker, panicService, dbmsModel );
+                databaseEventService, storageFactory, reconciledTxTracker, dbmsModel );
 
         topologyService = createTopologyService( databaseManager, reconcilerModule.reconciler(), globalLogService );
         reconcilerModule.reconciler().registerListener( topologyService );

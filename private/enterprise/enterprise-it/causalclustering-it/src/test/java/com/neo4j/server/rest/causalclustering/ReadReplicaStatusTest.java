@@ -37,7 +37,7 @@ import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.DatabaseHealth;
-import org.neo4j.monitoring.DatabasePanicEventGenerator;
+import org.neo4j.kernel.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.monitoring.Health;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.server.rest.repr.OutputFormat;

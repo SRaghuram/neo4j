@@ -34,8 +34,10 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
     private final GlobalModule globalModule;
     private final MultiDatabaseManager<?> databaseManager;
     private final LocalDbmsOperator localOperator;
-    private final SystemGraphDbmsOperator systemOperator;
+    protected final SystemGraphDbmsOperator systemOperator;
     private final ShutdownOperator shutdownOperator;
+    private final StandaloneInternalDbmsOperator internalDbmsOperator;
+    private final SystemDatabaseCommitEventListener systemCommitListener;
     protected final DatabaseIdRepository databaseIdRepository;
     private final ReconciledTransactionTracker reconciledTxTracker;
     private final DbmsReconciler reconciler;
@@ -58,7 +60,9 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
         this.reconciledTxTracker = reconciledTxTracker;
         this.systemOperator = new SystemGraphDbmsOperator( dbmsModel, reconciledTxTracker, internalLogProvider );
         this.shutdownOperator = new ShutdownOperator( databaseManager, globalModule.getGlobalConfig() );
+        this.internalDbmsOperator = new StandaloneInternalDbmsOperator( globalModule.getLogService().getInternalLogProvider() );
         this.reconciler = reconciler;
+        this.systemCommitListener = new SystemDatabaseCommitEventListener( systemOperator );
 
         globalModule.getGlobalDependencies().satisfyDependency( reconciler );
         globalModule.getGlobalDependencies().satisfyDependencies( localOperator, systemOperator );
@@ -70,7 +74,7 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
     @Override
     public void start() throws Exception
     {
-        registerWithListenerService( globalModule, systemOperator );
+        registerWithListenerService( globalModule );
         var connector = new OperatorConnector( reconciler );
         operators().forEach( op -> op.connect( connector ) );
         startInitialDatabases();
@@ -111,6 +115,7 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
     public void stop()
     {
         stopAllDatabases();
+        unregisterWithListenerService( globalModule );
     }
 
     public DbmsReconciler reconciler()
@@ -120,19 +125,19 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
 
     protected Stream<DbmsOperator> operators()
     {
-        return Stream.of( localOperator, systemOperator, shutdownOperator );
+        return Stream.of( localOperator, systemOperator, shutdownOperator, internalDbmsOperator );
     }
 
-    protected void registerWithListenerService( GlobalModule globalModule, SystemGraphDbmsOperator systemOperator )
+    protected void registerWithListenerService( GlobalModule globalModule )
     {
-        globalModule.getTransactionEventListeners().registerTransactionEventListener( SYSTEM_DATABASE_NAME, new TransactionEventListenerAdapter()
-        {
-            @Override
-            public void afterCommit( TransactionData txData, Object state, GraphDatabaseService systemDatabase )
-            {
-                systemOperator.transactionCommitted( txData.getTransactionId(), txData );
-            }
-        } );
+        globalModule.getTransactionEventListeners().registerTransactionEventListener( SYSTEM_DATABASE_NAME, systemCommitListener );
+
+        globalModule.getDatabaseEventListeners().registerDatabaseEventListener( internalDbmsOperator );
+    }
+
+    protected void unregisterWithListenerService( GlobalModule globalModule )
+    {
+        globalModule.getDatabaseEventListeners().unregisterDatabaseEventListener( internalDbmsOperator );
     }
 
     /**
@@ -169,5 +174,21 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
         var resolver = db.getDependencyResolver();
         var txIdStore = resolver.resolveDependency( TransactionIdStore.class );
         return txIdStore.getLastClosedTransactionId();
+    }
+
+    private static class SystemDatabaseCommitEventListener extends TransactionEventListenerAdapter<Object>
+    {
+        private final SystemGraphDbmsOperator systemOperator;
+
+        SystemDatabaseCommitEventListener( SystemGraphDbmsOperator systemOperator )
+        {
+            this.systemOperator = systemOperator;
+        }
+
+        @Override
+        public void afterCommit( TransactionData txData, Object state, GraphDatabaseService systemDatabase )
+        {
+            systemOperator.transactionCommitted( txData.getTransactionId(), txData );
+        }
     }
 }

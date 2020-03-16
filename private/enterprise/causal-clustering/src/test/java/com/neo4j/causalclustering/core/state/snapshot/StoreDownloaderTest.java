@@ -163,7 +163,8 @@ class StoreDownloaderTest
 
         LogFiles transactionLogs = mock( LogFiles.class );
 
-        return new StoreDownloadContext( database, storeFiles, transactionLogs, new ClusterInternalDbmsOperator(), PageCacheTracer.NULL );
+        return new StoreDownloadContext( database, storeFiles, transactionLogs,
+                                         new ClusterInternalDbmsOperator( NullLogProvider.getInstance() ), PageCacheTracer.NULL );
     }
 
     private RemoteStore mockRemoteSuccessfulStore( NamedDatabaseId namedDatabaseId ) throws StoreIdDownloadFailedException

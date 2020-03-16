@@ -43,7 +43,7 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
             FileSystemAbstraction fs, PageCache pageCache, LogProvider logProvider, Config config, ClusterStateLayout clusterStateLayout )
     {
         super( globalModule, edition );
-        this.internalDbmsOperator = new ClusterInternalDbmsOperator();
+        this.internalDbmsOperator = new ClusterInternalDbmsOperator( logProvider );
         this.logProvider = logProvider;
         this.fs = fs;
         this.log = logProvider.getLog( this.getClass() );

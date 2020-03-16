@@ -15,6 +15,8 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.event.GlobalTransactionEventListeners;
+import org.neo4j.kernel.monitoring.DatabaseEventListeners;
+import org.neo4j.logging.NullLog;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.TransactionIdStore;
@@ -65,6 +67,7 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseConte
         Dependencies dependencies = new Dependencies();
         GlobalModule module = mock( GlobalModule.class );
         when( module.getGlobalDependencies() ).thenReturn( dependencies );
+        when( module.getDatabaseEventListeners() ).thenReturn( new DatabaseEventListeners( NullLog.getInstance() ) );
         when( module.getGlobalConfig() ).thenReturn( Config.defaults() );
         when( module.getLogService() ).thenReturn( NullLogService.getInstance() );
         when( module.getExternalDependencyResolver() ).thenReturn( new Dependencies() );
