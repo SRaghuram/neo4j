@@ -75,7 +75,7 @@ abstract class BareBoneSingleFileStore extends LifecycleAdapter implements Singl
     @Override
     public PageCursor openWriteCursor() throws IOException
     {
-        return mappedFile.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, PageCursorTracer.NULL );
+        return mappedFile.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, tracerSupplier.get() );
     }
 
     @Override
@@ -83,7 +83,7 @@ abstract class BareBoneSingleFileStore extends LifecycleAdapter implements Singl
     {
         try
         {
-            return mappedFile.io( 0, PagedFile.PF_SHARED_READ_LOCK, PageCursorTracer.NULL );
+            return mappedFile.io( 0, PagedFile.PF_SHARED_READ_LOCK, tracerSupplier.get() );
         }
         catch ( IOException e )
         {

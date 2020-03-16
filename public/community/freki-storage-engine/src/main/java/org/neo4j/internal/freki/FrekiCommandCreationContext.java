@@ -38,6 +38,7 @@ import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPoint
 import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerToString;
 import static org.neo4j.internal.freki.MutableNodeRecordData.idFromForwardPointer;
 import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromForwardPointer;
+import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.util.Preconditions.checkState;
 
 class FrekiCommandCreationContext implements CommandCreationContext
@@ -110,7 +111,7 @@ class FrekiCommandCreationContext implements CommandCreationContext
         try ( PageCursor cursor = store.openReadCursor() )
         {
             Record record = store.newRecord();
-            if ( store.read( cursor, record, id ) )
+            if ( store.read( cursor, record, id ) && record.hasFlag( FLAG_IN_USE ) )
             {
                 MutableNodeRecordData data = new MutableNodeRecordData( nodeId );
                 data.deserialize( record.dataForReading(), stores.bigPropertyValueStore );

@@ -73,7 +73,7 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
             if ( needsLoading )
             {
                 needsLoading = false;
-                cursorAccessTracer.registerRelationshipByReference();
+                cursorAccessTracer.registerRelationshipByReference( singleId );
                 traversalCursor.init( MutableNodeRecordData.nodeIdFromRelationshipId( singleId ), selection );
             }
             while ( traversalCursor.next() )

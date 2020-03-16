@@ -20,8 +20,10 @@
 package org.neo4j.internal.freki;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import org.neo4j.internal.freki.StreamVByte.IntArrayTarget;
+import org.neo4j.io.IOUtils;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 
@@ -58,7 +60,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     int[] relationshipTypeOffsets;
     int firstRelationshipTypeOffset;
 
-    PageCursor x1Cursor;
+    private PageCursor[] xCursors;
 
     FrekiMainStoreCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer )
     {
@@ -66,6 +68,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         this.cursorAccessPatternTracer = cursorAccessPatternTracer;
         this.cursorAccessTracer = cursorAccessPatternTracer.access();
         this.cursorTracer = cursorTracer;
+        this.xCursors = new PageCursor[stores.getNumMainStores()];
         reset();
     }
 
@@ -87,13 +90,13 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         firstRelationshipTypeOffset = 0;
     }
 
-    PageCursor x1Cursor()
+    PageCursor xCursor( int sizeExp )
     {
-        if ( x1Cursor == null )
+        if ( xCursors[sizeExp] == null )
         {
-            x1Cursor = stores.mainStore.openReadCursor();
+            xCursors[sizeExp] = stores.mainStore( sizeExp ).openReadCursor();
         }
-        return x1Cursor;
+        return xCursors[sizeExp];
     }
 
     Record x1Record()
@@ -109,7 +112,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     boolean load( long nodeId )
     {
         Record x1Record = x1Record();
-        if ( !stores.mainStore.read( x1Cursor(), x1Record, nodeId ) || !x1Record.hasFlag( FLAG_IN_USE ) )
+        if ( !stores.mainStore.read( xCursor( 0 ), x1Record, nodeId ) || !x1Record.hasFlag( FLAG_IN_USE ) )
         {
             return false;
         }
@@ -120,18 +123,15 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         gatherDataFromX1( x1Record );
         if ( forwardPointerPointsToXRecord( data.forwardPointer ) )
         {
-            SimpleStore xLStore = stores.mainStore( sizeExponentialFromForwardPointer( data.forwardPointer ) );
+            int sizeExp = sizeExponentialFromForwardPointer( data.forwardPointer );
+            SimpleStore xLStore = stores.mainStore( sizeExp );
             Record xLRecord = xLStore.newRecord();
-            try ( PageCursor xLCursor = xLStore.openReadCursor() )
+            if ( !xLStore.read( xCursor( sizeExp ), xLRecord, idFromForwardPointer( data.forwardPointer ) ) || !xLRecord.hasFlag( FLAG_IN_USE ) )
             {
-                if ( !xLStore.read( xLCursor, xLRecord, idFromForwardPointer( data.forwardPointer ) ) || !xLRecord.hasFlag( FLAG_IN_USE ) )
-                {
-                    // TODO depending on whether we're strict about it we should throw here perhaps?
-                    return false;
-                }
+                // TODO depending on whether we're strict about it we should throw here perhaps?
+                return false;
             }
             gatherDataFromXL( xLRecord );
-            assert data.backwardPointer == data.nodeId;
         }
         return true;
     }
@@ -179,15 +179,11 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         int xLOffsetsHeader = readOffsetsHeader( xLBuffer );
         data.assignPropertyOffset( propertyOffset( xLOffsetsHeader ), xLBuffer );
         data.assignRelationshipOffset( relationshipOffset( xLOffsetsHeader ), xLBuffer );
-        if ( containsBackPointer( xLOffsetsHeader ) )
+
+        assert containsBackPointer( xLOffsetsHeader );
+        if ( data.relationshipOffset > 0 )
         {
-            xLBuffer.position( endOffset( xLOffsetsHeader ) );
-            if ( data.relationshipOffset > 0 )
-            {
-                data.endOffset = endOffset( xLOffsetsHeader );
-                readIntDeltas( SKIP, xLBuffer );
-            }
-            data.backwardPointer = readLongs( xLBuffer )[0];
+            data.endOffset = endOffset( xLOffsetsHeader );
         }
     }
 
@@ -269,11 +265,8 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     @Override
     public void close()
     {
-        if ( x1Cursor != null )
-        {
-            x1Cursor.close();
-            x1Cursor = null;
-        }
+        IOUtils.closeAllUnchecked( xCursors );
+        Arrays.fill( xCursors, null );
     }
 
     @Override

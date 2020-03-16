@@ -64,7 +64,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     @Override
     public void initNodeProperties( Reference reference )
     {
-        cursorAccessTracer.registerNodeToPropertyByReference();
+        cursorAccessTracer.registerNodeToPropertyByReference( ((FrekiReference) reference).sourceNodeId );
         reset();
         this.referenceToLoad = (FrekiReference) reference;
     }
@@ -88,7 +88,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     @Override
     public void initRelationshipProperties( Reference reference )
     {
-        cursorAccessTracer.registerRelationshipToPropertyByReference();
+        cursorAccessTracer.registerRelationshipToPropertyByReference( ((FrekiReference) reference).sourceNodeId );
         reset();
         this.referenceToLoad = (FrekiReference) reference;
     }
