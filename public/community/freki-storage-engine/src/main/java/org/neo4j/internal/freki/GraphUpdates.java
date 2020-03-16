@@ -45,6 +45,7 @@ import org.neo4j.storageengine.util.EagerDegrees;
 import org.neo4j.values.storable.Value;
 
 import static java.lang.Math.toIntExact;
+import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
 import static org.neo4j.internal.freki.MutableNodeRecordData.FLAG_PROPERTIES;
 import static org.neo4j.internal.freki.MutableNodeRecordData.FLAG_RELATIONSHIPS;
 import static org.neo4j.internal.freki.MutableNodeRecordData.buildForwardPointer;
@@ -257,7 +258,9 @@ class GraphUpdates
             // The reason we try x1 first is that there'll be overhead in the form of forward pointer and potentially next-relationship-id inside x1
             // if points to a larger record.
             long prevForwardPointer = sparse.data.getForwardPointer();
-            sparse.data.setForwardPointer( buildForwardPointer( 0, 0, forwardPointerPointsToDense( prevForwardPointer ) ) );
+            sparse.data.setForwardPointer( forwardPointerPointsToDense( prevForwardPointer )
+                                           ? buildForwardPointer( 0, 0, forwardPointerPointsToDense( prevForwardPointer ) )
+                                           : NULL );
             if ( trySerialize( sparse.data, smallBuffer.clear() ) )
             {
                 x1Command( smallBuffer, otherCommands );
@@ -305,7 +308,8 @@ class GraphUpdates
                 {
                     // We were able to fit properties and relationships into this larger store.
                     SimpleStore store = stores.storeSuitableForRecordSize( maxBuffer.limit(), 1 );
-                    xLargeCommands( maxBuffer, store, otherCommands, d -> d.clearData( FLAG_PROPERTIES | FLAG_RELATIONSHIPS ), false );
+                    xLargeCommands( maxBuffer, store, otherCommands, d -> d.clearData( FLAG_PROPERTIES | FLAG_RELATIONSHIPS ),
+                            forwardPointerPointsToDense( sparse.data.getForwardPointer() ) );
                     return;
                 }
             }
