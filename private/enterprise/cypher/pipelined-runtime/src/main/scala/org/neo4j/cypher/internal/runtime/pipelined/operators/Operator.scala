@@ -274,7 +274,6 @@ trait ContinuableOperatorTask extends OperatorTask with Measurable {
     closeCursors(resources)
     closeInput(operatorCloser)
   }
-  def reset(): Unit = {}
   protected def closeInput(operatorCloser: OperatorCloser): Unit
   protected def closeCursors(resources: QueryResources): Unit
   def producingWorkUnitEvent: WorkUnitEvent

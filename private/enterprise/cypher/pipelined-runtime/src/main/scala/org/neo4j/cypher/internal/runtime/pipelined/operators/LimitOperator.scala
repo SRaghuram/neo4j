@@ -251,22 +251,20 @@ class SerialLimitOnRhsOfApplyOperatorTaskTemplate(override val inner: OperatorTa
           newState,
         )
       },
-      condition(greaterThan(load(countLeftVar), constant(0))) (
+      condition(greaterThan(load(countLeftVar), constant(0)))(
         block(
           profileRow(id),
           inner.genOperateWithExpressions,
           doIfInnerCantContinue(
             assign(countLeftVar, subtract(load(countLeftVar), constant(1)))))
       ),
-      doIfInnerCantContinue(
-        condition(equal(load(countLeftVar), constant(0)))(
-          block(
-            invokeStatic(method[SerialLimitOnRhsOfApplyOperatorTaskTemplate, Unit, MorselReadCursor, Long, Int]("flushToNextArgument"),
-              INPUT_CURSOR,
-              load(argument),
-              loadField(argumentSlotOffset)),
-            assign(OperatorCodeGenHelperTemplates.LIMIT_NOT_REACHED, constant(false))
-          )
+      condition(equal(load(countLeftVar), constant(0)))(
+        block(
+          invokeStatic(method[SerialLimitOnRhsOfApplyOperatorTaskTemplate, Unit, MorselReadCursor, Long, Int]("flushToNextArgument"),
+            INPUT_CURSOR,
+            load(argument),
+            loadField(argumentSlotOffset)),
+          assign(OperatorCodeGenHelperTemplates.LIMIT_NOT_REACHED, constant(false))
         )
       )
     )
