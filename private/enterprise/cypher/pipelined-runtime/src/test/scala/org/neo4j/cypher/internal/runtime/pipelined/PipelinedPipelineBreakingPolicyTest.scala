@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.cypher.CypherInterpretedPipesFallbackOption.disabled
 import org.neo4j.cypher.internal.compiler.helpers.LogicalPlanBuilder
+import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
@@ -69,6 +70,24 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
 
     //then
     policy.breakOn(plan, Id.INVALID_ID) shouldBe false
+  }
+
+  test("should refuse to fuse expand over pipeline if RHS of apply not fusable") {
+    // given
+    val plan = given(_
+      .expand("(a)-->(c)")
+      .apply()
+      .|.sort(Seq(Ascending("a"))) // TODO use .notFusable
+      .|.argument("a")
+      .allNodeScan("a")
+    )
+
+    // when
+    val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, readOnly = true, parallelExecution = false),
+      InterpretedPipesFallbackPolicy(disabled, parallelExecution = false))
+
+    //then
+    policy.breakOn(plan, Id.INVALID_ID) shouldBe true
   }
 
   private def given(subBuilder: LogicalPlanBuilder => LogicalPlanBuilder)= {

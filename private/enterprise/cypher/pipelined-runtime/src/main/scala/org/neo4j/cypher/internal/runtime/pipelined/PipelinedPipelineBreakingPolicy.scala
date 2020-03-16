@@ -108,8 +108,10 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, i
       => false
 
       // 2 child operators
-      case _: Apply |
-           _: NodeHashJoin |
+      case _: Apply
+      => false
+
+      case _: NodeHashJoin |
            _: CartesianProduct |
            _: Union
       => true
@@ -135,10 +137,16 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, i
   private def canFuseOneChildOperator(lp: LogicalPlan, outerApplyPlanId: Id): Boolean = {
     require(lp.rhs.isEmpty)
 
+    def previous(p: LogicalPlan): LogicalPlan = p match {
+      case Apply(_, right) => right
+      case _ => p.lhs.orNull
+    }
+
     if (!fusionPolicy.canFuseOverPipeline(lp, outerApplyPlanId)) {
       return false
     }
-    var current = lp.lhs.orNull
+
+    var current = previous(lp)
     while (current != null) {
       if (!fusionPolicy.canFuse(current, outerApplyPlanId)) {
         return false
@@ -147,7 +155,7 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, i
       if (breakOn(current, outerApplyPlanId)) {
         return true
       }
-      current = current.lhs.orNull
+      current = previous(current)
     }
     true
   }
