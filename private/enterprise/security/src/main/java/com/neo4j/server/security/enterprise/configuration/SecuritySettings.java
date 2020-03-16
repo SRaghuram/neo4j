@@ -206,10 +206,7 @@ public class SecuritySettings implements SettingsDeclaration
             "         \"cn=Neo4j Read-Write,cn=users,dc=example,dc=com\"     = publisher; \\\n" +
             "         \"cn=Neo4j Schema Manager,cn=users,dc=example,dc=com\" = architect; \\\n" +
             "         \"cn=Neo4j Administrator,cn=users,dc=example,dc=com\"  = admin\n" +
-            "----\n" +
-            "Deprecated: This will be replaced by dynamic configuration in the system graph in 4.0, " +
-            "including a migration step for the existing setting value. +\n" )
-    @Deprecated
+            "----" )
     public static final Setting<String> ldap_authorization_group_to_role_mapping =
             newBuilder( "dbms.security.ldap.authorization.group_to_role_mapping", STRING, null ).build();
 
