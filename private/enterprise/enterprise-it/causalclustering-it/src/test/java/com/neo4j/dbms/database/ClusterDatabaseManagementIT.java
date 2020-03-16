@@ -400,9 +400,9 @@ class ClusterDatabaseManagementIT
 
         // Restart core
         toStop.start();
+        // tricky: old 'foo' might now get started, before it is dropped and the new 'foo' is started
 
-        // Core should have eventually started database and have only data from the recreation
-        assertDatabaseEventuallyStarted( databaseName, singleton( toStop ) );
+        // the new 'foo' is distinguished by having a node with the secondLabel
         assertEventually( () -> hasNodeCount( toStop, databaseName, secondLabel ), equalityCondition( 1L ), 90, SECONDS );
         assertThat( hasNodeCount( toStop, databaseName, firstLabel ), equalTo( 0L ) );
     }
@@ -446,7 +446,15 @@ class ClusterDatabaseManagementIT
 
     private static long hasNodeCount( CoreClusterMember member, String databaseName, Label label )
     {
-        GraphDatabaseAPI db = (GraphDatabaseAPI) member.managementService().database( databaseName );
+        GraphDatabaseAPI db;
+        try
+        {
+            db = (GraphDatabaseAPI) member.managementService().database( databaseName );
+        }
+        catch ( DatabaseNotFoundException e )
+        {
+            return -1;
+        }
 
         long result;
         try ( var tx = db.beginTransaction( KernelTransaction.Type.EXPLICIT, EnterpriseSecurityContext.AUTH_DISABLED ) )
