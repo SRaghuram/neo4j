@@ -215,6 +215,10 @@ class Record
     {
         // First read the header byte in its own shouldRetry-loop because how we read the data depends on this
         flags = safelyReadFlags( cursor, offset );
+        if ( !hasFlag( FLAG_IN_USE ) )
+        {
+            return;
+        }
         int sizeExp = sizeExp( flags );
         int length = recordDataSize( sizeExp );
         if ( length > cursor.getCurrentPageSize() || length <= 0 )

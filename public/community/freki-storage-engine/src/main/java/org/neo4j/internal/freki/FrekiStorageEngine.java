@@ -195,7 +195,7 @@ public class FrekiStorageEngine extends Life implements StorageEngine
         CommandsToApply initialBatch = batch;
         try ( LockGroup locks = new LockGroup();
                 FrekiTransactionApplier txApplier = new FrekiTransactionApplier( stores, singleReader, schemaState, indexUpdateListener, mode,
-                        idGeneratorUpdatesWorkSync, labelIndexUpdatesWorkSync, indexUpdatesWorkSync ) )
+                        idGeneratorUpdatesWorkSync, labelIndexUpdatesWorkSync, indexUpdatesWorkSync, cursorTracerSupplier.get() ) )
         {
             while ( batch != null )
             {

@@ -70,6 +70,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     private final FrekiStorageReader reader;
     private final SchemaState schemaState;
     private final IndexUpdateListener indexUpdateListener;
+    private final PageCursorTracer cursorTracer;
     private List<IndexDescriptor> createdIndexes;
     private final IdGeneratorUpdatesWorkSync.Batch idUpdates;
     private final LabelIndexUpdatesWorkSync.Batch labelIndexUpdates;
@@ -86,23 +87,24 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
 
     FrekiTransactionApplier( Stores stores, FrekiStorageReader reader, SchemaState schemaState, IndexUpdateListener indexUpdateListener,
             TransactionApplicationMode mode, IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync, LabelIndexUpdatesWorkSync labelIndexUpdatesWorkSync,
-            IndexUpdatesWorkSync indexUpdatesWorkSync )
+            IndexUpdatesWorkSync indexUpdatesWorkSync, PageCursorTracer cursorTracer )
     {
         this.stores = stores;
         this.reader = reader;
         this.schemaState = schemaState;
         this.indexUpdateListener = indexUpdateListener;
+        this.cursorTracer = cursorTracer;
         this.labelIndexUpdates = mode == REVERSE_RECOVERY || labelIndexUpdatesWorkSync == null ? null : labelIndexUpdatesWorkSync.newBatch();
         this.idUpdates = mode == REVERSE_RECOVERY ? null : idGeneratorUpdatesWorkSync.newBatch();
         this.indexUpdates = mode == REVERSE_RECOVERY || indexUpdatesWorkSync == null ? null : indexUpdatesWorkSync.newBatch();
-        this.nodeCursor = reader.allocateNodeCursor( PageCursorTracer.NULL );
-        this.propertyCursorBefore = reader.allocatePropertyCursor( PageCursorTracer.NULL );
-        this.propertyCursorAfter = reader.allocatePropertyCursor( PageCursorTracer.NULL );
+        this.nodeCursor = reader.allocateNodeCursor( cursorTracer );
+        this.propertyCursorBefore = reader.allocatePropertyCursor( cursorTracer );
+        this.propertyCursorAfter = reader.allocatePropertyCursor( cursorTracer );
     }
 
     void beginTx( long transactionId )
     {
-        countsApplier = stores.countsStore.apply( transactionId, PageCursorTracer.NULL );
+        countsApplier = stores.countsStore.apply( transactionId, cursorTracer );
     }
 
     void endTx()
@@ -137,7 +139,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         SimpleStore store = stores.mainStore( sizeExp );
         try ( PageCursor cursor = store.openWriteCursor() )
         {
-            store.write( cursor, node.after, idUpdates != null ? idUpdates : IGNORE, PageCursorTracer.NULL );
+            store.write( cursor, node.after, idUpdates != null ? idUpdates : IGNORE, cursorTracer );
         }
         // OK so this logic here is quite specific to the format, it knows that labels are kept in the smallest records only and
         // reads label information from it and hands off to the label index updates listener.
@@ -162,7 +164,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
                 Set<IndexDescriptor> relatedIndexes = stores.schemaCache.getIndexesRelatedTo( entityUpdates, EntityType.NODE );
                 if ( !relatedIndexes.isEmpty() )
                 {
-                    indexUpdates.add( entityUpdates.forIndexKeys( relatedIndexes, reader, EntityType.NODE, PageCursorTracer.NULL ) );
+                    indexUpdates.add( entityUpdates.forIndexKeys( relatedIndexes, reader, EntityType.NODE, cursorTracer ) );
                 }
             }
 
@@ -378,7 +380,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         checkExtractIndexUpdates( NULL ); // apply for this
 
         // Thoughts: we should perhaps to the usual combine-and-apply thing for the dense node updates?
-        try ( DenseStore.Updater updater = stores.denseStore.newUpdater( PageCursorTracer.NULL ) )
+        try ( DenseStore.Updater updater = stores.denseStore.newUpdater( cursorTracer ) )
         {
             // node properties
             node.propertyUpdates.forEach( p ->
@@ -501,7 +503,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
                 indexUpdateListener.createIndexes( createdIndexes.toArray( new IndexDescriptor[createdIndexes.size()] ) );
             }
             AsyncApply labelUpdatesAsyncApply = labelIndexUpdates != null ? labelIndexUpdates.applyAsync() : AsyncApply.EMPTY;
-            AsyncApply indexUpdatesAsyncApply = indexUpdates != null ? indexUpdates.applyAsync( PageCursorTracer.NULL ) : AsyncApply.EMPTY;
+            AsyncApply indexUpdatesAsyncApply = indexUpdates != null ? indexUpdates.applyAsync( cursorTracer ) : AsyncApply.EMPTY;
             if ( idUpdates != null )
             {
                 idUpdates.apply();

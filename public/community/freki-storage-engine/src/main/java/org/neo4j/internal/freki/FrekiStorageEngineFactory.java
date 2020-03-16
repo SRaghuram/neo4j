@@ -99,7 +99,7 @@ public class FrekiStorageEngineFactory implements StorageEngineFactory
     @Override
     public List<File> listStorageFiles( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout ) throws IOException
     {
-        return null;
+        return List.of( fileSystem.listFiles( databaseLayout.databaseDirectory() ) );
     }
 
     @Override

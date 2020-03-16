@@ -42,6 +42,7 @@ import org.neo4j.kernel.lifecycle.Life;
 import org.neo4j.storageengine.api.StandardConstraintRuleAccessor;
 import org.neo4j.token.api.NamedToken;
 
+import static java.util.Arrays.stream;
 import static java.util.stream.Stream.of;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.internal.freki.CursorAccessPatternTracer.NO_TRACING;
@@ -125,7 +126,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         }
         else if ( nodeIdSpec.contains( "," ) )
         {
-            dumpNodes( Arrays.stream( nodeIdSpec.split( "," ) ).mapToLong( Long::parseLong ).toArray() );
+            dumpNodes( stream( nodeIdSpec.split( "," ) ).mapToLong( Long::parseLong ).toArray() );
         }
         else
         {
@@ -290,11 +291,17 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         var storeStats = gatherStoreStats();
 
         var totalNumDenseNodes = of( storeStats ).mapToLong( s -> s.numDenseNodes ).sum();
-        printPercents( "Distribution of used record sizes", storeStats, ( stats, stat ) ->
-                (double) stat.usedRecords / stats[0].usedRecords );
+        printPercents( "Distribution of nodes", storeStats, ( stats, stat ) ->
+        {
+            long numRecords = stat == stats[0]
+                    // For x1 we're interested in nodes that are ONLY in x1
+                    ? stat.usedRecords - stream( stats ).filter( s -> s != stats[0] ).mapToLong( s -> s.usedRecords ).sum()
+                    : stat.usedRecords;
+            return (double) numRecords / stats[0].usedRecords;
+        }, true );
         System.out.printf( " (DE: %.2f%%)%n", percent( totalNumDenseNodes, storeStats[0].usedRecords ) );
-        printPercents( "Record occupancy i.e. avg occupancy rate for each record size", storeStats, ( stats, stat ) ->
-                (double) stat.bytesOccupiedInUsedRecords / (stat.bytesOccupiedInUsedRecords + stat.bytesVacantInUsedRecords) );
+        printPercents( "Record occupancy i.e. on average how much of the record is actual useful data", storeStats, ( stats, stat ) ->
+                (double) stat.bytesOccupiedInUsedRecords / (stat.bytesOccupiedInUsedRecords + stat.bytesVacantInUsedRecords), false );
 
         var totalOccupied = of( storeStats ).mapToLong( s -> s.bytesOccupiedInUsedRecords ).sum();
         var totalVacant = of( storeStats ).mapToLong( s -> s.bytesVacantInUsedRecords + (s.unusedRecords * recordSize( s.sizeExp )) ).sum();
@@ -311,7 +318,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
 
         System.out.println();
         System.out.println( "Calculating dense store stats ..." );
-        DenseStore.Stats denseStats = stores.denseStore.gatherStats();
+        DenseStore.Stats denseStats = stores.denseStore.gatherStats( PageCursorTracer.NULL );
         System.out.printf( "  Total dense store file size: %s%n", bytesToString( denseStats.totalTreeByteSize() ) );
         System.out.printf( "  Effective dense store data size: %s%n", bytesToString( denseStats.effectiveByteSize() ) );
         System.out.printf( "  Number of dense nodes: %d%n", denseStats.numberOfNodes() );
@@ -333,12 +340,19 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         return 100D * part / whole;
     }
 
-    private void printPercents( String title, StoreStats[] stats, BiFunction<StoreStats[],StoreStats,Double> calculator )
+    private void printPercents( String title, StoreStats[] stats, BiFunction<StoreStats[],StoreStats,Double> calculator, boolean includeCumulative )
     {
         System.out.println( title + ":" );
+        double cumulativePercent = 0;
+        String format = "  x%d: %.2f%%" + (includeCumulative ? " = %.2f" : "") + "%n";
         for ( StoreStats stat : stats )
         {
-            System.out.printf( "  x%d: %.2f%%%n", recordXFactor( stat.sizeExp ), calculator.apply( stats, stat ) * 100d );
+            double percent = calculator.apply( stats, stat ) * 100d;
+            cumulativePercent += percent;
+            Object[] args = includeCumulative
+                            ? new Object[]{recordXFactor( stat.sizeExp ), percent, cumulativePercent}
+                            : new Object[]{recordXFactor( stat.sizeExp ), percent};
+            System.out.printf( format, args );
         }
     }
 
@@ -436,7 +450,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
     {
         if ( stores instanceof Stores )
         {
-            Stores allStores = ((Stores) stores);
+            Stores allStores = (Stores) stores;
             try
             {
                 dumpTokens( allStores.propertyKeyTokenStore, "Property key tokens" );

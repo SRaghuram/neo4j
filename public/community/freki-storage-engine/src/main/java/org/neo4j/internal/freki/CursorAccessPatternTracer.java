@@ -34,6 +34,9 @@ import java.util.stream.Stream;
 
 import org.neo4j.util.FeatureToggles;
 
+import static java.lang.Math.max;
+import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
+
 /**
  * Traces how storage cursors are accessed, both which ways are mostly preferred (by reference or direct).
  * The focus is on cursors that spawn from the node cursor, because you reach nodes by reference always (well, except scan).
@@ -43,7 +46,7 @@ import org.neo4j.util.FeatureToggles;
  *     <li>relationship -> property</li>
  * </ul>
  */
-interface CursorAccessPatternTracer
+public interface CursorAccessPatternTracer
 {
     static CursorAccessPatternTracer decidedByFeatureToggle()
     {
@@ -52,25 +55,29 @@ interface CursorAccessPatternTracer
 
     ThreadAccess access();
 
+    void clear();
+
     void printSummary();
 
     interface ThreadAccess
     {
         void registerNode( long nodeId );
 
+        void registerNodeLabelsAccess();
+
         void registerNodeToPropertyDirect();
 
-        void registerNodeToPropertyByReference();
+        void registerNodeToPropertyByReference( long nodeId );
 
         void registerNodeToRelationshipsDirect();
 
-        void registerNodeToRelationshipsByReference();
+        void registerNodeToRelationshipsByReference( long nodeId );
 
         void registerRelationshipToPropertyDirect();
 
-        void registerRelationshipToPropertyByReference();
+        void registerRelationshipToPropertyByReference( long nodeId );
 
-        void registerRelationshipByReference();
+        void registerRelationshipByReference( long relationshipId );
     }
 
     ThreadAccess EMPTY_ACCESS = new ThreadAccess()
@@ -81,12 +88,17 @@ interface CursorAccessPatternTracer
         }
 
         @Override
+        public void registerNodeLabelsAccess()
+        {
+        }
+
+        @Override
         public void registerNodeToPropertyDirect()
         {
         }
 
         @Override
-        public void registerNodeToPropertyByReference()
+        public void registerNodeToPropertyByReference( long nodeId )
         {
         }
 
@@ -96,7 +108,7 @@ interface CursorAccessPatternTracer
         }
 
         @Override
-        public void registerNodeToRelationshipsByReference()
+        public void registerNodeToRelationshipsByReference( long nodeId )
         {
         }
 
@@ -106,12 +118,12 @@ interface CursorAccessPatternTracer
         }
 
         @Override
-        public void registerRelationshipToPropertyByReference()
+        public void registerRelationshipToPropertyByReference( long nodeId )
         {
         }
 
         @Override
-        public void registerRelationshipByReference()
+        public void registerRelationshipByReference( long relationshipId )
         {
         }
     };
@@ -122,6 +134,11 @@ interface CursorAccessPatternTracer
         public ThreadAccess access()
         {
             return EMPTY_ACCESS;
+        }
+
+        @Override
+        public void clear()
+        {
         }
 
         @Override
@@ -147,6 +164,12 @@ interface CursorAccessPatternTracer
         }
 
         @Override
+        public void clear()
+        {
+            allTracers.forEach( TracingThreadAccess::clear );
+        }
+
+        @Override
         public void printSummary()
         {
             System.out.printf( "Summary of Freki storage cursor access patterns (disable with %s):%n",
@@ -158,21 +181,30 @@ interface CursorAccessPatternTracer
             print( "Relationship -> property direct", a -> a.relationshipToPropertyDirect );
             print( "Relationship -> property by reference", a -> a.relationshipToPropertyByReference );
             print( "Relationship by reference", a -> a.relationshipByReference );
+            System.out.println( "  Highest consecutive loads for same node: " +
+                    allTracers.stream().mapToInt( a -> a.highestNumberOfConsecutiveNodeLoads ).max().orElse( -1 ) );
+            System.out.println( "  Highest consecutive accesses for same node: " +
+                    allTracers.stream().mapToInt( a -> a.highestNumberOfConsecutiveNodeAccesses ).max().orElse( -1 ) );
+            System.out.println( "  Avg consecutive loads for same node: " +
+                    (double) allTracers.stream().mapToLong( a -> a.numberOfNodeLoads ).sum() /
+                    allTracers.stream().mapToLong( a -> a.numberOfConsecutivelyDifferentNodeLoads ).sum() );
+            System.out.println( "  Avg consecutive accesses for same node: " +
+                    (double) allTracers.stream().mapToLong( a -> a.numberOfAccesses ).sum() /
+                    allTracers.stream().mapToLong( a -> a.numberOfConsecutivelyDifferentNodeLoads ).sum() );
 
-            LongObjectMap<MutableLong> aggregatedNodeAccesses = aggregateNodeAccesses();
-            LongObjectPair<MutableLong>[] nodesAccessesArray =
-                    aggregatedNodeAccesses.keyValuesView().toArray( new LongObjectPair[aggregatedNodeAccesses.size()] );
-            Arrays.sort( nodesAccessesArray, ( p1, p2 ) -> Long.compare( p2.getTwo().longValue(), p1.getTwo().longValue() ) );
-            System.out.println( "Most accessed nodes:" );
-            for ( int i = 0; i < nodesAccessesArray.length && i < 10; i++ )
+            LongObjectMap<MutableLong> aggregatedNodeLoads = aggregateNodeLoads();
+            LongObjectPair<MutableLong>[] nodesLoadsArray = aggregatedNodeLoads.keyValuesView().toArray( new LongObjectPair[aggregatedNodeLoads.size()] );
+            Arrays.sort( nodesLoadsArray, ( p1, p2 ) -> Long.compare( p2.getTwo().longValue(), p1.getTwo().longValue() ) );
+            System.out.println( "Most loaded nodes:" );
+            for ( int i = 0; i < nodesLoadsArray.length && i < 10; i++ )
             {
-                System.out.printf( "  Node[%d] accessed %d times%n", nodesAccessesArray[i].getOne(), nodesAccessesArray[i].getTwo().longValue() );
+                System.out.printf( "  Node[%d] loaded %d times%n", nodesLoadsArray[i].getOne(), nodesLoadsArray[i].getTwo().longValue() );
             }
-            long totalAccesses = Stream.of( nodesAccessesArray ).mapToLong( a -> a.getTwo().longValue() ).sum();
-            System.out.printf( "Avg accesses per node %.2f%n", (double) totalAccesses / nodesAccessesArray.length );
+            long totalLoads = Stream.of( nodesLoadsArray ).mapToLong( a -> a.getTwo().longValue() ).sum();
+            System.out.printf( "Avg loads per node %.2f%n", (double) totalLoads / nodesLoadsArray.length );
         }
 
-        private LongObjectMap<MutableLong> aggregateNodeAccesses()
+        private LongObjectMap<MutableLong> aggregateNodeLoads()
         {
             Iterator<TracingThreadAccess> accesses = allTracers.iterator();
             if ( !accesses.hasNext() )
@@ -180,14 +212,11 @@ interface CursorAccessPatternTracer
                 return LongObjectMaps.immutable.empty();
             }
 
-            MutableLongObjectMap<MutableLong> base = accesses.next().nodeAccesses;
+            MutableLongObjectMap<MutableLong> base = accesses.next().nodeLoads;
             while ( accesses.hasNext() )
             {
-                MutableLongObjectMap<MutableLong> other = accesses.next().nodeAccesses;
-                other.forEachKeyValue( ( nodeId, value ) ->
-                {
-                    base.getIfAbsentPut( nodeId, MutableLong::new ).add( value.longValue() );
-                } );
+                MutableLongObjectMap<MutableLong> other = accesses.next().nodeLoads;
+                other.forEachKeyValue( ( nodeId, value ) -> base.getIfAbsentPut( nodeId, MutableLong::new ).add( value.longValue() ) );
             }
             return base;
         }
@@ -204,7 +233,16 @@ interface CursorAccessPatternTracer
 
     class TracingThreadAccess implements ThreadAccess
     {
-        private MutableLongObjectMap<MutableLong> nodeAccesses = LongObjectMaps.mutable.empty();
+        private final MutableLongObjectMap<MutableLong> nodeLoads = LongObjectMaps.mutable.empty();
+        private long lastLoadedNodeId = NULL;
+        private int numberOfLoadsForSameNode;
+        private int numberOfAccessesForSameNode;
+        private long numberOfNodeLoads;
+        private long numberOfAccesses;
+        private long numberOfConsecutivelyDifferentNodeLoads;
+        private int highestNumberOfConsecutiveNodeLoads;
+        private int highestNumberOfConsecutiveNodeAccesses;
+
         private long nodeToPropertyDirect;
         private long nodeToPropertyByReference;
         private long nodeToRelationshipsDirect;
@@ -216,49 +254,98 @@ interface CursorAccessPatternTracer
         @Override
         public void registerNode( long nodeId )
         {
-            nodeAccesses.getIfAbsentPut( nodeId, MutableLong::new ).increment();
+            if ( nodeId != lastLoadedNodeId )
+            {
+                highestNumberOfConsecutiveNodeLoads = max( highestNumberOfConsecutiveNodeLoads, numberOfLoadsForSameNode );
+                highestNumberOfConsecutiveNodeAccesses = max( highestNumberOfConsecutiveNodeAccesses, numberOfAccessesForSameNode );
+                numberOfLoadsForSameNode = 0;
+                numberOfAccessesForSameNode = 0;
+                lastLoadedNodeId = nodeId;
+                numberOfConsecutivelyDifferentNodeLoads++;
+            }
+            nodeLoads.getIfAbsentPut( nodeId, MutableLong::new ).increment();
+            numberOfLoadsForSameNode++;
+            numberOfAccessesForSameNode++;
+            numberOfNodeLoads++;
+            numberOfAccesses++;
+        }
+
+        @Override
+        public void registerNodeLabelsAccess()
+        {
+            numberOfAccessesForSameNode++;
+            numberOfAccesses++;
         }
 
         @Override
         public void registerNodeToPropertyDirect()
         {
+            numberOfAccessesForSameNode++;
             nodeToPropertyDirect++;
+            numberOfAccesses++;
         }
 
         @Override
-        public void registerNodeToPropertyByReference()
+        public void registerNodeToPropertyByReference( long nodeId )
         {
             nodeToPropertyByReference++;
+            numberOfAccesses++;
         }
 
         @Override
         public void registerNodeToRelationshipsDirect()
         {
+            numberOfAccessesForSameNode++;
             nodeToRelationshipsDirect++;
+            numberOfAccesses++;
         }
 
         @Override
-        public void registerNodeToRelationshipsByReference()
+        public void registerNodeToRelationshipsByReference( long nodeId )
         {
             nodeToRelationshipsByReference++;
+            numberOfAccesses++;
         }
 
         @Override
         public void registerRelationshipToPropertyDirect()
         {
             relationshipToPropertyDirect++;
+            numberOfAccesses++;
         }
 
         @Override
-        public void registerRelationshipToPropertyByReference()
+        public void registerRelationshipToPropertyByReference( long nodeId )
         {
             relationshipToPropertyByReference++;
+            numberOfAccesses++;
         }
 
         @Override
-        public void registerRelationshipByReference()
+        public void registerRelationshipByReference( long relationshipId )
         {
             relationshipByReference++;
+            numberOfAccesses++;
+        }
+
+        private void clear()
+        {
+            nodeLoads.clear();
+            lastLoadedNodeId = NULL;
+            numberOfAccessesForSameNode = 0;
+            numberOfLoadsForSameNode = 0;
+            numberOfNodeLoads = 0;
+            numberOfAccesses++;
+            numberOfConsecutivelyDifferentNodeLoads = 0;
+            highestNumberOfConsecutiveNodeLoads = 0;
+            highestNumberOfConsecutiveNodeAccesses = 0;
+            nodeToPropertyDirect = 0;
+            nodeToPropertyByReference = 0;
+            nodeToRelationshipsDirect = 0;
+            nodeToRelationshipsByReference = 0;
+            relationshipToPropertyDirect = 0;
+            relationshipToPropertyByReference = 0;
+            relationshipByReference = 0;
         }
     }
 }
