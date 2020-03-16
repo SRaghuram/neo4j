@@ -33,8 +33,6 @@ import static org.neo4j.internal.helpers.collection.Iterables.asList;
 
 public class MigrateDataIntoOtherDatabase
 {
-    private static final String DB_NAME = "Freki.newdb";
-
     public static void main( String[] args )
     {
         Path fromHome = Path.of( args[0] );
@@ -50,12 +48,11 @@ public class MigrateDataIntoOtherDatabase
                 .build();
         DatabaseManagementService toDbms = new EnterpriseDatabaseManagementServiceBuilder( toHome.toFile() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false )
-                .setConfig( GraphDatabaseSettings.default_database, DB_NAME )
                 .setConfig( GraphDatabaseSettings.storage_engine, "Freki" )
                 .build();
         try
         {
-            copyDatabase( fromDbms.database( DEFAULT_DATABASE_NAME ), toDbms.database( DB_NAME ) );
+            copyDatabase( fromDbms.database( DEFAULT_DATABASE_NAME ), toDbms.database( DEFAULT_DATABASE_NAME ) );
         }
         finally
         {
