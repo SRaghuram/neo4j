@@ -20,7 +20,6 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Set;
 
 import org.neo4j.internal.helpers.collection.FilteringIterable;
 import org.neo4j.logging.Log;
@@ -309,31 +308,27 @@ public class Leader implements RaftMessageHandler
                 log.info( "Moving to FOLLOWER state after receiving leadership transfer request from %s at term %d (I am at %d)",
                           leadershipTransferRequest.from(), leadershipTransferRequest.term(), ctx.term() );
             }
-            //TODO: Add my groups
-            Set<String> myGroups = Set.of();
-            var rejection = new RaftMessages.LeadershipTransfer.Rejection( leadershipTransferRequest.from(), ctx.commitIndex(), ctx.term(), myGroups );
+            var rejection = new RaftMessages.LeadershipTransfer.Rejection( leadershipTransferRequest.from(), ctx.commitIndex(), ctx.term(), ctx.serverGroups() );
             outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( leadershipTransferRequest.from(), rejection ) );
             return outcomeBuilder;
         }
 
         @Override
-        public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Proposal leadershipTransferProposal ) throws IOException
+        public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Proposal proposal ) throws IOException
         {
             long commitIndex = ctx.commitIndex();
             long commitIndexTerm = ctx.entryLog().readEntryTerm( commitIndex );
-            var proposed = leadershipTransferProposal.proposed();
+            var proposed = proposal.proposed();
 
             var proposedKnown = stream( replicationTargets( ctx ) )
                     .anyMatch( member -> member.equals( proposed ) );
 
             if ( !proposedKnown )
             {
-                // TODO : I don't think we need to add groups here because its a local response
-                handle( new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), commitIndex, commitIndexTerm, Set.of() ) );
+                handle( new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), commitIndex, commitIndexTerm, ctx.serverGroups() ) );
             }
 
-            // TODO : add groups
-            var request = new RaftMessages.LeadershipTransfer.Request( ctx.myself(), commitIndex, commitIndexTerm, Set.of() );
+            var request = new RaftMessages.LeadershipTransfer.Request( ctx.myself(), commitIndex, commitIndexTerm, proposal.priorityGroups() );
             outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( proposed, request ) );
             return outcomeBuilder;
         }

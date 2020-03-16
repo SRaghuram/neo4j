@@ -38,6 +38,8 @@ import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMar
 
 import java.io.File;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
@@ -56,6 +58,7 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.catchup_b
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.join_catch_up_timeout;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.log_shipping_max_lag;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.refuse_to_be_leader;
+import static java.util.Set.copyOf;
 import static org.neo4j.time.Clocks.systemClock;
 
 public class RaftGroup
@@ -99,17 +102,20 @@ public class RaftGroup
         inFlightCache = InFlightCacheFactory.create( config, monitors );
         RaftLogShippingManager logShipping =
                 new RaftLogShippingManager( outbound, logProvider, raftLog, timerService, systemClock(), myself, raftMembershipManager,
-                        raftTimersConfig.detectionWindowMinInMillis(), config.get( catchup_batch_size ), config.get( log_shipping_max_lag ),
-                        inFlightCache );
+                                            raftTimersConfig.detectionWindowMinInMillis(), config.get( catchup_batch_size ),
+                                            config.get( log_shipping_max_lag ),
+                                            inFlightCache );
 
         boolean supportsPreVoting = config.get( CausalClusteringSettings.enable_pre_voting );
 
+        Supplier<Set<String>> serverGroupsSupplier = () -> copyOf( config.get( CausalClusteringSettings.server_groups ) );
+
         var state = new RaftState( myself, termState, raftMembershipManager, raftLog, voteState, inFlightCache,
-                logProvider, supportsPreVoting, config.get( refuse_to_be_leader ) );
+                                   logProvider, supportsPreVoting, config.get( refuse_to_be_leader ), serverGroupsSupplier );
 
         var raftMessageTimerResetMonitor = monitors.newMonitor( RaftMessageTimerResetMonitor.class );
         var raftOutcomeApplier = new RaftOutcomeApplier( state, outbound, leaderAvailabilityTimers, raftMessageTimerResetMonitor, logShipping,
-                raftMembershipManager, logProvider );
+                                                         raftMembershipManager, logProvider );
 
         raftMachine = new RaftMachine( myself, leaderAvailabilityTimers, logProvider, raftMembershipManager, inFlightCache, raftOutcomeApplier, state );
 

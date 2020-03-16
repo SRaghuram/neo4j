@@ -51,8 +51,9 @@ class RaftStateTest
         //given
         InFlightCache cache = new ConsecutiveInFlightCache();
         RaftState raftState = new RaftState( member( 0 ),
-                new InMemoryStateStorage<>( new TermState() ), new FakeMembership(), new InMemoryRaftLog(),
-                new InMemoryStateStorage<>( new VoteState() ), cache, NullLogProvider.getInstance(), false, false );
+                                             new InMemoryStateStorage<>( new TermState() ), new FakeMembership(), new InMemoryRaftLog(),
+                                             new InMemoryStateStorage<>( new VoteState() ), cache, NullLogProvider.getInstance(), false, false,
+                                             Set::of );
 
         List<RaftLogCommand> logCommands = new LinkedList<>()
         {{
@@ -87,11 +88,11 @@ class RaftStateTest
     {
         // given
         RaftState raftState = new RaftState( member( 0 ),
-                new InMemoryStateStorage<>( new TermState() ),
-                new FakeMembership(), new InMemoryRaftLog(),
-                new InMemoryStateStorage<>( new VoteState() ),
-                new ConsecutiveInFlightCache(), NullLogProvider.getInstance(),
-                false, false );
+                                             new InMemoryStateStorage<>( new TermState() ),
+                                             new FakeMembership(), new InMemoryRaftLog(),
+                                             new InMemoryStateStorage<>( new VoteState() ),
+                                             new ConsecutiveInFlightCache(), NullLogProvider.getInstance(),
+                                             false, false, Set::of );
 
         raftState.update( builder().setRole( CANDIDATE ).replaceFollowerStates( initialFollowerStates() ).renewElectionTimer( ACTIVE_ELECTION ).build() );
 

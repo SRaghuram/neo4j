@@ -175,6 +175,12 @@ public class ComparableRaftState implements ReadableRaftState
         return refusesToBeLeader;
     }
 
+    @Override
+    public Set<String> serverGroups()
+    {
+        return Set.of();
+    }
+
     public void update( Outcome outcome ) throws IOException
     {
         term = outcome.getTerm();

@@ -140,6 +140,19 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
 
             composer = new SimpleMessageComposer( new RaftMessages.LeadershipTransfer.Request( from, previousIndex, term, groups ) );
         }
+        else if ( messageType.equals( RaftMessages.Type.LEADERSHIP_TRANSFER_REJECTION ) )
+        {
+            long previousIndex = channel.getLong();
+            long term = channel.getLong();
+            int groupSize = channel.getInt();
+            var groups = new HashSet<String>();
+            for ( var i = 0; i < groupSize; i++ )
+            {
+                groups.add( StringMarshal.unmarshal( channel ) );
+            }
+
+            composer = new SimpleMessageComposer( new RaftMessages.LeadershipTransfer.Rejection( from, previousIndex, term, groups ) );
+        }
         else
         {
             throw new IllegalArgumentException( "Unknown message type" );

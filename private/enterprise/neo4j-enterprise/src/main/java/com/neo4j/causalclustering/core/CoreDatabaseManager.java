@@ -39,6 +39,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogService;
 import org.neo4j.monitoring.Monitors;
 
+import static com.neo4j.dbms.database.DefaultClusteredDatabaseContext.core;
 import static java.lang.String.format;
 
 public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
@@ -78,16 +79,18 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
                         coreDatabaseLogService, versionContextSupplier );
 
         var databaseCreationContext = newDatabaseCreationContext( namedDatabaseId, coreDatabaseDependencies,
-                coreDatabaseMonitors, kernelContext, versionContextSupplier, databaseConfig, coreDatabaseLogService );
+                                                                  coreDatabaseMonitors, kernelContext, versionContextSupplier, databaseConfig,
+                                                                  coreDatabaseLogService );
         var kernelDatabase = new Database( databaseCreationContext );
 
         var downloadContext = new StoreDownloadContext( kernelDatabase, storeFiles, transactionLogs, internalDbmsOperator(), pageCacheTracer );
 
         var coreDatabase = edition.coreDatabaseFactory().createDatabase( namedDatabaseId, clusterComponents, coreDatabaseMonitors, coreDatabaseDependencies,
-                downloadContext, kernelDatabase, kernelContext, raftContext, internalDbmsOperator() );
+                                                                         downloadContext, kernelDatabase, kernelContext, raftContext, internalDbmsOperator() );
 
-        var ctx = contextFactory.create( kernelDatabase, kernelDatabase.getDatabaseFacade(), transactionLogs,
-                storeFiles, logProvider, catchupComponentsFactory, coreDatabase, coreDatabaseMonitors, pageCacheTracer );
+        var ctx = core( kernelDatabase, kernelDatabase.getDatabaseFacade(), transactionLogs,
+                        storeFiles, logProvider, catchupComponentsFactory, coreDatabase,
+                        coreDatabaseMonitors, raftContext.raftGroup().raftMachine(), pageCacheTracer );
 
         kernelResolvers.registerDatabase( ctx.database() );
         return ctx;

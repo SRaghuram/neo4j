@@ -29,31 +29,18 @@ public interface RaftMessages
         T handle( Vote.Response response ) throws E;
         T handle( PreVote.Request request ) throws E;
         T handle( PreVote.Response response ) throws E;
-
         T handle( AppendEntries.Request request ) throws E;
-
         T handle( AppendEntries.Response response ) throws E;
-
         T handle( Heartbeat heartbeat ) throws E;
-
         T handle( HeartbeatResponse heartbeatResponse ) throws E;
-
         T handle( LogCompactionInfo logCompactionInfo ) throws E;
-
         T handle( Timeout.Election election ) throws E;
-
         T handle( Timeout.Heartbeat heartbeat ) throws E;
-
         T handle( NewEntry.Request request ) throws E;
-
         T handle( NewEntry.BatchRequest batchRequest ) throws E;
-
         T handle( PruneRequest pruneRequest ) throws E;
-
         T handle( LeadershipTransfer.Proposal leadershipTransferProposal ) throws E;
-
         T handle( LeadershipTransfer.Request leadershipTransferRequest ) throws E;
-
         T handle( LeadershipTransfer.Rejection leadershipTransferRejection ) throws E;
     }
 
@@ -1211,6 +1198,16 @@ public interface RaftMessages
             {
                 return groups;
             }
+
+            @Override
+            public String toString()
+            {
+                return "LeadershipTransferRequest{" +
+                       "previousIndex=" + previousIndex +
+                       ", term=" + term +
+                       ", groups=" + groups +
+                       '}';
+            }
         }
 
         class Rejection extends RaftMessage
@@ -1260,6 +1257,16 @@ public interface RaftMessages
                 return Objects.hash( super.hashCode(), previousIndex, term, groups );
             }
 
+            @Override
+            public String toString()
+            {
+                return "LeadershipTransferRejection{" +
+                       "previousIndex=" + previousIndex +
+                       ", term=" + term +
+                       ", groups=" + groups +
+                       '}';
+            }
+
             public Set<String> groups()
             {
                 return groups;
@@ -1279,16 +1286,23 @@ public interface RaftMessages
         class Proposal extends RaftMessage
         {
             private final MemberId proposed;
+            private final Set<String> priorityGroups;
 
-            public Proposal( MemberId from, MemberId proposed )
+            public Proposal( MemberId from, MemberId proposed, Set<String> priorityGroups )
             {
                 super( from, Type.LEADERSHIP_TRANSFER_PROPOSAL );
                 this.proposed = proposed;
+                this.priorityGroups = priorityGroups;
             }
 
             public MemberId proposed()
             {
                 return proposed;
+            }
+
+            public Set<String> priorityGroups()
+            {
+                return priorityGroups;
             }
 
             @Override
@@ -1304,28 +1318,29 @@ public interface RaftMessages
             }
 
             @Override
-            public boolean equals( Object o )
+            public boolean equals( Object object )
             {
-                if ( this == o )
+                if ( this == object )
                 {
                     return true;
                 }
-                if ( o == null || getClass() != o.getClass() )
+                if ( object == null || getClass() != object.getClass() )
                 {
                     return false;
                 }
-                if ( !super.equals( o ) )
+                if ( !super.equals( object ) )
                 {
                     return false;
                 }
-                Proposal that = (Proposal) o;
-                return Objects.equals( proposed, that.proposed );
+                Proposal proposal = (Proposal) object;
+                return Objects.equals( proposed, proposal.proposed ) &&
+                       Objects.equals( priorityGroups, proposal.priorityGroups );
             }
 
             @Override
             public int hashCode()
             {
-                return Objects.hash( super.hashCode(), proposed );
+                return Objects.hash( super.hashCode(), proposed, priorityGroups );
             }
         }
     }

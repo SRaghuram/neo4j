@@ -93,7 +93,8 @@ public class RaftStateBuilder
         StubMembership membership = new StubMembership( votingMembers, replicationMembers );
 
         RaftState state = new RaftState( myself, termStore, membership, entryLog,
-                voteStore, new ConsecutiveInFlightCache(), NullLogProvider.getInstance(), supportPreVoting, refusesToBeLeader );
+                                         voteStore, new ConsecutiveInFlightCache(), NullLogProvider.getInstance(), supportPreVoting, refusesToBeLeader,
+                                         Set::of );
 
         state.update( outcome );
 

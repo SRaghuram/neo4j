@@ -8,10 +8,12 @@ package com.neo4j.causalclustering.common;
 import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
+import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.io.layout.DatabaseLayout;
@@ -127,5 +129,11 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
     public ClusteredDatabase clusteredDatabase()
     {
         return null;
+    }
+
+    @Override
+    public Optional<LeaderLocator> leaderLocator()
+    {
+        return Optional.empty();
     }
 }

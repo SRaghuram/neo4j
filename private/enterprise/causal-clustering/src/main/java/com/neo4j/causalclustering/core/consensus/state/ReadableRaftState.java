@@ -49,4 +49,6 @@ public interface ReadableRaftState
     Set<MemberId> preVotesForMe();
 
     boolean refusesToBeLeader();
+
+    Set<String> serverGroups();
 }

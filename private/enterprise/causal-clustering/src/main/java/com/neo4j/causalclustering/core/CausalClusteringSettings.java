@@ -491,6 +491,11 @@ public class CausalClusteringSettings implements SettingsDeclaration
     public static final Setting<List<ServerGroupName>> server_groups =
             newBuilder( "causal_clustering.server_groups", listOf( SERVER_GROUP_NAME ), emptyList() ).build();
 
+    @Description( "A list of group names where leadership should be prioritised. This does not guarantee leadership on these grups at all times, but" +
+                  " the cluster will attempt to transfer leadership to these groups when possible." )
+    public static final Setting<List<String>> leadership_priority_groups =
+            newBuilder( "causal_clustering.leadership_priority_groups", listOf( STRING ), emptyList() ).build();
+
     @Description( "The load balancing plugin to use." )
     public static final Setting<String> load_balancing_plugin =
             newBuilder( "causal_clustering.load_balancing.plugin", STRING, "server_policies" ).build();

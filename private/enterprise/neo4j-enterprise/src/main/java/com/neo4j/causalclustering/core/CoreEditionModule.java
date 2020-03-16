@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.consensus.RaftGroupFactory;
+import com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferService;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.ClusterStateMigrator;
@@ -73,6 +74,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -323,6 +325,12 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         RaftGroupFactory raftGroupFactory = new RaftGroupFactory( myIdentity, globalModule, clusterStateLayout, topologyService, storageFactory,
                 namedDatabaseId -> ((DefaultLeaderService) leaderService).createListener( namedDatabaseId ),
                 globalOtherTracker );
+
+        var leaderTransferService =
+                new LeaderTransferService( globalModule.getJobScheduler(), 10, TimeUnit.SECONDS, topologyService, globalConfig, databaseManager,
+                                           raftMessageDispatcher, myIdentity );
+
+        globalLife.add( leaderTransferService );
 
         RecoveryFacade recoveryFacade = recoveryFacade( globalModule.getFileSystem(), globalModule.getPageCache(), globalModule.getTracers(), globalConfig,
                 globalModule.getStorageEngineFactory(), globalOtherTracker );

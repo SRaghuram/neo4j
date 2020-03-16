@@ -21,6 +21,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Supplier;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -50,15 +51,16 @@ public class RaftState implements ReadableRaftState
     private long lastLogIndexBeforeWeBecameLeader = -1;
     private boolean isPreElection;
     private final boolean refuseToBeLeader;
+    private Supplier<Set<String>> serverGroupsSupplier;
 
     public RaftState( MemberId myself,
-                      StateStorage<TermState> termStorage,
-                      RaftMembership membership,
-                      RaftLog entryLog,
-                      StateStorage<VoteState> voteStorage,
-                      InFlightCache inFlightCache, LogProvider logProvider, boolean supportPreVoting,
-                      boolean refuseToBeLeader
-            )
+            StateStorage<TermState> termStorage,
+            RaftMembership membership,
+            RaftLog entryLog,
+            StateStorage<VoteState> voteStorage,
+            InFlightCache inFlightCache, LogProvider logProvider, boolean supportPreVoting,
+            boolean refuseToBeLeader,
+            Supplier<Set<String>> serverGroupsSupplier )
     {
         this.myself = myself;
         this.termStorage = termStorage;
@@ -72,6 +74,7 @@ public class RaftState implements ReadableRaftState
         // Initial state
         this.isPreElection = supportPreVoting;
         this.refuseToBeLeader = refuseToBeLeader;
+        this.serverGroupsSupplier = serverGroupsSupplier;
     }
 
     @Override
@@ -198,6 +201,12 @@ public class RaftState implements ReadableRaftState
     public boolean refusesToBeLeader()
     {
         return refuseToBeLeader;
+    }
+
+    @Override
+    public Set<String> serverGroups()
+    {
+        return serverGroupsSupplier.get();
     }
 
     public void update( Outcome outcome ) throws IOException

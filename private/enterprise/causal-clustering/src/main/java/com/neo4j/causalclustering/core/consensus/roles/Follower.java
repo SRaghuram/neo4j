@@ -72,20 +72,29 @@ class Follower implements RaftMessageHandler
     {
         var sameOrEarlierTerm = ctx.term() <= request.term();
         var upToDate = ctx.commitIndex() >= request.previousIndex();
-        // TODO: Check if we are in the required groups <- this should happen in a Netty pipelined handler perhaps.
-        //  we don't have group info here.
-        if ( sameOrEarlierTerm && upToDate )
+        var myGroups = ctx.serverGroups();
+
+        if ( sameOrEarlierTerm && upToDate && iAmInPriority( myGroups, request ) )
         {
-            handleElectionTimeout( outcomeBuilder, ctx, log );
+            if ( Election.startRealElection( ctx, outcomeBuilder, log, ctx.term() ) )
+            {
+                outcomeBuilder.setRole( CANDIDATE );
+                log.info( "Moving to CANDIDATE state after receiving Leadership Transfer Request" );
+            }
         }
         else
         {
-            // TODO: Add my current groups
-            Set<String> groups = Set.of();
             outcomeBuilder.addOutgoingMessage(
                     new RaftMessages.Directed( request.from(),
-                            new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), ctx.commitIndex(), ctx.term(), groups ) ) );
+                            new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), ctx.commitIndex(), ctx.term(), myGroups ) ) );
         }
+    }
+
+    private static boolean iAmInPriority( Set<String> myGroups, RaftMessages.LeadershipTransfer.Request request )
+    {
+        var groups = new HashSet<>( myGroups );
+        groups.retainAll( request.groups() );
+        return !groups.isEmpty();
     }
 
     @Override
