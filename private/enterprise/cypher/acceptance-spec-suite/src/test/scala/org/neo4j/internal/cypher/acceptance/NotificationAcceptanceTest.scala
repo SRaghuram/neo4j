@@ -241,9 +241,9 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
 
     val result = executeSingle("EXPLAIN MATCH (n:Person) WHERE exists(n['na' + 'me']) RETURN n", Map.empty)
 
-    result.notifications should equal(Set(INDEX_LOOKUP_FOR_DYNAMIC_PROPERTY.notification(graphdb.InputPosition.empty,
+    result.notifications should contain(INDEX_LOOKUP_FOR_DYNAMIC_PROPERTY.notification(graphdb.InputPosition.empty,
       indexSeekOrScan(
-        Set("Person").asJava))))
+        Set("Person").asJava)))
   }
 
   test("warn for unfulfillable index seek when using dynamic property lookup with a single label and starts with") {

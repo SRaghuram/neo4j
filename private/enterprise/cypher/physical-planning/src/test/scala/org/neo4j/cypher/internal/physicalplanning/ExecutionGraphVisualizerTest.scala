@@ -193,7 +193,7 @@ class ExecutionGraphVisualizerTest extends CypherFunSuite {
     val plan = getExecutionPlan(new ExecutionGraphDefinitionBuilder(fuseAllFactory)
       .produceResults("n")
       .filter("true")
-      .expand("(n)--(m)").withBreak()
+      .expand("(n)--(m)")
       .allNodeScan("n").withBreak()
       .build())
 
@@ -216,7 +216,7 @@ class ExecutionGraphVisualizerTest extends CypherFunSuite {
       TRel(pipes(0), ops(3), Map("fused" -> (true: lang.Boolean)), "NEXT_OPERATOR"),
       TRel(ops(3), ops(2), Map("fused" -> (true: lang.Boolean)), "NEXT_OPERATOR"),
       TRel(ops(2), ops(1), Map("fused" -> (true: lang.Boolean)), "NEXT_OPERATOR"),
-      TRel(ops(1), ops(0), Map("fused" -> (false: lang.Boolean)), "NEXT_OPERATOR"), // This will be fused in reality, but the ExecutionGraphDefinition doesn't know that
+      TRel(ops(1), ops(0), Map("fused" -> (true: lang.Boolean)), "NEXT_OPERATOR")
     )
 
     assertPlanReturns(plan, ops, Seq.empty, bufs, pipes, rels)
