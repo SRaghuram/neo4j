@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 
 /**
- * Dummy operator that does nothing
+ * Dummy operator that does nothing. Intended for test-use only.
  */
 class NonFuseableOperator(val workIdentity: WorkIdentity) extends StatelessOperator {
 
