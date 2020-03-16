@@ -37,6 +37,7 @@ import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.ConstraintType;
@@ -174,6 +175,96 @@ public class StoreUpgradeIT
             assertConsistentStore( databaseLayout );
             assertFalse( new File( layout.countStore().getAbsolutePath() + ".a" ).exists() );
             assertFalse( new File( layout.countStore().getAbsolutePath() + ".b" ).exists() );
+        }
+
+        @Test
+        public void mustBeAbleToCreateTokensAfterUpgrade() throws Throwable
+        {
+            var layout = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            store.prepareDirectory( layout.databaseDirectory() );
+
+            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
+            builder.setConfig( allow_upgrade, true );
+            builder.setConfig( logs_directory, testDir.directory( "logs" ).toPath().toAbsolutePath());
+            DatabaseManagementService managementService = builder.build();
+            GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
+            try
+            {
+                checkInstance( store, (GraphDatabaseAPI) db );
+                try ( Transaction tx = db.beginTx() )
+                {
+                    Node node = tx.createNode( Label.label( "NonExistentLabel_82736482736" ) );
+                    node.setProperty( "nonExistentProperty_987348526435876", 1 );
+                    node.createRelationshipTo( node, RelationshipType.withName( "NonExistentType_5392436583" ) );
+                    tx.commit();
+                }
+            }
+            finally
+            {
+                managementService.shutdown();
+            }
+
+            managementService = builder.build();
+            db = managementService.database( DEFAULT_DATABASE_NAME );
+            try
+            {
+                try ( Transaction tx = db.beginTx() )
+                {
+                    Node node = tx.createNode( Label.label( "NonExistentLabel_09813492873" ) );
+                    node.setProperty( "nonExistentProperty_134587645837", 1 );
+                    node.createRelationshipTo( node, RelationshipType.withName( "NonExistentType_39485293845638" ) );
+                    tx.commit();
+                }
+            }
+            finally
+            {
+                managementService.shutdown();
+            }
+            DatabaseLayout databaseLayout = ((GraphDatabaseAPI) db).databaseLayout();
+            assertConsistentStore( databaseLayout );
+        }
+
+        @Test
+        public void mustBeAbleToCreateSchemaAfterUpgrade() throws Throwable
+        {
+            var layout = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            store.prepareDirectory( layout.databaseDirectory() );
+
+            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
+            builder.setConfig( allow_upgrade, true );
+            builder.setConfig( logs_directory, testDir.directory( "logs" ).toPath().toAbsolutePath());
+            DatabaseManagementService managementService = builder.build();
+            GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
+            try
+            {
+                checkInstance( store, (GraphDatabaseAPI) db );
+                try ( Transaction tx = db.beginTx() )
+                {
+                    tx.schema().indexFor( Label.label( "NonExistentLabel_82736482736" ) ).on( "nonExistentProperty_987348526435876" ).create();
+                    tx.commit();
+                }
+            }
+            finally
+            {
+                managementService.shutdown();
+            }
+
+            managementService = builder.build();
+            db = managementService.database( DEFAULT_DATABASE_NAME );
+            try
+            {
+                try ( Transaction tx = db.beginTx() )
+                {
+                    tx.schema().indexFor( Label.label( "NonExistentLabel_09813492873" ) ).on( "nonExistentProperty_134587645837" ).create();
+                    tx.commit();
+                }
+            }
+            finally
+            {
+                managementService.shutdown();
+            }
+            DatabaseLayout databaseLayout = ((GraphDatabaseAPI) db).databaseLayout();
+            assertConsistentStore( databaseLayout );
         }
 
         @Test
