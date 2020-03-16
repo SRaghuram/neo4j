@@ -23,7 +23,7 @@ In a scala class named `SuperBenchmark` add:
 ```
 object SuperBenchmark {
     def main(args: Array[String]): Unit = {
-        Main.run(classOf[SuperBenchmark], args)
+        Main.run(classOf[SuperBenchmark], args: _*)
     }    
 }
 ```
@@ -36,6 +36,12 @@ public static void main( String... args )
     Main.run( SuperBenchmark.class, args );
 }
 ```
+
+If you get the error `UnsupportedClassVersionError: ..._executePlan_jmhTest has been compiled by a more recent version of the Java Runtime (class file version 55.0), this version of the Java Runtime only recognizes class file versions up to 52.0`
+then you probably have to set the `JAVA_HOME` environment variable inside IntelliJ
+to the correct Java 11 JDK because it might not pick up changes from `.bashrc` or some other shell initialization file.
+
+---
 
 From command line:
 
