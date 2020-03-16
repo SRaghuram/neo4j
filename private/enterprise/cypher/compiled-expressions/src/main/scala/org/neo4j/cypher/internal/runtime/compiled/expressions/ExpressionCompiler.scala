@@ -2701,7 +2701,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
            AnyValue currentValue = listIterator.next();
            expressionVariables[innerVarOffset] = currentValue;
            Value isFiltered = [result from inner expression]
-           if (isFiltered == Values.TRUE)
+           if (coerceToBoolean(isFiltered) == Values.TRUE)
            {
                filtered.add(currentValue);
            }
@@ -2716,6 +2716,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
       val filteredVars = namer.nextVariableName()
       val currentValue = namer.nextVariableName()
       val isFiltered = namer.nextVariableName()
+      val coercedInner = if (isPredicate(innerPredicate)) inner else coerceToPredicate(inner)
       val ops = Seq(
         // ListValue list = [evaluate collection expression];
         // ArrayList<AnyValue> filtered = new ArrayList<>();
@@ -2738,7 +2739,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
             setExpressionVariable(innerVariable, load(currentValue)),
             declare[Value](isFiltered),
             // Value isFiltered = [result from inner expression]
-            assign(isFiltered, nullCheckIfRequired(inner)),
+            assign(isFiltered, nullCheckIfRequired(coercedInner)),
             // if (isFiltered == Values.TRUE)
             // {
             //    filtered.add(currentValue);
@@ -2752,8 +2753,8 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
         // return VirtualValues.fromList(extracted);
         invokeStatic(method[VirtualValues, ListValue, java.util.List[AnyValue]]("fromList"), load(filteredVars))
       )
-      IntermediateExpression(block(ops: _*), collection.fields ++ inner.fields,
-                             collection.variables ++ inner.variables,
+      IntermediateExpression(block(ops: _*), collection.fields ++ coercedInner.fields,
+                             collection.variables ++ coercedInner.variables,
                              collection.nullChecks)
     }
   }

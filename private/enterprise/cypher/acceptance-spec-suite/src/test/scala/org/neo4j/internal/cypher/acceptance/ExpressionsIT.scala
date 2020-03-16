@@ -2368,6 +2368,15 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiled, 1) should equal(list())
   }
 
+  test("filter on non-boolean predicate") {
+    //When, [bar IN ["a", "aa", "aaa"] WHERE 42]
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(listComprehension(bar, listOfString("a", "aa", "aaa"), Some(literalInt(42)), None))
+
+    //Then
+    a [CypherTypeException] should be thrownBy evaluate(compiled, 1)
+  }
+
   test("filter accessing same variable in inner and outer") {
     //Given
     val context = new MapCypherRow(mutable.Map("foo" -> VirtualValues.list(stringValue("a"), stringValue("aa"), stringValue("aaa"))))
