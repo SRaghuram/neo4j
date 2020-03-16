@@ -32,6 +32,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTaskWithMorselTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DelegateOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.Operator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProduceResultOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnionOperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
@@ -84,31 +85,27 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
           new OperatorExpressionCompiler(slots, inputSlotConfiguration, readOnly, codeGenerationMode, namer) // NOTE: We assume slots is the same within an entire pipeline
       }
 
-    def compileExpression(astExpression: Expression): () => IntermediateExpression =
-      () => expressionCompiler.intermediateCompileExpression(astExpression)
-        .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $astExpression"))
-
     val innermost = new DelegateOperatorTaskTemplate()(expressionCompiler)
-    var ctx = TemplateContext(slots,
-                              physicalPlan.slotConfigurations,
-                              tokenContext,
-                              indexRegistrator,
-                              compileExpression,
-                              physicalPlan.argumentSizes,
-                              executionGraphDefinition,
-                              innermost,
-                              innermost,
-                              expressionCompiler)
+    var currentTemplate: OperatorTaskTemplate = innermost
 
     var argumentStates = new ArrayBuffer[(ArgumentStateMapId, ArgumentStateFactory[_ <: ArgumentState])]
 
     for ( fixTemplate <- templates.reverse ) {
-      val TemplateAndArgumentStateFactory(template, maybeFactory) = fixTemplate(ctx)
-      argumentStates ++= maybeFactory
-      ctx = ctx.copy(inner = template)
+      val ctx = TemplateContext(slots,
+                                physicalPlan.slotConfigurations,
+                                tokenContext,
+                                indexRegistrator,
+                                physicalPlan.argumentSizes,
+                                executionGraphDefinition,
+                                currentTemplate,
+                                innermost,
+                                expressionCompiler)
+      val x = fixTemplate(ctx)
+      argumentStates ++= x.argumentStateFactory
+      currentTemplate = x.template
     }
     val workIdentity = WorkIdentity.fromFusedPlans(fusedPlans)
-    val operatorTaskWithMorselTemplate = ctx.inner.asInstanceOf[ContinuableOperatorTaskWithMorselTemplate]
+    val operatorTaskWithMorselTemplate = currentTemplate.asInstanceOf[ContinuableOperatorTaskWithMorselTemplate]
     ContinuableOperatorTaskWithMorselGenerator.compileOperator(operatorTaskWithMorselTemplate, workIdentity, argumentStates, codeGenerationMode)
   }
 

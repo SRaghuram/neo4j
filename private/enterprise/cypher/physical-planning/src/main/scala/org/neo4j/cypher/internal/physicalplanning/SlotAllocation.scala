@@ -514,7 +514,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
            _: CacheProperties
       =>
 
-      case p:ProjectingPlan =>
+      case p: ProjectingPlan =>
         p.projectExpressions foreach {
           case (key, internal.expressions.Variable(ident)) if key == ident =>
           // it's already there. no need to add a new slot for it

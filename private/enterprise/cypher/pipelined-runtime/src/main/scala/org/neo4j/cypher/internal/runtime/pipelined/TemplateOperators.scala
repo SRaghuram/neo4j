@@ -102,6 +102,7 @@ import org.neo4j.cypher.internal.util.Many
 import org.neo4j.cypher.internal.util.One
 import org.neo4j.cypher.internal.util.Zero
 import org.neo4j.cypher.internal.util.ZeroOneOrMany
+import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.IndexQuery
 import org.neo4j.internal.schema.IndexOrder
@@ -130,12 +131,16 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                              slotConfigurations: SlotConfigurations,
                              tokenContext: TokenContext,
                              indexRegistrator: QueryIndexRegistrator,
-                             compileExpression: Expression => () => IntermediateExpression,
                              argumentSizes: ArgumentSizes,
                              executionGraphDefinition: ExecutionGraphDefinition,
                              inner: OperatorTaskTemplate,
                              innermost: DelegateOperatorTaskTemplate,
-                             expressionCompiler: OperatorExpressionCompiler)
+                             expressionCompiler: OperatorExpressionCompiler) {
+
+    def compileExpression(astExpression: Expression): () => IntermediateExpression =
+      () => expressionCompiler.intermediateCompileExpression(astExpression)
+        .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $astExpression"))
+  }
 
   protected def createTemplate(plan: LogicalPlan,
                                isHeadOperator: Boolean,
