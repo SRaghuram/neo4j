@@ -23,7 +23,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.not
-import org.neo4j.codegen.api.IntermediateRepresentation.self
 import org.neo4j.codegen.api.IntermediateRepresentation.subtract
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
@@ -48,6 +47,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_COUNTER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_MORSEL
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.SHOULD_BREAK
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRows
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
@@ -253,6 +253,7 @@ class SerialLimitOnRhsOfApplyOperatorTaskTemplate(override val inner: OperatorTa
       },
       condition(greaterThan(load(countLeftVar), constant(0))) (
         block(
+          profileRow(id),
           inner.genOperateWithExpressions,
           doIfInnerCantContinue(
             assign(countLeftVar, subtract(load(countLeftVar), constant(1)))))
@@ -276,7 +277,6 @@ class SerialLimitOnRhsOfApplyOperatorTaskTemplate(override val inner: OperatorTa
 
   override def genOperateExit: IntermediateRepresentation = {
     block(
-      profileRows(id, subtract(load(reservedVar), load(countLeftVar))),
       invoke(load(state), method[SerialCountingState, Unit, Int]("update"),
         subtract(load(reservedVar), load(countLeftVar))),
       inner.genOperateExit)

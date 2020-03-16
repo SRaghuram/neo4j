@@ -54,6 +54,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.LeftOuterHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexStartsWithSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeLockingUniqueIndexSeekTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NonParallelLimitTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalExpandAllTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalExpandIntoTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalFailureTestBase
@@ -135,6 +136,7 @@ class SlottedUnwindTest extends UnwindTestBase(ENTERPRISE.DEFAULT, SlottedRuntim
 class SlottedDistinctTest extends DistinctTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedOrderedDistinctTest extends OrderedDistinctTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedLimitTest extends LimitTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+                       with NonParallelLimitTestBase[EnterpriseRuntimeContext]
 class SlottedSkipTest extends SkipTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedNodeHashJoinTest extends NodeHashJoinTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedValueHashJoinTest extends ValueHashJoinTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)

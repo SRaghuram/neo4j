@@ -55,6 +55,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexSeekRangeAndCompositeTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexStartsWithSeekTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NonParallelLimitTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalExpandAllTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalExpandIntoTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalFailureTestBase
@@ -225,7 +226,9 @@ class PipelinedFilterNoFusingTest extends FilterTestBase(NO_FUSING, PIPELINED, S
 
 // LIMIT
 class PipelinedLimitTest extends LimitTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+                         with NonParallelLimitTestBase[EnterpriseRuntimeContext]
 class PipelinedLimitNoFusingTest extends LimitTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+                                 with NonParallelLimitTestBase[EnterpriseRuntimeContext]
 
 // SKIP
 class PipelinedSkipTest extends SkipTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
