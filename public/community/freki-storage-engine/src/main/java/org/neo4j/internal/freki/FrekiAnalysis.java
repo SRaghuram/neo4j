@@ -20,6 +20,7 @@
 package org.neo4j.internal.freki;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -31,12 +32,15 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
+import org.neo4j.internal.tokenstore.GBPTreeTokenStore;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.Life;
+import org.neo4j.storageengine.api.StandardConstraintRuleAccessor;
+import org.neo4j.token.api.NamedToken;
 
 import static java.util.stream.Stream.of;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
@@ -52,6 +56,7 @@ import static org.neo4j.storageengine.api.RelationshipDirection.INCOMING;
 import static org.neo4j.storageengine.api.RelationshipDirection.LOOP;
 import static org.neo4j.storageengine.api.RelationshipDirection.OUTGOING;
 import static org.neo4j.storageengine.api.RelationshipSelection.ALL_RELATIONSHIPS;
+import static org.neo4j.token.TokenHolders.readOnlyTokenHolders;
 
 public class FrekiAnalysis extends Life implements AutoCloseable
 {
@@ -60,8 +65,9 @@ public class FrekiAnalysis extends Life implements AutoCloseable
 
     public FrekiAnalysis( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException
     {
-        this( new MainStores( fs, databaseLayout, pageCache, new DefaultIdGeneratorFactory( fs, immediate() ), PageCacheTracer.NULL, TRACER_SUPPLIER,
-                immediate(), false ), true, stores -> new FrekiCursorFactory( stores, NO_TRACING ) );
+        this( new Stores( fs, databaseLayout, pageCache, new DefaultIdGeneratorFactory( fs, immediate() ), PageCacheTracer.NULL, TRACER_SUPPLIER,
+                immediate(), false, new StandardConstraintRuleAccessor(), i -> i, readOnlyTokenHolders() ), true,
+                stores -> new FrekiCursorFactory( stores, NO_TRACING ) );
     }
 
     public FrekiAnalysis( MainStores stores )
@@ -115,11 +121,15 @@ public class FrekiAnalysis extends Life implements AutoCloseable
             var separatorIndex = nodeIdSpec.indexOf( '-' );
             var fromId = Long.parseLong( nodeIdSpec.substring( 0, separatorIndex ) );
             var toId = Long.parseLong( nodeIdSpec.substring( separatorIndex + 1 ) );
-            dumpNodes( fromId, toId );
+            dumpNodeRange( fromId, toId );
+        }
+        else if ( nodeIdSpec.contains( "," ) )
+        {
+            dumpNodes( Arrays.stream( nodeIdSpec.split( "," ) ).mapToLong( Long::parseLong ).toArray() );
         }
         else
         {
-            dumpNode( Long.parseLong( nodeIdSpec ) );
+            dumpNodes( Long.parseLong( nodeIdSpec ) );
         }
     }
 
@@ -137,12 +147,20 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         }
     }
 
-    public void dumpNode( long nodeId )
+    public void dumpNodes( long... nodeIds )
     {
-        dumpNodes( nodeId, nodeId + 1 );
+        try ( var nodeCursor = cursorFactory.allocateNodeCursor( PageCursorTracer.NULL );
+                var propertyCursor = cursorFactory.allocatePropertyCursor( PageCursorTracer.NULL );
+                var relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( PageCursorTracer.NULL ) )
+        {
+            for ( long nodeId : nodeIds )
+            {
+                dumpNode( nodeId, nodeCursor, propertyCursor, relationshipCursor );
+            }
+        }
     }
 
-    public void dumpNodes( long fromNodeId, long toNodeId )
+    public void dumpNodeRange( long fromNodeId, long toNodeId )
     {
         try ( var nodeCursor = cursorFactory.allocateNodeCursor( PageCursorTracer.NULL );
               var propertyCursor = cursorFactory.allocatePropertyCursor( PageCursorTracer.NULL );
@@ -150,15 +168,20 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         {
             for ( long nodeId = fromNodeId; nodeId < toNodeId; nodeId++ )
             {
-                nodeCursor.single( nodeId );
-                if ( !nodeCursor.next() )
-                {
-                    System.out.println( "Node " + nodeId + " not in use" );
-                    return;
-                }
-                dumpNode( nodeCursor, propertyCursor, relationshipCursor );
+                dumpNode( nodeId, nodeCursor, propertyCursor, relationshipCursor );
             }
         }
+    }
+
+    public void dumpNode( long nodeId, FrekiNodeCursor nodeCursor, FrekiPropertyCursor propertyCursor, FrekiRelationshipTraversalCursor relationshipCursor )
+    {
+        nodeCursor.single( nodeId );
+        if ( !nodeCursor.next() )
+        {
+            System.out.println( "Node " + nodeId + " not in use" );
+            return;
+        }
+        dumpNode( nodeCursor, propertyCursor, relationshipCursor );
     }
 
     private void dumpNode( FrekiNodeCursor nodeCursor, FrekiPropertyCursor propertyCursor, FrekiRelationshipTraversalCursor relationshipCursor )
@@ -406,6 +429,37 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         finally
         {
             executorService.shutdown();
+        }
+    }
+
+    public void dumpTokens()
+    {
+        if ( stores instanceof Stores )
+        {
+            Stores allStores = ((Stores) stores);
+            try
+            {
+                dumpTokens( allStores.propertyKeyTokenStore, "Property key tokens" );
+                dumpTokens( allStores.labelTokenStore, "Label tokens" );
+                dumpTokens( allStores.relationshipTypeTokenStore, "Relationship type tokens" );
+            }
+            catch ( IOException e )
+            {
+                throw new UncheckedIOException( e );
+            }
+        }
+        else
+        {
+            System.out.println( "Please instantiate FrekiAnalysis with a full Stores to get this feature" );
+        }
+    }
+
+    public void dumpTokens( GBPTreeTokenStore tokenStore, String name ) throws IOException
+    {
+        System.out.println( name );
+        for ( NamedToken token : tokenStore.loadTokens( PageCursorTracer.NULL ) )
+        {
+            System.out.println( "  " + token.id() + ": " + token.name() );
         }
     }
 

@@ -130,4 +130,12 @@ public class TokenHolders implements TokenNameLookup
             }
         };
     }
+
+    public static TokenHolders readOnlyTokenHolders()
+    {
+        return new TokenHolders(
+                new DelegatingTokenHolder( new ReadOnlyTokenCreator(), TokenHolder.TYPE_PROPERTY_KEY ),
+                new DelegatingTokenHolder( new ReadOnlyTokenCreator(), TokenHolder.TYPE_LABEL ),
+                new DelegatingTokenHolder( new ReadOnlyTokenCreator(), TokenHolder.TYPE_RELATIONSHIP_TYPE ) );
+    }
 }

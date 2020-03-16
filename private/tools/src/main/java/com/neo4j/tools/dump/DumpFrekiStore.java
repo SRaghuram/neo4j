@@ -32,6 +32,11 @@ public class DumpFrekiStore
               var pageCache = new MuninnPageCache( new SingleFilePageSwapperFactory( fs ), 100_000, NULL, EMPTY, scheduler );
               var analysis = new FrekiAnalysis( fs, databaseLayout, pageCache ) )
         {
+            var tokens = args.getBoolean( "tokens", false );
+            if ( tokens )
+            {
+                analysis.dumpTokens();
+            }
             var nodeIdSpec = args.get( "nodes", null );
             if ( nodeIdSpec != null )
             {
