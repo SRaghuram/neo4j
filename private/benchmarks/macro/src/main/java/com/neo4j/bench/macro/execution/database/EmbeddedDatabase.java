@@ -26,7 +26,6 @@ import java.util.Map;
 
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.commandline.dbms.StoreInfoCommand;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -156,7 +155,6 @@ public class EmbeddedDatabase implements Database
         {
             builder.setConfigRaw( neo4jConfig.toMap() );
         }
-        builder.setConfig( GraphDatabaseSettings.default_database, store.graphDbDirectory().getFileName().toString() );
         return builder.build();
     }
 

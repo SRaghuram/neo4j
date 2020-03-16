@@ -17,31 +17,10 @@
       }
     },
     {
-      "name": "Read 3",
-      "queryFile": "queries/query_3.cypher",
-      "parameters": {
-        "file": "parameters/query_3.txt"
-      }
-    },
-    {
       "name": "Read 4",
       "queryFile": "queries/query_4.cypher",
       "parameters": {
         "file": "parameters/query_4.txt"
-      }
-    },
-    {
-      "name": "Read 5",
-      "queryFile": "queries/query_5.cypher",
-      "parameters": {
-        "file": "parameters/query_5.txt"
-      }
-    },
-    {
-      "name": "Read 6",
-      "queryFile": "queries/query_6.cypher",
-      "parameters": {
-        "file": "parameters/query_6.txt"
       }
     },
     {

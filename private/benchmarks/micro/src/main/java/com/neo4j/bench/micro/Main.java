@@ -19,10 +19,13 @@ import com.neo4j.bench.jmh.api.config.JmhOptionsUtil;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import org.openjdk.jmh.runner.options.TimeValue;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+
+import org.neo4j.io.fs.FileUtils;
 
 import static com.neo4j.bench.common.util.BenchmarkUtil.tryMkDir;
 
@@ -63,6 +66,14 @@ public class Main
             String... methods )
     {
         Path storesDir = Paths.get( "benchmark_stores" );
+        try
+        {
+            FileUtils.deletePathRecursively( storesDir );
+        }
+        catch ( IOException e )
+        {
+            e.printStackTrace();
+        }
         Path profilerRecordingsOutputDir = Paths.get( "profiler_recordings" );
         int forkCount = 1;
         List<ParameterizedProfiler> profilers = ParameterizedProfiler.defaultProfilers( ProfilerType.JFR );

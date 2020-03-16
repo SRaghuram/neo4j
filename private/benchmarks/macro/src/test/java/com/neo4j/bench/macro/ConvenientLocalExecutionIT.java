@@ -27,14 +27,13 @@ import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.model.process.JvmArgs;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -44,25 +43,26 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
-import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static java.util.Collections.emptyList;
+import static org.neo4j.configuration.SettingValueParsers.FALSE;
 
 @TestDirectoryExtension
 class ConvenientLocalExecutionIT
 {
     // Required fields for running whole Workload or Single query
-    private static final Path STORE_DIR = null; // e.g. /Users/you/stores/3.5/ldbc_sf001_data/ not /Users/you/stores/3.5/ldbc_sf001_data/graph.db/
-    private static final Path RESULT_DIR = null; // e.g. /Users/you/results/
-    private static final String WORKLOAD_NAME = null; // e.g. "ldbc_sf001"
+    private static final Path STORE_DIR = Path.of( System.getProperty( "user.home" ), "Desktop", "ldbc_sf001_freki" );
+    private static final Path RESULT_DIR = Path.of( System.getProperty( "user.home" ), "Desktop", "ldbc_res" );
+
+    private static final String WORKLOAD_NAME = "ldbc_sf001";
     private static final Deployment DEPLOYMENT = Deployment.embedded();
 
     // Optional fields
     private static final boolean SKIP_FLAME_GRAPHS = false;
     private static final Path JDK_DIR = null;
     private static final Path NEO4J_CONFIG = null;
-    private static final int FORK_COUNT = 1;
-    private static final int WARMUP_COUNT = 1;
-    private static final int MEASUREMENT_COUNT = 1;
+    private static final int FORK_COUNT = 0;
+    private static final int WARMUP_COUNT = 3;
+    private static final int MEASUREMENT_COUNT = 10;
     private static final List<ParameterizedProfiler> PROFILERS = ParameterizedProfiler.defaultProfilers( ProfilerType.JFR );
     private static final ExecutionMode EXECUTION_MODE = ExecutionMode.EXECUTE;
     private static final JvmArgs JVM_ARGS = JvmArgs.from( "-Xms4g", "-Xmx4g" );
@@ -74,7 +74,11 @@ class ConvenientLocalExecutionIT
     @Inject
     private TestDirectory temporaryFolder;
 
-    @Disabled
+    public static void main( String[] args ) throws Exception
+    {
+        new ConvenientLocalExecutionIT().executeWorkload();
+    }
+
     @Test
     void executeWorkload() throws Exception
     {
@@ -136,7 +140,6 @@ class ConvenientLocalExecutionIT
     // Required fields for running Single query
     private static final String QUERY_NAME = null; // "Read 14" (from "ldbc_sf001")
 
-    @Disabled
     @Test
     void executeQuery() throws Exception
     {
@@ -176,7 +179,7 @@ class ConvenientLocalExecutionIT
 
     private Path neo4jConfigFile() throws Exception
     {
-        Path neo4jConfigFile = temporaryFolder.file( "neo4j.conf" ).toPath();
+        Path neo4jConfigFile = File.createTempFile("neo4j", "conf").toPath();
         Neo4jConfig neo4jConfig = neo4jConfig();
         Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
         return neo4jConfigFile;
