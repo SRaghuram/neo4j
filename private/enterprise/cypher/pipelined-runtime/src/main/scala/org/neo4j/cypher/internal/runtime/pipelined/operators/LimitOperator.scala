@@ -326,7 +326,7 @@ object SerialLimitOnRhsOfApplyOperatorTaskTemplate {
                           argumentOffset: Int): Unit = {
 
     var endRow = cursor.row
-    while (currentArgument == cursor.getLongAt(argumentOffset) && cursor.next()) {
+    while (cursor.onValidRow() && currentArgument == cursor.getLongAt(argumentOffset) && cursor.next()) {
       if (currentArgument == cursor.getLongAt(argumentOffset)) {
         endRow = cursor.row
       }
