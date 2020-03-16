@@ -132,6 +132,7 @@ public class OOMProfiler implements ExternalProfiler
         Path oomDirectory = getOOMDirectory( forkDirectory );
         try
         {
+            System.out.println( format( "creating OOM directory at %s", oomDirectory ) );
             Files.createDirectories( oomDirectory );
         }
         catch ( IOException e )

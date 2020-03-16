@@ -42,20 +42,7 @@ public class JvmArgs
 
     public static JvmArgs standardArgs( ForkDirectory forkDirectory )
     {
-        // Other options:
-        //      -XX:+HeapDumpAfterFullGC             : Creates heap dump file after full GC
-        //      -XX:+HeapDumpBeforeFullGC            : Creates heap dump file before full GC
-        //      -XX:+PrintHeapAtGC                   : Print heap layout before and after each GC  <--  very log spammy
-        //      -XX:+PrintTLAB                       : Print TLAB allocation statistics
-        //      -XX:+PrintReferenceGC                : Print times for weak/soft/JNI/etc reference processing during STW pause
-        //      -XX:+PrintGCCause
-        //      -XX:+PrintClassHistogramBeforeFullGC : Prints class histogram before full GC
-        //      -XX:+PrintClassHistogramAfterFullGC  : Prints class histogram after full GC
-        //      -XX:+PrintGCTimeStamps               : Print timestamps for each GC event (seconds count from start of JVM)  <-- use PrintGCDateStamps instead
-        return from(
-                "-XX:+HeapDumpOnOutOfMemoryError",                   // Creates heap dump in out-of-memory condition
-                "-XX:HeapDumpPath=" + forkDirectory.toAbsolutePath() // Specifies path to save heap dumps
-        );
+        return empty();
     }
 
     @JsonCreator

@@ -11,6 +11,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Objects;
 
 import static java.lang.String.format;
 
@@ -53,6 +54,7 @@ public abstract class Deployment implements DeploymentMode
 
     public static Deployment server( String neo4jDir )
     {
+        Objects.requireNonNull( neo4jDir, "Neo4j server directory cannot be null" );
         return new Server( neo4jDir );
     }
 
@@ -131,6 +133,7 @@ public abstract class Deployment implements DeploymentMode
             super( DeploymentModes.SERVER );
             this.path = path;
         }
+
         /**
          * WARNING: Never call this explicitly.
          * No-params constructor is only used for JSON (de)serialization.

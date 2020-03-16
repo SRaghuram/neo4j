@@ -18,7 +18,6 @@ import java.util.Collections;
 import java.util.List;
 
 import static com.neo4j.bench.common.results.RunPhase.MEASUREMENT;
-import static com.neo4j.bench.common.util.BenchmarkUtil.sanitize;
 
 public class JvmTracer implements ExternalProfiler
 {
@@ -45,17 +44,13 @@ public class JvmTracer implements ExternalProfiler
                                                                                               ProfilerType.JVM_LOGGING,
                                                                                               additionalParameters );
 
-        Path heapDump = forkDirectory.create( recordingDescriptor.sanitizedName() + ".hprof" );
         Path vmLog = forkDirectory.pathFor( recordingDescriptor );
         return JvmArgs.from(
                 "-XX:+UnlockDiagnosticVMOptions",
-                "-XX:+HeapDumpOnOutOfMemoryError",
-                "-XX:HeapDumpPath=" + sanitize( heapDump.toAbsolutePath().toString() ),
                 "-XX:+CITime",
                 "-XX:+PrintSafepointStatistics",
                 "-XX:PrintSafepointStatisticsCount=1",
                 "-XX:PrintSafepointStatisticsTimeout=500",
-//                "-XX:+TraceSafepointCleanupTime", // TODO temporarily remove as it appears in system out
                 "-XX:+LogVMOutput",
                 "-XX:LogFile=" + vmLog.toAbsolutePath().toString() );
     }

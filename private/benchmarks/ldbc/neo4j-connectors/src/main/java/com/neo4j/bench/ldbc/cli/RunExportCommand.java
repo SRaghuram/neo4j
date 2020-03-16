@@ -406,7 +406,7 @@ public class RunExportCommand implements Runnable
             Jvm jvm = Jvm.bestEffortOrFail( this.jvmFile );
 
             // base profilers are run on every fork
-            ArrayList<ProfilerType> baseProfilers = Lists.newArrayList();
+            ArrayList<ProfilerType> baseProfilers = Lists.newArrayList( ProfilerType.OOM );
             if ( doTrace )
             {
                 baseProfilers.add( ProfilerType.JVM_LOGGING );

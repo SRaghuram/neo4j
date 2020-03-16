@@ -9,6 +9,7 @@ import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.model.Parameters;
 import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ExternalProfiler;
+import com.neo4j.bench.common.profiling.OOMProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
@@ -22,6 +23,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static java.lang.String.format;
+import static java.util.stream.Collectors.toList;
 
 public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONNECTION extends AutoCloseable>
 {
@@ -94,14 +96,20 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
 //                                                             .flatMap( Collection::stream )
 //                                                             .distinct()
 //                                                             .collect( toList() );
-            List<String> serverJvmArgs = RunnableFork.addExternalProfilerJvmArgs( externalProfilers,
-                                                                                  jvm,
-                                                                                  forkDirectory,
-                                                                                  query,
-                                                                                  serverParameters,
-                                                                                  jvmArgs,
-                                                                                  resources)
-                                                                    .toArgs();
+            // TODO filter out OOMProfiler for server, as we don't support spaces in additional jmv args
+            // https://trello.com/c/NF6by0ki/5084-dbmsjvmadditional-with-spaces-in-them
+            List<ExternalProfiler> filteredExternalProfilers = externalProfilers.stream()
+                                                                                .filter( profiler -> profiler.getClass() != OOMProfiler.class )
+                                                                                .collect( toList() );
+            List<String> serverJvmArgs = RunnableFork.addExternalProfilerJvmArgs(
+                    filteredExternalProfilers,
+                    jvm,
+                    forkDirectory,
+                    query,
+                    serverParameters,
+                    jvmArgs,
+                    resources)
+                                                     .toArgs();
 
             if ( launcher.isDatabaseInDifferentProcess() )
             {

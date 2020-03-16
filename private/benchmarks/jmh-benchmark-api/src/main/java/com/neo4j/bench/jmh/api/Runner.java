@@ -49,7 +49,6 @@ import static com.neo4j.bench.jmh.api.config.JmhOptionsUtil.baseBuilder;
 import static com.neo4j.bench.jmh.api.config.SuiteDescription.fromConfig;
 import static com.neo4j.bench.jmh.api.config.Validation.assertValid;
 import static java.lang.String.format;
-import static java.util.stream.Collectors.toList;
 
 /**
  * This abstract runner defines the execution life-cycle of benchmarks written in JMH.

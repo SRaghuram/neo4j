@@ -28,7 +28,6 @@ import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.workload.Query;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -93,7 +92,7 @@ public class ForkRunner
                                                      store,
                                                      neo4jConfigFile,
                                                      forkDirectory,
-                                                     new ArrayList<>(),
+                                                     singletonList( ProfilerType.OOM ),
                                                      jvm,
                                                      doFork,
                                                      jvmArgs,
