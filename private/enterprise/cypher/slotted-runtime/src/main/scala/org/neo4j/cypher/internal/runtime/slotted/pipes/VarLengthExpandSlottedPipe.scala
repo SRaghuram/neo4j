@@ -103,7 +103,8 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
 
             if (relationshipIsUniqueInPath) {
               // Before expanding, check that both the relationship and node in question fulfil the predicate
-              if (predicateIsTrue(row, state, tempRelationshipOffset, relationshipPredicate, state.query.relationshipById(relId)) &&
+              if (predicateIsTrue(row, state, tempRelationshipOffset, relationshipPredicate, state.query.relationshipById(relId, relationships.startNodeId(),
+                relationships.endNodeId(), relationships.typeId())) &&
                 predicateIsTrue(row, state, tempNodeOffset, nodePredicate, state.query.nodeById(relationship.otherNodeId(fromNode)))
               ) {
                 // TODO: This call creates an intermediate NodeEntity which should not be necessary

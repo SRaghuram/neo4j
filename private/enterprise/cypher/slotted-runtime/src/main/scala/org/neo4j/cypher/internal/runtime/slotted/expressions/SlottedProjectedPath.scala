@@ -198,7 +198,7 @@ object SlottedProjectedPath {
 
   private def correctDirection(previous: NodeValue, first: AnyValue) = {
     val rel = first.asInstanceOf[RelationshipValue]
-    val correctDirection = rel.startNode().id() == previous.id() || rel.endNode().id() == previous.id()
+    val correctDirection = rel.startNodeId() == previous.id() || rel.endNodeId() == previous.id()
     correctDirection
   }
 }
