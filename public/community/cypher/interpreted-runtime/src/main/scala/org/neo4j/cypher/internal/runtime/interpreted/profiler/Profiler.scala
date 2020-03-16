@@ -30,11 +30,11 @@ import org.neo4j.cypher.internal.runtime.PrimitiveLongHelper
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.RelationshipIterator
 import org.neo4j.cypher.internal.runtime.RelationshipOperations
+import org.neo4j.cypher.internal.runtime.interpreted.DelegatingOperations
+import org.neo4j.cypher.internal.runtime.interpreted.DelegatingQueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeDecorator
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
-import org.neo4j.cypher.internal.runtime.interpreted.DelegatingOperations
-import org.neo4j.cypher.internal.runtime.interpreted.DelegatingQueryContext
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.result.OperatorProfile
 import org.neo4j.internal.kernel.api.CloseListener
@@ -198,6 +198,12 @@ final class ProfilingPipeQueryContext(inner: QueryContext)
     }
 
     override def hasNext: Boolean = inner.hasNext
+
+    override def startNodeId(): Long = inner.startNodeId()
+
+    override def endNodeId(): Long = inner.endNodeId()
+
+    override def typeId(): Int = inner.typeId()
   }
 
   override protected def manyDbHits(nodeCursor: NodeCursor): NodeCursor = {

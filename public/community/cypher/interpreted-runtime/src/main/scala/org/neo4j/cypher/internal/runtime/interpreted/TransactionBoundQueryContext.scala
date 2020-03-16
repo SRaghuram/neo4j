@@ -1061,13 +1061,13 @@ object TransactionBoundQueryContext {
     import RelationshipCursorIterator.NO_ID
 
     private var _next = NOT_INITIALIZED
-    private var typeId: Int = NO_ID
+    private var relTypeId: Int = NO_ID
     private var source: Long = NO_ID
     private var target: Long = NO_ID
 
     override def relationshipVisit[EXCEPTION <: Exception](relationshipId: Long,
                                                            visitor: RelationshipVisitor[EXCEPTION]): Boolean = {
-      visitor.visit(relationshipId, typeId, source, target)
+      visitor.visit(relationshipId, relTypeId, source, target)
       true
     }
 
@@ -1086,10 +1086,16 @@ object TransactionBoundQueryContext {
       _next >= 0
     }
 
+    override def startNodeId(): Long = source
+
+    override def endNodeId(): Long = target
+
+    override def typeId(): Int = relTypeId
+
     //We store the current state in case the underlying cursor is
     //closed when calling next.
     private def storeState(): Unit = {
-      typeId = selectionCursor.`type`()
+      relTypeId = selectionCursor.`type`()
       source = selectionCursor.sourceNodeReference()
       target = selectionCursor.targetNodeReference()
     }

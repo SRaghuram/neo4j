@@ -28,22 +28,36 @@ import static org.neo4j.memory.HeapEstimator.shallowSizeOfInstance;
 public abstract class RelationshipValue extends VirtualRelationshipValue
 {
     private final long id;
+    private final long startNodeId;
+    private final long endNodeId;
 
-    protected RelationshipValue( long id )
+    protected RelationshipValue( long id, long startNodeId, long endNodeId )
     {
         this.id = id;
+        this.startNodeId = startNodeId;
+        this.endNodeId = endNodeId;
     }
 
     @Override
     public <E extends Exception> void writeTo( AnyValueWriter<E> writer ) throws E
     {
-        writer.writeRelationship( id, startNode().id(), endNode().id(), type(), properties() );
+        writer.writeRelationship( id, startNodeId(), endNodeId(), type(), properties() );
     }
 
     @Override
     public String toString()
     {
         return format( "-[%d]-", id );
+    }
+
+    public long startNodeId()
+    {
+        return startNodeId;
+    }
+
+    public long endNodeId()
+    {
+        return endNodeId;
     }
 
     public abstract NodeValue startNode();
@@ -67,7 +81,7 @@ public abstract class RelationshipValue extends VirtualRelationshipValue
 
     public long otherNodeId( long node )
     {
-        return node == startNode().id() ? endNode().id() : startNode().id();
+        return node == startNodeId() ? endNodeId() : startNodeId();
     }
 
     @Override
@@ -86,7 +100,7 @@ public abstract class RelationshipValue extends VirtualRelationshipValue
 
         DirectRelationshipValue( long id, NodeValue startNode, NodeValue endNode, TextValue type, MapValue properties )
         {
-            super( id );
+            super( id, startNode.id(), endNode.id() );
             assert properties != null;
 
             this.startNode = startNode;

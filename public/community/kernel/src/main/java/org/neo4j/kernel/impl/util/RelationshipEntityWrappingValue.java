@@ -46,7 +46,7 @@ public class RelationshipEntityWrappingValue extends RelationshipValue
 
     RelationshipEntityWrappingValue( Relationship relationship )
     {
-        super( relationship.getId() );
+        super( relationship.getId(), relationship.getStartNodeId(), relationship.getEndNodeId() );
         this.relationship = relationship;
     }
 
@@ -88,7 +88,7 @@ public class RelationshipEntityWrappingValue extends RelationshipValue
             writer.writeVirtualRelationshipHack( relationship );
         }
 
-        writer.writeRelationship( id(), startNode().id(), endNode().id(), type(), p );
+        writer.writeRelationship( id(), startNodeId(), endNodeId(), type(), p );
     }
 
     @Override
