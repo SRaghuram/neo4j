@@ -169,7 +169,7 @@ class GraphUpdates
             }
             if ( forwardPointerPointsToDense( forwardPointer ) )
             {
-                dense = new DenseRecordAndData( sparse, stores.denseStore, stores.bigPropertyValueStore, bigValueCommandConsumer );
+                dense = new DenseRecordAndData( sparse, stores.denseStore, stores.bigPropertyValueStore, bigValueCommandConsumer, cursorTracer );
             }
         }
 
@@ -354,7 +354,7 @@ class GraphUpdates
         {
             if ( dense == null )
             {
-                dense = new DenseRecordAndData( sparse, stores.denseStore, stores.bigPropertyValueStore, bigValueCommandConsumer );
+                dense = new DenseRecordAndData( sparse, stores.denseStore, stores.bigPropertyValueStore, bigValueCommandConsumer, cursorTracer );
             }
             dense.moveDataFrom( flags, sparse.data );
         }
@@ -474,6 +474,7 @@ class GraphUpdates
         private final DenseStore store;
         private final SimpleBigValueStore bigValueStore;
         private final Consumer<StorageCommand> bigValueConsumer;
+        private final PageCursorTracer cursorTracer;
         private boolean deleted;
 
         // changes
@@ -481,12 +482,14 @@ class GraphUpdates
         private MutableIntObjectMap<PropertyUpdate> propertyUpdates = IntObjectMaps.mutable.empty();
         private MutableIntObjectMap<DenseRelationships> relationshipUpdates = IntObjectMaps.mutable.empty();
 
-        DenseRecordAndData( SparseRecordAndData smallRecord, DenseStore store, SimpleBigValueStore bigValueStore, Consumer<StorageCommand> bigValueConsumer )
+        DenseRecordAndData( SparseRecordAndData smallRecord, DenseStore store, SimpleBigValueStore bigValueStore, Consumer<StorageCommand> bigValueConsumer,
+                PageCursorTracer cursorTracer )
         {
             this.smallRecord = smallRecord;
             this.store = store;
             this.bigValueStore = bigValueStore;
             this.bigValueConsumer = bigValueConsumer;
+            this.cursorTracer = cursorTracer;
         }
 
         private long nodeId()
@@ -507,15 +510,15 @@ class GraphUpdates
             // decided when loading the node. But for dense nodes we won't load all relationships and will therefore need to keep
             // this counter in an explicit field in the small record. This call keeps that counter updated.
             smallRecord.data.registerInternalRelationshipId( internalId );
-            relationshipUpdatesForType( type ).create( new DenseRelationships.DenseRelationship( internalId, targetNode, outgoing,
+            relationshipUpdatesForType( type, cursorTracer ).create( new DenseRelationships.DenseRelationship( internalId, targetNode, outgoing,
                     serializeAddedProperties( addedProperties, IntObjectMaps.mutable.empty() ) ) );
         }
 
-        private DenseRelationships relationshipUpdatesForType( int type )
+        private DenseRelationships relationshipUpdatesForType( int type, PageCursorTracer cursorTracer )
         {
             return relationshipUpdates.getIfAbsentPutWithKey( type, t ->
             {
-                EagerDegrees degrees = store.getDegrees( nodeId(), selection( t, Direction.BOTH ), PageCursorTracer.NULL );
+                EagerDegrees degrees = store.getDegrees( nodeId(), selection( t, Direction.BOTH ), cursorTracer );
                 return new DenseRelationships( nodeId(), t,
                         degrees.rawOutgoingDegree( t ), degrees.rawIncomingDegree( t ), degrees.rawLoopDegree( t ) );
             } );
@@ -525,20 +528,20 @@ class GraphUpdates
         public void deleteRelationship( long internalId, int type, long otherNode, boolean outgoing )
         {
             // TODO have some way of at least saying whether or not this relationship had properties, so that this loading can be skipped completely
-            relationshipUpdatesForType( type ).delete( new DenseRelationships.DenseRelationship( internalId, otherNode, outgoing,
-                    store.loadRelationshipPropertiesForRemoval( nodeId(), internalId, type, otherNode, outgoing ) ) );
+            relationshipUpdatesForType( type, cursorTracer ).delete( new DenseRelationships.DenseRelationship( internalId, otherNode, outgoing,
+                    store.loadRelationshipPropertiesForRemoval( nodeId(), internalId, type, otherNode, outgoing, cursorTracer ) ) );
         }
 
         @Override
         public void updateNodeProperties( Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
         {
-            store.prepareUpdateNodeProperties( nodeId(), added, changed, removed, bigValueConsumer, propertyUpdates );
+            store.prepareUpdateNodeProperties( nodeId(), added, changed, removed, bigValueConsumer, propertyUpdates, cursorTracer );
         }
 
         @Override
         public void delete()
         {
-            store.loadAndRemoveNodeProperties( nodeId(), propertyUpdates );
+            store.loadAndRemoveNodeProperties( nodeId(), propertyUpdates, cursorTracer );
             deleted = true;
         }
 

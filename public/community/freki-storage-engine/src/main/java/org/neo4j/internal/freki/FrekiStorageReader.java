@@ -280,6 +280,6 @@ class FrekiStorageReader extends FrekiCursorFactory implements StorageReader
     @Override
     public TokenNameLookup tokenNameLookup()
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+        return tokenHolders;
     }
 }

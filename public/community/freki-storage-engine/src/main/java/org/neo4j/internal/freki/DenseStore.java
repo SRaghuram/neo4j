@@ -127,7 +127,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
      * Used to efficiently gather a set of node property changes, where existing values are loaded for changed and removed properties.
      */
     void prepareUpdateNodeProperties( long nodeId, Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed,
-            Consumer<StorageCommand> commandConsumer, MutableIntObjectMap<PropertyUpdate> updates )
+            Consumer<StorageCommand> commandConsumer, MutableIntObjectMap<PropertyUpdate> updates, PageCursorTracer cursorTracer )
     {
         try
         {
@@ -143,7 +143,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
                     {
                         loadedPropertyValues.put( key.tokenId, value.dataCopy() );
                     }
-                } );
+                }, cursorTracer );
             }
 
             // added - simple, just add them
@@ -167,11 +167,11 @@ class DenseStore extends LifecycleAdapter implements Closeable
         }
     }
 
-    void loadAndRemoveNodeProperties( long nodeId, MutableIntObjectMap<PropertyUpdate> updates )
+    void loadAndRemoveNodeProperties( long nodeId, MutableIntObjectMap<PropertyUpdate> updates, PageCursorTracer cursorTracer )
     {
         try
         {
-            loadRawNodeProperties( nodeId, ( key, value ) -> updates.put( key.tokenId, PropertyUpdate.remove( key.tokenId, value.dataCopy() ) ) );
+            loadRawNodeProperties( nodeId, ( key, value ) -> updates.put( key.tokenId, PropertyUpdate.remove( key.tokenId, value.dataCopy() ) ), cursorTracer );
         }
         catch ( IOException e )
         {
@@ -179,10 +179,10 @@ class DenseStore extends LifecycleAdapter implements Closeable
         }
     }
 
-    private void loadRawNodeProperties( long nodeId, BiConsumer<DenseStoreKey,DenseStoreValue> consumer ) throws IOException
+    private void loadRawNodeProperties( long nodeId, BiConsumer<DenseStoreKey,DenseStoreValue> consumer, PageCursorTracer cursorTracer ) throws IOException
     {
         try ( Seeker<DenseStoreKey,DenseStoreValue> seek = tree.seek( new DenseStoreKey().initializeProperty( nodeId, Integer.MIN_VALUE ),
-                new DenseStoreKey().initializeProperty( nodeId, Integer.MAX_VALUE ), PageCursorTracer.NULL ) )
+                new DenseStoreKey().initializeProperty( nodeId, Integer.MAX_VALUE ), cursorTracer ) )
         {
             while ( seek.next() )
             {
@@ -191,13 +191,14 @@ class DenseStore extends LifecycleAdapter implements Closeable
         }
     }
 
-    MutableIntObjectMap<PropertyUpdate> loadRelationshipPropertiesForRemoval( long nodeId, long internalId, int type, long otherNodeId, boolean outgoing )
+    MutableIntObjectMap<PropertyUpdate> loadRelationshipPropertiesForRemoval( long nodeId, long internalId, int type, long otherNodeId, boolean outgoing,
+            PageCursorTracer cursorTracer )
     {
         try
         {
             DenseStoreKey relationship =
                     new DenseStoreKey().initializeRelationship( nodeId, type, outgoing ? Direction.OUTGOING : Direction.INCOMING, otherNodeId, internalId );
-            try ( Seeker<DenseStoreKey, DenseStoreValue> seek = tree.seek( relationship, relationship, PageCursorTracer.NULL ) )
+            try ( Seeker<DenseStoreKey, DenseStoreValue> seek = tree.seek( relationship, relationship, cursorTracer ) )
             {
                 if ( !seek.next() )
                 {
@@ -445,14 +446,14 @@ class DenseStore extends LifecycleAdapter implements Closeable
         tree.close();
     }
 
-    Stats gatherStats()
+    Stats gatherStats( PageCursorTracer cursorTracer )
     {
         Stats stats = new Stats( tree.sizeInBytes() );
         DenseStoreKey from = new DenseStoreKey();
         DenseStoreKey to = new DenseStoreKey();
         layout.initializeAsLowest( from );
         layout.initializeAsHighest( to );
-        try ( Seeker<DenseStoreKey, DenseStoreValue> seek = tree.seek( from, to, PageCursorTracer.NULL ) )
+        try ( Seeker<DenseStoreKey, DenseStoreValue> seek = tree.seek( from, to, cursorTracer ) )
         {
             long nodeId = -1;
             int nodeNumberOfProperties = 0;

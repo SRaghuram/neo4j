@@ -164,6 +164,7 @@ public class Stores extends MainStores
         propertyKeyTokenStore.checkpoint( limiter, cursorTracer );
         relationshipTypeTokenStore.checkpoint( limiter, cursorTracer );
         labelTokenStore.checkpoint( limiter, cursorTracer );
+        countsStore.checkpoint( limiter, cursorTracer );
     }
 
     private CountsBuilder initialCountsBuilder( GBPTreeMetaDataStore metaDataStore )

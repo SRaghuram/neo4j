@@ -341,7 +341,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     @Override
     public void init( long nodeId, long reference, RelationshipSelection selection )
     {
-        cursorAccessTracer.registerNodeToRelationshipsByReference();
+        cursorAccessTracer.registerNodeToRelationshipsByReference( nodeId );
         //We don't use reference, is that a problem?
         init( nodeId, selection );
     }
