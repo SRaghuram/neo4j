@@ -682,7 +682,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("Filter").containingArgumentRegex("distance.*".r)
     plan should includeSomewhere.aPlan("NodeUniqueIndexSeekByRange")
-      .containingArgumentRegex(("p:Place UNIQUE\\(location\\) WHERE distance\\(.+?\\) " +  "< " + ".*").r)
+      .containingArgumentRegex(("UNIQUE p:Place\\(location\\) WHERE distance\\(.+?\\) " +  "< " + ".*").r)
 
     result.toList should equal(List(Map("count(p)" -> 100)))
   }
