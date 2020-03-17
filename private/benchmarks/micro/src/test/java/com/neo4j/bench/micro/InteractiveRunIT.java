@@ -52,7 +52,7 @@ class InteractiveRunIT extends AnnotationsFixture
     private TestDirectory temporaryFolder;
 
     @Test
-    void shouldRunExactlyOneMethodOfBenchmarkClass() throws Exception
+    void shouldRunExactlyOneMethodOfBenchmarkClassZeroFork() throws Exception
     {
         Class benchmark = ReadById.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation(), getAnnotations() );
@@ -60,24 +60,45 @@ class InteractiveRunIT extends AnnotationsFixture
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 ) / benchmarkMethodCount;
         // parameters affect store content, in this benchmark
         int expectedStoreCount = benchmarkDescription.storeCount( newArrayList( "format" ) );
-        for ( int forkCount = 0; forkCount < 2; forkCount++ )
-        {
-            runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL, forkCount, "randomNodeById" );
-        }
+        int forkCount = 0;
+        runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL, forkCount, "randomNodeById" );
     }
 
     @Test
-    void shouldRunAllMethodsOfBenchmarkClass() throws Exception
+    void shouldRunExactlyOneMethodOfBenchmarkClassOneFork() throws Exception
+    {
+        Class benchmark = ReadById.class;
+        BenchmarkDescription benchmarkDescription = of( benchmark, new Validation(), getAnnotations() );
+        int benchmarkMethodCount = benchmarkDescription.methods().size();
+        int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 ) / benchmarkMethodCount;
+        // parameters affect store content, in this benchmark
+        int expectedStoreCount = benchmarkDescription.storeCount( newArrayList( "format" ) );
+        int forkCount = 1;
+        runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL, forkCount, "randomNodeById" );
+    }
+
+    @Test
+    void shouldRunAllMethodsOfBenchmarkClassZeroFork() throws Exception
     {
         Class benchmark = AllNodesScan.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation(), getAnnotations() );
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 );
         // parameters affect store content, in this benchmark
         int expectedStoreCount = benchmarkDescription.storeCount( newArrayList( "auth" ) );
-        for ( int forkCount = 0; forkCount < 2; forkCount++ )
-        {
-            runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL, forkCount );
-        }
+        int forkCount = 0;
+        runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL, forkCount );
+    }
+
+    @Test
+    void shouldRunAllMethodsOfBenchmarkClassOneFork() throws Exception
+    {
+        Class benchmark = AllNodesScan.class;
+        BenchmarkDescription benchmarkDescription = of( benchmark, new Validation(), getAnnotations() );
+        int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 );
+        // parameters affect store content, in this benchmark
+        int expectedStoreCount = benchmarkDescription.storeCount( newArrayList( "auth" ) );
+        int forkCount = 1;
+        runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL, forkCount );
     }
 
     @Test
