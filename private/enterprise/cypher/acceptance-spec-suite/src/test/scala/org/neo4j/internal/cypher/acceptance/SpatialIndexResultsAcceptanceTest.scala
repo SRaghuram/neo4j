@@ -52,8 +52,6 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
           .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("p:Place\\(location\\).*".r))
       }))
 
-    println(result.executionPlanDescription())
-
     // Then
     val point = result.columnAs("point").toList.head.asInstanceOf[Point]
     point should equal(wgsPoint(12.78, 56.7))
