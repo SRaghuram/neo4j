@@ -45,7 +45,7 @@ class Union extends AbstractCypherBenchmark {
 
   @ParamValues(
     allowed = Array("1", "6", "36"),
-    base = Array("1", "36"))
+    base = Array("36"))
   @Param(Array[String]())
   var columns: Int = _
 
