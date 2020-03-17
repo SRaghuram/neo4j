@@ -34,7 +34,6 @@ import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
 import org.neo4j.internal.kernel.api.PropertyCursor
-import org.neo4j.internal.kernel.api.RelationshipGroupCursor
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.procs.ProcedureCallContext
@@ -151,8 +150,6 @@ object StaticEvaluation {
     override def getRelationshipsForIds(node: Long, dir: SemanticDirection, types: Array[Int]): Iterator[RelationshipValue] = notAvailable()
 
     override def nodeCursor(): NodeCursor = notAvailable()
-
-    override def groupCursor(): RelationshipGroupCursor = notAvailable()
 
     override def traversalCursor(): RelationshipTraversalCursor = notAvailable()
 
