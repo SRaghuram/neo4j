@@ -732,7 +732,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     result.executionPlanDescription() should (
       not(includeSomewhere.aPlan("Sort")) and
         includeSomewhere.aPlan("NodeIndexSeekByRange")
-          .containingArgumentRegex(".*cache\\[z.foo\\]".r))
+          .containingArgumentForCachedProperty("z", "foo"))
     result.toList should be(List(
       Map("zfoo" -> 6),
       Map("zfoo" -> 5),

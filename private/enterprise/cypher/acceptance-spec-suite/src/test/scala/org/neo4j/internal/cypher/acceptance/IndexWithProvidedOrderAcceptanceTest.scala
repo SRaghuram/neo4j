@@ -840,7 +840,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
         includeSomewhere.aPlan("Optional")
           .onTopOf(aPlan("Limit")
             .onTopOf(aPlan("Projection")
-              .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r).withOrder(providedOrder(prop("n", "prop1"))))
+              .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1").withOrder(providedOrder(prop("n", "prop1"))))
             )
           )
 
@@ -864,7 +864,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
         includeSomewhere.aPlan("Optional")
           .onTopOf(aPlan("Limit")
             .onTopOf(aPlan("Projection")
-              .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r).withOrder(providedOrder(prop("n", "prop1"))))
+              .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1").withOrder(providedOrder(prop("n", "prop1"))))
             )
           )
 
@@ -884,7 +884,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
           .onTopOf(aPlan("Limit")
             .onTopOf(aPlan("Projection")
               .onTopOf(aPlan("Projection")
-                .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r).withOrder(providedOrder(prop("n", "prop1"))))
+                .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1").withOrder(providedOrder(prop("n", "prop1"))))
               )
             )
           )
@@ -908,7 +908,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
           .onTopOf(aPlan("Limit")
             .onTopOf(aPlan("Projection")
               .onTopOf(aPlan("Projection")
-                .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop\\]".r).withOrder(providedOrder(prop("n", "prop"))))
+                .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n").containingArgumentForCachedProperty("n", "prop").withOrder(providedOrder(prop("n", "prop"))))
               )
             )
           )
@@ -929,7 +929,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
           .onTopOf(aPlan("Limit")
             .onTopOf(aPlan("Projection")
               .onTopOf(aPlan("Projection")
-                .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r).withOrder(providedOrder(prop("n", "prop1"))))
+                .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1").withOrder(providedOrder(prop("n", "prop1"))))
               )
             )
           )
@@ -951,7 +951,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
             .onTopOf(aPlan("Projection")
               .onTopOf(aPlan("Projection")
                 .onTopOf(aPlan("Projection")
-                  .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r).withOrder(providedOrder(prop("n", "prop1"))))
+                  .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1").withOrder(providedOrder(prop("n", "prop1"))))
                 )
               )
             )
@@ -974,7 +974,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
         includeSomewhere.aPlan("Optional")
           .onTopOf(aPlan("Limit")
             .onTopOf(aPlan("Projection")
-              .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop\\]".r).withOrder(providedOrder(prop("n", "prop"))))
+              .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n").containingArgumentForCachedProperty("n", "prop").withOrder(providedOrder(prop("n", "prop"))))
             )
           )
 
@@ -990,7 +990,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
         includeSomewhere.aPlan("Optional")
           .onTopOf(aPlan("Limit")
             .onTopOf(aPlan("Projection")
-              .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r).withOrder(providedOrder(prop("n", "prop1"))))
+              .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1").withOrder(providedOrder(prop("n", "prop1"))))
             )
           )
 
@@ -1028,7 +1028,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
           .onTopOf(aPlan("Optional")
             .onTopOf(aPlan("Limit")
               .onTopOf(aPlan("Projection")
-                .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop3\\]".r).withOrder(providedOrder(prop("n", "prop3"))))
+                .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n").containingArgumentForCachedProperty("n", "prop3").withOrder(providedOrder(prop("n", "prop3"))))
               )
             )
           )
@@ -1147,7 +1147,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       // index scan provide values but not order, since we don't know the property type
       result.executionPlanDescription() should
         includeSomewhere.aPlan("EagerAggregation")
-          .onTopOf(aPlan("NodeIndexScan").withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
+          .onTopOf(aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1"))
 
       val expected = expectedOrder(List(
         Map("min(n.prop1)" -> 40),

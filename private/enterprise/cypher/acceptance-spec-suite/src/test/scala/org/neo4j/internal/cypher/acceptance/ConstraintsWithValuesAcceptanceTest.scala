@@ -95,7 +95,7 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
       not(includeSomewhere.aPlan("Projection").withDBHits()) and
         includeSomewhere.aPlan("NodeIndexScan")
           .withExactVariables("n")
-          .containingArgumentRegex(".*cache\\[n\\.prop(1|2)\\]".r))
+          .containingArgumentForCachedProperty("n", "prop(1|2)"))
 
     val expectedResult: Map[String, Any] => Boolean = Set(
       Map[String,Any]("n.prop1" -> 40, "n.prop2" -> 5, "n.prop3" -> null),
@@ -227,7 +227,7 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     result.executionPlanDescription() should (
       not(includeSomewhere.aPlan("Projection").withDBHits()) and
         includeSomewhere.aPlan("NodeIndexScan")
-          .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))
+          .withExactVariables("n").containingArgumentForCachedProperty("n", "prop1"))
 
     result.toList should equal(expectedResult)
   }

@@ -19,8 +19,8 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       "WITH point({latitude: 12.78, longitude: 56.7}) as point RETURN distance(point,point) as dist",
       planComparisonStrategy = ComparePlansWithAssertion(_ should
-        includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{dist : .*\\}".r)
-          .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r))))
+        includeSomewhere.aPlan("Projection").containingArgumentForProjection("dist")
+          .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentForProjection("point"))))
 
     result.toList should equal(List(Map("dist" -> 0.0)))
   }
@@ -29,8 +29,8 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       "WITH point({latitude: 12.78, longitude: 56.7, height: 198.2}) as point RETURN distance(point,point) as dist",
       planComparisonStrategy = ComparePlansWithAssertion(_ should
-        includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{dist : .*\\}".r)
-          .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r))))
+        includeSomewhere.aPlan("Projection").containingArgumentForProjection("dist")
+          .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentForProjection("point"))))
 
     result.toList should equal(List(Map("dist" -> 0.0)))
   }
@@ -42,8 +42,8 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         |RETURN distance(p1,p2) as dist
       """.stripMargin,
       planComparisonStrategy = ComparePlansWithAssertion(_ should
-        includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{dist : .*\\}".r)
-          .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{p1 : .*, p2 : .*\\}".r))))
+        includeSomewhere.aPlan("Projection").containingArgumentForProjection("dist")
+          .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentForProjection("p1", "p2"))))
 
     result.columnAs("dist").next().asInstanceOf[Double] should equal(1.5)
   }
@@ -55,8 +55,8 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         |RETURN distance(p1,p2) as dist
       """.stripMargin,
       planComparisonStrategy = ComparePlansWithAssertion(_ should
-        includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{dist : .*\\}".r)
-          .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{p1 : .*, p2 : .*\\}".r))))
+        includeSomewhere.aPlan("Projection").containingArgumentForProjection("dist")
+          .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentForProjection("p1", "p2"))))
 
     Math.round(result.columnAs("dist").next().asInstanceOf[Double]) should equal(1270)
   }
@@ -68,8 +68,8 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         |RETURN distance(p1,p2) as dist
       """.stripMargin,
       planComparisonStrategy = ComparePlansWithAssertion(_ should
-        includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{dist : .*\\}".r)
-          .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{p1 : .*, p2 : .*\\}".r))))
+        includeSomewhere.aPlan("Projection").containingArgumentForProjection("dist")
+          .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentForProjection("p1", "p2"))))
 
     Math.round(result.columnAs("dist").next().asInstanceOf[Double]) should equal(1270)
   }
@@ -81,8 +81,8 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         |RETURN distance(p1,p2) as dist
       """.stripMargin,
       planComparisonStrategy = ComparePlansWithAssertion(_ should
-        includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{dist : .*\\}".r)
-          .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{p1 : .*, p2 : .*\\}".r))))
+        includeSomewhere.aPlan("Projection").containingArgumentForProjection("dist")
+          .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentForProjection("p1", "p2"))))
 
     Math.round(result.columnAs("dist").next().asInstanceOf[Double]) should equal(10116214)
   }
@@ -94,8 +94,8 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         |RETURN distance(p1,p2) as dist
       """.stripMargin,
       planComparisonStrategy = ComparePlansWithAssertion(_ should
-        includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{dist : .*\\}".r)
-          .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{p1 : .*, p2 : .*\\}".r))))
+        includeSomewhere.aPlan("Projection").containingArgumentForProjection("dist")
+          .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentForProjection("p1", "p2"))))
 
     Math.round(result.columnAs("dist").next().asInstanceOf[Double]) should equal(10116373)
   }
@@ -107,8 +107,8 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         |RETURN distance(p1,p2) as dist
       """.stripMargin,
       planComparisonStrategy = ComparePlansWithAssertion(_ should
-        includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{dist : .*\\}".r)
-          .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{p1 : .*, p2 : .*\\}".r))))
+        includeSomewhere.aPlan("Projection").containingArgumentForProjection("dist")
+          .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentForProjection("p1", "p2"))))
 
     Math.round(result.columnAs("dist").next().asInstanceOf[Double]) should equal(1)
   }
@@ -136,8 +136,8 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         |RETURN distance(p1,p2) as dist
       """.stripMargin,
       planComparisonStrategy = ComparePlansWithAssertion(_ should
-        includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{dist : .*\\}".r)
-          .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{p1 : .*, p2 : .*\\}".r))))
+        includeSomewhere.aPlan("Projection").containingArgumentForProjection("dist")
+          .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentForProjection("p1", "p2"))))
 
     Math.round(result.columnAs("dist").next().asInstanceOf[Double]) should equal(27842)
   }
@@ -745,7 +745,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
     // Then
     val plan = result.executionPlanDescription()
     plan should includeSomewhere
-      .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
+      .aPlan("Projection").containingArgumentForProjection("point")
       .onTopOf(aPlan("Filter").containingArgumentRegex("distance.*".r)
         .onTopOf(includeSomewhere.aPlan("NodeByLabelScan").containingArgument(":Place")))
     result.toList.toSet should equal(Set.empty)
@@ -854,7 +854,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
     // Then
     val plan = result.executionPlanDescription()
     plan should includeSomewhere
-      .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
+      .aPlan("Projection").containingArgumentForProjection("point")
       .onTopOf(aPlan("Filter").containingArgumentRegex("distance.*".r)
         .onTopOf(includeSomewhere.aPlan("NodeIndexSeekByRange")
           .containingArgumentRegex(("p:Place\\(location\\) WHERE distance\\(.+?\\) " + (if (inclusiveRange) "<= " else "< ") + ".*").r)))

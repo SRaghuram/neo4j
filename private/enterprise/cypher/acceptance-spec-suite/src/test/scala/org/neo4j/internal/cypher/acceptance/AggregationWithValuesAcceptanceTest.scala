@@ -131,7 +131,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     val result = executeSingle("MATCH (n:Awesome) RETURN collect(n.prop3) as res")
 
     result.executionPlanDescription() should
-      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop3\\]".r)
+      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop3")
 
     result.toList should equal(List(Map("res" -> List("abc", "cc"))))
   }
@@ -141,7 +141,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
-      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r)
+      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1")
 
     result.toList should equal(List(Map("min(property)" -> 40)))
   }
@@ -151,7 +151,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
-      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r)
+      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1")
 
     result.toList should equal(List(Map("min(property)" -> 40)))
   }
@@ -168,7 +168,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
-      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r)
+      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1")
 
     result.toList should equal(List(Map("min(prop)" -> 40)))
   }
@@ -178,7 +178,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
-      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r)
+      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1")
 
     result.toList should equal(List(Map("min(m.prop1)" -> 40)))
   }
@@ -188,7 +188,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
-      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentRegex(".*cache\\[n.prop1\\]".r)
+      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1")
 
     result.toList should equal(List(Map("min(prop)" -> 40)))
   }
@@ -205,7 +205,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
-      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentRegex(".*cache\\[n.prop1\\]".r)
+      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1")
 
     result.toList should equal(List(Map("min(prop)" -> 40)))
   }
@@ -222,7 +222,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
-      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentRegex(".*cache\\[n.prop1\\]".r)
+      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1")
 
     result.toList should equal(List(Map("min(property)" -> 40)))
   }
@@ -242,7 +242,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
-      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentRegex(".*cache\\[n.prop1\\]".r)
+      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1")
 
     result.toList should equal(List(Map("min" -> 40, "max" -> 42, "avg" -> 41)))
   }
@@ -299,7 +299,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     result.executionPlanDescription() should
       includeSomewhere.aPlan("CartesianProduct")
         .withChildren(
-          aPlan("NodeIndexScan").withExactVariables("m").containingArgumentRegex(".*cache\\[m.prop2\\]".r),
+          aPlan("NodeIndexScan").withExactVariables("m").containingArgumentForCachedProperty("m", "prop2"),
           aPlan("NodeByLabelScan").withExactVariables("n"))
 
     //count = 10 because of two calls to createSomeNodes
@@ -361,7 +361,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
-      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentRegex(".*cache\\[n.prop2\\]".r)
+      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop2")
 
     result.toList should equal(List(Map("count" -> 4)))
   }
@@ -433,7 +433,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     val result1 = executeWith(Configs.Create, query, executeBefore = createSomeNodes)
 
     result1.executionPlanDescription() should
-      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentRegex(".*cache\\[n.prop1\\]".r)
+      includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n").containingArgumentForCachedProperty("n", "prop1")
     result1.toList should equal(List(Map("avg" -> 41)))
 
     val result2 = executeWith(Configs.FromCountStore, "MATCH (n:New) RETURN count(n)")
@@ -445,7 +445,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
-      includeSomewhere.aPlan("NodeIndexScan").containingArgumentRegex(".*cache\\[n.prop2\\]".r)
+      includeSomewhere.aPlan("NodeIndexScan").containingArgumentForCachedProperty("n", "prop2")
 
     result.toList should equal(List(Map("count(prop)" -> 2)))
   }
@@ -455,7 +455,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
-      includeSomewhere.aPlan("NodeIndexScan").containingArgumentRegex(".*cache\\[n.prop1\\]".r)
+      includeSomewhere.aPlan("NodeIndexScan").containingArgumentForCachedProperty("n", "prop1")
 
     // 3 times 6 nodes
     result.toList should equal(List(Map("count(n.prop1)" -> 18)))
@@ -466,7 +466,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     val result = executeWith(Configs.CachedProperty, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
-      includeSomewhere.aPlan("NodeIndexScan").containingArgumentRegex(".*cache\\[n.prop1\\]".r)
+      includeSomewhere.aPlan("NodeIndexScan").containingArgumentForCachedProperty("n", "prop1")
 
     // 5 times 6 nodes
     result.toList should equal(List(Map("count(n.prop1)" -> 30)))
@@ -495,7 +495,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
-      includeSomewhere.aPlan("NodeIndexScan").containingArgumentRegex(".*cache\\[n.prop1\\]".r)
+      includeSomewhere.aPlan("NodeIndexScan").containingArgumentForCachedProperty("n", "prop1")
 
     // 2 times 6 nodes
     result.toList should equal(List(Map("count(n.prop1)" -> 12)))
@@ -506,7 +506,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     val result = executeWith(Configs.ProcedureCall, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
-      includeSomewhere.aPlan("NodeIndexScan").containingArgumentRegex(".*cache\\[n.prop1\\]".r)
+      includeSomewhere.aPlan("NodeIndexScan").containingArgumentForCachedProperty("n", "prop1")
 
     result.toList should equal(List(Map("count(n.prop1)" -> 6)))
   }

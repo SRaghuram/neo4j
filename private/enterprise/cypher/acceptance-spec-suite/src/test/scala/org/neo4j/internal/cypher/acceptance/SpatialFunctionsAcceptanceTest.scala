@@ -84,14 +84,14 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
   test("point function should work with literal map") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({latitude: 12.78, longitude: 56.7}) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 56.7, 12.78))))
   }
 
   test("point function should work with literal map and cartesian coordinates") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({x: 2.3, y: 4.5, crs: 'cartesian'}) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian, 2.3, 4.5))))
   }
@@ -99,35 +99,35 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
   test("point function should work with literal map and 3D cartesian coordinates") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       "RETURN point({x: 2.3, y: 4.5, z: 6.7, crs: 'cartesian-3D'}) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian_3D, 2.3, 4.5, 6.7))))
   }
 
   test("point function should work with literal map and srid") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({x: 2.3, y: 4.5, srid: 4326}) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 2.3, 4.5))))
   }
 
   test("point function should work with literal map and geographic coordinates") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({longitude: 2.3, latitude: 4.5, crs: 'WGS-84'}) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 2.3, 4.5))))
   }
 
   test("point function should work with node with only valid properties") {
     val result = executeWith(Configs.InterpretedAndSlotted, "CREATE (n {latitude: 12.78, longitude: 56.7}) RETURN point(n) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 56.7, 12.78))))
   }
 
   test("point function should work with node with some invalid properties") {
     val result = executeWith(Configs.InterpretedAndSlotted, "CREATE (n {latitude: 12.78, longitude: 56.7, banana: 'yes', some: 1.2, andAlso: [1,2]}) RETURN point(n) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 56.7, 12.78))))
   }
@@ -176,7 +176,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
   test("point function should work with integer arguments") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({x: 2, y: 4}) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian, 2, 4))))
   }
@@ -215,7 +215,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
   test("should default to Cartesian if missing cartesian CRS") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({x: 2.3, y: 4.5}) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian, 2.3, 4.5))))
   }
@@ -232,14 +232,14 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
   test("should default to WGS84 if missing geographic CRS") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({longitude: 2.3, latitude: 4.5}) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 2.3, 4.5))))
   }
 
   test("should allow Geographic CRS with x/y coordinates") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({x: 2.3, y: 4.5, crs: 'WGS-84'}) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 2.3, 4.5))))
   }
@@ -252,7 +252,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
   test("point function should work with previous map") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "WITH {latitude: 12.78, longitude: 56.7} as data RETURN point(data) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 56.7, 12.78))))
   }
@@ -263,7 +263,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (p:Place) RETURN point({latitude: p.latitude, longitude: p.longitude}) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
     // Then
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 56.7, 12.78))))
@@ -275,7 +275,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH ()-[r:PASS_THROUGH]->() RETURN point({latitude: r.latitude, longitude: r.longitude}) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
     // Then
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 56.7, 12.78))))
@@ -287,7 +287,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (p:Place) RETURN point(p) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
     // Then
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 56.7, 12.78))))
@@ -323,7 +323,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     // When
     val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78}) RETURN p.location as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
     // Then
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 12.78, 56.7))))
@@ -338,7 +338,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     // When
     val result = executeWith(Configs.All, "MATCH (p:Place) RETURN p.location as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
     // Then
     result.toList.length should be(1)
@@ -355,7 +355,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     // When
     val config = Configs.InterpretedAndSlotted
     val result = executeWith(config, "MATCH (p:Place) SET p.location = point({x: 1.2, y: 3.4, z: 5.6}) RETURN p.location as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
     // Then
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian_3D, 1.2, 3.4, 5.6))))
@@ -500,7 +500,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
         |RETURN points
       """.stripMargin
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("point")))
 
     // Then
     result.toList should equal(List(Map("points" -> List(
@@ -526,7 +526,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     // When
     val result = executeWith(Configs.All, "MATCH (p:Place) RETURN p.location as points",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{points : .*\\}".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("points")))
 
     // Then
     val points = result.columnAs("points").toList.head.asInstanceOf[Array[_]]
@@ -553,7 +553,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     // When
     val result = executeWith(Configs.All, "MATCH (p:Place) RETURN p.location as points",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{points : .*\\}".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("points")))
 
     // Then
     val points = result.columnAs("points").toList.head.asInstanceOf[Array[_]]
@@ -580,7 +580,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     // When
     val result = executeWith(Configs.All, "MATCH (p:Place) RETURN p.location as points",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{points : .*\\}".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("points")))
 
     // Then
     val points = result.columnAs("points").toList.head.asInstanceOf[Array[_]]
@@ -607,7 +607,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     // When
     val result = executeWith(Configs.All, "MATCH (p:Place) RETURN p.location as points",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{points : .*\\}".r)))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentForProjection("points")))
 
     // Then
     val points = result.columnAs("points").toList.head.asInstanceOf[Array[_]]

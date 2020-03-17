@@ -80,7 +80,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek")
-          .containingArgumentRegex("n:User\\(name, surname\\).*".r)
+          .containingArgumentForIndexPlan("n", "User", Seq("name", "surname"))
       }))
 
     // Then
@@ -129,11 +129,11 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek")
-          .containingArgumentRegex("n:User\\(name, surname\\).*".r)
+          .containingArgumentForIndexPlan("n", "User", Seq("name", "surname"))
         plan should not(includeSomewhere.aPlan("NodeIndexSeek")
-          .containingArgumentRegex("n:User\\(name\\).*".r))
+          .containingArgumentForIndexPlan("n", "User", Seq("name")))
         plan should not(includeSomewhere.aPlan("NodeIndexSeek")
-          .containingArgumentRegex("n:User\\(surname\\).*".r))
+          .containingArgumentForIndexPlan("n", "User", Seq("surname")))
       }))
 
     // Then
@@ -160,11 +160,11 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
        plan should includeSomewhere.aPlan("NodeIndexSeek")
-         .containingArgumentRegex("n:User\\(name, surname\\).*".r)
+         .containingArgumentForIndexPlan("n", "User", Seq("name", "surname"))
        plan should not(includeSomewhere.aPlan("NodeIndexSeek")
-         .containingArgumentRegex("n:User\\(name\\).*".r))
+         .containingArgumentForIndexPlan("n", "User", Seq("name")))
        plan should not(includeSomewhere.aPlan("NodeIndexSeek")
-         .containingArgumentRegex("n:User\\(surname\\).*".r))
+         .containingArgumentForIndexPlan("n", "User", Seq("surname")))
       }))
 
     // Then
@@ -195,11 +195,11 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should not(includeSomewhere.aPlan("NodeIndexSeek")
-          .containingArgumentRegex("n:User\\(name, surname\\).*".r))
+          .containingArgumentForIndexPlan("n", "User", Seq("name", "surname")))
         plan should not(includeSomewhere.aPlan("NodeIndexSeek")
-          .containingArgumentRegex("n:User\\(name\\).*".r))
+          .containingArgumentForIndexPlan("n", "User", Seq("name")))
         plan should includeSomewhere.aPlan("NodeIndexSeek")
-          .containingArgumentRegex("n:User\\(surname\\).*".r)
+          .containingArgumentForIndexPlan("n", "User", Seq("surname"))
       }))
 
     // Then
@@ -232,9 +232,9 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
               plan shouldNot includeSomewhere.aPlan("Filter")
 
             if (useScan)
-              plan should includeSomewhere.aPlan("NodeIndexScan").containingArgumentRegex("n:User\\(name, surname\\).*".r)
+              plan should includeSomewhere.aPlan("NodeIndexScan").containingArgumentForIndexPlan("n", "User", Seq("name", "surname"))
             else
-              plan should includeSomewhere.aPlan(s"NodeUniqueIndexSeek").containingArgumentRegex("n:User UNIQUE\\(name, surname\\).*".r)
+              plan should includeSomewhere.aPlan(s"NodeUniqueIndexSeek").containingArgumentForIndexPlan("n", "User", Seq("name", "surname"), unique = true)
           }))
 
         result.toComparableResult.toSet should equal(resultSet)
@@ -263,15 +263,15 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
             val scanPlan =
               if (shouldFilter)
                 aPlan("Filter").containingArgumentRegex(filterArguments: _*)
-                  .onTopOf(aPlan("NodeIndexScan").containingArgumentRegex("n:User\\(name, surname\\).*".r))
+                  .onTopOf(aPlan("NodeIndexScan").containingArgumentForIndexPlan("n", "User", Seq("name", "surname")))
               else
-                aPlan("NodeIndexScan").containingArgumentRegex("n:User\\(name, surname\\).*".r)
+                aPlan("NodeIndexScan").containingArgumentForIndexPlan("n", "User", Seq("name", "surname"))
 
             plan should includeSomewhere.aPlan("CartesianProduct")
               .withChildren(
                 scanPlan,
                 aPlan("NodeUniqueIndexSeek(Locking)")
-                  .containingArgumentRegex("s:User UNIQUE\\(name, surname\\).*".r))
+                  .containingArgumentForIndexPlan("s", "User", Seq("name", "surname"), unique = true))
           }))
 
         result.toComparableResult.toSet should equal(resultSet)
@@ -301,14 +301,14 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
             val lhs =
               if (shouldFilter)
                 aPlan("Filter").containingArgumentRegex(filterArgument.r)
-                  .onTopOf(aPlan(s"NodeUniqueIndexSeek").containingArgumentRegex("n:User UNIQUE\\(name, surname\\).*".r))
+                  .onTopOf(aPlan(s"NodeUniqueIndexSeek").containingArgumentForIndexPlan("n", "User", Seq("name", "surname"), unique = true))
               else
-                aPlan(s"NodeUniqueIndexSeek").containingArgumentRegex("n:User UNIQUE\\(name, surname\\).*".r)
+                aPlan(s"NodeUniqueIndexSeek").containingArgumentForIndexPlan("n", "User", Seq("name", "surname"), unique = true)
 
             plan should includeSomewhere.aPlan("CartesianProduct")
               .withChildren(lhs,
                             aPlan("NodeUniqueIndexSeek(Locking)")
-                              .containingArgumentRegex("s:User UNIQUE\\(name, surname\\).*".r))
+                              .containingArgumentForIndexPlan("s", "User", Seq("name", "surname"), unique = true))
           }))
 
         result.toComparableResult.toSet should equal(resultSet)
@@ -330,13 +330,13 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         plan should includeSomewhere.aPlan("Apply")
           .withLHS(aPlan("NodeUniqueIndexSeek(Locking)")
-            .containingArgumentRegex("n:User UNIQUE\\(name, surname\\).*".r)
+            .containingArgumentForIndexPlan("n", "User", Seq("name", "surname"), unique = true)
             .withRows(1)
             .withExactVariables("n")
           )
           .withRHS(
             includeSomewhere.aPlan("NodeUniqueIndexSeek(Locking)")
-              .containingArgumentRegex("s:User UNIQUE\\(name, surname\\).*".r)
+              .containingArgumentForIndexPlan("s", "User", Seq("name", "surname"), unique = true)
               .withRows(0)
               .withExactVariables("s", "n")
           )
@@ -349,13 +349,13 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         plan should includeSomewhere.aPlan("Apply")
           .withLHS(aPlan("NodeUniqueIndexSeek(Locking)")
-            .containingArgumentRegex("n:User UNIQUE\\(name, surname\\).*".r)
+            .containingArgumentForIndexPlan("n", "User", Seq("name", "surname"), unique = true)
             .withRows(1)
             .withExactVariables("n")
           )
           .withRHS(
             includeSomewhere.aPlan("NodeUniqueIndexSeek(Locking)")
-              .containingArgumentRegex("s:User UNIQUE\\(name, surname\\).*".r)
+              .containingArgumentForIndexPlan("s", "User", Seq("name", "surname"), unique = true)
               .withRows(1)
               .withExactVariables("s", "n")
           )
@@ -384,13 +384,13 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         plan should includeSomewhere.aPlan("Apply")
           .withLHS(aPlan("NodeUniqueIndexSeek")
-            .containingArgumentRegex("n:User UNIQUE\\(name, surname\\).*".r)
+            .containingArgumentForIndexPlan("n", "User", Seq("name", "surname"), unique = true)
             .withRows(2)
             .withExactVariables("n")
           )
           .withRHS(
             includeSomewhere.aPlan("NodeUniqueIndexSeek(Locking)")
-              .containingArgumentRegex("s:User UNIQUE\\(name, surname\\).*".r)
+              .containingArgumentForIndexPlan("s", "User", Seq("name", "surname"), unique = true)
               .withRows(2)
               .withExactVariables("s", "n")
           )
@@ -421,10 +421,10 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         plan should includeSomewhere.aPlan("CartesianProduct")
           .withChildren(
             aPlan("NodeUniqueIndexSeek(Locking)")
-              .containingArgumentRegex("n:User UNIQUE\\(name, surname\\).*".r)
+              .containingArgumentForIndexPlan("n", "User", Seq("name", "surname"), unique = true)
               .withExactVariables("n"),
             aPlan("NodeUniqueIndexSeek(Locking)")
-              .containingArgumentRegex("s:User UNIQUE\\(name, surname\\).*".r)
+              .containingArgumentForIndexPlan("s", "User", Seq("name", "surname"), unique = true)
               .withExactVariables("s")
           )
       }))
@@ -469,12 +469,12 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
                   .containingArgument("(n)-[:Knows]->(s)")
                   .onTopOf(aPlan("CartesianProduct")
                     .withLHS(aPlan("NodeUniqueIndexSeek(Locking)")
-                      .containingArgumentRegex("n:User UNIQUE\\(name, surname\\).*, cache\\[n.name\\], cache\\[n.surname\\]".r)
+                      .containingArgumentForIndexPlan("n", "User", Seq("name", "surname"), unique = true, caches = true)
                       .withRows(0)
                       .withExactVariables("n")
                     )
                     .withRHS(aPlan("NodeUniqueIndexSeek(Locking)")
-                      .containingArgumentRegex("s:User UNIQUE\\(name, surname\\).*, cache\\[n.name\\], cache\\[n.surname\\]".r)
+                      .containingArgumentForIndexPlan("s", "User", Seq("name", "surname"), unique = true, caches = true)
                       .withRows(0)
                       .withExactVariables("s")
                     )
@@ -486,7 +486,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
                   includeSomewhere.aPlan("Expand(All)")
                     .onTopOf(
                       includeSomewhere.aPlan("NodeUniqueIndexSeek(Locking)")
-                        .containingArgumentRegex("n:User UNIQUE\\(name, surname\\).*, cache\\[n.name\\], cache\\[n.surname\\]".r)
+                        .containingArgumentForIndexPlan("n", "User", Seq("name", "surname"), unique = true, caches = true)
                         .withRows(0)
                         .withExactVariables("n")
                     )
@@ -515,13 +515,13 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         plan should includeSomewhere.aPlan("Apply")
           .withLHS(aPlan("NodeUniqueIndexSeek(Locking)")
-            .containingArgumentRegex("n:User UNIQUE\\(name, surname\\).*".r)
+            .containingArgumentForIndexPlan("n", "User", Seq("name", "surname"), unique = true)
             .withRows(1)
             .withExactVariables("n")
           )
           .withRHS(
             includeSomewhere.aPlan("NodeUniqueIndexSeek(Locking)")
-              .containingArgumentRegex("s:User UNIQUE\\(name, surname\\).*".r)
+              .containingArgumentForIndexPlan("s", "User", Seq("name", "surname"), unique = true)
               .withRows(1)
               .withExactVariables("s", "n")
           )
@@ -538,9 +538,9 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:User) WHERE exists(n.surname) AND n.name = 'Jake' RETURN n",
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentRegex("n:User\\(name, surname\\).*".r)
-        plan should not(includeSomewhere.aPlan("NodeIndexSeek").containingArgumentRegex("n:User\\(name\\).*".r))
-        plan should not(includeSomewhere.aPlan("NodeIndexSeek").containingArgumentRegex("s:User\\(surname\\).*".r))
+        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentForIndexPlan("n", "User", Seq("name", "surname"))
+        plan should not(includeSomewhere.aPlan("NodeIndexSeek").containingArgumentForIndexPlan("n", "User", Seq("name")))
+        plan should not(includeSomewhere.aPlan("NodeIndexSeek").containingArgumentForIndexPlan("s", "User", Seq("surname")))
       }))
 
     // Then
@@ -555,9 +555,9 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:User) WHERE exists(n.surname) AND n.name = 'Jake' RETURN n",
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentRegex("n:User\\(name, surname\\).*".r)
-        plan should not(includeSomewhere.aPlan("NodeIndexSeek").containingArgumentRegex("n:User\\(name\\).*".r))
-        plan should not(includeSomewhere.aPlan("NodeIndexSeek").containingArgumentRegex("n:User\\(surname\\).*".r))
+        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentForIndexPlan("n", "User", Seq("name", "surname"))
+        plan should not(includeSomewhere.aPlan("NodeIndexSeek").containingArgumentForIndexPlan("n", "User", Seq("name")))
+        plan should not(includeSomewhere.aPlan("NodeIndexSeek").containingArgumentForIndexPlan("n", "User", Seq("surname")))
       }))
 
     // Then
@@ -572,9 +572,9 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:User) WHERE exists(n.surname) AND exists(n.name) RETURN n",
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexScan").containingArgumentRegex("n:User\\(name, surname\\).*".r)
-        plan should not(includeSomewhere.aPlan("NodeIndexScan").containingArgumentRegex("n:User\\(name\\).*".r))
-        plan should not(includeSomewhere.aPlan("NodeIndexScan").containingArgumentRegex("n:User\\(surname\\).*".r))
+        plan should includeSomewhere.aPlan("NodeIndexScan").containingArgumentForIndexPlan("n", "User", Seq("name", "surname"))
+        plan should not(includeSomewhere.aPlan("NodeIndexScan").containingArgumentForIndexPlan("n", "User", Seq("name")))
+        plan should not(includeSomewhere.aPlan("NodeIndexScan").containingArgumentForIndexPlan("n", "User", Seq("surname")))
       }))
 
     // Then
@@ -589,9 +589,9 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:User) WHERE exists(n.surname) AND exists(n.name) RETURN n",
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexScan").containingArgumentRegex("n:User\\(name, surname\\).*".r)
+        plan should includeSomewhere.aPlan("NodeIndexScan").containingArgumentForIndexPlan("n", "User", Seq("name", "surname"))
         plan should not(includeSomewhere.aPlan("NodeIndexScan").containingArgument("n:User(name)"))
-        plan should not(includeSomewhere.aPlan("NodeIndexScan").containingArgumentRegex("n:User\\(surname\\).*".r))
+        plan should not(includeSomewhere.aPlan("NodeIndexScan").containingArgumentForIndexPlan("n", "User", Seq("surname")))
       }))
 
     // Then
@@ -621,7 +621,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:Person) WHERE n.name = 'Joe' AND n.surname = 'Soap' RETURN n",
                 planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentRegex("n:Person\\(name, surname\\).*".r)
+        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentForIndexPlan("n", "Person", Seq("name", "surname"))
       }))
   }
 
@@ -644,7 +644,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         |ORDER BY x""".stripMargin,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentRegex("n:Foo\\(bar, baz\\).*".r)
+        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentForIndexPlan("n", "Foo", Seq("bar", "baz"))
       }))
 
     // Then
@@ -668,7 +668,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         |ORDER BY x""".stripMargin,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentRegex("n:Foo\\(bar, baz\\).*".r)
+        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentForIndexPlan("n", "Foo", Seq("bar", "baz"))
       }))
 
     // Then
@@ -692,7 +692,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         |ORDER BY x""".stripMargin,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentRegex("n:Foo\\(bar, baz\\).*".r)
+        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentForIndexPlan("n", "Foo", Seq("bar", "baz"))
       }))
 
     // Then
@@ -712,7 +712,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:L {foo: 42, bar: 1337, baz: 1980}) RETURN count(n)",
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentRegex("n:L\\(foo, bar, baz\\).*".r)
+        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentForIndexPlan("n", "L", Seq("foo", "bar", "baz"))
       }))
     result.toComparableResult should equal(Seq(Map("count(n)" -> 1)))
   }
@@ -730,7 +730,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:L {foo: 42, bar: 1337, baz: 1980}) RETURN count(n)",
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentRegex("n:L\\(foo, bar, baz\\).*".r)
+        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentForIndexPlan("n", "L", Seq("foo", "bar", "baz"))
       }))
     result.toComparableResult should equal(Seq(Map("count(n)" -> 1)))
   }
@@ -800,7 +800,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (n:X) where n.p1 = 1 AND n.p2 > 0 return n;",
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentRegex("n:X\\(p1, p2\\).*".r)
+        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentForIndexPlan("n", "X", Seq("p1", "p2"))
       }))
 
     // Then
@@ -816,7 +816,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (n:X) where n.p1 = 1 AND n.p2 > 0 return n;",
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentRegex("n:X\\(p1, p2\\).*".r)
+        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentForIndexPlan("n", "X", Seq("p1", "p2"))
       }))
 
     // Then
@@ -835,7 +835,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       "MATCH (n:X) WHERE exists(n.p1) AND n.p2 > 1 RETURN n.p1 AS p1, n.p2 AS p2",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexScan").containingArgumentRegex("n:X\\(p1, p2\\).*".r)
+        plan should includeSomewhere.aPlan("NodeIndexScan").containingArgumentForIndexPlan("n", "X", Seq("p1", "p2"))
       }))
 
     // Then
@@ -854,7 +854,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       "MATCH (n:X) WHERE exists(n.p1) AND n.p2 > 1 RETURN n.p1 AS p1, n.p2 AS p2",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexScan").containingArgumentRegex("n:X\\(p1, p2\\).*".r)
+        plan should includeSomewhere.aPlan("NodeIndexScan").containingArgumentForIndexPlan("n", "X", Seq("p1", "p2"))
       }))
 
     // Then
@@ -958,9 +958,9 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
                 plan shouldNot includeSomewhere.aPlan("Filter")
 
               if (useScan)
-                plan should includeSomewhere.aPlan("NodeIndexScan").containingArgumentRegex("n:User\\(name, surname, age, active\\).*".r)
+                plan should includeSomewhere.aPlan("NodeIndexScan").containingArgumentForIndexPlan("n", "User", Seq("name", "surname", "age", "active"))
               else
-                plan should includeSomewhere.aPlan(s"NodeIndexSeek").containingArgumentRegex("n:User\\(name, surname, age, active\\).*".r)
+                plan should includeSomewhere.aPlan(s"NodeIndexSeek").containingArgumentForIndexPlan("n", "User", Seq("name", "surname", "age", "active"))
             }))
         } catch {
           case e: Exception =>
@@ -1012,7 +1012,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
                           planComparisonStrategy = ComparePlansWithAssertion(plan => {
         // Then
         plan should includeSomewhere.aPlan(s"NodeIndexSeek")
-          .containingArgumentRegex("person:Person\\(highScore, name\\).*".r).withRows(4)
+          .containingArgumentForIndexPlan("person", "Person", Seq("highScore", "name")).withRows(4)
       }))
     // Then
     res.toComparableResult should be(expected)
@@ -1040,7 +1040,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
           )
           .withRows(4)
           .onTopOf(aPlan(s"NodeIndexScan")
-            .containingArgumentRegex("person:Person\\(name, highScore\\).*".r)
+            .containingArgumentForIndexPlan("person", "Person", Seq("name", "highScore"))
             .withRows(7)
           )
       }))
@@ -1094,9 +1094,9 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
                 plan shouldNot includeSomewhere.aPlan("Filter")
 
               if (useScan)
-                plan should includeSomewhere.aPlan("NodeIndexScan").containingArgumentRegex("n:User\\(name, surname\\).*".r)
+                plan should includeSomewhere.aPlan("NodeIndexScan").containingArgumentForIndexPlan("n", "User", Seq("name", "surname"))
               else
-                plan should includeSomewhere.aPlan(s"NodeIndexSeek").containingArgumentRegex("n:User\\(name, surname\\).*".r)
+                plan should includeSomewhere.aPlan(s"NodeIndexSeek").containingArgumentForIndexPlan("n", "User", Seq("name", "surname"))
             }))
 
           // Then
@@ -1117,7 +1117,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val result = executeWith(Configs.NodeById - Configs.Compiled, "match (a), (b:X) where id(a) = $id AND b.p1 = a.p1 AND b.p2 = 1 return b",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentRegex("b:X\\(p1, p2\\).*".r)
+        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentForIndexPlan("b", "X", Seq("p1", "p2"))
       }), params = Map("id" -> a.getId))
 
     result.toComparableResult should equal(Seq(Map("b" -> b)))
@@ -1260,7 +1260,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val resultIndex = executeWith(Configs.UDF, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentRegex("n:Runner\\(name, result\\).*".r)
+        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgumentForIndexPlan("n", "Runner", Seq("name", "result"))
       }))
 
     // Then
@@ -1279,7 +1279,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek")
-          .containingArgumentRegex("n:Awesome\\(prop1, prop2\\).*, cache\\[n.prop1\\], cache\\[n.prop2\\]".r)
+          .containingArgumentForIndexPlan("n", "Awesome", Seq("prop1", "prop2"), caches = true)
           .withExactVariables("n")
         plan should not(includeSomewhere.aPlan("Filter"))
       }))
@@ -1297,7 +1297,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek")
-          .containingArgumentRegex("n:Awesome\\(prop1, prop2, prop5\\).*, cache\\[n.prop1\\], cache\\[n.prop2\\], cache\\[n.prop5\\]".r)
+          .containingArgumentForIndexPlan("n", "Awesome", Seq("prop1", "prop2", "prop5"), caches = true)
           .withExactVariables("n")
         plan should not(includeSomewhere.aPlan("Filter"))
       }))
@@ -1330,7 +1330,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek")
-          .containingArgumentRegex("n:Awesome\\(prop1, prop2\\).*, cache\\[n.prop1\\], cache\\[n.prop2\\]".r)
+          .containingArgumentForIndexPlan("n", "Awesome", Seq("prop1", "prop2"), caches = true)
           .withExactVariables("n")
         plan should not(includeSomewhere.aPlan("Filter"))
       }))
@@ -1352,7 +1352,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek")
-          .containingArgumentRegex("n:Awesome\\(prop1, prop2\\).*, cache\\[n.prop1\\], cache\\[n.prop2\\]".r)
+          .containingArgumentForIndexPlan("n", "Awesome", Seq("prop1", "prop2"), caches = true)
           .withExactVariables("n")
         plan should not(includeSomewhere.aPlan("Filter"))
       }))
@@ -1378,7 +1378,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         plan should includeSomewhere.aPlan("Filter")
           .containingArgumentRegex(".*cache\\[n\\.prop2\\] = .*".r)
           .onTopOf(aPlan("NodeIndexSeek")
-            .containingArgumentRegex("n:Awesome\\(prop1, prop2\\).*, cache\\[n.prop1\\], cache\\[n.prop2\\]".r)
+            .containingArgumentForIndexPlan("n", "Awesome", Seq("prop1", "prop2"), caches = true)
             .withExactVariables("n"))
       }))
 
@@ -1405,7 +1405,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         plan should includeSomewhere.aPlan("Filter")
           .containingArgumentRegex(".*cache\\[n\\.prop2\\] > .*".r)
           .onTopOf(aPlan("NodeIndexSeek")
-            .containingArgumentRegex("n:Awesome\\(prop1, prop2\\).*, cache\\[n.prop1\\], cache\\[n.prop2\\]".r)
+            .containingArgumentForIndexPlan("n", "Awesome", Seq("prop1", "prop2"), caches = true)
             .withExactVariables("n"))
       }))
 
@@ -1428,7 +1428,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek")
-          .containingArgumentRegex("n:Awesome\\(prop1, prop2\\).*, cache\\[n.prop1\\], cache\\[n.prop2\\]".r)
+          .containingArgumentForIndexPlan("n", "Awesome", Seq("prop1", "prop2"), caches = true)
           .withExactVariables("n")
         plan should not(includeSomewhere.aPlan("Filter"))
       }))
@@ -1455,7 +1455,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexScan")
-          .containingArgumentRegex("n:Awesome\\(prop1, prop2\\).*, cache\\[n.prop1\\], cache\\[n.prop2\\]".r)
+          .containingArgumentForIndexPlan("n", "Awesome", Seq("prop1", "prop2"), caches = true)
           .withExactVariables("n")
         plan should not(includeSomewhere.aPlan("Filter"))
       }))
@@ -1500,7 +1500,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         plan should includeSomewhere.aPlan("Filter")
           .containingArgumentRegex(".*cache\\[n\\.prop2\\] >= .*".r)
           .onTopOf(aPlan("NodeIndexSeek")
-            .containingArgumentRegex("n:Awesome\\(prop1, prop2\\).*, cache\\[n.prop1\\], cache\\[n.prop2\\]".r)
+            .containingArgumentForIndexPlan("n", "Awesome", Seq("prop1", "prop2"), caches = true)
             .withExactVariables("n"))
       }))
 
@@ -1544,7 +1544,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek")
-          .containingArgumentRegex("n:Awesome\\(prop1, prop2\\).*, cache\\[n.prop1\\], cache\\[n.prop2\\]".r)
+          .containingArgumentForIndexPlan("n", "Awesome", Seq("prop1", "prop2"), caches = true)
           .withExactVariables("n")
       }))
 
@@ -1586,7 +1586,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         //THEN
         plan should includeSomewhere.aPlan("Filter")
           .containingArgumentRegex(".*cache\\[n\\.prop1\\] ENDS WITH .*".r, ".*cache\\[n\\.prop2\\] >= .*".r)
-          .onTopOf(aPlan("NodeIndexScan").containingArgumentRegex("n:Awesome\\(prop1, prop2\\).*".r))
+          .onTopOf(aPlan("NodeIndexScan").containingArgumentForIndexPlan("n", "Awesome", Seq("prop1", "prop2")))
       }))
 
     val expected = Set(
@@ -1625,7 +1625,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         //THEN
         plan should includeSomewhere.aPlan("Filter")
           .containingArgumentRegex(".*cache\\[n\\.prop1\\] ENDS WITH .*".r, ".*cache\\[n\\.prop2\\] >= .*".r)
-          .onTopOf(aPlan("NodeIndexScan").containingArgumentRegex("n:Awesome\\(prop1, prop2\\).*".r))
+          .onTopOf(aPlan("NodeIndexScan").containingArgumentForIndexPlan("n", "Awesome", Seq("prop1", "prop2")))
       }))
 
     val expected = Set(
@@ -1664,7 +1664,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         //THEN
         plan should includeSomewhere.aPlan("Filter")
           .containingArgumentRegex(".*cache\\[n\\.prop1\\] CONTAINS .*".r, ".*cache\\[n\\.prop2\\] >= .*".r)
-          .onTopOf(aPlan("NodeIndexScan").containingArgumentRegex("n:Awesome\\(prop1, prop2\\).*".r))
+          .onTopOf(aPlan("NodeIndexScan").containingArgumentForIndexPlan("n", "Awesome", Seq("prop1", "prop2")))
       }))
 
     val expected = Set(
@@ -1705,7 +1705,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek")
-          .containingArgumentRegex("n:User\\(city, name\\).*, cache\\[n.city\\], cache\\[n.name\\]".r)
+          .containingArgumentForIndexPlan("n", "User", Seq("city", "name"), caches = true)
           .withExactVariables("n")
       }))
 
@@ -1749,7 +1749,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek")
-          .containingArgumentRegex("n:User\\(name, city\\).*, cache\\[n.name\\], cache\\[n.city\\]".r)
+          .containingArgumentForIndexPlan("n", "User", Seq("name", "city"), caches = true)
           .withExactVariables("n")
       }))
 
@@ -1781,7 +1781,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek")
-          .containingArgumentRegex("n:Awesome\\(prop1, prop2\\).*".r)
+          .containingArgumentForIndexPlan("n", "Awesome", Seq("prop1", "prop2"))
           .withExactVariables("n")
         plan should not(includeSomewhere.aPlan("Filter"))
       }))
@@ -1809,7 +1809,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek")
-          .containingArgumentRegex("n:Awesome\\(prop1, prop2\\).*".r)
+          .containingArgumentForIndexPlan("n", "Awesome", Seq("prop1", "prop2"))
           .withExactVariables("n")
         plan should not(includeSomewhere.aPlan("Filter"))
       }))
