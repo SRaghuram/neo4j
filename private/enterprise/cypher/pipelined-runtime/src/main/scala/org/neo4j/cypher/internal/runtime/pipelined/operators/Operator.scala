@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import org.neo4j.cypher.internal.NonFatalCypherError
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.profiling.QueryProfiler
-import org.neo4j.cypher.internal.runtime.WithHeapUsageEstimation
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
@@ -21,6 +20,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
+import org.neo4j.memory.Measurable
 
 /**
  * Input to use for starting an operator task.
@@ -266,7 +266,7 @@ trait OperatorTask extends HasWorkIdentity {
 /**
  * Operator task which might require several operate calls to be fully executed.
  */
-trait ContinuableOperatorTask extends OperatorTask with WithHeapUsageEstimation {
+trait ContinuableOperatorTask extends OperatorTask with Measurable {
   def canContinue: Boolean
   def close(operatorCloser: OperatorCloser, resources: QueryResources): Unit = {
     // NOTE: we have to close cursors before closing the input to make sure that all cursors

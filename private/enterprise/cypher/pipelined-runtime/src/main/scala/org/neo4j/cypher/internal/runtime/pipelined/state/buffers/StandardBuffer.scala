@@ -8,8 +8,8 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 import java.util
 
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
-import org.neo4j.cypher.internal.runtime.WithHeapUsageEstimation
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.Measurable
 
 import scala.collection.JavaConverters.asJavaIteratorConverter
 import scala.collection.mutable.ArrayBuffer
@@ -54,7 +54,7 @@ class StandardBuffer[T <: AnyRef] extends Buffer[T] {
 /**
  * @param operatorId the ID of the operator that reads from this buffer
  */
-class MemoryTrackingStandardBuffer[T <: WithHeapUsageEstimation](memoryTracker: QueryMemoryTracker, operatorId: Id) extends StandardBuffer[T] {
+class MemoryTrackingStandardBuffer[T <: Measurable](memoryTracker: QueryMemoryTracker, operatorId: Id) extends StandardBuffer[T] {
   override def put(t: T): Unit = {
     memoryTracker.allocated(t, operatorId.x)
     super.put(t)

@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.cypher.internal.profiling.QueryProfiler
-import org.neo4j.cypher.internal.runtime.WithHeapUsageEstimation
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
@@ -17,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperatorState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.PreparedOutput
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.Measurable
 
 /**
  * The [[Task]] of executing an [[ExecutablePipeline]] once.
@@ -29,7 +29,7 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
                         outputOperatorState: OutputOperatorState,
                         state: PipelinedQueryState,
                         pipelineState: PipelineState)
-  extends Task[QueryResources] with WithHeapUsageEstimation {
+  extends Task[QueryResources] with Measurable {
 
   /**
    * This _output reference is needed to support reactive results in produce results,
