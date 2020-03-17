@@ -37,6 +37,34 @@
         </license>
     </licenses>
 
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <!-- ITs typically do not use all that much CPU, so a high fork count should be fine. -->
+                    <forkCount>8</forkCount>
+                    <!-- When issues happen, we want as much information as possible. -->
+                    <trimStackTrace>false</trimStackTrace>
+                    <!-- Fork creation should have a relatively minor impact compared to test run times. Robustness is thus preferred. -->
+                    <reuseForks>false</reuseForks>
+                    <!-- We want predictable and comparable runs. -->
+                    <runOrder>alphabetical</runOrder>
+                </configuration>
+            </plugin>
+            <plugin>
+                <!-- This branch typically not relevant for ITs, but added for symmetry. -->
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <forkCount>8</forkCount>
+                    <trimStackTrace>false</trimStackTrace>
+                    <reuseForks>false</reuseForks>
+                    <runOrder>alphabetical</runOrder>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
     <dependencies>
 
         <dependency>
