@@ -1390,10 +1390,10 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
            idx <- intermediateCompileExpression(index)
       } yield {
         val variableName = namer.nextVariableName()
-        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName, noValueOr(c, idx)(noValueOr(c, idx)(
+        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName, noValueOr(c, idx)(
           invokeStatic(method[CypherFunctions, AnyValue, AnyValue, AnyValue, DbAccess,
             NodeCursor, RelationshipScanCursor, PropertyCursor]("containerIndex"),
-                       c.ir, idx.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR)))))
+                       c.ir, idx.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR))))
         val ops = block(lazySet, load(variableName))
         val nullChecks = block(lazySet, equal(load(variableName), noValue))
         IntermediateExpression(
