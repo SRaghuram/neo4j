@@ -86,6 +86,7 @@ import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.Read
+import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
@@ -173,8 +174,8 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
 
       val relVarExpandPredicate =
         if (tempRelationshipOffset != NO_PREDICATE_OFFSET) {
-          new VarExpandPredicate[RelationshipSelectionCursor] {
-            override def isTrue(cursor: RelationshipSelectionCursor): Boolean = {
+          new VarExpandPredicate[RelationshipTraversalCursor] {
+            override def isTrue(cursor: RelationshipTraversalCursor): Boolean = {
               val value = VarExpandCursor.relationshipFromCursor(state.queryContext, cursor)
               predicateState.expressionVariables(tempRelationshipOffset) = value
               relationshipPredicate(inputCursor, predicateState) eq Values.TRUE
@@ -455,7 +456,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
         oneTime(arraySet(EXPRESSION_VARIABLES, tempNodeOffset, invoke(DB_ACCESS,
           method[DbAccess, NodeValue, Long]("nodeById"),
           invoke(load("selectionCursor"),
-            method[RelationshipSelectionCursor, Long](
+            method[RelationshipTraversalCursor, Long](
               "otherNodeReference"))))),
         equal(trueValue, nullCheckIfRequired(pred)))
     }
@@ -466,7 +467,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
       block(
         oneTime(arraySet(EXPRESSION_VARIABLES, tempRelOffset,
           invokeStatic(
-            method[VarExpandCursor, RelationshipValue, DbAccess, RelationshipSelectionCursor]("relationshipFromCursor"),
+            method[VarExpandCursor, RelationshipValue, DbAccess, RelationshipTraversalCursor]("relationshipFromCursor"),
             DB_ACCESS, load("selectionCursor")))),
         equal(trueValue, nullCheckIfRequired(pred)))
     }
@@ -553,7 +554,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
         param[Array[AnyValue]]("params"),
         param[ExpressionCursors]("cursors"),
         param[Array[AnyValue]]("expressionVariables"),
-        param[RelationshipSelectionCursor]("selectionCursor"))),
+        param[RelationshipTraversalCursor]("selectionCursor"))),
       fields)
   }
 

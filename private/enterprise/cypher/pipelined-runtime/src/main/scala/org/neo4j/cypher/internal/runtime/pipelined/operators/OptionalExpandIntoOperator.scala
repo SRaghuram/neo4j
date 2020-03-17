@@ -53,6 +53,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.helpers.CachingExpandInto
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.values.storable.Values
@@ -116,7 +117,7 @@ class OptionalExpandIntoOperator(val workIdentity: WorkIdentity,
       val toNode = getToNodeFunction.applyAsLong(inputCursor)
       hasWritten = false
       if (entityIsNull(fromNode) || entityIsNull(toNode)) {
-        relationships = RelationshipSelectionCursor.EMPTY
+        traversalCursor = RelationshipTraversalCursor.EMPTY
       } else {
         setUp(state, resources)
         setupCursors(state.queryContext, resources, fromNode, toNode)
@@ -126,9 +127,9 @@ class OptionalExpandIntoOperator(val workIdentity: WorkIdentity,
 
     override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
 
-      while (outputRow.onValidRow && relationships.next()) {
+      while (outputRow.onValidRow && traversalCursor.next()) {
         hasWritten = writeRow(outputRow,
-          relationships.relationshipReference())
+          traversalCursor.relationshipReference())
       }
       if (outputRow.onValidRow && !hasWritten) {
         writeNullRow(outputRow)
@@ -236,11 +237,11 @@ class OptionalExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
       ifElse(and(notEqual(load(fromNode), constant(-1L)), notEqual(load(toNode), constant(-1L)))) {
         block(
           setUpCursors(fromNode,toNode),
-          setField(canContinue, cursorNext[RelationshipSelectionCursor](loadField(relationshipsField))),
+          setField(canContinue, cursorNext[RelationshipTraversalCursor](loadField(relationshipsField))),
         )
       }{//else
         setField(relationshipsField,
-          getStatic[RelationshipSelectionCursor, RelationshipSelectionCursor]("EMPTY"))
+          getStatic[RelationshipTraversalCursor, RelationshipTraversalCursor]("EMPTY"))
       },
       constant(true))
   }
@@ -293,7 +294,7 @@ class OptionalExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
           doIfPredicateOrElse(condition(load(shouldWriteRow))(innerBlock))(innerBlock),
           doIfInnerCantContinue(
             setField(canContinue, and(loadField(canContinue),
-              cursorNext[RelationshipSelectionCursor](loadField(relationshipsField))))),
+              cursorNext[RelationshipTraversalCursor](loadField(relationshipsField))))),
           endInnerLoop
         )))
   }

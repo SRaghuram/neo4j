@@ -42,6 +42,7 @@ import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.kernel.api.SchemaRead
 import org.neo4j.internal.kernel.api.TokenRead
+import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.helpers.CachingExpandInto
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
@@ -182,7 +183,7 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
       m.declareAndInitialize("from", CodeGenType.primitiveNode)
       m.declareAndInitialize("to", CodeGenType.primitiveNode)
       val expandInto = m.generator.declare(typeRef[CachingExpandInto], "expandInto")
-      val local = m.generator.declare(typeRef[RelationshipSelectionCursor], "iter")
+      val local = m.generator.declare(typeRef[RelationshipTraversalCursor], "iter")
       m.generator.assign(expandInto,invoke(newInstance(typeRef[CachingExpandInto]),
         MethodReference.constructorReference(typeRef[CachingExpandInto],
           typeRef[Read],
@@ -202,7 +203,7 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
       m.declareAndInitialize("from", CodeGenType.primitiveNode)
       m.declareAndInitialize("to", CodeGenType.primitiveNode)
       val expandInto = m.generator.declare(typeRef[CachingExpandInto], "expandInto")
-      val local = m.generator.declare(typeRef[RelationshipSelectionCursor], "iter")
+      val local = m.generator.declare(typeRef[RelationshipTraversalCursor], "iter")
       m.generator.assign(expandInto,invoke(newInstance(typeRef[CachingExpandInto]),
         MethodReference.constructorReference(typeRef[CachingExpandInto],
           typeRef[Read],

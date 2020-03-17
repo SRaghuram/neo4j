@@ -30,8 +30,8 @@ import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.TokenRead
+import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.helpers.CachingExpandInto
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
 import org.neo4j.kernel.impl.api.RelationshipDataExtractor
 import org.neo4j.kernel.impl.core.TransactionalEntityFactory
@@ -61,7 +61,7 @@ object Methods {
   val startNode: MethodReference = method[RelationshipDataExtractor, Long]("startNode")
   val endNode: MethodReference = method[RelationshipDataExtractor, Long]("endNode")
   val typeOf: MethodReference = method[RelationshipDataExtractor, Int]("type")
-  val connectingRelationships: MethodReference = method[CachingExpandInto, RelationshipSelectionCursor]("connectingRelationships",
+  val connectingRelationships: MethodReference = method[CachingExpandInto, RelationshipTraversalCursor]("connectingRelationships",
     typeRef[CursorFactory],
     typeRef[NodeCursor],
     typeRef[Long],
