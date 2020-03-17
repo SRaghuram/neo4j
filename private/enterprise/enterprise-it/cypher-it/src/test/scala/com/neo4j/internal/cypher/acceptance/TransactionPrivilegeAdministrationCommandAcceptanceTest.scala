@@ -52,15 +52,18 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
     execute("CREATE ROLE role")
 
     // WHEN
     execute("GRANT SHOW TRANSACTION ON DATABASE foo TO role")
+    execute("GRANT SHOW TRANSACTION ON DATABASE $db TO role", Map("db" -> "bar"))
     execute("GRANT SHOW TRANSACTION (user1,user2) ON DEFAULT DATABASE TO role")
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       showTransaction("*").database("foo").role("role").map,
+      showTransaction("*").database("bar").role("role").map,
       showTransaction("user1").database(DEFAULT).role("role").map,
       showTransaction("user2").database(DEFAULT).role("role").map
     ))
@@ -122,6 +125,12 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
       execute("GRANT SHOW TRANSACTION (*) ON DATABASE foo TO role")
       // THEN
     } should have message "Failed to grant show_transaction privilege to role 'role': Database 'foo' does not exist."
+
+    the[DatabaseNotFoundException] thrownBy {
+      // WHEN
+      execute("GRANT SHOW TRANSACTION (*) ON DATABASE $db TO role", Map("db" -> "foo"))
+      // THEN
+    } should have message "Failed to grant show_transaction privilege to role 'role': Database 'foo' does not exist."
   }
 
   test("should grant terminate transaction privilege") {
@@ -146,15 +155,18 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
     execute("CREATE ROLE role")
 
     // WHEN
     execute("DENY TERMINATE TRANSACTION ON DATABASE foo TO role")
+    execute("DENY TERMINATE TRANSACTION ON DATABASE $db TO role", Map("db" -> "bar"))
     execute("DENY TERMINATE TRANSACTION (user1,user2) ON DEFAULT DATABASE TO role")
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       terminateTransaction("*", DENIED).database("foo").role("role").map,
+      terminateTransaction("*", DENIED).database("bar").role("role").map,
       terminateTransaction("user1", DENIED).database(DEFAULT).role("role").map,
       terminateTransaction("user2", DENIED).database(DEFAULT).role("role").map
     ))
@@ -196,6 +208,12 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
     the[DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("DENY TERMINATE TRANSACTION (*) ON DATABASE foo TO role")
+      // THEN
+    } should have message "Failed to deny terminate_transaction privilege to role 'role': Database 'foo' does not exist."
+
+    the[DatabaseNotFoundException] thrownBy {
+      // WHEN
+      execute("DENY TERMINATE TRANSACTION (*) ON DATABASE $db TO role", Map("db" -> "foo"))
       // THEN
     } should have message "Failed to deny terminate_transaction privilege to role 'role': Database 'foo' does not exist."
   }
@@ -244,16 +262,19 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
     execute("CREATE ROLE role")
     execute("GRANT SHOW TRANSACTION (*) ON DATABASE foo TO role")
     execute("GRANT TERMINATE TRANSACTION (*) ON DATABASE foo TO role")
     execute("GRANT TRANSACTION (*) ON DATABASE foo TO role")
+    execute("GRANT TRANSACTION ON DATABASE bar TO role")
     execute("DENY TRANSACTION ON DEFAULT DATABASE TO role")
     execute("GRANT TRANSACTION (user1) ON DATABASE * TO role")
     execute("DENY TRANSACTION (user1) ON DATABASE * TO role")
 
     // WHEN
     execute("REVOKE TRANSACTION ON DATABASE foo FROM role")
+    execute("REVOKE TRANSACTION ON DATABASE $db FROM role", Map("db" -> "bar"))
     execute("REVOKE TRANSACTION ON DEFAULT DATABASE FROM role")
     execute("REVOKE TRANSACTION (user1,user2) ON DATABASE * FROM role")
 
@@ -283,5 +304,6 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     execute("REVOKE TRANSACTION (*) ON DATABASE foo FROM role")
+    execute("REVOKE TRANSACTION (*) ON DATABASE $db FROM role", Map("db" -> "foo"))
   }
 }

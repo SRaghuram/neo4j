@@ -7,6 +7,7 @@ package com.neo4j.internal.cypher.planner
 
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
+import org.neo4j.cypher.internal.plandescription.Arguments.Database
 import org.neo4j.cypher.internal.plandescription.Arguments.Qualifier
 
 class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationCommandPlannerTestBase {
@@ -26,6 +27,28 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
           graphPrivilegePlan("GrantTraverse", Qualifier("NODES *"), "editor",
             graphPrivilegePlan("GrantTraverse", Qualifier("RELATIONSHIPS *"), "reader",
               graphPrivilegePlan("GrantTraverse", Qualifier("NODES *"), "reader",
+                assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+              )
+            )
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Grant traverse with parameter") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN GRANT TRAVERSE ON GRAPH $db TO reader, editor", Map("db" -> DEFAULT_DATABASE_NAME)).executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("GrantTraverse", Database("GRAPH $db"), Qualifier("RELATIONSHIPS *"), "editor",
+          graphPrivilegePlan("GrantTraverse", Database("GRAPH $db"), Qualifier("NODES *"), "editor",
+            graphPrivilegePlan("GrantTraverse", Database("GRAPH $db"), Qualifier("RELATIONSHIPS *"), "reader",
+              graphPrivilegePlan("GrantTraverse", Database("GRAPH $db"), Qualifier("NODES *"), "reader",
                 assertDbmsAdminPlan("ASSIGN PRIVILEGE")
               )
             )
@@ -119,6 +142,28 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     )
   }
 
+  test("Deny read with parameter") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN DENY READ {foo, prop} ON GRAPH $db TO reader", Map("db" -> DEFAULT_DATABASE_NAME)).executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("DenyRead", Database("GRAPH $db"), resourceArg("prop"), Qualifier("RELATIONSHIPS *"), "reader",
+          graphPrivilegePlan("DenyRead", Database("GRAPH $db"), resourceArg("foo"), Qualifier("RELATIONSHIPS *"), "reader",
+            graphPrivilegePlan("DenyRead", Database("GRAPH $db"), resourceArg("prop"), Qualifier("NODES *"), "reader",
+              graphPrivilegePlan("DenyRead", Database("GRAPH $db"), resourceArg("foo"), Qualifier("NODES *"), "reader",
+                assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+              )
+            )
+          )
+        )
+      ).toString
+    )
+  }
+
   test("Revoke read") {
     selectDatabase(SYSTEM_DATABASE_NAME)
 
@@ -190,6 +235,24 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
       logPlan(
         graphPrivilegePlan("DenyMatch", resourceArg("prop"), Qualifier("RELATIONSHIPS *"), "reader",
           graphPrivilegePlan("DenyMatch", resourceArg("prop"), Qualifier("NODES *"), "reader",
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Deny match prop with parameter") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN DENY MATCH {prop} ON GRAPH $db TO reader", Map("db" -> DEFAULT_DATABASE_NAME)).executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("DenyMatch", Database("GRAPH $db"), resourceArg("prop"), Qualifier("RELATIONSHIPS *"), "reader",
+          graphPrivilegePlan("DenyMatch", Database("GRAPH $db"), resourceArg("prop"), Qualifier("NODES *"), "reader",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
@@ -295,6 +358,28 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
         graphPrivilegePlan("RevokeWrite(DENIED)", DEFAULT_DATABASE_NAME, Qualifier("RELATIONSHIPS *"), "reader",
           graphPrivilegePlan("RevokeWrite(DENIED)", DEFAULT_DATABASE_NAME, Qualifier("NODES *"), "reader",
             assertDbmsAdminPlan("REMOVE PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke write with parameter") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN REVOKE WRITE ON GRAPH $db FROM reader", Map("db" -> DEFAULT_DATABASE_NAME)).executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("RevokeWrite(DENIED)", Database("GRAPH $db"), Qualifier("RELATIONSHIPS *"), "reader",
+          graphPrivilegePlan("RevokeWrite(GRANTED)", Database("GRAPH $db"), Qualifier("RELATIONSHIPS *"), "reader",
+            graphPrivilegePlan("RevokeWrite(DENIED)", Database("GRAPH $db"), Qualifier("NODES *"), "reader",
+              graphPrivilegePlan("RevokeWrite(GRANTED)", Database("GRAPH $db"), Qualifier("NODES *"), "reader",
+                assertDbmsAdminPlan("REMOVE PRIVILEGE")
+              )
+            )
           )
         )
       ).toString

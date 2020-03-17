@@ -7,14 +7,13 @@ package com.neo4j.internal.cypher.acceptance
 
 import java.lang.Boolean.TRUE
 
+import org.neo4j.configuration.Config
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.default_database
-import org.neo4j.configuration.Config
-import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.dbms.api.DatabaseNotFoundException
 import org.neo4j.graphdb.QueryExecutionException
-import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.internal.kernel.api.security.PrivilegeAction
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
@@ -102,15 +101,18 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // GIVEN
     setup()
     execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
     execute("CREATE ROLE role")
 
     // WHEN
     execute("GRANT CREATE INDEX ON DATABASE foo TO role")
+    execute("GRANT CREATE INDEX ON DATABASE $db TO role", Map("db" -> "bar"))
     execute("GRANT CREATE INDEX ON DATABASE * TO role")
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       createIndex().database("foo").role("role").map,
+      createIndex().database("bar").role("role").map,
       createIndex().role("role").map
     ))
   }
@@ -168,6 +170,12 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       execute("GRANT CREATE INDEX ON DATABASE foo TO role")
       // THEN
     } should have message "Failed to grant create_index privilege to role 'role': Database 'foo' does not exist."
+
+    the[DatabaseNotFoundException] thrownBy {
+      // WHEN
+      execute("GRANT CREATE INDEX ON DATABASE $db TO role", Map("db" -> "foo"))
+      // THEN
+    } should have message "Failed to grant create_index privilege to role 'role': Database 'foo' does not exist."
   }
 
   test("should grant drop index privilege") {
@@ -191,15 +199,18 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // GIVEN
     setup()
     execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
     execute("CREATE ROLE role")
 
     // WHEN
     execute("DENY DROP INDEX ON DATABASE foo TO role")
+    execute("DENY DROP INDEX ON DATABASE $db TO role", Map("db" -> "bar"))
     execute("DENY DROP INDEX ON DEFAULT DATABASE TO role")
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       dropIndex(DENIED).database("foo").role("role").map,
+      dropIndex(DENIED).database("bar").role("role").map,
       dropIndex(DENIED).database(DEFAULT).role("role").map
     ))
   }
@@ -241,6 +252,12 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       execute("DENY DROP INDEX ON DATABASE foo TO role")
       // THEN
     } should have message "Failed to deny drop_index privilege to role 'role': Database 'foo' does not exist."
+
+    the[DatabaseNotFoundException] thrownBy {
+      // WHEN
+      execute("DENY DROP INDEX ON DATABASE $db TO role", Map("db" -> "foo"))
+      // THEN
+    } should have message "Failed to deny drop_index privilege to role 'role': Database 'foo' does not exist."
   }
 
   test("should grant index management privilege") {
@@ -280,21 +297,31 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   test("should revoke index management privilege") {
     // GIVEN
     setup()
+    execute("CREATE DATABASE foo")
     execute("CREATE ROLE role")
     execute("GRANT CREATE INDEX ON DEFAULT DATABASE TO role")
     execute("DENY DROP INDEX ON DEFAULT DATABASE TO role")
     execute("GRANT ALL ON DEFAULT DATABASE TO role")
     execute("GRANT INDEX ON DEFAULT DATABASE TO role")
     execute("DENY INDEX ON DEFAULT DATABASE TO role")
+    execute("GRANT CREATE INDEX ON DATABASE foo TO role")
+    execute("DENY DROP INDEX ON DATABASE foo TO role")
+    execute("GRANT ALL ON DATABASE foo TO role")
+    execute("GRANT INDEX ON DATABASE foo TO role")
+    execute("DENY INDEX ON DATABASE foo TO role")
 
     // WHEN
     execute("REVOKE INDEX ON DEFAULT DATABASE FROM role")
+    execute("REVOKE INDEX ON DATABASE $db FROM role", Map("db" -> "foo"))
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       createIndex().database(DEFAULT).role("role").map,
       dropIndex(DENIED).database(DEFAULT).role("role").map,
-      allDatabasePrivilege().database(DEFAULT).role("role").map
+      allDatabasePrivilege().database(DEFAULT).role("role").map,
+      createIndex().database("foo").role("role").map,
+      dropIndex(DENIED).database("foo").role("role").map,
+      allDatabasePrivilege().database("foo").role("role").map
     ))
   }
 
@@ -339,21 +366,25 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN
     execute("REVOKE INDEX ON DATABASE foo FROM role")
+    execute("REVOKE INDEX ON DATABASE $db FROM role", Map("db" -> "foo"))
   }
 
   test("should grant create constraint privilege") {
     // GIVEN
     setup()
     execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
     execute("CREATE ROLE role")
 
     // WHEN
     execute("GRANT CREATE CONSTRAINT ON DATABASE foo TO role")
+    execute("GRANT CREATE CONSTRAINT ON DATABASE $db TO role", Map("db" -> "bar"))
     execute("GRANT CREATE CONSTRAINT ON DATABASE * TO role")
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       createConstraint().database("foo").role("role").map,
+      createConstraint().database("bar").role("role").map,
       createConstraint().role("role").map
     ))
   }
@@ -411,6 +442,12 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       execute("GRANT CREATE CONSTRAINT ON DATABASE foo TO role")
       // THEN
     } should have message "Failed to grant create_constraint privilege to role 'role': Database 'foo' does not exist."
+
+    the[DatabaseNotFoundException] thrownBy {
+      // WHEN
+      execute("GRANT CREATE CONSTRAINT ON DATABASE $db TO role", Map("db" -> "foo"))
+      // THEN
+    } should have message "Failed to grant create_constraint privilege to role 'role': Database 'foo' does not exist."
   }
 
   test("should grant drop constraint privilege") {
@@ -434,15 +471,18 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // GIVEN
     setup()
     execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
     execute("CREATE ROLE role")
 
     // WHEN
     execute("DENY DROP CONSTRAINT ON DATABASE foo TO role")
+    execute("DENY DROP CONSTRAINT ON DATABASE $db TO role", Map("db" -> "bar"))
     execute("DENY DROP CONSTRAINT ON DEFAULT DATABASE TO role")
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       dropConstraint(DENIED).database("foo").role("role").map,
+      dropConstraint(DENIED).database("bar").role("role").map,
       dropConstraint(DENIED).database(DEFAULT).role("role").map
     ))
   }
@@ -484,6 +524,12 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       execute("DENY DROP CONSTRAINT ON DATABASE foo TO role")
       // THEN
     } should have message "Failed to deny drop_constraint privilege to role 'role': Database 'foo' does not exist."
+
+    the[DatabaseNotFoundException] thrownBy {
+      // WHEN
+      execute("DENY DROP CONSTRAINT ON DATABASE $db TO role", Map("db" -> "foo"))
+      // THEN
+    } should have message "Failed to deny drop_constraint privilege to role 'role': Database 'foo' does not exist."
   }
 
   test("should grant constraint management privilege") {
@@ -523,21 +569,31 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   test("should revoke constraint management privilege") {
     // GIVEN
     setup()
+    execute("CREATE DATABASE foo")
     execute("CREATE ROLE role")
     execute("GRANT CREATE CONSTRAINT ON DEFAULT DATABASE TO role")
     execute("DENY DROP CONSTRAINT ON DEFAULT DATABASE TO role")
     execute("GRANT ALL ON DEFAULT DATABASE TO role")
     execute("GRANT CONSTRAINT ON DEFAULT DATABASE TO role")
     execute("DENY CONSTRAINT ON DEFAULT DATABASE TO role")
+    execute("GRANT CREATE CONSTRAINT ON DATABASE foo TO role")
+    execute("DENY DROP CONSTRAINT ON DATABASE foo TO role")
+    execute("GRANT ALL ON DATABASE foo TO role")
+    execute("GRANT CONSTRAINT ON DATABASE foo TO role")
+    execute("DENY CONSTRAINT ON DATABASE foo TO role")
 
     // WHEN
     execute("REVOKE CONSTRAINT ON DEFAULT DATABASE FROM role")
+    execute("REVOKE CONSTRAINT ON DATABASE $db FROM role", Map("db" -> "foo"))
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       createConstraint().database(DEFAULT).role("role").map,
       dropConstraint(DENIED).database(DEFAULT).role("role").map,
-      allDatabasePrivilege().database(DEFAULT).role("role").map
+      allDatabasePrivilege().database(DEFAULT).role("role").map,
+      createConstraint().database("foo").role("role").map,
+      dropConstraint(DENIED).database("foo").role("role").map,
+      allDatabasePrivilege().database("foo").role("role").map
     ))
   }
 
@@ -582,21 +638,25 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN
     execute("REVOKE CONSTRAINT ON DATABASE foo FROM role")
+    execute("REVOKE CONSTRAINT ON DATABASE $db FROM role", Map("db" -> "foo"))
   }
 
   test("should grant create label privilege") {
     // GIVEN
     setup()
     execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
     execute("CREATE ROLE role")
 
     // WHEN
     execute("GRANT CREATE NEW LABEL ON DATABASE foo TO role")
+    execute("GRANT CREATE NEW LABEL ON DATABASE $db TO role", Map("db" -> "bar"))
     execute("GRANT CREATE NEW LABEL ON DATABASE * TO role")
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       createNodeLabel().database("foo").role("role").map,
+      createNodeLabel().database("bar").role("role").map,
       createNodeLabel().role("role").map
     ))
   }
@@ -654,6 +714,12 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       execute("GRANT CREATE NEW LABEL ON DATABASE foo TO role")
       // THEN
     } should have message "Failed to grant create_label privilege to role 'role': Database 'foo' does not exist."
+
+    the[DatabaseNotFoundException] thrownBy {
+      // WHEN
+      execute("GRANT CREATE NEW LABEL ON DATABASE $db TO role", Map("db" -> "foo"))
+      // THEN
+    } should have message "Failed to grant create_label privilege to role 'role': Database 'foo' does not exist."
   }
 
   test("should grant create type privilege") {
@@ -677,15 +743,18 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // GIVEN
     setup()
     execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
     execute("CREATE ROLE role")
 
     // WHEN
     execute("DENY CREATE NEW RELATIONSHIP TYPE ON DATABASE foo TO role")
+    execute("DENY CREATE NEW RELATIONSHIP TYPE ON DATABASE $db TO role", Map("db" -> "bar"))
     execute("DENY CREATE NEW RELATIONSHIP TYPE ON DEFAULT DATABASE TO role")
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       createRelationshipType(DENIED).database("foo").role("role").map,
+      createRelationshipType(DENIED).database("bar").role("role").map,
       createRelationshipType(DENIED).database(DEFAULT).role("role").map
     ))
   }
@@ -724,6 +793,12 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     the[DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("DENY CREATE NEW TYPE ON DATABASE foo TO role")
+      // THEN
+    } should have message "Failed to deny create_reltype privilege to role 'role': Database 'foo' does not exist."
+
+    the[DatabaseNotFoundException] thrownBy {
+      // WHEN
+      execute("DENY CREATE NEW TYPE ON DATABASE $db TO role", Map("db" -> "foo"))
       // THEN
     } should have message "Failed to deny create_reltype privilege to role 'role': Database 'foo' does not exist."
   }
@@ -765,16 +840,23 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   test("should revoke create property key privilege") {
     // GIVEN
     setup()
+    execute("CREATE DATABASE foo")
     execute("CREATE ROLE role")
     execute("GRANT NAME ON DATABASE * TO role")
     execute("GRANT CREATE NEW PROPERTY NAME ON DATABASE * TO role")
     execute("DENY CREATE NEW NAME ON DATABASE * TO role")
+    execute("GRANT NAME ON DATABASE foo TO role")
+    execute("GRANT CREATE NEW PROPERTY NAME ON DATABASE foo TO role")
 
     // WHEN
     execute("REVOKE CREATE NEW PROPERTY NAME ON DATABASE * FROM role")
+    execute("REVOKE CREATE NEW PROPERTY NAME ON DATABASE $db FROM role", Map("db" -> "foo"))
 
     // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(nameManagement().role("role").map))
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+      nameManagement().role("role").map,
+      nameManagement().database("foo").role("role").map
+    ))
   }
 
   test("should do nothing when revoking create property key from non-existing role") {
@@ -796,21 +878,25 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN
     execute("REVOKE CREATE NEW PROPERTY NAME ON DATABASE foo FROM role")
+    execute("REVOKE CREATE NEW PROPERTY NAME ON DATABASE $db FROM role", Map("db" -> "foo"))
   }
 
   test("should grant name management privilege") {
     // GIVEN
     setup()
     execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
     execute("CREATE ROLE role")
 
     // WHEN
     execute("GRANT NAME ON DATABASE foo TO role")
+    execute("GRANT NAME ON DATABASE $db TO role", Map("db" -> "bar"))
     execute("GRANT NAME ON DATABASE * TO role")
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       nameManagement().database("foo").role("role").map,
+      nameManagement().database("bar").role("role").map,
       nameManagement().role("role").map
     ))
   }
@@ -898,6 +984,12 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       execute("GRANT NAME MANAGEMENT ON DATABASE foo TO role")
       // THEN
     } should have message "Failed to grant token privilege to role 'role': Database 'foo' does not exist."
+
+    the[DatabaseNotFoundException] thrownBy {
+      // WHEN
+      execute("GRANT NAME MANAGEMENT ON DATABASE $db TO role", Map("db" -> "foo"))
+      // THEN
+    } should have message "Failed to grant token privilege to role 'role': Database 'foo' does not exist."
   }
 
   test("should grant all database privilege") {
@@ -917,18 +1009,34 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     ))
   }
 
+  test("should fail to grant all database privilege using * as parameter") {
+    // Given
+    setup()
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+
+    the[InvalidArgumentsException] thrownBy {
+      // When
+      execute("GRANT ALL DATABASE PRIVILEGES ON DATABASE $db TO custom", Map("db" -> "*"))
+      // Then
+    } should have message "Failed to grant database_actions privilege to role 'custom': Parameterized database and graph names do not support wildcards."
+  }
+
   test("should deny all database privilege") {
     // Given
     setup()
+    execute("CREATE DATABASE foo")
     execute("CREATE ROLE custom")
 
     // When
     execute("DENY ALL DATABASE PRIVILEGES ON DEFAULT DATABASE TO custom")
+    execute("DENY ALL DATABASE PRIVILEGES ON DATABASE $db TO custom", Map("db" -> "foo"))
     execute("DENY ALL DATABASE PRIVILEGES ON DATABASE * TO custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       allDatabasePrivilege(DENIED).database(DEFAULT).role("custom").map,
+      allDatabasePrivilege(DENIED).database("foo").role("custom").map,
       allDatabasePrivilege(DENIED).role("custom").map
     ))
   }
@@ -1034,6 +1142,12 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     the[DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("DENY ALL ON DATABASE foo TO role")
+      // THEN
+    } should have message "Failed to deny database_actions privilege to role 'role': Database 'foo' does not exist."
+
+    the[DatabaseNotFoundException] thrownBy {
+      // WHEN
+      execute("DENY ALL ON DATABASE $db TO role", Map("db" -> "foo"))
       // THEN
     } should have message "Failed to deny database_actions privilege to role 'role': Database 'foo' does not exist."
   }

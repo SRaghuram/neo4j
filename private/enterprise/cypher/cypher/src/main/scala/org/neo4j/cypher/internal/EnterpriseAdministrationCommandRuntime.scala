@@ -818,10 +818,12 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     val role = Values.utf8Value(roleName)
     val (property: Value, resourceType: Value, resourceMerge: String) = getResourcePart(resource, startOfErrorMessage, grant.name, "MERGE")
     val (label: Value, qualifierMerge: String) = getQualifierPart(qualifier, startOfErrorMessage, grant.name, "MERGE")
-    val (dbName, db, databaseMerge, scopeMerge) = database match {
-      case NamedGraphScope(name) => (Values.utf8Value(name), name, "MATCH (d:Database {name: $database})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
-      case AllGraphsScope() => (Values.NO_VALUE, "*", "MERGE (d:DatabaseAll {name: '*'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
-      case DefaultDatabaseScope() => (Values.NO_VALUE, "DEFAULT DATABASE", "MERGE (d:DatabaseDefault {name: 'DEFAULT'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
+    val (databaseKey, databaseValue, databaseConverter, databaseMerge, scopeMerge) = database match {
+      case NamedGraphScope(name) =>
+        val (key, value, converter) = getNameFields("nameScope", name, valueMapper = s => new NormalizedDatabaseName(s).name())
+        (key, value, converter, s"MATCH (d:Database {name: $$$key})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
+      case AllGraphsScope() => ("*", Values.utf8Value("*"), IdentityConverter, "MERGE (d:DatabaseAll {name: '*'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
+      case DefaultDatabaseScope() => ("DEFAULT_DATABASE", Values.utf8Value("DEFAULT DATABASE"), IdentityConverter, "MERGE (d:DatabaseDefault {name: 'DEFAULT'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
       case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege ${grant.name} scope database $database")
     }
     UpdatingSystemCommandExecutionPlan(commandName, normalExecutionEngine,
@@ -848,9 +850,16 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |
          |// Return the table of results
          |RETURN '${grant.prefix}' AS grant, p.action AS action, d.name AS database, q.label AS label, r.name AS role""".stripMargin,
-      VirtualValues.map(Array("action", "resource", "property", "database", "label", "role"), Array(action, resourceType, property, dbName, label, role)),
+      VirtualValues.map(Array("action", "resource", "property", databaseKey, "label", "role"), Array(action, resourceType, property, databaseValue, label, role)),
       QueryHandler
-        .handleNoResult(_ => Some(new DatabaseNotFoundException(s"$startOfErrorMessage: Database '$db' does not exist."))) // needs to have the database name here since it is not in the startOfErrorMessage
+        .handleNoResult(params => {
+          val db = params.get(databaseKey).asInstanceOf[TextValue].stringValue()
+          if (db.equals("*") && !databaseKey.equals("*"))
+            Some(new InvalidArgumentsException(s"$startOfErrorMessage: Parameterized database and graph names do not support wildcards."))
+          else
+          // needs to have the database name here since it is not in the startOfErrorMessage
+            Some(new DatabaseNotFoundException(s"$startOfErrorMessage: Database '$db' does not exist."))
+        })
         .handleError {
           case (e: InternalException, _) if e.getMessage.contains("ignore rows where a relationship node is missing") =>
             new InvalidArgumentsException(s"$startOfErrorMessage: Role does not exist.", e) // the rolename is included in the startOfErrorMessage so not needed here (consistent with the other commands)
@@ -858,7 +867,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             new DatabaseAdministrationOnFollowerException(s"$startOfErrorMessage: $followerError", e)
           case (e, _) => new IllegalStateException(s"$startOfErrorMessage.", e)
         },
-      source
+      source,
+      parameterConverter = databaseConverter
     )
   }
 
@@ -869,10 +879,12 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     val (property: Value, resourceType: Value, resourceMatch: String) = getResourcePart(resource, startOfErrorMessage, "revoke", "MATCH")
     val (label: Value, qualifierMatch: String) = getQualifierPart(qualifier, startOfErrorMessage, "revoke", "MATCH")
-    val (dbName, scopeMatch) = database match {
-      case NamedGraphScope(name) => (Values.utf8Value(name), "MATCH (d:Database {name: $database})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
-      case AllGraphsScope() => (Values.NO_VALUE, "MATCH (d:DatabaseAll {name: '*'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
-      case DefaultDatabaseScope() => (Values.NO_VALUE, "MATCH (d:DatabaseDefault {name: 'DEFAULT'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
+    val (databaseKey, databaseValue, databaseConverter, scopeMatch) = database match {
+      case NamedGraphScope(name) =>
+        val (key, value, converter) = getNameFields("nameScope", name, valueMapper = s => new NormalizedDatabaseName(s).name())
+        (key, value, converter, s"MATCH (d:Database {name: $$$key})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
+      case AllGraphsScope() => ("", Values.NO_VALUE, IdentityConverter, "MATCH (d:DatabaseAll {name: '*'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
+      case DefaultDatabaseScope() => ("", Values.NO_VALUE, IdentityConverter, "MATCH (d:DatabaseDefault {name: 'DEFAULT'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
       case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege revoke scope database $database")
     }
     UpdatingSystemCommandExecutionPlan("RevokePrivilege", normalExecutionEngine,
@@ -895,13 +907,14 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |// Remove the assignment
          |DELETE g
          |RETURN r.name AS role, g AS grant""".stripMargin,
-      VirtualValues.map(Array("action", "resource", "property", "database", "label", "role"), Array(action, resourceType, property, dbName, label, role)),
+      VirtualValues.map(Array("action", "resource", "property", databaseKey, "label", "role"), Array(action, resourceType, property, databaseValue, label, role)),
       QueryHandler.handleError {
         case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
           new DatabaseAdministrationOnFollowerException(s"$startOfErrorMessage: $followerError", e)
         case (e, _) => new IllegalStateException(s"$startOfErrorMessage.", e)
       },
-      source
+      source,
+      parameterConverter = databaseConverter
     )
   }
 

@@ -6,6 +6,7 @@
 package com.neo4j.internal.cypher.acceptance
 
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.dbms.api.DatabaseNotFoundException
 import org.neo4j.exceptions.DatabaseAdministrationException
@@ -488,6 +489,16 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             error.getMessage should be(s"Failed to $grantOrDeny $actionName privilege to role 'custom': Database 'foo' does not exist.")
           }
 
+          test(s"should fail when ${grantOrDeny}ing $actionName privilege using * as parameter") {
+            // GIVEN
+            selectDatabase(SYSTEM_DATABASE_NAME)
+            execute("CREATE ROLE custom")
+            val error = the[InvalidArgumentsException] thrownBy {
+              execute(s"$grantOrDenyCommand $actionCommand ON GRAPH $$db TO custom", Map("db" -> "*"))
+            }
+            error.getMessage should be(s"Failed to $grantOrDeny $actionName privilege to role 'custom': Parameterized database and graph names do not support wildcards.")
+          }
+
           test(s"should fail when ${grantOrDeny}ing $actionName privilege to custom role when not on system database") {
             val commandName = actionCommand.split(" ").head
             the[DatabaseAdministrationException] thrownBy {
@@ -671,6 +682,21 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
               startExpected.role("custom").database("foo").node("*").map,
               startExpected.role("custom").database("foo").relationship("*").map
+            ))
+          }
+
+          test(s"should $grantOrDeny $actionName privilege to custom role for specific database and all element types using parameters") {
+            // GIVEN
+            selectDatabase(SYSTEM_DATABASE_NAME)
+            execute("CREATE ROLE custom")
+
+            // WHEN
+            execute(s"$grantOrDenyCommand $actionCommand ON GRAPH $$db TO custom", Map("db" -> DEFAULT_DATABASE_NAME))
+
+            // THEN
+            execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+              startExpected.database(DEFAULT_DATABASE_NAME).role("custom").node("*").map,
+              startExpected.database(DEFAULT_DATABASE_NAME).role("custom").relationship("*").map
             ))
           }
 

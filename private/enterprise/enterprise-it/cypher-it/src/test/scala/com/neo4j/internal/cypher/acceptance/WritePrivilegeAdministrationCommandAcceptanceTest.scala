@@ -76,6 +76,21 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         ))
       }
 
+      test(s"should $grantOrDeny write privilege to custom role for specific database and all elements using parameter") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"$grantOrDenyCommand WRITE ON GRAPH $$db ELEMENTS * (*) TO custom", Map("db" -> DEFAULT_DATABASE_NAME))
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          write(grantOrDenyRelType).database(DEFAULT_DATABASE_NAME).role("custom").node("*").map,
+          write(grantOrDenyRelType).database(DEFAULT_DATABASE_NAME).role("custom").relationship("*").map
+        ))
+      }
+
       test(s"should $grantOrDeny write privilege to multiple roles in a single grant") {
         // GIVEN
         selectDatabase(SYSTEM_DATABASE_NAME)
@@ -202,6 +217,21 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
 
+      }
+
+      test(s"should be able to revoke $grantOrDeny write using parameter") {
+        // GIVEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute(s"$grantOrDenyCommand WRITE ON GRAPH foo TO custom")
+        execute("SHOW ROLE custom PRIVILEGES").toSet should not be Set.empty
+
+        // WHEN
+        execute(s"REVOKE $grantOrDenyCommand WRITE ON GRAPH $$db FROM custom", Map("db" -> "foo"))
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
       }
 
       test(s"should do nothing when revoking $grantOrDeny write privilege from non-existent role") {

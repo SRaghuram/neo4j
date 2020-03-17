@@ -62,7 +62,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // WHEN
     execute("GRANT START ON DATABASE foo TO role")
-    execute("GRANT STOP ON DATABASE foo TO role")
+    execute("GRANT STOP ON DATABASE $db TO role", Map("db" -> "foo"))
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
@@ -71,7 +71,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     ))
 
     // WHEN
-    execute("REVOKE START ON DATABASE foo FROM role")
+    execute("REVOKE START ON DATABASE $db FROM role", Map("db" -> "foo"))
     execute("GRANT START ON DATABASE * TO role")
 
     // THEN
@@ -116,7 +116,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     setupUserWithCustomRole(access = false)
 
     // WHEN
-    execute(s"GRANT ACCESS ON DATABASE $DEFAULT_DATABASE_NAME TO custom")
+    execute("GRANT ACCESS ON DATABASE $db TO custom", Map("db" -> DEFAULT_DATABASE_NAME))
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -133,7 +133,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     ))
 
     // WHEN
-    execute(s"REVOKE ACCESS ON DATABASE $SYSTEM_DATABASE_NAME FROM custom")
+    execute("REVOKE ACCESS ON DATABASE $db FROM custom", Map("db" -> SYSTEM_DATABASE_NAME))
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -504,6 +504,12 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
       execute("GRANT START ON DATABASE foo TO role")
       // THEN
     } should have message "Failed to grant start_database privilege to role 'role': Database 'foo' does not exist."
+
+    the[DatabaseNotFoundException] thrownBy {
+      // WHEN
+      execute("GRANT START ON DATABASE $db TO role", Map("db" -> "foo"))
+      // THEN
+    } should have message "Failed to grant start_database privilege to role 'role': Database 'foo' does not exist."
   }
 
   // STOP DATABASE
@@ -759,6 +765,12 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
       execute("DENY STOP ON DATABASE foo TO role")
       // THEN
     } should have message "Failed to deny stop_database privilege to role 'role': Database 'foo' does not exist."
+
+    the[DatabaseNotFoundException] thrownBy {
+      // WHEN
+      execute("DENY STOP ON DATABASE $db TO role", Map("db" -> "foo"))
+      // THEN
+    } should have message "Failed to deny stop_database privilege to role 'role': Database 'foo' does not exist."
   }
 
   // ACCESS DATABASE
@@ -891,6 +903,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // WHEN
     execute("REVOKE ACCESS ON DATABASE foo FROM role")
+    execute("REVOKE ACCESS ON DATABASE $db FROM role", Map("db" -> "foo"))
   }
 
   // REDUCED ADMIN
