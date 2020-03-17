@@ -31,6 +31,7 @@ public class Timer
     private JobHandle job;
     private long activeJobId;
     private boolean isDead;
+    private volatile boolean isRunning;
 
     /**
      * Creates a timer in the deactivated state.
@@ -83,6 +84,10 @@ public class Timer
             {
                 return;
             }
+            else
+            {
+                isRunning = true;
+            }
         }
 
         try
@@ -92,6 +97,10 @@ public class Timer
         catch ( Throwable e )
         {
             log.error( format( "[%s] Handler threw exception", canonicalName() ), e );
+        }
+        finally
+        {
+            isRunning = false;
         }
     }
 
@@ -127,7 +136,7 @@ public class Timer
         synchronized ( this )
         {
             activeJobId++;
-            job = this.job;
+            job = isRunning ? this.job : null;
         }
 
         if ( job != null )
