@@ -569,7 +569,7 @@ class BackupIT
             }
             else
             {
-                if ( DatabaseFile.RELATIONSHIP_TYPE_SCAN_STORE.getName().equals( storeFile.getName() ) && !TokenScanStore.relationshipTokenScanStoreEnabled() )
+                if ( DatabaseFile.RELATIONSHIP_TYPE_SCAN_STORE.getName().equals( storeFile.getName() ) && !TokenScanStore.relationshipTypeScanStoreEnabled() )
                 {
                     // Skip relationship type scan store file if feature is not enabled
                     continue;
