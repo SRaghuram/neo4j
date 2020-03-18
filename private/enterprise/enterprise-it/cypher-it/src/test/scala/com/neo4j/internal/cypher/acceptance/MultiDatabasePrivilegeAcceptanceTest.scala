@@ -208,6 +208,40 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
   }
 
+  test("should normalize database name for database privileges") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE BaR")
+    execute("CREATE ROLE custom")
+
+    // WHEN
+    execute("GRANT START ON DATABASE BaR TO custom")
+    execute("DENY STOP ON DATABASE BAR TO custom")
+    execute("GRANT ACCESS ON DATABASE Bar TO custom")
+    execute("GRANT CREATE NEW PROPERTY NAME ON DATABASE bar TO custom")
+    execute("GRANT INDEX MANAGEMENT ON DATABASE bAR TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      startDatabase().role("custom").database("bar").map,
+      stopDatabase("DENIED").role("custom").database("bar").map,
+      access().role("custom").database("bar").map,
+      createPropertyKey().role("custom").database("bar").map,
+      indexManagement().role("custom").database("bar").map
+    ))
+
+    // WHEN
+    execute("REVOKE GRANT START ON DATABASE baR FROM custom")
+    execute("REVOKE DENY STOP ON DATABASE BAr FROM custom")
+    execute("REVOKE INDEX MANAGEMENT ON DATABASE bAr FROM custom")
+
+        // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      access().role("custom").database("bar").map,
+      createPropertyKey().role("custom").database("bar").map
+    ))
+  }
+
   // START DATABASE
 
   test("admin should be allowed to start database") {
