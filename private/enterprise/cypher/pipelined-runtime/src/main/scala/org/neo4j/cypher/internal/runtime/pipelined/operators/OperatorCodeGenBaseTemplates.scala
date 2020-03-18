@@ -530,17 +530,15 @@ object OperatorTaskTemplate {
   def flushToNextArgument(cursor: MorselReadCursor,
                           currentArgument: Long,
                           argumentOffset: Int): Unit = {
-
-//    var endRow = cursor.row
-//    while (cursor.onValidRow() && currentArgument == cursor.getLongAt(argumentOffset) && cursor.next()) {
-//      if (currentArgument == cursor.getLongAt(argumentOffset)) {
-//        endRow = cursor.row
-//      }
-//    }
-//
-//    if (cursor.onValidRow()) {
-//      cursor.setRow(endRow)
-//    }
+    // do nothing if cursor is not on a valid row
+    if (cursor.onValidRow()) {
+      var endRow = cursor.row
+      while (cursor.onValidRow() && currentArgument == cursor.getLongAt(argumentOffset) && cursor.next()) {
+        if (currentArgument == cursor.getLongAt(argumentOffset)) {
+          endRow = cursor.row
+        }
+      }
+    }
   }
 
   /**
