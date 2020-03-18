@@ -69,7 +69,9 @@ abstract class InputLoopTask(final val inputMorsel: Morsel) extends ContinuableO
   override final def operate(outputMorsel: Morsel,
                              state: PipelinedQueryState,
                              resources: QueryResources): Unit = {
-
+    //In the situation we get here with the inputCursor standing on a cancelled
+    //row we should advance to the next non-cancelled row
+    advanceOnCancelledRows(resources)
     enterOperate(state, resources)
     val outputCursor = outputMorsel.fullCursor(onFirstRow = true)
 
@@ -107,6 +109,18 @@ abstract class InputLoopTask(final val inputMorsel: Morsel) extends ContinuableO
 
     outputCursor.truncate()
     exitOperate()
+  }
+
+  private def advanceOnCancelledRows(resources: QueryResources): Unit = {
+    if (!inputCursor.onValidRow()) {
+      inputCursor.next()
+      //If we were in the process of executing an inner loop we must now
+      //close it and pick up a new inner loop
+      if (innerLoop) {
+        closeInnerLoop(resources)
+        innerLoop = false
+      }
+    }
   }
 
   override def canContinue: Boolean =
