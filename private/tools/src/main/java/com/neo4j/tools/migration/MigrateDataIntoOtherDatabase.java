@@ -26,6 +26,7 @@ import org.neo4j.graphdb.schema.ConstraintCreator;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.IndexCreator;
 import org.neo4j.graphdb.schema.IndexDefinition;
+import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
 
 import static java.lang.Math.toIntExact;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -43,11 +44,14 @@ public class MigrateDataIntoOtherDatabase
     public static void migrate( Path fromHome, Path toHome )
     {
         assert !(fromHome.equals( toHome ));
+        long totalPageCacheMem = ConfiguringPageCacheFactory.defaultHeuristicPageCacheMemory();
         DatabaseManagementService fromDbms = new EnterpriseDatabaseManagementServiceBuilder( fromHome.toFile() )
                 .setConfig( GraphDatabaseSettings.storage_engine, "" )
+                .setConfig( GraphDatabaseSettings.pagecache_memory, String.valueOf( totalPageCacheMem / 2 ) )
                 .build();
         DatabaseManagementService toDbms = new EnterpriseDatabaseManagementServiceBuilder( toHome.toFile() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false )
+                .setConfig( GraphDatabaseSettings.pagecache_memory, String.valueOf( totalPageCacheMem / 2 ) )
                 .setConfig( GraphDatabaseSettings.storage_engine, "Freki" )
                 .build();
         try

@@ -117,7 +117,7 @@ public class Stores extends MainStores
         }
     }
 
-    Stores( SimpleStore[] mainStores, BigPropertyValueStore bigPropertyValueStore, DenseStore denseStore,
+    Stores( SimpleStore[] mainStores, BigPropertyValueStore bigPropertyValueStore, DenseRelationshipStore denseStore,
             TransactionMetaDataStore metaDataStore, GBPTreeCountsStore countsStore, GBPTreeSchemaStore schemaStore, SchemaCache schemaCache,
             GBPTreeTokenStore propertyKeyTokenStore, GBPTreeTokenStore relationshipTypeTokenStore, GBPTreeTokenStore labelTokenStore )
     {

@@ -21,10 +21,7 @@ package org.neo4j.internal.freki;
 
 import org.eclipse.collections.api.map.primitive.IntObjectMap;
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
-import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
-import org.eclipse.collections.impl.factory.primitive.IntSets;
-import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,9 +41,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.storageengine.api.PropertyKeyValue;
 import org.neo4j.storageengine.api.RelationshipDirection;
-import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StorageProperty;
-import org.neo4j.storageengine.util.EagerDegrees;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
@@ -64,11 +59,10 @@ import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.values.storable.Values.doubleValue;
 import static org.neo4j.values.storable.Values.intValue;
-import static org.neo4j.values.storable.Values.stringValue;
 
 @PageCacheExtension
 @ExtendWith( RandomExtension.class )
-class DenseStoreTest
+class DenseRelationshipStoreTest
 {
     @Inject
     private FileSystemAbstraction fs;
@@ -79,63 +73,18 @@ class DenseStoreTest
     @Inject
     private RandomRule random;
 
-    private DenseStore store;
+    private DenseRelationshipStore store;
 
     @BeforeEach
     void start()
     {
-        store = new DenseStore( pageCache, directory.file( "store" ), immediate(), false, PageCacheTracer.NULL, null );
+        store = new DenseRelationshipStore( pageCache, directory.file( "store" ), immediate(), false, PageCacheTracer.NULL, null );
     }
 
     @AfterEach
     void stop() throws IOException
     {
         store.close();
-    }
-
-    @Test
-    void shouldSetAndGetProperties() throws IOException
-    {
-        // given
-        long nodeId = 10;
-        Set<StorageProperty> expectedProperties = asSet( new PropertyKeyValue( 4, intValue( 20 ) ), new PropertyKeyValue( 56, stringValue( "abc" ) ) );
-
-        // when
-        setProperties( nodeId, expectedProperties );
-
-        // when
-        assertProperties( nodeId, expectedProperties );
-    }
-
-    @Test
-    void shouldChangeProperties() throws IOException
-    {
-        // given
-        long nodeId = 10;
-        setProperties( nodeId, asSet( new PropertyKeyValue( 56, stringValue( "abcdefg" ) ) ) );
-
-        // when
-        Set<StorageProperty> changedProperty = asSet( new PropertyKeyValue( 56, intValue( 123 ) ) );
-        setProperties( nodeId, changedProperty );
-
-        // then
-        assertProperties( nodeId, changedProperty );
-    }
-
-    @Test
-    void shouldRemoveProperties() throws IOException
-    {
-        // given
-        long nodeId = 10;
-        Set<StorageProperty> expectedProperties = asSet( new PropertyKeyValue( 4, intValue( 20 ) ), new PropertyKeyValue( 56, stringValue( "abc" ) ) );
-        setProperties( nodeId, expectedProperties );
-
-        // when
-        removeProperties( nodeId, 56 );
-        expectedProperties.remove( new PropertyKeyValue( 56, stringValue( "abc" ) ) );
-
-        // then
-        assertProperties( nodeId, expectedProperties );
     }
 
     @Test
@@ -165,7 +114,7 @@ class DenseStoreTest
         StorageProperty property = new PropertyKeyValue( 1928, intValue( 10 ) );
         Rel out = new Rel( 100_000, nodeId, 123, 200_000, RelationshipDirection.OUTGOING, asSet( property ) );
         Rel in = new Rel( 100_001, nodeId, 123, 200_001, RelationshipDirection.INCOMING, asSet( property ) );
-        try ( DenseStore.Updater updater = store.newUpdater( NULL ) )
+        try ( DenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
         {
             for ( int i = 0; i < 10_000; i++ )
             {
@@ -179,54 +128,6 @@ class DenseStoreTest
         assertRelationships( nodeId, type, BOTH, asSet( out, in ) );
         assertRelationships( nodeId, type, OUTGOING, asSet( out ) );
         assertRelationships( nodeId, type, INCOMING, asSet( in ) );
-    }
-
-    @Test
-    void shouldManageDegrees() throws IOException
-    {
-        // given
-        int numNodes = random.nextInt( 2, 10 );
-        int numTypes = random.nextInt( 3, 10 );
-        MutableLongObjectMap<MutableIntObjectMap<int[]>> expectedDegrees = LongObjectMaps.mutable.empty();
-        int highType = 0;
-        try ( DenseStore.Updater updater = store.newUpdater( NULL ) )
-        {
-            for ( long nodeId = 0; nodeId < numNodes; nodeId++ )
-            {
-                MutableIntObjectMap<int[]> expectedNodeDegrees = expectedDegrees.getIfAbsentPut( nodeId, IntObjectMaps.mutable::empty );
-                for ( int i = 0, prevType = 0; i < numTypes; i++ )
-                {
-                    int stride = random.nextInt( 1, 10 );
-                    int type = prevType + stride;
-                    int[] degrees = new int[]{random.nextInt( 1_000 ), random.nextInt( 1_000 ), random.nextInt( 1_000 )};
-                    expectedNodeDegrees.put( type, degrees );
-                    prevType = type;
-                    updater.setDegree( nodeId, type, degrees[0], degrees[1], degrees[2] );
-                    highType = type;
-                }
-            }
-        }
-
-        // when/then
-        for ( long nodeId = 0; nodeId < numNodes; nodeId++ )
-        {
-            IntObjectMap<int[]> expectedNodeDegrees = expectedDegrees.get( nodeId );
-            for ( int type = 0; type < highType; type++ )
-            {
-                int[] expected = expectedNodeDegrees.get( type );
-                EagerDegrees degrees = store.getDegrees( nodeId, RelationshipSelection.selection( type, BOTH ), NULL );
-                assertThat( degrees.rawOutgoingDegree( type ) ).isEqualTo( expected != null ? expected[0] : 0 );
-                assertThat( degrees.rawIncomingDegree( type ) ).isEqualTo( expected != null ? expected[1] : 0 );
-                assertThat( degrees.rawLoopDegree( type ) ).isEqualTo( expected != null ? expected[2] : 0 );
-            }
-
-            EagerDegrees allDegrees = store.getDegrees( nodeId, RelationshipSelection.ALL_RELATIONSHIPS, NULL );
-            expectedNodeDegrees.forEachKeyValue( ( type, expected ) ->
-            {
-                assertThat( allDegrees.outgoingDegree( type ) ).isEqualTo( expected[0] + expected[2] );
-                assertThat( allDegrees.incomingDegree( type ) ).isEqualTo( expected[1] + expected[2] );
-            } );
-        }
     }
 
 //    @Test
@@ -327,11 +228,11 @@ class DenseStoreTest
     private void assertRelationships( long sourceNodeId, int type, Direction direction, Set<Rel> expectedRelationships )
     {
         Set<Rel> readRelationships = new HashSet<>();
-        try ( ResourceIterator<DenseStore.RelationshipData> relationships = store.getRelationships( sourceNodeId, type, direction, NULL ) )
+        try ( ResourceIterator<DenseRelationshipStore.RelationshipData> relationships = store.getRelationships( sourceNodeId, type, direction, NULL ) )
         {
             while ( relationships.hasNext() )
             {
-                DenseStore.RelationshipData relationship = relationships.next();
+                DenseRelationshipStore.RelationshipData relationship = relationships.next();
                 readRelationships.add( new Rel( relationship.internalId(), relationship.originNodeId(), relationship.type(), relationship.neighbourNodeId(),
                         relationship.direction(), readProperties( relationship ) ) );
             }
@@ -339,7 +240,7 @@ class DenseStoreTest
         }
     }
 
-    private Set<StorageProperty> readProperties( DenseStore.RelationshipData relationship )
+    private Set<StorageProperty> readProperties( DenseRelationshipStore.RelationshipData relationship )
     {
         Set<StorageProperty> readProperties = new HashSet<>();
         Iterator<StorageProperty> props = relationship.properties();
@@ -351,22 +252,9 @@ class DenseStoreTest
         return readProperties;
     }
 
-    private void assertDegrees( long nodeId, EagerDegrees expectedDegrees )
-    {
-        EagerDegrees degrees = store.getDegrees( nodeId, RelationshipSelection.ALL_RELATIONSHIPS, NULL );
-        assertThat( IntSets.immutable.of( degrees.types() ) ).isEqualTo( IntSets.immutable.of( expectedDegrees.types() ) );
-        assertThat( degrees.totalDegree() ).isEqualTo( expectedDegrees.totalDegree() );
-        for ( int type : degrees.types() )
-        {
-            assertThat( degrees.outgoingDegree( type ) ).isEqualTo( expectedDegrees.outgoingDegree( type ) );
-            assertThat( degrees.incomingDegree( type ) ).isEqualTo( expectedDegrees.incomingDegree( type ) );
-            assertThat( degrees.totalDegree( type ) ).isEqualTo( expectedDegrees.totalDegree( type ) );
-        }
-    }
-
     private void createRelationships( Set<Rel> expectedRelationships ) throws IOException
     {
-        try ( DenseStore.Updater updater = store.newUpdater( NULL ) )
+        try ( DenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
         {
             for ( Rel relationship : expectedRelationships )
             {
@@ -375,7 +263,7 @@ class DenseStoreTest
         }
     }
 
-    private void createRelationship( DenseStore.Updater updater, Rel relationship )
+    private void createRelationship( DenseRelationshipStore.Updater updater, Rel relationship )
     {
         updater.createRelationship( relationship.internalId(), relationship.originNodeId(), relationship.type(), relationship.neighbourNodeId(),
                 relationship.direction() == RelationshipDirection.OUTGOING, serialize( relationship.properties ), u -> u.after );
@@ -397,45 +285,7 @@ class DenseStoreTest
         return buffer;
     }
 
-    private void removeProperties( long nodeId, int... propertyKeys ) throws IOException
-    {
-        try ( DenseStore.Updater updater = store.newUpdater( NULL ) )
-        {
-            for ( int propertyKey : propertyKeys )
-            {
-                updater.removeProperty( nodeId, propertyKey );
-            }
-        }
-    }
-
-    private void assertProperties( long nodeId, Set<StorageProperty> expectedProperties )
-    {
-        Set<StorageProperty> readProperties = new HashSet<>();
-        try ( ResourceIterator<StorageProperty> properties = store.getProperties( nodeId, NULL ) )
-        {
-            while ( properties.hasNext() )
-            {
-                StorageProperty property = properties.next();
-                readProperties.add( new PropertyKeyValue( property.propertyKeyId(), property.value() ) );
-            }
-        }
-
-        // then
-        assertThat( readProperties ).isEqualTo( expectedProperties );
-    }
-
-    private void setProperties( long nodeId, Set<StorageProperty> expectedProperties ) throws IOException
-    {
-        try ( DenseStore.Updater updater = store.newUpdater( NULL ) )
-        {
-            for ( StorageProperty property : expectedProperties )
-            {
-                updater.setProperty( nodeId, property.propertyKeyId(), serialize( property.value() ) );
-            }
-        }
-    }
-
-    private static class Rel implements DenseStore.RelationshipData
+    private static class Rel implements DenseRelationshipStore.RelationshipData
     {
         private final long internalId;
         private final long originNodeId;

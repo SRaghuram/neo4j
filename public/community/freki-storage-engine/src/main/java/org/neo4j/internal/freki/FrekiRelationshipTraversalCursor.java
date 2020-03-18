@@ -62,8 +62,8 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     private long currentRelationshipInternalId;
 
     // dense node state
-    private ResourceIterator<DenseStore.RelationshipData> denseRelationships;
-    private DenseStore.RelationshipData currentDenseRelationship;
+    private ResourceIterator<DenseRelationshipStore.RelationshipData> denseRelationships;
+    private DenseRelationshipStore.RelationshipData currentDenseRelationship;
     private int selectionCriterionIndex;
 
     public FrekiRelationshipTraversalCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer )

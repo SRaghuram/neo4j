@@ -21,9 +21,7 @@ package org.neo4j.internal.freki;
 
 import org.eclipse.collections.api.map.primitive.IntObjectMap;
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
-import org.eclipse.collections.api.set.primitive.IntSet;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
-import org.eclipse.collections.impl.factory.primitive.IntSets;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -112,9 +110,8 @@ public class FrekiCommandSerializationTest
     {
         // given
         long nodeId = randomLargeId();
-        IntObjectMap<PropertyUpdate> properties = randomProperties();
         IntObjectMap<DenseRelationships> relationships = randomRelationships();
-        FrekiCommand.DenseNode node = new FrekiCommand.DenseNode( nodeId, properties, relationships );
+        FrekiCommand.DenseNode node = new FrekiCommand.DenseNode( nodeId, relationships );
 
         // when
         InMemoryClosableChannel channel = new InMemoryClosableChannel( 50_000 );
@@ -123,7 +120,6 @@ public class FrekiCommandSerializationTest
         // then
         FrekiCommand.DenseNode readNode = readCommand( channel, FrekiCommand.DenseNode.class );
         assertThat( readNode.nodeId ).isEqualTo( node.nodeId );
-        assertThat( readNode.propertyUpdates ).isEqualTo( node.propertyUpdates );
         assertThat( readNode.relationshipUpdates ).isEqualTo( node.relationshipUpdates );
     }
 
@@ -317,18 +313,12 @@ public class FrekiCommandSerializationTest
         return serializedValue;
     }
 
-    private IntSet randomPropertyKeys()
-    {
-        return IntSets.mutable.of( randomTokens() );
-    }
-
     private IntObjectMap<DenseRelationships> randomRelationships()
     {
         MutableIntObjectMap<DenseRelationships> map = IntObjectMaps.mutable.empty();
         for ( int type : randomTokens() )
         {
-            DenseRelationships relationships = map.getIfAbsentPut( type, new DenseRelationships( 0, type,
-                    random.nextInt( 100 ), random.nextInt( 100 ), random.nextInt( 100 ) ) );
+            DenseRelationships relationships = map.getIfAbsentPut( type, new DenseRelationships( 0, type ) );
             for ( int i = 0, count = random.nextInt( 1, 5 ); i < count; i++ )
             {
                 relationships.create( new DenseRelationships.DenseRelationship( randomLargeId(), randomLargeId(), random.nextBoolean(), randomProperties() ) );

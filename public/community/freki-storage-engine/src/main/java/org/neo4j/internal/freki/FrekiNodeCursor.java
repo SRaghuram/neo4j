@@ -20,6 +20,7 @@
 package org.neo4j.internal.freki;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.AllNodeScan;
@@ -35,6 +36,7 @@ import static org.apache.commons.lang3.ArrayUtils.EMPTY_LONG_ARRAY;
 import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPointsToDense;
 import static org.neo4j.internal.freki.StreamVByte.nonEmptyIntDeltas;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
+import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 
 class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
 {
@@ -83,13 +85,6 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public int[] relationshipTypes()
     {
-        // Dense
-        if ( forwardPointerPointsToDense( data.forwardPointer ) )
-        {
-            return stores.denseStore.getDegrees( data.nodeId, RelationshipSelection.ALL_RELATIONSHIPS, cursorTracer ).types();
-        }
-
-        // Sparse
         readRelationshipTypesAndOffsets();
         return relationshipTypesInNode.clone();
     }
@@ -100,7 +95,36 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
         // Dense
         if ( forwardPointerPointsToDense( data.forwardPointer ) )
         {
-            return stores.denseStore.getDegrees( data.nodeId, selection, cursorTracer );
+            readRelationshipTypesAndOffsets();
+
+            EagerDegrees degrees = new EagerDegrees();
+            if ( relationshipTypesInNode.length == 0 )
+            {
+                return degrees;
+            }
+
+            // Read degrees where relationship data would be if this would have been a sparse node
+            ByteBuffer buffer = data.relationshipBuffer();
+            for ( int i = 0; i < selection.numberOfCriteria(); i++ )
+            {
+                RelationshipSelection.Criterion criterion = selection.criterion( i );
+                if ( criterion.type() == ANY_RELATIONSHIP_TYPE ) // all types
+                {
+                    for ( int typeIndex = 0; typeIndex < relationshipTypesInNode.length; typeIndex++ )
+                    {
+                        addDenseDegreesForType( degrees, buffer, typeIndex );
+                    }
+                }
+                else // a single type
+                {
+                    int typeIndex = Arrays.binarySearch( relationshipTypesInNode, criterion.type() );
+                    if ( typeIndex >= 0 )
+                    {
+                        addDenseDegreesForType( degrees, buffer, typeIndex );
+                    }
+                }
+            }
+            return degrees;
         }
 
         // Sparse
@@ -118,12 +142,17 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
         return degrees;
     }
 
+    private void addDenseDegreesForType( EagerDegrees degrees, ByteBuffer buffer, int typeIndex )
+    {
+        int offset = relationshipTypeOffset( typeIndex );
+        int[] typeDegrees = readIntDeltas( new StreamVByte.IntArrayTarget(), buffer.position( offset ) ).array();
+        degrees.add( relationshipTypesInNode[typeIndex], typeDegrees[0], typeDegrees[1], typeDegrees[2] );
+    }
+
     @Override
     public boolean supportsFastDegreeLookup()
     {
-        // For simplicity degree lookup involves an internal relationships cursor, but looping through the data is cheap
-        // and the data is right there in the buffer. Also for dense nodes the degree lookup is a single lookup in the b+tree
-        return true;
+        return MutableNodeRecordData.forwardPointerPointsToDense( data.forwardPointer );
     }
 
     @Override

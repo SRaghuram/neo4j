@@ -34,18 +34,18 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.Consumer;
 
-import org.neo4j.graphdb.Direction;
 import org.neo4j.internal.kernel.api.exceptions.ConstraintViolationTransactionFailureException;
 import org.neo4j.internal.kernel.api.exceptions.DeletedNodeStillHasRelationships;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.storageengine.api.RelationshipDirection;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageProperty;
-import org.neo4j.storageengine.util.EagerDegrees;
 import org.neo4j.values.storable.Value;
 
 import static java.lang.Math.toIntExact;
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
+import static org.neo4j.internal.freki.MutableNodeRecordData.FLAG_DEGREES;
 import static org.neo4j.internal.freki.MutableNodeRecordData.FLAG_PROPERTIES;
 import static org.neo4j.internal.freki.MutableNodeRecordData.FLAG_RELATIONSHIPS;
 import static org.neo4j.internal.freki.MutableNodeRecordData.buildForwardPointer;
@@ -55,8 +55,6 @@ import static org.neo4j.internal.freki.MutableNodeRecordData.idFromForwardPointe
 import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromForwardPointer;
 import static org.neo4j.internal.freki.PropertyUpdate.add;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
-import static org.neo4j.storageengine.api.RelationshipSelection.ALL_RELATIONSHIPS;
-import static org.neo4j.storageengine.api.RelationshipSelection.selection;
 
 /**
  * Contains all logic about making graph data changes to a Freki store, everything from loading and modifying data to serializing
@@ -164,7 +162,7 @@ class GraphUpdates
                 Record xL = readRecord( stores, sizeExponentialFromForwardPointer( forwardPointer ), idFromForwardPointer( forwardPointer ) );
                 MutableNodeRecordData largeData = new MutableNodeRecordData( nodeId );
                 largeData.deserialize( xL.dataForReading(), stores.bigPropertyValueStore );
-                sparse.data.copyDataFrom( FLAG_PROPERTIES | FLAG_RELATIONSHIPS, largeData );
+                sparse.data.copyDataFrom( FLAG_PROPERTIES | FLAG_DEGREES | FLAG_RELATIONSHIPS, largeData );
                 xLBefore = xL;
             }
             if ( forwardPointerPointsToDense( forwardPointer ) )
@@ -228,7 +226,7 @@ class GraphUpdates
             sparse.prepareForCommandExtraction();
             if ( dense != null )
             {
-                dense.prepareForCommandExtraction( cursorTracer );
+                dense.prepareForCommandExtraction();
             }
         }
 
@@ -299,33 +297,33 @@ class GraphUpdates
 
             // TODO === ATTEMPT move relationships to a larger x ===
 
-            // === ATTEMPT move properties and relationships to a larger x ===
+            // === ATTEMPT move properties, degrees and relationships to a larger x ===
             {
                 MutableNodeRecordData largeData = new MutableNodeRecordData( nodeId );
-                largeData.copyDataFrom( FLAG_PROPERTIES | FLAG_RELATIONSHIPS, sparse.data );
+                largeData.copyDataFrom( FLAG_PROPERTIES | FLAG_DEGREES | FLAG_RELATIONSHIPS, sparse.data );
                 largeData.setBackPointer( nodeId );
                 if ( trySerialize( largeData, maxBuffer.clear() ) )
                 {
                     // We were able to fit properties and relationships into this larger store.
                     SimpleStore store = stores.storeSuitableForRecordSize( maxBuffer.limit(), 1 );
-                    xLargeCommands( maxBuffer, store, otherCommands, d -> d.clearData( FLAG_PROPERTIES | FLAG_RELATIONSHIPS ),
+                    xLargeCommands( maxBuffer, store, otherCommands, d -> d.clearData( FLAG_PROPERTIES | FLAG_DEGREES | FLAG_RELATIONSHIPS ),
                             forwardPointerPointsToDense( sparse.data.getForwardPointer() ) );
                     return;
                 }
             }
 
-            // === ATTEMPT move properties to a larger x (and relationships to dense store) ===
+            // === ATTEMPT move properties and degrees to a larger x (and relationships to dense store) ===
             {
+                moveDataToDense();
                 MutableNodeRecordData largeData = new MutableNodeRecordData( nodeId );
-                largeData.copyDataFrom( FLAG_PROPERTIES, sparse.data );
+                largeData.copyDataFrom( FLAG_PROPERTIES | FLAG_DEGREES, sparse.data );
                 largeData.setBackPointer( nodeId );
                 if ( trySerialize( largeData, maxBuffer.clear() ) )
                 {
                     // We were able to fit properties and relationships into this larger store. The reason we try x1 first is that there'll be overhead
                     // in the form of forward pointer and potentially next-relationship-id inside x1 if points to a larger record.
                     SimpleStore store = stores.storeSuitableForRecordSize( maxBuffer.limit(), 1 );
-                    xLargeCommands( maxBuffer, store, otherCommands, d -> d.clearData( FLAG_PROPERTIES ), true );
-                    moveDataToDense( FLAG_RELATIONSHIPS );
+                    xLargeCommands( maxBuffer, store, otherCommands, d -> d.clearData( FLAG_PROPERTIES | FLAG_DEGREES ), true );
                     return;
                 }
             }
@@ -350,13 +348,13 @@ class GraphUpdates
             return deletedRecord;
         }
 
-        private void moveDataToDense( int flags )
+        private void moveDataToDense()
         {
             if ( dense == null )
             {
                 dense = new DenseRecordAndData( sparse, stores.denseStore, stores.bigPropertyValueStore, bigValueCommandConsumer, cursorTracer );
             }
-            dense.moveDataFrom( flags, sparse.data );
+            dense.moveDataFrom( sparse.data );
         }
 
         private boolean trySerialize( MutableNodeRecordData data, ByteBuffer buffer )
@@ -471,7 +469,7 @@ class GraphUpdates
     {
         // meta
         private final SparseRecordAndData smallRecord;
-        private final DenseStore store;
+        private final DenseRelationshipStore store;
         private final SimpleBigValueStore bigValueStore;
         private final Consumer<StorageCommand> bigValueConsumer;
         private final PageCursorTracer cursorTracer;
@@ -479,11 +477,10 @@ class GraphUpdates
 
         // changes
         // TODO it feels like we've simply moving tx-state data from one form to another and that's probably true and can probably be improved on later
-        private MutableIntObjectMap<PropertyUpdate> propertyUpdates = IntObjectMaps.mutable.empty();
         private MutableIntObjectMap<DenseRelationships> relationshipUpdates = IntObjectMaps.mutable.empty();
 
-        DenseRecordAndData( SparseRecordAndData smallRecord, DenseStore store, SimpleBigValueStore bigValueStore, Consumer<StorageCommand> bigValueConsumer,
-                PageCursorTracer cursorTracer )
+        DenseRecordAndData( SparseRecordAndData smallRecord, DenseRelationshipStore store, SimpleBigValueStore bigValueStore,
+                Consumer<StorageCommand> bigValueConsumer, PageCursorTracer cursorTracer )
         {
             this.smallRecord = smallRecord;
             this.store = store;
@@ -506,53 +503,56 @@ class GraphUpdates
         @Override
         public void createRelationship( long internalId, long targetNode, int type, boolean outgoing, Iterable<StorageProperty> addedProperties )
         {
+            createRelationship( internalId, targetNode, type, outgoing, serializeAddedProperties( addedProperties, IntObjectMaps.mutable.empty() ) );
+        }
+
+        private void createRelationship( long internalId, long targetNode, int type, boolean outgoing, IntObjectMap<PropertyUpdate> properties )
+        {
             // For sparse representation the high internal relationship ID counter is simply the highest of the existing relationships,
             // decided when loading the node. But for dense nodes we won't load all relationships and will therefore need to keep
             // this counter in an explicit field in the small record. This call keeps that counter updated.
             smallRecord.data.registerInternalRelationshipId( internalId );
-            relationshipUpdatesForType( type, cursorTracer ).create( new DenseRelationships.DenseRelationship( internalId, targetNode, outgoing,
-                    serializeAddedProperties( addedProperties, IntObjectMaps.mutable.empty() ) ) );
+            smallRecord.data.degrees.add( type, calculateDirection( targetNode, outgoing ), 1 );
+            relationshipUpdatesForType( type ).create( new DenseRelationships.DenseRelationship( internalId, targetNode, outgoing, properties ) );
         }
 
-        private DenseRelationships relationshipUpdatesForType( int type, PageCursorTracer cursorTracer )
+        private RelationshipDirection calculateDirection( long targetNode, boolean outgoing )
         {
-            return relationshipUpdates.getIfAbsentPutWithKey( type, t ->
-            {
-                EagerDegrees degrees = store.getDegrees( nodeId(), selection( t, Direction.BOTH ), cursorTracer );
-                return new DenseRelationships( nodeId(), t,
-                        degrees.rawOutgoingDegree( t ), degrees.rawIncomingDegree( t ), degrees.rawLoopDegree( t ) );
-            } );
+            return nodeId() == targetNode ? RelationshipDirection.LOOP : outgoing ? RelationshipDirection.OUTGOING : RelationshipDirection.INCOMING;
+        }
+
+        private DenseRelationships relationshipUpdatesForType( int type )
+        {
+            return relationshipUpdates.getIfAbsentPutWithKey( type, t -> new DenseRelationships( nodeId(), t ) );
         }
 
         @Override
         public void deleteRelationship( long internalId, int type, long otherNode, boolean outgoing )
         {
             // TODO have some way of at least saying whether or not this relationship had properties, so that this loading can be skipped completely
-            relationshipUpdatesForType( type, cursorTracer ).delete( new DenseRelationships.DenseRelationship( internalId, otherNode, outgoing,
+            smallRecord.data.degrees.add( type, calculateDirection( otherNode, outgoing ), -1 );
+            relationshipUpdatesForType( type ).delete( new DenseRelationships.DenseRelationship( internalId, otherNode, outgoing,
                     store.loadRelationshipPropertiesForRemoval( nodeId(), internalId, type, otherNode, outgoing, cursorTracer ) ) );
         }
 
         @Override
         public void updateNodeProperties( Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
         {
-            store.prepareUpdateNodeProperties( nodeId(), added, changed, removed, bigValueConsumer, propertyUpdates, cursorTracer );
+            throw new UnsupportedOperationException();
         }
 
         @Override
         public void delete()
         {
-            store.loadAndRemoveNodeProperties( nodeId(), propertyUpdates, cursorTracer );
             deleted = true;
         }
 
-        void prepareForCommandExtraction( PageCursorTracer cursorTracer ) throws ConstraintViolationTransactionFailureException
+        void prepareForCommandExtraction() throws ConstraintViolationTransactionFailureException
         {
             if ( deleted )
             {
                 // This dense node has now been deleted, verify that all its relationships have also been removed in this transaction
-                // This is difficult to do efficiently, but we can at least compare degrees and see that an equal amount of deleted relationships
-                // exist in this transaction for this node.
-                if ( !allRelationshipsHaveBeenDeleted( cursorTracer ) )
+                if ( !smallRecord.data.degrees.isEmpty() )
                 {
                     throw new DeletedNodeStillHasRelationships( nodeId() );
                 }
@@ -561,47 +561,22 @@ class GraphUpdates
 
         void createCommands( Consumer<StorageCommand> commands )
         {
-            commands.accept( new FrekiCommand.DenseNode( nodeId(), propertyUpdates, relationshipUpdates ) );
-        }
-
-        private boolean allRelationshipsHaveBeenDeleted( PageCursorTracer cursorTracer )
-        {
-            EagerDegrees degrees = store.getDegrees( nodeId(), ALL_RELATIONSHIPS, cursorTracer );
-            for ( int type : degrees.types() )
-            {
-                DenseRelationships relationshipsOfType = relationshipUpdates.get( type );
-                if ( relationshipsOfType == null || relationshipsOfType.deleted.size() != degrees.totalDegree( type ) )
-                {
-                    return false;
-                }
-            }
-            return true;
+            commands.accept( new FrekiCommand.DenseNode( nodeId(), relationshipUpdates ) );
         }
 
         /**
          * Moving from a sparse --> dense will have all data look like "created", since the before-state is the before-state of the sparse record
          * that it comes from. This differs from changes to an existing dense node where all changes need to follow the added/changed/removed pattern.
          */
-        void moveDataFrom( int flags, MutableNodeRecordData data )
+        void moveDataFrom( MutableNodeRecordData data )
         {
-            if ( (flags & FLAG_PROPERTIES) != 0 )
-            {
-                serializeAddedProperties( data.properties, propertyUpdates );
-            }
-            if ( (flags & FLAG_RELATIONSHIPS) != 0 )
-            {
-                data.relationships.forEachKeyValue( ( type, fromRelationships ) ->
-                {
-                    // We're moving to the dense store, which from its POV all relationships will be created so therefore
-                    // start at 0 degrees and all creations will increment those degrees.
-                    DenseRelationships relationships = relationshipUpdates.getIfAbsentPut( type, new DenseRelationships( nodeId(), type, 0, 0, 0 ) );
-                    fromRelationships.relationships.forEach( fromRelationship -> relationships.create(
-                            new DenseRelationships.DenseRelationship( fromRelationship.internalId, fromRelationship.otherNode, fromRelationship.outgoing,
-                                    serializeAddedProperties( fromRelationship.properties, IntObjectMaps.mutable.empty() ) ) ) );
-                } );
-                smallRecord.data.nextInternalRelationshipId = data.nextInternalRelationshipId;
-            }
-            data.clearData( flags );
+            // We're moving to the dense store, which from its POV all relationships will be created so therefore
+            // start at 0 degrees and all creations will increment those degrees.
+            data.relationships.forEachKeyValue( ( type, fromRelationships ) -> fromRelationships.relationships.forEach(
+                    from -> createRelationship( from.internalId, from.otherNode, from.type, from.outgoing,
+                            serializeAddedProperties( from.properties, IntObjectMaps.mutable.empty() ) ) ) );
+            smallRecord.data.nextInternalRelationshipId = data.nextInternalRelationshipId;
+            data.clearData( FLAG_RELATIONSHIPS );
         }
 
         private IntObjectMap<PropertyUpdate> serializeAddedProperties( IntObjectMap<Value> properties, MutableIntObjectMap<PropertyUpdate> target )
