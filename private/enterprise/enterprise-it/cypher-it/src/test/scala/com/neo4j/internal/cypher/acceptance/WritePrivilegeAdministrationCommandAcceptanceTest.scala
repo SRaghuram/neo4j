@@ -516,6 +516,31 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
   }
 
+  test("should normalize graph name for write privileges") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE BaR")
+    execute("CREATE ROLE custom")
+
+    // WHEN
+    execute("GRANT WRITE ON GRAPH BAR TO custom")
+    execute("DENY WRITE ON GRAPH baR TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      write().role("custom").database("bar").node("*").map,
+      write().role("custom").database("bar").relationship("*").map,
+      write("DENIED").role("custom").database("bar").node("*").map,
+      write("DENIED").role("custom").database("bar").relationship(("*")).map
+    ))
+
+    // WHEN
+    execute("REVOKE WRITE ON GRAPH Bar FROM custom")
+
+    //THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
+  }
+
   // Tests for actual behaviour of authorization rules for restricted users based on privileges
 
   test("should create node when granted WRITE privilege to custom role for all databases and all labels") {
@@ -1333,5 +1358,4 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     selectDatabase("foo")
     execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "b")))
   }
-
 }

@@ -718,6 +718,43 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     } should have message "Permission denied."
   }
 
+  test("should normalize graph name for graph privileges") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE BaR")
+    execute("CREATE ROLE custom")
+
+    // WHEN
+    execute("GRANT TRAVERSE ON GRAPH BaR NODES A TO custom")
+    execute("DENY TRAVERSE ON GRAPH bar RELATIONSHIP B TO custom")
+    execute("GRANT READ {prop} ON GRAPH BAR NODES A TO custom")
+    execute("DENY READ {prop2} ON GRAPH bAR NODES B TO custom")
+    execute("GRANT MATCH {prop3} ON GRAPH bAr NODES C TO custom")
+    execute("DENY MATCH {prop4} ON GRAPH bAr NODES D TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      traverse().role("custom").database("bar").node("A").map,
+      traverse("DENIED").role("custom").database("bar").relationship("B").map,
+      read().role("custom").database("bar").property("prop").node("A").map,
+      read("DENIED").role("custom").database("bar").property("prop2").node("B").map,
+      matchPrivilege().role("custom").database("bar").property("prop3").node("C").map,
+      matchPrivilege("DENIED").role("custom").database("bar").property("prop4").node("D").map
+    ))
+
+    // WHEN
+    execute("REVOKE GRANT TRAVERSE ON GRAPH bar NODES A FROM custom")
+    execute("REVOKE DENY READ {prop2} ON GRAPH BAr NODES B FROM custom")
+    execute("REVOKE MATCH {prop3} ON GRAPH BAr NODES C FROM custom")
+
+    //THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      traverse("DENIED").role("custom").database("bar").relationship("B").map,
+      read().role("custom").database("bar").property("prop").node("A").map,
+      matchPrivilege("DENIED").role("custom").database("bar").property("prop4").node("D").map
+    ))
+  }
+
   // Tests for granting and denying privileges on properties
   Seq(
     ("grant", "GRANTED"),
