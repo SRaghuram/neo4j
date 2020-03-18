@@ -5,10 +5,27 @@
 
 set -eux
 
-version=$(mvn -q help:evaluate -Dexpression="benchmarks.version" -DforceStdout -pl :benchmarks)
+version=
+
+while (("$#")); do
+  case "$1" in
+  --version)
+    version=$2
+    shift 2
+    ;;
+  --) # end of argument parsing
+    shift
+    break
+    ;;
+  esac
+done
 
 if [[ -z $version ]]; then
-  echo "benchmarks.version property not set in benchmarks POM"
+  version=$(mvn -q help:evaluate -Dexpression="benchmarks.version" -DforceStdout -pl :benchmarks)
+fi
+
+if [[ -z $version ]]; then
+  echo "benchmarks.version property not set in benchmarks POM or not set from command line"
   exit 1
 fi
 
