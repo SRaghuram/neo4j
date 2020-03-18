@@ -58,7 +58,7 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
     // WHEN
     execute("GRANT SHOW TRANSACTION ON DATABASE foo TO role")
     execute("GRANT SHOW TRANSACTION ON DATABASE $db TO role", Map("db" -> "bar"))
-    execute("GRANT SHOW TRANSACTION (user1,user2) ON DEFAULT DATABASE TO role")
+    execute("GRANT SHOW TRANSACTION (user1,$userParam) ON DEFAULT DATABASE TO role", Map("userParam" -> "user2"))
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
@@ -161,7 +161,7 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
     // WHEN
     execute("DENY TERMINATE TRANSACTION ON DATABASE foo TO role")
     execute("DENY TERMINATE TRANSACTION ON DATABASE $db TO role", Map("db" -> "bar"))
-    execute("DENY TERMINATE TRANSACTION (user1,user2) ON DEFAULT DATABASE TO role")
+    execute("DENY TERMINATE TRANSACTION ($userParam,user2) ON DEFAULT DATABASE TO role", Map("userParam" -> "user1"))
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
@@ -276,7 +276,7 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
     execute("REVOKE TRANSACTION ON DATABASE foo FROM role")
     execute("REVOKE TRANSACTION ON DATABASE $db FROM role", Map("db" -> "bar"))
     execute("REVOKE TRANSACTION ON DEFAULT DATABASE FROM role")
-    execute("REVOKE TRANSACTION (user1,user2) ON DATABASE * FROM role")
+    execute("REVOKE TRANSACTION ($userParam1,$userParam2) ON DATABASE * FROM role", Map("userParam1" -> "user1", "userParam2" -> "user2"))
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(

@@ -1081,12 +1081,12 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute(s"EXPLAIN REVOKE DENY SHOW TRANSACTION (user1, user2) ON DEFAULT DATABASE FROM reader").executionPlanString()
+    val plan = execute("EXPLAIN REVOKE DENY SHOW TRANSACTION (user1, $user2) ON DEFAULT DATABASE FROM reader").executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "SHOW TRANSACTION", allDatabases = false, qualifierArg("USER", "user2"), "reader",
+        databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "SHOW TRANSACTION", allDatabases = false, Qualifier("USER $user2"), "reader",
           databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "SHOW TRANSACTION", allDatabases = false, qualifierArg("USER", "user1"), "reader",
             assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
@@ -1183,13 +1183,13 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute(s"EXPLAIN REVOKE DENY TERMINATE TRANSACTION (user1, user2) ON DEFAULT DATABASE FROM reader").executionPlanString()
+    val plan = execute("EXPLAIN REVOKE DENY TERMINATE TRANSACTION ($user1, user2) ON DEFAULT DATABASE FROM reader").executionPlanString()
 
     // Then
     plan should include(
       logPlan(
         databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "TERMINATE TRANSACTION", allDatabases = false, qualifierArg("USER", "user2"), "reader",
-          databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "TERMINATE TRANSACTION", allDatabases = false, qualifierArg("USER", "user1"), "reader",
+          databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "TERMINATE TRANSACTION", allDatabases = false, Qualifier("USER $user1"), "reader",
             assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
@@ -1201,7 +1201,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN GRANT TRANSACTION MANAGEMENT ON DATABASE * TO reader, editor").executionPlanString()
+    val plan = execute("EXPLAIN GRANT TRANSACTION MANAGEMENT (*) ON DATABASE * TO reader, editor").executionPlanString()
 
     // Then
     plan should include(
@@ -1237,15 +1237,13 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY TRANSACTION (user1,user2) ON DATABASE $db TO reader", Map("db" -> SYSTEM_DATABASE_NAME)).executionPlanString()
+    val plan = execute("EXPLAIN DENY TRANSACTION ($user) ON DATABASE $db TO reader", Map("db" -> SYSTEM_DATABASE_NAME)).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "TRANSACTION MANAGEMENT", Database("DATABASE $db"), qualifierArg("USER", "user2"), "reader",
-          databasePrivilegePlan("DenyDatabaseAction", "TRANSACTION MANAGEMENT", Database("DATABASE $db"), qualifierArg("USER", "user1"), "reader",
-            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
-          )
+        databasePrivilegePlan("DenyDatabaseAction", "TRANSACTION MANAGEMENT", Database("DATABASE $db"), Qualifier("USER $user"), "reader",
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
     )

@@ -792,14 +792,16 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege $grantName resource type $resource")
   }
 
-  private def getQualifierPart(qualifier: PrivilegeQualifier, startOfErrorMessage: String, grantName: String, matchOrMerge: String): (Value, String) = qualifier match {
-    case AllQualifier() => (Values.NO_VALUE, matchOrMerge + " (q:DatabaseQualifier {type: 'database', label: ''})") // The label is just for later printout of results
-    case LabelQualifier(name) => (Values.utf8Value(name), matchOrMerge + " (q:LabelQualifier {type: 'node', label: $label})")
-    case LabelAllQualifier() => (Values.NO_VALUE, matchOrMerge + " (q:LabelQualifierAll {type: 'node', label: '*'})") // The label is just for later printout of results
-    case RelationshipQualifier(name) => (Values.utf8Value(name), matchOrMerge + " (q:RelationshipQualifier {type: 'relationship', label: $label})")
-    case RelationshipAllQualifier() => (Values.NO_VALUE, matchOrMerge + " (q:RelationshipQualifierAll {type: 'relationship', label: '*'})") // The label is just for later printout of results
-    case UserAllQualifier() => (Values.NO_VALUE, matchOrMerge + " (q:UserQualifierAll {type: 'user', label: '*'})") // The label is just for later printout of results
-    case UserQualifier(name) => (Values.stringValue(name), matchOrMerge + " (q:UserQualifier {type: 'user', label: $label})")
+  private def getQualifierPart(qualifier: PrivilegeQualifier, startOfErrorMessage: String, grantName: String, matchOrMerge: String): (String, Value, MapValueConverter, String) = qualifier match {
+    case AllQualifier() => ("", Values.NO_VALUE, IdentityConverter, matchOrMerge + " (q:DatabaseQualifier {type: 'database', label: ''})") // The label is just for later printout of results
+    case LabelQualifier(name) => ("label", Values.utf8Value(name), IdentityConverter, matchOrMerge + " (q:LabelQualifier {type: 'node', label: $label})")
+    case LabelAllQualifier() => ("", Values.NO_VALUE, IdentityConverter, matchOrMerge + " (q:LabelQualifierAll {type: 'node', label: '*'})") // The label is just for later printout of results
+    case RelationshipQualifier(name) => ("label", Values.utf8Value(name), IdentityConverter, matchOrMerge + " (q:RelationshipQualifier {type: 'relationship', label: $label})")
+    case RelationshipAllQualifier() => ("", Values.NO_VALUE, IdentityConverter, matchOrMerge + " (q:RelationshipQualifierAll {type: 'relationship', label: '*'})") // The label is just for later printout of results
+    case UserAllQualifier() => ("", Values.NO_VALUE, IdentityConverter, matchOrMerge + " (q:UserQualifierAll {type: 'user', label: '*'})") // The label is just for later printout of results
+    case UserQualifier(name) =>
+      val (key, value, converter) = getNameFields("userQualifier", name)
+      (key, value, converter, matchOrMerge + s" (q:UserQualifier {type: 'user', label: $$$key})")
     case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege $grantName qualifier $qualifier")
   }
 
@@ -817,7 +819,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     val action = Values.utf8Value(actionName)
     val role = Values.utf8Value(roleName)
     val (property: Value, resourceType: Value, resourceMerge: String) = getResourcePart(resource, startOfErrorMessage, grant.name, "MERGE")
-    val (label: Value, qualifierMerge: String) = getQualifierPart(qualifier, startOfErrorMessage, grant.name, "MERGE")
+    val (qualifierKey, qualifierValue, qualifierConverter, qualifierMerge) = getQualifierPart(qualifier, startOfErrorMessage, grant.name, "MERGE")
     val (databaseKey, databaseValue, databaseConverter, databaseMerge, scopeMerge) = database match {
       case NamedGraphScope(name) =>
         val (key, value, converter) = getNameFields("nameScope", name, valueMapper = s => new NormalizedDatabaseName(s).name())
@@ -832,7 +834,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |$qualifierMerge
          |WITH q
          |
-         |// Find the specified database, the default database or find/create the special DatabaseAll node for '*'
+         |// Find the specified database or find/create the special default database or the special DatabaseAll node for '*'
          |$databaseMerge
          |WITH q, d
          |
@@ -850,7 +852,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |
          |// Return the table of results
          |RETURN '${grant.prefix}' AS grant, p.action AS action, d.name AS database, q.label AS label, r.name AS role""".stripMargin,
-      VirtualValues.map(Array("action", "resource", "property", databaseKey, "label", "role"), Array(action, resourceType, property, databaseValue, label, role)),
+      VirtualValues.map(Array("action", "resource", "property", databaseKey, qualifierKey, "role"), Array(action, resourceType, property, databaseValue, qualifierValue, role)),
       QueryHandler
         .handleNoResult(params => {
           val db = params.get(databaseKey).asInstanceOf[TextValue].stringValue()
@@ -868,7 +870,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           case (e, _) => new IllegalStateException(s"$startOfErrorMessage.", e)
         },
       source,
-      parameterConverter = databaseConverter
+      parameterConverter = p => databaseConverter(qualifierConverter(p))
     )
   }
 
@@ -878,7 +880,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     val role = Values.utf8Value(roleName)
 
     val (property: Value, resourceType: Value, resourceMatch: String) = getResourcePart(resource, startOfErrorMessage, "revoke", "MATCH")
-    val (label: Value, qualifierMatch: String) = getQualifierPart(qualifier, startOfErrorMessage, "revoke", "MATCH")
+    val (qualifierKey, qualifierValue, qualifierConverter, qualifierMatch) = getQualifierPart(qualifier, startOfErrorMessage, "revoke", "MATCH")
     val (databaseKey, databaseValue, databaseConverter, scopeMatch) = database match {
       case NamedGraphScope(name) =>
         val (key, value, converter) = getNameFields("nameScope", name, valueMapper = s => new NormalizedDatabaseName(s).name())
@@ -907,14 +909,14 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |// Remove the assignment
          |DELETE g
          |RETURN r.name AS role, g AS grant""".stripMargin,
-      VirtualValues.map(Array("action", "resource", "property", databaseKey, "label", "role"), Array(action, resourceType, property, databaseValue, label, role)),
+      VirtualValues.map(Array("action", "resource", "property", databaseKey, qualifierKey, "role"), Array(action, resourceType, property, databaseValue, qualifierValue, role)),
       QueryHandler.handleError {
         case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
           new DatabaseAdministrationOnFollowerException(s"$startOfErrorMessage: $followerError", e)
         case (e, _) => new IllegalStateException(s"$startOfErrorMessage.", e)
       },
       source,
-      parameterConverter = databaseConverter
+      parameterConverter = p => databaseConverter(qualifierConverter(p))
     )
   }
 
