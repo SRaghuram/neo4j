@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.spec.pipelined
 import org.neo4j.cypher.QueryPlanTestSupport
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.RuntimeContext
-import org.neo4j.cypher.internal.ir.ProvidedOrder
+import org.neo4j.cypher.internal.ir.ordering.ProvidedOrder
 import org.neo4j.cypher.internal.logical.builder.Parser
 import org.neo4j.cypher.internal.logical.plans.DoNotGetValue
 import org.neo4j.cypher.internal.logical.plans.GetValue
