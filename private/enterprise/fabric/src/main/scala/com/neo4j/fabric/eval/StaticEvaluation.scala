@@ -209,7 +209,7 @@ object StaticEvaluation {
 
     override def getImportURL(url: URL): Either[String, URL] = notAvailable()
 
-    override def nodeIsDense(node: Long, nodeCursor: NodeCursor): Boolean = notAvailable()
+    override def nodeHasCheapDegrees(node: Long, nodeCursor: NodeCursor): Boolean = notAvailable()
 
     override def asObject(value: AnyValue): AnyRef = notAvailable()
 
