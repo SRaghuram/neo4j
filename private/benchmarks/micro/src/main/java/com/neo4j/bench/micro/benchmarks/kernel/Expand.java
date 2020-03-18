@@ -30,6 +30,7 @@ import java.util.stream.Stream;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
+import org.neo4j.storageengine.api.Degrees;
 
 import static com.neo4j.bench.micro.Main.run;
 import static com.neo4j.bench.micro.benchmarks.core.Expand.NODE_COUNT;
@@ -178,6 +179,36 @@ public class Expand extends AbstractKernelBenchmark
             txState.node.next();
             bh.consume( txState.node.propertiesReference() );
         }
+    }
+
+    @Benchmark
+    @BenchmarkMode( {Mode.SampleTime} )
+    public void degreesSingleType( TxState txState, RNGState rngState, Blackhole bh )
+    {
+        long nodeId = rngState.rng.nextInt( NODE_COUNT );
+        txState.kernelTx.read.singleNode( nodeId, txState.node );
+
+        int type = txState.randomRelationshipType( rngState.rng );
+
+        txState.node.next();
+        Degrees degrees = txState.node.degrees( selection( type, Direction.BOTH ) );
+
+        bh.consume( degrees.totalDegree( type ) );
+    }
+
+    @Benchmark
+    @BenchmarkMode( {Mode.SampleTime} )
+    public void allDegrees( TxState txState, RNGState rngState, Blackhole bh )
+    {
+        long nodeId = rngState.rng.nextInt( NODE_COUNT );
+        txState.kernelTx.read.singleNode( nodeId, txState.node );
+
+        int type = txState.randomRelationshipType( rngState.rng );
+
+        txState.node.next();
+        Degrees degrees = txState.node.degrees( ALL_RELATIONSHIPS );
+
+        bh.consume( degrees.totalDegree() );
     }
 
     public static void main( String... methods ) throws Exception
