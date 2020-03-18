@@ -557,6 +557,46 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   }
 
+  test("OR between EXISTS and other predicate") {
+
+    val query =
+      """
+        |    MATCH (a:Person), (b:Dog { name:'Ozzy' })
+        |    WHERE a.id = 0
+        |    OR EXISTS {
+        |      MATCH (a)-[:HAS_DOG]->(b)
+        |    }
+        |    RETURN a.name as name
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SelectOrSemiApply")
+
+    result.toSet should equal(Set(Map("name" -> "Alice"), Map("name" -> "Chris")))
+  }
+
+  test("OR between NOT EXISTS and other predicate") {
+
+    val query =
+      """
+        |    MATCH (a:Person), (b:Dog { name:'Ozzy' })
+        |    WHERE a.id = 0
+        |    OR NOT EXISTS {
+        |      MATCH (a)-[:HAS_DOG]->(b)
+        |    }
+        |    RETURN a.name as name
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SelectOrAntiSemiApply")
+
+    result.toSet should equal(Set(Map("name" -> "Alice"), Map("name" -> "Bosse")))
+  }
+
   test("Unrelated inner pattern") {
 
     val query =
