@@ -98,22 +98,22 @@ class OptionalExpandAllOperator(val workIdentity: WorkIdentity,
       val fromNode = getFromNodeFunction.applyAsLong(inputCursor)
       hasWritten = false
       if (entityIsNull(fromNode)) {
-        traversalCursor = RelationshipTraversalCursor.EMPTY
+        relationships = RelationshipTraversalCursor.EMPTY
       } else {
         setUp(state, resources)
         val pools: CursorPools = resources.cursorPools
         nodeCursor = pools.nodeCursorPool.allocateAndTrace()
-        traversalCursor = getRelationshipsCursor(state.queryContext, pools, fromNode, dir, types.types(state.queryContext))
+        relationships = getRelationshipsCursor(state.queryContext, pools, fromNode, dir, types.types(state.queryContext))
       }
       true
     }
 
     override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
 
-      while (outputRow.onValidRow && traversalCursor.next()) {
+      while (outputRow.onValidRow && relationships.next()) {
         hasWritten = writeRow(outputRow,
-          traversalCursor.relationshipReference(),
-          traversalCursor.otherNodeReference())
+          relationships.relationshipReference(),
+          relationships.otherNodeReference())
       }
       if (outputRow.onValidRow && !hasWritten) {
         writeNullRow(outputRow)
@@ -218,10 +218,10 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       ifElse(notEqual(load(fromNode), constant(-1L))) {
         block(
           setUpCursors(fromNode),
-          setField(canContinue, cursorNext[RelationshipTraversalCursor](loadField(traversalCursorField))),
+          setField(canContinue, cursorNext[RelationshipTraversalCursor](loadField(relationshipsField))),
         )
       }{//else
-        setField(traversalCursorField,
+        setField(relationshipsField,
           getStatic[RelationshipTraversalCursor, RelationshipTraversalCursor]("EMPTY"))
       },
       constant(true))
@@ -275,7 +275,7 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
           doIfPredicateOrElse(condition(load(shouldWriteRow))(innerBlock))(innerBlock),
           doIfInnerCantContinue(
             setField(canContinue, and(loadField(canContinue),
-              cursorNext[RelationshipTraversalCursor](loadField(traversalCursorField))))),
+              cursorNext[RelationshipTraversalCursor](loadField(relationshipsField))))),
           endInnerLoop
         )))
   }

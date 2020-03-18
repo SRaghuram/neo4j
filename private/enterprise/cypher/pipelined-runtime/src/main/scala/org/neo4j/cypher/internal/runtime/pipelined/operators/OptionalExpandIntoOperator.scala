@@ -117,7 +117,7 @@ class OptionalExpandIntoOperator(val workIdentity: WorkIdentity,
       val toNode = getToNodeFunction.applyAsLong(inputCursor)
       hasWritten = false
       if (entityIsNull(fromNode) || entityIsNull(toNode)) {
-        traversalCursor = RelationshipTraversalCursor.EMPTY
+        relationships = RelationshipTraversalCursor.EMPTY
       } else {
         setUp(state, resources)
         setupCursors(state.queryContext, resources, fromNode, toNode)
@@ -127,9 +127,9 @@ class OptionalExpandIntoOperator(val workIdentity: WorkIdentity,
 
     override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
 
-      while (outputRow.onValidRow && traversalCursor.next()) {
+      while (outputRow.onValidRow && relationships.next()) {
         hasWritten = writeRow(outputRow,
-          traversalCursor.relationshipReference())
+          relationships.relationshipReference())
       }
       if (outputRow.onValidRow && !hasWritten) {
         writeNullRow(outputRow)

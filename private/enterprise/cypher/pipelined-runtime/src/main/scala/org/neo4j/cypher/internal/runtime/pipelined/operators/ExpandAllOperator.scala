@@ -148,7 +148,8 @@ class ExpandAllTask(inputMorsel: Morsel,
   The mutable state is an unfortunate cost for this feature.
    */
   protected var nodeCursor: NodeCursor = _
-  protected var traversalCursor: RelationshipTraversalCursor = _
+  private var traversalCursor: RelationshipTraversalCursor = _
+  protected var relationships: RelationshipTraversalCursor = _
 
   protected override def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
     val fromNode = getFromNodeFunction.applyAsLong(inputCursor)
@@ -157,16 +158,16 @@ class ExpandAllTask(inputMorsel: Morsel,
     else {
       val pools: CursorPools = resources.cursorPools
       nodeCursor = pools.nodeCursorPool.allocateAndTrace()
-      traversalCursor = getRelationshipsCursor(state.queryContext, pools, fromNode, dir, types.types(state.queryContext))
+      relationships = getRelationshipsCursor(state.queryContext, pools, fromNode, dir, types.types(state.queryContext))
       true
     }
   }
 
   override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
 
-    while (outputRow.onValidRow && traversalCursor.next()) {
-      val relId = traversalCursor.relationshipReference()
-      val otherSide = traversalCursor.otherNodeReference()
+    while (outputRow.onValidRow && relationships.next()) {
+      val relId = relationships.relationshipReference()
+      val otherSide = relationships.otherNodeReference()
 
       // Now we have everything needed to create a row.
       outputRow.copyFrom(inputCursor)
@@ -212,7 +213,6 @@ class ExpandAllTask(inputMorsel: Morsel,
         case BOTH =>
           RelationshipSelections.allCursor(traversalCursor, nodeCursor, types)
       }
-      traversalCursor
     }
   }
 }
@@ -232,20 +232,21 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                    (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen, isHead) {
 
   protected val nodeCursorField: InstanceField = field[NodeCursor](codeGen.namer.nextVariableName("nodeCursor"))
-  protected val traversalCursorField: InstanceField = field[RelationshipTraversalCursor](codeGen.namer.nextVariableName("traversal"))
+  private val traversalCursorField: InstanceField = field[RelationshipTraversalCursor](codeGen.namer.nextVariableName("traversal"))
+  protected val relationshipsField: InstanceField = field[RelationshipTraversalCursor](codeGen.namer.nextVariableName("relationships"))
   private val typeField = field[Array[Int]](codeGen.namer.nextVariableName("type"),
     if (types.isEmpty && missingTypes.isEmpty) constant(null)
     else arrayOf[Int](types.map(constant):_*))
   private val missingTypeField: InstanceField = field[Array[String]](codeGen.namer.nextVariableName("missingType"),
     arrayOf[String](missingTypes.map(constant):_*))
 
-  codeGen.registerCursor(relName, RelationshipCursorRepresentation(loadField(traversalCursorField)))
+  codeGen.registerCursor(relName, RelationshipCursorRepresentation(loadField(relationshipsField)))
 
   override def scopeId: String = "expandAll" + id.x
 
   override def genMoreFields: Seq[Field] = {
     val localFields =
-      ArrayBuffer(nodeCursorField, traversalCursorField, typeField)
+      ArrayBuffer(nodeCursorField, traversalCursorField, relationshipsField, typeField)
     if (missingTypes.nonEmpty) {
       localFields += missingTypeField
     }
@@ -293,7 +294,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
         block(
           assign(resultBoolean, constant(true)),
           setUpCursors(fromNode),
-          setField(canContinue, profilingCursorNext[RelationshipTraversalCursor](loadField(traversalCursorField), id))
+          setField(canContinue, profilingCursorNext[RelationshipTraversalCursor](loadField(relationshipsField), id))
         )
       },
 
@@ -323,7 +324,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
         writeRow(getRelationship, getOtherNode),
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(
-          setField(canContinue, profilingCursorNext[RelationshipTraversalCursor](loadField(traversalCursorField), id))),
+          setField(canContinue, profilingCursorNext[RelationshipTraversalCursor](loadField(relationshipsField), id))),
         endInnerLoop
       )
     )
@@ -361,6 +362,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       freeCursor[RelationshipTraversalCursor](loadField(traversalCursorField), TraversalCursorPool),
       setField(nodeCursorField, constant(null)),
       setField(traversalCursorField, constant(null)),
+      setField(relationshipsField, constant(null))
     )
   }
 
@@ -378,8 +380,8 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     )
   }
 
-  protected def getOtherNode: IntermediateRepresentation = invoke(loadField(traversalCursorField), otherNodeMethod)
-  protected def getRelationship: IntermediateRepresentation = invoke(loadField(traversalCursorField),
+  protected def getOtherNode: IntermediateRepresentation = invoke(loadField(relationshipsField), otherNodeMethod)
+  protected def getRelationship: IntermediateRepresentation = invoke(loadField(relationshipsField),
     method[RelationshipTraversalCursor, Long]("relationshipReference"))
   protected def setUpCursors(fromNode: String): IntermediateRepresentation = {
     //look if there is already a registered nodeCursor otherwise create and register one
@@ -397,7 +399,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
         .map(expandUsingExistingNodeCursor)
         //otherwise we need to set up a cursor to point at the from node
         .getOrElse(expandWithNewNodeCursor(fromNode)),
-      invokeSideEffect(loadField(traversalCursorField),
+      invokeSideEffect(loadField(relationshipsField),
         method[RelationshipTraversalCursor, Unit, KernelReadTracer]("setTracer"),
         loadField(executionEventField))
     )
@@ -410,7 +412,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     val method = findExpansionMethod
 
     block(allocateAndTraceCursor(traversalCursorField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
-      setField(traversalCursorField, invokeStatic(method,
+      setField(relationshipsField, invokeStatic(method,
         loadField(traversalCursorField),
         cursor.target,
         loadField(typeField))))
@@ -428,12 +430,12 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
         block(
           allocateAndTraceCursor(traversalCursorField, executionEventField,
             ALLOCATE_TRAVERSAL_CURSOR),
-          setField(traversalCursorField, invokeStatic(method,
+          setField(relationshipsField, invokeStatic(method,
             loadField(traversalCursorField),
             loadField(nodeCursorField),
             loadField(typeField))))
       )( //else
-        setField(traversalCursorField,
+        setField(relationshipsField,
           getStatic[RelationshipTraversalCursor, RelationshipTraversalCursor]("EMPTY"))
       ))
   }
