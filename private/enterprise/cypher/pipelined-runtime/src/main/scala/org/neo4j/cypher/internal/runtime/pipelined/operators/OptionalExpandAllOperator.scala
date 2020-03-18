@@ -52,7 +52,6 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.values.storable.Values
 
 class OptionalExpandAllOperator(val workIdentity: WorkIdentity,
@@ -219,10 +218,10 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       ifElse(notEqual(load(fromNode), constant(-1L))) {
         block(
           setUpCursors(fromNode),
-          setField(canContinue, cursorNext[RelationshipTraversalCursor](loadField(relationshipsField))),
+          setField(canContinue, cursorNext[RelationshipTraversalCursor](loadField(traversalCursorField))),
         )
       }{//else
-        setField(relationshipsField,
+        setField(traversalCursorField,
           getStatic[RelationshipTraversalCursor, RelationshipTraversalCursor]("EMPTY"))
       },
       constant(true))
@@ -276,7 +275,7 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
           doIfPredicateOrElse(condition(load(shouldWriteRow))(innerBlock))(innerBlock),
           doIfInnerCantContinue(
             setField(canContinue, and(loadField(canContinue),
-              cursorNext[RelationshipTraversalCursor](loadField(relationshipsField))))),
+              cursorNext[RelationshipTraversalCursor](loadField(traversalCursorField))))),
           endInnerLoop
         )))
   }
