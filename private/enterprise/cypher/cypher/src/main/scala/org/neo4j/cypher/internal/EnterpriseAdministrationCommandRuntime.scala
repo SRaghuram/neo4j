@@ -508,9 +508,10 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         )
         case ShowUserPrivileges(name) =>
           val currentUser = securityContext.subject().username()
+          val requestedUser = name.getOrElse(currentUser)
           // Should be able to see your own privileges without admin privilege, source is check for admin privilege
-          val newSource = if (name.equals(currentUser)) None else source
-          (Values.utf8Value(name),
+          val newSource = if (requestedUser.equals(currentUser)) None else source
+          (Values.utf8Value(requestedUser),
           s"""
              |OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r:Role) WHERE u.name = $$grantee WITH r, u
              |$privilegeMatch

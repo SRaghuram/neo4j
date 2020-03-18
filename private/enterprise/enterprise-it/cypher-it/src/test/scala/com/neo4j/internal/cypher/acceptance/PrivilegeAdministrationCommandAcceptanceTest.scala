@@ -271,6 +271,27 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     }) should be(1)
   }
 
+  test("should show user privileges for current user as non admin without specifying the user name") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+
+    // WHEN
+    executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES", resultHandler = (row, _) => {
+      // THEN
+      val res = Map(
+        "access" -> row.get("access"),
+        "action" -> row.get("action"),
+        "resource" -> row.get("resource"),
+        "graph" -> row.get("graph"),
+        "segment" -> row.get("segment"),
+        "role" -> row.get("role"),
+        "user" -> row.get("user")
+      )
+      res should be(access().database(DEFAULT).role("PUBLIC").user("joe").map)
+    }) should be(1)
+  }
+
   test("should give nothing when showing privileges for non-existing user") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
