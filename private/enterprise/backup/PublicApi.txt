@@ -1,5 +1,5 @@
-com.neo4j.backup.OnlineBackup public class extends java.lang.Object
-com.neo4j.backup.OnlineBackup.Result public static class extends java.lang.Object
+com.neo4j.backup.OnlineBackup public final class extends java.lang.Object
+com.neo4j.backup.OnlineBackup.Result public static final class extends java.lang.Object
 com.neo4j.backup.OnlineBackup.Result::isConsistent() boolean public
 com.neo4j.backup.OnlineBackup::backup(java.lang.String, java.nio.file.Path) com.neo4j.backup.OnlineBackup.Result public
 com.neo4j.backup.OnlineBackup::from(java.lang.String) com.neo4j.backup.OnlineBackup public static
