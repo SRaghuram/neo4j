@@ -21,10 +21,13 @@ import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
 import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
 import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.getStatic
+import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
@@ -44,6 +47,7 @@ import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.profiling.QueryProfiler
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
@@ -56,7 +60,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.BELOW_LIMIT
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ_CONSTRUCTOR_PARAMETER
@@ -65,7 +68,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR_FIELD
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_MORSEL_CONSTRUCTOR_PARAMETER
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_ROW_IS_VALID
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NEXT
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NO_KERNEL_TRACER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NO_OPERATOR_PROFILE_EVENT
@@ -83,7 +85,11 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.UPDATE_DEMAND
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.UPDATE_OUTPUT_COUNTER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.WORK_IDENTITY_STATIC_FIELD_NAME
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.argumentSlotOffsetFieldName
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.argumentVarName
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.belowLimitVarName
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.closeEvent
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.getArgumentSlotOffset
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
@@ -97,6 +103,7 @@ import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.Read
 import org.neo4j.values.AnyValue
 
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 trait CompiledStreamingOperator extends StreamingOperator {
@@ -512,6 +519,43 @@ object OperatorTaskTemplate {
     override def genOutputBuffer: Option[IntermediateRepresentation] = None
     override def genInit: IntermediateRepresentation = noop()
   }
+
+  /**
+   * Used from generated code.
+   * Advances the cursor to just before the next argument is
+   * about to start, so that after one call to `next` the cursor will point at the next
+   * argument. Not necessary for correctness but will speed things up considerably
+   * when there are many rows per argument.
+   */
+  def flushToNextArgument(cursor: MorselReadCursor,
+                          currentArgument: Long,
+                          argumentOffset: Int): Unit = {
+
+//    var endRow = cursor.row
+//    while (cursor.onValidRow() && currentArgument == cursor.getLongAt(argumentOffset) && cursor.next()) {
+//      if (currentArgument == cursor.getLongAt(argumentOffset)) {
+//        endRow = cursor.row
+//      }
+//    }
+//
+//    if (cursor.onValidRow()) {
+//      cursor.setRow(endRow)
+//    }
+  }
+
+  /**
+   * Used from generated code.
+   * If cursor is currently on an invalid (e.g., cancelled) row, it will be advanced.
+   * After calling this method the cursor will either point at the next valid row, or the end of the cursor (an invalid row).
+   */
+ def nextRowIfInvalid(cursor: MorselReadCursor): Unit = {
+   if (!cursor.onValidRow()) {
+     val row = cursor.row
+     if (!cursor.next()) {
+       cursor.setRow(row)
+     }
+   }
+ }
 }
 
 trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
@@ -559,9 +603,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
             param[QueryProfiler]("queryProfiler")
           ),
           body = block(
-            condition(not(INPUT_ROW_IS_VALID)) {
-              invokeSideEffect(INPUT_CURSOR, NEXT)
-            },
+            invokeStatic(method[OperatorTaskTemplate, Unit, MorselReadCursor]("nextRowIfInvalid"), INPUT_CURSOR),
             genOperateEnter,
             genOperateWithExpressions,
             genOperateExit
@@ -642,13 +684,15 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
   }
 }
 
+case class LimitNotReachedState(argumentStateMapId: ArgumentStateMapId)
+
 // Used for innermost, e.g. to insert the `outputRow.next` of the start operator at the deepest nesting level
 // and also for providing demand operations
 class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
                                    var shouldCheckDemand: Boolean = false,
                                    var shouldCheckOutputCounter: Boolean = false,
                                    var shouldCheckBreak: Boolean = false,
-                                   var shouldCheckLimitNotReached: Boolean = false)
+                                   val limits: mutable.ArrayBuffer[LimitNotReachedState] = mutable.ArrayBuffer.empty)
                                   (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
 
   // Reset configuration to the default settings
@@ -659,11 +703,33 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
     shouldCheckBreak = false
   }
 
-  def resetBelowLimit: IntermediateRepresentation = if (shouldCheckLimitNotReached) assign(BELOW_LIMIT, constant(true)) else noop()
+  def resetBelowLimit: IntermediateRepresentation = {
+    val ops = limits.map {
+      case LimitNotReachedState(argumentStateMapId) =>
+        block(
+          condition(not(load(belowLimitVarName(argumentStateMapId)))) {
+            block(
+              invokeStatic(method[OperatorTaskTemplate, Unit, MorselReadCursor, Long, Int]("flushToNextArgument"),
+                INPUT_CURSOR,
+                load(argumentVarName(argumentStateMapId)),
+                loadField(field[Int](argumentSlotOffsetFieldName(argumentStateMapId)))),
+              assign(belowLimitVarName(argumentStateMapId), constant(true)))
+          })
+     } :+  block(
+      limits.map(limit => assign(argumentVarName(limit.argumentStateMapId), getArgument(limit.argumentStateMapId))):_*
+    )
+    block(ops:_*)
+  }
 
-  def setToNextIfBelowLimit(field: Field, next: IntermediateRepresentation): IntermediateRepresentation =
-    if (shouldCheckLimitNotReached) IntermediateRepresentation.ifElse(load(BELOW_LIMIT))(setField(field, next))(setField(field, constant(false)))
-    else setField(field, next)
+  def setToNextIfBelowLimit(field: Field, next: IntermediateRepresentation): IntermediateRepresentation = {
+    if (limits.isEmpty) {
+      setField(field, next)
+    }
+    else {
+      val condition = limits.map(limit => load(belowLimitVarName(limit.argumentStateMapId))).reduceLeft(and)
+      ifElse(condition)(setField(field, next))(setField(field, constant(false)))
+    }
+  }
 
   override def inner: OperatorTaskTemplate = null
 
@@ -726,8 +792,9 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
     and(conditions)
   }
 
-  override def genOperateEnter: IntermediateRepresentation =
-    noop()
+  override def genOperateEnter: IntermediateRepresentation = block(
+    limits.map(limit => declareAndAssign(typeRefOf[Long], argumentVarName(limit.argumentStateMapId), constant(-1L))): _*
+  )
 
   /**
    * If we need to care about demand (produceResult part of the fused operator)
@@ -750,13 +817,18 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
     }
   }
 
-  override def genFields: Seq[Field] = Seq.empty
+  override def genFields: Seq[Field] =
+    limits.map(limit => field[Int](argumentSlotOffsetFieldName(limit.argumentStateMapId), getArgumentSlotOffset(limit.argumentStateMapId)))
 
   override def genLocalVariables: Seq[LocalVariable] = {
     val seq = Seq.newBuilder[LocalVariable]
     if (shouldCheckOutputCounter) seq += OUTPUT_COUNTER
     if (shouldWriteToContext) seq += OUTPUT_CURSOR_VAR
-    if (shouldCheckLimitNotReached) seq += BELOW_LIMIT
+    limits.foreach {
+      case LimitNotReachedState(argumentStateMapId) =>
+        seq += variable[Boolean](belowLimitVarName(argumentStateMapId), constant(true))
+    }
+
     seq.result()
   }
 
@@ -769,4 +841,8 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
   override def genCreateState: IntermediateRepresentation = noop()
 
   override def genOutputBuffer: Option[IntermediateRepresentation] = None
+
+  private def getArgument(argumentStateMapId: ArgumentStateMapId) =
+    invoke(INPUT_CURSOR, method[CypherRow, Long, Int]("getLongAt"), loadField(field[Int](argumentSlotOffsetFieldName(argumentStateMapId))))
+
 }

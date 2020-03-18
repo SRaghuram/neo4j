@@ -44,8 +44,8 @@ import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.expressions.SemanticDirection.BOTH
 import org.neo4j.cypher.internal.expressions.SemanticDirection.INCOMING
 import org.neo4j.cypher.internal.expressions.SemanticDirection.OUTGOING
-import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.DbAccess
@@ -253,7 +253,16 @@ object OperatorCodeGenHelperTemplates {
       )
     )
 
-  def argumentSlotOffset(argumentStateMapId: ArgumentStateMapId): IntermediateRepresentation =
+  def argumentSlotOffsetFieldName(argumentStateMapId: ArgumentStateMapId): String =
+    "argumentSlotOffset_asm" + argumentStateMapId.x
+
+  def argumentVarName(argumentStateMapId: ArgumentStateMapId): String =
+    "argument_asm" + argumentStateMapId.x
+
+  def belowLimitVarName(argumentStateMapId: ArgumentStateMapId): String =
+    "belowLimit_asm" + argumentStateMapId.x
+
+  def getArgumentSlotOffset(argumentStateMapId: ArgumentStateMapId): IntermediateRepresentation =
     invoke(
       invoke(load(
         ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name),
