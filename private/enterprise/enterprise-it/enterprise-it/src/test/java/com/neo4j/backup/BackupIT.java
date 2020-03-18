@@ -61,9 +61,11 @@ import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.internal.index.label.TokenScanStore;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
+import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.IOLimiter;
@@ -567,6 +569,11 @@ class BackupIT
             }
             else
             {
+                if ( DatabaseFile.RELATIONSHIP_TYPE_SCAN_STORE.getName().equals( storeFile.getName() ) && !TokenScanStore.relationshipTokenScanStoreEnabled() )
+                {
+                    // Skip relationship type scan store file if feature is not enabled
+                    continue;
+                }
                 assertThat( backupStoreFiles ).contains( storeFile );
             }
         }
