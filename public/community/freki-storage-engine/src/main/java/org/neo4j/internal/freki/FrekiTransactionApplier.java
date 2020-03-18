@@ -19,9 +19,6 @@
  */
 package org.neo4j.internal.freki;
 
-import org.eclipse.collections.api.set.primitive.MutableIntSet;
-import org.eclipse.collections.impl.factory.primitive.IntSets;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -57,7 +54,6 @@ import static org.apache.commons.lang3.ArrayUtils.EMPTY_LONG_ARRAY;
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
 import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPointsToXRecord;
 import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromForwardPointer;
-import static org.neo4j.internal.freki.PropertyValueFormat.read;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.io.IOUtils.closeAll;
 import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
@@ -83,7 +79,6 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     // State used for generating index updates
     private long currentNodeId = NULL;
     private final FrekiCommand.SparseNode[] currentSparseNodeCommands = new FrekiCommand.SparseNode[4];
-    private FrekiCommand.DenseNode currentDenseNodeCommand;
 
     FrekiTransactionApplier( Stores stores, FrekiStorageReader reader, SchemaState schemaState, IndexUpdateListener indexUpdateListener,
             TransactionApplicationMode mode, IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync, LabelIndexUpdatesWorkSync labelIndexUpdatesWorkSync,
@@ -169,14 +164,12 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
             }
 
             Arrays.fill( currentSparseNodeCommands, null );
-            currentDenseNodeCommand = null;
             currentNodeId = nodeId;
         }
     }
 
     public EntityUpdates extractIndexUpdates()
     {
-        boolean propertiesHandledByDenseNode = false;
         long[] labelsBefore;
         long[] labelsAfter;
         FrekiCommand.SparseNode x1 = currentSparseNodeCommands[0];
@@ -185,11 +178,8 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         {
             labelsBefore = parseLabels( x1.before );
             labelsAfter = parseLabels( x1.after );
-            if ( !propertiesHandledByDenseNode )
-            {
-                initializePropertyCursorOnRecord( propertyCursorBefore, findRelevantUsedRecord( node -> node.before ) );
-                initializePropertyCursorOnRecord( propertyCursorAfter, findRelevantUsedRecord( node -> node.after ) );
-            }
+            initializePropertyCursorOnRecord( propertyCursorBefore, findRelevantUsedRecord( node -> node.before ) );
+            initializePropertyCursorOnRecord( propertyCursorAfter, findRelevantUsedRecord( node -> node.after ) );
             nodeIsCreatedRightNow = !x1.before.hasFlag( FLAG_IN_USE );
         }
         else
@@ -201,136 +191,72 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
             labelsBefore = nodeCursor.labels();
             labelsAfter = labelsBefore;
 
-            if ( !propertiesHandledByDenseNode )
+            // So since we loaded this record from store we might as well use it to initialize the after-property cursor,
+            // because they should have the same contents at this point
+            nodeCursor.properties( propertyCursorAfter );
+            // Either this node was just now created, or this node was already large and the large record was updated
+            boolean beforeFound = false;
+            for ( FrekiCommand.SparseNode nodeCommand : currentSparseNodeCommands )
             {
-                // So since we loaded this record from store we might as well use it to initialize the after-property cursor,
-                // because they should have the same contents at this point
-                nodeCursor.properties( propertyCursorAfter );
-                // Either this node was just now created, or this node was already large and the large record was updated
-                boolean beforeFound = false;
-                for ( FrekiCommand.SparseNode nodeCommand : currentSparseNodeCommands )
+                if ( nodeCommand != null && nodeCommand.before.hasFlag( FLAG_IN_USE ) )
                 {
-                    if ( nodeCommand != null && nodeCommand.before.hasFlag( FLAG_IN_USE ) )
-                    {
-                        initializePropertyCursorOnRecord( propertyCursorBefore, nodeCommand.before );
-                        beforeFound = true;
-                        break;
-                    }
+                    initializePropertyCursorOnRecord( propertyCursorBefore, nodeCommand.before );
+                    beforeFound = true;
+                    break;
                 }
-                if ( !beforeFound )
-                {
-                    propertyCursorBefore.reset();
-                }
+            }
+            if ( !beforeFound )
+            {
+                propertyCursorBefore.reset();
             }
         }
 
         EntityUpdates.Builder builder = EntityUpdates.forEntity( currentNodeId, nodeIsCreatedRightNow );
         builder.withTokens( labelsBefore ).withTokensAfter( labelsAfter );
-        if ( !propertiesHandledByDenseNode )
+        boolean beforeHasNext = propertyCursorBefore.next();
+        boolean afterHasNext = propertyCursorAfter.next();
+        int prevBeforeKey = -1;
+        int prevAfterKey = -1;
+        while ( beforeHasNext || afterHasNext )
         {
-            boolean beforeHasNext = propertyCursorBefore.next();
-            boolean afterHasNext = propertyCursorAfter.next();
-            int prevBeforeKey = -1;
-            int prevAfterKey = -1;
-            while ( beforeHasNext || afterHasNext )
+            int beforeKey = beforeHasNext ? propertyCursorBefore.propertyKey() : Integer.MAX_VALUE;
+            int afterKey = afterHasNext ? propertyCursorAfter.propertyKey() : Integer.MAX_VALUE;
+
+            assert !beforeHasNext || prevBeforeKey == -1 || prevBeforeKey <= beforeKey;
+            assert !afterHasNext || prevAfterKey == -1 || prevAfterKey <= afterKey;
+            prevBeforeKey = beforeKey;
+            prevAfterKey = afterKey;
+
+            if ( beforeKey < afterKey )
             {
-                int beforeKey = beforeHasNext ? propertyCursorBefore.propertyKey() : Integer.MAX_VALUE;
-                int afterKey = afterHasNext ? propertyCursorAfter.propertyKey() : Integer.MAX_VALUE;
-
-                assert !beforeHasNext || prevBeforeKey == -1 || prevBeforeKey <= beforeKey;
-                assert !afterHasNext || prevAfterKey == -1 || prevAfterKey <= afterKey;
-                prevBeforeKey = beforeKey;
-                prevAfterKey = afterKey;
-
-                if ( beforeKey < afterKey )
-                {
-                    // a property has been removed
-                    builder.removed( beforeKey, propertyCursorBefore.propertyValue() );
-                    beforeHasNext = propertyCursorBefore.next();
-                }
-                else if ( beforeKey > afterKey )
-                {
-                    // a property has been added
-                    builder.added( afterKey, propertyCursorAfter.propertyValue() );
-                    afterHasNext = propertyCursorAfter.next();
-                }
-                else
-                {
-                    // a property has been changed or is unchanged
-                    Value beforeValue = propertyCursorBefore.propertyValue();
-                    Value afterValue = propertyCursorAfter.propertyValue();
-                    if ( beforeValue.equals( afterValue ) )
-                    {
-                        builder.existing( afterKey, afterValue );
-                    }
-                    else
-                    {
-                        builder.changed( afterKey, beforeValue, afterValue );
-                    }
-                    beforeHasNext = propertyCursorBefore.next();
-                    afterHasNext = propertyCursorAfter.next();
-                }
+                // a property has been removed
+                builder.removed( beforeKey, propertyCursorBefore.propertyValue() );
+                beforeHasNext = propertyCursorBefore.next();
             }
-        }
-        else
-        {
-            //We need to go over all properties (load from store), to find unchanged
-            Record before = findRelevantUsedRecord( node -> node.before );
-            if ( before == null )
+            else if ( beforeKey > afterKey )
             {
-                propertyCursorBefore.initNodeProperties( FrekiReference.nodeReference( currentDenseNodeCommand.nodeId ) );
+                // a property has been added
+                builder.added( afterKey, propertyCursorAfter.propertyValue() );
+                afterHasNext = propertyCursorAfter.next();
             }
             else
             {
-                initializePropertyCursorOnRecord( propertyCursorBefore, before );
-            }
-
-            MutableIntSet newProperties = IntSets.mutable.empty();
-            for ( PropertyUpdate propertyUpdate : currentDenseNodeCommand.propertyUpdates )
-            {
-                if ( propertyUpdate.mode == Mode.CREATE )
+                // a property has been changed or is unchanged
+                Value beforeValue = propertyCursorBefore.propertyValue();
+                Value afterValue = propertyCursorAfter.propertyValue();
+                if ( beforeValue.equals( afterValue ) )
                 {
-                    newProperties.add( propertyUpdate.propertyKeyId );
-                }
-            }
-            while ( propertyCursorBefore.next() )
-            {
-                int key = propertyCursorBefore.propertyKey();
-                PropertyUpdate update = currentDenseNodeCommand.propertyUpdates.get( key );
-                if ( update != null )
-                {
-                    if ( update.mode == Mode.CREATE || update.mode == Mode.UPDATE )
-                    {
-                        newProperties.remove( key );
-                        builder.changed( key, propertyCursorBefore.propertyValue(), readValueAndRestorePosition( update.after ) );
-                    }
-                    else
-                    {
-                        builder.removed( key, propertyCursorBefore.propertyValue() );
-                    }
+                    builder.existing( afterKey, afterValue );
                 }
                 else
                 {
-                    builder.existing( key, propertyCursorBefore.propertyValue() );
+                    builder.changed( afterKey, beforeValue, afterValue );
                 }
+                beforeHasNext = propertyCursorBefore.next();
+                afterHasNext = propertyCursorAfter.next();
             }
-            newProperties.forEach(
-                    key -> builder.added( key, readValueAndRestorePosition( currentDenseNodeCommand.propertyUpdates.get( key ).after ) ) );
         }
         return builder.build();
-    }
-
-    private Value readValueAndRestorePosition( ByteBuffer buffer )
-    {
-        int position = buffer.position();
-        try
-        {
-            return read( buffer, stores.bigPropertyValueStore );
-        }
-        finally
-        {
-            buffer.position( position );
-        }
     }
 
     private Record findRelevantUsedRecord( Function<FrekiCommand.SparseNode,Record> recordFunction )
@@ -376,24 +302,11 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     public void handle( FrekiCommand.DenseNode node ) throws IOException
     {
         checkExtractIndexUpdates( node.nodeId ); //apply for prev
-        currentDenseNodeCommand = node;
         checkExtractIndexUpdates( NULL ); // apply for this
 
         // Thoughts: we should perhaps to the usual combine-and-apply thing for the dense node updates?
-        try ( DenseStore.Updater updater = stores.denseStore.newUpdater( cursorTracer ) )
+        try ( DenseRelationshipStore.Updater updater = stores.denseStore.newUpdater( cursorTracer ) )
         {
-            // node properties
-            node.propertyUpdates.forEach( p ->
-            {
-                if ( p.mode == Mode.CREATE || p.mode == Mode.UPDATE )
-                {
-                    updater.setProperty( node.nodeId, p.propertyKeyId, p.after );
-                }
-                else
-                {
-                    updater.removeProperty( node.nodeId, p.propertyKeyId );
-                }
-            } );
             // relationships
             node.relationshipUpdates.forEachKeyValue( ( type, typedRelationships ) ->
             {
@@ -401,8 +314,6 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
                         updater.deleteRelationship( relationship.internalId, node.nodeId, type, relationship.otherNodeId, relationship.outgoing ) );
                 typedRelationships.created.forEach( relationship -> updater.createRelationship( relationship.internalId, node.nodeId, type,
                         relationship.otherNodeId, relationship.outgoing, relationship.propertyUpdates, u -> u.after ) );
-                DenseRelationships.Degree degree = typedRelationships.degree( true );
-                updater.setDegree( node.nodeId, type, degree.outgoing(), degree.incoming(), degree.loop() );
             } );
         }
     }

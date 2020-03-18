@@ -22,10 +22,14 @@ package org.neo4j.storageengine.util;
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
 
+import java.util.Arrays;
+import java.util.Objects;
+
 import org.neo4j.graphdb.Direction;
 import org.neo4j.storageengine.api.Degrees;
 import org.neo4j.storageengine.api.RelationshipDirection;
 
+import static java.lang.String.format;
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_INT_ARRAY;
 
 public class EagerDegrees implements Degrees
@@ -165,7 +169,38 @@ public class EagerDegrees implements Degrees
         return degree;
     }
 
-    private static class Degree
+    public void addAll( EagerDegrees degrees )
+    {
+        for ( int type : degrees.types() )
+        {
+            add( type, degrees.rawOutgoingDegree( type ), degrees.rawIncomingDegree( type ), degrees.rawLoopDegree( type ) );
+        }
+    }
+
+    public void clear()
+    {
+        firstType = FIRST_TYPE_UNDECIDED;
+        firstTypeDegrees = null;
+        degrees = null;
+    }
+
+    public boolean isEmpty()
+    {
+        if ( firstTypeDegrees == null )
+        {
+            return true;
+        }
+        for ( int type : types() )
+        {
+            if ( !findDegree( type ).isEmpty() )
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static class Degree
     {
         private int outgoing;
         private int incoming;
@@ -177,5 +212,101 @@ public class EagerDegrees implements Degrees
             this.incoming += incoming;
             this.loop += loop;
         }
+
+        public int outgoing()
+        {
+            return outgoing;
+        }
+
+        public int incoming()
+        {
+            return incoming;
+        }
+
+        public int loop()
+        {
+            return loop;
+        }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            if ( this == o )
+            {
+                return true;
+            }
+            if ( o == null || getClass() != o.getClass() )
+            {
+                return false;
+            }
+            Degree degree = (Degree) o;
+            return outgoing == degree.outgoing && incoming == degree.incoming && loop == degree.loop;
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash( outgoing, incoming, loop );
+        }
+
+        @Override
+        public String toString()
+        {
+            return "[" + "out:" + outgoing + ", in:" + incoming + ", loop:" + loop + ']';
+        }
+
+        public boolean isEmpty()
+        {
+            return outgoing == 0 && incoming == 0 && loop == 0;
+        }
+    }
+
+    @Override
+    public boolean equals( Object o )
+    {
+        if ( this == o )
+        {
+            return true;
+        }
+        if ( o == null || getClass() != o.getClass() )
+        {
+            return false;
+        }
+        EagerDegrees that = (EagerDegrees) o;
+        int[] types = types();
+        if ( !Arrays.equals( types, that.types() ) )
+        {
+            return false;
+        }
+        for ( int type : types )
+        {
+            if ( !findDegree( type ).equals( that.findDegree( type ) ) )
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        int result = 1;
+        for ( int type : types() )
+        {
+            result = result * 31 + findDegree( type ).hashCode();
+        }
+        return result;
+    }
+
+    @Override
+    public String toString()
+    {
+        StringBuilder degrees = new StringBuilder();
+        for ( int type : types() )
+        {
+            degrees.append( degrees.length() > 0 ? ", " : "" ).append( ":" ).append( type ).append( findDegree( type ) );
+        }
+        return format( "Degrees{%s}", degrees );
     }
 }

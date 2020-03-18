@@ -228,7 +228,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
             return;
         }
 
-        ByteBuffer buffer = data.relationshipBuffer();
+        ByteBuffer buffer = data.relationshipBuffer( data.relationshipOffset + 1 /*the HAS_DEGREES byte*/ );
         relationshipTypesInNode = readIntDeltas( new IntArrayTarget(), buffer ).array();
         // Right after the types array the relationship group data starts, so this is the offset for the first type
         firstRelationshipTypeOffset = buffer.position();

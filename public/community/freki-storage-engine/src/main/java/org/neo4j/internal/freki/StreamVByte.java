@@ -35,7 +35,12 @@ class StreamVByte
 {
     private static final int MASK_SQUASHED_BLOCK = 0b1000_0000;
     private static final int SHIFT_SQUASHED_BLOCK_LENGTH = 5;
-    private static final int[] LONG_SIZES = {3, 4, 5, 7};
+    private static final int[] LONG_SIZES = {1, 3, 5, 7};
+    private static final long[] LONG_MASKS = {
+            0,
+            0x00000000_00FFFF00L,
+            0x000000FF_FF000000L,
+            0xFFFFFF00_00000000L};
 
     static void writeIntDeltas( int[] source, ByteBuffer buffer )
     {
@@ -309,15 +314,15 @@ class StreamVByte
 
     private static int calculateLongSize( long value )
     {
-        if ( (value & 0xFFFF00_00000000L) != 0 )
+        if ( (value & LONG_MASKS[3]) != 0 )
         {
             return LONG_SIZES[3];
         }
-        else if ( (value & 0xFF_00000000L) != 0 )
+        else if ( (value & LONG_MASKS[2]) != 0 )
         {
             return LONG_SIZES[2];
         }
-        else if ( (value & 0xFF000000L) != 0 )
+        else if ( (value & LONG_MASKS[1]) != 0 )
         {
             return LONG_SIZES[1];
         }
@@ -368,7 +373,7 @@ class StreamVByte
 
     private static int writeLongValue( byte[] serialized, int offset, int headerOffset, int j, long value )
     {
-        if ( (value & 0xFFFF00_00000000L) != 0 )
+        if ( (value & LONG_MASKS[3]) != 0 )
         {
             serialized[headerOffset] |= 0b11 << (j * 2);
             serialized[offset++] = (byte) value;
@@ -379,7 +384,7 @@ class StreamVByte
             serialized[offset++] = (byte) (value >>> 40);
             serialized[offset++] = (byte) (value >>> 48);
         }
-        else if ( (value & 0xFF_00000000L) != 0 )
+        else if ( (value & LONG_MASKS[2]) != 0 )
         {
             serialized[headerOffset] |= 0b10 << (j * 2);
             serialized[offset++] = (byte) value;
@@ -388,20 +393,17 @@ class StreamVByte
             serialized[offset++] = (byte) (value >>> 24);
             serialized[offset++] = (byte) (value >>> 32);
         }
-        else if ( (value & 0xFF000000L) != 0 )
+        else if ( (value & LONG_MASKS[1]) != 0 )
         {
             serialized[headerOffset] |= 0b01 << (j * 2);
             serialized[offset++] = (byte) value;
             serialized[offset++] = (byte) (value >>> 8);
             serialized[offset++] = (byte) (value >>> 16);
-            serialized[offset++] = (byte) (value >>> 24);
         }
         else
         {
             // header 2b not set, leaving it as 0b00
             serialized[offset++] = (byte) value;
-            serialized[offset++] = (byte) (value >>> 8);
-            serialized[offset++] = (byte) (value >>> 16);
         }
         return offset;
     }
@@ -430,12 +432,9 @@ class StreamVByte
         {
             return unsignedLong( serialized[offset] ) |
                     (unsignedLong( serialized[offset + 1] ) << 8) |
-                    (unsignedLong( serialized[offset + 2] ) << 16) |
-                    (unsignedLong( serialized[offset + 3] ) << 24);
+                    (unsignedLong( serialized[offset + 2] ) << 16);
         }
-        return unsignedLong( serialized[offset] ) |
-                (unsignedLong( serialized[offset + 1] ) << 8) |
-                (unsignedLong( serialized[offset + 2] ) << 16);
+        return unsignedLong( serialized[offset] );
     }
 
     private static int unsigned( byte value )

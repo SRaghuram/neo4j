@@ -136,14 +136,12 @@ abstract class FrekiCommand implements StorageCommand
         static final byte TYPE = 2;
 
         final long nodeId;
-        final IntObjectMap<PropertyUpdate> propertyUpdates;
         final IntObjectMap<DenseRelationships> relationshipUpdates;
 
-        DenseNode( long nodeId, IntObjectMap<PropertyUpdate> propertyUpdates, IntObjectMap<DenseRelationships> relationshipUpdates )
+        DenseNode( long nodeId, IntObjectMap<DenseRelationships> relationshipUpdates )
         {
             super( TYPE );
             this.nodeId = nodeId;
-            this.propertyUpdates = propertyUpdates;
             this.relationshipUpdates = relationshipUpdates;
         }
 
@@ -160,11 +158,27 @@ abstract class FrekiCommand implements StorageCommand
             super.serialize( channel );
             channel.putLong( nodeId );
 
-            // node properties
-            writeProperties( channel, propertyUpdates );
+            channel.putInt( relationshipUpdates.size() );
+            for ( IntObjectPair<DenseRelationships> relationships : relationshipUpdates.keyValuesView() )
+            {
+                // type and degrees
+                DenseRelationships relationshipsOfType = relationships.getTwo();
+                channel.putInt( relationships.getOne() );
 
-            // relationships
-            writeRelationships( channel );
+                // Created
+                channel.putInt( relationshipsOfType.created.size() ); // number of relationships of this type
+                for ( DenseRelationships.DenseRelationship relationship : relationshipsOfType.created )
+                {
+                    writeRelationship( channel, relationship );
+                }
+
+                // Deleted
+                channel.putInt( relationshipsOfType.deleted.size() ); // number of relationships of this type
+                for ( DenseRelationships.DenseRelationship relationship : relationshipsOfType.deleted )
+                {
+                    writeRelationship( channel, relationship );
+                }
+            }
         }
 
         private void writeProperties( WritableChannel channel, IntObjectMap<PropertyUpdate> properties ) throws IOException
@@ -244,36 +258,6 @@ abstract class FrekiCommand implements StorageCommand
             return ByteBuffer.wrap( data );
         }
 
-        private void writeRelationships( WritableChannel channel )
-                throws IOException
-        {
-            channel.putInt( relationshipUpdates.size() );
-            for ( IntObjectPair<DenseRelationships> relationships : relationshipUpdates.keyValuesView() )
-            {
-                // type and degrees
-                DenseRelationships relationshipsOfType = relationships.getTwo();
-                channel.putInt( relationships.getOne() );
-                DenseRelationships.Degree degreesBefore = relationshipsOfType.degree( false );
-                channel.putInt( degreesBefore.outgoing() );
-                channel.putInt( degreesBefore.incoming() );
-                channel.putInt( degreesBefore.loop() );
-
-                // Created
-                channel.putInt( relationshipsOfType.created.size() ); // number of relationships of this type
-                for ( DenseRelationships.DenseRelationship relationship : relationshipsOfType.created )
-                {
-                    writeRelationship( channel, relationship );
-                }
-
-                // Deleted
-                channel.putInt( relationshipsOfType.deleted.size() ); // number of relationships of this type
-                for ( DenseRelationships.DenseRelationship relationship : relationshipsOfType.deleted )
-                {
-                    writeRelationship( channel, relationship );
-                }
-            }
-        }
-
         private void writeRelationship( WritableChannel channel, DenseRelationships.DenseRelationship relationship ) throws IOException
         {
             channel.putLong( relationship.internalId );
@@ -285,24 +269,6 @@ abstract class FrekiCommand implements StorageCommand
             {
                 writeProperties( channel, relationship.propertyUpdates );
             }
-        }
-
-        private static IntObjectMap<DenseRelationships> readRelationships( long nodeId, ReadableChannel channel ) throws IOException
-        {
-            MutableIntObjectMap<DenseRelationships> relationships = IntObjectMaps.mutable.empty();
-            int numRelationshipTypes = channel.getInt();
-            for ( int i = 0; i < numRelationshipTypes; i++ )
-            {
-                int type = channel.getInt();
-                int outgoingDegree = channel.getInt();
-                int incomingDegree = channel.getInt();
-                int loopDegree = channel.getInt();
-                DenseRelationships relationshipsOfType =
-                        relationships.getIfAbsentPut( type, new DenseRelationships( nodeId, type, outgoingDegree, incomingDegree, loopDegree ) );
-                readRelationships( channel, relationshipsOfType::create );
-                readRelationships( channel, relationshipsOfType::delete );
-            }
-            return relationships;
         }
 
         private static void readRelationships( ReadableChannel channel, Consumer<DenseRelationships.DenseRelationship> target ) throws IOException
@@ -330,10 +296,17 @@ abstract class FrekiCommand implements StorageCommand
         {
             long nodeId = channel.getLong();
 
-            IntObjectMap<PropertyUpdate> propertyUpdates = readProperties( channel );
-            IntObjectMap<DenseRelationships> relationships = readRelationships( nodeId, channel );
+            MutableIntObjectMap<DenseRelationships> relationships = IntObjectMaps.mutable.empty();
+            int numRelationshipTypes = channel.getInt();
+            for ( int i = 0; i < numRelationshipTypes; i++ )
+            {
+                int type = channel.getInt();
+                DenseRelationships relationshipsOfType = relationships.getIfAbsentPut( type, new DenseRelationships( nodeId, type ) );
+                readRelationships( channel, relationshipsOfType::create );
+                readRelationships( channel, relationshipsOfType::delete );
+            }
 
-            return new DenseNode( nodeId, propertyUpdates, relationships );
+            return new DenseNode( nodeId, relationships );
         }
     }
 

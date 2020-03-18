@@ -49,7 +49,7 @@ class MainStores extends Life
     public final SimpleStore mainStore;
     private final SimpleStore[] mainStores;
     public final SimpleBigValueStore bigPropertyValueStore;
-    public final DenseStore denseStore;
+    public final DenseRelationshipStore denseStore;
     protected final List<Pair<IdGeneratorFactory,IdType>> idGeneratorsToRegisterOnTheWorkSync = new ArrayList<>();
 
     MainStores( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache, IdGeneratorFactory idGeneratorFactory,
@@ -58,7 +58,7 @@ class MainStores extends Life
     {
         SimpleStore[] mainStores = new SimpleStore[4];
         BigPropertyValueStore bigPropertyValueStore = null;
-        DenseStore denseStore = null;
+        DenseRelationshipStore denseStore = null;
         boolean success = false;
         try
         {
@@ -78,7 +78,7 @@ class MainStores extends Life
             }
             bigPropertyValueStore =
                     new BigPropertyValueStore( databaseLayout.file( "big-values" ), pageCache, false, createStoreIfNotExists, cursorTracerSupplier );
-            denseStore = new DenseStore( pageCache, databaseLayout.file( "dense-store" ), recoveryCleanupWorkCollector, false, pageCacheTracer,
+            denseStore = new DenseRelationshipStore( pageCache, databaseLayout.file( "dense-store" ), recoveryCleanupWorkCollector, false, pageCacheTracer,
                     bigPropertyValueStore );
             success = true;
 
@@ -97,7 +97,7 @@ class MainStores extends Life
         }
     }
 
-    MainStores( SimpleStore[] mainStores, SimpleBigValueStore bigPropertyValueStore, DenseStore denseStore )
+    MainStores( SimpleStore[] mainStores, SimpleBigValueStore bigPropertyValueStore, DenseRelationshipStore denseStore )
     {
         this.mainStores = mainStores;
         this.mainStore = mainStores[0];

@@ -34,6 +34,7 @@ import org.neo4j.values.storable.CoordinateReferenceSystem;
 import org.neo4j.values.storable.Values;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.internal.freki.MutableNodeRecordData.buildForwardPointer;
 
 @ExtendWith( RandomExtension.class )
 class MutableNodeRecordDataTest
@@ -167,6 +168,20 @@ class MutableNodeRecordDataTest
             // If we delete the last relationship then the 'nextRelationshipId' on next load will be one less, therefore decrement the expected here
             record.nextInternalRelationshipId--;
         }
+
+        // then
+        checkIfDeserializedRecordIsEqual();
+    }
+
+    @Test
+    void canHaveDegreesForDenseNode()
+    {
+        // given
+        record.setForwardPointer( buildForwardPointer( 0, 0, true ) );
+
+        // when
+        record.degrees.add( 3, 33, 333, 3333 );
+        record.degrees.add( 5, 55, 555, 5555 );
 
         // then
         checkIfDeserializedRecordIsEqual();
