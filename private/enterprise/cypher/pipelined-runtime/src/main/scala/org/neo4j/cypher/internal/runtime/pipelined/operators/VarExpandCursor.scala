@@ -15,7 +15,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.VarExpandCursor.rel
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.allCursor
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.incomingCursor
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.outgoingCursor
@@ -413,8 +412,7 @@ abstract class IncomingVarExpandCursor(fromNode: Long,
                                          node: NodeCursor,
                                          types: Array[Int]): RelationshipTraversalCursor = {
 
-    incomingCursor(traversalCursor,
-      node, types)
+    incomingCursor(traversalCursor, node, types)
   }
 }
 

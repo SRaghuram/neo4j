@@ -78,10 +78,8 @@ import org.neo4j.graphdb.Direction
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.Read
-import org.neo4j.internal.kernel.api.RelationshipGroupCursor
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.helpers.CachingExpandInto
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 
 import scala.collection.mutable.ArrayBuffer
 

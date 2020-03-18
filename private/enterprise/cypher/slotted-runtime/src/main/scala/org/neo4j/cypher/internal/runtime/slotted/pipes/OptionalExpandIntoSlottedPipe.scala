@@ -60,7 +60,6 @@ abstract class OptionalExpandIntoSlottedPipe(source: Pipe,
         if (entityIsNull(fromNode) || entityIsNull(toNode)) {
           Iterator(withNulls(inputRow))
         } else {
-          val groupCursor = query.groupCursor()
           val traversalCursor = query.traversalCursor()
           val nodeCursor = query.nodeCursor()
           try {

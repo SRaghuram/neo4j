@@ -86,17 +86,9 @@ import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.NodeCursor
-import org.neo4j.internal.kernel.api.RelationshipGroupCursor
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.TokenRead
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.allDenseCursor
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.allSparseCursor
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.incomingDenseCursor
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.incomingSparseCursor
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.outgoingDenseCursor
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.outgoingSparseCursor
 import org.neo4j.values.AnyValue
 
 import scala.collection.mutable
