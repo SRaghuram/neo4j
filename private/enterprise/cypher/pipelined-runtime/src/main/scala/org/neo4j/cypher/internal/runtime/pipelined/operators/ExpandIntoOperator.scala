@@ -389,6 +389,7 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
 object ExpandIntoOperatorTaskTemplate {
   val CONNECTING_RELATIONSHIPS: Method = method[CachingExpandInto,
+    RelationshipTraversalCursor,
     NodeCursor,
     RelationshipTraversalCursor,
     Long,
