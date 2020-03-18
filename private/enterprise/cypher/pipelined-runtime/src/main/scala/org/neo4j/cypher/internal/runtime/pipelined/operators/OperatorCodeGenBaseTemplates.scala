@@ -538,6 +538,11 @@ object OperatorTaskTemplate {
           endRow = cursor.row
         }
       }
+
+      // set to last valid row
+      if (!cursor.onValidRow()) {
+        cursor.setRow(endRow)
+      }
     }
   }
 

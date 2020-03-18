@@ -55,6 +55,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTa
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandIntoOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.FilterOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.InputOperatorTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.LimitNotReachedState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyNodeByIdsSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeCountFromCountStoreOperatorTemplate
@@ -80,6 +81,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectOperatorTemp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipByIdSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipCountFromCountStoreOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SeekExpression
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialLimitOnRhsOfApplyOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDistinctOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate.SerialTopLevelLimitStateFactory
@@ -524,19 +526,31 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               Some(argumentStateMapId -> new SerialTopLevelDistinctOperatorTaskTemplate.DistinctStateFactory(plan.id))
             )
 
-        // Special case for limit when not nested under an apply and with serial execution
-        case plan@Limit(_, countExpression, DoNotIncludeTies) if hasNoNestedArguments && serialExecutionOnly =>
+        // Special case for limit with serial execution
+        case plan@Limit(_, countExpression, DoNotIncludeTies) if serialExecutionOnly =>
           ctx: TemplateContext =>
             val argumentStateMapId = ctx.executionGraphDefinition.findArgumentStateMapForPlan(plan.id)
-            ctx.innermost.shouldCheckBreak = true
-            TemplateAndArgumentStateFactory(
-              new SerialTopLevelLimitOperatorTaskTemplate(ctx.inner,
-                plan.id,
-                ctx.innermost,
-                argumentStateMapId,
-                ctx.compileExpression(countExpression))(ctx.expressionCompiler),
-              Some(argumentStateMapId -> SerialTopLevelLimitStateFactory)
-            )
+            if (hasNoNestedArguments) {
+              ctx.innermost.shouldCheckBreak = true
+              TemplateAndArgumentStateFactory(
+                new SerialTopLevelLimitOperatorTaskTemplate(ctx.inner,
+                  plan.id,
+                  ctx.innermost,
+                  argumentStateMapId,
+                  ctx.compileExpression(countExpression))(ctx.expressionCompiler),
+                Some(argumentStateMapId -> SerialTopLevelLimitStateFactory)
+              )
+            } else {
+              ctx.innermost.limits += LimitNotReachedState(argumentStateMapId)
+              TemplateAndArgumentStateFactory(
+                new SerialLimitOnRhsOfApplyOperatorTaskTemplate(ctx.inner,
+                  plan.id,
+                  ctx.innermost,
+                  argumentStateMapId,
+                  ctx.compileExpression(countExpression))(ctx.expressionCompiler),
+                Some(argumentStateMapId -> SerialTopLevelLimitStateFactory)
+              )
+            }
 
         // Special case for skip when not nested under an apply and with serial execution
         case plan@Skip(_, countExpression) if hasNoNestedArguments && serialExecutionOnly =>
