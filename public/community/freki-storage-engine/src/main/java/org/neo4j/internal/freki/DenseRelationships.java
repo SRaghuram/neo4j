@@ -36,19 +36,10 @@ class DenseRelationships
     final List<DenseRelationship> created = new ArrayList<>();
     final List<DenseRelationship> deleted = new ArrayList<>();
 
-    // Upon first create/delete relationship of this type for a dense node the existing degrees are loaded, they are then kept up to date
-    // after that point so that when applying these changes during transaction commit these degrees for this type can overwrite the existing degree
-    // for this type. If these values instead would have been relative then problems would arise during recovery regarding which transaction
-    // had already been applied to the dense store.
-    private final Degree prevDegree;
-    private final Degree degree;
-
-    DenseRelationships( long nodeId, int type, int existingAbsoluteOutgoingDegree, int existingAbsoluteIncomingDegree, int existingAbsoluteLoopDegree )
+    DenseRelationships( long nodeId, int type )
     {
         this.nodeId = nodeId;
         this.type = type;
-        this.prevDegree = new Degree( existingAbsoluteOutgoingDegree, existingAbsoluteIncomingDegree, existingAbsoluteLoopDegree );
-        this.degree = new Degree( existingAbsoluteOutgoingDegree, existingAbsoluteIncomingDegree, existingAbsoluteLoopDegree );
     }
 
     void create( DenseRelationship relationship )
@@ -64,26 +55,6 @@ class DenseRelationships
     void add( DenseRelationship relationship, List<DenseRelationship> list, int increment )
     {
         list.add( relationship );
-        modifyDegree( relationship.otherNodeId, relationship.outgoing, increment );
-    }
-
-    private void modifyDegree( long otherNodeId, boolean outgoing, int increment )
-    {
-        if ( outgoing )
-        {
-            if ( nodeId == otherNodeId )
-            {
-                degree.loop += increment;
-            }
-            else
-            {
-                degree.outgoing += increment;
-            }
-        }
-        else
-        {
-            degree.incoming += increment;
-        }
     }
 
     @Override
@@ -98,19 +69,13 @@ class DenseRelationships
             return false;
         }
         DenseRelationships that = (DenseRelationships) o;
-        return type == that.type && prevDegree.equals( that.prevDegree ) && degree.equals( that.degree ) &&
-                Objects.equals( created, that.created ) && Objects.equals( deleted, that.deleted );
+        return type == that.type && Objects.equals( created, that.created ) && Objects.equals( deleted, that.deleted );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( type, created, deleted, prevDegree, degree );
-    }
-
-    Degree degree( boolean after )
-    {
-        return after ? degree : prevDegree;
+        return Objects.hash( type, created, deleted );
     }
 
     static class DenseRelationship

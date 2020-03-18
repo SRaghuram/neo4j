@@ -180,7 +180,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
                 {
                     if ( forwardPointerPointsToDense( data.forwardPointer ) )
                     {
-                        DenseStore.RelationshipData denseRelationship =
+                        DenseRelationshipStore.RelationshipData denseRelationship =
                                 stores.denseStore.getRelationship( reference.sourceNodeId, reference.type, Direction.OUTGOING, reference.endNodeId,
                                         reference.internalId, cursorTracer );
                         denseProperties = denseRelationship != null ? denseRelationship.properties() : emptyIterator();
@@ -260,12 +260,6 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
             }
         }
         return false;
-    }
-
-    private boolean readNodePropertyKeys()
-    {
-        // For the time being we're not quite using the dense store node property feature
-        return readPropertyKeys( data.propertyBuffer() );
     }
 
     private boolean readPropertyKeys( ByteBuffer buffer )
