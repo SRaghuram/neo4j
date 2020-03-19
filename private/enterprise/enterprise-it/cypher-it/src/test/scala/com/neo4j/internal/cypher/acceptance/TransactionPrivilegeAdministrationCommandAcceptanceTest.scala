@@ -109,7 +109,7 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
       // WHEN
       execute("GRANT SHOW TRANSACTION (*) ON DATABASE * TO role")
       // THEN
-    } should have message "Failed to grant show_transaction privilege to role 'role': Role 'role' does not exist."
+    } should have message "Failed to grant show_transaction privilege to role 'role': Role does not exist."
   }
 
   test("should fail to grant show transaction privilege with missing database") {
@@ -185,7 +185,7 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
       // WHEN
       execute("DENY TERMINATE TRANSACTION (*) ON DATABASE * TO role")
       // THEN
-    } should have message "Failed to deny terminate_transaction privilege to role 'role': Role 'role' does not exist."
+    } should have message "Failed to deny terminate_transaction privilege to role 'role': Role does not exist."
   }
 
   test("should fail to deny terminate transaction privilege with missing database") {

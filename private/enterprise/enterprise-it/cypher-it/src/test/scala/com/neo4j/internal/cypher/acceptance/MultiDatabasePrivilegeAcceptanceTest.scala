@@ -491,7 +491,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
       // WHEN
       execute("GRANT START ON DATABASE * TO role")
       // THEN
-    } should have message "Failed to grant start_database privilege to role 'role': Role 'role' does not exist."
+    } should have message "Failed to grant start_database privilege to role 'role': Role does not exist."
   }
 
   test("should fail to grant start database with missing database") {
@@ -746,7 +746,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
       // WHEN
       execute("DENY STOP ON DATABASE * TO role")
       // THEN
-    } should have message "Failed to deny stop_database privilege to role 'role': Role 'role' does not exist."
+    } should have message "Failed to deny stop_database privilege to role 'role': Role does not exist."
   }
 
   test("should fail to deny stop database with missing database") {

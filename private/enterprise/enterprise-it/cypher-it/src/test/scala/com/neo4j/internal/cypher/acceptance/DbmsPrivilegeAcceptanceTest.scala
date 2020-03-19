@@ -37,7 +37,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
           // WHEN
           execute(s"$grant CREATE ROLE ON DBMS TO role")
           // THEN
-        } should have message s"Failed to ${grant.toLowerCase} create_role privilege to role 'role': Role 'role' does not exist."
+        } should have message s"Failed to ${grant.toLowerCase} create_role privilege to role 'role': Role does not exist."
       }
 
       test(s"should $grant drop role privilege") {
@@ -146,7 +146,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
           // WHEN
           execute(s"$grant DROP USER ON DBMS TO role")
           // THEN
-        } should have message s"Failed to ${grant.toLowerCase} drop_user privilege to role 'role': Role 'role' does not exist."
+        } should have message s"Failed to ${grant.toLowerCase} drop_user privilege to role 'role': Role does not exist."
       }
 
       test(s"should $grant show user privilege") {

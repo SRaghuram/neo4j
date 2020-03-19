@@ -796,10 +796,10 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |RETURN '${grant.prefix}' AS grant, p.action AS action, d.name AS database, q.label AS label, r.name AS role""".stripMargin,
       VirtualValues.map(Array("action", "resource", "property", "database", "label", "role"), Array(action, resourceType, property, dbName, label, role)),
       QueryHandler
-        .handleNoResult(() => Some(new DatabaseNotFoundException(s"$startOfErrorMessage: Database '$db' does not exist.")))
+        .handleNoResult(() => Some(new DatabaseNotFoundException(s"$startOfErrorMessage: Database '$db' does not exist."))) // needs to have the database name here since it is not in the startOfErrorMessage
         .handleError {
           case e: InternalException if e.getMessage.contains("ignore rows where a relationship node is missing") =>
-            new InvalidArgumentsException(s"$startOfErrorMessage: Role '$roleName' does not exist.", e)
+            new InvalidArgumentsException(s"$startOfErrorMessage: Role does not exist.", e) // the rolename is included in the startOfErrorMessage so not needed here (consistent with the other commands)
           case e: HasStatus if e.status() == Status.Cluster.NotALeader =>
             new DatabaseAdministrationOnFollowerException(s"$startOfErrorMessage: $followerError", e)
           case e => new IllegalStateException(s"$startOfErrorMessage.", e)

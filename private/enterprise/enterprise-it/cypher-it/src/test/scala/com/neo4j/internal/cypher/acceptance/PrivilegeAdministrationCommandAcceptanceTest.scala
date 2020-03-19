@@ -412,7 +412,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
               execute(s"$grantOrDenyCommand $actionCommand ON GRAPH * NODES * (*) TO custom")
               // THEN
             }
-            error1.getMessage should be(s"Failed to $grantOrDeny $actionName privilege to role 'custom': Role 'custom' does not exist.")
+            error1.getMessage should be(s"Failed to $grantOrDeny $actionName privilege to role 'custom': Role does not exist.")
 
             // WHEN
             val error2 = the[InvalidArgumentsException] thrownBy {
@@ -420,7 +420,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
               execute(s"$grantOrDenyCommand $actionCommand ON GRAPH * RELATIONSHIPS * (*) TO custom")
               // THEN
             }
-            error2.getMessage should be(s"Failed to $grantOrDeny $actionName privilege to role 'custom': Role 'custom' does not exist.")
+            error2.getMessage should be(s"Failed to $grantOrDeny $actionName privilege to role 'custom': Role does not exist.")
 
             // WHEN
             val error3 = the[InvalidArgumentsException] thrownBy {
@@ -428,7 +428,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
               execute(s"$grantOrDenyCommand $actionCommand ON GRAPH * TO custom")
               // THEN
             }
-            error3.getMessage should be(s"Failed to $grantOrDeny $actionName privilege to role 'custom': Role 'custom' does not exist.")
+            error3.getMessage should be(s"Failed to $grantOrDeny $actionName privilege to role 'custom': Role does not exist.")
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set())

@@ -985,7 +985,7 @@ class AdministrationCommandsOnClusterIT
             }
             catch ( IllegalStateException | QueryExecutionException e )
             {
-                assertEquals( "Failed to grant traversal privilege to role '" + roleName + "': Role '" + roleName + "' does not exist.", e.getMessage() );
+                assertEquals( "Failed to grant traversal privilege to role '" + roleName + "': Role does not exist.", e.getMessage() );
             }
         } );
     }

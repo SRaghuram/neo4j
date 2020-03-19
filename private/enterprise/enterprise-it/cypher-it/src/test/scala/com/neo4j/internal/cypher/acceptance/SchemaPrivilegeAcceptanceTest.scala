@@ -155,7 +155,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       // WHEN
       execute("GRANT CREATE INDEX ON DATABASE * TO role")
       // THEN
-    } should have message "Failed to grant create_index privilege to role 'role': Role 'role' does not exist."
+    } should have message "Failed to grant create_index privilege to role 'role': Role does not exist."
   }
 
   test("should fail to grant create index with missing database") {
@@ -228,7 +228,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       // WHEN
       execute("DENY DROP INDEX ON DATABASE * TO role")
       // THEN
-    } should have message "Failed to deny drop_index privilege to role 'role': Role 'role' does not exist."
+    } should have message "Failed to deny drop_index privilege to role 'role': Role does not exist."
   }
 
   test("should fail to deny drop index with missing database") {
@@ -398,7 +398,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       // WHEN
       execute("GRANT CREATE CONSTRAINT ON DATABASE * TO role")
       // THEN
-    } should have message "Failed to grant create_constraint privilege to role 'role': Role 'role' does not exist."
+    } should have message "Failed to grant create_constraint privilege to role 'role': Role does not exist."
   }
 
   test("should fail to grant create constraint with missing database") {
@@ -471,7 +471,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       // WHEN
       execute("DENY DROP CONSTRAINT ON DATABASE * TO role")
       // THEN
-    } should have message "Failed to deny drop_constraint privilege to role 'role': Role 'role' does not exist."
+    } should have message "Failed to deny drop_constraint privilege to role 'role': Role does not exist."
   }
 
   test("should fail to deny drop constraint with missing database") {
@@ -641,7 +641,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       // WHEN
       execute("GRANT CREATE NEW LABEL ON DATABASE * TO role")
       // THEN
-    } should have message "Failed to grant create_label privilege to role 'role': Role 'role' does not exist."
+    } should have message "Failed to grant create_label privilege to role 'role': Role does not exist."
   }
 
   test("should fail to grant create label with missing database") {
@@ -713,7 +713,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       // WHEN
       execute("DENY CREATE NEW TYPE ON DATABASE * TO role")
       // THEN
-    } should have message "Failed to deny create_reltype privilege to role 'role': Role 'role' does not exist."
+    } should have message "Failed to deny create_reltype privilege to role 'role': Role does not exist."
   }
 
   test("should fail to deny create type with missing database") {
@@ -885,7 +885,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       // WHEN
       execute("GRANT NAME MANAGEMENT ON DATABASE * TO role")
       // THEN
-    } should have message "Failed to grant token privilege to role 'role': Role 'role' does not exist."
+    } should have message "Failed to grant token privilege to role 'role': Role does not exist."
   }
 
   test("should fail to grant name management with missing database") {
@@ -1023,7 +1023,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       // WHEN
       execute("DENY ALL ON DATABASE * TO role")
       // THEN
-    } should have message "Failed to deny database_actions privilege to role 'role': Role 'role' does not exist."
+    } should have message "Failed to deny database_actions privilege to role 'role': Role does not exist."
   }
 
   test("should fail to deny all database privilege with missing database") {

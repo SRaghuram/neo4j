@@ -265,8 +265,8 @@ public class EnterpriseSecurityStressIT extends SecurityStressTestBase
 
     private final Runnable assignPrivilegeWork =
             () -> systemDbWork( List.of( "GRANT TRAVERSE ON GRAPH * NODES A TO custom", "DENY READ {prop} ON GRAPH * NODES * TO custom" ),
-                    Set.of( "Failed to grant traversal privilege to role 'custom': Role 'custom' does not exist.",
-                            "Failed to deny read privilege to role 'custom': Role 'custom' does not exist.") );
+                    Set.of( "Failed to grant traversal privilege to role 'custom': Role does not exist.",
+                            "Failed to deny read privilege to role 'custom': Role does not exist.") );
 
     // Revoke both granted and non-granted privileges
     private final Runnable revokePrivilegeWork =

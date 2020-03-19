@@ -107,7 +107,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
           // WHEN
           execute(s"$grantOrDenyCommand WRITE ON GRAPH * ELEMENTS * (*) TO custom")
           // THEN
-        } should have message s"Failed to $grantOrDeny write privilege to role 'custom': Role 'custom' does not exist."
+        } should have message s"Failed to $grantOrDeny write privilege to role 'custom': Role does not exist."
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set())
