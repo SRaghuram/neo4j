@@ -545,20 +545,6 @@ object OperatorTaskTemplate {
       }
     }
   }
-
-  /**
-   * Used from generated code.
-   * If cursor is currently on an invalid (e.g., cancelled) row, it will be advanced.
-   * After calling this method the cursor will either point at the next valid row, or the end of the cursor (an invalid row).
-   */
- def nextRowIfInvalid(cursor: MorselReadCursor): Unit = {
-   if (!cursor.onValidRow()) {
-     val row = cursor.row
-     if (!cursor.next()) {
-       cursor.setRow(row)
-     }
-   }
- }
 }
 
 trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
@@ -606,7 +592,6 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
             param[QueryProfiler]("queryProfiler")
           ),
           body = block(
-            invokeStatic(method[OperatorTaskTemplate, Unit, MorselReadCursor]("nextRowIfInvalid"), INPUT_CURSOR),
             genOperateEnter,
             genOperateWithExpressions,
             genOperateExit

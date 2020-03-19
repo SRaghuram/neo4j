@@ -168,7 +168,12 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
   final override protected def genOperateHead: IntermediateRepresentation = {
     //// Based on this code from InputLoopTask
     //val outputCursor = outputRow.fullCursor(onFirstRow = true)
-    //
+    //if (!this.inputCursor.onValidRow) {
+    //  this.inputCursor.next()
+    //  if (innerLoop) {
+    //     [close]
+    //      innerLoop = false
+    //}
     //while ((inputCursor.onValidRow || innerLoop) && outputCursor.onValidRow) {
     //  if (!innerLoop) {
     //    innerLoop = initializeInnerLoop(context, state, resources, outputCursor) <<< genInitializeInnerLoop
@@ -193,6 +198,17 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
     //
     //outputCursor.close()
     block(
+      condition(not(INPUT_ROW_IS_VALID)){
+        block(
+          invokeSideEffect(INPUT_CURSOR, NEXT),
+          condition(loadField(innerLoop)) {
+            block(
+              genCloseInnerLoop,
+              setField(innerLoop, constant(false))
+            )
+          }
+        )
+      },
       loop(and(or(INPUT_ROW_IS_VALID, loadField(innerLoop)), innermost.predicate))(
         block(
           innermost.resetBelowLimit,
