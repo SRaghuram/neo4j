@@ -45,13 +45,14 @@ public class MigrateDataIntoOtherDatabase
     {
         assert !(fromHome.equals( toHome ));
         long totalPageCacheMem = ConfiguringPageCacheFactory.defaultHeuristicPageCacheMemory();
+        String pcMemory = String.valueOf( totalPageCacheMem / 10 );
         DatabaseManagementService fromDbms = new EnterpriseDatabaseManagementServiceBuilder( fromHome.toFile() )
                 .setConfig( GraphDatabaseSettings.storage_engine, "" )
-                .setConfig( GraphDatabaseSettings.pagecache_memory, String.valueOf( totalPageCacheMem / 2 ) )
+                .setConfig( GraphDatabaseSettings.pagecache_memory, pcMemory )
                 .build();
         DatabaseManagementService toDbms = new EnterpriseDatabaseManagementServiceBuilder( toHome.toFile() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false )
-                .setConfig( GraphDatabaseSettings.pagecache_memory, String.valueOf( totalPageCacheMem / 2 ) )
+                .setConfig( GraphDatabaseSettings.pagecache_memory, pcMemory )
                 .setConfig( GraphDatabaseSettings.storage_engine, "Freki" )
                 .build();
         try
