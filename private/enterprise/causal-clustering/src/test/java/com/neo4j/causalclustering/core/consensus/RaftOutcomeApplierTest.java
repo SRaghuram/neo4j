@@ -50,7 +50,8 @@ class RaftOutcomeApplierTest
     private RaftMembershipManager membershipManager = mock( RaftMembershipManager.class );
 
     private RaftOutcomeApplier raftOutcomeApplier =
-            new RaftOutcomeApplier( raftState, outbound, leaderAvailabilityTimers, raftMessageTimerResetMonitor, logShipping, membershipManager, logProvider );
+            new RaftOutcomeApplier( raftState, outbound, leaderAvailabilityTimers, raftMessageTimerResetMonitor, logShipping, membershipManager, logProvider,
+                                    rejection -> {} );
 
     private OutcomeBuilder outcomeTestBuilder = OutcomeTestBuilder.builder();
 

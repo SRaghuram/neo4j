@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -29,6 +30,7 @@ class RaftOutcomeApplier
 {
     private final RaftState state;
     private final Log log;
+    private Consumer<RaftMessages.LeadershipTransfer.Rejection> rejectionConsumer;
     private final Outbound<MemberId,RaftMessages.RaftMessage> outbound;
     private final RaftMessageTimerResetMonitor raftMessageTimerResetMonitor;
     private final LeaderAvailabilityTimers leaderAvailabilityTimers;
@@ -40,7 +42,7 @@ class RaftOutcomeApplier
 
     RaftOutcomeApplier( RaftState state, Outbound<MemberId,RaftMessages.RaftMessage> outbound, LeaderAvailabilityTimers leaderAvailabilityTimers,
             RaftMessageTimerResetMonitor raftMessageTimerResetMonitor, RaftLogShippingManager logShipping, RaftMembershipManager membershipManager,
-            LogProvider logProvider )
+            LogProvider logProvider, Consumer<RaftMessages.LeadershipTransfer.Rejection> rejectionConsumer )
     {
         this.state = state;
         this.outbound = outbound;
@@ -49,6 +51,7 @@ class RaftOutcomeApplier
         this.logShipping = logShipping;
         this.membershipManager = membershipManager;
         this.log = logProvider.getLog( getClass() );
+        this.rejectionConsumer = rejectionConsumer;
     }
 
     synchronized Role handle( Outcome outcome ) throws IOException
@@ -68,6 +71,8 @@ class RaftOutcomeApplier
         }
 
         driveMembership( outcome );
+
+        rejectionConsumer.accept( outcome.getLeaderTransferRejection() );
 
         return outcome.getRole();
     }

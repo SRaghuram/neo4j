@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2002-2020 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
@@ -12,11 +17,13 @@ import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.NamedDatabaseId;
+
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 
 class TransferLeader implements Runnable
 {
@@ -26,24 +33,26 @@ class TransferLeader implements Runnable
     private DatabaseManager<ClusteredDatabaseContext> databaseManager;
     private Inbound.MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> messageHandler;
     private MemberId myself;
+    private DatabasePenalties databasePenalties;
     private SelectionStrategy selectionStrategy;
 
     TransferLeader( TopologyService topologyService, Config config, DatabaseManager<ClusteredDatabaseContext> databaseManager,
             Inbound.MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> messageHandler, MemberId myself,
-            SelectionStrategy leaderLoadBalancing )
+            DatabasePenalties databasePenalties, SelectionStrategy leaderLoadBalancing )
     {
         this.topologyService = topologyService;
         this.config = config;
         this.databaseManager = databaseManager;
         this.messageHandler = messageHandler;
         this.myself = myself;
+        this.databasePenalties = databasePenalties;
         this.selectionStrategy = leaderLoadBalancing;
     }
 
     @Override
     public void run()
     {
-        // TODO: clear unsuspended members ?
+        databasePenalties.clean();
 
         var leaderTransferContext = createContext( notPrioritisedLeadership(), PRIORITISED_SELECTION_STRATEGY );
 
@@ -62,8 +71,11 @@ class TransferLeader implements Runnable
     {
         if ( !databaseIds.isEmpty() )
         {
-            var validTopologies = databaseIds.stream().map( topologyService::coreTopologyForDatabase ).collect( Collectors.toList() );
-            return selectionStrategy.select( validTopologies, myself );
+            var validTopologies = databaseIds.stream().map( topologyService::coreTopologyForDatabase )
+                    .map( ct -> new TopologyContext( ct.databaseId(), ct.raftId(), ct.members().keySet()
+                            .stream().filter( member -> databasePenalties.notSuspended( ct.databaseId(), member ) && !member.equals( myself ) )
+                            .collect( toSet() ) ) ).collect( toList() );
+            return selectionStrategy.select( validTopologies );
         }
         return null;
     }
@@ -90,8 +102,8 @@ class TransferLeader implements Runnable
 
     private List<NamedDatabaseId> myLeaderships()
     {
-        return databaseManager.registeredDatabases().values().stream().filter( this::amLeader )
-                .map( ClusteredDatabaseContext::databaseId ).collect( Collectors.toList() );
+        return databaseManager.registeredDatabases().values().stream().filter( this::amLeader ).map( ClusteredDatabaseContext::databaseId )
+                .collect( toList() );
     }
 
     private boolean amLeader( ClusteredDatabaseContext context )

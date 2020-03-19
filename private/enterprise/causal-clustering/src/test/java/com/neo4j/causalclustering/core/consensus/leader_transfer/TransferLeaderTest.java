@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2002-2020 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
@@ -20,6 +25,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
@@ -33,6 +39,7 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
+import org.neo4j.time.Clocks;
 
 import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -49,12 +56,13 @@ class TransferLeaderTest
     private final Config config = Config.defaults();
     private final TrackingMessageHandler messageHandler = new TrackingMessageHandler();
     private final StubDatabaseManager databaseManager = new StubDatabaseManager( databaseIds );
+    private final DatabasePenalties databasePenalties = new DatabasePenalties( 1, TimeUnit.MILLISECONDS, Clocks.fakeClock() );
 
     @Test
     void shouldChooseToTransferIfIAmNotInPriority()
     {
         TransferLeader transferLeader =
-                new TransferLeader( fakeTopologyService, config, databaseManager, messageHandler, myself, new RandomStrategy() );
+                new TransferLeader( fakeTopologyService, config, databaseManager, messageHandler, myself, databasePenalties, new RandomStrategy() );
         var databaseId = databaseIds.iterator().next();
         // I am leader
         databaseManager.setLeaderFor( databaseId, myself );
@@ -75,7 +83,8 @@ class TransferLeaderTest
     void shouldChooseToNotTransferLeaderIfIamNotLeader()
     {
         TransferLeader transferLeader =
-                new TransferLeader( fakeTopologyService, config, databaseManager, messageHandler, myself, ( validTopologies, myself ) -> null );
+                new TransferLeader( fakeTopologyService, config, databaseManager, messageHandler, myself, databasePenalties,
+                                    ( validTopologies, myself ) -> null );
         var databaseId = databaseIds.iterator().next();
         // I am not leader
         databaseManager.setLeaderFor( databaseId, null );
@@ -93,7 +102,8 @@ class TransferLeaderTest
     void shouldChooseToNotTransferLeaderIfIamLeaderAndInPrioritisedGroup()
     {
         TransferLeader transferLeader =
-                new TransferLeader( fakeTopologyService, config, databaseManager, messageHandler, myself, ( validTopologies, myself ) -> null );
+                new TransferLeader( fakeTopologyService, config, databaseManager, messageHandler, myself, databasePenalties,
+                                    ( validTopologies, myself ) -> null );
         var databaseId = databaseIds.iterator().next();
         // I am leader
         databaseManager.setLeaderFor( databaseId, myself );
@@ -116,7 +126,7 @@ class TransferLeaderTest
 
         private final Map<NamedDatabaseId,ControllableLeaderLocator> databases;
 
-        public StubDatabaseManager( Set<NamedDatabaseId> databaseIds )
+        StubDatabaseManager( Set<NamedDatabaseId> databaseIds )
         {
             databases = databaseIds.stream().collect( Collectors.toMap( d -> d, d -> new ControllableLeaderLocator() ) );
         }
@@ -161,7 +171,8 @@ class TransferLeaderTest
         {
             return new TreeMap<>( databases.entrySet().stream()
                                           .collect( Collectors.toMap( Map.Entry::getKey,
-                                                                      entry -> new TransferLeaderTest.StubClusteredDatabaseContext( entry.getValue(), entry.getKey() ) ) ) );
+                                                                      entry -> new TransferLeaderTest.StubClusteredDatabaseContext( entry.getValue(),
+                                                                                                                                    entry.getKey() ) ) ) );
         }
 
         @Override
@@ -246,7 +257,7 @@ class TransferLeaderTest
         private LeaderLocator leaderLocator;
         private NamedDatabaseId databaseId;
 
-        public StubClusteredDatabaseContext( LeaderLocator leaderLocator, NamedDatabaseId databaseId )
+        StubClusteredDatabaseContext( LeaderLocator leaderLocator, NamedDatabaseId databaseId )
         {
             this.leaderLocator = leaderLocator;
             this.databaseId = databaseId;

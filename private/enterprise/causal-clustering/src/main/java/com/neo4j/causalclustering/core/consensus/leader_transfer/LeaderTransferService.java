@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2002-2020 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
@@ -10,17 +15,21 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobScheduler;
 
-public class LeaderTransferService extends LifecycleAdapter implements FailedLeaderTransferHandler
+import static java.time.Clock.systemUTC;
+
+public class LeaderTransferService extends LifecycleAdapter implements RejectedLeaderTransferReporter
 {
     private final TransferLeader transferLeader;
     private JobScheduler jobScheduler;
     private final long schedulingTime;
     private final TimeUnit timeUnit;
+    private final DatabasePenalties databasePenalties = new DatabasePenalties( 1, TimeUnit.MINUTES, systemUTC() );
     private JobHandle<?> jobHandle;
 
     public LeaderTransferService( JobScheduler jobScheduler, long schedulingTime, TimeUnit timeUnit, TopologyService topologyService, Config config,
@@ -30,7 +39,8 @@ public class LeaderTransferService extends LifecycleAdapter implements FailedLea
         this.jobScheduler = jobScheduler;
         this.schedulingTime = schedulingTime;
         this.timeUnit = timeUnit;
-        this.transferLeader = new TransferLeader( topologyService, config, databaseManager, messageHandler, myself, ( validTopologies, myself1 ) -> null );
+        this.transferLeader =
+                new TransferLeader( topologyService, config, databaseManager, messageHandler, myself, databasePenalties, validTopologies -> null );
     }
 
     @Override
@@ -49,8 +59,8 @@ public class LeaderTransferService extends LifecycleAdapter implements FailedLea
     }
 
     @Override
-    public void handle( RaftMessages.LeadershipTransfer.Rejection rejection )
+    public void report( RaftMessages.LeadershipTransfer.Rejection rejection, NamedDatabaseId namedDatabaseId )
     {
-
+        databasePenalties.issuePenalty( rejection.from(), namedDatabaseId );
     }
 }

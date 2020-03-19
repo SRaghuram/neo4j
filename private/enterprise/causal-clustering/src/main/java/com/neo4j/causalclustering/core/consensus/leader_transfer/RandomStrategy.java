@@ -1,24 +1,25 @@
+/*
+ * Copyright (c) 2002-2020 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
-
-import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
-import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static java.util.Collections.shuffle;
 
 class RandomStrategy implements SelectionStrategy
 {
     @Override
-    public LeaderTransferContext select( List<DatabaseCoreTopology> validTopologies, MemberId myself )
+    public LeaderTransferContext select( List<TopologyContext> validTopologies )
     {
         var databaseCoreTopologies = new ArrayList<>( validTopologies );
         shuffle( databaseCoreTopologies );
-        for ( DatabaseCoreTopology validTopology : databaseCoreTopologies )
+        for ( TopologyContext validTopology : databaseCoreTopologies )
         {
-            var members = validTopology.members().keySet().stream().filter( memberId -> !memberId.equals( myself ) ).collect( Collectors.toList() );
+            var members = new ArrayList<>( validTopology.members() );
             shuffle( members );
             if ( !members.isEmpty() )
             {
