@@ -155,7 +155,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |WITH u, r.name as roleNames ORDER BY roleNames
           |WITH u, collect(roleNames) as roles
           |RETURN u.name as user, roles + 'PUBLIC' as roles, u.passwordChangeRequired AS passwordChangeRequired, u.suspended AS suspended""".stripMargin,
-        VirtualValues.EMPTY_MAP, source = source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+        VirtualValues.EMPTY_MAP, source = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // CREATE [OR REPLACE] USER foo [IF NOT EXISTS] SET PASSWORD password
@@ -183,7 +183,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
                 new DatabaseAdministrationOnFollowerException(s"Failed to create the specified user '$userName': $followerError", error)
               case _ => new IllegalStateException(s"Failed to create the specified user '$userName'.", error)
             }),
-          source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+          Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
         )
       } finally {
         // Clear password
@@ -231,7 +231,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             }
             maybeThrowable
           }),
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // ALTER USER foo
@@ -269,7 +269,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
            |$userColumns
         """.stripMargin,
         VirtualValues.map(Array("predefined"), Array(predefinedRoles)),
-        source = source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+        source = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // CREATE [OR REPLACE] ROLE foo [IF NOT EXISTS] AS COPY OF bar
@@ -288,7 +288,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
               new DatabaseAdministrationOnFollowerException(s"Failed to create the specified role '$roleName': $followerError", error)
             case _ => new IllegalStateException(s"Failed to create the specified role '$roleName'.", error)
           }),
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // Used to split the requirement from the source role before copying privileges
@@ -304,7 +304,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
               new DatabaseAdministrationOnFollowerException(s"Failed to create a role as copy of '$roleName': $followerError", error)
             case error => new IllegalStateException(s"Failed to create a role as copy of '$roleName'.", error) // should not get here but need a default case
           },
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // COPY PRIVILEGES FROM role1 TO role2
@@ -317,7 +317,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
            |RETURN from.name, to.name, count(g)""".stripMargin,
         VirtualValues.map(Array("from", "to"), Array(Values.utf8Value(from), Values.utf8Value(to))),
         QueryHandler.handleError(e => new IllegalStateException(s"Failed to create role '$to' as copy of '$from': Failed to copy privileges.", e)),
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // DROP ROLE foo [IF EXISTS]
@@ -332,7 +332,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
               new DatabaseAdministrationOnFollowerException(s"Failed to delete the specified role '$roleName': $followerError", error)
             case error => new IllegalStateException(s"Failed to delete the specified role '$roleName'.", error)
           },
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // GRANT ROLE foo TO user
@@ -353,7 +353,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
               new DatabaseAdministrationOnFollowerException(s"Failed to grant role '$roleName' to user '$userName': $followerError", e)
             case e => new IllegalStateException(s"Failed to grant role '$roleName' to user '$userName'.", e)
           },
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // REVOKE ROLE foo FROM user
@@ -371,92 +371,92 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             new DatabaseAdministrationOnFollowerException(s"Failed to revoke role '$roleName' from user '$userName': $followerError", error)
           case error => new IllegalStateException(s"Failed to revoke role '$roleName' from user '$userName'.", error)
         },
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // GRANT/DENY/REVOKE _ ON DBMS TO role
     case GrantDbmsAction(source, action, roleName) => (context, parameterMapping, securityContext) =>
       val dbmsAction = AdminActionMapper.asKernelAction(action).toString
       makeGrantOrDenyExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), AllQualifier()(InputPosition.NONE), roleName,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant $dbmsAction privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant $dbmsAction privilege to role '$roleName'")
 
     case DenyDbmsAction(source, action, roleName) => (context, parameterMapping, securityContext) =>
       val dbmsAction = AdminActionMapper.asKernelAction(action).toString
       makeGrantOrDenyExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), AllQualifier()(InputPosition.NONE), roleName,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny $dbmsAction privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny $dbmsAction privilege to role '$roleName'")
 
     case RevokeDbmsAction(source, action, roleName, revokeType) => (context, parameterMapping, securityContext) =>
       val dbmsAction = AdminActionMapper.asKernelAction(action).toString
       makeRevokeExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), AllQualifier()(InputPosition.NONE), roleName, revokeType,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke $dbmsAction privilege from role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke $dbmsAction privilege from role '$roleName'")
 
     // GRANT/DENY/REVOKE _ ON DATABASE foo TO role
     case GrantDatabaseAction(source, action, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       val databaseAction = AdminActionMapper.asKernelAction(action).toString
       makeGrantOrDenyExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, qualifier, roleName,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant $databaseAction privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant $databaseAction privilege to role '$roleName'")
 
     case DenyDatabaseAction(source, action, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       val databaseAction = AdminActionMapper.asKernelAction(action).toString
       makeGrantOrDenyExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, qualifier, roleName,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny $databaseAction privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny $databaseAction privilege to role '$roleName'")
 
     case RevokeDatabaseAction(source, action, database, qualifier, roleName, revokeType) => (context, parameterMapping, securityContext) =>
       val databaseAction = AdminActionMapper.asKernelAction(action).toString
       makeRevokeExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke $databaseAction privilege from role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke $databaseAction privilege from role '$roleName'")
 
     // GRANT/DENY/REVOKE TRAVERSE ON GRAPH foo NODES A (*) TO role
     case GrantTraverse(source, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.TRAVERSE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant traversal privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant traversal privilege to role '$roleName'")
 
     case DenyTraverse(source, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.TRAVERSE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny traversal privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny traversal privilege to role '$roleName'")
 
     case RevokeTraverse(source, database, qualifier, roleName, revokeType) => (context, parameterMapping, securityContext) =>
       makeRevokeExecutionPlan(PrivilegeAction.TRAVERSE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke traversal privilege from role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke traversal privilege from role '$roleName'")
 
     // GRANT/DENY/REVOKE READ {prop} ON GRAPH foo NODES A (*) TO role
     case GrantRead(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.READ.toString, resource, database, qualifier, roleName,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant read privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant read privilege to role '$roleName'")
 
     case DenyRead(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.READ.toString, resource, database, qualifier, roleName,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny read privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny read privilege to role '$roleName'")
 
     case RevokeRead(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping, securityContext) =>
       makeRevokeExecutionPlan(PrivilegeAction.READ.toString, resource, database, qualifier, roleName, revokeType,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke read privilege from role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke read privilege from role '$roleName'")
 
     // GRANT/DENY/REVOKE MATCH {prop} ON GRAPH foo NODES A (*) TO role
     case GrantMatch(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.MATCH.toString, resource, database, qualifier, roleName,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant match privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant match privilege to role '$roleName'")
 
     case DenyMatch(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.MATCH.toString, resource, database, qualifier, roleName,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny match privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny match privilege to role '$roleName'")
 
     case RevokeMatch(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping, securityContext) =>
       makeRevokeExecutionPlan(PrivilegeAction.MATCH.toString, resource, database, qualifier, roleName, revokeType,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke match privilege from role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke match privilege from role '$roleName'")
 
     // GRANT/DENY/REVOKE WRITE ON GRAPH foo NODES * (*) TO role
     case GrantWrite(source, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.WRITE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), GRANT, s"Failed to grant write privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, currentUser)), GRANT, s"Failed to grant write privilege to role '$roleName'")
 
     case DenyWrite(source, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.WRITE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), DENY, s"Failed to deny write privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, currentUser)), DENY, s"Failed to deny write privilege to role '$roleName'")
 
     case RevokeWrite(source, database, qualifier, roleName, revokeType) => (context, parameterMapping, currentUser) =>
       makeRevokeExecutionPlan(PrivilegeAction.WRITE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, currentUser)), s"Failed to revoke write privilege from role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, currentUser)), s"Failed to revoke write privilege from role '$roleName'")
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES
     case ShowPrivileges(source, scope) => (context, parameterMapping, securityContext) =>
@@ -504,13 +504,13 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
              |$returnColumns
              |$orderBy
           """.stripMargin,
-          source
+          Some(source)
         )
         case ShowUserPrivileges(name) =>
           val currentUser = securityContext.subject().username()
           val requestedUser = name.getOrElse(currentUser)
           // Should be able to see your own privileges without admin privilege, source is check for admin privilege
-          val newSource = if (requestedUser.equals(currentUser)) None else source
+          val newSource = if (requestedUser.equals(currentUser)) None else Some(source)
           (Values.utf8Value(requestedUser),
           s"""
              |OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r:Role) WHERE u.name = $$grantee WITH r, u
@@ -535,7 +535,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
              |$returnColumns
              |$orderBy
           """.stripMargin,
-          source
+          Some(source)
         )
         case _ => throw new IllegalStateException(s"Invalid show privilege scope '$scope'")
       }
@@ -607,13 +607,13 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
               new DatabaseAdministrationOnFollowerException(s"Failed to create the specified database '$dbName': $followerError", error)
             case _ => new IllegalStateException(s"Failed to create the specified database '$dbName'.", error)
           }),
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // Used to ensure we don't create to many databases,
     // this by first creating/replacing (source) and then check we didn't exceed the allowed number
     case EnsureValidNumberOfDatabases(source) =>  (context, parameterMapping, securityContext) =>
-      val dbName = source.get.normalizedName.name // database to be created, needed for error message
+      val dbName = source.normalizedName.name // database to be created, needed for error message
       val query =
         """MATCH (d:Database)
           |RETURN count(d) as numberOfDatabases
@@ -626,7 +626,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             None
           }
         ),
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // DROP DATABASE foo [IF EXISTS]
@@ -644,7 +644,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             new DatabaseAdministrationOnFollowerException(s"Failed to delete the specified database '$dbName': $followerError", error)
           case error => new IllegalStateException(s"Failed to delete the specified database '$dbName'.", error)
         },
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // START DATABASE foo
@@ -673,7 +673,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
               new DatabaseAdministrationOnFollowerException(s"Failed to start the specified database '$dbName': $followerError", error)
             case error => new IllegalStateException(s"Failed to start the specified database '$dbName'.", error)
           },
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // STOP DATABASE foo
@@ -696,7 +696,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             new DatabaseAdministrationOnFollowerException(s"Failed to stop the specified database '$dbName': $followerError", error)
           case error => new IllegalStateException(s"Failed to stop the specified database '$dbName'.", error)
         },
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // Used to check whether a database is present and not the system database,
@@ -717,7 +717,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
               new DatabaseAdministrationOnFollowerException(s"Failed to $action the specified database '$dbName': $followerError", error)
             case error => new IllegalStateException(s"Failed to $action the specified database '$dbName'.", error) // should not get here but need a default case
           },
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
     // Used to log commands
