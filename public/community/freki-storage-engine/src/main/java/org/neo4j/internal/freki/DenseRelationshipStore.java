@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -57,7 +56,11 @@ import org.neo4j.values.storable.Value;
 import static java.lang.String.format;
 import static org.neo4j.internal.freki.MutableNodeRecordData.externalRelationshipId;
 import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValueSizeIncludingTypeHeader;
+import static org.neo4j.internal.freki.StreamVByte.calculateLongSizeIndex;
+import static org.neo4j.internal.freki.StreamVByte.readLongValue;
+import static org.neo4j.internal.freki.StreamVByte.sizeOfLongSizeIndex;
 import static org.neo4j.internal.freki.StreamVByte.writeIntDeltas;
+import static org.neo4j.internal.freki.StreamVByte.writeLongValue;
 import static org.neo4j.storageengine.api.RelationshipDirection.LOOP;
 import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 
@@ -70,7 +73,6 @@ import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
  */
 class DenseRelationshipStore extends LifecycleAdapter implements Closeable
 {
-    private static final Comparator<StorageProperty> PROPERTY_SORTER = ( p1, p2 ) -> Integer.compare( p1.propertyKeyId(), p2.propertyKeyId() );
     private static final int MAX_ENTRY_VALUE_SIZE = 256;
 
     private final DenseLayout layout;
@@ -160,6 +162,10 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
 
     private static RelationshipPropertyIterator relationshipPropertiesIterator( ByteBuffer relationshipData, SimpleBigValueStore bigPropertyValueStore )
     {
+        if ( relationshipData.remaining() == 0 )
+        {
+            return NO_PROPERTIES;
+        }
         int[] propertyKeys = StreamVByte.readIntDeltas( new StreamVByte.IntArrayTarget(), relationshipData ).array();
         return new RelationshipPropertyIterator()
         {
@@ -335,6 +341,8 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
             into.direction = key.direction;
             into.internalRelationshipId = key.internalRelationshipId;
             into.neighbourNodeId = key.neighbourNodeId;
+            into.cachedSizesByte = key.cachedSizesByte;
+            into.cachedKeySize = key.cachedKeySize;
             return into;
         }
 
@@ -347,7 +355,7 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         @Override
         public int keySize( DenseKey key )
         {
-            return 16;
+            return key.getOrCalculateSize();
         }
 
         @Override
@@ -359,28 +367,23 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         @Override
         public void writeKey( PageCursor cursor, DenseKey key )
         {
-            // [ sss,iiii][tttt,tttt][tttt,tttt][tttt,tttt]
-            // t: tokenId
-            // i: item type
-            // s: source node size
-            // TODO but for now just store the sourceNodeId as an int
-            cursor.putInt( (int) key.nodeId );
-            int serialized = key.tokenId | (key.isOutgoing() ? 0x80000000 : 0);
-            cursor.putInt( serialized );
-            cursor.putInt( (int) key.internalRelationshipId );
-            cursor.putInt( (int) key.neighbourNodeId );
+            key.getOrCalculateSize();
+            cursor.putByte( key.cachedSizesByte );
+            writeLongValue( cursor, key.nodeId );
+            writeLongValue( cursor, key.tokenAndDirectionInt() );
+            writeLongValue( cursor, key.neighbourNodeId );
+            writeLongValue( cursor, key.internalRelationshipId );
         }
 
         @Override
         public void readKey( PageCursor cursor, DenseKey into, int keySize )
         {
-            into.nodeId = cursor.getInt() & 0xFFFFFFFFL;
-            int serialized = cursor.getInt();
-            into.tokenId = serialized & 0xFFFFFF;
-            boolean outgoing = (serialized & 0x80000000) != 0;
-            into.direction = outgoing ? Direction.OUTGOING : Direction.INCOMING;
-            into.internalRelationshipId = cursor.getInt() & 0xFFFFFFFFL;
-            into.neighbourNodeId = cursor.getInt() & 0xFFFFFFFFL;
+            into.cachedSizesByte = cursor.getByte();
+            into.nodeId = readLongValue( cursor, into.cachedSizesByte & 0x3 );
+            into.fromTokenAndDirection( (int) readLongValue( cursor, (into.cachedSizesByte >>> 2) & 0x3 ) );
+            into.neighbourNodeId = readLongValue( cursor, (into.cachedSizesByte >>> 4) & 0x3 );
+            into.internalRelationshipId = readLongValue( cursor, (into.cachedSizesByte >>> 6) & 0x3 );
+            into.cachedKeySize = keySize;
         }
 
         @Override
@@ -398,8 +401,11 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
                 return;
             }
             into.data.clear();
-            cursor.getBytes( into.data.array(), 0, valueSize );
-            into.data.position( valueSize );
+            if ( valueSize > 0 )
+            {
+                cursor.getBytes( into.data.array(), 0, valueSize );
+                into.data.position( valueSize );
+            }
             into.data.flip();
         }
 
@@ -449,11 +455,14 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
     private static class DenseKey
     {
         // the order of these fields should match the order in which they are compared
-        long nodeId; // temporary so long everything is in the same tree
-        int tokenId; // both property and relationship will have exactly one token id
+        long nodeId;
+        int tokenId;
         Direction direction;
         long neighbourNodeId;
         long internalRelationshipId;
+
+        transient int cachedKeySize;
+        transient byte cachedSizesByte;
 
         DenseKey initialize( long originNodeId, int type, Direction direction, long neighbourNodeId, long internalId )
         {
@@ -462,7 +471,34 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
             this.direction = direction;
             this.neighbourNodeId = neighbourNodeId;
             this.internalRelationshipId = internalId;
+            this.cachedKeySize = 0;
             return this;
+        }
+
+        int getOrCalculateSize()
+        {
+            if ( cachedKeySize == 0 )
+            {
+                int nodeIdSize = calculateLongSizeIndex( nodeId );
+                int tokenAndDirectionSize = calculateLongSizeIndex( tokenAndDirectionInt() );
+                int neighbourIdSize = calculateLongSizeIndex( neighbourNodeId );
+                int internalRelationshipIdSize = calculateLongSizeIndex( internalRelationshipId );
+                cachedKeySize = 1 + sizeOfLongSizeIndex( nodeIdSize ) + sizeOfLongSizeIndex( tokenAndDirectionSize ) +
+                        sizeOfLongSizeIndex( neighbourIdSize ) + sizeOfLongSizeIndex( internalRelationshipIdSize );
+                cachedSizesByte = (byte) (nodeIdSize | (tokenAndDirectionSize << 2) | (neighbourIdSize << 4) | (internalRelationshipIdSize << 6));
+            }
+            return cachedKeySize;
+        }
+
+        private int tokenAndDirectionInt()
+        {
+            return tokenId << 1 | (direction == Direction.OUTGOING ? 1 : 0);
+        }
+
+        private void fromTokenAndDirection( int tokenAndDirection )
+        {
+            tokenId = tokenAndDirection >>> 1;
+            direction = (tokenAndDirection & 0x1) != 0 ? Direction.OUTGOING : Direction.INCOMING;
         }
 
         boolean isOutgoing()
@@ -486,12 +522,15 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         void initialize( IntObjectMap<PropertyUpdate> properties, Function<PropertyUpdate,ByteBuffer> version )
         {
             data.clear();
-            properties.keySet().toSortedArray();
-            int[] sortedKeys = properties.keySet().toSortedArray();
-            writeIntDeltas( sortedKeys, data );
-            for ( int key : sortedKeys )
+            if ( !properties.isEmpty() )
             {
-                data.put( version.apply( properties.get( key ) ) );
+                properties.keySet().toSortedArray();
+                int[] sortedKeys = properties.keySet().toSortedArray();
+                writeIntDeltas( sortedKeys, data );
+                for ( int key : sortedKeys )
+                {
+                    data.put( version.apply( properties.get( key ) ) );
+                }
             }
             data.flip();
         }
@@ -624,6 +663,39 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
     {
         abstract ByteBuffer serializedValue();
     }
+
+    private static final RelationshipPropertyIterator NO_PROPERTIES = new RelationshipPropertyIterator()
+    {
+        @Override
+        ByteBuffer serializedValue()
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        protected StorageProperty fetchNextOrNull()
+        {
+            return null;
+        }
+
+        @Override
+        public int propertyKeyId()
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Value value()
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean isDefined()
+        {
+            throw new UnsupportedOperationException();
+        }
+    };
 
     static class Stats
     {
