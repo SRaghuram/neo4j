@@ -22,6 +22,8 @@ package org.neo4j.internal.freki;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+import org.neo4j.io.pagecache.PageCursor;
+
 import static java.lang.Integer.min;
 
 /**
@@ -312,21 +314,31 @@ class StreamVByte
         return count == 0 ? size + 1 : size;
     }
 
-    private static int calculateLongSize( long value )
+    static int calculateLongSize( long value )
+    {
+        return LONG_SIZES[calculateLongSizeIndex( value )];
+    }
+
+    static int sizeOfLongSizeIndex( int longSizeIndex )
+    {
+        return LONG_SIZES[longSizeIndex];
+    }
+
+    static int calculateLongSizeIndex( long value )
     {
         if ( (value & LONG_MASKS[3]) != 0 )
         {
-            return LONG_SIZES[3];
+            return 3;
         }
         else if ( (value & LONG_MASKS[2]) != 0 )
         {
-            return LONG_SIZES[2];
+            return 2;
         }
         else if ( (value & LONG_MASKS[1]) != 0 )
         {
-            return LONG_SIZES[1];
+            return 1;
         }
-        return LONG_SIZES[0];
+        return 0;
     }
 
     static long[] readLongs( ByteBuffer buffer )
@@ -408,6 +420,38 @@ class StreamVByte
         return offset;
     }
 
+    static void writeLongValue( PageCursor cursor, long value )
+    {
+        if ( (value & LONG_MASKS[3]) != 0 )
+        {
+            cursor.putByte( (byte) value );
+            cursor.putByte( (byte) (value >>> 8) );
+            cursor.putByte( (byte) (value >>> 16) );
+            cursor.putByte( (byte) (value >>> 24) );
+            cursor.putByte( (byte) (value >>> 32) );
+            cursor.putByte( (byte) (value >>> 40) );
+            cursor.putByte( (byte) (value >>> 48) );
+        }
+        else if ( (value & LONG_MASKS[2]) != 0 )
+        {
+            cursor.putByte( (byte) value );
+            cursor.putByte( (byte) (value >>> 8) );
+            cursor.putByte( (byte) (value >>> 16) );
+            cursor.putByte( (byte) (value >>> 24) );
+            cursor.putByte( (byte) (value >>> 32) );
+        }
+        else if ( (value & LONG_MASKS[1]) != 0 )
+        {
+            cursor.putByte( (byte) value );
+            cursor.putByte( (byte) (value >>> 8) );
+            cursor.putByte( (byte) (value >>> 16) );
+        }
+        else
+        {
+            cursor.putByte( (byte) value );
+        }
+    }
+
     private static long readLongValue( byte[] serialized, int offset, int size )
     {
         if ( size == 3 )
@@ -435,6 +479,35 @@ class StreamVByte
                     (unsignedLong( serialized[offset + 2] ) << 16);
         }
         return unsignedLong( serialized[offset] );
+    }
+
+    static long readLongValue( PageCursor cursor, int size )
+    {
+        if ( size == 3 )
+        {
+            return unsigned( cursor.getByte() ) |
+                    (unsignedLong( cursor.getByte() ) << 8) |
+                    (unsignedLong( cursor.getByte() ) << 16) |
+                    (unsignedLong( cursor.getByte() ) << 24) |
+                    (unsignedLong( cursor.getByte() ) << 32) |
+                    (unsignedLong( cursor.getByte() ) << 40) |
+                    (unsignedLong( cursor.getByte() ) << 48);
+        }
+        else if ( size == 2 )
+        {
+            return unsigned( cursor.getByte() ) |
+                    (unsignedLong( cursor.getByte() ) << 8) |
+                    (unsignedLong( cursor.getByte() ) << 16) |
+                    (unsignedLong( cursor.getByte() ) << 24) |
+                    (unsignedLong( cursor.getByte() ) << 32);
+        }
+        else if ( size == 1 )
+        {
+            return unsigned( cursor.getByte() ) |
+                    (unsignedLong( cursor.getByte() ) << 8) |
+                    (unsignedLong( cursor.getByte() ) << 16);
+        }
+        return unsigned( cursor.getByte() );
     }
 
     private static int unsigned( byte value )

@@ -29,13 +29,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.internal.helpers.collection.PrefetchingResourceIterator;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -56,7 +59,9 @@ import static org.neo4j.graphdb.Direction.OUTGOING;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.internal.freki.PropertyUpdate.add;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
+import static org.neo4j.internal.helpers.collection.Iterators.loop;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
+import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 import static org.neo4j.values.storable.Values.doubleValue;
 import static org.neo4j.values.storable.Values.intValue;
 
@@ -130,100 +135,45 @@ class DenseRelationshipStoreTest
         assertRelationships( nodeId, type, INCOMING, asSet( in ) );
     }
 
-//    @Test
-//    void shouldDeleteNode() throws IOException
-//    {
-//        // given
-//        int numNodes = random.nextInt( 1, 10 );
-//        int numTypes = 4;
-//        MutableLongObjectMap<Set<StorageProperty>> properties = LongObjectMaps.mutable.empty();
-//        MutableLongObjectMap<Set<Rel>> relationships = LongObjectMaps.mutable.empty();
-//        try ( DenseStore.Updater updater = store.newUpdater( NULL ) )
-//        {
-//            for ( long nodeId = 0; nodeId < numNodes; nodeId++ )
-//            {
-//                Set<StorageProperty> nodeProperties = properties.getIfAbsentPut( nodeId, HashSet::new );
-//                int numProperties = random.nextInt( 2, 5 );
-//                for ( int key = 0; key < numProperties; key++ )
-//                {
-//                    Value value = Values.intValue( key );
-//                    updater.setProperty( nodeId, key, serialize( value ) );
-//                    nodeProperties.add( new PropertyKeyValue( key, value ) );
-//                }
-//
-//                Set<Rel> nodeRelationships = relationships.getIfAbsentPut( nodeId, HashSet::new );
-//                int numRelationships = random.nextInt( 1, 20 );
-//                for ( int i = 0; i < numRelationships; i++ )
-//                {
-//                    boolean outgoing = random.nextBoolean();
-//                    long otherNodeId = random.nextLong( 1_000 );
-//                    RelationshipDirection direction =
-//                            outgoing ? otherNodeId == nodeId ? RelationshipDirection.LOOP : RelationshipDirection.OUTGOING : RelationshipDirection.INCOMING;
-//                    StorageProperty relationshipProperty = new PropertyKeyValue( random.nextInt( 4 ), stringValue( nodeId + "." + i ) );
-//                    MutableIntObjectMap<PropertyUpdate> props = IntObjectMaps.mutable.empty();
-//                    props.put( relationshipProperty.propertyKeyId(), add( relationshipProperty.propertyKeyId(), serialize( relationshipProperty.value() ) ) );
-//                    int type = random.nextInt( numTypes );
-//                    updater.createRelationship( i, nodeId, type, otherNodeId, outgoing, props, u -> u.after );
-//                    nodeRelationships.add( new Rel( i, nodeId, type, otherNodeId, direction, asSet( relationshipProperty ) ) );
-//                }
-//
-//                EagerDegrees degrees = asDegrees( nodeRelationships );
-//                for ( int type : degrees.types() )
-//                {
-//                    updater.setDegree( nodeId, type, degrees.rawOutgoingDegree( type ), degrees.rawIncomingDegree( type ), degrees.rawLoopDegree( type ) );
-//                }
-//            }
-//        }
-//
-//        // when
-//        long nodeToDelete = random.nextLong( numNodes );
-//        try ( DenseStore.Updater updater = store.newUpdater( NULL ) )
-//        {
-//            Set<Rel> nodeRelationships = relationships.get( nodeToDelete );
-//            nodeRelationships.forEach( relationship -> updater.deleteRelationship( relationship.internalId, relationship.originNodeId, relationship.type,
-//                    relationship.neighbourNodeId, relationship.direction == RelationshipDirection.OUTGOING ) );
-//            updater.deleteNode( nodeToDelete );
-//        }
-//
-//        // then
-//        for ( long nodeId = 0; nodeId < numNodes; nodeId++ )
-//        {
-//            if ( nodeId == nodeToDelete )
-//            {
-//                try ( PrefetchingResourceIterator<StorageProperty> readProperties = store.getProperties( nodeId, NULL );
-//                      PrefetchingResourceIterator<DenseStore.RelationshipData> readRelationships =
-//                              store.getRelationships( nodeId, ANY_RELATIONSHIP_TYPE, BOTH, NULL ) )
-//                {
-//                    assertThat( readProperties.hasNext() ).isFalse();
-//                    assertThat( readRelationships.hasNext() ).isFalse();
-//                    assertThat( store.getDegrees( nodeId, RelationshipSelection.ALL_RELATIONSHIPS, NULL ).totalDegree() ).isEqualTo( 0 );
-//                }
-//            }
-//            else
-//            {
-//                assertProperties( nodeId, properties.get( nodeId ) );
-//                assertRelationships( nodeId, ANY_RELATIONSHIP_TYPE, BOTH, relationships.get( nodeId ) );
-//                assertDegrees( nodeId, asDegrees( relationships.get( nodeId ) ) );
-//            }
-//        }
-//    }
-//
-//    @Test
-//    void shouldFailDeleteNodeWithRelationships()
-//    {
-//        // given
-//
-//        // when
-//
-//        // then
-//    }
-//
-//    private EagerDegrees asDegrees( Set<Rel> relationships )
-//    {
-//        EagerDegrees degrees = new EagerDegrees();
-//        relationships.forEach( r -> degrees.add( r.type, r.direction, 1 ) );
-//        return degrees;
-//    }
+    @Test
+    void shouldDeleteNodeWithLotsOfRelationships() throws IOException
+    {
+        // given
+        long nodeId = random.nextLong( 0xFFFFFF_FFFFFFFFL );
+        try ( DenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+        {
+            for ( int r = 0; r < 1_000; r++ )
+            {
+                boolean outgoing = random.nextBoolean();
+                long otherNodeId = random.nextLong( 0xFFFFFF_FFFFFFFFL );
+                updater.createRelationship( r, outgoing ? nodeId : otherNodeId, (r % 10) * random.nextInt( 1, 100 ), outgoing ? otherNodeId : nodeId, outgoing,
+                        IntObjectMaps.immutable.empty(), v -> v.after );
+            }
+        }
+
+        // when
+        List<Rel> relationships = new ArrayList<>();
+        for ( DenseRelationshipStore.RelationshipData relationship : loop( store.getRelationships( nodeId, ANY_RELATIONSHIP_TYPE, BOTH, NULL ) ) )
+        {
+            relationships.add( new Rel( relationship.internalId(), relationship.originNodeId(), relationship.type(), relationship.neighbourNodeId(),
+                    relationship.direction(), asSet( relationship.properties() ) ) );
+        }
+        try ( DenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+        {
+            for ( Rel relationship : relationships )
+            {
+                updater.deleteRelationship( relationship.internalId, relationship.originNodeId, relationship.type, relationship.neighbourNodeId,
+                        relationship.direction != RelationshipDirection.INCOMING );
+            }
+        }
+
+        // then
+        try ( PrefetchingResourceIterator<DenseRelationshipStore.RelationshipData> emptyRelationships = store.getRelationships( nodeId, ANY_RELATIONSHIP_TYPE,
+                BOTH, NULL ) )
+        {
+            assertThat( emptyRelationships.hasNext() ).isFalse();
+        }
+    }
 
     private void assertRelationships( long sourceNodeId, int type, Direction direction, Set<Rel> expectedRelationships )
     {
