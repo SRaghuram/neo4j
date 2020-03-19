@@ -17,19 +17,20 @@ import org.neo4j.codegen.api.IntermediateRepresentation.constructor
 import org.neo4j.codegen.api.IntermediateRepresentation.declare
 import org.neo4j.codegen.api.IntermediateRepresentation.equal
 import org.neo4j.codegen.api.IntermediateRepresentation.fail
+import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.getStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
-import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
 import org.neo4j.codegen.api.IntermediateRepresentation.isNull
 import org.neo4j.codegen.api.IntermediateRepresentation.load
+import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.loop
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
 import org.neo4j.codegen.api.IntermediateRepresentation.noValue
 import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
 import org.neo4j.codegen.api.IntermediateRepresentation.or
-import org.neo4j.codegen.api.IntermediateRepresentation.self
+import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.IntermediateRepresentation.staticConstant
 import org.neo4j.codegen.api.IntermediateRepresentation.ternary
 import org.neo4j.codegen.api.LocalVariable
@@ -186,17 +187,19 @@ class UnionOperatorTemplate(val inner: OperatorTaskTemplate,
                             rhsMapping: Iterable[UnionSlotMapping])
                            (protected val codeGen: UnionOperatorExpressionCompiler) extends ContinuableOperatorTaskWithMorselTemplate {
 
+
   // Union does not support fusing over pipelines, so it is always gonna be the head operator
   override protected val isHead: Boolean = true
 
-  protected val lhsSlotsConfigsFused: StaticField = staticConstant[SlotConfiguration](codeGen.namer.nextVariableName("lhsSlotConfig"), lhsSlotConfig)
-  protected val rhsSlotsConfigsFused: StaticField = staticConstant[SlotConfiguration](codeGen.namer.nextVariableName("rhsSlotConfig"), rhsSlotConfig)
+  private val lhsSlotsConfigsFused: StaticField = staticConstant[SlotConfiguration](codeGen.namer.nextVariableName("lhsSlotConfig"), lhsSlotConfig)
+  private val rhsSlotsConfigsFused: StaticField = staticConstant[SlotConfiguration](codeGen.namer.nextVariableName("rhsSlotConfig"), rhsSlotConfig)
+  private val canContinue = field[Boolean](codeGen.namer.nextVariableName("canContinue"))
 
   override protected def scopeId: String = "union" + id.x
 
   override def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
-  override def genFields: Seq[Field] = Seq(lhsSlotsConfigsFused, rhsSlotsConfigsFused)
+  override def genFields: Seq[Field] = Seq(lhsSlotsConfigsFused, rhsSlotsConfigsFused, canContinue)
 
   override def genLocalVariables: Seq[LocalVariable] = Seq.empty
 
@@ -211,6 +214,7 @@ class UnionOperatorTemplate(val inner: OperatorTaskTemplate,
    *       fromLHS = false;
    *   else
    *       throw new java.lang.IllegalStateException( "Unknown slot configuration in UnionOperator." );
+   *   this.canContinue = this.inputMorsel.onValidRow
    *    << genLoop >>
    * }}}
    */
@@ -227,25 +231,27 @@ class UnionOperatorTemplate(val inner: OperatorTaskTemplate,
           fail(newInstance(constructor[IllegalStateException, String], constant("Unknown slot configuration in UnionOperator.")))
         }
       },
+      setField(canContinue, INPUT_ROW_IS_VALID),
       genLoop
     )
   }
   /**
    * {{{
-   *    while( (this.canContinue()) && ((served) < (demand)) )
+   *    while( (this.canContinue) && ((served) < (demand)) )
    *    {
    *        if ( fromLHS )
    *            // copy from LHS
    *        else
    *            // copy from RHS
    *        << inner.genOperate >>
-   *        this.inputCursor.next();
+   *        this.canContinue = this.inputCursor.next();
    *    }
    * }}}
    */
   private def genLoop: IntermediateRepresentation = {
-    loop(and(invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue")), innermost.predicate)) {
+    loop(and(loadField(canContinue), innermost.predicate)) {
       block(
+        innermost.resetBelowLimit,
         ifElse(load(codeGen.fromLHSName)) {
           copySlots(lhsMapping)
         } {
@@ -253,7 +259,9 @@ class UnionOperatorTemplate(val inner: OperatorTaskTemplate,
         },
         inner.genOperateWithExpressions,
         // Else if no inner operator can proceed we move to the next input row
-        doIfInnerCantContinue(block(invokeSideEffect(INPUT_CURSOR, NEXT), profileRow(id))),
+        doIfInnerCantContinue(
+          innermost.setToNextIfBelowLimit(canContinue,
+            block(profileRow(id), invoke(INPUT_CURSOR, NEXT)))),
         innermost.resetCachedPropertyVariables
       )
     }
@@ -299,7 +307,9 @@ class UnionOperatorTemplate(val inner: OperatorTaskTemplate,
   override protected def genOperateMiddle: IntermediateRepresentation = throw new CantCompileQueryException("Cannot compile Union as middle operator")
 
   override def genCanContinue: Option[IntermediateRepresentation] = {
-    inner.genCanContinue.map(or(_, INPUT_ROW_IS_VALID)).orElse(Some(INPUT_ROW_IS_VALID))
+    inner.genCanContinue.map(or(_, loadField(canContinue))).orElse(Some(loadField(canContinue)))
+
+    //inner.genCanContinue.map(or(_, INPUT_ROW_IS_VALID)).orElse(Some(INPUT_ROW_IS_VALID))
   }
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
