@@ -72,6 +72,8 @@ import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static org.neo4j.configuration.GraphDatabaseSettings.load_csv_file_url_root;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
+import static org.neo4j.test.proc.ProcessUtil.getClassPath;
+import static org.neo4j.test.proc.ProcessUtil.getJavaExecutable;
 
 @Command( name = "run-workload", description = "runs all queries for a single workload" )
 public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
@@ -168,9 +170,27 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                     try
                     {
                         tmpFrekiStoreDir = Files.createTempDirectory( "freki" );
-                        MigrateDataIntoOtherDatabase.migrate( storeDir.toPath(), tmpFrekiStoreDir );
+                        String[] args = {
+                                getJavaExecutable().toString(),
+                                "-cp", getClassPath(),
+                                MigrateDataIntoOtherDatabase.class.getName(),
+                                storeDir.toPath().toAbsolutePath().toString(), tmpFrekiStoreDir.toAbsolutePath().toString()
+                        };
+                        int exitCode = new ProcessBuilder( args )
+                                .inheritIO()
+                                .start()
+                                .waitFor();
+                        if ( exitCode != 0 )
+                        {
+                            throw new RuntimeException( "Migration failed with code: " + exitCode );
+                        }
                         FileUtils.deleteRecursively( storeDir );
                         FileUtils.moveFile( tmpFrekiStoreDir.toFile(), storeDir );
+                        System.out.println( "Successful migration to Freki.");
+                    }
+                    catch ( InterruptedException e )
+                    {
+                        throw new RuntimeException( "Unexpected interruption during migration", e );
                     }
                     finally
                     {
