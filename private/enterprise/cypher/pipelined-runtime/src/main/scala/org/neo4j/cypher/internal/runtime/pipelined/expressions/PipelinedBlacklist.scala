@@ -39,19 +39,9 @@ object PipelinedBlacklist {
 
         case c: CartesianProduct if providedOrders.hasProvidedOrder(c.left.id) =>
           _ + "CartesianProduct if the LHS has a provided order"
-
-        case s: SemiApply if hasAggregation(s.right) =>
-          _ + "Aggregation on RHS of SemiApply"
-
-        case s: AntiSemiApply if hasAggregation(s.right) =>
-          _ + "Aggregation on RHS of AntiSemiApply"
       }
     if (unsupport.nonEmpty) {
       throw new CantCompileQueryException(s"Pipelined does not yet support ${unsupport.mkString("`", "`, `", "`")}, use another runtime.")
     }
-  }
-
-  private def hasAggregation(plan: LogicalPlan): Boolean = plan.treeExists {
-    case _: Aggregation | _: OrderedAggregation => true
   }
 }
