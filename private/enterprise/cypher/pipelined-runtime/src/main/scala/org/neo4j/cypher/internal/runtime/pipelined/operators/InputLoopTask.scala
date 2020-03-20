@@ -211,7 +211,7 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
       },
       loop(and(or(INPUT_ROW_IS_VALID, loadField(innerLoop)), innermost.predicate))(
         block(
-          innermost.resetBelowLimit,
+          innermost.resetBelowLimitAndAdvanceToNextArgument,
           // Initialize the inner loop
           doInitializeInnerLoopOrRestoreContinuationState,
 

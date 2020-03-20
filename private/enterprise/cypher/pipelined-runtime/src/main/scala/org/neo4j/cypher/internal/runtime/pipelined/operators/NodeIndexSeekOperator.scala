@@ -309,7 +309,7 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(override val inner: Operator
         codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
         property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_, getPropertyValue)).getOrElse(noop()),
         inner.genOperateWithExpressions,
-        doIfInnerCantContinue(innermost.setToNextIfBelowLimit(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id))),
+        doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id))),
         endInnerLoop
       )
     )
@@ -491,7 +491,7 @@ class ManyQueriesNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTempl
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(
           block(
-            innermost.setToNextIfBelowLimit(canContinue,
+            innermost.setUnlessPastLimit(canContinue,
               invokeStatic(nextMethod,
                 indexReadSession(queryIndexId),
                 loadField(nodeIndexCursorField),
@@ -612,7 +612,7 @@ class CompositeNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTemplat
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(
           block(
-            innermost.setToNextIfBelowLimit(canContinue,
+            innermost.setUnlessPastLimit(canContinue,
               invokeStatic(compositeNextMethod,
                 indexReadSession(queryIndexId),
                 loadField(nodeIndexCursorField),

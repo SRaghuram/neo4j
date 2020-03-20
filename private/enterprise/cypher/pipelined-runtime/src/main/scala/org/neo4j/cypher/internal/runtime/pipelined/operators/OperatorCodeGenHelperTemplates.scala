@@ -219,7 +219,6 @@ object OperatorCodeGenHelperTemplates {
   val OUTPUT_CURSOR_VAR: LocalVariable = variable[MorselFullCursor](ExpressionCompiler.CONTEXT, OUTPUT_FULL_CURSOR)
   val OUTPUT_CURSOR: IntermediateRepresentation = load(OUTPUT_CURSOR_VAR.name)
   val OUTPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(OUTPUT_CURSOR, method[MorselFullCursor, Boolean]("onValidRow"))
-  val BELOW_LIMIT: LocalVariable = variable[Boolean]("belowLimit", constant(true))
 
   val OUTPUT_TRUNCATE: IntermediateRepresentation = invokeSideEffect(OUTPUT_CURSOR, method[MorselFullCursor, Unit]("truncate"))
   val UPDATE_DEMAND: IntermediateRepresentation =

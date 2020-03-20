@@ -32,7 +32,6 @@ import org.neo4j.codegen.api.Method
 import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -189,7 +188,7 @@ class SingleNodeByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
         codeGen.setLongAt(offset, load(idVariable)),
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(profileRow(id)),
-        innermost.setToNextIfBelowLimit(canContinue, constant(false)),
+        innermost.setUnlessPastLimit(canContinue, constant(false)),
         endInnerLoop),
     )
   }
@@ -268,7 +267,7 @@ class ManyNodeByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
             inner.genOperateWithExpressions,
             doIfInnerCantContinue(profileRow(id))
           )),
-        doIfInnerCantContinue(innermost.setToNextIfBelowLimit(canContinue, cursorNext[IteratorCursor](loadField(idCursor)))),
+        doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, cursorNext[IteratorCursor](loadField(idCursor)))),
         endInnerLoop)
     )
   }

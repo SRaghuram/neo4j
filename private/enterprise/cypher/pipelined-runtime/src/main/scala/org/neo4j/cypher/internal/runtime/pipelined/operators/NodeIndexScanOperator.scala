@@ -179,7 +179,7 @@ class NodeIndexScanTaskTemplate(inner: OperatorTaskTemplate,
         codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
         block(cacheProperties:_*),
         inner.genOperateWithExpressions,
-        doIfInnerCantContinue(innermost.setToNextIfBelowLimit(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id))),
+        doIfInnerCantContinue(innermost.setUnlessPastLimit(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id))),
         endInnerLoop
       )
     )

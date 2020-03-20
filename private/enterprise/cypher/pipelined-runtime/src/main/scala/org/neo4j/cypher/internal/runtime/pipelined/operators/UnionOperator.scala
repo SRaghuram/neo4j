@@ -251,7 +251,7 @@ class UnionOperatorTemplate(val inner: OperatorTaskTemplate,
   private def genLoop: IntermediateRepresentation = {
     loop(and(loadField(canContinue), innermost.predicate)) {
       block(
-        innermost.resetBelowLimit,
+        innermost.resetBelowLimitAndAdvanceToNextArgument,
         ifElse(load(codeGen.fromLHSName)) {
           copySlots(lhsMapping)
         } {
@@ -260,7 +260,7 @@ class UnionOperatorTemplate(val inner: OperatorTaskTemplate,
         inner.genOperateWithExpressions,
         // Else if no inner operator can proceed we move to the next input row
         doIfInnerCantContinue(
-          innermost.setToNextIfBelowLimit(canContinue,
+          innermost.setUnlessPastLimit(canContinue,
             block(profileRow(id), invoke(INPUT_CURSOR, NEXT)))),
         innermost.resetCachedPropertyVariables
       )
@@ -308,8 +308,6 @@ class UnionOperatorTemplate(val inner: OperatorTaskTemplate,
 
   override def genCanContinue: Option[IntermediateRepresentation] = {
     inner.genCanContinue.map(or(_, loadField(canContinue))).orElse(Some(loadField(canContinue)))
-
-    //inner.genCanContinue.map(or(_, INPUT_ROW_IS_VALID)).orElse(Some(INPUT_ROW_IS_VALID))
   }
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)

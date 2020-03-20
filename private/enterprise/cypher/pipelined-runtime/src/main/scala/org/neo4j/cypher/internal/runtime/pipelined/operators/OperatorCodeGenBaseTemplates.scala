@@ -689,7 +689,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
     shouldCheckBreak = false
   }
 
-  def resetBelowLimit: IntermediateRepresentation = {
+  def resetBelowLimitAndAdvanceToNextArgument: IntermediateRepresentation = {
     val ops = limits.map {(argumentStateMapId) =>
         block(
           condition(not(load(belowLimitVarName(argumentStateMapId)))) {
@@ -706,7 +706,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
     block(ops:_*)
   }
 
-  def setToNextIfBelowLimit(field: Field, next: IntermediateRepresentation): IntermediateRepresentation = {
+  def setUnlessPastLimit(field: Field, next: IntermediateRepresentation): IntermediateRepresentation = {
     if (limits.isEmpty) {
       setField(field, next)
     }

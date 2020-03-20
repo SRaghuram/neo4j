@@ -29,7 +29,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.trueValue
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.physicalplanning.Slot
-import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -274,7 +273,7 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
             )),
           doIfPredicateOrElse(condition(load(shouldWriteRow))(innerBlock))(innerBlock),
           doIfInnerCantContinue(
-            innermost.setToNextIfBelowLimit(canContinue,
+            innermost.setUnlessPastLimit(canContinue,
               and(loadField(canContinue), cursorNext[RelationshipTraversalCursor](loadField(relationshipsField))))),
           endInnerLoop
         )))

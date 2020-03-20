@@ -89,7 +89,7 @@ class ArgumentOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
     block(
       loop(and(invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue")), innermost.predicate))(
         block(
-          innermost.resetBelowLimit,
+          innermost.resetBelowLimitAndAdvanceToNextArgument,
           codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
           inner.genOperateWithExpressions,
           // Else if no inner operator can proceed we move to the next input row
