@@ -193,11 +193,14 @@ class DenseRelationshipStoreTest
     private Set<StorageProperty> readProperties( DenseRelationshipStore.RelationshipData relationship )
     {
         Set<StorageProperty> readProperties = new HashSet<>();
-        Iterator<StorageProperty> props = relationship.properties();
-        while ( props.hasNext() )
+        if ( relationship.hasProperties() )
         {
-            StorageProperty property = props.next();
-            readProperties.add( new PropertyKeyValue( property.propertyKeyId(), property.value() ) );
+            Iterator<StorageProperty> props = relationship.properties();
+            while ( props.hasNext() )
+            {
+                StorageProperty property = props.next();
+                readProperties.add( new PropertyKeyValue( property.propertyKeyId(), property.value() ) );
+            }
         }
         return readProperties;
     }

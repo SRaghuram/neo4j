@@ -655,7 +655,7 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         @Override
         public boolean hasProperties()
         {
-            return StreamVByte.hasNonEmptyIntArray( value.data );
+            return value.data.remaining() > 0;
         }
     }
 

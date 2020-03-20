@@ -316,12 +316,19 @@ abstract class FrekiCommand implements StorageCommand
 
         final long pointer;
         final byte[] bytes;
+        final int length;
 
         BigPropertyValue( long pointer, byte[] bytes )
+        {
+            this( pointer, bytes, bytes.length );
+        }
+
+        BigPropertyValue( long pointer, byte[] bytes, int length )
         {
             super( TYPE );
             this.pointer = pointer;
             this.bytes = bytes;
+            this.length = length;
         }
 
         @Override
@@ -336,8 +343,8 @@ abstract class FrekiCommand implements StorageCommand
         {
             super.serialize( channel );
             channel.putLong( pointer );
-            channel.putInt( bytes.length );
-            channel.put( bytes, bytes.length );
+            channel.putInt( length );
+            channel.put( bytes, length );
         }
 
         static BigPropertyValue deserialize( ReadableChannel channel ) throws IOException
