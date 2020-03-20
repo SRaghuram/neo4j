@@ -172,43 +172,34 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       makeCreateUserExecutionPlan(userName, password, requirePasswordChange, suspended)(sourcePlan, normalExecutionEngine)
 
     // ALTER USER foo
+    // ALTER USER foo [SET PASSWORD pw] [CHANGE [NOT] REQUIRED] [SET STATUS ACTIVE]
     case AlterUser(source, userName, password, requirePasswordChange, suspended) => (context, parameterMapping) =>
       val (userNameKey, userNameValue, userNameConverter) = getNameFields("username", userName)
-      val params: Seq[(String, String, Value, MapValue => MapValue, Option[(String, Value)])] = Seq(
-        password -> "credentials",
+      val maybePw = password.map(getPasswordExpression(_))
+      val params = Seq(
+        maybePw -> "credentials",
         requirePasswordChange -> "passwordChangeRequired",
         suspended -> "suspended"
       ).flatMap { param =>
         param._1 match {
           case None => Seq.empty
-          case Some(value: Boolean) => Seq((param._2, param._2, Values.booleanValue(value), identity[MapValue]_, None))
-          case Some(pw:Either[Array[Byte], AnyRef]) =>
-            val (key, value, pwMapper) = getPasswordFields(pw)
-            val (keyBytes, valueBytes, mapperBytes) = getPasswordFields(pw, rename = s => s + "_bytes", hashPw = false)
-            val mapper: MapValue => MapValue = m => pwMapper(mapperBytes(m))
-            Seq((param._2, key, value, mapper, Some(keyBytes -> valueBytes)))
-          case Some(p) => throw new InvalidArgumentsException(s"Invalid option type for ALTER USER, expected byte array or boolean but got: ${p.getClass.getSimpleName}")
+          case Some(boolExpr: Boolean) => Seq((param._2, param._2, Values.booleanValue(boolExpr)))
+          case Some(passwordExpression: PasswordExpression) => Seq((param._2, passwordExpression.key, passwordExpression.value))
+          case Some(p) => throw new InvalidArgumentsException(s"Invalid option type for ALTER USER, expected PasswordExpression or Boolean but got: ${p.getClass.getSimpleName}")
         }
       }
-      val (query, keys, values, mapper, returnItems) = params.foldLeft((s"MATCH (user:User {name: $$$userNameKey}) WITH user, user.credentials AS oldCredentials", Array.empty[String], Array.empty[Value], identity[MapValue]_, Seq.empty[(String, Value)])) { (acc, param) =>
-        val property = param._1
-        val key = param._2
+      val (query, keys, values) = params.foldLeft((s"MATCH (user:User {name: $$$userNameKey}) WITH user, user.credentials AS oldCredentials", Seq.empty[String], Seq.empty[Value])) { (acc, param) =>
+        val propertyName: String = param._1
+        val key: String = param._2
         val value: Value = param._3
-        val values: Array[Value] = acc._3 :+ value
-        val extraCredentials: Seq[(String, Value)] = param._5.toSeq
-        val currentCredentials: Seq[(String, Value)] = acc._5
-        val mapper: MapValue => MapValue = param._4
-        val accMap: MapValue => MapValue = acc._4
-        val combinedMapper: MapValue => MapValue = v => mapper(accMap(v))
-        val returnItems: Seq[(String, Value)] = currentCredentials ++ extraCredentials
-        (acc._1 + s" SET user.$property = $$$key", acc._2 :+ key, values, combinedMapper, returnItems)
+        (acc._1 + s" SET user.$propertyName = $$$key", acc._2 :+ key, acc._3 :+ value)
       }
-      val returnText: String = (Seq("oldCredentials") ++ returnItems.map(p => s"$$${p._1}")).mkString(", ")
-      val returnKeys: Seq[String] = keys ++ returnItems.map(_._1)
-      val returnVals: Seq[Value] = values.toSeq ++ returnItems.map(_._2)
+      val parameterKeys: Seq[String] = (keys ++ maybePw.map(_.bytesKey).toSeq) :+ userNameKey
+      val parameterValues: Seq[Value] = (values ++ maybePw.map(_.bytesValue).toSeq) :+ userNameValue
+      val mapper: MapValue => MapValue = m => maybePw.map(_.mapValueConverter).getOrElse(IdentityConverter)(userNameConverter(m))
       UpdatingSystemCommandExecutionPlan("AlterUser", normalExecutionEngine,
-        s"$query RETURN [$returnText] AS credentials",
-        VirtualValues.map(returnKeys.toArray :+ userNameKey, returnVals.toArray :+ userNameValue),
+        s"$query RETURN oldCredentials",
+        VirtualValues.map(parameterKeys.toArray, parameterValues.toArray),
         QueryHandler
           .handleNoResult(p => Some(new InvalidArgumentsException(s"Failed to alter the specified user '${runtimeValue(userName, p)}': User does not exist.")))
           .handleError {
@@ -216,27 +207,16 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
               new DatabaseAdministrationOnFollowerException(s"Failed to alter the specified user '${runtimeValue(userName, p)}': $followerError", error)
             case (error, p) => new IllegalStateException(s"Failed to alter the specified user '${runtimeValue(userName, p)}'.", error)
           }
-          .handleResult((_, value, p) => {
-            val result = value.asInstanceOf[ListValue].asArray()
-            val oldCredentials = SystemGraphCredential.deserialize(result(0).asInstanceOf[TextValue].stringValue(), secureHasher)
-            val maybeThrowable = password match {
-              case Some(Left(password: Array[Byte])) =>
-                if (oldCredentials.matchesPassword(password))
-                  Some(new InvalidArgumentsException(s"Failed to alter the specified user '${runtimeValue(userName, p)}': Old password and new password cannot be the same."))
-                else
-                  None
-              case Some(Right(_)) =>
-                val userNew: Array[Byte] = result(1).asInstanceOf[ByteArray].asObjectCopy()
-                if (oldCredentials.matchesPassword(userNew))
-                  Some(new InvalidArgumentsException(s"Failed to alter the specified user '${runtimeValue(userName, p)}': Old password and new password cannot be the same."))
-                else
-                  None
-              case None => None
-            }
-            maybeThrowable
+          .handleResult((_, value, p) => maybePw.flatMap { newPw =>
+            val oldCredentials = SystemGraphCredential.deserialize(value.asInstanceOf[TextValue].stringValue(), secureHasher)
+            val newValue = p.get(newPw.bytesKey).asInstanceOf[ByteArray].asObjectCopy()
+            if (oldCredentials.matchesPassword(newValue))
+              Some(new InvalidArgumentsException(s"Failed to alter the specified user '${runtimeValue(userName, p)}': Old password and new password cannot be the same."))
+            else
+              None
           }),
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
-        parameterConverter = m => mapper(userNameConverter(m))
+        parameterConverter = mapper
       )
 
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
@@ -522,7 +502,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
            |ORDER BY role, graph, segment, resource, action
         """.stripMargin
 
-      val (nameKey: String, grantee: Value, converter: MapValueConverter, query) = scope match {
+      val (nameKey: String, grantee: Value, converter: Function[MapValue, MapValue], query) = scope match {
         case ShowRolePrivileges(name) =>
           val (roleNameKey, roleNameValue, roleNameConverter) = getNameFields("role", name)
           (roleNameKey, roleNameValue, roleNameConverter,
@@ -795,7 +775,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege $grantName resource type $resource")
   }
 
-  private def getQualifierPart(qualifier: PrivilegeQualifier, startOfErrorMessage: String, grantName: String, matchOrMerge: String): (String, Value, MapValueConverter, String) = qualifier match {
+  private def getQualifierPart(qualifier: PrivilegeQualifier, startOfErrorMessage: String, grantName: String, matchOrMerge: String): (String, Value, Function[MapValue, MapValue], String) = qualifier match {
     case AllQualifier() => ("", Values.NO_VALUE, IdentityConverter, matchOrMerge + " (q:DatabaseQualifier {type: 'database', label: ''})") // The label is just for later printout of results
     case LabelQualifier(name) => ("label", Values.utf8Value(name), IdentityConverter, matchOrMerge + " (q:LabelQualifier {type: 'node', label: $label})")
     case LabelAllQualifier() => ("", Values.NO_VALUE, IdentityConverter, matchOrMerge + " (q:LabelQualifierAll {type: 'node', label: '*'})") // The label is just for later printout of results
