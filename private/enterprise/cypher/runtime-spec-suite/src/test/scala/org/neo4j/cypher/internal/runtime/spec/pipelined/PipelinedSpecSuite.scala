@@ -21,6 +21,10 @@ import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedDynamicLimitPro
 import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedSpecSuite.FUSING
 import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedSpecSuite.NO_FUSING
 import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedSpecSuite.SIZE_HINT
+import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase
+import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase.DEFAULT_MORSEL_SIZE_BIG
+import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase.DEFAULT_MORSEL_SIZE_SMALL
+import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase.ENTERPRISE_PROFILING
 import org.neo4j.cypher.internal.runtime.spec.slotted.WithSlotsMemoryManagementTestBase
 import org.neo4j.cypher.internal.runtime.spec.stress.WorkloadTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AggregationTestBase
@@ -481,3 +485,10 @@ class PipelinedDynamicLimitPropagationTest extends RuntimeTestSuite[EnterpriseRu
 object PipelinedDynamicLimitPropagationTest {
   val CONFIGURED_MORSEL_SIZE: Int = 100
 }
+
+// EXPERIMENTAL PROFILING
+
+class PipelinedMemoryManagementBigMorselProfiling extends MemoryManagementProfilingBase(ENTERPRISE_PROFILING, PIPELINED, DEFAULT_MORSEL_SIZE_BIG)
+  with PipelinedSpecSuite
+class PipelinedMemoryManagementSmallMorselProfiling extends MemoryManagementProfilingBase(ENTERPRISE_PROFILING, PIPELINED, DEFAULT_MORSEL_SIZE_SMALL)
+  with PipelinedSpecSuite
