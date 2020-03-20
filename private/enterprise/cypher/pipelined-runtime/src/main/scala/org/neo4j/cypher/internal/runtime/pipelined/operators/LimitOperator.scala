@@ -135,10 +135,6 @@ class SerialTopLevelLimitOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                              (codeGen: OperatorExpressionCompiler)
   extends SerialTopLevelCountingOperatorTaskTemplate(inner, id, innermost, argumentStateMapId, generateCountExpression, codeGen) {
 
-  override def genOperateEnter: IntermediateRepresentation = block(
-    super.genOperateEnter
-  )
-
   override def genLocalVariables: Seq[LocalVariable] = super.genLocalVariables :+ SHOULD_BREAK
 
   override def genOperate: IntermediateRepresentation = {
@@ -254,10 +250,13 @@ class SerialLimitOnRhsOfApplyOperatorTaskTemplate(override val inner: OperatorTa
       },
       condition(greaterThan(load(countLeftVar), constant(0)))(
         block(
-          profileRow(id),
           inner.genOperateWithExpressions,
           doIfInnerCantContinue(
-            assign(countLeftVar, subtract(load(countLeftVar), constant(1)))))
+            block(
+              profileRow(id),
+              assign(countLeftVar, subtract(load(countLeftVar), constant(1)))
+            )
+          ))
       ),
       condition(equal(load(countLeftVar), constant(0)))(
           assign(belowLimitVarName(argumentStateMapId), constant(false))
@@ -281,7 +280,19 @@ class SerialLimitOnRhsOfApplyOperatorTaskTemplate(override val inner: OperatorTa
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
 
-  private def howMuchToReserve: IntermediateRepresentation = constant(Int.MaxValue)
+  private def howMuchToReserve: IntermediateRepresentation = {
+    if (innermost.shouldWriteToContext) {
+      // Use the available output morsel rows to determine our maximum chunk of the total limit
+      invoke(OUTPUT_MORSEL, method[Morsel, Int]("numberOfRows"))
+    } else if (innermost.shouldCheckOutputCounter) {
+      // Use the output counter to determine our maximum chunk of the total limit
+      load(OUTPUT_COUNTER)
+    } else {
+      // We do not seem to have any bound on the output of this task (i.e. we are the final produce result pipeline task)
+      // Reserve as much as we can get
+      constant(Int.MaxValue)
+    }
+  }
 
   private def fetchState : IntermediateRepresentation =
     cast[SerialCountingState](
