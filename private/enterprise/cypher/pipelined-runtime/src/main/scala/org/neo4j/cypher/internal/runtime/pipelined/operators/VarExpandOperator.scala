@@ -14,6 +14,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.arrayOf
 import org.neo4j.codegen.api.IntermediateRepresentation.arraySet
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.cast
 import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
@@ -348,7 +349,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
             constant(minLength),
             constant(maxLength),
             loadField(DATA_READ),
-            INPUT_CURSOR,
+            cast[CypherRow](INPUT_CURSOR),
             DB_ACCESS,
             PARAMS,
             EXPRESSION_CURSORS,
