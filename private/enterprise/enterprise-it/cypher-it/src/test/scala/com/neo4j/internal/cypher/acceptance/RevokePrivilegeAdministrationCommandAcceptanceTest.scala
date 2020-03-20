@@ -5,10 +5,7 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
-import org.neo4j.exceptions.DatabaseAdministrationException
-import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 
 // Tests for REVOKE TRAVERSE, REVOKE READ and REVOKE MATCH
 class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
@@ -886,71 +883,6 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
-      }
-
-      test(s"should do nothing when revoking $grantOrDeny traversal privilege with missing database with REVOKE $revokeType") {
-        // GIVEN
-        execute("CREATE ROLE custom")
-        execute(s"$grantOrDenyCommand TRAVERSE ON GRAPH * NODES * (*) TO custom")
-
-        // WHEN
-        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH foo NODES * (*) FROM custom")
-
-        // THEN
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(traverse(grantOrDenyRelType).role("custom").node("*").map))
-      }
-
-      test(s"should do nothing when revoking $grantOrDeny read privilege with missing database with REVOKE $revokeType") {
-        // GIVEN
-        execute("CREATE ROLE custom")
-        execute(s"$grantOrDenyCommand READ {*} ON GRAPH * NODES * (*) TO custom")
-
-        // WHEN
-        execute(s"REVOKE $revokeType READ {*} ON GRAPH foo NODES * (*) FROM custom")
-
-        // THEN
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(read(grantOrDenyRelType).role("custom").node("*").map))
-      }
-
-      test(s"should do nothing when revoking $grantOrDeny MATCH privilege with missing database with REVOKE $revokeType") {
-        // GIVEN
-        execute("CREATE ROLE custom")
-        execute(s"$grantOrDenyCommand MATCH {*} ON GRAPH * NODES * (*) TO custom")
-
-        // WHEN
-        execute(s"REVOKE $revokeType MATCH {*} ON GRAPH foo NODES * (*) FROM custom")
-        // THEN
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(matchPrivilege(grantOrDenyRelType).role("custom").node("*").map))
-      }
-
-      test(s"should fail when revoking $grantOrDeny traversal privilege to custom role when not on system database with REVOKE $revokeType") {
-        selectDatabase(DEFAULT_DATABASE_NAME)
-        the[DatabaseAdministrationException] thrownBy {
-          // WHEN
-          execute(s"REVOKE $revokeType TRAVERSE ON GRAPH * NODES * (*) FROM custom")
-          // THEN
-        } should have message
-          s"This is an administration command and it should be executed against the system database: REVOKE ${revokeType}TRAVERSE"
-      }
-
-      test(s"should fail when revoking $grantOrDeny read privilege to custom role when not on system database with REVOKE $revokeType") {
-        selectDatabase(DEFAULT_DATABASE_NAME)
-        the[DatabaseAdministrationException] thrownBy {
-          // WHEN
-          execute(s"REVOKE $revokeType READ {*} ON GRAPH * NODES * (*) FROM custom")
-          // THEN
-        } should have message
-          s"This is an administration command and it should be executed against the system database: REVOKE ${revokeType}READ"
-      }
-
-      test(s"should fail when revoking $grantOrDeny MATCH privilege to custom role when not on system database with REVOKE $revokeType") {
-        selectDatabase(DEFAULT_DATABASE_NAME)
-        the[DatabaseAdministrationException] thrownBy {
-          // WHEN
-          execute(s"REVOKE $revokeType MATCH {*} ON GRAPH * NODES * (*) FROM custom")
-          // THEN
-        } should have message
-          s"This is an administration command and it should be executed against the system database: REVOKE ${revokeType}MATCH"
       }
   }
 

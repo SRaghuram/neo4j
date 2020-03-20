@@ -389,35 +389,6 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     result.toList should be(List(db("foo")))
   }
 
-  test("should give nothing when showing a non-existing database") {
-    // GIVEN
-    setup()
-
-    // WHEN
-    val result = execute("SHOW DATABASE foo")
-
-    // THEN
-    result.toList should be(List.empty)
-
-    // and an invalid (non-existing) one
-    // WHEN
-    val result2 = execute("SHOW DATABASE ``")
-
-    // THEN
-    result2.toList should be(List.empty)
-  }
-
-  test("should fail when showing a database when not on system database") {
-    setup()
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    the[DatabaseAdministrationException] thrownBy {
-      // WHEN
-      execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME")
-      // THEN
-    } should have message
-      "This is an administration command and it should be executed against the system database: SHOW DATABASE"
-  }
-
   test("should show default databases") {
     // GIVEN
     setup()
@@ -463,17 +434,6 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     result2.toSet should be(Set(db(DEFAULT_DATABASE_NAME), db("foo", default = true), db(SYSTEM_DATABASE_NAME)))
-  }
-
-  test("should fail when showing databases when not on system database") {
-    setup()
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    the[DatabaseAdministrationException] thrownBy {
-      // WHEN
-      execute("SHOW DATABASES")
-      // THEN
-    } should have message
-      "This is an administration command and it should be executed against the system database: SHOW DATABASES"
   }
 
   test("should show default database") {
@@ -528,17 +488,6 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     result2.toSet should be(Set(defaultDb(name = "foo")))
-  }
-
-  test("should fail when showing default database when not on system database") {
-    setup()
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    the[DatabaseAdministrationException] thrownBy {
-      // WHEN
-      execute("SHOW DEFAULT DATABASE")
-      // THEN
-    } should have message
-      "This is an administration command and it should be executed against the system database: SHOW DEFAULT DATABASE"
   }
 
   test("should fail when showing databases when credentials expired") {
@@ -963,17 +912,6 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     exception2.getMessage should include("Failed to create the specified database '$db': cannot have both `OR REPLACE` and `IF NOT EXISTS`.")
   }
 
-  test("should fail when creating a database when not on system database") {
-    setup()
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    the[DatabaseAdministrationException] thrownBy {
-      // WHEN
-      execute("CREATE DATABASE foo")
-      // THEN
-    } should have message
-      "This is an administration command and it should be executed against the system database: CREATE DATABASE"
-  }
-
   // Tests for dropping databases
 
   test("should create and drop databases") {
@@ -1210,21 +1148,6 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("SHOW DATABASES").toSet should be(Set(db("foo", default = true), db(SYSTEM_DATABASE_NAME)))
   }
 
-  test("should fail when dropping a database when not on system database") {
-    // GIVEN
-    setup()
-    execute("CREATE DATABASE foo")
-
-    // WHEN
-    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
-    the[DatabaseAdministrationException] thrownBy {
-      // WHEN
-      execute("DROP DATABASE foo")
-      // THEN
-    } should have message
-      "This is an administration command and it should be executed against the system database: DROP DATABASE"
-  }
-
   // Tests for starting databases
 
   test("should start database on create") {
@@ -1365,22 +1288,6 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     executeOn("foo", "baz", "bar", "MATCH (n) RETURN n") should be(0)
-  }
-
-  test("should fail when starting a database when not on system database") {
-    // GIVEN
-    setup()
-    execute("CREATE DATABASE foo")
-    execute("STOP DATABASE foo")
-
-    // WHEN
-    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
-    the[DatabaseAdministrationException] thrownBy {
-      // WHEN
-      execute("START DATABASE foo")
-      // THEN
-    } should have message
-      "This is an administration command and it should be executed against the system database: START DATABASE"
   }
 
   // Tests for stopping databases
@@ -1584,17 +1491,6 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     // THEN
     val result = execute("SHOW DATABASE foo")
     result.toList should be(List(db("foo", status = offlineStatus)))
-  }
-
-  test("should fail when stopping a database when not on system database") {
-    setup()
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    the[DatabaseAdministrationException] thrownBy {
-      // WHEN
-      execute("STOP DATABASE foo")
-      // THEN
-    } should have message
-      "This is an administration command and it should be executed against the system database: STOP DATABASE"
   }
 
   test("should pass through deadlock exception") {

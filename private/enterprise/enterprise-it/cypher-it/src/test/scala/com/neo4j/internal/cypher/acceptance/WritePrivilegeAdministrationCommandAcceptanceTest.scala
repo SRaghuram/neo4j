@@ -7,11 +7,8 @@ package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
-import org.neo4j.dbms.api.DatabaseNotFoundException
-import org.neo4j.exceptions.DatabaseAdministrationException
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.security.AuthorizationViolationException
-import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 
 //noinspection RedundantDefaultArgument
@@ -106,49 +103,6 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
         execute("SHOW ROLE role2 PRIVILEGES").toSet should be(expected.map(_.role("role2").map).toSet)
         execute("SHOW ROLE role3 PRIVILEGES").toSet should be(expected.map(_.role("role3").map).toSet)
-      }
-
-      test(s"should fail ${grantOrDeny}ing write privilege for all databases and all elements to non-existing role") {
-        // WHEN
-        the[InvalidArgumentsException] thrownBy {
-          // WHEN
-          execute(s"$grantOrDenyCommand WRITE ON GRAPH * ELEMENTS * (*) TO custom")
-          // THEN
-        } should have message s"Failed to $grantOrDeny write privilege to role 'custom': Role does not exist."
-
-        // WHEN
-        the[InvalidArgumentsException] thrownBy {
-          // WHEN
-          execute(s"$grantOrDenyCommand WRITE ON GRAPH * ELEMENTS * (*) TO $$role", Map("role" -> "custom"))
-          // THEN
-        } should have message s"Failed to $grantOrDeny write privilege to role 'custom': Role does not exist."
-
-        // THEN
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
-      }
-
-      test(s"should fail when ${grantOrDeny}ing write privilege with missing database") {
-        // GIVEN
-        execute("CREATE ROLE custom")
-
-        // WHEN
-        the[DatabaseNotFoundException] thrownBy {
-          // WHEN
-          execute(s"$grantOrDenyCommand WRITE ON GRAPH foo ELEMENTS * (*) TO custom")
-          //THEN
-        } should have message s"Failed to $grantOrDeny write privilege to role 'custom': Database 'foo' does not exist."
-        the[DatabaseNotFoundException] thrownBy {
-          execute(s"$grantOrDenyCommand WRITE ON GRAPH $$db ELEMENTS * (*) TO custom", Map("db" -> "foo"))
-        } should have message s"Failed to $grantOrDeny write privilege to role 'custom': Database 'foo' does not exist."
-      }
-
-      test(s"should fail when ${grantOrDeny}ing write privilege to custom role when not on system database") {
-        selectDatabase(DEFAULT_DATABASE_NAME)
-        the[DatabaseAdministrationException] thrownBy {
-          // WHEN
-          execute(s"$grantOrDenyCommand WRITE ON GRAPH * ELEMENTS * (*) TO custom")
-          // THEN
-        } should have message s"This is an administration command and it should be executed against the system database: $grantOrDenyCommand WRITE"
       }
 
       test(s"should fail with 'not-supported-yet' message when ${grantOrDeny}ing write privilege with limited scope") {
@@ -253,29 +207,6 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         // THEN
         execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
       }
-
-      test(s"should do nothing when revoking $grantOrDeny write privilege with missing database") {
-        // GIVEN
-        execute("CREATE ROLE custom")
-        execute(s"$grantOrDenyCommand WRITE ON GRAPH * ELEMENTS * (*) TO custom")
-
-        // WHEN
-        execute(s"REVOKE $grantOrDenyCommand WRITE ON GRAPH foo ELEMENTS * (*) FROM custom")
-        // THEN
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          write(grantOrDenyRelType).role("custom").node("*").map,
-          write(grantOrDenyRelType).role("custom").relationship("*").map
-        ))
-      }
-
-      test(s"should fail when revoking $grantOrDeny write privilege to custom role when not on system database") {
-        selectDatabase(DEFAULT_DATABASE_NAME)
-        the[DatabaseAdministrationException] thrownBy {
-          // WHEN
-          execute(s"REVOKE $grantOrDenyCommand WRITE ON GRAPH * ELEMENTS * (*) FROM custom")
-          // THEN
-        } should have message s"This is an administration command and it should be executed against the system database: REVOKE $grantOrDenyCommand WRITE"
-      }
   }
 
   // Tests for revoke write privileges
@@ -352,32 +283,6 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       write(DENIED).role("custom").node("*").map,
       write(DENIED).role("custom").relationship("*").map
     ))
-  }
-
-  test("should do nothing when revoking write privilege with missing database") {
-    // GIVEN
-    execute("CREATE ROLE custom")
-    execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
-    execute("DENY WRITE ON GRAPH * ELEMENTS * (*) TO custom")
-
-    // WHEN
-    execute(s"REVOKE WRITE ON GRAPH foo ELEMENTS * (*) FROM custom")
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      write(GRANTED).role("custom").node("*").map,
-      write(GRANTED).role("custom").relationship("*").map,
-      write(DENIED).role("custom").node("*").map,
-      write(DENIED).role("custom").relationship("*").map
-    ))
-  }
-
-  test("should fail when revoking write privilege to custom role when not on system database") {
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    the[DatabaseAdministrationException] thrownBy {
-      // WHEN
-      execute("REVOKE WRITE ON GRAPH * ELEMENTS * (*) FROM custom")
-      // THEN
-    } should have message s"This is an administration command and it should be executed against the system database: REVOKE WRITE"
   }
 
   // Mixed tests for write privileges

@@ -111,16 +111,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("SHOW PRIVILEGES").toSet should be(defaultRolePrivileges)
   }
 
-  test("should fail when showing privileges for all users when not on system database") {
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    the[DatabaseAdministrationException] thrownBy {
-      // WHEN
-      execute("SHOW ALL PRIVILEGES")
-      // THEN
-    } should have message
-      "This is an administration command and it should be executed against the system database: SHOW PRIVILEGE"
-  }
-
   test("should show privileges for specific role") {
     // WHEN
     val result = execute("SHOW ROLE editor PRIVILEGES")
@@ -163,21 +153,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     } should have message "Permission denied."
   }
 
-  test("should give nothing when showing privileges for non-existing role") {
-    // WHEN
-    val resultFoo = execute("SHOW ROLE foo PRIVILEGES")
-
-    // THEN
-    resultFoo.toSet should be(Set.empty)
-
-    // and an invalid (non-existing) one
-    // WHEN
-    val resultEmpty = execute("SHOW ROLE `` PRIVILEGES")
-
-    // THEN
-    resultEmpty.toSet should be(Set.empty)
-  }
-
   test("should not show role privileges on a dropped database") {
     // GIVEN
     execute("CREATE ROLE custom")
@@ -201,16 +176,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
-  }
-
-  test("should fail when showing privileges for roles when not on system database") {
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    the[DatabaseAdministrationException] thrownBy {
-      // WHEN
-      execute("SHOW ROLE editor PRIVILEGES")
-      // THEN
-    } should have message
-      "This is an administration command and it should be executed against the system database: SHOW PRIVILEGE"
   }
 
   test("should show privileges for specific user") {
@@ -329,16 +294,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("SHOW USER bar PRIVILEGES").toSet should be(Set(access().role(PUBLIC).database(DEFAULT).user("bar").map))
   }
 
-  test("should fail when showing privileges for users when not on system database") {
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    the[DatabaseAdministrationException] thrownBy {
-      // WHEN
-      execute("SHOW USER neo4j PRIVILEGES")
-      // THEN
-    } should have message
-      "This is an administration command and it should be executed against the system database: SHOW PRIVILEGE"
-  }
-
   // Tests for granting and denying privileges
 
   Seq(
@@ -369,64 +324,12 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             ))
           }
 
-          test(s"should fail ${grantOrDeny}ing $actionName privilege for all databases and all labels to non-existing role") {
-            // WHEN
-            val error1 = the[InvalidArgumentsException] thrownBy {
-              // WHEN
-              execute(s"$grantOrDenyCommand $actionCommand ON GRAPH * NODES * (*) TO custom")
-              // THEN
-            }
-            error1.getMessage should be(s"Failed to $grantOrDeny $actionName privilege to role 'custom': Role does not exist.")
-
-            // WHEN
-            val error2 = the[InvalidArgumentsException] thrownBy {
-              // WHEN
-              execute(s"$grantOrDenyCommand $actionCommand ON GRAPH * RELATIONSHIPS * (*) TO custom")
-              // THEN
-            }
-            error2.getMessage should be(s"Failed to $grantOrDeny $actionName privilege to role 'custom': Role does not exist.")
-
-            // WHEN
-            val error3 = the[InvalidArgumentsException] thrownBy {
-              // WHEN
-              execute(s"$grantOrDenyCommand $actionCommand ON GRAPH * TO $$role", Map("role" -> "custom"))
-              // THEN
-            }
-            error3.getMessage should be(s"Failed to $grantOrDeny $actionName privilege to role 'custom': Role does not exist.")
-
-            // THEN
-            execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set())
-          }
-
-          test(s"should fail when ${grantOrDeny}ing $actionName privilege with missing database") {
-            execute("CREATE ROLE custom")
-            val error = the[DatabaseNotFoundException] thrownBy {
-              execute(s"$grantOrDenyCommand $actionCommand ON GRAPH foo TO custom")
-            }
-            error.getMessage should be(s"Failed to $grantOrDeny $actionName privilege to role 'custom': Database 'foo' does not exist.")
-            val error2 = the[DatabaseNotFoundException] thrownBy {
-              execute(s"$grantOrDenyCommand $actionCommand ON GRAPH $$db TO custom", Map("db" -> "foo"))
-            }
-            error2.getMessage should be(s"Failed to $grantOrDeny $actionName privilege to role 'custom': Database 'foo' does not exist.")
-          }
-
           test(s"should fail when ${grantOrDeny}ing $actionName privilege using * as parameter") {
             execute("CREATE ROLE custom")
             val error = the[InvalidArgumentsException] thrownBy {
               execute(s"$grantOrDenyCommand $actionCommand ON GRAPH $$db TO custom", Map("db" -> "*"))
             }
             error.getMessage should be(s"Failed to $grantOrDeny $actionName privilege to role 'custom': Parameterized database and graph names do not support wildcards.")
-          }
-
-          test(s"should fail when ${grantOrDeny}ing $actionName privilege to custom role when not on system database") {
-            val commandName = actionCommand.split(" ").head
-            selectDatabase(DEFAULT_DATABASE_NAME)
-            the[DatabaseAdministrationException] thrownBy {
-              // WHEN
-              execute(s"$grantOrDenyCommand $actionCommand ON GRAPH * TO custom")
-              // THEN
-            } should have message
-              s"This is an administration command and it should be executed against the system database: $grantOrDenyCommand $commandName"
           }
 
           Seq(

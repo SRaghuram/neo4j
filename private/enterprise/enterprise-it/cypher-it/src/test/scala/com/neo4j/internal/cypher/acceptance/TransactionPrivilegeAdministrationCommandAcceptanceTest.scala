@@ -5,9 +5,6 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import org.neo4j.dbms.api.DatabaseNotFoundException
-import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
-
 class TransactionPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
   test("should return empty counts to the outside for commands that update the system graph internally") {
     //TODO: ADD ANY NEW UPDATING COMMANDS HERE
@@ -99,36 +96,6 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(transaction("*").database("foo").role("role").map))
   }
 
-  test("should fail to grant show transaction privilege to non-existing role") {
-    the[InvalidArgumentsException] thrownBy {
-      // WHEN
-      execute("GRANT SHOW TRANSACTION (*) ON DATABASE * TO role")
-      // THEN
-    } should have message "Failed to grant show_transaction privilege to role 'role': Role does not exist."
-
-    the[InvalidArgumentsException] thrownBy {
-      // WHEN
-      execute("GRANT SHOW TRANSACTION (*) ON DATABASE * TO $r", Map("r" -> "role"))
-      // THEN
-    } should have message "Failed to grant show_transaction privilege to role 'role': Role does not exist."
-  }
-
-  test("should fail to grant show transaction privilege with missing database") {
-    execute("CREATE ROLE role")
-
-    the[DatabaseNotFoundException] thrownBy {
-      // WHEN
-      execute("GRANT SHOW TRANSACTION (*) ON DATABASE foo TO role")
-      // THEN
-    } should have message "Failed to grant show_transaction privilege to role 'role': Database 'foo' does not exist."
-
-    the[DatabaseNotFoundException] thrownBy {
-      // WHEN
-      execute("GRANT SHOW TRANSACTION (*) ON DATABASE $db TO role", Map("db" -> "foo"))
-      // THEN
-    } should have message "Failed to grant show_transaction privilege to role 'role': Database 'foo' does not exist."
-  }
-
   test("should grant terminate transaction privilege") {
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -180,37 +147,6 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(transaction("*").database("foo").role("role").map))
-  }
-
-  test("should fail to deny terminate transaction privilege to non-existing role") {
-    the[InvalidArgumentsException] thrownBy {
-      // WHEN
-      execute("DENY TERMINATE TRANSACTION (*) ON DATABASE * TO role")
-      // THEN
-    } should have message "Failed to deny terminate_transaction privilege to role 'role': Role does not exist."
-
-    the[InvalidArgumentsException] thrownBy {
-      // WHEN
-      execute("DENY TERMINATE TRANSACTION (*) ON DATABASE * TO $r", Map("r" -> "role"))
-      // THEN
-    } should have message "Failed to deny terminate_transaction privilege to role 'role': Role does not exist."
-  }
-
-  test("should fail to deny terminate transaction privilege with missing database") {
-    // GIVEN
-    execute("CREATE ROLE role")
-
-    the[DatabaseNotFoundException] thrownBy {
-      // WHEN
-      execute("DENY TERMINATE TRANSACTION (*) ON DATABASE foo TO role")
-      // THEN
-    } should have message "Failed to deny terminate_transaction privilege to role 'role': Database 'foo' does not exist."
-
-    the[DatabaseNotFoundException] thrownBy {
-      // WHEN
-      execute("DENY TERMINATE TRANSACTION (*) ON DATABASE $db TO role", Map("db" -> "foo"))
-      // THEN
-    } should have message "Failed to deny terminate_transaction privilege to role 'role': Database 'foo' does not exist."
   }
 
   test("should grant transaction management privilege") {
@@ -275,26 +211,5 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
       showTransaction("*").database("foo").role("role").map,
       terminateTransaction("*").database("foo").role("role").map
     ))
-  }
-
-  test("should do nothing when revoking transaction management privilege from non-existing role") {
-    // GIVEN
-    execute("CREATE ROLE role")
-    execute("GRANT TRANSACTION (*) ON DATABASE * TO role")
-
-    // WHEN
-    execute("REVOKE TRANSACTION (*) ON DATABASE * FROM wrongRole")
-    execute("REVOKE TRANSACTION (*) ON DATABASE * FROM $r", Map("r" -> "wrongRole"))
-  }
-
-  test("should do nothing when revoking transaction management privilege with missing database") {
-    // GIVEN
-    execute("CREATE ROLE role")
-    execute("CREATE DATABASE bar")
-    execute("GRANT TRANSACTION (*) ON DATABASE bar TO role")
-
-    // WHEN
-    execute("REVOKE TRANSACTION (*) ON DATABASE foo FROM role")
-    execute("REVOKE TRANSACTION (*) ON DATABASE $db FROM role", Map("db" -> "foo"))
   }
 }

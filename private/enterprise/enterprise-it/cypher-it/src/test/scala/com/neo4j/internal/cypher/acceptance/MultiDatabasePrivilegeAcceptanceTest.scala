@@ -12,10 +12,8 @@ import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.default_database
-import org.neo4j.dbms.api.DatabaseNotFoundException
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.security.AuthorizationViolationException
-import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
 class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
   test("should return empty counts to the outside for commands that update the system graph internally") {
@@ -477,41 +475,6 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute("SHOW DATABASE foo").toSet should be(Set(db("foo", offlineStatus)))
   }
 
-  test("should fail to grant start database to non-existing role") {
-    // GIVEN
-    setup()
-
-    the[InvalidArgumentsException] thrownBy {
-      // WHEN
-      execute("GRANT START ON DATABASE * TO role")
-      // THEN
-    } should have message "Failed to grant start_database privilege to role 'role': Role does not exist."
-
-    the[InvalidArgumentsException] thrownBy {
-      // WHEN
-      execute("GRANT START ON DATABASE * TO $r", Map("r" -> "role"))
-      // THEN
-    } should have message "Failed to grant start_database privilege to role 'role': Role does not exist."
-  }
-
-  test("should fail to grant start database with missing database") {
-    // GIVEN
-    setup()
-    execute("CREATE ROLE role")
-
-    the[DatabaseNotFoundException] thrownBy {
-      // WHEN
-      execute("GRANT START ON DATABASE foo TO role")
-      // THEN
-    } should have message "Failed to grant start_database privilege to role 'role': Database 'foo' does not exist."
-
-    the[DatabaseNotFoundException] thrownBy {
-      // WHEN
-      execute("GRANT START ON DATABASE $db TO role", Map("db" -> "foo"))
-      // THEN
-    } should have message "Failed to grant start_database privilege to role 'role': Database 'foo' does not exist."
-  }
-
   // STOP DATABASE
 
   test("admin should be allowed to stop database") {
@@ -737,41 +700,6 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute("SHOW DATABASE foo").toSet should be(Set(db("foo", onlineStatus)))
   }
 
-  test("should fail to deny stop database to non-existing role") {
-    // GIVEN
-    setup()
-
-    the[InvalidArgumentsException] thrownBy {
-      // WHEN
-      execute("DENY STOP ON DATABASE * TO role")
-      // THEN
-    } should have message "Failed to deny stop_database privilege to role 'role': Role does not exist."
-
-    the[InvalidArgumentsException] thrownBy {
-      // WHEN
-      execute("DENY STOP ON DATABASE * TO $r", Map("r" -> "role"))
-      // THEN
-    } should have message "Failed to deny stop_database privilege to role 'role': Role does not exist."
-  }
-
-  test("should fail to deny stop database with missing database") {
-    // GIVEN
-    setup()
-    execute("CREATE ROLE role")
-
-    the[DatabaseNotFoundException] thrownBy {
-      // WHEN
-      execute("DENY STOP ON DATABASE foo TO role")
-      // THEN
-    } should have message "Failed to deny stop_database privilege to role 'role': Database 'foo' does not exist."
-
-    the[DatabaseNotFoundException] thrownBy {
-      // WHEN
-      execute("DENY STOP ON DATABASE $db TO role", Map("db" -> "foo"))
-      // THEN
-    } should have message "Failed to deny stop_database privilege to role 'role': Database 'foo' does not exist."
-  }
-
   // ACCESS DATABASE
 
   test("should be able to access default database with grant privilege from PUBLIC") {
@@ -881,29 +809,6 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     executeOnDefault("alice", "abc", "MATCH (n) RETURN n") should be(0)
-  }
-
-  test("should do nothing when revoking access from non-existing role") {
-    // GIVEN
-    setup()
-    execute("CREATE ROLE role")
-    execute("GRANT ACCESS ON DATABASE * TO role")
-
-    // WHEN
-    execute("REVOKE ACCESS ON DATABASE * FROM wrongRole")
-    execute("REVOKE ACCESS ON DATABASE * FROM $r", Map("r" -> "wrongRole"))
-  }
-
-  test("should do nothing when revoking access with missing database") {
-    // GIVEN
-    setup()
-    execute("CREATE ROLE role")
-    execute("CREATE DATABASE bar")
-    execute("GRANT ACCESS ON DATABASE bar TO role")
-
-    // WHEN
-    execute("REVOKE ACCESS ON DATABASE foo FROM role")
-    execute("REVOKE ACCESS ON DATABASE $db FROM role", Map("db" -> "foo"))
   }
 
   // REDUCED ADMIN

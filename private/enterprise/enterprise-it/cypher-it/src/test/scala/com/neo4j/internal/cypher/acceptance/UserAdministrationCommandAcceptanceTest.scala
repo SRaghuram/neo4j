@@ -7,11 +7,9 @@ package com.neo4j.internal.cypher.acceptance
 
 import java.util
 
-import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.cypher.internal.DatabaseStatus.Online
-import org.neo4j.exceptions.DatabaseAdministrationException
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.exceptions.ParameterNotFoundException
 import org.neo4j.exceptions.ParameterWrongTypeException
@@ -76,16 +74,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     result.toSet shouldBe Set(neo4jUser, user("Bar"), user("Baz"), user("Zet"))
-  }
-
-  test("should fail when showing users when not on system database") {
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    the[DatabaseAdministrationException] thrownBy {
-      // WHEN
-      execute("SHOW USERS")
-      // THEN
-    } should have message
-      "This is an administration command and it should be executed against the system database: SHOW USERS"
   }
 
   // Tests for creating users
@@ -382,16 +370,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     exception2.getMessage should include("Failed to create the specified user '$user': cannot have both `OR REPLACE` and `IF NOT EXISTS`.")
   }
 
-  test("should fail when creating user when not on system database") {
-    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
-    the[DatabaseAdministrationException] thrownBy {
-      // WHEN
-      execute("CREATE USER foo SET PASSWORD 'bar'")
-      // THEN
-    } should have message
-      "This is an administration command and it should be executed against the system database: CREATE USER"
-  }
-
   // Tests for dropping users
 
   test("should drop user") {
@@ -523,16 +501,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW USERS").toSet should be(Set(neo4jUser))
-  }
-
-  test("should fail when dropping user when not on system database") {
-    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
-    the[DatabaseAdministrationException] thrownBy {
-      // WHEN
-      execute("DROP USER foo")
-      // THEN
-    } should have message
-      "This is an administration command and it should be executed against the system database: DROP USER"
   }
 
   // Tests for altering users
@@ -969,16 +937,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message "Failed to alter the specified user 'foo': User does not exist."
   }
 
-  test("should fail when altering user when not on system database") {
-    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
-    the[DatabaseAdministrationException] thrownBy {
-      // WHEN
-      execute("ALTER USER foo SET PASSWORD 'bar'")
-      // THEN
-    } should have message
-      "This is an administration command and it should be executed against the system database: ALTER USER"
-  }
-
   // Tests for changing own password
 
   test("should change own password") {
@@ -1387,19 +1345,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       execute("ALTER CURRENT USER SET PASSWORD FROM 'old' TO 'new'")
       // THEN
     } should have message "User failed to alter their own password: Command not available with auth disabled."
-  }
-
-  test("should fail when changing own password when not on system database") {
-    // GIVEN
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    selectDatabase(DEFAULT_DATABASE_NAME)
-
-    the[QueryExecutionException] thrownBy { // the DatabaseManagementException gets wrapped in this code path
-      // WHEN
-      executeOnDefault("neo4j", "neo", "ALTER CURRENT USER SET PASSWORD FROM 'neo' TO 'baz'")
-      // THEN
-    } should have message
-      "This is an administration command and it should be executed against the system database: ALTER CURRENT USER SET PASSWORD"
   }
 
   // Tests for user administration with restricted privileges

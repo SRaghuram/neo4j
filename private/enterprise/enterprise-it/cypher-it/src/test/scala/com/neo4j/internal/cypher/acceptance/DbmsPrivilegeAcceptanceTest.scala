@@ -6,7 +6,6 @@
 package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.graphdb.security.AuthorizationViolationException
-import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
 class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
@@ -25,20 +24,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           adminAction("create_role", relType).role("custom").map
         ))
-      }
-
-      test(s"should fail to $grant create role privilege to non-existing role") {
-        the[InvalidArgumentsException] thrownBy {
-          // WHEN
-          execute(s"$grant CREATE ROLE ON DBMS TO role")
-          // THEN
-        } should have message s"Failed to ${grant.toLowerCase} create_role privilege to role 'role': Role does not exist."
-
-        the[InvalidArgumentsException] thrownBy {
-          // WHEN
-          execute(s"$grant CREATE ROLE ON DBMS TO $$r", Map("r" -> "role"))
-          // THEN
-        } should have message s"Failed to ${grant.toLowerCase} create_role privilege to role 'role': Role does not exist."
       }
 
       test(s"should $grant drop role privilege") {
@@ -130,20 +115,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           adminAction("drop_user", relType).role("custom").map
         ))
-      }
-
-      test(s"should fail to $grant drop user privilege to non-existing role") {
-        the[InvalidArgumentsException] thrownBy {
-          // WHEN
-          execute(s"$grant DROP USER ON DBMS TO role")
-          // THEN
-        } should have message s"Failed to ${grant.toLowerCase} drop_user privilege to role 'role': Role does not exist."
-
-        the[InvalidArgumentsException] thrownBy {
-          // WHEN
-          execute(s"$grant DROP USER ON DBMS TO $$r", Map("r" -> "role"))
-          // THEN
-        } should have message s"Failed to ${grant.toLowerCase} drop_user privilege to role 'role': Role does not exist."
       }
 
       test(s"should $grant show user privilege") {
@@ -522,42 +493,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
       grantAdmin().role("custom").map,
       adminAction("dbms_actions").role("custom").map
     ))
-  }
-
-  test("should do nothing when revoking role management privilege from non-existing role") {
-    // GIVEN
-    execute("CREATE ROLE role")
-    execute("GRANT ROLE MANAGEMENT ON DBMS TO role")
-
-    // WHEN
-    execute("REVOKE ROLE MANAGEMENT ON DBMS FROM wrongRole")
-  }
-
-  test("should do nothing when revoking user management privilege from non-existing role") {
-    // GIVEN
-    execute("CREATE ROLE role")
-    execute("DENY USER MANAGEMENT ON DBMS TO role")
-
-    // WHEN
-    execute("REVOKE USER MANAGEMENT ON DBMS FROM wrongRole")
-  }
-
-  test("should do nothing when revoking database management privilege from non-existing role") {
-    // GIVEN
-    execute("CREATE ROLE role")
-    execute("DENY DATABASE MANAGEMENT ON DBMS TO role")
-
-    // WHEN
-    execute("REVOKE DATABASE MANAGEMENT ON DBMS FROM wrongRole")
-  }
-
-  test("should do nothing when revoking privilege management privilege from non-existing role") {
-    // GIVEN
-    execute("CREATE ROLE role")
-    execute("DENY PRIVILEGE MANAGEMENT ON DBMS TO role")
-
-    // WHEN
-    execute("REVOKE PRIVILEGE MANAGEMENT ON DBMS FROM wrongRole")
   }
 
   test("Should do nothing when revoking a non-existing subset of a compound (mostly dbms) admin privilege") {

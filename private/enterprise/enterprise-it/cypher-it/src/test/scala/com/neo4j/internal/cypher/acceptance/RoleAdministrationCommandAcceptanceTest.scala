@@ -8,9 +8,6 @@ package com.neo4j.internal.cypher.acceptance
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER
-import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
-import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
-import org.neo4j.exceptions.DatabaseAdministrationException
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.security.AuthorizationViolationException
@@ -136,16 +133,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       role("foo").member("Bar").map,
       role("foo").member("Baz").map,
     ) ++ publicRole("neo4j", "Bar", "Baz"))
-  }
-
-  test("should fail when showing roles when not on system database") {
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    the[DatabaseAdministrationException] thrownBy {
-      // WHEN
-      execute("SHOW ROLES")
-      // THEN
-    } should have message
-      "This is an administration command and it should be executed against the system database: SHOW ALL ROLES"
   }
 
   // Tests for creating roles
@@ -523,16 +510,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     exceptionCopy.getMessage should include("Failed to create the specified role 'foo': cannot have both `OR REPLACE` and `IF NOT EXISTS`.")
   }
 
-  test("should fail when creating role when not on system database") {
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    the[DatabaseAdministrationException] thrownBy {
-      // WHEN
-      execute("CREATE ROLE foo")
-      // THEN
-    } should have message
-      "This is an administration command and it should be executed against the system database: CREATE ROLE"
-  }
-
   // Tests for dropping roles
 
   test("should drop role") {
@@ -673,16 +650,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles)
-  }
-
-  test("should fail when dropping role when not on system database") {
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    the[DatabaseAdministrationException] thrownBy {
-      // WHEN
-      execute("DROP ROLE foo")
-      // THEN
-    } should have message
-      "This is an administration command and it should be executed against the system database: DROP ROLE"
   }
 
   // Tests for granting roles to users
@@ -977,29 +944,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
   }
 
-  test("should fail when granting role to user when not on system database") {
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    the[DatabaseAdministrationException] thrownBy {
-      // WHEN
-      execute("GRANT ROLE dragon TO Bar")
-      // THEN
-    } should have message
-      "This is an administration command and it should be executed against the system database: GRANT ROLE"
-
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE USER Bar SET PASSWORD 'neo'")
-    execute("CREATE ROLE dragon")
-    selectDatabase(DEFAULT_DATABASE_NAME)
-
-    the[DatabaseAdministrationException] thrownBy {
-      // WHEN
-      execute("GRANT ROLE dragon TO Bar")
-      // THEN
-    } should have message
-      "This is an administration command and it should be executed against the system database: GRANT ROLE"
-  }
-
   // Tests for revoking roles from users
 
   test("should revoke role from user") {
@@ -1249,29 +1193,5 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers)
-  }
-
-  test("should fail when revoking role from user when not on system database") {
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    the[DatabaseAdministrationException] thrownBy {
-      // WHEN
-      execute("REVOKE ROLE dragon FROM Bar")
-      // THEN
-    } should have message
-      "This is an administration command and it should be executed against the system database: REVOKE ROLE"
-
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE USER Bar SET PASSWORD 'neo'")
-    execute("CREATE ROLE dragon")
-    execute("GRANT ROLE dragon TO Bar")
-    selectDatabase(DEFAULT_DATABASE_NAME)
-
-    the[DatabaseAdministrationException] thrownBy {
-      // WHEN
-      execute("REVOKE ROLE dragon FROM Bar")
-      // THEN
-    } should have message
-      "This is an administration command and it should be executed against the system database: REVOKE ROLE"
   }
 }
