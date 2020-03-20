@@ -326,6 +326,8 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         System.out.printf( "  Avg effective data size per dense node: %.2f%n", (double) denseStats.effectiveByteSize() / denseStats.numberOfNodes() );
         System.out.printf( "  Avg effective relationship size per dense node: %.2f%n",
                 (double) denseStats.effectiveRelationshipsByteSize() / denseStats.numberOfNodes() );
+        System.out.printf( "  Avg effective size per relationship: %.2f%n",
+                (double) denseStats.effectiveRelationshipsByteSize() / denseStats.numberOfRelationships() );
         System.out.printf( "  Avg total size per dense node: %.2f%n", (double) denseStats.totalTreeByteSize() / denseStats.numberOfNodes() );
 
         // - TODO Number of big values

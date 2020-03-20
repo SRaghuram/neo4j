@@ -186,7 +186,7 @@ class PropertyValueFormatTest
         //Then
         assertEquals( Values.stringValue( "abc" ), readValue() );
         assertEquals( Values.stringValue( "" ), readValue() );
-        assertEquals( Values.stringValue( "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ), readValue() );
+        assertEquals( "ABCDEFGHIJKLMNOPQRSTUVWXYZ", readValue().asObject() );
 
     }
 
@@ -446,12 +446,12 @@ class PropertyValueFormatTest
         propertyValueFormat.beginArray( 2, ValueWriter.ArrayType.ZONED_DATE_TIME ); //ZonedTime currently writes multiple int properties
         propertyValueFormat.writeDateTime( 867000000000000L, 123456789, -3600 );
         propertyValueFormat.writeDateTime( 541235431L, 984345, "Europe/Stockholm" );
-
         propertyValueFormat.endArray();
-        assertEquals( Values.dateTimeArray( new ZonedDateTime[] {
+
+        assertArrayEquals( new ZonedDateTime[] {
                 DateTimeValue.datetimeRaw( 867000000000000L, 123456789, ZoneOffset.ofTotalSeconds( -3600 ) ),
                 DateTimeValue.datetimeRaw( 541235431L, 984345, ZoneId.of( "Europe/Stockholm" ) )
-        } ), readValue() );
+        }, (ZonedDateTime[]) readValue().asObjectCopy() );
     }
 
     @Test
