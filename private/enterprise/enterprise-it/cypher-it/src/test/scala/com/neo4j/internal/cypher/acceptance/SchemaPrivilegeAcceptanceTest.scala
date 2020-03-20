@@ -246,6 +246,12 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       execute("DENY DROP INDEX ON DATABASE * TO role")
       // THEN
     } should have message "Failed to deny drop_index privilege to role 'role': Role does not exist."
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("DENY DROP INDEX ON DATABASE * TO $r", Map("r" -> "role"))
+      // THEN
+    } should have message "Failed to deny drop_index privilege to role 'role': Role does not exist."
   }
 
   test("should fail to deny drop index with missing database") {

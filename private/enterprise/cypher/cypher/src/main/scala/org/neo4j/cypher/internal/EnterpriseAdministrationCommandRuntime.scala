@@ -89,6 +89,7 @@ import org.neo4j.cypher.internal.procs.QueryHandler
 import org.neo4j.cypher.internal.procs.SystemCommandExecutionPlan
 import org.neo4j.cypher.internal.procs.UpdatingSystemCommandExecutionPlan
 import org.neo4j.cypher.internal.runtime.ParameterMapping
+import org.neo4j.cypher.internal.runtime.ast.ParameterFromSlot
 import org.neo4j.cypher.internal.runtime.slottedParameters
 import org.neo4j.cypher.internal.security.SystemGraphCredential
 import org.neo4j.cypher.internal.util.InputPosition
@@ -172,7 +173,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // ALTER USER foo
     case AlterUser(source, userName, password, requirePasswordChange, suspended) => (context, parameterMapping) =>
-      val userNameValue = makeParameterValue(userName)
+      val (userNameKey, userNameValue, userNameConverter) = getNameFields("username", userName)
       val params: Seq[(String, String, Value, MapValue => MapValue, Option[(String, Value)])] = Seq(
         password -> "credentials",
         requirePasswordChange -> "passwordChangeRequired",
@@ -189,7 +190,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           case Some(p) => throw new InvalidArgumentsException(s"Invalid option type for ALTER USER, expected byte array or boolean but got: ${p.getClass.getSimpleName}")
         }
       }
-      val (query, keys, values, mapper, returnItems) = params.foldLeft(("MATCH (user:User {name: $name}) WITH user, user.credentials AS oldCredentials", Array.empty[String], Array.empty[Value], identity[MapValue]_, Seq.empty[(String, Value)])) { (acc, param) =>
+      val (query, keys, values, mapper, returnItems) = params.foldLeft((s"MATCH (user:User {name: $$$userNameKey}) WITH user, user.credentials AS oldCredentials", Array.empty[String], Array.empty[Value], identity[MapValue]_, Seq.empty[(String, Value)])) { (acc, param) =>
         val property = param._1
         val key = param._2
         val value: Value = param._3
@@ -207,7 +208,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       val returnVals: Seq[Value] = values.toSeq ++ returnItems.map(_._2)
       UpdatingSystemCommandExecutionPlan("AlterUser", normalExecutionEngine,
         s"$query RETURN [$returnText] AS credentials",
-        VirtualValues.map(returnKeys.toArray :+ "name", returnVals.toArray :+ userNameValue),
+        VirtualValues.map(returnKeys.toArray :+ userNameKey, returnVals.toArray :+ userNameValue),
         QueryHandler
           .handleNoResult(p => Some(new InvalidArgumentsException(s"Failed to alter the specified user '${runtimeValue(userName, p)}': User does not exist.")))
           .handleError {
@@ -235,7 +236,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             maybeThrowable
           }),
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
-        parameterConverter = m => mapper(m)
+        parameterConverter = m => mapper(userNameConverter(m))
       )
 
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
@@ -807,6 +808,12 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege $grantName qualifier $qualifier")
   }
 
+  private def escapeName(name: Either[String, AnyRef]): String = name match {
+    case Left(s) => Prettifier.escapeName(s)
+    case Right(p) if p.isInstanceOf[ParameterFromSlot]=> s"$$${p.asInstanceOf[ParameterFromSlot].name}"
+    case Right(p) if p.isInstanceOf[Parameter]=> s"$$${p.asInstanceOf[Parameter].name}"
+  }
+
   private def makeGrantOrDenyExecutionPlan(actionName: String,
                                            resource: ActionResource,
                                            database: GraphScope,
@@ -820,7 +827,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     val action = Values.utf8Value(actionName)
     val (roleKey, roleValue, roleConverter) = getNameFields("role", roleName)
-    val roleMap = VirtualValues.map(Array(roleKey), Array(Values.utf8Value(Prettifier.escapeName(roleName))))
+    val roleMap = VirtualValues.map(Array(roleKey), Array(Values.utf8Value(escapeName(roleName))))
     val (property: Value, resourceType: Value, resourceMerge: String) = getResourcePart(resource, startOfErrorMessage(roleMap), grant.name, "MERGE")
     val (qualifierKey, qualifierValue, qualifierConverter, qualifierMerge) = getQualifierPart(qualifier, startOfErrorMessage(roleMap), grant.name, "MERGE")
     val (databaseKey, databaseValue, databaseConverter, databaseMerge, scopeMerge) = database match {
@@ -881,7 +888,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
                                       roleName: Either[String, Parameter], revokeType: String, source: Option[ExecutionPlan], startOfErrorMessage: MapValue => String) = {
     val action = Values.utf8Value(actionName)
     val (roleKey, roleValue, roleConverter) = getNameFields("role", roleName)
-    val roleMap = VirtualValues.map(Array(roleKey), Array(Values.utf8Value(Prettifier.escapeName(roleName))))
+    val roleMap = VirtualValues.map(Array(roleKey), Array(Values.utf8Value(escapeName(roleName))))
 
     val (property: Value, resourceType: Value, resourceMatch: String) = getResourcePart(resource, startOfErrorMessage(roleMap), "revoke", "MATCH")
     val (qualifierKey, qualifierValue, qualifierConverter, qualifierMatch) = getQualifierPart(qualifier, startOfErrorMessage(roleMap), "revoke", "MATCH")

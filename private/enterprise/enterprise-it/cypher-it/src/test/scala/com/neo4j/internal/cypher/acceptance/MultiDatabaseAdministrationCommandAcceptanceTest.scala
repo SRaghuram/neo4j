@@ -644,6 +644,17 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     execute("SHOW DATABASES").toList.size should equal(2)
+
+    // WHEN
+    the[DatabaseLimitReachedException] thrownBy {
+      // WHEN
+      execute("CREATE DATABASE $db", Map("db" -> "foo"))
+      // THEN
+    } should have message "Failed to create the specified database 'foo': The total limit of databases is already reached. " +
+      "To create more you need to either drop databases or change the limit via the config setting 'dbms.max_databases'"
+
+    // THEN
+    execute("SHOW DATABASES").toList.size should equal(2)
   }
 
   test("should create database using mixed case name") {
@@ -678,7 +689,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     // THEN
     the[DatabaseNotFoundException] thrownBy {
       executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name")
-    } should have message s"$DEFAULT_DATABASE_NAME"
+    } should have message DEFAULT_DATABASE_NAME
 
     // WHEN
     initSystemGraph(defaultConfig)
@@ -805,7 +816,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     // THEN
     the[DatabaseNotFoundException] thrownBy {
       executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name")
-    } should have message s"$DEFAULT_DATABASE_NAME"
+    } should have message DEFAULT_DATABASE_NAME
 
     // WHEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -835,6 +846,12 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     the[DatabaseExistsException] thrownBy {
       // WHEN
       execute("CREATE DATABASE foo")
+      // THEN
+    } should have message "Failed to create the specified database 'foo': Database already exists."
+
+    the[DatabaseExistsException] thrownBy {
+      // WHEN
+      execute("CREATE DATABASE $db", Map("db" -> "foo"))
       // THEN
     } should have message "Failed to create the specified database 'foo': Database already exists."
   }
@@ -874,34 +891,41 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // Empty name
-    testCreateDbWithInvalidName("``", "The provided database name is empty.")
+    testCreateDbWithInvalidName("", "The provided database name is empty.")
 
     // Starting on invalid character
     testCreateDbWithInvalidName("_default", "Database name '_default' is not starting with an ASCII alphabetic character.")
 
     // Has prefix 'system'
-    testCreateDbWithInvalidName("`system-mine`", "Database name 'system-mine' is invalid, due to the prefix 'system'.")
+    testCreateDbWithInvalidName("system-mine", "Database name 'system-mine' is invalid, due to the prefix 'system'.")
 
     // Contains invalid characters
-    testCreateDbWithInvalidName("`myDbWith_and%`",
+    testCreateDbWithInvalidName("myDbWith_and%",
       "Database name 'mydbwith_and%' contains illegal characters. Use simple ascii characters, numbers, dots and dashes.")
 
     // Too short name
     testCreateDbWithInvalidName("me", "The provided database name must have a length between 3 and 63 characters.")
 
     // Too long name
-    val name = "ihaveallooootoflettersclearlymorethenishould_ihaveallooootoflettersclearlymorethenishould"
+    val name = "ihaveallooootoflettersclearlymorethanishould-ihaveallooootoflettersclearlymorethanishould"
     testCreateDbWithInvalidName(name, "The provided database name must have a length between 3 and 63 characters.")
   }
 
   private def testCreateDbWithInvalidName(name: String, expectedErrorMessage: String): Unit = {
 
     val e = the[InvalidArgumentException] thrownBy {
-      execute("CREATE DATABASE " + name)
+      execute(s"CREATE DATABASE `$name`")
     }
 
     e should have message expectedErrorMessage
     e.status().code().toString should be("Status.Code[Neo.ClientError.Statement.ArgumentError]")
+
+    val e2 = the[InvalidArgumentException] thrownBy {
+      execute("CREATE DATABASE $db", Map("db" -> name))
+    }
+
+    e2 should have message expectedErrorMessage
+    e2.status().code().toString should be("Status.Code[Neo.ClientError.Statement.ArgumentError]")
 
   }
 
@@ -973,6 +997,14 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     exception.getMessage should include("Failed to create the specified database 'foo': cannot have both `OR REPLACE` and `IF NOT EXISTS`.")
+
+    // WHEN
+    val exception2 = the[SyntaxException] thrownBy {
+      execute("CREATE OR REPLACE DATABASE $db IF NOT EXISTS", Map("db" -> "foo"))
+    }
+
+    // THEN
+    exception2.getMessage should include("Failed to create the specified database '$db': cannot have both `OR REPLACE` and `IF NOT EXISTS`.")
   }
 
   test("should fail when creating a database when not on system database") {
@@ -1092,6 +1124,13 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       // THEN
     } should have message "Failed to delete the specified database 'foo': Database does not exist."
 
+    // using parameter
+    the[DatabaseNotFoundException] thrownBy {
+      // WHEN
+      execute("DROP DATABASE $db", Map("db" -> "foo"))
+      // THEN
+    } should have message "Failed to delete the specified database 'foo': Database does not exist."
+
     // THEN
     execute("SHOW DATABASE foo").toSet should be(Set.empty)
 
@@ -1099,6 +1138,13 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     the[DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("DROP DATABASE ``")
+      // THEN
+    } should have message "Failed to delete the specified database '': Database does not exist."
+
+    // and an invalid (non-existing) one using parameter
+    the[DatabaseNotFoundException] thrownBy {
+      // WHEN
+      execute("DROP DATABASE $db", Map("db" -> ""))
       // THEN
     } should have message "Failed to delete the specified database '': Database does not exist."
 
@@ -1171,10 +1217,9 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     // THEN
     execute(s"SHOW DATABASE $SYSTEM_DATABASE_NAME").toSet should be(Set(db(SYSTEM_DATABASE_NAME)))
 
-    // GIVEN
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
-      execute(s"DROP DATABASE $SYSTEM_DATABASE_NAME IF EXISTS")
+      execute("DROP DATABASE $db IF EXISTS", Map("db" -> SYSTEM_DATABASE_NAME))
       // THEN
     } should have message "Not allowed to delete system database."
 
@@ -1256,10 +1301,24 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       // THEN
     } should have message "Failed to start the specified database 'foo': Database does not exist."
 
+    // using parameter
+    the[DatabaseNotFoundException] thrownBy {
+      // WHEN
+      execute("START DATABASE $db", Map("db" -> "foo"))
+      // THEN
+    } should have message "Failed to start the specified database 'foo': Database does not exist."
+
     // and an invalid (non-existing) one
     the[DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("START DATABASE ``")
+      // THEN
+    } should have message "Failed to start the specified database '': Database does not exist."
+
+    // and an invalid (non-existing) one using parameter
+    the[DatabaseNotFoundException] thrownBy {
+      // WHEN
+      execute("START DATABASE $db", Map("db" -> ""))
       // THEN
     } should have message "Failed to start the specified database '': Database does not exist."
   }
@@ -1478,10 +1537,24 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       // THEN
     } should have message "Failed to stop the specified database 'foo': Database does not exist."
 
+    // using parameter
+    the[DatabaseNotFoundException] thrownBy {
+      // WHEN
+      execute("STOP DATABASE $db", Map("db" -> "foo"))
+      // THEN
+    } should have message "Failed to stop the specified database 'foo': Database does not exist."
+
     // and an invalid (non-existing) one
     the[DatabaseNotFoundException] thrownBy {
       // WHEN
       execute("STOP DATABASE ``")
+      // THEN
+    } should have message "Failed to stop the specified database '': Database does not exist."
+
+    // and an invalid (non-existing) one using parameter
+    the[DatabaseNotFoundException] thrownBy {
+      // WHEN
+      execute("STOP DATABASE $db", Map("db" -> ""))
       // THEN
     } should have message "Failed to stop the specified database '': Database does not exist."
   }
@@ -1508,18 +1581,23 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   test("should fail on stopping system database") {
     setup()
 
-    // GIVEN
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute(s"STOP DATABASE $SYSTEM_DATABASE_NAME")
       // THEN
     } should have message "Not allowed to stop system database."
 
-    // WHEN
-    val result = execute(s"SHOW DATABASE $SYSTEM_DATABASE_NAME")
+    // THEN
+    execute(s"SHOW DATABASE $SYSTEM_DATABASE_NAME").toSet should be(Set(db(SYSTEM_DATABASE_NAME)))
+
+    the[DatabaseAdministrationException] thrownBy {
+      // WHEN
+      execute("STOP DATABASE $db", Map("db" -> SYSTEM_DATABASE_NAME))
+      // THEN
+    } should have message "Not allowed to stop system database."
 
     // THEN
-    result.toSet should be(Set(db(SYSTEM_DATABASE_NAME)))
+    execute(s"SHOW DATABASE $SYSTEM_DATABASE_NAME").toSet should be(Set(db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should stop default database") {

@@ -21,6 +21,8 @@ import org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DEN
 import org.neo4j.internal.kernel.api.security.AuthenticationResult
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
+import scala.collection.JavaConverters.mapAsJavaMapConverter
+
 class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
   test("GraphStatistics should tell us if a query contains system updates or not"){
@@ -310,6 +312,12 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "Failed to create the specified user 'neo4j': User already exists."
 
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("CREATE USER $user SET PASSWORD 'password'", Map("user" -> "neo4j"))
+      // THEN
+    } should have message "Failed to create the specified user 'neo4j': User already exists."
+
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
   }
@@ -420,6 +428,12 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "Failed to replace the specified user 'neo4j': Deleting yourself is not allowed."
 
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
+      // WHEN
+      executeOnSystem("neo4j", "bar", "CREATE OR REPLACE USER $user SET PASSWORD 'baz'", Map[String, Object]("user" -> "neo4j").asJava)
+      // THEN
+    } should have message "Failed to replace the specified user 'neo4j': Deleting yourself is not allowed."
+
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive)
     testUserLogin("neo4j", "bar", AuthenticationResult.SUCCESS)
@@ -437,6 +451,14 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     exception.getMessage should include("Failed to create the specified user 'foo': cannot have both `OR REPLACE` and `IF NOT EXISTS`.")
+
+    // WHEN
+    val exception2 = the[SyntaxException] thrownBy {
+      execute("CREATE OR REPLACE USER $user IF NOT EXISTS SET PASSWORD 'pass'", Map("user" -> "foo"))
+    }
+
+    // THEN
+    exception2.getMessage should include("Failed to create the specified user '$user': cannot have both `OR REPLACE` and `IF NOT EXISTS`.")
   }
 
   test("should fail when creating user when not on system database") {
@@ -529,7 +551,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
       // WHEN
-      executeOnSystem("neo4j", "neo", "DROP USER neo4j IF EXISTS")
+      executeOnSystem("neo4j", "neo", "DROP USER $user IF EXISTS", Map[String, Object]("user" -> "neo4j").asJava)
       // THEN
     } should have message "Failed to delete the specified user 'neo4j': Deleting yourself is not allowed."
 
@@ -649,7 +671,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     the[InvalidArgumentsException] thrownBy {
       // WHEN
-      execute("ALTER USER foo SET PASSWORD 'bar'")
+      execute("ALTER USER $user SET PASSWORD 'bar'", Map("user" -> "foo"))
       // THEN
     } should have message "Failed to alter the specified user 'foo': Old password and new password cannot be the same."
 
@@ -663,7 +685,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     the[InvalidArgumentsException] thrownBy {
       // WHEN
-      execute("ALTER USER foo SET PASSWORD $password", Map("password" -> ""))
+      execute("ALTER USER $user SET PASSWORD $password", Map("user" -> "foo", "password" -> ""))
       // THEN
     } should have message "A password cannot be empty."
 
@@ -849,7 +871,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // WHEN
     the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
-      executeOnSystem("neo4j", "potato", "ALTER USER neo4j SET STATUS ACTIVE")
+      executeOnSystem("neo4j", "potato", "ALTER USER $user SET STATUS ACTIVE", Map[String, Object]("user" -> "neo4j").asJava)
     } should have message "Failed to alter the specified user 'neo4j': Changing your own activation status is not allowed."
 
     // THEN
@@ -968,6 +990,12 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       execute("ALTER USER foo SET PASSWORD 'baz'")
       // THEN
     } should have message "Failed to alter the specified user 'foo': User does not exist."
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("ALTER USER $user SET PASSWORD 'baz'", Map("user" -> "foo"))
+      // THEN
+    } should have message "Failed to alter the specified user 'foo': User does not exist."
   }
 
   test("should fail when altering a non-existing user: parameter password (and illegal username)") {
@@ -1020,7 +1048,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     the[InvalidArgumentsException] thrownBy {
       // WHEN
-      execute("ALTER USER foo SET PASSWORD $password SET STATUS ACTIVE", Map("password" -> "baz"))
+      execute("ALTER USER $user SET PASSWORD $password SET STATUS ACTIVE", Map("user" -> "foo", "password" -> "baz"))
       // THEN
     } should have message "Failed to alter the specified user 'foo': User does not exist."
   }

@@ -248,6 +248,12 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "Failed to create the specified role 'foo': Role already exists."
 
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("CREATE ROLE $r", Map("r" -> "foo"))
+      // THEN
+    } should have message "Failed to create the specified role 'foo': Role already exists."
+
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
   }
 
@@ -295,7 +301,21 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     the[InvalidArgumentException] thrownBy {
       // WHEN
+      execute("CREATE ROLE $r", Map("r" -> ""))
+      // THEN
+    } should have message "The provided role name is empty."
+
+    the[InvalidArgumentException] thrownBy {
+      // WHEN
       execute("CREATE ROLE `my%role`")
+      // THEN
+    } should have message
+      """Role name 'my%role' contains illegal characters.
+        |Use simple ascii characters, numbers and underscores.""".stripMargin
+
+    the[InvalidArgumentException] thrownBy {
+      // WHEN
+      execute("CREATE ROLE $r", Map("r" -> "my%role"))
       // THEN
     } should have message
       """Role name 'my%role' contains illegal characters.
@@ -427,7 +447,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     the[InvalidArgumentsException] thrownBy {
       // WHEN
-      execute("CREATE ROLE bar IF NOT EXISTS AS COPY OF foo")
+      execute("CREATE ROLE $newRole IF NOT EXISTS AS COPY OF $oldRole", Map("newRole" -> "bar", "oldRole" -> "foo"))
       // THEN
     } should have message "Failed to create a role as copy of 'foo': Role does not exist."
 
@@ -498,6 +518,12 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "Failed to create the specified role 'bar': Role already exists."
 
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("CREATE ROLE $newRole AS COPY OF $oldRole", Map("newRole" -> "bar", "oldRole" -> "foo"))
+      // THEN
+    } should have message "Failed to create the specified role 'bar': Role already exists."
+
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map, role("bar").map))
   }
 
@@ -555,11 +581,11 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // WHEN
     val exceptionCreate = the[SyntaxException] thrownBy {
-      execute("CREATE OR REPLACE ROLE foo IF NOT EXISTS")
+      execute("CREATE OR REPLACE ROLE $role IF NOT EXISTS", Map("role" -> "foo"))
     }
 
     // THEN
-    exceptionCreate.getMessage should include("Failed to create the specified role 'foo': cannot have both `OR REPLACE` and `IF NOT EXISTS`.")
+    exceptionCreate.getMessage should include("Failed to create the specified role '$role': cannot have both `OR REPLACE` and `IF NOT EXISTS`.")
 
     // WHEN
     val exceptionCopy = the[SyntaxException] thrownBy {
