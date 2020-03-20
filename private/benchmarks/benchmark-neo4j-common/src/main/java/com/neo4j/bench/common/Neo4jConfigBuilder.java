@@ -31,7 +31,7 @@ import static org.neo4j.configuration.SettingValueParsers.TRUE;
 public class Neo4jConfigBuilder
 {
 
-    private static final String BOLT_ADDRESS_SETTING = ".";
+    private static final String BOLT_ADDRESS_SETTING = "dbms.connector.bolt.listen_address";
 
     public static Neo4jConfigBuilder withDefaults()
     {
