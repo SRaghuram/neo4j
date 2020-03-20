@@ -15,8 +15,6 @@ import org.neo4j.values.virtual.ListValue
 import org.neo4j.values.virtual.ListValueBuilder
 import org.neo4j.values.virtual.VirtualValues
 
-import scala.collection.mutable.ArrayBuffer
-
 /**
  * Aggregator for collect(...).
  */
@@ -47,18 +45,18 @@ class CollectUpdater(preserveNulls: Boolean) extends Updater {
 }
 
 class CollectStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id) extends Reducer {
-  private val collections = new ArrayBuffer[ListValue]
+  private val collection = ListValueBuilder.newListBuilder()
   override def update(updater: Updater): Unit = {
     updater match {
       case u: CollectUpdater =>
-        val value = u.collection.build();
-        collections += value
+        collection.combine(u.collection)
         // Note: this allocation is currently never de-allocated
         memoryTracker.allocated(value, operatorId.x)
     }
   }
 
-  override def result: AnyValue = VirtualValues.concat(collections: _*)
+  override def result: AnyValue =
+    collection.build()
 }
 
 class CollectConcurrentReducer() extends Reducer {
