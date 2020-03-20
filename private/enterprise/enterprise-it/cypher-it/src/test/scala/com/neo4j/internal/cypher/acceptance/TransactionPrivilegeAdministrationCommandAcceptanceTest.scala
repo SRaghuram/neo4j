@@ -5,7 +5,6 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.dbms.api.DatabaseNotFoundException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
@@ -14,7 +13,6 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
     //TODO: ADD ANY NEW UPDATING COMMANDS HERE
 
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
 
     // Notice: They are executed in succession so they have to make sense in that order
@@ -50,7 +48,6 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
   test("should grant show transaction privilege") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
     execute("CREATE ROLE role")
@@ -71,7 +68,6 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
   test("should deny show transaction privilege") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     execute("CREATE ROLE role")
 
@@ -89,7 +85,6 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
   test("should revoke show transaction privilege") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     execute("CREATE ROLE role")
     execute("GRANT TRANSACTION (*) ON DATABASE foo TO role")
@@ -105,9 +100,6 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
   }
 
   test("should fail to grant show transaction privilege to non-existing role") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("GRANT SHOW TRANSACTION (*) ON DATABASE * TO role")
@@ -122,8 +114,6 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
   }
 
   test("should fail to grant show transaction privilege with missing database") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE role")
 
     the[DatabaseNotFoundException] thrownBy {
@@ -141,7 +131,6 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
   test("should grant terminate transaction privilege") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     execute("CREATE ROLE role")
 
@@ -159,7 +148,6 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
   test("should deny terminate transaction privilege") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
     execute("CREATE ROLE role")
@@ -180,7 +168,6 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
   test("should revoke terminate transaction privilege") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     execute("CREATE ROLE role")
     execute("GRANT TRANSACTION (*) ON DATABASE foo TO role")
@@ -196,9 +183,6 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
   }
 
   test("should fail to deny terminate transaction privilege to non-existing role") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("DENY TERMINATE TRANSACTION (*) ON DATABASE * TO role")
@@ -214,7 +198,6 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
   test("should fail to deny terminate transaction privilege with missing database") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE role")
 
     the[DatabaseNotFoundException] thrownBy {
@@ -232,7 +215,6 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
   test("should grant transaction management privilege") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     execute("CREATE ROLE role")
 
@@ -252,7 +234,6 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
   test("should deny transaction management privilege") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     execute("CREATE ROLE role")
 
@@ -272,7 +253,6 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
   test("should revoke transaction management privilege") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
     execute("CREATE ROLE role")
@@ -299,7 +279,6 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
   test("should do nothing when revoking transaction management privilege from non-existing role") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE role")
     execute("GRANT TRANSACTION (*) ON DATABASE * TO role")
 
@@ -310,7 +289,6 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
   test("should do nothing when revoking transaction management privilege with missing database") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE role")
     execute("CREATE DATABASE bar")
     execute("GRANT TRANSACTION (*) ON DATABASE bar TO role")

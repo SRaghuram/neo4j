@@ -7,7 +7,6 @@ package com.neo4j.internal.cypher.acceptance
 
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
-import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.dbms.api.DatabaseNotFoundException
 import org.neo4j.exceptions.DatabaseAdministrationException
 import org.neo4j.graphdb.QueryExecutionException
@@ -23,7 +22,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     //TODO: ADD ANY NEW UPDATING COMMANDS HERE
 
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
     Seq("a", "b", "c").foreach(role => execute(s"CREATE ROLE $role"))
@@ -70,9 +68,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
   test("should not show privileges as non admin") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo", passwordChangeRequired = false))
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
@@ -81,33 +77,19 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
   }
 
   test("should show privileges for users") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
-    // WHEN
     execute("SHOW PRIVILEGES").toSet should be(defaultRolePrivileges)
   }
 
   test("should show all privileges") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
-    // WHEN
     execute("SHOW ALL PRIVILEGES").toSet should be(defaultRolePrivileges)
   }
 
   test("should not show privileges on a dropped database") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
     execute("GRANT ACCESS ON DATABASE foo TO custom")
     execute("GRANT TRAVERSE ON GRAPH foo NODES * TO custom")
-    val grantOnFoo = Set(
-      access().role("custom").database("foo").map,
-      traverse().node("*").role("custom").database("foo").map
-    )
-    execute("SHOW PRIVILEGES").toSet should be(defaultRolePrivileges ++ grantOnFoo)
 
     // WHEN
     execute("DROP DATABASE foo")
@@ -118,15 +100,9 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
   test("should not show privileges on a dropped role") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("GRANT ACCESS ON DATABASE * TO custom")
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
-    val grantForCustom = Set(
-      access().role("custom").map,
-      traverse().node("*").role("custom").map
-    )
-    execute("SHOW PRIVILEGES").toSet should be(defaultRolePrivileges ++ grantForCustom)
 
     // WHEN
     execute("DROP ROLE custom")
@@ -136,6 +112,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
   }
 
   test("should fail when showing privileges for all users when not on system database") {
+    selectDatabase(DEFAULT_DATABASE_NAME)
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("SHOW ALL PRIVILEGES")
@@ -145,9 +122,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
   }
 
   test("should show privileges for specific role") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // WHEN
     val result = execute("SHOW ROLE editor PRIVILEGES")
 
@@ -164,9 +138,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
   }
 
   test("should show privileges for specific role as parameter") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // WHEN
     val result = execute("SHOW ROLE $role PRIVILEGES", Map("role" -> "editor"))
 
@@ -184,7 +155,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
   test("should not show role privileges as non admin") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     setupUserWithCustomRole()
 
     // WHEN & THEN
@@ -194,9 +164,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
   }
 
   test("should give nothing when showing privileges for non-existing role") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // WHEN
     val resultFoo = execute("SHOW ROLE foo PRIVILEGES")
 
@@ -213,12 +180,9 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
   test("should not show role privileges on a dropped database") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
     execute("GRANT TRAVERSE ON GRAPH foo NODES * TO custom")
-    val grantOnFoo = Set(traverse().node("*").role("custom").database("foo").map)
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(grantOnFoo)
 
     // WHEN
     execute("DROP DATABASE foo")
@@ -229,11 +193,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
   test("should not show role privileges on a dropped role") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
-    val grantForCustom = Set(traverse().node("*").role("custom").map)
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(grantForCustom)
 
     // WHEN
     execute("DROP ROLE custom")
@@ -243,6 +204,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
   }
 
   test("should fail when showing privileges for roles when not on system database") {
+    selectDatabase(DEFAULT_DATABASE_NAME)
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("SHOW ROLE editor PRIVILEGES")
@@ -252,9 +214,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
   }
 
   test("should show privileges for specific user") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // WHEN
     val result = execute("SHOW USER neo4j PRIVILEGES")
 
@@ -276,9 +235,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
   }
 
   test("should show privileges for specific user as parameter") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // WHEN
     val result = execute("SHOW USER $user PRIVILEGES", Map("user" -> "neo4j"))
 
@@ -301,7 +257,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
   test("should show user privileges for current user as non admin") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
 
     // WHEN
@@ -313,7 +268,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
   test("should show user privileges for current user as non admin without specifying the user name") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
 
     // WHEN
@@ -324,9 +278,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
   }
 
   test("should give nothing when showing privileges for non-existing user") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // WHEN
     val resultFoo = execute("SHOW USER foo PRIVILEGES")
 
@@ -343,13 +294,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
   test("should give nothing when showing privileges for a dropped user") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER bar SET PASSWORD 'secret'")
-    execute("GRANT ROLE custom TO bar")
+    setupUserWithCustomRole("bar", "secret")
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
-    val grantForCustom = Set(traverse().node("*").role("custom").user("bar").map)
-    execute("SHOW USER bar PRIVILEGES").toSet should be(grantForCustom + access().role(PUBLIC).database(DEFAULT).user("bar").map)
 
     // WHEN
     execute("DROP USER bar")
@@ -360,14 +306,9 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
   test("should not show user privileges on a dropped database") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER bar SET PASSWORD 'secret'")
-    execute("GRANT ROLE custom TO bar")
+    setupUserWithCustomRole("bar", "secret", access = false)
     execute("CREATE DATABASE foo")
     execute("GRANT TRAVERSE ON GRAPH foo NODES * TO custom")
-    val grantOnFoo = Set(traverse().node("*").role("custom").user("bar").database("foo").map)
-    execute("SHOW USER bar PRIVILEGES").toSet should be(grantOnFoo + access().role(PUBLIC).database(DEFAULT).user("bar").map)
 
     // WHEN
     execute("DROP DATABASE foo")
@@ -378,13 +319,8 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
   test("should not show user privileges on a dropped role") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER bar SET PASSWORD 'secret'")
-    execute("GRANT ROLE custom TO bar")
+    setupUserWithCustomRole("bar", "secret")
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
-    val grantForCustom = Set(traverse().node("*").role("custom").user("bar").map)
-    execute("SHOW USER bar PRIVILEGES").toSet should be(grantForCustom + access().role(PUBLIC).database(DEFAULT).user("bar").map)
 
     // WHEN
     execute("DROP ROLE custom")
@@ -394,6 +330,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
   }
 
   test("should fail when showing privileges for users when not on system database") {
+    selectDatabase(DEFAULT_DATABASE_NAME)
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("SHOW USER neo4j PRIVILEGES")
@@ -420,7 +357,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
           test(s"should $grantOrDeny $actionName privilege to custom role for all databases and all element types") {
             // GIVEN
-            selectDatabase(SYSTEM_DATABASE_NAME)
             execute("CREATE ROLE custom")
 
             // WHEN
@@ -434,9 +370,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
           }
 
           test(s"should fail ${grantOrDeny}ing $actionName privilege for all databases and all labels to non-existing role") {
-            // GIVEN
-            selectDatabase(SYSTEM_DATABASE_NAME)
-
             // WHEN
             val error1 = the[InvalidArgumentsException] thrownBy {
               // WHEN
@@ -466,8 +399,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
           }
 
           test(s"should fail when ${grantOrDeny}ing $actionName privilege with missing database") {
-            // GIVEN
-            selectDatabase(SYSTEM_DATABASE_NAME)
             execute("CREATE ROLE custom")
             val error = the[DatabaseNotFoundException] thrownBy {
               execute(s"$grantOrDenyCommand $actionCommand ON GRAPH foo TO custom")
@@ -480,8 +411,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
           }
 
           test(s"should fail when ${grantOrDeny}ing $actionName privilege using * as parameter") {
-            // GIVEN
-            selectDatabase(SYSTEM_DATABASE_NAME)
             execute("CREATE ROLE custom")
             val error = the[InvalidArgumentsException] thrownBy {
               execute(s"$grantOrDenyCommand $actionCommand ON GRAPH $$db TO custom", Map("db" -> "*"))
@@ -491,6 +420,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
           test(s"should fail when ${grantOrDeny}ing $actionName privilege to custom role when not on system database") {
             val commandName = actionCommand.split(" ").head
+            selectDatabase(DEFAULT_DATABASE_NAME)
             the[DatabaseAdministrationException] thrownBy {
               // WHEN
               execute(s"$grantOrDenyCommand $actionCommand ON GRAPH * TO custom")
@@ -507,7 +437,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
               test(s"should $grantOrDeny $actionName privilege to custom role for all databases and all ${segmentName}s") {
                 // GIVEN
-                selectDatabase(SYSTEM_DATABASE_NAME)
                 execute("CREATE ROLE custom")
 
                 // WHEN
@@ -519,7 +448,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
               test(s"should $grantOrDeny $actionName privilege to custom role for all databases but only a specific $segmentName (that does not need to exist)") {
                 // GIVEN
-                selectDatabase(SYSTEM_DATABASE_NAME)
                 execute("CREATE ROLE custom")
 
                 // WHEN
@@ -531,7 +459,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
               test(s"should $grantOrDeny $actionName privilege to custom role for a specific database and a specific $segmentName") {
                 // GIVEN
-                selectDatabase(SYSTEM_DATABASE_NAME)
                 execute("CREATE ROLE custom")
                 execute("CREATE DATABASE foo")
 
@@ -545,7 +472,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
               test(s"should $grantOrDeny $actionName privilege to custom role for a specific database and all ${segmentName}s") {
                 // GIVEN
-                selectDatabase(SYSTEM_DATABASE_NAME)
                 execute("CREATE ROLE custom")
                 execute("CREATE DATABASE foo")
 
@@ -559,7 +485,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
               test(s"should $grantOrDeny $actionName privilege to custom role for a specific database and multiple ${segmentName}s") {
                 // GIVEN
-                selectDatabase(SYSTEM_DATABASE_NAME)
                 execute("CREATE ROLE custom")
                 execute("CREATE DATABASE foo")
 
@@ -576,7 +501,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
               test(s"should $grantOrDeny $actionName privilege to custom role for a specific database and multiple ${segmentName}s in one grant") {
                 // GIVEN
-                selectDatabase(SYSTEM_DATABASE_NAME)
                 execute("CREATE ROLE custom")
                 execute("CREATE DATABASE foo")
 
@@ -592,7 +516,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
               test(s"should $grantOrDeny $actionName privilege to multiple roles for a specific database and multiple ${segmentName}s in one grant") {
                 // GIVEN
-                selectDatabase(SYSTEM_DATABASE_NAME)
                 execute("CREATE ROLE role1")
                 execute("CREATE ROLE role2")
                 execute("CREATE DATABASE foo")
@@ -615,7 +538,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
           test(s"should $grantOrDeny $actionName privilege to custom role for all databases and all elements") {
             // GIVEN
-            selectDatabase(SYSTEM_DATABASE_NAME)
             execute("CREATE ROLE custom")
 
             // WHEN
@@ -630,7 +552,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
           test(s"should $grantOrDeny $actionName privilege to custom role for all databases but only a specific element (that does not need to exist)") {
             // GIVEN
-            selectDatabase(SYSTEM_DATABASE_NAME)
             execute("CREATE ROLE custom")
 
             // WHEN
@@ -645,7 +566,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
           test(s"should $grantOrDeny $actionName privilege to custom role for a specific database and a specific element") {
             // GIVEN
-            selectDatabase(SYSTEM_DATABASE_NAME)
             execute("CREATE ROLE custom")
             execute("CREATE DATABASE foo")
 
@@ -661,7 +581,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
           test(s"should $grantOrDeny $actionName privilege to custom role for a specific database and all elements") {
             // GIVEN
-            selectDatabase(SYSTEM_DATABASE_NAME)
             execute("CREATE ROLE custom")
             execute("CREATE DATABASE foo")
 
@@ -677,7 +596,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
           test(s"should $grantOrDeny $actionName privilege to custom role for specific database and all element types using parameters") {
             // GIVEN
-            selectDatabase(SYSTEM_DATABASE_NAME)
             execute("CREATE ROLE custom")
 
             // WHEN
@@ -692,7 +610,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
           test(s"should $grantOrDeny $actionName privilege to custom role for a specific database and multiple elements") {
             // GIVEN
-            selectDatabase(SYSTEM_DATABASE_NAME)
             execute("CREATE ROLE custom")
             execute("CREATE DATABASE foo")
 
@@ -711,7 +628,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
           test(s"should $grantOrDeny $actionName privilege to custom role for a specific database and multiple elements in one grant") {
             // GIVEN
-            selectDatabase(SYSTEM_DATABASE_NAME)
             execute("CREATE ROLE custom")
             execute("CREATE DATABASE foo")
 
@@ -729,7 +645,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
           test(s"should $grantOrDeny $actionName privilege to multiple roles for a specific database and multiple elements in one grant") {
             // GIVEN
-            selectDatabase(SYSTEM_DATABASE_NAME)
             execute("CREATE ROLE role1")
             execute("CREATE ROLE role2")
             execute("CREATE DATABASE foo")
@@ -756,9 +671,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
   test("should not grant anything as non admin") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo", passwordChangeRequired = false))
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
@@ -768,9 +681,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
   test("should not deny anything as non admin") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo", passwordChangeRequired = false))
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
@@ -780,7 +691,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
   test("should normalize graph name for graph privileges") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE BaR")
     execute("CREATE ROLE custom")
 
@@ -831,7 +741,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
           test(s"should $grantOrDeny $actionName privilege for specific property to custom role for all databases and all element types") {
             // GIVEN
-            selectDatabase(SYSTEM_DATABASE_NAME)
             execute("CREATE ROLE custom")
 
             // WHEN
@@ -852,7 +761,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
               test(s"should $grantOrDeny $actionName privilege for specific property to custom role for all databases and all ${segmentName}s") {
                 // GIVEN
-                selectDatabase(SYSTEM_DATABASE_NAME)
                 execute("CREATE ROLE custom")
 
                 // WHEN
@@ -866,7 +774,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
               test(s"should $grantOrDeny $actionName privilege for specific property to custom role for all databases but only a specific $segmentName") {
                 // GIVEN
-                selectDatabase(SYSTEM_DATABASE_NAME)
                 execute("CREATE ROLE custom")
 
                 // WHEN
@@ -880,7 +787,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
               test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific database and a specific $segmentName") {
                 // GIVEN
-                selectDatabase(SYSTEM_DATABASE_NAME)
                 execute("CREATE ROLE custom")
                 execute("CREATE DATABASE foo")
 
@@ -895,7 +801,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
               test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific database and all ${segmentName}s") {
                 // GIVEN
-                selectDatabase(SYSTEM_DATABASE_NAME)
                 execute("CREATE ROLE custom")
                 execute("CREATE DATABASE foo")
 
@@ -910,7 +815,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
               test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific database and multiple ${segmentName}s") {
                 // GIVEN
-                selectDatabase(SYSTEM_DATABASE_NAME)
                 execute("CREATE ROLE custom")
                 execute("CREATE DATABASE foo")
 
@@ -927,7 +831,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
               test(s"should $grantOrDeny $actionName privilege for multiple properties to custom role for a specific database and specific $segmentName") {
                 // GIVEN
-                selectDatabase(SYSTEM_DATABASE_NAME)
                 execute("CREATE ROLE custom")
                 execute("CREATE DATABASE foo")
 
@@ -944,7 +847,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
               test(s"should $grantOrDeny $actionName privilege for multiple properties to custom role for a specific database and multiple ${segmentName}s") {
                 // GIVEN
-                selectDatabase(SYSTEM_DATABASE_NAME)
                 execute("CREATE ROLE custom")
                 execute("CREATE DATABASE foo")
 
@@ -961,7 +863,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
               test(s"should $grantOrDeny $actionName privilege for multiple properties to multiple roles for a specific database and multiple ${segmentName}s in a single grant") {
                 // GIVEN
-                selectDatabase(SYSTEM_DATABASE_NAME)
                 execute("CREATE ROLE role1")
                 execute("CREATE ROLE role2")
                 execute("CREATE ROLE role3")
@@ -986,7 +887,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
           test(s"should $grantOrDeny $actionName privilege for specific property to custom role for all databases and all elements") {
             // GIVEN
-            selectDatabase(SYSTEM_DATABASE_NAME)
             execute("CREATE ROLE custom")
 
             // WHEN
@@ -1001,7 +901,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
           test(s"should $grantOrDeny $actionName privilege for specific property to custom role for all databases but only a specific element") {
             // GIVEN
-            selectDatabase(SYSTEM_DATABASE_NAME)
             execute("CREATE ROLE custom")
 
             // WHEN
@@ -1016,7 +915,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
           test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific database and a specific element") {
             // GIVEN
-            selectDatabase(SYSTEM_DATABASE_NAME)
             execute("CREATE ROLE custom")
             execute("CREATE DATABASE foo")
 
@@ -1032,7 +930,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
           test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific database and all elements") {
             // GIVEN
-            selectDatabase(SYSTEM_DATABASE_NAME)
             execute("CREATE ROLE custom")
             execute("CREATE DATABASE foo")
 
@@ -1048,7 +945,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
           test(s"should $grantOrDeny $actionName privilege for specific property to custom role for a specific database and multiple elements") {
             // GIVEN
-            selectDatabase(SYSTEM_DATABASE_NAME)
             execute("CREATE ROLE custom")
             execute("CREATE DATABASE foo")
 
@@ -1067,7 +963,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
           test(s"should $grantOrDeny $actionName privilege for multiple properties to custom role for a specific database and specific element") {
             // GIVEN
-            selectDatabase(SYSTEM_DATABASE_NAME)
             execute("CREATE ROLE custom")
             execute("CREATE DATABASE foo")
 
@@ -1086,7 +981,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
           test(s"should $grantOrDeny $actionName privilege for multiple properties to custom role for a specific database and multiple elements") {
             // GIVEN
-            selectDatabase(SYSTEM_DATABASE_NAME)
             execute("CREATE ROLE custom")
             execute("CREATE DATABASE foo")
 
@@ -1105,7 +999,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
           test(s"should $grantOrDeny $actionName privilege for multiple properties to multiple roles for a specific database and multiple elements in a single grant") {
             // GIVEN
-            selectDatabase(SYSTEM_DATABASE_NAME)
             execute("CREATE ROLE role1")
             execute("CREATE ROLE role2")
             execute("CREATE ROLE role3")
@@ -1131,7 +1024,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
   test("should not be able to override internal parameters from the outside") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
 
     // WHEN using a parameter name that used to be internal, but is not any more, it should work

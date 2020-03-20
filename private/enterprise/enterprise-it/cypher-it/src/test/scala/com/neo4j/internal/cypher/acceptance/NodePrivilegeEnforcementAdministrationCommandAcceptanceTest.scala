@@ -7,11 +7,9 @@ package com.neo4j.internal.cypher.acceptance
 
 import java.util
 
-import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.graphdb.Label
-import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
 
 // Tests for actual behaviour of authorization rules for restricted users based on node privileges
@@ -101,7 +99,6 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
 
   test("should read properties when granted MATCH privilege to custom role for a specific database") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     selectDatabase("foo")
     execute("CREATE (:B {name:'b'})")
@@ -303,7 +300,6 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
   test("should see properties and nodes when revoking privileges for role") {
     // GIVEN
     setupMultiLabelData
-    selectDatabase(SYSTEM_DATABASE_NAME)
     setupUserWithCustomRole(access = false)
 
     // WHEN
@@ -1821,8 +1817,6 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     setupUserWithCustomRole("user1", "secret", "role1")
     setupUserWithCustomRole("user2", "secret", "role2")
     setupUserWithCustomRole("user3", "secret", "role3")
-
-    selectDatabase(SYSTEM_DATABASE_NAME)
 
     // role1 whitelist A
     execute("GRANT READ {foo} ON GRAPH * NODES * TO role1")

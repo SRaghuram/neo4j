@@ -5,7 +5,6 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.internal.kernel.api.security.AuthenticationResult
 
@@ -15,7 +14,6 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
 
   test("should execute dbms.security.createUser on system") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
 
     // WHEN
@@ -28,7 +26,6 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
 
   test("should explain dbms.security.createUser on system") {
     // WHEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     val result = execute( "EXPLAIN CALL dbms.security.createUser('Alice', 'foo')" )
 
     //THEN
@@ -37,7 +34,6 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
 
   test("should execute dbms.security.createUser with return values on system") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
 
     // WHEN
@@ -50,7 +46,6 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
 
   test("should not execute dbms.security.createUser with more clauses on system") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
 
     // WHEN
@@ -75,7 +70,6 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
 
   test("should execute dbms.security.createUser on system with parameter") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
 
     // WHEN
@@ -88,7 +82,6 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
 
   test("should fail dbms.security.createUser for existing user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
 
     // WHEN
@@ -101,7 +94,6 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
 
   test("should fail using non-system procedure on system") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
 
     // WHEN
@@ -113,7 +105,6 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
 
   test("should fail using non-existing procedure on system") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
 
     // WHEN
@@ -141,7 +132,6 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
     case (query, name) =>
       test(s"should fail using $name on default database") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
         execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
 
         // WHEN

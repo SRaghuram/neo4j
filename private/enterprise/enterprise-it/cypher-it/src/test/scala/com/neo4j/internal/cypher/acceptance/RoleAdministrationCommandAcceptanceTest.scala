@@ -8,7 +8,8 @@ package com.neo4j.internal.cypher.acceptance
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER
-import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
+import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.exceptions.DatabaseAdministrationException
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.exceptions.SyntaxException
@@ -21,7 +22,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     //TODO: ADD ANY NEW UPDATING COMMANDS HERE
 
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER Bar SET PASSWORD 'neo'")
     Seq("x", "y", "z").foreach(user => execute(s"CREATE USER $user SET PASSWORD 'neo'"))
     Seq("a", "b", "c").foreach(role => execute(s"CREATE ROLE $role"))
@@ -47,9 +47,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   // Tests for showing roles
 
   test("should show all default roles") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
     // WHEN
     val result = execute("SHOW ALL ROLES")
 
@@ -58,9 +55,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should show populated default roles") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
     // WHEN
     val result = execute("SHOW POPULATED ROLES")
 
@@ -72,9 +66,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should create and show roles") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
     // WHEN
     execute("CREATE ROLE foo")
     val result = execute("SHOW ROLES")
@@ -84,8 +75,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should show populated roles") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER Bar SET PASSWORD 'neo'")
     execute("CREATE USER Baz SET PASSWORD 'NEO'")
     execute("CREATE ROLE foo")
@@ -104,9 +93,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should show default roles with users") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
     // WHEN
     val result = execute("SHOW ROLES WITH USERS")
 
@@ -115,9 +101,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should show all default roles with users") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
     // WHEN
     val result = execute("SHOW ALL ROLES WITH USERS")
 
@@ -127,7 +110,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should show populated roles with users") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
 
     // WHEN
@@ -139,7 +121,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should show populated roles with several users") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER Bar SET PASSWORD 'neo'")
     execute("CREATE USER Baz SET PASSWORD 'NEO'")
     execute("CREATE ROLE foo")
@@ -158,6 +139,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when showing roles when not on system database") {
+    selectDatabase(DEFAULT_DATABASE_NAME)
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("SHOW ROLES")
@@ -169,9 +151,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   // Tests for creating roles
 
   test("should create role") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
     // WHEN
     execute("CREATE ROLE foo")
 
@@ -179,9 +158,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should create role with parameter") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
     // WHEN
     execute("CREATE ROLE $role", Map("role" -> "foo"))
 
@@ -189,9 +165,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should create role using if not exists") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
     // WHEN
     execute("CREATE ROLE foo IF NOT EXISTS")
 
@@ -199,9 +172,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should not create role with reserved name") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
     // WHEN
     val exception = the[InvalidArgumentException] thrownBy execute("CREATE ROLE PUBLIC")
     exception.getMessage should startWith("Failed to create the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
@@ -212,9 +182,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should not create role with reserved name using parameter") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
     // WHEN
     val exception = the[InvalidArgumentException] thrownBy execute("CREATE ROLE $role", Map("role" -> PUBLIC))
     exception.getMessage should startWith("Failed to create the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
@@ -225,9 +192,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should allow create role with parameter that looks like reserved name") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
     // WHEN
     execute(s"CREATE ROLE $$$PUBLIC", Map(PUBLIC -> "allowed"))
 
@@ -238,9 +202,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when creating already existing role") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
 
     the[InvalidArgumentsException] thrownBy {
       // WHEN
@@ -259,9 +221,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should do nothing when creating already existing role using if not exists") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
 
     // WHEN
     execute("CREATE ROLE foo IF NOT EXISTS")
@@ -271,10 +231,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should replace already existing role") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("SHOW ROLES").toSet should be(defaultRoles)
-
     // WHEN: creation
     execute("CREATE OR REPLACE ROLE foo")
     execute("GRANT ROLE foo TO neo4j")
@@ -290,9 +246,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when creating role with invalid name") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
     the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE ROLE ``")
@@ -326,61 +279,55 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should create role from existing role") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
 
     // WHEN
     execute("CREATE ROLE bar AS COPY OF foo")
 
+    // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map, role("bar").map))
     execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set.empty)
   }
 
   test("should create role from existing role with parameter") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
 
     // WHEN
     execute("CREATE ROLE bar AS COPY OF $other", Map("other" -> "foo"))
 
+    // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map, role("bar").map))
     execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set.empty)
   }
 
   test("should create role with parameter from existing role with parameter") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
 
     // WHEN
     execute("CREATE ROLE $role AS COPY OF $other", Map("role" -> "bar", "other" -> "foo"))
 
+    // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map, role("bar").map))
     execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set.empty)
   }
 
   test("should create role from existing role using if not exists") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
 
     // WHEN
     execute("CREATE ROLE bar IF NOT EXISTS AS COPY OF foo")
 
+    // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map, role("bar").map))
     execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set.empty)
   }
 
   test("should create role from existing role and copy privileges") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO foo")
     execute("GRANT READ {a,b,c} ON GRAPH * NODES A (*) TO foo")
     val expected = Set(traverse().node("*").map,
@@ -402,13 +349,11 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should replace role and copy privileges from existing role") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE base1")
     execute("CREATE ROLE base2")
-    val baseRoles = Set(Map("role" -> "base1", "isBuiltIn" -> false), Map("role" -> "base2", "isBuiltIn" -> false))
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ baseRoles)
     execute("GRANT TRAVERSE ON GRAPH * NODES A TO base1")
     execute("GRANT TRAVERSE ON GRAPH * NODES B TO base2")
+    val baseRoles = Set(Map("role" -> "base1", "isBuiltIn" -> false), Map("role" -> "base2", "isBuiltIn" -> false))
 
     // WHEN: creation
     execute("CREATE OR REPLACE ROLE bar AS COPY OF base1")
@@ -433,9 +378,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when creating from non-existing role") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("CREATE ROLE bar AS COPY OF foo")
@@ -467,9 +409,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when creating role with invalid name from role") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
 
     the[InvalidArgumentException] thrownBy {
       // WHEN
@@ -507,10 +447,8 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when creating already existing role from other role") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
     execute("CREATE ROLE bar")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map, role("bar").map))
 
     the[InvalidArgumentsException] thrownBy {
       // WHEN
@@ -529,13 +467,9 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should do nothing when creating already existing role from other role using if not exists") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO foo")
     execute("CREATE ROLE bar")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map, role("bar").map))
-    execute("SHOW ROLE foo PRIVILEGES").toSet should be(Set(traverse().role("foo").node("*").map))
-    execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set.empty)
 
     // WHEN
     execute("CREATE ROLE bar IF NOT EXISTS AS COPY OF foo")
@@ -548,9 +482,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when creating existing role from non-existing role") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE bar")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("bar").map))
 
     the[InvalidArgumentsException] thrownBy {
       // WHEN
@@ -563,10 +495,8 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should do nothing when creating existing role from non-existing role using if exists") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE bar")
     execute("GRANT ROLE bar TO neo4j")
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers ++ Set(role("bar").member("neo4j").map))
 
     // WHEN
     execute("CREATE ROLE bar IF NOT EXISTS AS COPY OF foo")
@@ -576,9 +506,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should get syntax exception when using both replace and if not exists") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
     // WHEN
     val exceptionCreate = the[SyntaxException] thrownBy {
       execute("CREATE OR REPLACE ROLE $role IF NOT EXISTS", Map("role" -> "foo"))
@@ -597,6 +524,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when creating role when not on system database") {
+    selectDatabase(DEFAULT_DATABASE_NAME)
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("CREATE ROLE foo")
@@ -609,32 +537,27 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should drop role") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
 
     // WHEN
     execute("DROP ROLE foo")
 
+    // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles)
   }
 
   test("should drop role with parameter") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
 
     // WHEN
     execute("DROP ROLE $role", Map("role" -> "foo"))
 
+    // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles)
   }
 
   test("should not drop role with reserved name") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
     // WHEN
     val exception = the[InvalidArgumentException] thrownBy execute("DROP ROLE PUBLIC")
     exception.getMessage should startWith("Failed to delete the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
@@ -645,9 +568,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should not drop role with reserved name using parameter") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
     // WHEN
     val exception = the[InvalidArgumentException] thrownBy execute("DROP ROLE $role", Map("role" -> PUBLIC))
     exception.getMessage should startWith("Failed to delete the specified role 'PUBLIC': 'PUBLIC' is a reserved role.")
@@ -659,21 +579,18 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should allow drop role with parameter that looks like reserved name") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
 
     // WHEN
     execute(s"DROP ROLE $$$PUBLIC", Map(PUBLIC -> "foo"))
 
+    // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles)
   }
 
   test("should drop existing role using if exists") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
 
     // WHEN
     execute("DROP ROLE foo IF EXISTS")
@@ -683,10 +600,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should drop built-in role") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("SHOW ROLES").toSet should be(defaultRoles)
-
     // WHEN
     execute(s"DROP ROLE $READER")
 
@@ -696,7 +609,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should lose admin rights when dropping the admin role") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute(s"CREATE USER alice SET PASSWORD 'secret' CHANGE NOT REQUIRED")
     execute(s"GRANT ROLE $ADMIN TO alice")
 
@@ -713,10 +625,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when dropping non-existing role") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("SHOW ROLES").toSet should be(defaultRoles)
-
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("DROP ROLE foo")
@@ -752,10 +660,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should do nothing when dropping non-existing role using if exists") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("SHOW ROLES").toSet should be(defaultRoles)
-
     // WHEN
     execute("DROP ROLE foo IF EXISTS")
 
@@ -772,6 +676,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when dropping role when not on system database") {
+    selectDatabase(DEFAULT_DATABASE_NAME)
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("DROP ROLE foo")
@@ -784,7 +689,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should grant role to user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE USER user SET PASSWORD 'neo'")
 
@@ -801,7 +705,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should grant role to user using parameters") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE USER user SET PASSWORD 'neo'")
 
@@ -817,10 +720,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should not fail granting reserved role to user") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
-
     // WHEN
     execute("GRANT ROLE PUBLIC TO neo4j")
 
@@ -829,10 +728,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should not fail granting reserved role as parameter to user") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
-
     // WHEN
     execute("GRANT ROLE $role TO neo4j", Map("role" -> PUBLIC))
 
@@ -842,9 +737,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should grant reserved role together with other role to user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
     // WHEN
     execute("GRANT ROLE PUBLIC, custom TO neo4j")
@@ -860,7 +753,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // Bar   : dragon, fairy
     // Baz   :
     // Zet   : fairy
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER Bar SET PASSWORD 'neo'")
     execute("CREATE USER Baz SET PASSWORD 'NEO'")
     execute("CREATE USER Zet SET PASSWORD 'NeX'")
@@ -884,7 +776,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should grant role to several users") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE USER userA SET PASSWORD 'neo'")
     execute("CREATE USER userB SET PASSWORD 'neo'")
@@ -902,7 +793,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should grant multiple roles to user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom1")
     execute("CREATE ROLE custom2")
     execute("CREATE USER userA SET PASSWORD 'neo'")
@@ -920,7 +810,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should grant multiple roles to several users") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom1")
     execute("CREATE ROLE custom2")
     execute("CREATE USER userA SET PASSWORD 'neo'")
@@ -941,7 +830,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should grant multiple roles to several users using parameters") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom1")
     execute("CREATE ROLE custom2")
     execute("CREATE USER userA SET PASSWORD 'neo'")
@@ -962,25 +850,18 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should be able to grant already granted role to user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER Bar SET PASSWORD 'neo'")
-    execute("CREATE ROLE dragon")
-    execute("GRANT ROLE dragon TO Bar")
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar", Seq("dragon")))
+    setupUserWithCustomRole("Bar", "neo", "dragon")
 
     // WHEN
     execute("GRANT ROLE dragon TO Bar")
 
     // THEN
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar", Seq("dragon")))
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar", Seq("dragon"), passwordChangeRequired = false))
   }
 
   test("should fail when granting non-existing role to user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER Bar SET PASSWORD 'neo'")
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
-    execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers ++ publicRole("Bar")
 
     the[InvalidArgumentsException] thrownBy {
       // WHEN
@@ -1029,10 +910,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   test("should fail when granting role to non-existing user") {
     // GIVEN
     val rolesWithUsers = defaultRolesWithUsers ++ Set(Map("role" -> "dragon", "isBuiltIn" -> false, "member" -> null))
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE dragon")
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
-    execute("SHOW ROLES WITH USERS").toSet shouldBe rolesWithUsers
 
     the[InvalidArgumentsException] thrownBy {
       // WHEN
@@ -1079,11 +957,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when granting non-existing role to non-existing user") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
-    execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
-
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("GRANT ROLE dragon TO Bar")
@@ -1105,6 +978,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when granting role to user when not on system database") {
+    selectDatabase(DEFAULT_DATABASE_NAME)
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("GRANT ROLE dragon TO Bar")
@@ -1113,10 +987,10 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       "This is an administration command and it should be executed against the system database: GRANT ROLE"
 
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER Bar SET PASSWORD 'neo'")
     execute("CREATE ROLE dragon")
-    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+    selectDatabase(DEFAULT_DATABASE_NAME)
 
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
@@ -1130,10 +1004,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should revoke role from user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER user SET PASSWORD 'neo'")
-    execute("GRANT ROLE custom TO user")
+    setupUserWithCustomRole("user", "neo")
 
     // WHEN
     execute("REVOKE ROLE custom FROM user")
@@ -1147,10 +1018,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should revoke role from user with parameters") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER user SET PASSWORD 'neo'")
-    execute("GRANT ROLE custom TO user")
+    setupUserWithCustomRole("user", "neo")
 
     // WHEN
     execute("REVOKE ROLE $role FROM $user", Map("role" -> "custom", "user" -> "user"))
@@ -1164,7 +1032,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail revoking reserved role") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER user SET PASSWORD 'neo'")
 
     // WHEN
@@ -1180,7 +1047,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail revoking reserved role using parameter") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER user SET PASSWORD 'neo'")
 
     // WHEN
@@ -1196,10 +1062,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail revoking reserved role together with other role") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER user SET PASSWORD 'neo'")
-    execute("GRANT ROLE custom TO user")
+    setupUserWithCustomRole("user", "neo")
 
     // WHEN
     val exception = the[InvalidArgumentException] thrownBy execute("REVOKE ROLE PUBLIC, custom FROM user")
@@ -1212,7 +1075,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should revoke role from several users") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE USER userA SET PASSWORD 'neo'")
     execute("CREATE USER userB SET PASSWORD 'neo'")
@@ -1231,7 +1093,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should revoke multiple roles from user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom1")
     execute("CREATE ROLE custom2")
     execute("CREATE USER userA SET PASSWORD 'neo'")
@@ -1251,7 +1112,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should revoke multiple roles from several users") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom1")
     execute("CREATE ROLE custom2")
     execute("CREATE USER userA SET PASSWORD 'neo'")
@@ -1278,7 +1138,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should revoke multiple roles from several users using parameters") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom1")
     execute("CREATE ROLE custom2")
     execute("CREATE USER userA SET PASSWORD 'neo'")
@@ -1306,10 +1165,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should be able to revoke already revoked role from user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER user SET PASSWORD 'neo'")
-    execute("GRANT ROLE custom TO user")
+    setupUserWithCustomRole("user", "neo")
     execute("REVOKE ROLE custom FROM user")
 
     // WHEN
@@ -1324,7 +1180,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should grant and revoke multiple roles to multiple users") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER Bar SET PASSWORD 'neo'")
     execute("CREATE USER Baz SET PASSWORD 'NEO'")
     execute("CREATE ROLE foo")
@@ -1367,9 +1222,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should do nothing when revoking non-existent role from (existing) user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER user SET PASSWORD 'neo'")
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers ++ publicRole("user"))
 
     // WHEN
     execute("REVOKE ROLE custom FROM user")
@@ -1380,10 +1233,8 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should do nothing when revoking (existing) role from non-existing user") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     val roles = defaultRolesWithUsers + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> null)
-    execute("SHOW ROLES WITH USERS").toSet should be(roles)
 
     // WHEN
     execute("REVOKE ROLE custom FROM user")
@@ -1393,10 +1244,6 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should do nothing when revoking non-existing role from non-existing user") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers)
-
     // WHEN
     execute("REVOKE ROLE custom FROM user")
 
@@ -1405,6 +1252,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when revoking role from user when not on system database") {
+    selectDatabase(DEFAULT_DATABASE_NAME)
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("REVOKE ROLE dragon FROM Bar")
@@ -1413,11 +1261,11 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       "This is an administration command and it should be executed against the system database: REVOKE ROLE"
 
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER Bar SET PASSWORD 'neo'")
     execute("CREATE ROLE dragon")
     execute("GRANT ROLE dragon TO Bar")
-    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
+    selectDatabase(DEFAULT_DATABASE_NAME)
 
     the[DatabaseAdministrationException] thrownBy {
       // WHEN

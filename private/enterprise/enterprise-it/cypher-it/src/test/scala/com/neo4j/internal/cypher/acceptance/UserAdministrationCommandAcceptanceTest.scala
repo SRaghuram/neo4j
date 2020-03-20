@@ -7,6 +7,7 @@ package com.neo4j.internal.cypher.acceptance
 
 import java.util
 
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.cypher.internal.DatabaseStatus.Online
@@ -37,9 +38,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   test("should return empty counts to the outside for commands that update the system graph internally") {
     //TODO: ADD ANY NEW UPDATING COMMANDS HERE
 
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // Notice: They are executed in succession so they have to make sense in that order
     assertQueriesAndSubQueryCounts(List(
       "CREATE USER Bar SET PASSWORD 'neo'" -> 1,
@@ -55,9 +53,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   // Tests for showing users
 
   test("should show default user") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // WHEN
     val result = execute("SHOW USERS")
 
@@ -72,7 +67,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // Bar   :
     // Baz   :
     // Zet   :
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER Bar SET PASSWORD 'neo'")
     execute("CREATE USER Baz SET PASSWORD 'NEO'")
     execute("CREATE USER Zet SET PASSWORD 'NeX'")
@@ -85,6 +79,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when showing users when not on system database") {
+    selectDatabase(DEFAULT_DATABASE_NAME)
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("SHOW USERS")
@@ -96,10 +91,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   // Tests for creating users
 
   test("should create user with password as string") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet should be(Set(neo4jUser))
-
     // WHEN
     execute("CREATE USER bar SET PASSWORD 'password'")
 
@@ -110,10 +101,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should create user using if not exists") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet should be(Set(neo4jUser))
-
     // WHEN
     execute("CREATE USER bar IF NOT EXISTS SET PASSWORD 'password'")
 
@@ -124,10 +111,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should create user with mixed password") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet should be(Set(neo4jUser))
-
     // WHEN
     execute("CREATE USER bar SET PASSWORD 'p4s5W*rd'")
 
@@ -139,10 +122,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when creating user with empty password") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
-
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("CREATE USER foo SET PASSWORD ''")
@@ -153,10 +132,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should create user with password as parameter") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
-
     // WHEN
     execute("CREATE USER foo SET PASSWORD $password CHANGE REQUIRED", Map("password" -> "bar"))
 
@@ -167,10 +142,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should create user with username and password as parameter") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
-
     // WHEN
     execute("CREATE USER $user SET PASSWORD $password CHANGE REQUIRED", Map("user" -> "foo", "password" -> "bar"))
 
@@ -183,7 +154,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should use query cache when creating multiple users with parameterized passwords") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     val passwords = Seq("bar", "abc", "password")
     val commandCount = 5  // CREATE is two and DROP is three (one outer and two inner Cypher commands)
@@ -206,10 +176,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when creating user with numeric password as parameter") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
-
     the[ParameterWrongTypeException] thrownBy {
       // WHEN
       execute("CREATE USER foo SET PASSWORD $password CHANGE REQUIRED", Map("password" -> 123))
@@ -220,10 +186,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when creating user with password as missing parameter") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
-
     the[ParameterNotFoundException] thrownBy {
       // WHEN
       execute("CREATE USER foo SET PASSWORD $password CHANGE REQUIRED")
@@ -234,10 +196,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when creating user with password as null parameter") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
-
     the[ParameterNotFoundException] thrownBy {
       // WHEN
       execute("CREATE USER foo SET PASSWORD $password CHANGE REQUIRED", Map("password" -> null))
@@ -248,10 +206,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should create user with password change not required") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
-
     // WHEN
     execute("CREATE USER foo SET PASSWORD 'password' CHANGE NOT REQUIRED")
 
@@ -262,10 +216,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should create user with status active") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
-
     // WHEN
     execute("CREATE USER foo SET PASSWORD 'password' SET STATUS ACTIVE")
 
@@ -276,10 +226,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should create user with status suspended") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
-
     // WHEN
     execute("CREATE USER foo SET PASSWORD 'password' SET STATUS SUSPENDED")
 
@@ -290,10 +236,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should create user with all parameters") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
-
     // WHEN
     execute("CREATE USER foo SET PASSWORD 'password' CHANGE NOT REQUIRED SET STATUS SUSPENDED")
 
@@ -302,10 +244,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when creating already existing user") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
-
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("CREATE USER neo4j SET PASSWORD 'password'")
@@ -323,10 +261,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should do nothing when creating already existing user using if not exists") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
-
     // WHEN
     execute("CREATE USER neo4j IF NOT EXISTS SET PASSWORD 'password' CHANGE NOT REQUIRED SET STATUS SUSPENDED")
 
@@ -335,10 +269,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when creating user with illegal username") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
-
     the[InvalidArgumentException] thrownBy {
       // WHEN
       execute("CREATE USER `` SET PASSWORD 'password' SET PASSWORD CHANGE REQUIRED")
@@ -395,10 +325,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should replace existing user") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet should be(Set(neo4jUser))
-
     // WHEN: creation
     execute("CREATE OR REPLACE USER bar SET PASSWORD 'firstPassword'")
 
@@ -418,9 +344,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when replacing current user") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("ALTER USER neo4j SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet should be(Set(neo4jUserActive))
 
     the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
       // WHEN
@@ -441,9 +365,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should get syntax exception when using both replace and if not exists") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     // WHEN
     val exception = the[SyntaxException] thrownBy {
       execute("CREATE OR REPLACE USER foo IF NOT EXISTS SET PASSWORD 'pass'")
@@ -462,6 +383,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when creating user when not on system database") {
+    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("CREATE USER foo SET PASSWORD 'bar'")
@@ -474,7 +396,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should drop user") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
     // WHEN
@@ -486,7 +407,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should drop existing user using if exists") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
     // WHEN
@@ -498,10 +418,8 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should re-create dropped user") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
     execute("DROP USER foo")
-    execute("SHOW USERS").toSet should be(Set(neo4jUser))
 
     // WHEN
     execute("CREATE USER foo SET PASSWORD 'bar'")
@@ -512,7 +430,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should be able to drop the user that created you") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
     execute("GRANT ROLE admin TO alice")
 
@@ -536,9 +453,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when dropping current user that is admin") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive)
 
     the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
       // WHEN
@@ -560,10 +475,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when dropping non-existing user") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet should be(Set(neo4jUser))
-
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("DROP USER foo")
@@ -599,10 +510,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should do nothing when dropping non-existing user using if exists") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet should be(Set(neo4jUser))
-
     // WHEN
     execute("DROP USER foo IF EXISTS")
 
@@ -619,6 +526,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when dropping user when not on system database") {
+    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("DROP USER foo")
@@ -631,7 +539,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should alter user password") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
     // WHEN
@@ -644,7 +551,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should alter user password with mixed upper- and lowercase letters") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
     // WHEN
@@ -658,7 +564,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when alter user with invalid password") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
     the[InvalidArgumentsException] thrownBy {
@@ -680,7 +585,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when alter user with empty password parameter") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
     the[InvalidArgumentsException] thrownBy {
@@ -694,7 +598,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when alter user with current password parameter") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
     the[InvalidArgumentsException] thrownBy {
@@ -708,7 +611,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should alter user password as parameter") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
     // WHEN
@@ -721,7 +623,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when alter user password as list parameter") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
     the[ParameterWrongTypeException] thrownBy {
@@ -733,7 +634,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when alter user password as string and parameter") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
     val exception = the[SyntaxException] thrownBy {
@@ -746,7 +646,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when altering user password as missing parameter") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
     the[ParameterNotFoundException] thrownBy {
@@ -758,7 +657,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should alter user password mode") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
     // WHEN
@@ -770,7 +668,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should alter user password mode to change required") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
     // WHEN
@@ -782,7 +679,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should give correct error message when user with password change required tries to execute a query") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
     execute("GRANT ROLE admin TO alice")
 
@@ -799,7 +695,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   // It should be changed so that only a few key procedures are allowed to be run with password change required
   test("should give correct error message when user with password change required tries to execute db.indexes") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
     execute("GRANT ROLE admin TO alice")
 
@@ -814,7 +709,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should alter user status to suspended") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
     // WHEN
@@ -826,7 +720,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should alter user status to active") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
     // WHEN
@@ -838,7 +731,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should suspend a suspended user") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
     execute("ALTER USER foo SET STATUS SUSPENDED")
     testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
@@ -852,7 +744,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should not alter current user status to suspended") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("ALTER USER neo4j SET PASSWORD 'potato' CHANGE NOT REQUIRED")
 
     // WHEN
@@ -866,7 +757,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should not alter current user status to active") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("ALTER USER neo4j SET PASSWORD 'potato' CHANGE NOT REQUIRED")
 
     // WHEN
@@ -880,7 +770,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should alter user password and mode") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
     // WHEN
@@ -893,7 +782,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should alter user password as parameter and password mode") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
     // WHEN
@@ -906,7 +794,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should alter user password and status") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
     // WHEN
@@ -919,7 +806,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should alter user password as parameter and status") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
     // WHEN
@@ -932,7 +818,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should alter user password mode and status") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
     // WHEN
@@ -944,7 +829,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should alter user on all points as suspended") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
     // WHEN
@@ -957,7 +841,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should alter user on all points as active") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
     // WHEN
@@ -970,7 +853,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should alter user on all points as active with parameter password") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
 
     // WHEN
@@ -982,9 +864,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when altering a non-existing user: string password") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'baz'")
@@ -999,9 +878,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when altering a non-existing user: parameter password (and illegal username)") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER `neo:4j` SET PASSWORD $password", Map("password" -> "baz"))
@@ -1010,9 +886,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when altering a non-existing user: string password and password mode") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'baz' CHANGE NOT REQUIRED")
@@ -1021,9 +894,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when altering a non-existing user: parameter password and password mode") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD $password SET PASSWORD CHANGE REQUIRED", Map("password" -> "baz"))
@@ -1032,9 +902,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when altering a non-existing user: string password and status") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'baz' SET STATUS ACTIVE")
@@ -1043,9 +910,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when altering a non-existing user: parameter password and status") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER $user SET PASSWORD $password SET STATUS ACTIVE", Map("user" -> "foo", "password" -> "baz"))
@@ -1054,9 +918,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when altering a non-existing user: string password, password mode and status") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'baz' CHANGE REQUIRED SET STATUS ACTIVE")
@@ -1065,9 +926,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when altering a non-existing user: password mode") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
@@ -1076,9 +934,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when altering a non-existing user: password mode and status") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD CHANGE REQUIRED SET STATUS SUSPENDED")
@@ -1087,9 +942,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when altering a non-existing user: status") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET STATUS SUSPENDED")
@@ -1098,9 +950,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when altering a non-existing parameterized user: status") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("ALTER USER $user SET STATUS SUSPENDED", Map("user" -> "foo"))
@@ -1110,7 +959,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when altering a dropped user") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER foo SET PASSWORD 'password'")
     execute("DROP USER foo")
 
@@ -1122,6 +970,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when altering user when not on system database") {
+    selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("ALTER USER foo SET PASSWORD 'bar'")
@@ -1134,11 +983,9 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should change own password") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
     execute("GRANT ROLE editor TO foo")
     execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
 
     // WHEN
     executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM 'bar' TO 'baz'")
@@ -1150,11 +997,9 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should change own password to password with mixed upper- and lowercase letters and characters") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
     execute("GRANT ROLE editor TO foo")
     execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
 
     // WHEN
     executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM 'bar' TO '!bAr%'")
@@ -1167,10 +1012,8 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should change own password when password change is required") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
     execute("GRANT ROLE editor TO foo")
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor")))
 
     // WHEN
     executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM 'bar' TO 'baz'")
@@ -1184,10 +1027,8 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should change own password when user has no role") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
     execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", passwordChangeRequired = false))
 
     // WHEN
     executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM 'bar' TO 'baz'")
@@ -1199,10 +1040,8 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail on changing own password from wrong password") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
     execute("GRANT ROLE editor TO foo")
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("foo", Seq("editor"), passwordChangeRequired = false))
 
     the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
       // WHEN
@@ -1217,11 +1056,9 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when changing own password to invalid password") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
     execute("GRANT ROLE editor TO foo")
     execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
 
     the[InvalidArgumentsException] thrownBy {
       // WHEN
@@ -1244,11 +1081,9 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should change own password to parameter") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
     execute("GRANT ROLE editor TO foo")
     execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
 
     val parameter = new util.HashMap[String, Object]()
     parameter.put("password", "baz")
@@ -1263,11 +1098,9 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when changing own password to list parameter") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
     execute("GRANT ROLE editor TO foo")
     execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
 
     val parameter = new util.HashMap[String, Object]()
     val passwordList = new util.ArrayList[String]()
@@ -1287,11 +1120,9 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when changing own password to missing parameter") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
     execute("GRANT ROLE editor TO foo")
     execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
 
     the[QueryExecutionException] thrownBy { // the ParameterNotFoundException exception gets wrapped in this code path
       // WHEN
@@ -1305,11 +1136,9 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should change own password from parameter") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
     execute("GRANT ROLE editor TO foo")
     execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
 
     val parameter = new util.HashMap[String, Object]()
     parameter.put("password", "bar")
@@ -1324,11 +1153,9 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when changing own password from integer parameter") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "123")
     execute("GRANT ROLE editor TO foo")
     execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
 
     val parameter = new util.HashMap[String, Object]()
     parameter.put("password", Integer.valueOf(123))
@@ -1345,11 +1172,9 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when changing own password from missing parameter") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
     execute("GRANT ROLE editor TO foo")
     execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
 
     the[QueryExecutionException] thrownBy { // the ParameterNotFoundException exception gets wrapped in this code path
       // WHEN
@@ -1363,11 +1188,9 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should change own password from parameter to parameter") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
     execute("GRANT ROLE editor TO foo")
     execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
 
     val parameter = new util.HashMap[String, Object]()
     parameter.put("currentPassword", "bar")
@@ -1383,11 +1206,9 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail to change own password from parameter to parameter with same value") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
     execute("GRANT ROLE editor TO foo")
     execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
 
     val parameter = new util.HashMap[String, Object]()
     parameter.put("currentPassword", "bar")
@@ -1406,11 +1227,9 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail to change own password from parameter to same parameter") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
     execute("GRANT ROLE editor TO foo")
     execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
 
     val parameter = new util.HashMap[String, Object]()
     parameter.put("currentPassword", "bar")
@@ -1428,11 +1247,9 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when changing own password from wrong password parameter") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
     execute("GRANT ROLE editor TO foo")
     execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
 
     val parameter = new util.HashMap[String, Object]()
     parameter.put("wrongPassword", "boo")
@@ -1450,11 +1267,9 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when changing own password from wrong password parameter to password parameter") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
     execute("GRANT ROLE editor TO foo")
     execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
 
     val parameter = new util.HashMap[String, Object]()
     parameter.put("wrongPassword", "boo")
@@ -1473,11 +1288,9 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when changing own password from wrong password to password parameter") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
     execute("GRANT ROLE editor TO foo")
     execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
 
     val parameter = new util.HashMap[String, Object]()
     parameter.put("newPassword", "baz")
@@ -1495,11 +1308,9 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when changing own password from existing parameter to missing parameter") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
     execute("GRANT ROLE editor TO foo")
     execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
 
     val parameter = new util.HashMap[String, Object]()
     parameter.put("currentPassword", "bar")
@@ -1516,11 +1327,9 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when changing own password from missing parameter to existing parameter") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
     execute("GRANT ROLE editor TO foo")
     execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
 
     val parameter = new util.HashMap[String, Object]()
     parameter.put("newPassword", "baz")
@@ -1537,11 +1346,9 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when changing own password from parameter to parameter when both are missing") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
     execute("GRANT ROLE editor TO foo")
     execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
 
     val e = the[QueryExecutionException] thrownBy { // the ParameterNotFoundException exception gets wrapped in this code path
       // WHEN
@@ -1556,11 +1363,9 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when changing own password to string and parameter") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     prepareUser("foo", "bar")
     execute("GRANT ROLE editor TO foo")
     execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
 
     val parameter = new util.HashMap[String, Object]()
     parameter.put("password", "imAParameter")
@@ -1577,9 +1382,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should fail when changing own password when AUTH DISABLED") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-
     the[IllegalStateException] thrownBy {
       // WHEN
       execute("ALTER CURRENT USER SET PASSWORD FROM 'old' TO 'new'")
@@ -1589,9 +1391,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail when changing own password when not on system database") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin"), passwordChangeRequired = false))
     selectDatabase(DEFAULT_DATABASE_NAME)
 
     the[QueryExecutionException] thrownBy { // the DatabaseManagementException gets wrapped in this code path
@@ -1605,10 +1405,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   // Tests for user administration with restricted privileges
 
   test("should fail create user for when password change required") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("SHOW USERS").toSet should be(Set(neo4jUser))
-
     the[AuthorizationViolationException] thrownBy {
       // WHEN
       executeOnSystem("neo4j", "neo4j", "CREATE USER bob SET PASSWORD 'builder' CHANGE NOT REQUIRED")
@@ -1621,10 +1417,8 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail create user for user with editor role") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
     execute("GRANT ROLE editor TO alice")
-    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false)))
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
@@ -1638,11 +1432,9 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail drop user for user with editor role") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
     execute("CREATE USER bob SET PASSWORD 'builder'")
     execute("GRANT ROLE editor TO alice")
-    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false), user("bob")))
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
@@ -1656,11 +1448,9 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail alter other user for user with editor role") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
     execute("CREATE USER bob SET PASSWORD 'builder'")
     execute("GRANT ROLE editor TO alice")
-    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false), user("bob")))
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
@@ -1674,10 +1464,8 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should allow alter own user password without admin only through 'ALTER CURRENT USER SET PASSWORD' command") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER alice SET PASSWORD 'abc'")
     execute("GRANT ROLE editor TO alice")
-    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"))))
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
@@ -1697,10 +1485,8 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail alter own user status without admin") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
     execute("GRANT ROLE editor TO alice")
-    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("editor"), passwordChangeRequired = false)))
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
@@ -1714,10 +1500,8 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should fail alter own user status when suspended") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED SET STATUS SUSPENDED")
     execute("GRANT ROLE admin TO alice")
-    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("alice", Seq("admin"), suspended = true, passwordChangeRequired = false)))
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
@@ -1731,7 +1515,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
   test("should allow show database for non admin user") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
     execute("GRANT ROLE editor TO alice")
 
@@ -1743,7 +1526,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   test("should allow show default database for non admin user") {
 
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
     execute("GRANT ROLE editor TO alice")
 

@@ -266,9 +266,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
   test("should fail to start database without privilege") {
     setup()
     execute("CREATE DATABASE foo")
-    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
-    execute("CREATE ROLE role")
-    execute("GRANT ROLE role TO alice")
+    setupUserWithCustomRole("alice", "abc")
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
@@ -284,10 +282,8 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute("STOP DATABASE foo")
     execute("STOP DATABASE bar")
 
-    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
-    execute("CREATE ROLE role")
-    execute("GRANT ROLE role TO alice")
-    execute("GRANT START ON DATABASE * TO role")
+    setupUserWithCustomRole("alice", "abc")
+    execute("GRANT START ON DATABASE * TO custom")
 
     // WHEN
     executeOnSystem("alice", "abc", "START DATABASE foo")
@@ -319,10 +315,9 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute("STOP DATABASE foo")
     execute("STOP DATABASE bar")
 
-    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
-    execute("CREATE ROLE role")
-    execute("GRANT ROLE role TO alice")
-    execute("GRANT START ON DATABASE bar TO role")
+
+    setupUserWithCustomRole("alice", "abc")
+    execute("GRANT START ON DATABASE bar TO custom")
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
@@ -354,10 +349,9 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     setup()
     execute("CREATE DATABASE foo")
 
-    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
-    execute("CREATE ROLE role")
-    execute("GRANT ROLE role TO alice")
-    execute("GRANT START ON DATABASE * TO role")
+
+    setupUserWithCustomRole("alice", "abc")
+    execute("GRANT START ON DATABASE * TO custom")
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
@@ -543,10 +537,9 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute("CREATE DATABASE foo")
     execute("STOP DATABASE foo")
 
-    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
-    execute("CREATE ROLE role")
-    execute("GRANT ROLE role TO alice")
-    execute("GRANT STOP ON DATABASE * TO role")
+
+    setupUserWithCustomRole("alice", "abc")
+    execute("GRANT STOP ON DATABASE * TO custom")
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
@@ -565,9 +558,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
   test("should fail to stop database without privilege") {
     setup()
     execute("CREATE DATABASE foo")
-    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
-    execute("CREATE ROLE role")
-    execute("GRANT ROLE role TO alice")
+    setupUserWithCustomRole("alice", "abc")
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
@@ -581,10 +572,8 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
 
-    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
-    execute("CREATE ROLE role")
-    execute("GRANT ROLE role TO alice")
-    execute("GRANT STOP ON DATABASE * TO role")
+    setupUserWithCustomRole("alice", "abc")
+    execute("GRANT STOP ON DATABASE * TO custom")
 
     // WHEN
     executeOnSystem("alice", "abc", "STOP DATABASE foo")
@@ -614,10 +603,8 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
 
-    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
-    execute("CREATE ROLE role")
-    execute("GRANT ROLE role TO alice")
-    execute("GRANT STOP ON DATABASE bar TO role")
+    setupUserWithCustomRole("alice", "abc")
+    execute("GRANT STOP ON DATABASE bar TO custom")
 
     the[AuthorizationViolationException] thrownBy {
       // WHEN
@@ -929,9 +916,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
       test(s"Test role copied from admin $partialName") {
         // WHEN
         setup()
-        execute("CREATE ROLE custom AS COPY OF admin")
-        execute("CREATE USER Alice SET PASSWORD 'oldSecret' CHANGE NOT REQUIRED")
-        execute("GRANT ROLE custom TO Alice")
+        setupUserWithCustomAdminRole("Alice", "oldSecret")
 
         // THEN
         testMethod("custom", 4)
@@ -951,7 +936,6 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
   private def testAdminWithoutAllRemovablePrivileges(role: String, populatedRoles: Int): Unit = {
     // WHEN
     clearPublicRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     execute(s"REVOKE MATCH {*} ON GRAPH * FROM $role")
     execute(s"REVOKE WRITE ON GRAPH * FROM $role")
@@ -1006,7 +990,6 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
   private def testAdminWithoutBasePrivileges(role: String, populatedRoles: Int): Unit = {
     // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     execute(s"REVOKE MATCH {*} ON GRAPH * FROM $role")
     execute(s"REVOKE WRITE ON GRAPH * FROM $role")

@@ -7,11 +7,9 @@ package com.neo4j.internal.cypher.acceptance
 
 import java.util
 
-import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.graphdb.Node
-import org.neo4j.graphdb.config.Setting
 
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 
@@ -22,7 +20,6 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
 
   test("should find relationship when granted traversal privilege") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     setupUserWithCustomRole()
     execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
 
@@ -163,7 +160,6 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
 
   test("should get correct count for all relationships with traversal privilege") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     setupUserWithCustomRole()
     execute("GRANT MATCH {*} ON GRAPH * NODES A TO custom")
 
@@ -203,7 +199,6 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
 
   test("should get correct count for specific relationship with traversal privilege") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     setupUserWithCustomRole()
     execute("GRANT MATCH {*} ON GRAPH * NODES A TO custom")
 
@@ -270,7 +265,6 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
   test("should get relationships for a matched node") {
 
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     setupUserWithCustomRole()
     execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
 
@@ -973,7 +967,6 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
 
   test("should see properties and relationships depending on granted MATCH privileges for role") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
     execute("GRANT READ {id} ON GRAPH * TO custom")
@@ -1483,7 +1476,6 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
 
   test("should see properties and relationships depending on granted MATCH privileges for role fulltext index") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
     execute("GRANT READ {id} ON GRAPH * TO custom")
@@ -1534,7 +1526,6 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
 
   test("should give correct results with relationship") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
 
@@ -1609,7 +1600,6 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
 
   test("should give correct results with relationship fulltext index") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
 
@@ -1687,7 +1677,6 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
 
   test("should give correct results with relationship fulltext index and denies") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     setupUserWithCustomRole()
     execute("GRANT TRAVERSE ON GRAPH * ELEMENTS * TO custom")
 

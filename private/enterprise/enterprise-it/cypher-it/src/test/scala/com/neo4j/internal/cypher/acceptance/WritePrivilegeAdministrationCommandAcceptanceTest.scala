@@ -21,7 +21,6 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     //TODO: ADD ANY NEW UPDATING COMMANDS HERE
 
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
 
     // Notice: They are executed in succession so they have to make sense in that order
@@ -47,7 +46,6 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       test(s"should $grantOrDeny write privilege to custom role for all databases and all elements") {
         // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
 
         // WHEN
@@ -62,7 +60,6 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       test(s"should $grantOrDeny write privilege to custom role for a specific database and all elements") {
         // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
 
@@ -78,7 +75,6 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       test(s"should $grantOrDeny write privilege to custom role for specific database and all elements using parameter") {
         // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
 
         // WHEN
@@ -93,7 +89,6 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       test(s"should $grantOrDeny write privilege to multiple roles in a single grant") {
         // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE role1")
         execute("CREATE ROLE role2")
         execute("CREATE ROLE role3")
@@ -114,9 +109,6 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       }
 
       test(s"should fail ${grantOrDeny}ing write privilege for all databases and all elements to non-existing role") {
-        // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
-
         // WHEN
         the[InvalidArgumentsException] thrownBy {
           // WHEN
@@ -132,15 +124,18 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         } should have message s"Failed to $grantOrDeny write privilege to role 'custom': Role does not exist."
 
         // THEN
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set())
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
       }
 
       test(s"should fail when ${grantOrDeny}ing write privilege with missing database") {
         // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
+
+        // WHEN
         the[DatabaseNotFoundException] thrownBy {
+          // WHEN
           execute(s"$grantOrDenyCommand WRITE ON GRAPH foo ELEMENTS * (*) TO custom")
+          //THEN
         } should have message s"Failed to $grantOrDeny write privilege to role 'custom': Database 'foo' does not exist."
         the[DatabaseNotFoundException] thrownBy {
           execute(s"$grantOrDenyCommand WRITE ON GRAPH $$db ELEMENTS * (*) TO custom", Map("db" -> "foo"))
@@ -169,22 +164,12 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       test(s"should revoke correct $grantOrDeny write privilege different databases") {
         // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
         execute("CREATE DATABASE bar")
         execute(s"$grantOrDenyCommand WRITE ON GRAPH * ELEMENTS * (*) TO custom")
         execute(s"$grantOrDenyCommand WRITE ON GRAPH foo ELEMENTS * (*) TO custom")
         execute(s"$grantOrDenyCommand WRITE ON GRAPH bar ELEMENTS * (*) TO custom")
-
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          write(grantOrDenyRelType).role("custom").node("*").map,
-          write(grantOrDenyRelType).role("custom").node("*").database("foo").map,
-          write(grantOrDenyRelType).role("custom").node("*").database("bar").map,
-          write(grantOrDenyRelType).role("custom").relationship("*").map,
-          write(grantOrDenyRelType).role("custom").relationship("*").database("foo").map,
-          write(grantOrDenyRelType).role("custom").relationship("*").database("bar").map
-        ))
 
         // WHEN
         execute(s"REVOKE $grantOrDenyCommand WRITE ON GRAPH foo ELEMENTS * (*) FROM custom")
@@ -209,7 +194,6 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       test(s"should be able to revoke write if only having $grantOrDeny") {
         // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
 
         // WHEN
@@ -231,11 +215,9 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       test(s"should be able to revoke $grantOrDeny write using parameter") {
         // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
         execute(s"$grantOrDenyCommand WRITE ON GRAPH foo TO custom")
-        execute("SHOW ROLE custom PRIVILEGES").toSet should not be Set.empty
 
         // WHEN
         execute(s"REVOKE $grantOrDenyCommand WRITE ON GRAPH $$db FROM custom", Map("db" -> "foo"))
@@ -246,31 +228,25 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       test(s"should do nothing when revoking $grantOrDeny write privilege from non-existent role") {
         // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute("CREATE DATABASE foo")
         execute(s"$grantOrDenyCommand WRITE ON GRAPH * ELEMENTS * (*) TO custom")
-
-        val customPrivileges = Set(
-          write(grantOrDenyRelType).role("custom").node("*").map,
-          write(grantOrDenyRelType).role("custom").relationship("*").map
-        )
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(customPrivileges)
 
         // WHEN
         execute(s"REVOKE $grantOrDenyCommand WRITE ON GRAPH * ELEMENTS * (*) FROM wrongRole")
 
         // THEN
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(customPrivileges)
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          write(grantOrDenyRelType).role("custom").node("*").map,
+          write(grantOrDenyRelType).role("custom").relationship("*").map
+        ))
       }
 
       test(s"should do nothing when revoking $grantOrDeny write privilege not granted to role") {
         // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute("CREATE ROLE role")
         execute(s"$grantOrDenyCommand WRITE ON GRAPH * ELEMENTS * (*) TO custom")
-        execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
 
         // WHEN
         execute(s"REVOKE $grantOrDenyCommand WRITE ON GRAPH * ELEMENTS * (*) FROM role")
@@ -280,20 +256,16 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       test(s"should do nothing when revoking $grantOrDeny write privilege with missing database") {
         // GIVEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
         execute(s"$grantOrDenyCommand WRITE ON GRAPH * ELEMENTS * (*) TO custom")
-
-        val customPrivileges = Set(
-          write(grantOrDenyRelType).role("custom").node("*").map,
-          write(grantOrDenyRelType).role("custom").relationship("*").map
-        )
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(customPrivileges)
 
         // WHEN
         execute(s"REVOKE $grantOrDenyCommand WRITE ON GRAPH foo ELEMENTS * (*) FROM custom")
         // THEN
-        execute("SHOW ROLE custom PRIVILEGES").toSet should be(customPrivileges)
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          write(grantOrDenyRelType).role("custom").node("*").map,
+          write(grantOrDenyRelType).role("custom").relationship("*").map
+        ))
       }
 
       test(s"should fail when revoking $grantOrDeny write privilege to custom role when not on system database") {
@@ -310,32 +282,16 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
   test("should revoke correct write privilege different databases") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
 
-    // WHEN
     execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
     execute("GRANT WRITE ON GRAPH foo ELEMENTS * (*) TO custom")
     execute("GRANT WRITE ON GRAPH bar ELEMENTS * (*) TO custom")
 
     execute("DENY WRITE ON GRAPH * ELEMENTS * (*) TO custom")
     execute("DENY WRITE ON GRAPH foo ELEMENTS * (*) TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      write(GRANTED).role("custom").node("*").map,
-      write(GRANTED).role("custom").node("*").database("foo").map,
-      write(GRANTED).role("custom").node("*").database("bar").map,
-      write(DENIED).role("custom").node("*").map,
-      write(DENIED).role("custom").node("*").database("foo").map,
-
-      write(GRANTED).role("custom").relationship("*").map,
-      write(GRANTED).role("custom").relationship("*").database("foo").map,
-      write(GRANTED).role("custom").relationship("*").database("bar").map,
-      write(DENIED).role("custom").relationship("*").map,
-      write(DENIED).role("custom").relationship("*").database("foo").map
-    ))
 
     // WHEN
     execute("REVOKE WRITE ON GRAPH foo ELEMENTS * (*) FROM custom")
@@ -368,12 +324,10 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
   test("should do nothing when revoking write privilege from non-existent role") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
     execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
     execute("DENY WRITE ON GRAPH * ELEMENTS * (*) TO custom")
-    execute("SHOW ROLE wrongRole PRIVILEGES").toSet should be(Set.empty)
 
     // WHEN
     execute(s"REVOKE WRITE ON GRAPH * ELEMENTS * (*) FROM wrongRole")
@@ -384,45 +338,37 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
   test("should do nothing when revoking write privilege not granted to role") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("CREATE ROLE role")
     execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
     execute("DENY WRITE ON GRAPH * ELEMENTS * (*) TO custom")
 
-    val customPrivileges = Set(
+    // WHEN
+    execute(s"REVOKE WRITE ON GRAPH * ELEMENTS * (*) FROM role")
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       write(GRANTED).role("custom").node("*").map,
       write(GRANTED).role("custom").relationship("*").map,
       write(DENIED).role("custom").node("*").map,
       write(DENIED).role("custom").relationship("*").map
-    )
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(customPrivileges)
-
-    // WHEN
-    execute(s"REVOKE WRITE ON GRAPH * ELEMENTS * (*) FROM role")
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(customPrivileges)
+    ))
   }
 
   test("should do nothing when revoking write privilege with missing database") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
     execute("DENY WRITE ON GRAPH * ELEMENTS * (*) TO custom")
 
-    val customPrivileges = Set(
+    // WHEN
+    execute(s"REVOKE WRITE ON GRAPH foo ELEMENTS * (*) FROM custom")
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       write(GRANTED).role("custom").node("*").map,
       write(GRANTED).role("custom").relationship("*").map,
       write(DENIED).role("custom").node("*").map,
       write(DENIED).role("custom").relationship("*").map
-    )
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(customPrivileges)
-
-    // WHEN
-    execute(s"REVOKE WRITE ON GRAPH foo ELEMENTS * (*) FROM custom")
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(customPrivileges)
+    ))
   }
 
   test("should fail when revoking write privilege to custom role when not on system database") {
@@ -438,7 +384,6 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
   test("should be able to have both grant and deny privilege for write") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
 
     // WHEN
@@ -456,17 +401,9 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
   test("should revoke correct write privilege with a mix of grant and deny") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
     execute("DENY WRITE ON GRAPH * ELEMENTS * (*) TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      write(GRANTED).role("custom").node("*").map,
-      write(GRANTED).role("custom").relationship("*").map,
-      write(DENIED).role("custom").node("*").map,
-      write(DENIED).role("custom").relationship("*").map
-    ))
 
     // WHEN
     execute("REVOKE GRANT WRITE ON GRAPH * ELEMENTS * (*) FROM $role", Map("role" -> "custom"))
@@ -490,55 +427,39 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
   test("should do nothing when revoking grant write privilege when only having deny") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("DENY WRITE ON GRAPH * ELEMENTS * (*) TO custom")
-
-    val customPrivileges = Set(
-      write(DENIED).role("custom").node("*").map,
-      write(DENIED).role("custom").relationship("*").map
-    )
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(customPrivileges)
 
     // WHEN
     execute(s"REVOKE GRANT WRITE ON GRAPH * ELEMENTS * (*) FROM custom")
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(customPrivileges)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      write(DENIED).role("custom").node("*").map,
+      write(DENIED).role("custom").relationship("*").map
+    ))
   }
 
   test("should do nothing when revoking deny write privilege when only having grant") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
-
-    val customPrivileges = Set(
-      write().role("custom").node("*").map,
-      write().role("custom").relationship("*").map
-    )
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(customPrivileges)
 
     // WHEN
     execute(s"REVOKE DENY WRITE ON GRAPH * ELEMENTS * (*) FROM custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(customPrivileges)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      write().role("custom").node("*").map,
+      write().role("custom").relationship("*").map
+    ))
   }
 
   test("should revoke part of write privilege when not having all") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     execute("CREATE ROLE custom")
     execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
     execute("DENY WRITE ON GRAPH foo ELEMENTS * (*) TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      write(GRANTED).role("custom").node("*").map,
-      write(GRANTED).role("custom").relationship("*").map,
-      write(DENIED).role("custom").database("foo").node("*").map,
-      write(DENIED).role("custom").database("foo").relationship("*").map
-    ))
 
     // WHEN
     execute(s"REVOKE WRITE ON GRAPH * ELEMENTS * (*) FROM custom")
@@ -557,8 +478,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
   }
 
   test("should normalize graph name for write privileges") {
-    // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    // GIVEN)
     execute("CREATE DATABASE BaR")
     execute("CREATE ROLE custom")
 
@@ -1342,7 +1262,6 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
   test("should create nodes when granted WRITE privilege to custom role for a specific database") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     selectDatabase("foo")
     execute("CREATE (:B {name:'b'})")
@@ -1371,7 +1290,6 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
   test("should not be able to create nodes when denied WRITE privilege to custom role for a specific database") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     selectDatabase("foo")
     execute("CREATE (:B {name:'b'})")

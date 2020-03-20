@@ -153,6 +153,14 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     if (access) execute(s"GRANT ACCESS ON DATABASE * TO $rolename")
   }
 
+  def setupUserWithCustomAdminRole(username: String = "joe", password: String = "soap", rolename: String = "custom"): Unit = {
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute(s"CREATE USER $username SET PASSWORD '$password' CHANGE NOT REQUIRED")
+    execute(s"CREATE ROLE $rolename AS COPY OF admin")
+    execute(s"GRANT ROLE $rolename TO $username")
+  }
+
+
   case class RoleMapBuilder(map: Map[String, Any]) {
     def member(user: String) = RoleMapBuilder(map + ("member" -> user))
 
@@ -346,4 +354,10 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute(s"REVOKE ACCESS ON DEFAULT DATABASE FROM ${PredefinedRoles.PUBLIC}")
   }
+
+  override protected def initTest() {
+    super.initTest()
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+  }
+
 }

@@ -5,7 +5,6 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
@@ -17,7 +16,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     case (grant, relType) =>
       test(s"should $grant create role privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
 
         // WHEN
@@ -30,9 +28,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
       }
 
       test(s"should fail to $grant create role privilege to non-existing role") {
-        // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
         the[InvalidArgumentsException] thrownBy {
           // WHEN
           execute(s"$grant CREATE ROLE ON DBMS TO role")
@@ -48,7 +43,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
       test(s"should $grant drop role privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
 
         // WHEN
@@ -62,7 +56,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
       test(s"should $grant assign role privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
 
         // WHEN
@@ -76,7 +69,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
       test(s"should $grant remove role privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
 
         // WHEN
@@ -90,7 +82,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
       test(s"should $grant show role privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
 
         // WHEN
@@ -104,7 +95,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
       test(s"should $grant role management privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
 
         // WHEN
@@ -118,7 +108,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
       test(s"should $grant create user privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
 
         // WHEN
@@ -132,7 +121,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
       test(s"should $grant drop user privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
 
         // WHEN
@@ -145,9 +133,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
       }
 
       test(s"should fail to $grant drop user privilege to non-existing role") {
-        // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-
         the[InvalidArgumentsException] thrownBy {
           // WHEN
           execute(s"$grant DROP USER ON DBMS TO role")
@@ -163,7 +148,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
       test(s"should $grant show user privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
 
         // WHEN
@@ -177,7 +161,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
       test(s"should $grant alter user privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
 
         // WHEN
@@ -191,7 +174,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
       test(s"should $grant user management privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
 
         // WHEN
@@ -205,7 +187,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
       test(s"should $grant create database privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
 
         // WHEN
@@ -219,7 +200,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
       test(s"should $grant drop database privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
 
         // WHEN
@@ -233,7 +213,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
       test(s"should $grant database management privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
 
         // WHEN
@@ -247,7 +226,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
       test(s"should $grant show privilege privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
 
         // WHEN
@@ -261,7 +239,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
       test(s"should $grant assign privilege privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
 
         // WHEN
@@ -275,7 +252,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
       test(s"should $grant remove privilege privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
 
         // WHEN
@@ -289,7 +265,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
       test(s"should $grant privilege management privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
 
         // WHEN
@@ -303,7 +278,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
       test(s"should $grant all dbms privilege privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom")
 
         // WHEN
@@ -318,7 +292,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should not revoke other role management privileges when revoking role management") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     createRoleWithOnlyAdminPrivilege()
     execute("CREATE ROLE custom AS COPY OF adminOnly")
     execute("GRANT CREATE ROLE ON DBMS TO custom")
@@ -327,16 +300,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     execute("GRANT REMOVE ROLE ON DBMS TO custom")
     execute("GRANT SHOW ROLE ON DBMS TO custom")
     execute("GRANT ROLE MANAGEMENT ON DBMS TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantAdmin().role("custom").map,
-      adminAction("create_role").role("custom").map,
-      adminAction("drop_role").role("custom").map,
-      adminAction("assign_role").role("custom").map,
-      adminAction("remove_role").role("custom").map,
-      adminAction("show_role").role("custom").map,
-      adminAction("role_management").role("custom").map
-    ))
 
     // WHEN
     execute("REVOKE ROLE MANAGEMENT ON DBMS FROM custom")
@@ -354,7 +317,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should not revoke other user management privileges when revoking user management") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     createRoleWithOnlyAdminPrivilege()
     execute("CREATE ROLE custom AS COPY OF adminOnly")
     execute("GRANT CREATE USER ON DBMS TO custom")
@@ -362,15 +324,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     execute("GRANT SHOW USER ON DBMS TO custom")
     execute("GRANT ALTER USER ON DBMS TO custom")
     execute("GRANT USER MANAGEMENT ON DBMS TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantAdmin().role("custom").map,
-      adminAction("create_user").role("custom").map,
-      adminAction("drop_user").role("custom").map,
-      adminAction("alter_user").role("custom").map,
-      adminAction("show_user").role("custom").map,
-      adminAction("user_management").role("custom").map
-    ))
 
     // WHEN
     execute("REVOKE USER MANAGEMENT ON DBMS FROM custom")
@@ -387,19 +340,11 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should not revoke other database management privileges when revoking database management") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     createRoleWithOnlyAdminPrivilege()
     execute("CREATE ROLE custom AS COPY OF adminOnly")
     execute("GRANT CREATE DATABASE ON DBMS TO custom")
     execute("GRANT DROP DATABASE ON DBMS TO custom")
     execute("GRANT DATABASE MANAGEMENT ON DBMS TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantAdmin().role("custom").map,
-      adminAction("create_database").role("custom").map,
-      adminAction("drop_database").role("custom").map,
-      adminAction("database_management").role("custom").map
-    ))
 
     // WHEN
     execute("REVOKE DATABASE MANAGEMENT ON DBMS FROM custom")
@@ -414,21 +359,12 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should not revoke other privilege management privileges when revoking privilege management") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     createRoleWithOnlyAdminPrivilege()
     execute("CREATE ROLE custom AS COPY OF adminOnly")
     execute("GRANT SHOW PRIVILEGE ON DBMS TO custom")
     execute("GRANT ASSIGN PRIVILEGE ON DBMS TO custom")
     execute("GRANT REMOVE PRIVILEGE ON DBMS TO custom")
     execute("GRANT PRIVILEGE MANAGEMENT ON DBMS TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantAdmin().role("custom").map,
-      adminAction("show_privilege").role("custom").map,
-      adminAction("assign_privilege").role("custom").map,
-      adminAction("remove_privilege").role("custom").map,
-      adminAction("privilege_management").role("custom").map
-    ))
 
     // WHEN
     execute("REVOKE PRIVILEGE MANAGEMENT ON DBMS FROM custom")
@@ -444,7 +380,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should not revoke other dbms privileges when revoking all dbms privileges") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     createRoleWithOnlyAdminPrivilege()
     execute("CREATE ROLE custom AS COPY OF adminOnly")
     allDbmsPrivileges("GRANT", includingCompound = true)
@@ -478,7 +413,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("Should revoke sub-privilege even if role management exists") {
     // Given
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     createRoleWithOnlyAdminPrivilege()
     execute("CREATE ROLE custom AS COPY OF adminOnly")
     execute("GRANT CREATE ROLE ON DBMS TO custom")
@@ -487,15 +421,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     execute("GRANT REMOVE ROLE ON DBMS TO custom")
     execute("GRANT SHOW ROLE ON DBMS TO custom")
     execute("GRANT ROLE MANAGEMENT ON DBMS TO custom")
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantAdmin().role("custom").map,
-      adminAction("create_role").role("custom").map,
-      adminAction("drop_role").role("custom").map,
-      adminAction("assign_role").role("custom").map,
-      adminAction("remove_role").role("custom").map,
-      adminAction("show_role").role("custom").map,
-      adminAction("role_management").role("custom").map
-    ))
 
     // When
     // Now revoke each sub-privilege in turn
@@ -516,7 +441,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("Should revoke sub-privilege even if user management exists") {
     // Given
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     createRoleWithOnlyAdminPrivilege()
     execute("CREATE ROLE custom AS COPY OF adminOnly")
     execute("GRANT CREATE USER ON DBMS TO custom")
@@ -524,14 +448,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     execute("GRANT SHOW USER ON DBMS TO custom")
     execute("GRANT ALTER USER ON DBMS TO custom")
     execute("GRANT USER MANAGEMENT ON DBMS TO custom")
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantAdmin().role("custom").map,
-      adminAction("create_user").role("custom").map,
-      adminAction("drop_user").role("custom").map,
-      adminAction("alter_user").role("custom").map,
-      adminAction("show_user").role("custom").map,
-      adminAction("user_management").role("custom").map
-    ))
 
     // When
     // Now revoke each sub-privilege in turn
@@ -551,17 +467,10 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("Should revoke sub-privilege even if database management exists") {
     // Given
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("GRANT CREATE DATABASE ON DBMS TO custom")
     execute("GRANT DROP DATABASE ON DBMS TO custom")
     execute("GRANT DATABASE MANAGEMENT ON DBMS TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      adminAction("create_database").role("custom").map,
-      adminAction("drop_database").role("custom").map,
-      adminAction("database_management").role("custom").map
-    ))
 
     // When
     // Now revoke each sub-privilege in turn
@@ -578,19 +487,11 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("Should revoke sub-privilege even if privilege management exists") {
     // Given
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
     execute("GRANT SHOW PRIVILEGE ON DBMS TO custom")
     execute("GRANT ASSIGN PRIVILEGE ON DBMS TO custom")
     execute("GRANT REMOVE PRIVILEGE ON DBMS TO custom")
     execute("GRANT PRIVILEGE MANAGEMENT ON DBMS TO custom")
-
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      adminAction("show_privilege").role("custom").map,
-      adminAction("assign_privilege").role("custom").map,
-      adminAction("remove_privilege").role("custom").map,
-      adminAction("privilege_management").role("custom").map
-    ))
 
     // When
     // Now revoke each sub-privilege in turn
@@ -608,7 +509,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("Should revoke sub-privilege even if all dbms privilege exists") {
     // Given
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     createRoleWithOnlyAdminPrivilege()
     execute("CREATE ROLE custom AS COPY OF adminOnly")
     allDbmsPrivileges("GRANT", includingCompound = true)
@@ -626,7 +526,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should do nothing when revoking role management privilege from non-existing role") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE role")
     execute("GRANT ROLE MANAGEMENT ON DBMS TO role")
 
@@ -636,7 +535,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should do nothing when revoking user management privilege from non-existing role") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE role")
     execute("DENY USER MANAGEMENT ON DBMS TO role")
 
@@ -646,7 +544,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should do nothing when revoking database management privilege from non-existing role") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE role")
     execute("DENY DATABASE MANAGEMENT ON DBMS TO role")
 
@@ -656,7 +553,6 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should do nothing when revoking privilege management privilege from non-existing role") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE role")
     execute("DENY PRIVILEGE MANAGEMENT ON DBMS TO role")
 
@@ -709,10 +605,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should enforce create role privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomRole("foo", "bar")
 
     // WHEN
     execute("GRANT CREATE ROLE ON DBMS TO custom")
@@ -733,10 +626,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail when creating role when denied create role privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("DENY CREATE ROLE ON DBMS TO custom")
@@ -749,10 +639,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail when replacing role with denied create role privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("DENY CREATE ROLE ON DBMS TO custom")
@@ -765,10 +652,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail when replacing role with denied drop role privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("DENY DROP ROLE ON DBMS TO custom")
@@ -781,10 +665,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail when replacing role without create role privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomRole("foo", "bar")
 
     // WHEN
     execute("GRANT DROP ROLE ON DBMS TO custom")
@@ -797,10 +678,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail when replacing role without drop role privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomRole("foo", "bar")
 
     // WHEN
     execute("GRANT CREATE ROLE ON DBMS TO custom")
@@ -815,10 +693,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should enforce drop role privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomRole("foo", "bar")
     execute("CREATE ROLE role")
 
     // WHEN
@@ -840,10 +715,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail when dropping role when denied drop role privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("CREATE ROLE role")
@@ -859,10 +731,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should enforce assign role privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomRole("foo", "bar")
     execute("CREATE ROLE role")
 
     // WHEN
@@ -884,10 +753,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail when granting role when denied assign role privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("CREATE ROLE role")
@@ -903,10 +769,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should enforce remove role privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomRole("foo", "bar")
 
     // WHEN
     execute("CREATE ROLE role")
@@ -929,10 +792,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail when revoking role when denied remove role privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("CREATE ROLE role")
@@ -948,10 +808,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should enforce show role privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomRole("foo", "bar")
 
     // WHEN
     execute("GRANT SHOW ROLE ON DBMS TO custom")
@@ -970,10 +827,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail showing roles when denied show role privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("DENY SHOW ROLE ON DBMS TO custom")
@@ -988,10 +842,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should be able to create role with role management privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("GRANT ROLE MANAGEMENT ON DBMS TO custom")
@@ -1002,10 +853,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should deny create role when denied role management privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("GRANT CREATE ROLE ON DBMS TO custom")
@@ -1021,10 +869,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should enforce create user privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomRole("foo", "bar")
 
     // WHEN
     execute("GRANT CREATE USER ON DBMS TO custom")
@@ -1045,10 +890,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail when creating user when denied create user privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("DENY CREATE USER ON DBMS TO custom")
@@ -1061,10 +903,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail when replacing user when denied create user privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("DENY CREATE USER ON DBMS TO custom")
@@ -1077,10 +916,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail when replacing user when denied drop user privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("DENY DROP USER ON DBMS TO custom")
@@ -1093,10 +929,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail when replacing user without create user privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomRole("foo", "bar")
 
     // WHEN
     execute("GRANT DROP USER ON DBMS TO custom")
@@ -1109,10 +942,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail when replacing user without drop user privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomRole("foo", "bar")
 
     // WHEN
     execute("GRANT CREATE USER ON DBMS TO custom")
@@ -1127,10 +957,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should enforce drop user privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomRole("foo", "bar")
 
     // WHEN
     execute("CREATE USER user SET PASSWORD 'abc'")
@@ -1152,10 +979,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail when dropping user when denied drop user privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("CREATE USER user SET PASSWORD 'abc'")
@@ -1171,10 +995,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should enforce alter user privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomRole("foo", "bar")
 
     // WHEN
     execute("CREATE USER user SET PASSWORD 'abc' CHANGE REQUIRED")
@@ -1199,10 +1020,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail when altering user when denied alter user privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("CREATE USER user SET PASSWORD 'abc'")
@@ -1218,10 +1036,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should enforce show user privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomRole("foo", "bar")
 
     // WHEN
     execute("GRANT SHOW USER ON DBMS TO custom")
@@ -1240,10 +1055,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail when listing users when denied show user privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("DENY SHOW USER ON DBMS TO custom")
@@ -1258,10 +1070,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should enforce user management privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomRole("foo", "bar")
 
     // WHEN
     execute("GRANT USER MANAGEMENT ON DBMS TO custom")
@@ -1293,10 +1102,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should deny user management when denied user management privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("GRANT CREATE USER ON DBMS TO custom")
@@ -1324,10 +1130,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should enforce create database privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomRole("foo", "bar")
 
     // WHEN
     execute("GRANT CREATE DATABASE ON DBMS TO custom")
@@ -1350,10 +1153,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail when creating database when denied database user privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("DENY CREATE DATABASE ON DBMS TO custom")
@@ -1368,10 +1168,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail when replacing database with denied create database privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("DENY CREATE DATABASE ON DBMS TO custom")
@@ -1384,10 +1181,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail when replacing database with denied drop database privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("DENY DROP DATABASE ON DBMS TO custom")
@@ -1400,10 +1194,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail when replacing database without create database privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomRole("foo", "bar")
 
     // WHEN
     execute("GRANT DROP DATABASE ON DBMS TO custom")
@@ -1416,10 +1207,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail when replacing database without drop database privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomRole("foo", "bar")
 
     // WHEN
     execute("GRANT CREATE DATABASE ON DBMS TO custom")
@@ -1434,10 +1222,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should enforce drop database privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomRole("foo", "bar")
 
     // WHEN
     execute("CREATE DATABASE baz")
@@ -1461,10 +1246,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail when dropping database when denied drop database privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("CREATE DATABASE baz")
@@ -1482,10 +1264,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should enforce database management privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomRole("foo", "bar")
 
     // WHEN
     execute("GRANT DATABASE MANAGEMENT ON DBMS TO custom")
@@ -1509,10 +1288,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail database management when denied database management privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("GRANT CREATE DATABASE ON DBMS TO custom")
@@ -1541,10 +1317,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should enforce show privilege privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomRole("foo", "bar")
 
     // WHEN
     execute("GRANT SHOW PRIVILEGE ON DBMS TO custom")
@@ -1571,10 +1344,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail when showing privileges when denied show privilege privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("DENY SHOW PRIVILEGE ON DBMS TO custom")
@@ -1591,10 +1361,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should be able to show your own privileges even if denied show privilege privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("DENY SHOW PRIVILEGE ON DBMS TO custom")
@@ -1655,11 +1422,8 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
       test(s"should enforce assign privilege privilege for GRANT $privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-        execute("CREATE ROLE custom")
+        setupUserWithCustomRole("foo", "bar")
         execute("CREATE ROLE otherRole")
-        execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-        execute("GRANT ROLE custom TO foo")
 
         // WHEN
         execute("GRANT ASSIGN PRIVILEGE ON DBMS TO custom")
@@ -1682,11 +1446,8 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
       test(s"should enforce assign privilege privilege for DENY $privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-        execute("CREATE ROLE custom")
+        setupUserWithCustomRole("foo", "bar")
         execute("CREATE ROLE otherRole")
-        execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-        execute("GRANT ROLE custom TO foo")
 
         // WHEN
         execute("GRANT ASSIGN PRIVILEGE ON DBMS TO custom")
@@ -1709,11 +1470,8 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
       test(s"should fail when granting and denying $privilege privileges when denied assign privilege privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-        execute("CREATE ROLE custom AS COPY OF admin")
+        setupUserWithCustomAdminRole("foo", "bar")
         execute("CREATE ROLE otherRole")
-        execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-        execute("GRANT ROLE custom TO foo")
 
         // WHEN
         execute("DENY ASSIGN PRIVILEGE ON DBMS TO custom")
@@ -1732,11 +1490,8 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
       test(s"should enforce remove privilege privilege for $privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-        execute("CREATE ROLE custom")
+        setupUserWithCustomRole("foo", "bar")
         execute("CREATE ROLE otherRole")
-        execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-        execute("GRANT ROLE custom TO foo")
 
         // WHEN
         execute("GRANT REMOVE PRIVILEGE ON DBMS TO custom")
@@ -1760,11 +1515,8 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
       test(s"should fail when revoking $privilege privileges when denied remove privilege privilege") {
         // GIVEN
-        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-        execute("CREATE ROLE custom AS COPY OF admin")
+        setupUserWithCustomAdminRole("foo", "bar")
         execute("CREATE ROLE otherRole")
-        execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-        execute("GRANT ROLE custom TO foo")
 
         // WHEN
         execute("DENY REMOVE PRIVILEGE ON DBMS TO custom")
@@ -1783,11 +1535,8 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should enforce privilege management privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
+    setupUserWithCustomRole("foo", "bar")
     execute("CREATE ROLE otherRole")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
 
     // WHEN
     execute("GRANT PRIVILEGE MANAGEMENT ON DBMS TO custom")
@@ -1847,11 +1596,8 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail privilege management when denied privilege management privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
+    setupUserWithCustomAdminRole("foo", "bar")
     execute("CREATE ROLE otherRole")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
 
     // WHEN
     execute("GRANT SHOW PRIVILEGE ON DBMS TO custom")
@@ -1887,10 +1633,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should enforce all dbms privileges privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
+    setupUserWithCustomRole("foo", "bar")
 
     // WHEN
     execute("GRANT ALL DBMS PRIVILEGES ON DBMS TO custom")
@@ -1945,11 +1688,8 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   test("should fail dbms management when denied all dbms privileges privilege") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
+    setupUserWithCustomAdminRole("foo", "bar")
     execute("CREATE ROLE otherRole")
-    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
-    execute("GRANT ROLE custom TO foo")
 
     // WHEN
     allDbmsPrivileges("GRANT", includingCompound = false)

@@ -1133,20 +1133,6 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("GRANT CREATE NEW PROPERTY NAME ON DATABASE foo TO custom")
     execute("GRANT NAME ON DATABASE foo TO custom")
     execute("GRANT ALL DATABASE PRIVILEGES ON DATABASE foo TO custom")
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      access().database("foo").role("custom").map,
-      createIndex().database("foo").role("custom").map,
-      dropIndex().database("foo").role("custom").map,
-      indexManagement().database("foo").role("custom").map,
-      createConstraint().database("foo").role("custom").map,
-      dropConstraint().database("foo").role("custom").map,
-      constraintManagement().database("foo").role("custom").map,
-      createNodeLabel().database("foo").role("custom").map,
-      createRelationshipType().database("foo").role("custom").map,
-      createPropertyKey().database("foo").role("custom").map,
-      nameManagement().database("foo").role("custom").map,
-      allDatabasePrivilege().database("foo").role("custom").map
-    ))
 
     // When
     // Now revoke each sub-privilege in turn
