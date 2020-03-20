@@ -54,6 +54,10 @@ import org.neo4j.values.storable.Values;
 import org.neo4j.values.utils.TemporalValueWriterAdapter;
 
 import static org.neo4j.internal.helpers.Numbers.safeCastIntToUnsignedByte;
+import static org.neo4j.values.storable.ValueWriter.ArrayType.DOUBLE;
+import static org.neo4j.values.storable.ValueWriter.ArrayType.INT;
+import static org.neo4j.values.storable.ValueWriter.ArrayType.LONG;
+import static org.neo4j.values.storable.ValueWriter.ArrayType.STRING;
 
 class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
 {
@@ -108,12 +112,18 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
 
     private final SimpleBigValueStore bigPropertyValueStore;
     private final Consumer<StorageCommand> commands;
-    private final ByteBuffer buffer;
+    private final ByteBuffer outputBuffer; //Actual output-buffer
+
+    private ByteBuffer buffer; //current write buffer
+
+    private static final int MAX_INLINED_STRING_SIZE = 20;
+    private static final int MAX_INLINED_ARRAY_SIZE = 30;
 
     //Array state
     private boolean writingArray;
     private byte currentArrayType = -1;
     private int currentArrayElementsLeft = -1;
+    private boolean bigArray;
     //Nested properties
     private int nestedPropertyCount;
 
@@ -121,7 +131,8 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     {
         this.bigPropertyValueStore = bigPropertyValueStore;
         this.commands = commands;
-        this.buffer = buffer;
+        this.outputBuffer = buffer;
+        this.buffer = outputBuffer;
     }
 
     private static byte externalType( byte typeByte )
@@ -172,7 +183,15 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         //TODO optimize array writing size (esp. byte and char)
         assert !writingArray;
         byte externalType = getExternalType( arrayType );
-        buffer.put( (byte) ( externalType | SPECIAL_TYPE_MASK | SPECIAL_TYPE_ARRAY) );
+        byte header = (byte) ( externalType | SPECIAL_TYPE_MASK | SPECIAL_TYPE_ARRAY);
+        int worstCaseSize = getWorstCaseSize( INT ) + size * getWorstCaseSize( arrayType );
+        if ( worstCaseSize > MAX_INLINED_ARRAY_SIZE )
+        {
+            buffer = ByteBuffer.allocate( worstCaseSize ); //Temporary buffer to hold array writings
+            bigArray = true;
+            header |= SPECIAL_TYPE_POINTER;
+        }
+        outputBuffer.put( header ); //Array header, always in output buffer
         writeInteger( size ); //write length first, before setting array state
 
         currentArrayType = externalType;
@@ -188,9 +207,20 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         {
             throw new IllegalStateException( "Did not fill array with data" );
         }
+
         writingArray = false;
         currentArrayType = -1;
         currentArrayElementsLeft = -1;
+
+        if ( bigArray )
+        {
+            bigArray = false;
+            ByteBuffer arrayBuffer = buffer;
+            buffer = outputBuffer; // restore buffer
+            long pointer = bigPropertyValueStore.allocateSpace( arrayBuffer.position() );
+            writeInteger( pointer );
+            commands.accept( new FrekiCommand.BigPropertyValue( pointer, arrayBuffer.array(), arrayBuffer.position() ) );
+        }
     }
 
     @Override
@@ -507,7 +537,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         beginWriteProperty( EXTERNAL_TYPE_STRING );
         byte[] bytes = UTF8.encode( value );
         int length = bytes.length;
-        if ( length > 30 )
+        if ( length > MAX_INLINED_STRING_SIZE )
         {
             long pointer = bigPropertyValueStore.allocateSpace( bytes.length );
             writePointer( EXTERNAL_TYPE_STRING, pointer );
@@ -573,7 +603,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
             }
 
             boolean isArray = (typeByte & SPECIAL_TYPE_ARRAY) != 0;
-            if ( isArray )
+            if ( isArray ) // this only covers inlined arrays
             {
                 byte externalType = externalType( typeByte );
                 int length = (int) read( buffer, bigPropertyValueStore ).asObject();
@@ -684,13 +714,12 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         else
         {
             boolean isPointer = (typeByte & SPECIAL_TYPE_POINTER) != 0;
+            boolean isArray = (typeByte & SPECIAL_TYPE_ARRAY) != 0;
             if ( isPointer )
             {
                 size += 1 + advanceBuffer( sizeOfSimpleProperty( buffer.get(), buffer ), buffer );
             }
-
-            boolean isArray = (typeByte & SPECIAL_TYPE_ARRAY) != 0;
-            if ( isArray )
+            else if ( isArray )
             {
                 size += calculatePropertyValueSizeIncludingTypeHeader( buffer );
                 int length = (int) read( buffer ).asObject();
@@ -864,6 +893,42 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         }
     }
 
+    private int getWorstCaseSize( ArrayType arrayType )
+    {
+        switch ( arrayType )
+        {
+        case BYTE:
+        case CHAR:
+            return 2;
+        case SHORT:
+            return 3;
+        case INT:
+        case FLOAT:
+            return 5;
+        case LONG:
+        case DOUBLE:
+            return 9;
+        case BOOLEAN:
+            return 1;
+        case STRING:
+            return MAX_INLINED_STRING_SIZE + 2;
+        case POINT:
+            return 1 + getWorstCaseSize( INT ) + 3 * getWorstCaseSize( DOUBLE ) ;
+        case ZONED_DATE_TIME:
+            return getWorstCaseSize( LONG ) + getWorstCaseSize( INT ) + getWorstCaseSize( STRING );
+        case LOCAL_DATE_TIME:
+        case ZONED_TIME:
+            return getWorstCaseSize( LONG ) + getWorstCaseSize( INT );
+        case DATE:
+        case LOCAL_TIME:
+            return getWorstCaseSize( LONG );
+        case DURATION:
+            return 1 + getWorstCaseSize( INT ) + 3 * getWorstCaseSize( LONG );
+        default:
+            throw new UnsupportedOperationException( "Unknown ArrayType:" + arrayType );
+        }
+    }
+
     private static Object[] allocateTypeArray( byte externalType, int length )
     {
         switch ( externalType )
@@ -910,12 +975,14 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         private final SimpleBigValueStore bigPropertyValueStore;
         private final byte externalType;
         private final long pointer;
+        private final boolean isArray;
 
         private Value cachedValue;
 
         private PointerValue( byte typeByte, long pointer, SimpleBigValueStore bigPropertyValueStore )
         {
             this.externalType = externalType( typeByte );
+            isArray = (typeByte & SPECIAL_TYPE_ARRAY) != 0;
             this.pointer = pointer;
             this.bigPropertyValueStore = bigPropertyValueStore;
         }
@@ -933,19 +1000,28 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
                 int length = bigPropertyValueStore.length( cursor, pointer ); // this is not optimal, as read() re-reads the length.
                 buffer = ByteBuffer.wrap( new byte[length] );
                 bigPropertyValueStore.read( cursor, buffer, pointer );
+                buffer.position( 0 );
             }
             catch ( IOException e )
             {
                 throw new UncheckedIOException( e );
             }
 
-            if ( externalType == EXTERNAL_TYPE_STRING )
+            if ( isArray )
             {
-                cachedValue = Values.utf8Value( buffer.array() );
+                int length = (int) read( buffer ).asObject();
+                cachedValue = readArray( externalType, length, buffer, bigPropertyValueStore );
             }
             else
             {
-                cachedValue = read( buffer );
+                if ( externalType == EXTERNAL_TYPE_STRING )
+                {
+                    cachedValue = Values.utf8Value( buffer.array() );
+                }
+                else
+                {
+                    cachedValue = read( buffer );
+                }
             }
             return cachedValue;
         }

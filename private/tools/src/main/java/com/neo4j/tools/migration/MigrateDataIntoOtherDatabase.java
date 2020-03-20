@@ -29,6 +29,7 @@ import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
 
 import static java.lang.Math.toIntExact;
+import static org.neo4j.configuration.GraphDatabaseSettings.CheckpointPolicy.CONTINUOUS;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterables.asList;
 
@@ -44,8 +45,10 @@ public class MigrateDataIntoOtherDatabase
     public static void migrate( Path fromHome, Path toHome )
     {
         assert !(fromHome.equals( toHome ));
+        System.out.println( String.format( "Migrating %s to Freki store: %s", fromHome, toHome ) );
         long totalPageCacheMem = ConfiguringPageCacheFactory.defaultHeuristicPageCacheMemory();
         String pcMemory = String.valueOf( totalPageCacheMem / 10 );
+        System.out.println( "Using a pagecache of size " + pcMemory );
         DatabaseManagementService fromDbms = new EnterpriseDatabaseManagementServiceBuilder( fromHome.toFile() )
                 .setConfig( GraphDatabaseSettings.storage_engine, "" )
                 .setConfig( GraphDatabaseSettings.pagecache_memory, pcMemory )
@@ -53,6 +56,9 @@ public class MigrateDataIntoOtherDatabase
         DatabaseManagementService toDbms = new EnterpriseDatabaseManagementServiceBuilder( toHome.toFile() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false )
                 .setConfig( GraphDatabaseSettings.pagecache_memory, pcMemory )
+                .setConfig( GraphDatabaseSettings.keep_logical_logs, "false" )
+                .setConfig( GraphDatabaseSettings.check_point_policy, CONTINUOUS )
+                .setConfig( GraphDatabaseSettings.check_point_iops_limit, -1 )
                 .setConfig( GraphDatabaseSettings.storage_engine, "Freki" )
                 .build();
         try
