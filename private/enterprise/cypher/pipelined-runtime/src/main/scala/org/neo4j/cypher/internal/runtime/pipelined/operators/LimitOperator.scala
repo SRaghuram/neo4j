@@ -280,19 +280,7 @@ class SerialLimitOnRhsOfApplyOperatorTaskTemplate(override val inner: OperatorTa
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
 
-  private def howMuchToReserve: IntermediateRepresentation = {
-    if (innermost.shouldWriteToContext) {
-      // Use the available output morsel rows to determine our maximum chunk of the total limit
-      invoke(OUTPUT_MORSEL, method[Morsel, Int]("numberOfRows"))
-    } else if (innermost.shouldCheckOutputCounter) {
-      // Use the output counter to determine our maximum chunk of the total limit
-      load(OUTPUT_COUNTER)
-    } else {
-      // We do not seem to have any bound on the output of this task (i.e. we are the final produce result pipeline task)
-      // Reserve as much as we can get
-      constant(Int.MaxValue)
-    }
-  }
+  private def howMuchToReserve: IntermediateRepresentation = constant(Int.MaxValue)
 
   private def fetchState : IntermediateRepresentation =
     cast[SerialCountingState](
