@@ -672,15 +672,13 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
   }
 }
 
-case class LimitNotReachedState(argumentStateMapId: ArgumentStateMapId)
-
 // Used for innermost, e.g. to insert the `outputRow.next` of the start operator at the deepest nesting level
 // and also for providing demand operations
 class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
                                    var shouldCheckDemand: Boolean = false,
                                    var shouldCheckOutputCounter: Boolean = false,
                                    var shouldCheckBreak: Boolean = false,
-                                   val limits: mutable.ArrayBuffer[LimitNotReachedState] = mutable.ArrayBuffer.empty)
+                                   val limits: mutable.ArrayBuffer[ArgumentStateMapId] = mutable.ArrayBuffer.empty)
                                   (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
 
   // Reset configuration to the default settings
@@ -692,8 +690,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
   }
 
   def resetBelowLimit: IntermediateRepresentation = {
-    val ops = limits.map {
-      case LimitNotReachedState(argumentStateMapId) =>
+    val ops = limits.map {(argumentStateMapId) =>
         block(
           condition(not(load(belowLimitVarName(argumentStateMapId)))) {
             block(
@@ -704,7 +701,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
               assign(belowLimitVarName(argumentStateMapId), constant(true)))
           })
      } :+  block(
-      limits.map(limit => assign(argumentVarName(limit.argumentStateMapId), getArgument(limit.argumentStateMapId))):_*
+      limits.map(argumentStateMapId => assign(argumentVarName(argumentStateMapId), getArgument(argumentStateMapId))):_*
     )
     block(ops:_*)
   }
@@ -714,7 +711,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
       setField(field, next)
     }
     else {
-      val condition = limits.map(limit => load(belowLimitVarName(limit.argumentStateMapId))).reduceLeft(and)
+      val condition = limits.map(argumentStateMapId => load(belowLimitVarName(argumentStateMapId))).reduceLeft(and)
       ifElse(condition)(setField(field, next))(setField(field, constant(false)))
     }
   }
@@ -781,7 +778,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
   }
 
   override def genOperateEnter: IntermediateRepresentation = block(
-    limits.map(limit => declareAndAssign(typeRefOf[Long], argumentVarName(limit.argumentStateMapId), constant(-1L))): _*
+    limits.map(argumentStateMapId => declareAndAssign(typeRefOf[Long], argumentVarName(argumentStateMapId), constant(-1L))): _*
   )
 
   /**
@@ -806,14 +803,13 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
   }
 
   override def genFields: Seq[Field] =
-    limits.map(limit => field[Int](argumentSlotOffsetFieldName(limit.argumentStateMapId), getArgumentSlotOffset(limit.argumentStateMapId)))
+    limits.map(argumentStateMapId => field[Int](argumentSlotOffsetFieldName(argumentStateMapId), getArgumentSlotOffset(argumentStateMapId)))
 
   override def genLocalVariables: Seq[LocalVariable] = {
     val seq = Seq.newBuilder[LocalVariable]
     if (shouldCheckOutputCounter) seq += OUTPUT_COUNTER
     if (shouldWriteToContext) seq += OUTPUT_CURSOR_VAR
-    limits.foreach {
-      case LimitNotReachedState(argumentStateMapId) =>
+    limits.foreach { (argumentStateMapId) =>
         seq += variable[Boolean](belowLimitVarName(argumentStateMapId), constant(true))
     }
 

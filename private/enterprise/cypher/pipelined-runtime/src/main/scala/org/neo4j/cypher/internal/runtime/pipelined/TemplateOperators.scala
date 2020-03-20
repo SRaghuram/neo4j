@@ -55,7 +55,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTa
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandIntoOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.FilterOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.InputOperatorTemplate
-import org.neo4j.cypher.internal.runtime.pipelined.operators.LimitNotReachedState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyNodeByIdsSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeCountFromCountStoreOperatorTemplate
@@ -541,7 +540,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                 Some(argumentStateMapId -> SerialLimitStateFactory)
               )
             } else {
-              ctx.innermost.limits += LimitNotReachedState(argumentStateMapId)
+              ctx.innermost.limits += argumentStateMapId
               TemplateAndArgumentStateFactory(
                 new SerialLimitOnRhsOfApplyOperatorTaskTemplate(ctx.inner,
                   plan.id,

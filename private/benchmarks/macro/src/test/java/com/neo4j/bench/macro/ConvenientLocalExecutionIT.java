@@ -48,16 +48,16 @@ import static org.neo4j.configuration.SettingValueParsers.FALSE;
 class ConvenientLocalExecutionIT
 {
     // Required fields for running whole Workload or Single query
-    private static final Path STORE_DIR = Path.of( "/Users/pontusmelke/dbs/ldbc_sf001" ); // e.g. /Users/you/stores/3.5/ldbc_sf001_data/ not /Users/you/stores/3.5/ldbc_sf001_data/graph.db/
-    private static final Path RESULT_DIR = Path.of("/Users/pontusmelke/tmp"); // e.g. /Users/you/results/
-    private static final String WORKLOAD_NAME = "ldbc_sf001"; // e.g. "ldbc_sf001"
+    private static final Path STORE_DIR = null; // e.g. /Users/you/stores/3.5/ldbc_sf001_data/ not /Users/you/stores/3.5/ldbc_sf001_data/graph.db/
+    private static final Path RESULT_DIR = null; // e.g. /Users/you/results/
+    private static final String WORKLOAD_NAME = null; // e.g. "ldbc_sf001"
     private static final Deployment DEPLOYMENT = Deployment.embedded();
 
     // Optional fields
     private static final boolean SKIP_FLAME_GRAPHS = false;
     private static final Path JDK_DIR = null;
     private static final Path NEO4J_CONFIG = null;
-    private static final int FORK_COUNT = 0;
+    private static final int FORK_COUNT = 1;
     private static final int WARMUP_COUNT = 1;
     private static final int MEASUREMENT_COUNT = 1;
     private static final List<ProfilerType> PROFILERS = Lists.newArrayList( ProfilerType.JFR );
@@ -133,8 +133,9 @@ class ConvenientLocalExecutionIT
     }
 
     // Required fields for running Single query
-    private static final String QUERY_NAME = "Read 7"; // "Read 14" (from "ldbc_sf001")
+    private static final String QUERY_NAME = null; // "Read 14" (from "ldbc_sf001")
 
+    @Disabled
     @Test
     void executeQuery() throws Exception
     {
