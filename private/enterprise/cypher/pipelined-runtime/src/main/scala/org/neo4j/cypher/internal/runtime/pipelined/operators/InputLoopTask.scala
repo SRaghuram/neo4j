@@ -113,13 +113,13 @@ abstract class InputLoopTask(final val inputMorsel: Morsel) extends ContinuableO
 
   private def advanceOnCancelledRows(resources: QueryResources): Unit = {
     if (!inputCursor.onValidRow()) {
-      inputCursor.next()
       //If we were in the process of executing an inner loop we must now
       //close it and pick up a new inner loop
       if (innerLoop) {
         closeInnerLoop(resources)
         innerLoop = false
       }
+      inputCursor.next()
     }
   }
 
@@ -169,11 +169,11 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
     //// Based on this code from InputLoopTask
     //val outputCursor = outputRow.fullCursor(onFirstRow = true)
     //if (!this.inputCursor.onValidRow) {
-    //  this.inputCursor.next()
     //  if (innerLoop) {
     //     [close]
     //      innerLoop = false
-    //}
+    //  }
+    //  this.inputCursor.next()
     //while ((inputCursor.onValidRow || innerLoop) && outputCursor.onValidRow) {
     //  if (!innerLoop) {
     //    innerLoop = initializeInnerLoop(context, state, resources, outputCursor) <<< genInitializeInnerLoop
@@ -198,15 +198,15 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
     //
     //outputCursor.close()
     block(
-      condition(not(INPUT_ROW_IS_VALID)){
+      condition(not(INPUT_ROW_IS_VALID)) {
         block(
-          invokeSideEffect(INPUT_CURSOR, NEXT),
           condition(loadField(innerLoop)) {
             block(
               genCloseInnerLoop,
               setField(innerLoop, constant(false))
             )
-          }
+          },
+          invokeSideEffect(INPUT_CURSOR, NEXT),
         )
       },
       loop(and(or(INPUT_ROW_IS_VALID, loadField(innerLoop)), innermost.predicate))(
