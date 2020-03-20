@@ -8,9 +8,9 @@ package org.neo4j.cypher.internal.runtime.pipelined.rewriters
 import org.neo4j.cypher.internal.LogicalQuery
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
 import org.neo4j.cypher.internal.rewriting.RewriterStepSequencer
-import org.neo4j.cypher.internal.util.Rewriter
 import org.neo4j.cypher.internal.util.attribution.IdGen
 import org.neo4j.cypher.internal.util.helpers.fixedPoint
 
@@ -23,21 +23,20 @@ case class PipelinedPlanRewriter(rewriterSequencer: String => RewriterStepSequen
 
   def description: String = "optimize logical plans for pipelined execution using heuristic rewriting"
 
-  def rewrite(cardinalities: Cardinalities, providedOrders: ProvidedOrders, idGen: IdGen, batchSize: Int): AnyRef => AnyRef = {
+  def rewrite(cardinalities: Cardinalities,
+              providedOrders: ProvidedOrders,
+              leveragedOrders: LeveragedOrders,
+              idGen: IdGen): AnyRef => AnyRef = {
     fixedPoint(rewriterSequencer("PipelinedPlanRewriter")(
-      combineCartesianProductOfMultipleIndexSeeks(cardinalities, providedOrders),
+      combineCartesianProductOfMultipleIndexSeeks(cardinalities, leveragedOrders),
       semiApplyToLimitApply(cardinalities, providedOrders, idGen),
       antiSemiApplyToAntiLimitApply(cardinalities, providedOrders, idGen)
       ).rewriter)
   }
 
-  def apply(query: LogicalQuery, batchSize: Int): LogicalPlan = {
+  def apply(query: LogicalQuery): LogicalPlan = {
     val inputPlan = query.logicalPlan
-    val rewrittenPlan = inputPlan.endoRewrite(rewrite(query.cardinalities, query.providedOrders, query.idGen, batchSize))
+    val rewrittenPlan = inputPlan.endoRewrite(rewrite(query.cardinalities, query.providedOrders, query.leveragedOrders, query.idGen))
     rewrittenPlan
   }
-}
-
-case object noopRewriter extends Rewriter {
-  override def apply(input: AnyRef): AnyRef = input
 }

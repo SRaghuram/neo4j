@@ -1250,6 +1250,10 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     ))
   }
 
+  test("Should support cartesian product with one ordered index and one other plan with no results") {
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (a:Awesome), (n:NoResults) WHERE a.prop1 > 40 RETURN a, n").toList should be(empty)
+  }
+
   // Some nodes which are suitable for CONTAINS and ENDS WITH testing
   private def createStringyNodes(tx: InternalTransaction) =
     tx.execute(

@@ -19,11 +19,11 @@ import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
 import org.neo4j.cypher.internal.util.Cardinality
 
 abstract class MultiNodeIndexSeekRewriterTestBase[CONTEXT <: RuntimeContext](
-                                                               edition: Edition[CONTEXT],
-                                                               runtime: CypherRuntime[CONTEXT],
-                                                               sizeHint: Int
-                                                             ) extends RuntimeTestSuite[CONTEXT](edition, runtime)
-                                                                  with QueryPlanTestSupport {
+                                                                              edition: Edition[CONTEXT],
+                                                                              runtime: CypherRuntime[CONTEXT],
+                                                                              sizeHint: Int
+                                                                            ) extends RuntimeTestSuite[CONTEXT](edition, runtime)
+                                                                              with QueryPlanTestSupport {
   test("preserves order with multiple index seeks - provided order") {
     // given
     val nValues = 14 // gives 819 results in the range 0-12
@@ -43,7 +43,7 @@ abstract class MultiNodeIndexSeekRewriterTestBase[CONTEXT <: RuntimeContext](
       .produceResults("nn", "mm")
       .projection("n.prop as nn", "m.prop as mm")
       .apply()
-      .|.cartesianProduct()
+      .|.cartesianProduct().withLeveragedOrder()
       .|.|.nodeIndexOperator("m:Label(prop < ???)", paramExpr = Some(varFor("j")), getValue = DoNotGetValue)
                             .withCardinalityEstimation(CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD + Cardinality(1))
       .|.nodeIndexOperator("n:Label(prop < ???)",
@@ -92,7 +92,7 @@ abstract class MultiNodeIndexSeekRewriterTestBase[CONTEXT <: RuntimeContext](
       .|.nodeIndexOperator("n:Label(prop < ???)",
                            paramExpr = Some(varFor("i")),
                            getValue = GetValue)
-                          .withCardinalityEstimation(CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD + Cardinality(-1)) // One below threshold and no provided order
+                          .withCardinalityEstimation(CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD + Cardinality(-1)) // One below threshold and no leveraged order
       .input(variables = Seq("i", "j"))
       .build()
 
@@ -134,7 +134,7 @@ abstract class MultiNodeIndexSeekRewriterTestBase[CONTEXT <: RuntimeContext](
       .|.nodeIndexOperator("n:Label(prop < ???)",
                            paramExpr = Some(varFor("i")),
                            getValue = GetValue)
-                          .withCardinalityEstimation(CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD) // At the threshold and no provided order
+                          .withCardinalityEstimation(CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD) // At the threshold and no leveraged order
       .input(variables = Seq("i", "j"))
       .build()
 
@@ -144,7 +144,7 @@ abstract class MultiNodeIndexSeekRewriterTestBase[CONTEXT <: RuntimeContext](
                         k <- 0 until i} yield Array(j, k)
     val (runtimeResult, executionPlanDescription) = executeAndExplain(logicalQuery, runtime, inputRows)
 
-    executionPlanDescription shouldNot includeSomewhere.nTimes(1, aPlan("MultiNodeIndexSeek"))
+    executionPlanDescription shouldNot includeSomewhere.aPlan("MultiNodeIndexSeek")
     executionPlanDescription should includeSomewhere.nTimes(2, aPlan("NodeIndexSeekByRange"))
     executionPlanDescription should includeSomewhere.aPlan("CartesianProduct")
 

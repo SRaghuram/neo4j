@@ -146,9 +146,9 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                           queryIndexRegistrator: QueryIndexRegistrator,
                           warnings: Set[InternalNotification]): ExecutionPlan = {
     val batchSize = selectBatchSize(query, context)
-    val optimizedLogicalPlan = optimizingRewriter(query, batchSize)
+    val optimizedLogicalPlan = optimizingRewriter(query)
 
-    PipelinedBlacklist.throwOnUnsupportedPlan(optimizedLogicalPlan, parallelExecution, query.providedOrders)
+    PipelinedBlacklist.throwOnUnsupportedPlan(optimizedLogicalPlan, parallelExecution, query.leveragedOrders)
 
     val interpretedPipesFallbackPolicy = InterpretedPipesFallbackPolicy(context.interpretedPipesFallback, parallelExecution)
     val breakingPolicy = PipelinedPipelineBreakingPolicy(operatorFusionPolicy, interpretedPipesFallbackPolicy)

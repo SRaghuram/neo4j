@@ -33,6 +33,7 @@ import org.neo4j.cypher.internal.planner.spi.InstrumentedGraphStatistics
 import org.neo4j.cypher.internal.planner.spi.MutableGraphStatisticsSnapshot
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Solveds
 import org.neo4j.cypher.internal.runtime.NoInput
@@ -89,6 +90,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
   private val solveds = new Solveds
   private val cardinalities = new Cardinalities
   private val providedOrders = new ProvidedOrders
+  private val leveragedOrders = new LeveragedOrders
   val users: mutable.Map[String, LoginContext] = mutable.Map[String, LoginContext]()
 
   class CountSubscriber(bh: Blackhole) extends QuerySubscriberAdapter {
@@ -270,6 +272,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       semanticTable,
       cardinalities,
       providedOrders,
+      leveragedOrders,
       hasLoadCSV = false,
       Option.empty,
       Plans.IdGen)

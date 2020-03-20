@@ -15,12 +15,12 @@ import org.neo4j.cypher.internal.logical.plans.NestedPlanExpression
 import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
 import org.neo4j.cypher.internal.logical.plans.ResolvedFunctionInvocation
 import org.neo4j.cypher.internal.logical.plans.SemiApply
-import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.exceptions.CantCompileQueryException
 
 object PipelinedBlacklist {
 
-  def throwOnUnsupportedPlan(logicalPlan: LogicalPlan, parallelExecution: Boolean, providedOrders: ProvidedOrders): Unit = {
+  def throwOnUnsupportedPlan(logicalPlan: LogicalPlan, parallelExecution: Boolean, leveragedOrders: LeveragedOrders): Unit = {
     val unsupport =
       logicalPlan.fold(Set[String]()) {
         //Queries containing these expression cant be handled by morsel runtime yet
@@ -37,8 +37,8 @@ object PipelinedBlacklist {
         case f: FunctionInvocation if f.function == functions.Type && parallelExecution =>
           _ + (f.functionName.name+"()")
 
-        case c: CartesianProduct if providedOrders.hasProvidedOrder(c.left.id) =>
-          _ + "CartesianProduct if the LHS has a provided order"
+        case c: CartesianProduct if leveragedOrders.get(c.id) =>
+          _ + "CartesianProduct if it needs to maintain order"
       }
     if (unsupport.nonEmpty) {
       throw new CantCompileQueryException(s"Pipelined does not yet support ${unsupport.mkString("`", "`, `", "`")}, use another runtime.")
