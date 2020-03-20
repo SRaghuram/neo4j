@@ -6,6 +6,7 @@
 package com.neo4j.internal.cypher.planner
 
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
+import org.neo4j.cypher.internal.plandescription.Arguments.Role
 
 class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationCommandPlannerTestBase {
 
@@ -15,12 +16,12 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN GRANT SHOW ROLE ON DBMS TO reader, editor").executionPlanString()
+    val plan = execute("EXPLAIN GRANT SHOW ROLE ON DBMS TO reader, $role", Map("role" -> "editor")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        dbmsPrivilegePlan("GrantDbmsAction", "SHOW ROLE", "editor",
+        dbmsPrivilegePlan("GrantDbmsAction", "SHOW ROLE", Role("ROLE $role"),
           dbmsPrivilegePlan("GrantDbmsAction", "SHOW ROLE", "reader",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
@@ -85,12 +86,12 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY CREATE ROLE ON DBMS TO reader").executionPlanString()
+    val plan = execute("EXPLAIN DENY CREATE ROLE ON DBMS TO $role", Map("role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        dbmsPrivilegePlan("DenyDbmsAction", "CREATE ROLE", "reader",
+        dbmsPrivilegePlan("DenyDbmsAction", "CREATE ROLE", Role("ROLE $role"),
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -153,13 +154,13 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN REVOKE DROP ROLE ON DBMS FROM reader").executionPlanString()
+    val plan = execute("EXPLAIN REVOKE DROP ROLE ON DBMS FROM $role", Map("role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "DROP ROLE", "reader",
-          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "DROP ROLE", "reader",
+        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "DROP ROLE", Role("ROLE $role"),
+          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "DROP ROLE", Role("ROLE $role"),
             assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
@@ -171,13 +172,13 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN GRANT ASSIGN ROLE ON DBMS TO reader, editor").executionPlanString()
+    val plan = execute("EXPLAIN GRANT ASSIGN ROLE ON DBMS TO $role, editor", Map("role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
         dbmsPrivilegePlan("GrantDbmsAction", "ASSIGN ROLE", "editor",
-          dbmsPrivilegePlan("GrantDbmsAction", "ASSIGN ROLE", "reader",
+          dbmsPrivilegePlan("GrantDbmsAction", "ASSIGN ROLE", Role("ROLE $role"),
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
@@ -241,12 +242,12 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY REMOVE ROLE ON DBMS TO reader").executionPlanString()
+    val plan = execute("EXPLAIN DENY REMOVE ROLE ON DBMS TO $role", Map("role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        dbmsPrivilegePlan("DenyDbmsAction", "REMOVE ROLE", "reader",
+        dbmsPrivilegePlan("DenyDbmsAction", "REMOVE ROLE", Role("ROLE $role"),
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -309,13 +310,13 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN REVOKE ROLE MANAGEMENT ON DBMS FROM reader").executionPlanString()
+    val plan = execute("EXPLAIN REVOKE ROLE MANAGEMENT ON DBMS FROM $role", Map("role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "ROLE MANAGEMENT", "reader",
-          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "ROLE MANAGEMENT", "reader",
+        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "ROLE MANAGEMENT", Role("ROLE $role"),
+          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "ROLE MANAGEMENT", Role("ROLE $role"),
             assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
@@ -329,13 +330,13 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN GRANT SHOW USER ON DBMS TO reader, editor").executionPlanString()
+    val plan = execute("EXPLAIN GRANT SHOW USER ON DBMS TO $role1, $role2", Map("role1" -> "reader", "role2" -> "editor")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        dbmsPrivilegePlan("GrantDbmsAction", "SHOW USER", "editor",
-          dbmsPrivilegePlan("GrantDbmsAction", "SHOW USER", "reader",
+        dbmsPrivilegePlan("GrantDbmsAction", "SHOW USER", Role("ROLE $role2"),
+          dbmsPrivilegePlan("GrantDbmsAction", "SHOW USER", Role("ROLE $role1"),
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
@@ -399,12 +400,12 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY CREATE USER ON DBMS TO reader").executionPlanString()
+    val plan = execute("EXPLAIN DENY CREATE USER ON DBMS TO $role", Map("role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        dbmsPrivilegePlan("DenyDbmsAction", "CREATE USER", "reader",
+        dbmsPrivilegePlan("DenyDbmsAction", "CREATE USER", Role("ROLE $role"),
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -433,12 +434,12 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN GRANT DROP USER ON DBMS TO reader, editor").executionPlanString()
+    val plan = execute("EXPLAIN GRANT DROP USER ON DBMS TO reader, $role", Map("role" -> "editor")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        dbmsPrivilegePlan("GrantDbmsAction", "DROP USER", "editor",
+        dbmsPrivilegePlan("GrantDbmsAction", "DROP USER", Role("ROLE $role"),
           dbmsPrivilegePlan("GrantDbmsAction", "DROP USER", "reader",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
@@ -503,12 +504,12 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY ALTER USER ON DBMS TO reader").executionPlanString()
+    val plan = execute("EXPLAIN DENY ALTER USER ON DBMS TO $role", Map("role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        dbmsPrivilegePlan("DenyDbmsAction", "ALTER USER", "reader",
+        dbmsPrivilegePlan("DenyDbmsAction", "ALTER USER", Role("ROLE $role"),
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -571,13 +572,13 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN REVOKE USER MANAGEMENT ON DBMS FROM reader").executionPlanString()
+    val plan = execute("EXPLAIN REVOKE USER MANAGEMENT ON DBMS FROM $role", Map("role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "USER MANAGEMENT", "reader",
-          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "USER MANAGEMENT", "reader",
+        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "USER MANAGEMENT", Role("ROLE $role"),
+          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "USER MANAGEMENT", Role("ROLE $role"),
             assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
@@ -591,13 +592,13 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN GRANT CREATE DATABASE ON DBMS TO reader, editor").executionPlanString()
+    val plan = execute("EXPLAIN GRANT CREATE DATABASE ON DBMS TO $role, editor", Map("role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
         dbmsPrivilegePlan("GrantDbmsAction", "CREATE DATABASE", "editor",
-          dbmsPrivilegePlan("GrantDbmsAction", "CREATE DATABASE", "reader",
+          dbmsPrivilegePlan("GrantDbmsAction", "CREATE DATABASE", Role("ROLE $role"),
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
@@ -661,12 +662,12 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY DROP DATABASE ON DBMS TO reader").executionPlanString()
+    val plan = execute("EXPLAIN DENY DROP DATABASE ON DBMS TO $role", Map("role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        dbmsPrivilegePlan("DenyDbmsAction", "DROP DATABASE", "reader",
+        dbmsPrivilegePlan("DenyDbmsAction", "DROP DATABASE", Role("ROLE $role"),
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -729,13 +730,13 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN REVOKE DATABASE MANAGEMENT ON DBMS FROM reader").executionPlanString()
+    val plan = execute("EXPLAIN REVOKE DATABASE MANAGEMENT ON DBMS FROM $role", Map("role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "DATABASE MANAGEMENT", "reader",
-          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "DATABASE MANAGEMENT", "reader",
+        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "DATABASE MANAGEMENT", Role("ROLE $role"),
+          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "DATABASE MANAGEMENT", Role("ROLE $role"),
             assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
@@ -749,13 +750,13 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN GRANT SHOW PRIVILEGE ON DBMS TO reader, editor").executionPlanString()
+    val plan = execute("EXPLAIN GRANT SHOW PRIVILEGE ON DBMS TO $role, editor", Map("role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
         dbmsPrivilegePlan("GrantDbmsAction", "SHOW PRIVILEGE", "editor",
-          dbmsPrivilegePlan("GrantDbmsAction", "SHOW PRIVILEGE", "reader",
+          dbmsPrivilegePlan("GrantDbmsAction", "SHOW PRIVILEGE", Role("ROLE $role"),
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
@@ -819,12 +820,12 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY ASSIGN PRIVILEGE ON DBMS TO reader").executionPlanString()
+    val plan = execute("EXPLAIN DENY ASSIGN PRIVILEGE ON DBMS TO $role", Map("role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        dbmsPrivilegePlan("DenyDbmsAction", "ASSIGN PRIVILEGE", "reader",
+        dbmsPrivilegePlan("DenyDbmsAction", "ASSIGN PRIVILEGE", Role("ROLE $role"),
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -887,13 +888,13 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN REVOKE REMOVE PRIVILEGE ON DBMS FROM reader").executionPlanString()
+    val plan = execute("EXPLAIN REVOKE REMOVE PRIVILEGE ON DBMS FROM $role", Map("role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "REMOVE PRIVILEGE", "reader",
-          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "REMOVE PRIVILEGE", "reader",
+        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "REMOVE PRIVILEGE", Role("ROLE $role"),
+          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "REMOVE PRIVILEGE", Role("ROLE $role"),
             assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
@@ -905,12 +906,12 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN GRANT PRIVILEGE MANAGEMENT ON DBMS TO reader, editor").executionPlanString()
+    val plan = execute("EXPLAIN GRANT PRIVILEGE MANAGEMENT ON DBMS TO reader, $role", Map("role" -> "editor")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        dbmsPrivilegePlan("GrantDbmsAction", "PRIVILEGE MANAGEMENT", "editor",
+        dbmsPrivilegePlan("GrantDbmsAction", "PRIVILEGE MANAGEMENT", Role("ROLE $role"),
           dbmsPrivilegePlan("GrantDbmsAction", "PRIVILEGE MANAGEMENT", "reader",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
@@ -975,12 +976,12 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY ALL DBMS PRIVILEGES ON DBMS TO reader").executionPlanString()
+    val plan = execute("EXPLAIN DENY ALL DBMS PRIVILEGES ON DBMS TO $role", Map("role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        dbmsPrivilegePlan("DenyDbmsAction", "ALL DBMS PRIVILEGES", "reader",
+        dbmsPrivilegePlan("DenyDbmsAction", "ALL DBMS PRIVILEGES", Role("ROLE $role"),
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString

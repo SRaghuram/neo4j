@@ -40,15 +40,15 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN GRANT TRAVERSE ON GRAPH $db TO reader, editor", Map("db" -> DEFAULT_DATABASE_NAME)).executionPlanString()
+    val plan = execute("EXPLAIN GRANT TRAVERSE ON GRAPH $db TO $role1, $role2", Map("db" -> DEFAULT_DATABASE_NAME, "role1" -> "reader", "role2" -> "editor")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("GrantTraverse", Database("GRAPH $db"), Qualifier("RELATIONSHIPS *"), "editor",
-          graphPrivilegePlan("GrantTraverse", Database("GRAPH $db"), Qualifier("NODES *"), "editor",
-            graphPrivilegePlan("GrantTraverse", Database("GRAPH $db"), Qualifier("RELATIONSHIPS *"), "reader",
-              graphPrivilegePlan("GrantTraverse", Database("GRAPH $db"), Qualifier("NODES *"), "reader",
+        graphPrivilegePlan("GrantTraverse", Database("GRAPH $db"), Qualifier("RELATIONSHIPS *"), "$role2",
+          graphPrivilegePlan("GrantTraverse", Database("GRAPH $db"), Qualifier("NODES *"), "$role2",
+            graphPrivilegePlan("GrantTraverse", Database("GRAPH $db"), Qualifier("RELATIONSHIPS *"), "$role1",
+              graphPrivilegePlan("GrantTraverse", Database("GRAPH $db"), Qualifier("NODES *"), "$role1",
                 assertDbmsAdminPlan("ASSIGN PRIVILEGE")
               )
             )
@@ -146,15 +146,15 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY READ {foo, prop} ON GRAPH $db TO reader", Map("db" -> DEFAULT_DATABASE_NAME)).executionPlanString()
+    val plan = execute("EXPLAIN DENY READ {foo, prop} ON GRAPH $db TO $role", Map("db" -> DEFAULT_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("DenyRead", Database("GRAPH $db"), resourceArg("prop"), Qualifier("RELATIONSHIPS *"), "reader",
-          graphPrivilegePlan("DenyRead", Database("GRAPH $db"), resourceArg("foo"), Qualifier("RELATIONSHIPS *"), "reader",
-            graphPrivilegePlan("DenyRead", Database("GRAPH $db"), resourceArg("prop"), Qualifier("NODES *"), "reader",
-              graphPrivilegePlan("DenyRead", Database("GRAPH $db"), resourceArg("foo"), Qualifier("NODES *"), "reader",
+        graphPrivilegePlan("DenyRead", Database("GRAPH $db"), resourceArg("prop"), Qualifier("RELATIONSHIPS *"), "$role",
+          graphPrivilegePlan("DenyRead", Database("GRAPH $db"), resourceArg("foo"), Qualifier("RELATIONSHIPS *"), "$role",
+            graphPrivilegePlan("DenyRead", Database("GRAPH $db"), resourceArg("prop"), Qualifier("NODES *"), "$role",
+              graphPrivilegePlan("DenyRead", Database("GRAPH $db"), resourceArg("foo"), Qualifier("NODES *"), "$role",
                 assertDbmsAdminPlan("ASSIGN PRIVILEGE")
               )
             )
@@ -246,13 +246,13 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY MATCH {prop} ON GRAPH $db TO reader", Map("db" -> DEFAULT_DATABASE_NAME)).executionPlanString()
+    val plan = execute("EXPLAIN DENY MATCH {prop} ON GRAPH $db TO $role", Map("db" -> DEFAULT_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("DenyMatch", Database("GRAPH $db"), resourceArg("prop"), Qualifier("RELATIONSHIPS *"), "reader",
-          graphPrivilegePlan("DenyMatch", Database("GRAPH $db"), resourceArg("prop"), Qualifier("NODES *"), "reader",
+        graphPrivilegePlan("DenyMatch", Database("GRAPH $db"), resourceArg("prop"), Qualifier("RELATIONSHIPS *"), "$role",
+          graphPrivilegePlan("DenyMatch", Database("GRAPH $db"), resourceArg("prop"), Qualifier("NODES *"), "$role",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
@@ -368,15 +368,15 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN REVOKE WRITE ON GRAPH $db FROM reader", Map("db" -> DEFAULT_DATABASE_NAME)).executionPlanString()
+    val plan = execute("EXPLAIN REVOKE WRITE ON GRAPH $db FROM $role", Map("db" -> DEFAULT_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("RevokeWrite(DENIED)", Database("GRAPH $db"), Qualifier("RELATIONSHIPS *"), "reader",
-          graphPrivilegePlan("RevokeWrite(GRANTED)", Database("GRAPH $db"), Qualifier("RELATIONSHIPS *"), "reader",
-            graphPrivilegePlan("RevokeWrite(DENIED)", Database("GRAPH $db"), Qualifier("NODES *"), "reader",
-              graphPrivilegePlan("RevokeWrite(GRANTED)", Database("GRAPH $db"), Qualifier("NODES *"), "reader",
+        graphPrivilegePlan("RevokeWrite(DENIED)", Database("GRAPH $db"), Qualifier("RELATIONSHIPS *"), "$role",
+          graphPrivilegePlan("RevokeWrite(GRANTED)", Database("GRAPH $db"), Qualifier("RELATIONSHIPS *"), "$role",
+            graphPrivilegePlan("RevokeWrite(DENIED)", Database("GRAPH $db"), Qualifier("NODES *"), "$role",
+              graphPrivilegePlan("RevokeWrite(GRANTED)", Database("GRAPH $db"), Qualifier("NODES *"), "$role",
                 assertDbmsAdminPlan("REMOVE PRIVILEGE")
               )
             )

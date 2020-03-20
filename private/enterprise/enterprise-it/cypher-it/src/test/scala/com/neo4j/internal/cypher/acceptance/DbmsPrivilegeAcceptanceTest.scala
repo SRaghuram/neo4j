@@ -38,6 +38,12 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
           execute(s"$grant CREATE ROLE ON DBMS TO role")
           // THEN
         } should have message s"Failed to ${grant.toLowerCase} create_role privilege to role 'role': Role does not exist."
+
+        the[InvalidArgumentsException] thrownBy {
+          // WHEN
+          execute(s"$grant CREATE ROLE ON DBMS TO $$r", Map("r" -> "role"))
+          // THEN
+        } should have message s"Failed to ${grant.toLowerCase} create_role privilege to role 'role': Role does not exist."
       }
 
       test(s"should $grant drop role privilege") {
@@ -46,7 +52,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grant DROP ROLE ON DBMS TO custom")
+        execute(s"$grant DROP ROLE ON DBMS TO $$role", Map("role" -> "custom"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -147,6 +153,12 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
           execute(s"$grant DROP USER ON DBMS TO role")
           // THEN
         } should have message s"Failed to ${grant.toLowerCase} drop_user privilege to role 'role': Role does not exist."
+
+        the[InvalidArgumentsException] thrownBy {
+          // WHEN
+          execute(s"$grant DROP USER ON DBMS TO $$r", Map("r" -> "role"))
+          // THEN
+        } should have message s"Failed to ${grant.toLowerCase} drop_user privilege to role 'role': Role does not exist."
       }
 
       test(s"should $grant show user privilege") {
@@ -155,7 +167,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grant SHOW USER ON DBMS TO custom")
+        execute(s"$grant SHOW USER ON DBMS TO $$role", Map("role" -> "custom"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -225,7 +237,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grant DATABASE MANAGEMENT ON DBMS TO custom")
+        execute(s"$grant DATABASE MANAGEMENT ON DBMS TO $$role", Map("role" -> "custom"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -267,7 +279,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grant REMOVE PRIVILEGE ON DBMS TO custom")
+        execute(s"$grant REMOVE PRIVILEGE ON DBMS TO $$role", Map("role" -> "custom"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -438,7 +450,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     allDbmsPrivileges("GRANT", includingCompound = true)
 
     // WHEN
-    execute("REVOKE ALL DBMS PRIVILEGES ON DBMS FROM custom")
+    execute("REVOKE ALL DBMS PRIVILEGES ON DBMS FROM $role", Map("role" -> "custom"))
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(

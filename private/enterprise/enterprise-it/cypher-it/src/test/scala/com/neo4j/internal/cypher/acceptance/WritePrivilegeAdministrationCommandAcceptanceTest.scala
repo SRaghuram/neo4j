@@ -124,6 +124,13 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
           // THEN
         } should have message s"Failed to $grantOrDeny write privilege to role 'custom': Role does not exist."
 
+        // WHEN
+        the[InvalidArgumentsException] thrownBy {
+          // WHEN
+          execute(s"$grantOrDenyCommand WRITE ON GRAPH * ELEMENTS * (*) TO $$role", Map("role" -> "custom"))
+          // THEN
+        } should have message s"Failed to $grantOrDeny write privilege to role 'custom': Role does not exist."
+
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set())
       }
@@ -134,6 +141,9 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         execute("CREATE ROLE custom")
         the[DatabaseNotFoundException] thrownBy {
           execute(s"$grantOrDenyCommand WRITE ON GRAPH foo ELEMENTS * (*) TO custom")
+        } should have message s"Failed to $grantOrDeny write privilege to role 'custom': Database 'foo' does not exist."
+        the[DatabaseNotFoundException] thrownBy {
+          execute(s"$grantOrDenyCommand WRITE ON GRAPH $$db ELEMENTS * (*) TO custom", Map("db" -> "foo"))
         } should have message s"Failed to $grantOrDeny write privilege to role 'custom': Database 'foo' does not exist."
       }
 
@@ -432,8 +442,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("CREATE ROLE custom")
 
     // WHEN
-    execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
-    execute("DENY WRITE ON GRAPH * ELEMENTS * (*) TO custom")
+    execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO $role", Map("role" -> "custom"))
+    execute("DENY WRITE ON GRAPH * ELEMENTS * (*) TO $role", Map("role" -> "custom"))
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -459,7 +469,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     ))
 
     // WHEN
-    execute(s"REVOKE GRANT WRITE ON GRAPH * ELEMENTS * (*) FROM custom")
+    execute("REVOKE GRANT WRITE ON GRAPH * ELEMENTS * (*) FROM $role", Map("role" -> "custom"))
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -468,8 +478,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     ))
 
     // WHEN
-    execute(s"GRANT WRITE ON GRAPH * ELEMENTS * (*) To custom")
-    execute(s"REVOKE DENY WRITE ON GRAPH * ELEMENTS * (*) FROM custom")
+    execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) To custom")
+    execute("REVOKE DENY WRITE ON GRAPH * ELEMENTS * (*) FROM $role", Map("role" -> "custom"))
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(

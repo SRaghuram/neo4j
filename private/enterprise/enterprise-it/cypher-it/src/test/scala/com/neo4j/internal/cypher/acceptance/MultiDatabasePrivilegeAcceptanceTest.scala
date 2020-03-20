@@ -81,7 +81,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     ))
 
     // WHEN
-    execute("DENY START ON DATABASE bar TO role")
+    execute("DENY START ON DATABASE bar TO $r", Map("r" -> "role"))
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
@@ -100,7 +100,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     ))
 
     // WHEN
-    execute("DENY STOP ON DEFAULT DATABASE TO role")
+    execute("DENY STOP ON DEFAULT DATABASE TO $r", Map("r" -> "role"))
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
@@ -141,7 +141,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     ))
 
     // WHEN
-    execute("DENY ACCESS ON DEFAULT DATABASE TO custom")
+    execute("DENY ACCESS ON DEFAULT DATABASE TO $role", Map("role" -> "custom"))
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -150,7 +150,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     ))
 
     // WHEN
-    execute("REVOKE GRANT ACCESS ON DEFAULT DATABASE FROM custom")
+    execute("REVOKE GRANT ACCESS ON DEFAULT DATABASE FROM $role", Map("role" -> "custom"))
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -492,6 +492,12 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
       execute("GRANT START ON DATABASE * TO role")
       // THEN
     } should have message "Failed to grant start_database privilege to role 'role': Role does not exist."
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT START ON DATABASE * TO $r", Map("r" -> "role"))
+      // THEN
+    } should have message "Failed to grant start_database privilege to role 'role': Role does not exist."
   }
 
   test("should fail to grant start database with missing database") {
@@ -753,6 +759,12 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
       execute("DENY STOP ON DATABASE * TO role")
       // THEN
     } should have message "Failed to deny stop_database privilege to role 'role': Role does not exist."
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("DENY STOP ON DATABASE * TO $r", Map("r" -> "role"))
+      // THEN
+    } should have message "Failed to deny stop_database privilege to role 'role': Role does not exist."
   }
 
   test("should fail to deny stop database with missing database") {
@@ -892,6 +904,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // WHEN
     execute("REVOKE ACCESS ON DATABASE * FROM wrongRole")
+    execute("REVOKE ACCESS ON DATABASE * FROM $r", Map("r" -> "wrongRole"))
   }
 
   test("should do nothing when revoking access with missing database") {

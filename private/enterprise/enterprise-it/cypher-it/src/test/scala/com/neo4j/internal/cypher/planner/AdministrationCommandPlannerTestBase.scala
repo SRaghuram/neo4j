@@ -61,30 +61,35 @@ class AdministrationCommandPlannerTestBase extends AdministrationCommandAcceptan
   def managementPlan(name: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, children = SingleChild(source))
   def managementPlan(name: String, arguments: Seq[Argument] = Seq.empty): PlanDescriptionImpl = planDescription(name, arguments)
 
-  def databasePrivilegePlan(name: String, action: String, database: Database, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
-    planDescription(name, Seq(DatabaseAction(action), database, rolePrivilegeArg(roleName)), SingleChild(source))
+  def databasePrivilegePlan(name: String, action: String, database: String, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
+    planDescription(name, Seq(DatabaseAction(action), databasePrivilegeArg(database), rolePrivilegeArg(roleName)), SingleChild(source))
+  def databasePrivilegePlan(name: String, action: String, database: Database, parameterRoleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
+    planDescription(name, Seq(DatabaseAction(action), database, Role(s"ROLE $parameterRoleName")), SingleChild(source))
   def databasePrivilegePlan(name: String, action: String, allDatabases: Boolean, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl = {
     val databaseArg = if (allDatabases) "ALL DATABASES" else "DEFAULT DATABASE"
     planDescription(name, Seq(DatabaseAction(action), Database(databaseArg), rolePrivilegeArg(roleName)), SingleChild(source))
   }
 
-  def databasePrivilegePlan(name: String, action: String, database: Database, qualifier: Qualifier, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
-    planDescription(name, Seq(DatabaseAction(action), database, qualifier, rolePrivilegeArg(roleName)), SingleChild(source))
+  def databasePrivilegePlan(name: String, action: String, database: String, qualifier: Qualifier, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
+    planDescription(name, Seq(DatabaseAction(action), databasePrivilegeArg(database), qualifier, rolePrivilegeArg(roleName)), SingleChild(source))
+  def databasePrivilegePlan(name: String, action: String, database: Database, qualifier: Qualifier, parameterRoleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
+    planDescription(name, Seq(DatabaseAction(action), database, qualifier, Role(s"ROLE $parameterRoleName")), SingleChild(source))
   def databasePrivilegePlan(name: String, action: String, allDatabases: Boolean, qualifier: Qualifier, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl = {
     val databaseArg = if (allDatabases) "ALL DATABASES" else "DEFAULT DATABASE"
     planDescription(name, Seq(DatabaseAction(action), Database(databaseArg), qualifier, rolePrivilegeArg(roleName)), SingleChild(source))
   }
 
   def dbmsPrivilegePlan(name: String, action: String, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(DbmsAction(action), rolePrivilegeArg(roleName)), SingleChild(source))
+  def dbmsPrivilegePlan(name: String, action: String, roleName: Role, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(DbmsAction(action), roleName), SingleChild(source))
 
   def graphPrivilegePlan(name: String, database: String, qualifier: Qualifier, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(graphPrivilegeArg(database), qualifier, rolePrivilegeArg(roleName)), SingleChild(source))
-  def graphPrivilegePlan(name: String, database: Database, qualifier: Qualifier, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(database, qualifier, rolePrivilegeArg(roleName)), SingleChild(source))
+  def graphPrivilegePlan(name: String, database: Database, qualifier: Qualifier, parameterRoleName: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(database, qualifier, Role(s"ROLE $parameterRoleName")), SingleChild(source))
   def graphPrivilegePlan(name: String, qualifier: Qualifier, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(Database("ALL GRAPHS"), qualifier, rolePrivilegeArg(roleName)), SingleChild(source))
 
   def graphPrivilegePlan(name: String, database: String, resource: Resource, qualifier: Qualifier, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
     planDescription(name, Seq(graphPrivilegeArg(database), resource, qualifier, rolePrivilegeArg(roleName)), SingleChild(source))
-  def graphPrivilegePlan(name: String, database: Database, resource: Resource, qualifier: Qualifier, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
-    planDescription(name, Seq(database, resource, qualifier, rolePrivilegeArg(roleName)), SingleChild(source))
+  def graphPrivilegePlan(name: String, database: Database, resource: Resource, qualifier: Qualifier, parameterRoleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
+    planDescription(name, Seq(database, resource, qualifier, Role(s"ROLE $parameterRoleName")), SingleChild(source))
   def graphPrivilegePlan(name: String, resource: Resource, qualifier: Qualifier, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
     planDescription(name, Seq(Database("ALL GRAPHS"), resource, qualifier, rolePrivilegeArg(roleName)), SingleChild(source))
 

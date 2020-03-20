@@ -77,7 +77,7 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     execute("DENY SHOW TRANSACTION (*) ON DATABASE foo TO role")
-    execute("DENY SHOW TRANSACTION (user1,user2) ON DEFAULT DATABASE TO role")
+    execute("DENY SHOW TRANSACTION (user1,user2) ON DEFAULT DATABASE TO $r", Map("r" -> "role"))
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
@@ -111,6 +111,12 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("GRANT SHOW TRANSACTION (*) ON DATABASE * TO role")
+      // THEN
+    } should have message "Failed to grant show_transaction privilege to role 'role': Role does not exist."
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT SHOW TRANSACTION (*) ON DATABASE * TO $r", Map("r" -> "role"))
       // THEN
     } should have message "Failed to grant show_transaction privilege to role 'role': Role does not exist."
   }
@@ -183,7 +189,7 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     execute("REVOKE TERMINATE TRANSACTION (*) ON DATABASE foo FROM role")
-    execute("REVOKE TERMINATE TRANSACTION (user1,user2) ON DEFAULT DATABASE FROM role")
+    execute("REVOKE TERMINATE TRANSACTION (user1,user2) ON DEFAULT DATABASE FROM $r", Map("r" -> "role"))
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(transaction("*").database("foo").role("role").map))
@@ -196,6 +202,12 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
     the[InvalidArgumentsException] thrownBy {
       // WHEN
       execute("DENY TERMINATE TRANSACTION (*) ON DATABASE * TO role")
+      // THEN
+    } should have message "Failed to deny terminate_transaction privilege to role 'role': Role does not exist."
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("DENY TERMINATE TRANSACTION (*) ON DATABASE * TO $r", Map("r" -> "role"))
       // THEN
     } should have message "Failed to deny terminate_transaction privilege to role 'role': Role does not exist."
   }
@@ -226,7 +238,7 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     execute("GRANT TRANSACTION (*) ON DATABASE foo TO role")
-    execute("GRANT TRANSACTION ON DEFAULT DATABASE TO role")
+    execute("GRANT TRANSACTION ON DEFAULT DATABASE TO $r", Map("r" -> "role"))
     execute("GRANT TRANSACTION (user1,user2) ON DATABASE * TO role")
 
     // THEN
@@ -293,6 +305,7 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
     // WHEN
     execute("REVOKE TRANSACTION (*) ON DATABASE * FROM wrongRole")
+    execute("REVOKE TRANSACTION (*) ON DATABASE * FROM $r", Map("r" -> "wrongRole"))
   }
 
   test("should do nothing when revoking transaction management privilege with missing database") {

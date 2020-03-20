@@ -470,7 +470,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             // WHEN
             val error3 = the[InvalidArgumentsException] thrownBy {
               // WHEN
-              execute(s"$grantOrDenyCommand $actionCommand ON GRAPH * TO custom")
+              execute(s"$grantOrDenyCommand $actionCommand ON GRAPH * TO $$role", Map("role" -> "custom"))
               // THEN
             }
             error3.getMessage should be(s"Failed to $grantOrDeny $actionName privilege to role 'custom': Role does not exist.")
@@ -487,6 +487,10 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
               execute(s"$grantOrDenyCommand $actionCommand ON GRAPH foo TO custom")
             }
             error.getMessage should be(s"Failed to $grantOrDeny $actionName privilege to role 'custom': Database 'foo' does not exist.")
+            val error2 = the[DatabaseNotFoundException] thrownBy {
+              execute(s"$grantOrDenyCommand $actionCommand ON GRAPH $$db TO custom", Map("db" -> "foo"))
+            }
+            error2.getMessage should be(s"Failed to $grantOrDeny $actionName privilege to role 'custom': Database 'foo' does not exist.")
           }
 
           test(s"should fail when ${grantOrDeny}ing $actionName privilege using * as parameter") {
@@ -629,7 +633,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
             execute("CREATE ROLE custom")
 
             // WHEN
-            execute(s"$grantOrDenyCommand $actionCommand ON GRAPH * ELEMENTS * (*) TO custom")
+            execute(s"$grantOrDenyCommand $actionCommand ON GRAPH * ELEMENTS * (*) TO $$role", Map("role" -> "custom"))
 
             // THEN
             execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(

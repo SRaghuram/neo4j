@@ -42,7 +42,9 @@ import org.neo4j.cypher.internal.ast.ShowRolePrivileges
 import org.neo4j.cypher.internal.ast.ShowUserPrivileges
 import org.neo4j.cypher.internal.ast.UserAllQualifier
 import org.neo4j.cypher.internal.ast.UserQualifier
+import org.neo4j.cypher.internal.ast.prettifier.Prettifier
 import org.neo4j.cypher.internal.compiler.phases.LogicalPlanState
+import org.neo4j.cypher.internal.expressions.Parameter
 import org.neo4j.cypher.internal.logical.plans.AlterUser
 import org.neo4j.cypher.internal.logical.plans.CopyRolePrivileges
 import org.neo4j.cypher.internal.logical.plans.CreateDatabase
@@ -402,85 +404,85 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     case GrantDbmsAction(source, action, roleName) => (context, parameterMapping) =>
       val dbmsAction = AdminActionMapper.asKernelAction(action).toString
       makeGrantOrDenyExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), AllQualifier()(InputPosition.NONE), roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, s"Failed to grant $dbmsAction privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant $dbmsAction privilege to role '${runtimeValue(roleName, params)}'")
 
     case DenyDbmsAction(source, action, roleName) => (context, parameterMapping) =>
       val dbmsAction = AdminActionMapper.asKernelAction(action).toString
       makeGrantOrDenyExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), AllQualifier()(InputPosition.NONE), roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, s"Failed to deny $dbmsAction privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny $dbmsAction privilege to role '${runtimeValue(roleName, params)}'")
 
     case RevokeDbmsAction(source, action, roleName, revokeType) => (context, parameterMapping) =>
       val dbmsAction = AdminActionMapper.asKernelAction(action).toString
       makeRevokeExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), AllQualifier()(InputPosition.NONE), roleName, revokeType,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), s"Failed to revoke $dbmsAction privilege from role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke $dbmsAction privilege from role '${runtimeValue(roleName, params)}'")
 
     // GRANT/DENY/REVOKE _ ON DATABASE foo TO role
     case GrantDatabaseAction(source, action, database, qualifier, roleName) => (context, parameterMapping) =>
       val databaseAction = AdminActionMapper.asKernelAction(action).toString
       makeGrantOrDenyExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, s"Failed to grant $databaseAction privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant $databaseAction privilege to role '${runtimeValue(roleName, params)}'")
 
     case DenyDatabaseAction(source, action, database, qualifier, roleName) => (context, parameterMapping) =>
       val databaseAction = AdminActionMapper.asKernelAction(action).toString
       makeGrantOrDenyExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, s"Failed to deny $databaseAction privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny $databaseAction privilege to role '${runtimeValue(roleName, params)}'")
 
     case RevokeDatabaseAction(source, action, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
       val databaseAction = AdminActionMapper.asKernelAction(action).toString
       makeRevokeExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), s"Failed to revoke $databaseAction privilege from role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke $databaseAction privilege from role '${runtimeValue(roleName, params)}'")
 
     // GRANT/DENY/REVOKE TRAVERSE ON GRAPH foo NODES A (*) TO role
     case GrantTraverse(source, database, qualifier, roleName) => (context, parameterMapping) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.TRAVERSE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, s"Failed to grant traversal privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant traversal privilege to role '${runtimeValue(roleName, params)}'")
 
     case DenyTraverse(source, database, qualifier, roleName) => (context, parameterMapping) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.TRAVERSE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, s"Failed to deny traversal privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny traversal privilege to role '${runtimeValue(roleName, params)}'")
 
     case RevokeTraverse(source, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
       makeRevokeExecutionPlan(PrivilegeAction.TRAVERSE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), s"Failed to revoke traversal privilege from role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke traversal privilege from role '${runtimeValue(roleName, params)}'")
 
     // GRANT/DENY/REVOKE READ {prop} ON GRAPH foo NODES A (*) TO role
     case GrantRead(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.READ.toString, resource, database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, s"Failed to grant read privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant read privilege to role '${runtimeValue(roleName, params)}'")
 
     case DenyRead(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.READ.toString, resource, database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, s"Failed to deny read privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny read privilege to role '${runtimeValue(roleName, params)}'")
 
     case RevokeRead(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
       makeRevokeExecutionPlan(PrivilegeAction.READ.toString, resource, database, qualifier, roleName, revokeType,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), s"Failed to revoke read privilege from role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke read privilege from role '${runtimeValue(roleName, params)}'")
 
     // GRANT/DENY/REVOKE MATCH {prop} ON GRAPH foo NODES A (*) TO role
     case GrantMatch(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.MATCH.toString, resource, database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, s"Failed to grant match privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant match privilege to role '${runtimeValue(roleName, params)}'")
 
     case DenyMatch(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.MATCH.toString, resource, database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, s"Failed to deny match privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny match privilege to role '${runtimeValue(roleName, params)}'")
 
     case RevokeMatch(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
       makeRevokeExecutionPlan(PrivilegeAction.MATCH.toString, resource, database, qualifier, roleName, revokeType,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), s"Failed to revoke match privilege from role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke match privilege from role '${runtimeValue(roleName, params)}'")
 
     // GRANT/DENY/REVOKE WRITE ON GRAPH foo NODES * (*) TO role
     case GrantWrite(source, database, qualifier, roleName) => (context, parameterMapping) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.WRITE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, s"Failed to grant write privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant write privilege to role '${runtimeValue(roleName, params)}'")
 
     case DenyWrite(source, database, qualifier, roleName) => (context, parameterMapping) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.WRITE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, s"Failed to deny write privilege to role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny write privilege to role '${runtimeValue(roleName, params)}'")
 
     case RevokeWrite(source, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
       makeRevokeExecutionPlan(PrivilegeAction.WRITE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), s"Failed to revoke write privilege from role '$roleName'")
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke write privilege from role '${runtimeValue(roleName, params)}'")
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES
     case ShowPrivileges(source, scope) => (context, parameterMapping) =>
@@ -809,24 +811,25 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
                                            resource: ActionResource,
                                            database: GraphScope,
                                            qualifier: PrivilegeQualifier,
-                                           roleName: String,
+                                           roleName: Either[String, Parameter],
                                            source: Option[ExecutionPlan],
                                            grant: GrantOrDeny,
-                                           startOfErrorMessage: String): UpdatingSystemCommandExecutionPlan = {
+                                           startOfErrorMessage: MapValue => String): UpdatingSystemCommandExecutionPlan = {
 
     val commandName = if (grant.isGrant) "GrantPrivilege" else "DenyPrivilege"
 
     val action = Values.utf8Value(actionName)
-    val role = Values.utf8Value(roleName)
-    val (property: Value, resourceType: Value, resourceMerge: String) = getResourcePart(resource, startOfErrorMessage, grant.name, "MERGE")
-    val (qualifierKey, qualifierValue, qualifierConverter, qualifierMerge) = getQualifierPart(qualifier, startOfErrorMessage, grant.name, "MERGE")
+    val (roleKey, roleValue, roleConverter) = getNameFields("role", roleName)
+    val roleMap = VirtualValues.map(Array(roleKey), Array(Values.utf8Value(Prettifier.escapeName(roleName))))
+    val (property: Value, resourceType: Value, resourceMerge: String) = getResourcePart(resource, startOfErrorMessage(roleMap), grant.name, "MERGE")
+    val (qualifierKey, qualifierValue, qualifierConverter, qualifierMerge) = getQualifierPart(qualifier, startOfErrorMessage(roleMap), grant.name, "MERGE")
     val (databaseKey, databaseValue, databaseConverter, databaseMerge, scopeMerge) = database match {
       case NamedGraphScope(name) =>
         val (key, value, converter) = getNameFields("nameScope", name, valueMapper = s => new NormalizedDatabaseName(s).name())
         (key, value, converter, s"MATCH (d:Database {name: $$$key})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
       case AllGraphsScope() => ("*", Values.utf8Value("*"), IdentityConverter, "MERGE (d:DatabaseAll {name: '*'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
       case DefaultDatabaseScope() => ("DEFAULT_DATABASE", Values.utf8Value("DEFAULT DATABASE"), IdentityConverter, "MERGE (d:DatabaseDefault {name: 'DEFAULT'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
-      case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege ${grant.name} scope database $database")
+      case _ => throw new IllegalStateException(s"${startOfErrorMessage(roleMap)}: Invalid privilege ${grant.name} scope database $database")
     }
     UpdatingSystemCommandExecutionPlan(commandName, normalExecutionEngine,
       s"""
@@ -847,47 +850,48 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |WITH q, d, p
          |
          |// Connect the role to the action to complete the privilege assignment
-         |OPTIONAL MATCH (r:Role {name: $$role})
+         |OPTIONAL MATCH (r:Role {name: $$$roleKey})
          |MERGE (r)-[:${grant.relType}]->(p)
          |
          |// Return the table of results
          |RETURN '${grant.prefix}' AS grant, p.action AS action, d.name AS database, q.label AS label, r.name AS role""".stripMargin,
-      VirtualValues.map(Array("action", "resource", "property", databaseKey, qualifierKey, "role"), Array(action, resourceType, property, databaseValue, qualifierValue, role)),
+      VirtualValues.map(Array("action", "resource", "property", databaseKey, qualifierKey, roleKey), Array(action, resourceType, property, databaseValue, qualifierValue, roleValue)),
       QueryHandler
         .handleNoResult(params => {
           val db = params.get(databaseKey).asInstanceOf[TextValue].stringValue()
           if (db.equals("*") && !databaseKey.equals("*"))
-            Some(new InvalidArgumentsException(s"$startOfErrorMessage: Parameterized database and graph names do not support wildcards."))
+            Some(new InvalidArgumentsException(s"${startOfErrorMessage(params)}: Parameterized database and graph names do not support wildcards."))
           else
-          // needs to have the database name here since it is not in the startOfErrorMessage
-            Some(new DatabaseNotFoundException(s"$startOfErrorMessage: Database '$db' does not exist."))
+            // needs to have the database name here since it is not in the startOfErrorMessage
+            Some(new DatabaseNotFoundException(s"${startOfErrorMessage(params)}: Database '$db' does not exist."))
         })
         .handleError {
-          case (e: InternalException, _) if e.getMessage.contains("ignore rows where a relationship node is missing") =>
-            new InvalidArgumentsException(s"$startOfErrorMessage: Role does not exist.", e) // the rolename is included in the startOfErrorMessage so not needed here (consistent with the other commands)
-          case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
-            new DatabaseAdministrationOnFollowerException(s"$startOfErrorMessage: $followerError", e)
-          case (e, _) => new IllegalStateException(s"$startOfErrorMessage.", e)
+          case (e: InternalException, p) if e.getMessage.contains("ignore rows where a relationship node is missing") =>
+            new InvalidArgumentsException(s"${startOfErrorMessage(p)}: Role does not exist.", e) // the rolename is included in the startOfErrorMessage so not needed here (consistent with the other commands)
+          case (e: HasStatus, p) if e.status() == Status.Cluster.NotALeader =>
+            new DatabaseAdministrationOnFollowerException(s"${startOfErrorMessage(p)}: $followerError", e)
+          case (e, p) => new IllegalStateException(s"${startOfErrorMessage(p)}.", e)
         },
       source,
-      parameterConverter = p => databaseConverter(qualifierConverter(p))
+      parameterConverter = p => databaseConverter(qualifierConverter(roleConverter(p)))
     )
   }
 
   private def makeRevokeExecutionPlan(actionName: String, resource: ActionResource, database: GraphScope, qualifier: PrivilegeQualifier,
-                                      roleName: String, revokeType: String, source: Option[ExecutionPlan], startOfErrorMessage: String) = {
+                                      roleName: Either[String, Parameter], revokeType: String, source: Option[ExecutionPlan], startOfErrorMessage: MapValue => String) = {
     val action = Values.utf8Value(actionName)
-    val role = Values.utf8Value(roleName)
+    val (roleKey, roleValue, roleConverter) = getNameFields("role", roleName)
+    val roleMap = VirtualValues.map(Array(roleKey), Array(Values.utf8Value(Prettifier.escapeName(roleName))))
 
-    val (property: Value, resourceType: Value, resourceMatch: String) = getResourcePart(resource, startOfErrorMessage, "revoke", "MATCH")
-    val (qualifierKey, qualifierValue, qualifierConverter, qualifierMatch) = getQualifierPart(qualifier, startOfErrorMessage, "revoke", "MATCH")
+    val (property: Value, resourceType: Value, resourceMatch: String) = getResourcePart(resource, startOfErrorMessage(roleMap), "revoke", "MATCH")
+    val (qualifierKey, qualifierValue, qualifierConverter, qualifierMatch) = getQualifierPart(qualifier, startOfErrorMessage(roleMap), "revoke", "MATCH")
     val (databaseKey, databaseValue, databaseConverter, scopeMatch) = database match {
       case NamedGraphScope(name) =>
         val (key, value, converter) = getNameFields("nameScope", name, valueMapper = s => new NormalizedDatabaseName(s).name())
         (key, value, converter, s"MATCH (d:Database {name: $$$key})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
       case AllGraphsScope() => ("", Values.NO_VALUE, IdentityConverter, "MATCH (d:DatabaseAll {name: '*'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
       case DefaultDatabaseScope() => ("", Values.NO_VALUE, IdentityConverter, "MATCH (d:DatabaseDefault {name: 'DEFAULT'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
-      case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege revoke scope database $database")
+      case _ => throw new IllegalStateException(s"${startOfErrorMessage(roleMap)}: Invalid privilege revoke scope database $database")
     }
     UpdatingSystemCommandExecutionPlan("RevokePrivilege", normalExecutionEngine,
       s"""
@@ -902,21 +906,21 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |MATCH (res)<-[:APPLIES_TO]-(p:Privilege {action: $$action})-[:SCOPE]->(s)
          |
          |// Find the privilege assignment connecting the role to the action
-         |OPTIONAL MATCH (r:Role {name: $$role})
+         |OPTIONAL MATCH (r:Role {name: $$$roleKey})
          |WITH p, r, d, q
          |OPTIONAL MATCH (r)-[g:$revokeType]->(p)
          |
          |// Remove the assignment
          |DELETE g
          |RETURN r.name AS role, g AS grant""".stripMargin,
-      VirtualValues.map(Array("action", "resource", "property", databaseKey, qualifierKey, "role"), Array(action, resourceType, property, databaseValue, qualifierValue, role)),
+      VirtualValues.map(Array("action", "resource", "property", databaseKey, qualifierKey, roleKey), Array(action, resourceType, property, databaseValue, qualifierValue, roleValue)),
       QueryHandler.handleError {
-        case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
-          new DatabaseAdministrationOnFollowerException(s"$startOfErrorMessage: $followerError", e)
-        case (e, _) => new IllegalStateException(s"$startOfErrorMessage.", e)
+        case (e: HasStatus, p) if e.status() == Status.Cluster.NotALeader =>
+          new DatabaseAdministrationOnFollowerException(s"${startOfErrorMessage(p)}: $followerError", e)
+        case (e, p) => new IllegalStateException(s"${startOfErrorMessage(p)}.", e)
       },
       source,
-      parameterConverter = p => databaseConverter(qualifierConverter(p))
+      parameterConverter = p => databaseConverter(qualifierConverter(roleConverter(p)))
     )
   }
 

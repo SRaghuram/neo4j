@@ -42,7 +42,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType READ {bar} ON GRAPH foo NODES A (*) FROM custom")
+        execute(s"REVOKE $revokeType READ {bar} ON GRAPH $$db NODES A (*) FROM $$role", Map("db" -> "foo", "role" -> "custom"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -54,7 +54,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType READ {bar} ON GRAPH foo NODES * (*) FROM custom")
+        execute(s"REVOKE $revokeType READ {bar} ON GRAPH $$db NODES * (*) FROM $$role", Map("db" -> "foo", "role" -> "custom"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -342,7 +342,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH foo RELATIONSHIPS A (*) FROM custom")
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH $$db RELATIONSHIPS A (*) FROM $$role", Map("db" -> "foo", "role" -> "custom"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -352,7 +352,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH foo RELATIONSHIPS * (*) FROM custom")
+        execute(s"REVOKE $revokeType TRAVERSE ON GRAPH $$db RELATIONSHIPS * (*) FROM $$role", Map("db" -> "foo", "role" -> "custom"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -578,7 +578,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH {bar} ON GRAPH foo ELEMENTS A (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH {bar} ON GRAPH $$db ELEMENTS A (*) FROM $$role", Map("db" -> "foo", "role" -> "custom"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -589,7 +589,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH {bar} ON GRAPH foo ELEMENTS * (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH {bar} ON GRAPH $$db ELEMENTS * (*) FROM $$role", Map("db" -> "foo", "role" -> "custom"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -609,7 +609,7 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         ))
 
         // WHEN
-        execute(s"REVOKE $revokeType MATCH {bar} ON GRAPH foo ELEMENTS B, C (*) FROM custom")
+        execute(s"REVOKE $revokeType MATCH {bar} ON GRAPH $$db ELEMENTS B, C (*) FROM $$role", Map("db" -> "foo", "role" -> "custom"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)

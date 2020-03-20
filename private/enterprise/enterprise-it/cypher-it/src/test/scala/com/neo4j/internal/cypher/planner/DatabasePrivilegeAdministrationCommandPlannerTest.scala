@@ -40,7 +40,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "ACCESS", databasePrivilegeArg(SYSTEM_DATABASE_NAME), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "ACCESS", SYSTEM_DATABASE_NAME, "reader",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -51,12 +51,12 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY ACCESS ON DATABASE $db TO reader", Map("db" -> SYSTEM_DATABASE_NAME)).executionPlanString()
+    val plan = execute("EXPLAIN DENY ACCESS ON DATABASE $db TO $role", Map("db" -> SYSTEM_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "ACCESS", Database("DATABASE $db"), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "ACCESS", Database("DATABASE $db"), "$role",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -140,7 +140,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "START", databasePrivilegeArg(SYSTEM_DATABASE_NAME), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "START", SYSTEM_DATABASE_NAME, "reader",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -151,12 +151,12 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY START ON DATABASE $db TO reader", Map("db" -> SYSTEM_DATABASE_NAME)).executionPlanString()
+    val plan = execute("EXPLAIN DENY START ON DATABASE $db TO $role", Map("db" -> SYSTEM_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "START", Database("DATABASE $db"), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "START", Database("DATABASE $db"), "$role",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -208,7 +208,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "STOP", databasePrivilegeArg(SYSTEM_DATABASE_NAME), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "STOP", SYSTEM_DATABASE_NAME, "reader",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -219,12 +219,12 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY STOP ON DATABASE $db TO reader", Map("db" -> SYSTEM_DATABASE_NAME)).executionPlanString()
+    val plan = execute("EXPLAIN DENY STOP ON DATABASE $db TO $role", Map("db" -> SYSTEM_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "STOP", Database("DATABASE $db"), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "STOP", Database("DATABASE $db"), "$role",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -278,7 +278,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "CREATE INDEX", databasePrivilegeArg(SYSTEM_DATABASE_NAME), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "CREATE INDEX", SYSTEM_DATABASE_NAME, "reader",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -289,12 +289,12 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY CREATE INDEX ON DATABASE $db TO reader", Map("db" -> SYSTEM_DATABASE_NAME)).executionPlanString()
+    val plan = execute("EXPLAIN DENY CREATE INDEX ON DATABASE $db TO $role", Map("db" -> SYSTEM_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "CREATE INDEX", Database("DATABASE $db"), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "CREATE INDEX", Database("DATABASE $db"), "$role",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -344,7 +344,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "DROP INDEX", databasePrivilegeArg(SYSTEM_DATABASE_NAME), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "DROP INDEX", SYSTEM_DATABASE_NAME, "reader",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -355,12 +355,12 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY DROP INDEX ON DATABASE $db TO reader", Map("db" -> SYSTEM_DATABASE_NAME)).executionPlanString()
+    val plan = execute("EXPLAIN DENY DROP INDEX ON DATABASE $db TO $role", Map("db" -> SYSTEM_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "DROP INDEX", Database("DATABASE $db"), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "DROP INDEX", Database("DATABASE $db"), "$role",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -410,7 +410,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "INDEX MANAGEMENT", databasePrivilegeArg(SYSTEM_DATABASE_NAME), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "INDEX MANAGEMENT", SYSTEM_DATABASE_NAME, "reader",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -421,12 +421,12 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY INDEX MANAGEMENT ON DATABASE $db TO reader", Map("db" -> SYSTEM_DATABASE_NAME)).executionPlanString()
+    val plan = execute("EXPLAIN DENY INDEX MANAGEMENT ON DATABASE $db TO $role", Map("db" -> SYSTEM_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "INDEX MANAGEMENT", Database("DATABASE $db"), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "INDEX MANAGEMENT", Database("DATABASE $db"), "$role",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -478,7 +478,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "CREATE CONSTRAINT", databasePrivilegeArg(SYSTEM_DATABASE_NAME), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "CREATE CONSTRAINT", SYSTEM_DATABASE_NAME, "reader",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -489,12 +489,12 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY CREATE CONSTRAINT ON DATABASE $db TO reader", Map("db" -> SYSTEM_DATABASE_NAME)).executionPlanString()
+    val plan = execute("EXPLAIN DENY CREATE CONSTRAINT ON DATABASE $db TO $role", Map("db" -> SYSTEM_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "CREATE CONSTRAINT", Database("DATABASE $db"), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "CREATE CONSTRAINT", Database("DATABASE $db"), "$role",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -544,7 +544,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "DROP CONSTRAINT", databasePrivilegeArg(SYSTEM_DATABASE_NAME), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "DROP CONSTRAINT", SYSTEM_DATABASE_NAME, "reader",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -555,12 +555,12 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY DROP CONSTRAINT ON DATABASE $db TO reader", Map("db" -> SYSTEM_DATABASE_NAME)).executionPlanString()
+    val plan = execute("EXPLAIN DENY DROP CONSTRAINT ON DATABASE $db TO $role", Map("db" -> SYSTEM_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "DROP CONSTRAINT", Database("DATABASE $db"), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "DROP CONSTRAINT", Database("DATABASE $db"), "$role",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -610,7 +610,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "CONSTRAINT MANAGEMENT", databasePrivilegeArg(SYSTEM_DATABASE_NAME), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "CONSTRAINT MANAGEMENT", SYSTEM_DATABASE_NAME, "reader",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -621,12 +621,12 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY CONSTRAINT MANAGEMENT ON DATABASE $db TO reader", Map("db" -> SYSTEM_DATABASE_NAME)).executionPlanString()
+    val plan = execute("EXPLAIN DENY CONSTRAINT MANAGEMENT ON DATABASE $db TO $role", Map("db" -> SYSTEM_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "CONSTRAINT MANAGEMENT", Database("DATABASE $db"), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "CONSTRAINT MANAGEMENT", Database("DATABASE $db"), "$role",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -680,7 +680,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "CREATE NEW NODE LABEL", databasePrivilegeArg(SYSTEM_DATABASE_NAME), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "CREATE NEW NODE LABEL", SYSTEM_DATABASE_NAME, "reader",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -691,12 +691,12 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY CREATE NEW LABEL ON DATABASE $db TO reader", Map("db" -> SYSTEM_DATABASE_NAME)).executionPlanString()
+    val plan = execute("EXPLAIN DENY CREATE NEW LABEL ON DATABASE $db TO $role", Map("db" -> SYSTEM_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "CREATE NEW NODE LABEL", Database("DATABASE $db"), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "CREATE NEW NODE LABEL", Database("DATABASE $db"), "$role",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -746,7 +746,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "CREATE NEW RELATIONSHIP TYPE", databasePrivilegeArg(SYSTEM_DATABASE_NAME), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "CREATE NEW RELATIONSHIP TYPE", SYSTEM_DATABASE_NAME, "reader",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -757,12 +757,12 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY CREATE NEW TYPE ON DATABASE $db TO reader", Map("db" -> SYSTEM_DATABASE_NAME)).executionPlanString()
+    val plan = execute("EXPLAIN DENY CREATE NEW TYPE ON DATABASE $db TO $role", Map("db" -> SYSTEM_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "CREATE NEW RELATIONSHIP TYPE", Database("DATABASE $db"), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "CREATE NEW RELATIONSHIP TYPE", Database("DATABASE $db"), "$role",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -812,7 +812,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "CREATE NEW PROPERTY NAME", databasePrivilegeArg(SYSTEM_DATABASE_NAME), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "CREATE NEW PROPERTY NAME", SYSTEM_DATABASE_NAME, "reader",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -823,12 +823,12 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY CREATE NEW NAME ON DATABASE $db TO reader", Map("db" -> SYSTEM_DATABASE_NAME)).executionPlanString()
+    val plan = execute("EXPLAIN DENY CREATE NEW NAME ON DATABASE $db TO $role", Map("db" -> SYSTEM_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "CREATE NEW PROPERTY NAME", Database("DATABASE $db"), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "CREATE NEW PROPERTY NAME", Database("DATABASE $db"), "$role",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -880,7 +880,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "NAME MANAGEMENT", databasePrivilegeArg(SYSTEM_DATABASE_NAME), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "NAME MANAGEMENT", SYSTEM_DATABASE_NAME, "reader",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -891,12 +891,12 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY NAME MANAGEMENT ON DATABASE $db TO reader", Map("db" -> SYSTEM_DATABASE_NAME)).executionPlanString()
+    val plan = execute("EXPLAIN DENY NAME MANAGEMENT ON DATABASE $db TO $role", Map("db" -> SYSTEM_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "NAME MANAGEMENT", Database("DATABASE $db"), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "NAME MANAGEMENT", Database("DATABASE $db"), "$role",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -950,7 +950,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "ALL DATABASE PRIVILEGES", databasePrivilegeArg(SYSTEM_DATABASE_NAME), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "ALL DATABASE PRIVILEGES", SYSTEM_DATABASE_NAME, "reader",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -961,12 +961,12 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY ALL ON DATABASE $db TO reader", Map("db" -> SYSTEM_DATABASE_NAME)).executionPlanString()
+    val plan = execute("EXPLAIN DENY ALL ON DATABASE $db TO $role", Map("db" -> SYSTEM_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "ALL DATABASE PRIVILEGES", Database("DATABASE $db"), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "ALL DATABASE PRIVILEGES", Database("DATABASE $db"), "$role",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -1020,7 +1020,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "SHOW TRANSACTION", databasePrivilegeArg(SYSTEM_DATABASE_NAME), Qualifier("ALL USERS"), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "SHOW TRANSACTION", SYSTEM_DATABASE_NAME, Qualifier("ALL USERS"), "reader",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -1031,12 +1031,12 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY SHOW TRANSACTION (*) ON DATABASE $db TO reader", Map("db" -> SYSTEM_DATABASE_NAME)).executionPlanString()
+    val plan = execute("EXPLAIN DENY SHOW TRANSACTION (*) ON DATABASE $db TO $role", Map("db" -> SYSTEM_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "SHOW TRANSACTION", Database("DATABASE $db"), Qualifier("ALL USERS"), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "SHOW TRANSACTION", Database("DATABASE $db"), Qualifier("ALL USERS"), "$role",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -1122,7 +1122,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "TERMINATE TRANSACTION", databasePrivilegeArg(SYSTEM_DATABASE_NAME), Qualifier("ALL USERS"), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "TERMINATE TRANSACTION", SYSTEM_DATABASE_NAME, Qualifier("ALL USERS"), "reader",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -1133,12 +1133,12 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY TERMINATE TRANSACTION (*) ON DATABASE $db TO reader", Map("db" -> SYSTEM_DATABASE_NAME)).executionPlanString()
+    val plan = execute("EXPLAIN DENY TERMINATE TRANSACTION (*) ON DATABASE $db TO $role", Map("db" -> SYSTEM_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "TERMINATE TRANSACTION", Database("DATABASE $db"), Qualifier("ALL USERS"), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "TERMINATE TRANSACTION", Database("DATABASE $db"), Qualifier("ALL USERS"), "$role",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -1224,8 +1224,8 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "TRANSACTION MANAGEMENT", databasePrivilegeArg(SYSTEM_DATABASE_NAME), qualifierArg("USER", "user2"), "reader",
-          databasePrivilegePlan("DenyDatabaseAction", "TRANSACTION MANAGEMENT", databasePrivilegeArg(SYSTEM_DATABASE_NAME), qualifierArg("USER", "user1"), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "TRANSACTION MANAGEMENT", SYSTEM_DATABASE_NAME, qualifierArg("USER", "user2"), "reader",
+          databasePrivilegePlan("DenyDatabaseAction", "TRANSACTION MANAGEMENT", SYSTEM_DATABASE_NAME, qualifierArg("USER", "user1"), "reader",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
@@ -1237,12 +1237,12 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute("EXPLAIN DENY TRANSACTION ($user) ON DATABASE $db TO reader", Map("db" -> SYSTEM_DATABASE_NAME)).executionPlanString()
+    val plan = execute("EXPLAIN DENY TRANSACTION ($user) ON DATABASE $db TO $role", Map("db" -> SYSTEM_DATABASE_NAME, "role" -> "reader")).executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "TRANSACTION MANAGEMENT", Database("DATABASE $db"), Qualifier("USER $user"), "reader",
+        databasePrivilegePlan("DenyDatabaseAction", "TRANSACTION MANAGEMENT", Database("DATABASE $db"), Qualifier("USER $user"), "$role",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
