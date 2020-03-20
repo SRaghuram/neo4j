@@ -84,7 +84,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.SeekExpression
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialLimitOnRhsOfApplyOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDistinctOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate
-import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate.SerialTopLevelLimitStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate.SerialLimitStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelSkipOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelSkipOperatorTaskTemplate.SerialTopLevelSkipStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleExactSeekQueryNodeIndexSeekTaskTemplate
@@ -538,7 +538,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   ctx.innermost,
                   argumentStateMapId,
                   ctx.compileExpression(countExpression))(ctx.expressionCompiler),
-                Some(argumentStateMapId -> SerialTopLevelLimitStateFactory)
+                Some(argumentStateMapId -> SerialLimitStateFactory)
               )
             } else {
               ctx.innermost.limits += LimitNotReachedState(argumentStateMapId)
@@ -548,7 +548,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   ctx.innermost,
                   argumentStateMapId,
                   ctx.compileExpression(countExpression))(ctx.expressionCompiler),
-                Some(argumentStateMapId -> SerialTopLevelLimitStateFactory)
+                Some(argumentStateMapId -> SerialLimitStateFactory)
               )
             }
 

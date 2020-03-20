@@ -307,7 +307,7 @@ class SerialLimitOnRhsOfApplyOperatorTaskTemplate(override val inner: OperatorTa
 object SerialTopLevelLimitOperatorTaskTemplate {
 
   // This is used by fused limit in a serial pipeline, i.e. only safe to use in single-threaded execution or by a serial pipeline in parallel execution
-  object SerialTopLevelLimitStateFactory extends ArgumentStateFactory[SerialCountingState] {
+  object SerialLimitStateFactory extends ArgumentStateFactory[SerialCountingState] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): SerialCountingState =
       new StandardSerialLimitState(argumentRowId, argumentRowIdsForReducers)
 
