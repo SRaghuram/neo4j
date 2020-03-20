@@ -9,13 +9,10 @@ import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.executor.Location;
 import org.junit.jupiter.api.Test;
 
-import java.net.URI;
-import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.driver.Logger;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.logging.JULBridge;
@@ -102,7 +99,7 @@ class DriverLoggingTest
 
         var fabricConfig = FabricConfig.from( config );
         var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, mock( SslPolicyLoader.class ) );
-        var graph0DriverConfig = driverConfigFactory.createConfig( new Location.Remote( 0, createUri( "bolt://mega:1111" ), null ) );
+        var graph0DriverConfig = driverConfigFactory.createConfig( new Location.Remote.External( 0, null, createUri( "bolt://mega:1111" ), null ) );
 
         var logger = graph0DriverConfig.logging().getLog( LOG_NAME );
         log( logger );

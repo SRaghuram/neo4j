@@ -23,10 +23,10 @@ class ClusterCatalogManager(
 
   override def locationOf(graph: Catalog.Graph, requireWritable: Boolean): Location = (graph, requireWritable) match {
 
-    case (Catalog.InternalGraph(id, _, databaseName), true) =>
+    case (Catalog.InternalGraph(id, uuid, _, databaseName), true) =>
       determineLeader(databaseName) match {
-        case LeaderIsLocal           => new Location.Local(id, databaseName.name())
-        case LeaderIsRemote(address) => new Location.Remote(id, internalRemoteUri(address), databaseName.name())
+        case LeaderIsLocal           => new Location.Local(id, uuid, databaseName.name())
+        case LeaderIsRemote(address) => new Location.Remote.Internal(id, uuid, internalRemoteUri(address), databaseName.name())
       }
 
     case _ =>

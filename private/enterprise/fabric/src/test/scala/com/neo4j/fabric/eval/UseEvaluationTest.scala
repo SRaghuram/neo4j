@@ -7,13 +7,13 @@ package com.neo4j.fabric.eval
 
 import java.time.Duration
 import java.util
+import java.util.UUID
 
 import com.neo4j.fabric.FabricTest
 import com.neo4j.fabric.ProcedureRegistryTestSupport
 import com.neo4j.fabric.config.FabricConfig
 import com.neo4j.fabric.config.FabricConfig.GlobalDriverConfig
 import com.neo4j.fabric.config.FabricConfig.Graph
-import com.neo4j.fabric.eval
 import com.neo4j.fabric.eval.Catalog.ExternalGraph
 import com.neo4j.fabric.eval.Catalog.InternalGraph
 import com.neo4j.fabric.pipeline.SignatureResolver
@@ -26,6 +26,8 @@ import org.neo4j.cypher.internal.util.test_helpers.TestName
 import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.exceptions.EntityNotFoundException
 import org.neo4j.exceptions.SyntaxException
+import org.neo4j.kernel.database.DatabaseIdFactory
+import org.neo4j.kernel.database.NamedDatabaseId
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.MapValue
@@ -40,6 +42,10 @@ class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport wit
   private val mega1 = new Graph(1L, FabricConfig.RemoteUri.create("bolt://mega:2222"), "neo4j", null, null)
   private val mega2 = new Graph(2L, FabricConfig.RemoteUri.create("bolt://mega:3333"), "neo4j", new NormalizedGraphName("mega"), null)
 
+  private val neo4jUuid = UUID.randomUUID()
+  private val testUuid = UUID.randomUUID()
+  private val megaUuid = UUID.randomUUID()
+
   private val config = new FabricConfig(
     true,
     new FabricConfig.Database(new NormalizedDatabaseName("mega"), util.Set.of(mega0, mega1, mega2)),
@@ -48,7 +54,7 @@ class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport wit
     new FabricConfig.DataStream(300, 1000, 50, 10)
   )
 
-  private val internalDbs = Set("neo4j", "test", "mega")
+  private val internalDbs = Set(dbId("neo4j", neo4jUuid), dbId("test", testUuid), dbId("mega", megaUuid))
 
   "Correctly evaluates:" - {
     "USE mega.graph(0)" in eval().shouldEqual(external(mega0))
@@ -67,12 +73,12 @@ class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport wit
     "USE mega.GRAPH(y)" in eval("y" -> Values.intValue(1)).shouldEqual(external(mega1))
     "USE mega.sOuRce_Of_aLL_tRuTH" in eval().shouldEqual(external(mega0))
     "USE Mega.MEGA" in eval().shouldEqual(external(mega2))
-    "USE mega" in eval().shouldEqual(internal(3, "mega"))
-    "USE MeGa" in eval().shouldEqual(internal(3, "mega"))
-    "USE neo4j" in eval().shouldEqual(internal(4, "neo4j"))
-    "USE Neo4j" in eval().shouldEqual(internal(4, "neo4j"))
-    "USE test" in eval().shouldEqual(internal(5, "test"))
-    "USE mega.graph(4)" in eval().shouldEqual(internal(4, "neo4j"))
+    "USE mega" in eval().shouldEqual(internal(3, megaUuid, "mega"))
+    "USE MeGa" in eval().shouldEqual(internal(3, megaUuid, "mega"))
+    "USE neo4j" in eval().shouldEqual(internal(4, neo4jUuid, "neo4j"))
+    "USE Neo4j" in eval().shouldEqual(internal(4, neo4jUuid, "neo4j"))
+    "USE test" in eval().shouldEqual(internal(5, testUuid, "test"))
+    "USE mega.graph(4)" in eval().shouldEqual(internal(4, neo4jUuid, "neo4j"))
   }
 
   "Fails for:" - {
@@ -125,7 +131,8 @@ class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport wit
     }
   }
 
-  private def external(graph: FabricConfig.Graph) = ExternalGraph(graph)
-  private def internal(id: Long, name: String) = InternalGraph(id, new NormalizedGraphName(name), new NormalizedDatabaseName(name))
+  private def external(graph: FabricConfig.Graph) = ExternalGraph(graph, new UUID(graph.getId, 0))
+  private def internal(id: Long, uuid: UUID, name: String) = InternalGraph(id, uuid, new NormalizedGraphName(name), new NormalizedDatabaseName(name))
+  private def dbId(name: String, uuid:UUID):NamedDatabaseId = DatabaseIdFactory.from(name, uuid)
 
 }

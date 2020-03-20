@@ -7,6 +7,7 @@ package com.neo4j.fabric.eval
 
 import com.neo4j.fabric.config.FabricConfig
 import com.neo4j.fabric.executor.Location
+import com.neo4j.fabric.executor.Location.Remote
 
 class SingleCatalogManager(
   databaseLookup: DatabaseLookup,
@@ -14,19 +15,16 @@ class SingleCatalogManager(
 ) extends CatalogManager {
 
   def currentCatalog(): Catalog =
-    Catalog.create(fabricConfig, internalDatabaseNames)
+    Catalog.create(fabricConfig, databaseLookup.databaseIds)
 
   def locationOf(graph: Catalog.Graph, requireWritable: Boolean): Location = (graph, requireWritable) match {
-    case (Catalog.InternalGraph(id, _, databaseName), _) =>
-      new Location.Local(id, databaseName.name())
+    case (Catalog.InternalGraph(id, uuid, _, databaseName), _) =>
+      new Location.Local(id, uuid, databaseName.name())
 
-    case (Catalog.ExternalGraph(graphConfig), _) =>
-      new Location.Remote(graphConfig.getId, externalRemoteUri(graphConfig.getUri), graphConfig.getDatabase)
+    case (Catalog.ExternalGraph(graphConfig, uuid), _) =>
+      new Remote.External(graphConfig.getId, uuid, externalRemoteUri(graphConfig.getUri), graphConfig.getDatabase)
   }
 
   private def externalRemoteUri(configUri: FabricConfig.RemoteUri): Location.RemoteUri =
     new Location.RemoteUri(configUri.getScheme, configUri.getAddresses, configUri.getQuery)
-
-  private def internalDatabaseNames: Set[String] =
-    databaseLookup.databaseIds.map(db => db.name())
 }

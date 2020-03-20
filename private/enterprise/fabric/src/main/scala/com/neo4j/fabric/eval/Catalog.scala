@@ -5,6 +5,8 @@
  */
 package com.neo4j.fabric.eval
 
+import java.util.UUID
+
 import com.neo4j.fabric.config.FabricConfig
 import com.neo4j.fabric.util.Errors
 import com.neo4j.fabric.util.Errors.show
@@ -12,6 +14,7 @@ import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.configuration.helpers.NormalizedGraphName
 import org.neo4j.cypher.internal.ast.CatalogName
 import org.neo4j.cypher.internal.util.InputPosition
+import org.neo4j.kernel.database.NamedDatabaseId
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.IntegralValue
 
@@ -23,11 +26,13 @@ object Catalog {
 
   sealed trait Graph extends Entry {
     def id: Long
+    def uuid: UUID
     def name: Option[String]
   }
 
   case class InternalGraph(
     id: Long,
+    uuid: UUID,
     graphName: NormalizedGraphName,
     databaseName: NormalizedDatabaseName
   ) extends Graph {
@@ -36,7 +41,8 @@ object Catalog {
   }
 
   case class ExternalGraph(
-    graph: FabricConfig.Graph
+    graph: FabricConfig.Graph,
+    uuid: UUID
   ) extends Graph {
     def id: Long = graph.getId
     def name: Option[String] = Option(graph.getName).map(_.name)
@@ -71,7 +77,7 @@ object Catalog {
 
   case class Arg[T <: AnyValue](name: String, tpe: Class[T])
 
-  def create(config: FabricConfig, internalDatabases: Set[String]): Catalog = {
+  def create(config: FabricConfig, internalDatabases: Set[NamedDatabaseId]): Catalog = {
     val fabricNamespace = config.getDatabase.getName.name()
     val fabricGraphs = config.getDatabase.getGraphs.asScala.toSet
 
@@ -89,13 +95,13 @@ object Catalog {
 
   private def asExternal(graphs: Set[FabricConfig.Graph]) = for {
     graph <- graphs.toSeq
-  } yield ExternalGraph(graph)
+  } yield ExternalGraph(graph, new UUID(graph.getId, 0))
 
-  private def asInternal(startId: Long, names: Set[String]) = for {
-    (name, id) <- names.toSeq.sorted.zip(Stream.iterate(startId)(_ + 1))
-    graphName = new NormalizedGraphName(name)
-    databaseName = new NormalizedDatabaseName(name)
-  } yield InternalGraph(id, graphName, databaseName)
+  private def asInternal(startId: Long, databaseIds: Set[NamedDatabaseId]) = for {
+    (namedDatabaseId, id) <- databaseIds.toSeq.sortBy(_.name).zip(Stream.iterate(startId)(_ + 1))
+    graphName = new NormalizedGraphName(namedDatabaseId.name())
+    databaseName = new NormalizedDatabaseName(namedDatabaseId.name())
+  } yield InternalGraph(id, namedDatabaseId.databaseId().uuid(), graphName, databaseName)
 
   private def byName(graphs: Seq[Catalog.Graph], namespace: String*): Catalog =
     Catalog((for {

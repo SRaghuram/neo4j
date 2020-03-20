@@ -11,7 +11,7 @@ import com.neo4j.fabric.driver.PooledDriver;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.transaction.CompositeTransaction;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
-import com.neo4j.fabric.transaction.TransactionBookmarkManager;
+import com.neo4j.fabric.bookmark.TransactionBookmarkManager;
 import com.neo4j.fabric.transaction.TransactionMode;
 import reactor.core.publisher.Mono;
 
@@ -117,7 +117,7 @@ public class FabricRemoteExecutor
         private Mono<FabricDriverTransaction> beginDriverTx( Location.Remote location, AccessMode accessMode )
         {
             var driver = getDriver( location );
-            var bookmarks = bookmarkManager.getBookmarksForGraph( location );
+            var bookmarks = bookmarkManager.getBookmarksForRemote( location );
             return driver.beginTransaction( location, accessMode, transactionInfo, bookmarks );
         }
 
@@ -149,7 +149,7 @@ public class FabricRemoteExecutor
         public Mono<Void> commit()
         {
             return driverTx.flatMap( FabricDriverTransaction::commit )
-                    .doOnSuccess( bookmark -> bookmarkManager.recordBookmarkReceivedFromGraph( location, bookmark ) )
+                    .doOnSuccess( bookmark -> bookmarkManager.remoteTransactionCommitted( location, bookmark ) )
                     .then();
         }
 

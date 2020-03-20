@@ -49,8 +49,8 @@ class DriverPoolTest
     private final FabricConfig fabricConfig = mock( FabricConfig.class );
     private final Config config = mock( Config.class );
 
-    private final Location.Remote s1 = new Location.Remote( 1, createUri( shard0.boltURI().toString() ), "db1" );
-    private final Location.Remote s2 = new Location.Remote( 2, createUri( shard1.boltURI().toString() ), "db1" );
+    private final Location.Remote s1 = new Location.Remote.External( 1, null, createUri( shard0.boltURI().toString() ), "db1" );
+    private final Location.Remote s2 = new Location.Remote.External( 2, null, createUri( shard1.boltURI().toString() ), "db1" );
 
     private final CredentialsProvider credentialsProvider = Mockito.mock( CredentialsProvider.class );
     private final AuthSubject as1 = mock( AuthSubject.class );

@@ -5,6 +5,7 @@
  */
 package com.neo4j.fabric.transaction;
 
+import com.neo4j.fabric.bookmark.TransactionBookmarkManager;
 import com.neo4j.fabric.executor.Exceptions;
 import com.neo4j.fabric.executor.FabricLocalExecutor;
 import com.neo4j.fabric.config.FabricConfig;
@@ -79,7 +80,7 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
         try
         {
             remoteTransactionContext = remoteExecutor.startTransactionContext( this, transactionInfo, bookmarkManager );
-            localTransactionContext = localExecutor.startTransactionContext( this, transactionInfo );
+            localTransactionContext = localExecutor.startTransactionContext( this, transactionInfo, bookmarkManager );
 
             scheduleTimeout( transactionInfo );
             internalLog.debug( "Transaction %d started", id );

@@ -5,12 +5,13 @@
  */
 package com.neo4j.fabric.bolt;
 
+import com.neo4j.fabric.bookmark.LocalGraphTransactionIdTracker;
+import com.neo4j.fabric.bookmark.TransactionBookmarkManagerFactory;
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.executor.FabricExecutor;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.transaction.FabricTransaction;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
-import com.neo4j.fabric.transaction.TransactionBookmarkManager;
 import com.neo4j.fabric.transaction.TransactionManager;
 
 import java.time.Duration;
@@ -24,7 +25,6 @@ import org.neo4j.bolt.dbapi.BoltTransaction;
 import org.neo4j.bolt.dbapi.BookmarkMetadata;
 import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.bolt.runtime.Bookmark;
-import org.neo4j.bolt.txtracking.TransactionIdTracker;
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.KernelTransaction;
@@ -42,22 +42,22 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
     private final NamedDatabaseId namedDatabaseId;
     private final FabricConfig config;
     private final TransactionManager transactionManager;
-    private final Duration bookmarkTimeout;
-    private final TransactionIdTracker transactionIdTracker;
+    private final LocalGraphTransactionIdTracker transactionIdTracker;
+    private final TransactionBookmarkManagerFactory transactionBookmarkManagerFactory;
 
     public BoltFabricDatabaseService( NamedDatabaseId namedDatabaseId,
             FabricExecutor fabricExecutor,
             FabricConfig config,
             TransactionManager transactionManager,
-            Duration bookmarkTimeout,
-            TransactionIdTracker transactionIdTracker )
+            LocalGraphTransactionIdTracker transactionIdTracker,
+            TransactionBookmarkManagerFactory transactionBookmarkManagerFactory )
     {
         this.namedDatabaseId = namedDatabaseId;
         this.config = config;
         this.transactionManager = transactionManager;
         this.fabricExecutor = fabricExecutor;
-        this.bookmarkTimeout = bookmarkTimeout;
         this.transactionIdTracker = transactionIdTracker;
+        this.transactionBookmarkManagerFactory = transactionBookmarkManagerFactory;
     }
 
     @Override
@@ -79,7 +79,7 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
                 txMetadata
         );
 
-        var transactionBookmarkManager = new TransactionBookmarkManager( config, transactionIdTracker, bookmarkTimeout );
+        var transactionBookmarkManager = transactionBookmarkManagerFactory.createTransactionBookmarkManager( transactionIdTracker );
         transactionBookmarkManager.processSubmittedByClient( bookmarks );
 
         FabricTransaction fabricTransaction = transactionManager.begin( transactionInfo, transactionBookmarkManager );

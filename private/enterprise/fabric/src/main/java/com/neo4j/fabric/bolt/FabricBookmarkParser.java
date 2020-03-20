@@ -5,11 +5,8 @@
  */
 package com.neo4j.fabric.bolt;
 
-import com.neo4j.fabric.driver.RemoteBookmark;
+import com.neo4j.fabric.bookmark.BookmarkStateSerializer;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Base64;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -30,7 +27,7 @@ public class FabricBookmarkParser implements CustomBookmarkFormatParser
         return customBookmarks.stream().map( this::parse ).collect( Collectors.toList());
     }
 
-    private Bookmark parse( String bookmarkString )
+    public FabricBookmark parse( String bookmarkString )
     {
         if ( !isCustomBookmark( bookmarkString ) )
         {
@@ -41,48 +38,9 @@ public class FabricBookmarkParser implements CustomBookmarkFormatParser
 
         if ( content.isEmpty() )
         {
-            return new FabricBookmark( List.of() );
+            return new FabricBookmark( List.of(), List.of() );
         }
 
-        var graphParts = content.split( "-" );
-
-        var remoteStates = Arrays.stream( graphParts )
-                .map( rawGraphState -> parseGraphState( bookmarkString, rawGraphState ) )
-                .collect( Collectors.toList() );
-
-        return new FabricBookmark( remoteStates );
-    }
-
-    private FabricBookmark.GraphState parseGraphState( String bookmarkString, String rawGraphState )
-    {
-        var parts = rawGraphState.split( ":" );
-        if ( parts.length != 2 )
-        {
-            throw new IllegalArgumentException( String.format( "Bookmark '%s' not valid", bookmarkString ) );
-        }
-
-        long graphId;
-        try
-        {
-            graphId = Long.parseLong( parts[0] );
-        }
-        catch ( NumberFormatException e )
-        {
-            throw new IllegalArgumentException( String.format( "Could not parse graph ID in '%s'", bookmarkString ), e );
-        }
-
-        var remoteBookmarks = Arrays.stream( parts[1].split( "," ) )
-                .map( FabricBookmarkParser::decodeRemoteBookmark )
-                .collect( Collectors.toList() );
-        return new FabricBookmark.GraphState( graphId, remoteBookmarks );
-    }
-
-    private static RemoteBookmark decodeRemoteBookmark( String encodedBookmark )
-    {
-        var decodedBookmarkState = Arrays.stream( encodedBookmark.split( "\\|" ) )
-                .map( bookmarkPart -> Base64.getDecoder().decode( bookmarkPart ) )
-                .map( decodedPart -> new String( decodedPart, StandardCharsets.UTF_8 ) )
-                .collect( Collectors.toSet());
-        return new RemoteBookmark( decodedBookmarkState );
+        return BookmarkStateSerializer.deserialize( content );
     }
 }

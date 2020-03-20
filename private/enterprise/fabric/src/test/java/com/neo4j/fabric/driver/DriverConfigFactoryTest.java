@@ -70,7 +70,7 @@ class DriverConfigFactoryTest
         var fabricConfig = FabricConfig.from( config );
         var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, mock( SslPolicyLoader.class ) );
 
-        var graph0DriverConfig = driverConfigFactory.createConfig( new Location.Remote( 0, createUri( "bolt://mega:1111" ), null ) );
+        var graph0DriverConfig = driverConfigFactory.createConfig( new Location.Remote.External( 0, null, createUri( "bolt://mega:1111" ), null ) );
 
         assertTrue( graph0DriverConfig.logging().getLog( "" ).isDebugEnabled() );
         assertTrue( graph0DriverConfig.logLeakedSessions() );
@@ -80,7 +80,7 @@ class DriverConfigFactoryTest
         assertEquals( Duration.ofSeconds( 17 ).toMillis(), graph0DriverConfig.connectionAcquisitionTimeoutMillis() );
         assertEquals( Duration.ofSeconds( 9 ).toMillis(), graph0DriverConfig.connectionTimeoutMillis() );
 
-        var graph1DriverConfig = driverConfigFactory.createConfig( new Location.Remote( 1, createUri( "bolt://mega:2222" ), null ) );
+        var graph1DriverConfig = driverConfigFactory.createConfig( new Location.Remote.External( 1, null, createUri( "bolt://mega:2222" ), null ) );
 
         assertFalse( graph1DriverConfig.logging().getLog( "" ).isDebugEnabled() );
         assertFalse( graph1DriverConfig.logLeakedSessions() );
@@ -90,7 +90,7 @@ class DriverConfigFactoryTest
         assertEquals( Duration.ofSeconds( 7 ).toMillis(), graph1DriverConfig.connectionAcquisitionTimeoutMillis() );
         assertEquals( Duration.ofSeconds( 3 ).toMillis(), graph1DriverConfig.connectionTimeoutMillis() );
 
-        var graph2DriverConfig = driverConfigFactory.createConfig( new Location.Remote( 2, createUri( "bolt://mega:3333" ), null ) );
+        var graph2DriverConfig = driverConfigFactory.createConfig( new Location.Remote.External( 2, null, createUri( "bolt://mega:3333" ), null ) );
         assertEquals( 99, graph2DriverConfig.maxConnectionPoolSize() );
         assertEquals( Duration.ofSeconds( 11 ).toMillis(), graph2DriverConfig.connectionTimeoutMillis() );
     }
@@ -109,7 +109,7 @@ class DriverConfigFactoryTest
         var fabricConfig = FabricConfig.from( config );
         var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, mock( SslPolicyLoader.class ) );
 
-        var graph0DriverConfig = driverConfigFactory.createConfig( new Location.Remote( 0, createUri( "bolt://mega:1111" ), null ) );
+        var graph0DriverConfig = driverConfigFactory.createConfig( new Location.Remote.External( 0, null, createUri( "bolt://mega:1111" ), null ) );
 
         assertFalse( graph0DriverConfig.logging().getLog( "" ).isDebugEnabled() );
         assertFalse( graph0DriverConfig.logLeakedSessions() );
@@ -138,7 +138,7 @@ class DriverConfigFactoryTest
         var address2 = new SocketAddress( "core-2", 2222 );
         var address3 = new SocketAddress( "core-3", 3333 );
         var uri = new Location.RemoteUri( "bolt", List.of( address1, address2, address3 ), null );
-        var graph0DriverConfig = driverConfigFactory.createConfig( new Location.Remote( 0, uri, null ) );
+        var graph0DriverConfig = driverConfigFactory.createConfig( new Location.Remote.External( 0, null, uri, null ) );
 
         var resolvedAddresses = graph0DriverConfig.resolver().resolve( null );
         assertThat( resolvedAddresses ).contains( ServerAddress.of( "core-1", 1111 ), ServerAddress.of( "core-2", 2222 ), ServerAddress.of( "core-3", 3333 ) );

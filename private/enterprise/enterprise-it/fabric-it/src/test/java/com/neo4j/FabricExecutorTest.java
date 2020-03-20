@@ -14,6 +14,7 @@ import com.neo4j.fabric.driver.RemoteBookmark;
 import com.neo4j.fabric.executor.FabricException;
 import com.neo4j.fabric.executor.FabricExecutor;
 import com.neo4j.fabric.stream.Records;
+import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.stream.summary.PartialSummary;
 import com.neo4j.utils.DriverUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -157,13 +158,12 @@ class FabricExecutorTest
         mockDriverPool( createMockDriver( graph0Result ), createMockDriver( graph1Result ) );
     }
 
-    private static void mockResult( AutoCommitStatementResult statementResult )
+    private static void mockResult( StatementResult statementResult )
     {
         reset( statementResult );
         when( statementResult.columns() ).thenReturn( Flux.fromIterable( List.of( "a", "b" ) ) );
         when( statementResult.records() ).thenReturn( Flux.empty() );
         when( statementResult.summary() ).thenReturn( Mono.empty() );
-        when( statementResult.getBookmark() ).thenReturn( Mono.just( new RemoteBookmark( Set.of( "BB" ) ) ) );
     }
 
     private void mockDriverPool( PooledDriver graph0, PooledDriver graph1 )
@@ -173,15 +173,15 @@ class FabricExecutorTest
         doReturn( graph1 ).when( driverPool ).getDriver( argThat( g -> g.getGraphId() == 1 ), any() );
     }
 
-    private PooledDriver createMockDriver( AutoCommitStatementResult mockStatementResult )
+    private PooledDriver createMockDriver( StatementResult mockStatementResult )
     {
         PooledDriver mockDriver = mock( PooledDriver.class );
 
         FabricDriverTransaction tx = mock( FabricDriverTransaction.class );
 
         when( tx.run( any(), any() ) ).thenReturn( mockStatementResult );
-        when( tx.commit() ).thenReturn( Mono.empty() );
-        when( tx.rollback() ).thenReturn( Mono.empty() );
+        when( tx.commit() ).thenReturn( Mono.just( new RemoteBookmark( "BB" ) ) );
+        when( tx.rollback() ).thenReturn(Mono.empty());
 
         when( mockDriver.beginTransaction( any(), accessModeArgument.capture(), any(), any() ) ).thenReturn( Mono.just( tx ) );
         return mockDriver;

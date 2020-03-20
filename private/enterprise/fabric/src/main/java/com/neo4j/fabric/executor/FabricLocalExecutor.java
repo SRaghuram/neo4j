@@ -5,6 +5,7 @@
  */
 package com.neo4j.fabric.executor;
 
+import com.neo4j.fabric.bookmark.TransactionBookmarkManager;
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.localdb.FabricDatabaseManager;
 import com.neo4j.fabric.stream.Record;
@@ -49,9 +50,11 @@ public class FabricLocalExecutor
         this.dbms = dbms;
     }
 
-    public LocalTransactionContext startTransactionContext( CompositeTransaction compositeTransaction, FabricTransactionInfo transactionInfo )
+    public LocalTransactionContext startTransactionContext( CompositeTransaction compositeTransaction,
+            FabricTransactionInfo transactionInfo,
+            TransactionBookmarkManager bookmarkManager )
     {
-        return new LocalTransactionContext( compositeTransaction, transactionInfo );
+        return new LocalTransactionContext( compositeTransaction, transactionInfo, bookmarkManager );
     }
 
     public class LocalTransactionContext implements AutoCloseable
@@ -60,11 +63,15 @@ public class FabricLocalExecutor
 
         private final CompositeTransaction compositeTransaction;
         private final FabricTransactionInfo transactionInfo;
+        private final TransactionBookmarkManager bookmarkManager;
 
-        private LocalTransactionContext( CompositeTransaction compositeTransaction, FabricTransactionInfo transactionInfo )
+        private LocalTransactionContext( CompositeTransaction compositeTransaction,
+                FabricTransactionInfo transactionInfo,
+                TransactionBookmarkManager bookmarkManager )
         {
             this.compositeTransaction = compositeTransaction;
             this.transactionInfo = transactionInfo;
+            this.bookmarkManager = bookmarkManager;
         }
 
         public StatementResult run( Location.Local location, TransactionMode transactionMode, ExecutingQuery parentQuery, FullyParsedQuery query,
@@ -89,6 +96,7 @@ public class FabricLocalExecutor
                 return existingTx.fabricKernelTransaction;
             }
 
+            bookmarkManager.awaitUpToDate( location );
             return kernelTransactions.computeIfAbsent( location.getGraphId(), locationId ->
             {
                 switch ( transactionMode )
@@ -97,21 +105,21 @@ public class FabricLocalExecutor
                     return compositeTransaction.startWritingTransaction( location, () ->
                     {
                         var tx = beginKernelTx( location, AccessMode.WRITE, parentQuery );
-                        return new KernelTxWrapper( tx, location );
+                        return new KernelTxWrapper( tx, bookmarkManager, location );
                     } );
 
                 case MAYBE_WRITE:
                     return compositeTransaction.startReadingTransaction( location, () ->
                     {
                         var tx = beginKernelTx( location, AccessMode.WRITE, parentQuery );
-                        return new KernelTxWrapper( tx, location );
+                        return new KernelTxWrapper( tx, bookmarkManager, location );
                     } );
 
                 case DEFINITELY_READ:
                     return compositeTransaction.startReadingOnlyTransaction( location, () ->
                     {
                         var tx = beginKernelTx( location, AccessMode.READ, parentQuery );
-                        return new KernelTxWrapper( tx, location );
+                        return new KernelTxWrapper( tx, bookmarkManager, location );
                     } );
                 default:
                     throw new IllegalArgumentException( "Unexpected transaction mode: " + transactionMode );
@@ -197,11 +205,13 @@ public class FabricLocalExecutor
     {
 
         private final FabricKernelTransaction fabricKernelTransaction;
-        private final Location location;
+        private final TransactionBookmarkManager bookmarkManager;
+        private final Location.Local location;
 
-        KernelTxWrapper( FabricKernelTransaction fabricKernelTransaction, Location location )
+        KernelTxWrapper( FabricKernelTransaction fabricKernelTransaction, TransactionBookmarkManager bookmarkManager, Location.Local location )
         {
             this.fabricKernelTransaction = fabricKernelTransaction;
+            this.bookmarkManager = bookmarkManager;
             this.location = location;
         }
 
@@ -209,6 +219,7 @@ public class FabricLocalExecutor
         public Mono<Void> commit()
         {
             fabricKernelTransaction.commit();
+            bookmarkManager.localTransactionCommitted( location );
             return Mono.empty();
         }
 

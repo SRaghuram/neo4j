@@ -211,13 +211,13 @@ class DriverSslTest
 
         driverPool = new DriverPool( jobScheduler, fabricConfig, config, Clock.systemUTC(), credentialsProvider, sslLoader );
         driverPool.start();
-        var driver = driverPool.getDriver( new Location.Remote( 0, createUri( graph0Uri ), null ), null );
+        var driver = driverPool.getDriver( new Location.Remote.External( 0, null, createUri( graph0Uri ), null ), null );
 
         var transactionInfo = mock( FabricTransactionInfo.class );
         when( transactionInfo.getTxTimeout() ).thenReturn( Duration.ZERO );
         try
         {
-            driver.run( "RETURN 1", MapValue.EMPTY, new Location.Remote( 0, null, null ), AccessMode.WRITE, transactionInfo, List.of() )
+            driver.run( "RETURN 1", MapValue.EMPTY, new Location.Remote.External( 0, null, null, null ), AccessMode.WRITE, transactionInfo, List.of() )
                     .columns()
                     .collectList()
                     .block();

@@ -3,43 +3,44 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.fabric.transaction;
+package com.neo4j.fabric.bookmark;
 
 import com.neo4j.fabric.bolt.FabricBookmark;
-import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.driver.RemoteBookmark;
 import com.neo4j.fabric.executor.FabricException;
 import com.neo4j.fabric.executor.Location;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.neo4j.bolt.runtime.Bookmark;
-import org.neo4j.bolt.txtracking.TransactionIdTracker;
 import org.neo4j.kernel.api.exceptions.Status;
 
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
-public class TransactionBookmarkManager
+/**
+ * This transaction bookmark manger is used when fabric bookmarks are used only for "Fabric" database.
+ * In other words, non-fabric databases are not using fabric bookmarks.
+ * <p>
+ * The most specific thing about this transaction bookmark manger is that it handles mixture of fabric and non-fabric bookmarks
+ * as it must handle System database bookmarks, which are not fabric ones.
+ */
+public class MixedModeBookmarkManager implements TransactionBookmarkManager
 {
-    private final FabricConfig fabricConfig;
-    private final TransactionIdTracker transactionIdTracker;
-    private final Duration bookmarkTimeout;
+    private final LocalGraphTransactionIdTracker localGraphTransactionIdTracker;
 
-    private final Map<Long, GraphBookmarkData> remoteGraphBookmarkData = new ConcurrentHashMap<>();
+    private final Map<UUID, GraphBookmarkData> remoteGraphBookmarkData = new ConcurrentHashMap<>();
 
-    public TransactionBookmarkManager( FabricConfig fabricConfig, TransactionIdTracker transactionIdTracker, Duration bookmarkTimeout )
+    public MixedModeBookmarkManager( LocalGraphTransactionIdTracker localGraphTransactionIdTracker )
     {
-        this.fabricConfig = fabricConfig;
-        this.transactionIdTracker = transactionIdTracker;
-        this.bookmarkTimeout = bookmarkTimeout;
+        this.localGraphTransactionIdTracker = localGraphTransactionIdTracker;
     }
 
+    @Override
     public void processSubmittedByClient( List<Bookmark> bookmarks )
     {
         if ( bookmarks.isEmpty() )
@@ -52,9 +53,10 @@ public class TransactionBookmarkManager
         processFabricBookmarks( bookmarksByType );
     }
 
-    public List<RemoteBookmark> getBookmarksForGraph( Location.Remote location )
+    @Override
+    public List<RemoteBookmark> getBookmarksForRemote( Location.Remote location )
     {
-        var bookmarkData = remoteGraphBookmarkData.get( location.getGraphId() );
+        var bookmarkData = remoteGraphBookmarkData.get( location.getUuid() );
 
         if ( bookmarkData != null )
         {
@@ -64,10 +66,31 @@ public class TransactionBookmarkManager
         return List.of();
     }
 
-    public void recordBookmarkReceivedFromGraph( Location.Remote location, RemoteBookmark bookmark )
+    @Override
+    public void remoteTransactionCommitted( Location.Remote location, RemoteBookmark bookmark )
     {
-        var bookmarkData = remoteGraphBookmarkData.computeIfAbsent( location.getGraphId(), g -> new GraphBookmarkData() );
+        var bookmarkData = remoteGraphBookmarkData.computeIfAbsent( location.getUuid(), g -> new GraphBookmarkData() );
+
+        // there must be only one transaction per location,
+        // so there is something fishy when more than bookmark is registered from the same location
+        if ( bookmarkData.bookmarkReceivedFromGraph != null )
+        {
+            throw new IllegalStateException( "More that one bookmark received from a remote location " + location );
+        }
+
         bookmarkData.bookmarkReceivedFromGraph = bookmark;
+    }
+
+    @Override
+    public void awaitUpToDate( Location.Local location )
+    {
+        // no-op as fabric database does not support writes
+    }
+
+    @Override
+    public void localTransactionCommitted( Location.Local local )
+    {
+        // no-op as fabric database does not support writes
     }
 
     public FabricBookmark constructFinalBookmark()
@@ -85,10 +108,10 @@ public class TransactionBookmarkManager
                 graphBookmarks = bookmarkData.bookmarksSubmittedByClient;
             }
 
-            return new FabricBookmark.GraphState( entry.getKey(), graphBookmarks );
+            return new FabricBookmark.ExternalGraphState( entry.getKey(), graphBookmarks );
         } ).collect( Collectors.toList() );
 
-        return new FabricBookmark( remoteStates );
+        return new FabricBookmark( List.of(), remoteStates );
     }
 
     private BookmarksByType sortOutByType( List<Bookmark> bookmarks )
@@ -121,30 +144,17 @@ public class TransactionBookmarkManager
     {
         if ( bookmarksByType.systemDbTxId != -1 )
         {
-            transactionIdTracker.awaitUpToDate( NAMED_SYSTEM_DATABASE_ID, bookmarksByType.systemDbTxId, bookmarkTimeout );
+            localGraphTransactionIdTracker.awaitSystemGraphUpToDate( bookmarksByType.systemDbTxId );
         }
     }
 
     private void processFabricBookmarks( BookmarksByType bookmarksByType )
     {
-        Map<Long, FabricConfig.Graph> graphsById = fabricConfig.getDatabase()
-                .getGraphs()
-                .stream()
-                .collect( Collectors.toMap(FabricConfig.Graph::getId, Function.identity()) );
-
         for ( var bookmark : bookmarksByType.fabricBookmarks )
         {
-            bookmark.getGraphStates().forEach( graphState ->
+            bookmark.getExternalGraphStates().forEach( graphState ->
             {
-                var graph = graphsById.get( graphState.getRemoteGraphId() );
-
-                if ( graph == null )
-                {
-                    throw new FabricException( Status.Transaction.InvalidBookmark,
-                            "Bookmark with non-existent remote graph ID database encountered: " + bookmark );
-                }
-
-                var bookmarkData = remoteGraphBookmarkData.computeIfAbsent( graph.getId(), g -> new GraphBookmarkData() );
+                var bookmarkData = remoteGraphBookmarkData.computeIfAbsent( graphState.getGraphUuid(), g -> new GraphBookmarkData() );
                 bookmarkData.bookmarksSubmittedByClient.addAll( graphState.getBookmarks() );
             } );
         }

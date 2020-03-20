@@ -44,7 +44,7 @@ class SecurityPlanConstructionTest
         var sslLoader = SslPolicyLoader.create( config, NullLogProvider.nullLogProvider() );
         var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, sslLoader );
 
-        var securityPlan = driverConfigFactory.createSecurityPlan( new Location.Remote( 0, null, null ) );
+        var securityPlan = driverConfigFactory.createSecurityPlan( new Location.Remote.External( 0, null, null, null ) );
 
         assertFalse( securityPlan.requiresEncryption() );
         assertNull(securityPlan.sslContext());
@@ -67,7 +67,7 @@ class SecurityPlanConstructionTest
         var sslLoader = SslPolicyLoader.create( config, NullLogProvider.nullLogProvider() );
         var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, sslLoader );
 
-        var securityPlan = driverConfigFactory.createSecurityPlan( new Location.Remote( 0, null, null ) );
+        var securityPlan = driverConfigFactory.createSecurityPlan( new Location.Remote.External( 0, null, null, null ) );
 
         assertFalse(securityPlan.requiresEncryption());
         assertNull(securityPlan.sslContext());
@@ -94,13 +94,13 @@ class SecurityPlanConstructionTest
         var sslLoader = SslPolicyLoader.create( config, NullLogProvider.nullLogProvider() );
         var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, sslLoader );
 
-        var securityPlanForGraph0 = driverConfigFactory.createSecurityPlan( new Location.Remote( 0, null, null ) );
+        var securityPlanForGraph0 = driverConfigFactory.createSecurityPlan( new Location.Remote.External( 0, null, null, null ) );
 
         assertTrue( securityPlanForGraph0.requiresEncryption() );
         assertNotNull( securityPlanForGraph0.sslContext() );
         assertTrue( securityPlanForGraph0.requiresHostnameVerification() );
 
-        var securityPlanForGraph1 = driverConfigFactory.createSecurityPlan( new Location.Remote( 1, null, null ) );
+        var securityPlanForGraph1 = driverConfigFactory.createSecurityPlan( new Location.Remote.External( 1, null, null, null ) );
 
         assertFalse(securityPlanForGraph1.requiresEncryption());
         assertNull(securityPlanForGraph1.sslContext());

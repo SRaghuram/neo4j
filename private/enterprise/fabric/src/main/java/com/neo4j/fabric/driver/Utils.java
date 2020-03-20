@@ -5,15 +5,27 @@
  */
 package com.neo4j.fabric.driver;
 
-import java.util.Set;
-
 import org.neo4j.driver.Bookmark;
 
 public class Utils
 {
     static RemoteBookmark convertBookmark( Bookmark bookmark )
     {
-        Set<String> serialisedBookmark = bookmark == null ? Set.of() : bookmark.values();
+        if ( bookmark == null )
+        {
+            return null;
+        }
+
+        // Even though the internal state of Driver's bookmark is a set,
+        // currently the set size in a bookmark received from a server is always 1
+        // assuming that will simplify bookmark handling a lot
+        // if this is changed by the driver, it should fail our tests
+        if ( bookmark.values().size() != 1 )
+        {
+            throw new IllegalArgumentException( "Unexpected bookmark format received from a remote" );
+        }
+
+        String serialisedBookmark = bookmark.values().stream().findAny().get();
         return new RemoteBookmark( serialisedBookmark );
     }
 }

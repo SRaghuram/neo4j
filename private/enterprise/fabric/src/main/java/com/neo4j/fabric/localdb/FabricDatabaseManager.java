@@ -94,10 +94,15 @@ public class FabricDatabaseManager extends LifecycleAdapter
 
     public boolean isFabricDatabase( String databaseNameRaw )
     {
-        var fabricByDefault = FeatureToggles.flag( FabricDatabaseManager.class, FABRIC_BY_DEFAULT_FLAG_NAME, false );
+        var fabricByDefault = fabricEnabledForAllDatabases();
         var databaseName = new NormalizedDatabaseName( databaseNameRaw ).name();
         var isSystemDatabase = databaseName.equals( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
         return !isSystemDatabase && (fabricByDefault || isConfiguredFabricDatabase( databaseNameRaw ));
+    }
+
+    public boolean fabricEnabledForAllDatabases()
+    {
+        return FeatureToggles.flag( FabricDatabaseManager.class, FABRIC_BY_DEFAULT_FLAG_NAME, false );
     }
 
     public boolean isConfiguredFabricDatabase( String databaseNameRaw )

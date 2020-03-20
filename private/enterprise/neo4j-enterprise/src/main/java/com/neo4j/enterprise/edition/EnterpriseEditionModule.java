@@ -19,6 +19,8 @@ import com.neo4j.dbms.database.EnterpriseMultiDatabaseManager;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.fabric.auth.FabricAuthManagerWrapper;
 import com.neo4j.fabric.bolt.BoltFabricDatabaseManagementService;
+import com.neo4j.fabric.bookmark.LocalGraphTransactionIdTracker;
+import com.neo4j.fabric.bookmark.TransactionBookmarkManagerFactory;
 import com.neo4j.fabric.bootstrap.FabricServicesBootstrap;
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.executor.FabricExecutor;
@@ -309,8 +311,13 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
 
         var transactionIdTracker = new TransactionIdTracker( managementService, reconciledTxTracker, monitors, clock );
 
+        var databaseManager = (DatabaseManager<DatabaseContext>) dependencies.resolveDependency( DatabaseManager.class );
+        var databaseIdRepository = databaseManager.databaseIdRepository();
+        var transactionBookmarkManagerFactory = dependencies.resolveDependency( TransactionBookmarkManagerFactory.class );
+
+        var localGraphTransactionIdTracker = new LocalGraphTransactionIdTracker( transactionIdTracker, databaseIdRepository, bookmarkTimeout );
         var fabricDatabaseManagementService = new BoltFabricDatabaseManagementService( fabricExecutor, config, transactionManager, fabricDatabaseManager,
-                bookmarkTimeout, transactionIdTracker );
+                localGraphTransactionIdTracker, transactionBookmarkManagerFactory );
 
         return new BoltGraphDatabaseManagementServiceSPI()
         {

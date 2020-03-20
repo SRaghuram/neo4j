@@ -99,9 +99,9 @@ class TransactionTest
     @BeforeAll
     static void beforeAll() throws UnavailableException
     {
-        var graph1 = new Location.Remote( 1, createUri( "bolt://somewhere:1001" ), null );
-        var graph2 = new Location.Remote( 2, createUri( "bolt://somewhere:1002" ), null );
-        var graph3 = new Location.Remote( 3, createUri( "bolt://somewhere:1003" ), null );
+        var graph1 = new Location.Remote.External( 1, null, createUri( "bolt://somewhere:1001" ), null );
+        var graph2 = new Location.Remote.External( 2, null, createUri( "bolt://somewhere:1002" ), null );
+        var graph3 = new Location.Remote.External( 3, null, createUri( "bolt://somewhere:1003" ), null );
 
         var configProperties = Map.of(
                 "fabric.database.name", "mega",
@@ -191,12 +191,6 @@ class TransactionTest
         reset( shardDriver );
         when( shardDriver.beginTransaction( any(), any(), any(), any() ) ).thenReturn( transaction );
 
-        var result = mock( AutoCommitStatementResult.class );
-        when( result.columns() ).thenReturn( Flux.fromIterable( List.of( "a", "b" ) ) );
-        when( result.records() ).thenReturn( Flux.empty() );
-        when( result.summary() ).thenReturn( Mono.just( new EmptySummary() ) );
-        when( result.getBookmark() ).thenReturn( Mono.just( new RemoteBookmark( Set.of("BB") ) ) );
-
         doAnswer( invocationOnMock ->
         {
             latch.countDown();
@@ -214,7 +208,7 @@ class TransactionTest
 
         when( tx.run( any(), any() ) ).thenReturn( result );
 
-        when( tx.commit() ).thenReturn( Mono.empty() );
+        when( tx.commit() ).thenReturn( Mono.just( new RemoteBookmark( "BB" ) ) );
         when( tx.rollback() ).thenReturn( Mono.empty() );
 
         return tx;

@@ -5,6 +5,7 @@
  */
 package com.neo4j.fabric.transaction;
 
+import com.neo4j.fabric.bookmark.TransactionBookmarkManager;
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.executor.FabricLocalExecutor;
 import com.neo4j.fabric.executor.FabricRemoteExecutor;

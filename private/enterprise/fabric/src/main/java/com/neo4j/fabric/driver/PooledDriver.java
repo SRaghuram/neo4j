@@ -72,7 +72,7 @@ public abstract class PooledDriver
         var builder = SessionConfig.builder().withDefaultAccessMode( translateAccessMode( accessMode ) );
 
         var mergedBookmarks = new HashSet<String>();
-        bookmarks.forEach( remoteBookmark -> mergedBookmarks.addAll( remoteBookmark.getSerialisedState() ) );
+        bookmarks.forEach( remoteBookmark -> mergedBookmarks.add( remoteBookmark.getSerialisedState() ) );
 
         builder.withBookmarks(  Bookmark.from( mergedBookmarks ) );
 

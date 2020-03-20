@@ -5,13 +5,25 @@
  */
 package com.neo4j;
 
+import com.neo4j.fabric.bolt.FabricBookmark;
+import com.neo4j.fabric.bolt.FabricBookmarkParser;
+import com.neo4j.fabric.bookmark.FabricOnlyBookmarkManager;
+import com.neo4j.fabric.bookmark.LocalGraphTransactionIdTracker;
+import com.neo4j.fabric.bookmark.TransactionBookmarkManagerFactory;
+import com.neo4j.fabric.driver.RemoteBookmark;
+import com.neo4j.fabric.localdb.FabricDatabaseManager;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -20,10 +32,12 @@ import org.neo4j.bolt.dbapi.BoltQueryExecution;
 import org.neo4j.bolt.dbapi.BoltTransaction;
 import org.neo4j.bolt.dbapi.BookmarkMetadata;
 import org.neo4j.bolt.runtime.Bookmark;
+import org.neo4j.bolt.v4.runtime.bookmarking.BookmarkWithDatabaseId;
 import org.neo4j.configuration.Config;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Session;
 import org.neo4j.driver.SessionConfig;
 import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.Notification;
@@ -32,38 +46,43 @@ import org.neo4j.graphdb.QueryStatistics;
 import org.neo4j.graphdb.Result;
 import org.neo4j.kernel.impl.query.QueryExecution;
 import org.neo4j.kernel.impl.query.QuerySubscriber;
+import org.neo4j.util.FeatureToggles;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
-class BookmarkEndToEndTest
+class FabricOnlyBookmarkEndToEndTest
 {
     private static Driver clientDriver;
     private static TestServer testServer;
     private static TestBoltServer remote1;
-    private static TestBoltServer remote2;
+
+    private static LocalGraphTransactionIdTracker localGraphTransactionIdTracker = mock(LocalGraphTransactionIdTracker.class);
+    private static FabricOnlyBookmarkManager bookmarkManager = new FabricOnlyBookmarkManager( localGraphTransactionIdTracker );
+    private static TransactionBookmarkManagerFactory transactionBookmarkManagerFactory = mock(TransactionBookmarkManagerFactory.class);
 
     @BeforeAll
     static void beforeAll()
     {
+        FeatureToggles.set(FabricDatabaseManager.class, FabricDatabaseManager.FABRIC_BY_DEFAULT_FLAG_NAME, "true" );
 
         remote1 = new TestBoltServer();
-        remote2 = new TestBoltServer();
-
-        List.<Runnable>of(
-                () -> remote1.start(),
-                () -> remote2.start()
-        ).parallelStream().forEach( Runnable::run );
+        remote1.start();
 
         var configProperties = Map.of(
                 "fabric.database.name", "mega",
                 "fabric.graph.0.uri", remote1.getBoltUri().toString(),
-                "fabric.graph.1.uri", remote2.getBoltUri().toString(),
+                "fabric.graph.0.name", "remote1",
+                "fabric.graph.1.uri", "bolt://somewhere:1234",
+                "fabric.graph.1.name", "remote2",
                 "fabric.driver.connection.encrypted", "false",
                 "dbms.connector.bolt.listen_address", "0.0.0.0:0",
                 "dbms.connector.bolt.enabled", "true"
@@ -73,124 +92,117 @@ class BookmarkEndToEndTest
                 .setRaw( configProperties )
                 .build();
         testServer = new TestServer( config );
+        testServer.addMocks( transactionBookmarkManagerFactory );
         testServer.start();
 
+        when( transactionBookmarkManagerFactory.createTransactionBookmarkManager( any() ) ).thenReturn( bookmarkManager );
+
         clientDriver = GraphDatabase.driver(
-                testServer.getBoltRoutingUri(),
+                testServer.getBoltDirectUri(),
                 AuthTokens.none(),
                 org.neo4j.driver.Config.builder()
                         .withoutEncryption()
                         .withMaxConnectionPoolSize( 3 )
                         .build() );
+
+        createDatabase( "local1" );
+        createDatabase( "local2" );
     }
 
     @AfterAll
     static void afterAll()
     {
+        FeatureToggles.set(FabricDatabaseManager.class, FabricDatabaseManager.FABRIC_BY_DEFAULT_FLAG_NAME, "false" );
         List.<Runnable>of(
                 () -> testServer.stop(),
                 () -> clientDriver.close(),
-                () -> remote1.stop(),
-                () -> remote2.stop()
+                () -> remote1.stop()
         ).parallelStream().forEach( Runnable::run );
     }
 
-    @Test
-    void testBasicLifecycle()
+    @BeforeEach
+    void beforeEach()
     {
-        ArgumentCaptor<List<Bookmark>> submittedBookmarks = mockRemote( remote1, List.of( 1111L, 2222L ) );
-
-        var b1 = run( "USE mega.graph(0) RETURN 1", List.of() );
-
-        var b2 = run( "USE mega.graph(0) RETURN 1", List.of( b1 ) );
-
-        verifyBookmarks( submittedBookmarks, List.of( 1111L ) );
-
-        run( "USE mega.graph(0) RETURN 1", List.of( b2 ) );
-
-        verifyBookmarks( submittedBookmarks, List.of( 2222L ) );
+        reset( localGraphTransactionIdTracker );
     }
 
     @Test
-    void testBasicLifecycleWithWrite()
+    void testBookmarkHandling()
     {
-        ArgumentCaptor<List<Bookmark>> submittedBookmarks = mockRemote( remote1, List.of( 1111L ) );
+        var submittedBookmark = createDriverBookmark( 1001L, 1002L, 1003L, 1004L );
+        when( localGraphTransactionIdTracker.getTransactionId( any() ) ).thenReturn( 2001L );
 
-        var b = run( "USE mega.graph(0) CREATE() RETURN 1", List.of() );
+        ArgumentCaptor<List<Bookmark>> submittedBookmarks = mockRemote( remote1, List.of(3001L) );
 
-        run( "USE mega.graph(0) RETURN 1", List.of( b ) );
-
-        verifyBookmarks( submittedBookmarks, List.of( 1111L ) );
-    }
-
-    @Test
-    void testBookmarksToMultipleRemotes()
-    {
-        ArgumentCaptor<List<Bookmark>> submittedBookmarksOnRemote1 = mockRemote( remote1, List.of( 1111L, 2222L, 3333L ) );
-        ArgumentCaptor<List<Bookmark>> submittedBookmarksOnRemote2 = mockRemote( remote2, List.of( 4444L, 5555L ) );
-
-        var b1 = run( "USE mega.graph(0) RETURN 1", List.of() );
-        var b2 = run( "USE mega.graph(1) RETURN 1", List.of() );
-
-        var query = String.join( "\n",
-                "UNWIND [0, 1] AS gid",
-                "CALL {",
-                "  USE mega.graph(gid)",
-                "  RETURN 1",
-                "}",
-                "RETURN 2"
-        );
-
-        var b3 = run( query, List.of( b1, b2 ) );
-        verifyBookmarks( submittedBookmarksOnRemote1, List.of( 1111L ) );
-        verifyBookmarks( submittedBookmarksOnRemote2, List.of( 4444L ) );
-
-        var b4 = run( "USE mega.graph(0) RETURN 1", List.of( b3 ) );
-        verifyBookmarks( submittedBookmarksOnRemote1, List.of( 2222L ) );
-
-        run( query, List.of( b4 ) );
-        verifyBookmarks( submittedBookmarksOnRemote1, List.of( 3333L ) );
-        verifyBookmarks( submittedBookmarksOnRemote2, List.of( 5555L ) );
-    }
-
-    @Test
-    void testRemoteBookmarksComposition()
-    {
-        ArgumentCaptor<List<Bookmark>> submittedBookmarks = mockRemote( remote1, List.of( 1111L, 2222L, 3333L, 4444L, 5555L ) );
-
-        var b1 = run( "USE mega.graph(0) RETURN 1", List.of() );
-        var b2 = run( "USE mega.graph(0) RETURN 1", List.of() );
-        var b3 = run( "USE mega.graph(0) RETURN 1", List.of() );
-
-        var b4 = run( "USE mega.graph(0) RETURN 1", List.of( b1, b3, b2 ) );
-        // all three (1111, 3333, 2222) should be submitted to the remote, the remote returns only the one with the highest TX ID from the bookmark parser
-        verifyBookmarks( submittedBookmarks, List.of( 3333L ) );
-
-        run( "USE mega.graph(0) RETURN 1", List.of( b4 ) );
-        verifyBookmarks( submittedBookmarks, List.of( 4444L ) );
-    }
-
-    @Test
-    void testEmptyBookmark()
-    {
-        ArgumentCaptor<List<Bookmark>> submittedBookmarks = mockRemote( remote1, List.of( 1111L, 2222L ) );
-
-        var b1 = run( "RETURN 1", List.of() );
-
-        var b2 = run( "USE mega.graph(0) RETURN 1", List.of( b1 ) );
-
-        verifyBookmarks( submittedBookmarks, List.of() );
-
-        run( "USE mega.graph(0) RETURN 1", List.of( b2 ) );
-
-        verifyBookmarks( submittedBookmarks, List.of( 1111L ) );
-    }
-
-    private org.neo4j.driver.Bookmark run( String statement, List<org.neo4j.driver.Bookmark> bookmarks )
-    {
-        try ( var session = clientDriver.session( SessionConfig.builder().withBookmarks( bookmarks ).withDatabase( "mega" ).build() ) )
+        var receivedBookmark = runInSession( submittedBookmark, session ->
         {
-            session.run( statement ).consume();
+            try ( var tx = session.beginTransaction() )
+            {
+                tx.run( "USE local1 RETURN 1" ).consume();
+                tx.run( "USE mega.remote1 RETURN 1" ).consume();
+
+                tx.commit();
+            }
+        } );
+
+        verify( localGraphTransactionIdTracker ).awaitGraphUpToDate( any(), eq( 1001L ) );
+        verifyBookmarks( submittedBookmarks, List.of( 1003L ) );
+
+        var fabricBookmark = toFabricBookmark( receivedBookmark );
+        verifyInternal( fabricBookmark, getDatabaseUuid( "local1" ), 2001L );
+        verifyInternal( fabricBookmark, getDatabaseUuid( "local2" ), 1002L );
+
+        verifyExternal( fabricBookmark, new UUID( 0, 0 ), 3001L );
+        verifyExternal( fabricBookmark, new UUID( 1, 0 ), 1004L );
+    }
+
+    private FabricBookmark toFabricBookmark( org.neo4j.driver.Bookmark driverBookmark )
+    {
+        var serializedBookmark = driverBookmark.values().stream().findAny().get();
+        var fabricBookmarkParser = new FabricBookmarkParser();
+        return fabricBookmarkParser.parse( serializedBookmark );
+    }
+
+    private UUID getDatabaseUuid( String name )
+    {
+        var fabricDatabaseManager = testServer.getDependencies().resolveDependency( FabricDatabaseManager.class );
+        var namedDatabaseId = fabricDatabaseManager.databaseIdRepository().getByName( name ).get();
+        return namedDatabaseId.databaseId().uuid();
+    }
+
+    private static void createDatabase( String name )
+    {
+        try ( var session = clientDriver.session( SessionConfig.builder().withDatabase( "system" ).build() ) )
+        {
+            session.run( "CREATE DATABASE " + name ).consume();
+        }
+    }
+
+    private org.neo4j.driver.Bookmark createDriverBookmark( long local1TxId, long local2TxId, long remote1TxId, long remote2TxId )
+    {
+        var local1Uuid = getDatabaseUuid( "local1" );
+        var local2Uuid = getDatabaseUuid( "local2" );
+
+        var remote1Uuid = new UUID( 0, 0 );
+        var remote2Uuid = new UUID( 1, 0 );
+
+        var internalGraphState1 = new FabricBookmark.InternalGraphState( local1Uuid, local1TxId );
+        var internalGraphState2 = new FabricBookmark.InternalGraphState( local2Uuid, local2TxId );
+
+        var b1 = new BookmarkWithDatabaseId( remote1TxId, NAMED_SYSTEM_DATABASE_ID );
+        var b2 = new BookmarkWithDatabaseId( remote2TxId, NAMED_SYSTEM_DATABASE_ID );
+        var externalGraphState1 = new FabricBookmark.ExternalGraphState( remote1Uuid, List.of( new RemoteBookmark( b1.toString() ) ) );
+        var externalGraphState2 = new FabricBookmark.ExternalGraphState( remote2Uuid, List.of( new RemoteBookmark( b2.toString() ) ) );
+
+        var fabricBookmark = new FabricBookmark( List.of( internalGraphState1, internalGraphState2 ), List.of( externalGraphState1, externalGraphState2 ) );
+        return org.neo4j.driver.Bookmark.from( Set.of( fabricBookmark.serialize() ) );
+    }
+
+    private org.neo4j.driver.Bookmark runInSession( org.neo4j.driver.Bookmark bookmark, Consumer<Session> function )
+    {
+        try ( var session = clientDriver.session( SessionConfig.builder().withBookmarks( bookmark ).build() ) )
+        {
+            function.accept( session );
             return session.lastBookmark();
         }
     }
@@ -309,6 +321,28 @@ class BookmarkEndToEndTest
     private void verifyBookmarks( ArgumentCaptor<List<Bookmark>> submittedBookmarks, List<Long> expectedTxIds )
     {
         var txIds = submittedBookmarks.getValue().stream().map( Bookmark::txId ).collect( Collectors.toList() );
-        assertThat( txIds ).contains( expectedTxIds.toArray( Long[]::new ) );
+        Assertions.assertThat( txIds ).contains( expectedTxIds.toArray( Long[]::new ) );
+    }
+
+    private void verifyInternal( FabricBookmark fabricBookmark, UUID uuid, long expectedTxId )
+    {
+        var txId = fabricBookmark.getInternalGraphStates().stream()
+                .filter( gs -> gs.getGraphUuid().equals( uuid ) )
+                .map( FabricBookmark.InternalGraphState::getTransactionId )
+                .findAny()
+                .get();
+
+        assertEquals(expectedTxId, txId);
+    }
+
+    private void verifyExternal( FabricBookmark fabricBookmark, UUID uuid, long expectedTxId )
+    {
+        var externalBookmarks = fabricBookmark.getExternalGraphStates().stream()
+                .filter( gs -> gs.getGraphUuid().equals( uuid ) )
+                .flatMap( gs -> gs.getBookmarks().stream() )
+                .map( RemoteBookmark::getSerialisedState )
+                .collect( Collectors.toList() );
+        var expectedBookmark = new BookmarkWithDatabaseId( expectedTxId, NAMED_SYSTEM_DATABASE_ID ).toString();
+        assertThat( externalBookmarks ).contains( expectedBookmark );
     }
 }

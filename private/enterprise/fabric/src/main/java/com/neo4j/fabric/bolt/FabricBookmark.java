@@ -5,14 +5,13 @@
  */
 package com.neo4j.fabric.bolt;
 
+import com.neo4j.fabric.bookmark.BookmarkStateSerializer;
 import com.neo4j.fabric.driver.RemoteBookmark;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.function.BiFunction;
-import java.util.stream.Collectors;
 
 import org.neo4j.bolt.dbapi.BookmarkMetadata;
 import org.neo4j.bolt.runtime.BoltResponseHandler;
@@ -25,13 +24,25 @@ public class FabricBookmark extends BookmarkMetadata implements Bookmark
 {
     public static final String PREFIX = "FB:";
 
-    private final List<GraphState> graphStates;
+    private final List<InternalGraphState> internalGraphStates;
+    private final List<ExternalGraphState> externalGraphStates;
 
-    public FabricBookmark( List<GraphState> graphStates )
+    public FabricBookmark( List<InternalGraphState> internalGraphStates, List<ExternalGraphState> externalGraphStates )
     {
         super( -1, null );
 
-        this.graphStates = graphStates;
+        this.internalGraphStates = internalGraphStates;
+        this.externalGraphStates = externalGraphStates;
+    }
+
+    public List<InternalGraphState> getInternalGraphStates()
+    {
+        return internalGraphStates;
+    }
+
+    public List<ExternalGraphState> getExternalGraphStates()
+    {
+        return externalGraphStates;
     }
 
     @Override
@@ -52,21 +63,16 @@ public class FabricBookmark extends BookmarkMetadata implements Bookmark
         state.onMetadata( BOOKMARK_KEY, utf8Value( serialize() ) );
     }
 
-    public List<GraphState> getGraphStates()
-    {
-        return graphStates;
-    }
-
     @Override
     public Bookmark toBookmark( BiFunction<Long,NamedDatabaseId, Bookmark> defaultBookmarkFormat )
     {
         return this;
     }
 
-    @Override
-    public String toString()
+    public String serialize()
     {
-        return "FabricBookmark{" + "graphStates=" + graphStates + '}';
+        String serializedState = BookmarkStateSerializer.serialize( this );
+        return PREFIX + serializedState;
     }
 
     @Override
@@ -81,59 +87,43 @@ public class FabricBookmark extends BookmarkMetadata implements Bookmark
             return false;
         }
         FabricBookmark that = (FabricBookmark) o;
-        return graphStates.equals( that.graphStates );
+        return internalGraphStates.equals( that.internalGraphStates ) && externalGraphStates.equals( that.externalGraphStates );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( graphStates );
+        return Objects.hash( internalGraphStates, externalGraphStates );
     }
 
-    public String serialize()
+    @Override
+    public String toString()
     {
-        return graphStates.stream().map( GraphState::serialize ).collect( Collectors.joining( "-", PREFIX, "" ) );
+        return "FabricBookmark{" + "internalGraphStates=" + internalGraphStates + ", externalGraphStates=" + externalGraphStates + '}';
     }
 
-    public static class GraphState
+    /**
+     * State of a graph that is located in current DBMS.
+     */
+    public static class InternalGraphState
     {
-        private final long remoteGraphId;
-        private final List<RemoteBookmark> bookmarks;
+        private final UUID graphUuid;
+        private final long transactionId;
 
-        public GraphState( long remoteGraphId, List<RemoteBookmark> bookmarks )
+        public InternalGraphState( UUID graphUuid, long transactionId )
         {
-            this.remoteGraphId = remoteGraphId;
-            this.bookmarks = bookmarks;
+            this.graphUuid = graphUuid;
+            this.transactionId = transactionId;
         }
 
-        public long getRemoteGraphId()
+        public UUID getGraphUuid()
         {
-            return remoteGraphId;
+            return graphUuid;
         }
 
-        public List<RemoteBookmark> getBookmarks()
+        public long getTransactionId()
         {
-            return bookmarks;
-        }
-
-        @Override
-        public String toString()
-        {
-            return "GraphState{" + "remoteGraphId=" + remoteGraphId + ", bookmarks=" + bookmarks + '}';
-        }
-
-        private String serialize()
-        {
-            return bookmarks.stream()
-                    .map( GraphState::serialize0 )
-                    .collect( Collectors.joining( ",", remoteGraphId + ":", "" ) );
-        }
-
-        private static String serialize0( RemoteBookmark remoteBookmark )
-        {
-            return remoteBookmark.getSerialisedState().stream()
-                    .map( bookmarkPart -> Base64.getEncoder().encodeToString( bookmarkPart.getBytes( StandardCharsets.UTF_8 ) ) )
-                    .collect( Collectors.joining( "|" ) );
+            return transactionId;
         }
 
         @Override
@@ -147,14 +137,72 @@ public class FabricBookmark extends BookmarkMetadata implements Bookmark
             {
                 return false;
             }
-            GraphState that = (GraphState) o;
-            return remoteGraphId == that.remoteGraphId && bookmarks.equals( that.bookmarks );
+            InternalGraphState that = (InternalGraphState) o;
+            return transactionId == that.transactionId && graphUuid.equals( that.graphUuid );
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash( remoteGraphId, bookmarks );
+            return Objects.hash( graphUuid, transactionId );
+        }
+
+        @Override
+        public String toString()
+        {
+            return "InternalGraphState{" + "graphUuid=" + graphUuid + ", transactionId=" + transactionId + '}';
+        }
+    }
+
+    /**
+     * State of a graph that is located in another DBMS.
+     */
+    public static class ExternalGraphState
+    {
+        private final UUID graphUuid;
+        private final List<RemoteBookmark> bookmarks;
+
+        public ExternalGraphState( UUID graphUuid, List<RemoteBookmark> bookmarks )
+        {
+            this.graphUuid = graphUuid;
+            this.bookmarks = bookmarks;
+        }
+
+        public UUID getGraphUuid()
+        {
+            return graphUuid;
+        }
+
+        public List<RemoteBookmark> getBookmarks()
+        {
+            return bookmarks;
+        }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            if ( this == o )
+            {
+                return true;
+            }
+            if ( o == null || getClass() != o.getClass() )
+            {
+                return false;
+            }
+            ExternalGraphState that = (ExternalGraphState) o;
+            return graphUuid.equals( that.graphUuid ) && bookmarks.equals( that.bookmarks );
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash( graphUuid, bookmarks );
+        }
+
+        @Override
+        public String toString()
+        {
+            return "ExternalGraphState{" + "graphUuid=" + graphUuid + ", bookmarks=" + bookmarks + '}';
         }
     }
 }

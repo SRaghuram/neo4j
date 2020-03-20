@@ -41,9 +41,13 @@ class ClusterCatalogManagerTest extends FabricTest {
     new FabricConfig.DataStream(300, 1000, 50, 10)
   )
 
-  private val intA = DatabaseIdFactory.from("intA", UUID.randomUUID())
-  private val intB = DatabaseIdFactory.from("intB", UUID.randomUUID())
-  private val mega = DatabaseIdFactory.from("mega", UUID.randomUUID())
+  private val intAUuid = UUID.randomUUID()
+  private val intBUuid = UUID.randomUUID()
+  private val megaUuid = UUID.randomUUID()
+
+  private val intA = DatabaseIdFactory.from("intA", intAUuid)
+  private val intB = DatabaseIdFactory.from("intB", intBUuid)
+  private val mega = DatabaseIdFactory.from("mega", megaUuid)
 
   private val internalDbs = Set(intA, intB, mega)
 
@@ -79,13 +83,13 @@ class ClusterCatalogManagerTest extends FabricTest {
       .shouldEqual(external(mega2))
 
     catalog.resolve(CatalogName("intA"))
-      .shouldEqual(internal(3, "intA"))
+      .shouldEqual(internal(3, intAUuid, "intA"))
 
     catalog.resolve(CatalogName("intB"))
-      .shouldEqual(internal(4, "intB"))
+      .shouldEqual(internal(4, intBUuid, "intB"))
 
     catalog.resolve(CatalogName("mega"))
-      .shouldEqual(internal(5, "mega"))
+      .shouldEqual(internal(5, megaUuid, "mega"))
   }
 
   "location resolution" - {
@@ -105,22 +109,22 @@ class ClusterCatalogManagerTest extends FabricTest {
         val writable = true
 
         manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable)
-          .shouldEqual(new Location.Remote(0, remoteUri(mega0.getUri), "neo4j0"))
+          .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
 
         manager.locationOf(catalog.resolve(CatalogName("mega", "graph"), Seq(Values.of(1))), writable)
-          .shouldEqual(new Location.Remote(1, remoteUri(mega1.getUri), "neo4j1"))
+          .shouldEqual(new Location.Remote.External(1, uuid(1), remoteUri(mega1.getUri), "neo4j1"))
 
         manager.locationOf(catalog.resolve(CatalogName("mega", "extB")), writable)
-          .shouldEqual(new Location.Remote(2, remoteUri(mega2.getUri), "neo4j2"))
+          .shouldEqual(new Location.Remote.External(2, uuid(2), remoteUri(mega2.getUri), "neo4j2"))
 
         manager.locationOf(catalog.resolve(CatalogName("intA")), writable)
-          .shouldEqual(new Location.Local(3, "inta"))
+          .shouldEqual(new Location.Local(3, intAUuid, "inta"))
 
         manager.locationOf(catalog.resolve(CatalogName("intB")), writable)
-          .shouldEqual(new Location.Local(4, "intb"))
+          .shouldEqual(new Location.Local(4, intBUuid, "intb"))
 
         manager.locationOf(catalog.resolve(CatalogName("mega")), writable)
-          .shouldEqual(new Location.Local(5, "mega"))
+          .shouldEqual(new Location.Local(5, megaUuid, "mega"))
       }
 
       "and writable not required" in {
@@ -128,22 +132,22 @@ class ClusterCatalogManagerTest extends FabricTest {
         val writable = false
 
         manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable)
-          .shouldEqual(new Location.Remote(0, remoteUri(mega0.getUri), "neo4j0"))
+          .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
 
         manager.locationOf(catalog.resolve(CatalogName("mega", "graph"), Seq(Values.of(1))), writable)
-          .shouldEqual(new Location.Remote(1, remoteUri(mega1.getUri), "neo4j1"))
+          .shouldEqual(new Location.Remote.External(1, uuid(1), remoteUri(mega1.getUri), "neo4j1"))
 
         manager.locationOf(catalog.resolve(CatalogName("mega", "extB")), writable)
-          .shouldEqual(new Location.Remote(2, remoteUri(mega2.getUri), "neo4j2"))
+          .shouldEqual(new Location.Remote.External(2, uuid(2), remoteUri(mega2.getUri), "neo4j2"))
 
         manager.locationOf(catalog.resolve(CatalogName("intA")), writable)
-          .shouldEqual(new Location.Local(3, "inta"))
+          .shouldEqual(new Location.Local(3, intAUuid, "inta"))
 
         manager.locationOf(catalog.resolve(CatalogName("intB")), writable)
-          .shouldEqual(new Location.Local(4, "intb"))
+          .shouldEqual(new Location.Local(4, intBUuid, "intb"))
 
         manager.locationOf(catalog.resolve(CatalogName("mega")), writable)
-          .shouldEqual(new Location.Local(5, "mega"))
+          .shouldEqual(new Location.Local(5, megaUuid, "mega"))
       }
     }
 
@@ -161,22 +165,22 @@ class ClusterCatalogManagerTest extends FabricTest {
         val writable = true
 
         manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable)
-          .shouldEqual(new Location.Remote(0, remoteUri(mega0.getUri), "neo4j0"))
+          .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
 
         manager.locationOf(catalog.resolve(CatalogName("mega", "graph"), Seq(Values.of(1))), writable)
-          .shouldEqual(new Location.Remote(1, remoteUri(mega1.getUri), "neo4j1"))
+          .shouldEqual(new Location.Remote.External(1, uuid(1), remoteUri(mega1.getUri), "neo4j1"))
 
         manager.locationOf(catalog.resolve(CatalogName("mega", "extB")), writable)
-          .shouldEqual(new Location.Remote(2, remoteUri(mega2.getUri), "neo4j2"))
+          .shouldEqual(new Location.Remote.External(2, uuid(2), remoteUri(mega2.getUri), "neo4j2"))
 
         manager.locationOf(catalog.resolve(CatalogName("intA")), writable)
-          .shouldEqual(new Location.Remote(3, remoteUri("bolt", remoteAddress), "inta"))
+          .shouldEqual(new Location.Remote.Internal(3, intAUuid, remoteUri("bolt", remoteAddress), "inta"))
 
         manager.locationOf(catalog.resolve(CatalogName("intB")), writable)
-          .shouldEqual(new Location.Remote(4, remoteUri("bolt", remoteAddress), "intb"))
+          .shouldEqual(new Location.Remote.Internal(4, intBUuid, remoteUri("bolt", remoteAddress), "intb"))
 
         manager.locationOf(catalog.resolve(CatalogName("mega")), writable)
-          .shouldEqual(new Location.Local(5, "mega"))
+          .shouldEqual(new Location.Local(5, megaUuid, "mega"))
       }
 
       "and writable not required" in {
@@ -184,29 +188,31 @@ class ClusterCatalogManagerTest extends FabricTest {
         val writable = false
 
         manager.locationOf(catalog.resolve(CatalogName("mega", "extA")), writable)
-          .shouldEqual(new Location.Remote(0, remoteUri(mega0.getUri), "neo4j0"))
+          .shouldEqual(new Location.Remote.External(0, uuid(0), remoteUri(mega0.getUri), "neo4j0"))
 
         manager.locationOf(catalog.resolve(CatalogName("mega", "graph"), Seq(Values.of(1))), writable)
-          .shouldEqual(new Location.Remote(1, remoteUri(mega1.getUri), "neo4j1"))
+          .shouldEqual(new Location.Remote.External(1, uuid(1), remoteUri(mega1.getUri), "neo4j1"))
 
         manager.locationOf(catalog.resolve(CatalogName("mega", "extB")), writable)
-          .shouldEqual(new Location.Remote(2, remoteUri(mega2.getUri), "neo4j2"))
+          .shouldEqual(new Location.Remote.External(2, uuid(2), remoteUri(mega2.getUri), "neo4j2"))
 
         manager.locationOf(catalog.resolve(CatalogName("intA")), writable)
-          .shouldEqual(new Location.Local(3, "inta"))
+          .shouldEqual(new Location.Local(3, intAUuid, "inta"))
 
         manager.locationOf(catalog.resolve(CatalogName("intB")), writable)
-          .shouldEqual(new Location.Local(4, "intb"))
+          .shouldEqual(new Location.Local(4, intBUuid, "intb"))
 
         manager.locationOf(catalog.resolve(CatalogName("mega")), writable)
-          .shouldEqual(new Location.Local(5, "mega"))
+          .shouldEqual(new Location.Local(5, megaUuid, "mega"))
       }
     }
   }
 
-  private def external(graph: FabricConfig.Graph) = ExternalGraph(graph)
-  private def internal(id: Long, name: String) = InternalGraph(id, new NormalizedGraphName(name), new NormalizedDatabaseName(name))
+  private def external(graph: FabricConfig.Graph) = ExternalGraph(graph, uuid(graph.getId))
+  private def internal(id: Long, uuid: UUID, name: String) = InternalGraph(id, uuid, new NormalizedGraphName(name), new NormalizedDatabaseName(name))
 
   private def remoteUri(uri: FabricConfig.RemoteUri): Location.RemoteUri = new Location.RemoteUri(uri.getScheme, uri.getAddresses, uri.getQuery)
   private def remoteUri(scheme: String, address: SocketAddress): Location.RemoteUri = new Location.RemoteUri(scheme, Seq(address).asJava, null)
+
+  private def uuid(graphId: Long): UUID = new UUID(graphId, 0);
 }

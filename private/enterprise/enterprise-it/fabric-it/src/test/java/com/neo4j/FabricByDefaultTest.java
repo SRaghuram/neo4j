@@ -5,9 +5,6 @@
  */
 package com.neo4j;
 
-import com.neo4j.fabric.bolt.FabricBookmark;
-import com.neo4j.fabric.bolt.FabricBookmarkParser;
-import com.neo4j.fabric.driver.RemoteBookmark;
 import com.neo4j.fabric.localdb.FabricDatabaseManager;
 import com.neo4j.utils.DriverUtils;
 import com.neo4j.utils.ProxyFunctions;
@@ -24,7 +21,6 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetTime;
 import java.time.ZonedDateTime;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -35,29 +31,24 @@ import java.util.stream.Stream;
 import org.neo4j.configuration.Config;
 import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.AuthTokens;
-import org.neo4j.driver.Bookmark;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
-import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.ClientException;
-import org.neo4j.driver.internal.InternalBookmark;
 import org.neo4j.driver.summary.QueryType;
 import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.driver.types.Node;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
-import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 import org.neo4j.util.FeatureToggles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 import static org.neo4j.internal.helpers.collection.Iterables.stream;
 
@@ -1080,76 +1071,6 @@ class FabricByDefaultTest
         assertThat( r.counters().indexesRemoved() ).isEqualTo( 0 );
         assertThat( r.counters().constraintsAdded() ).isEqualTo( 0 );
         assertThat( r.counters().constraintsRemoved() ).isEqualTo( 0 );
-    }
-
-    @Test
-    void testBookmarks()
-    {
-        var b1 = runQuery( "USE mega.graph(0) CREATE ()", List.of() );
-        verifyBookmark( b1, 0L );
-        var b2 = runQuery( "USE mega.graph(1) CREATE ()", List.of() );
-        verifyBookmark( b2, 1L );
-        var b3 = runQuery( "USE mega.graph(0) CREATE ()", List.of() );
-        verifyBookmark( b3, 0L );
-
-        var b4 = runQuery( "RETURN 1", List.of( b1, b2, b3 ) );
-        // check the information carried by b1, b2 and b3 has not been lost
-        verifyBookmark( b4, 0L, 1L );
-        verifyBookmarkComposition( b4, b1, b2, b3 );
-
-        var b5 = runQuery( "USE mega.graph(1) CREATE ()", List.of( b1, b2, b3 ) );
-        verifyBookmark( b5, 0L, 1L );
-        verifyBookmarkComposition( b5, b1, b3 );
-
-        var b6 = runQuery( "USE mega.graph(1) CREATE ()", List.of( b5 ) );
-        verifyBookmark( b6, 0L, 1L );
-        verifyBookmarkComposition( b6, b1, b3 );
-    }
-
-    private void verifyBookmark( Bookmark bookmark, Long... graphIds )
-    {
-        var internalBookmark = (InternalBookmark) bookmark;
-        var parser = new FabricBookmarkParser();
-        var fabricBookmark = parser.parse( Iterables.asList(internalBookmark.values()) ).stream()
-                .map( b -> (FabricBookmark)b )
-                .collect( Collectors.toList()).get( 0 );
-        var graphStates = fabricBookmark.getGraphStates();
-        assertEquals(graphIds.length, graphStates.size());
-        var idsFromBookmark = graphStates.stream().map( FabricBookmark.GraphState::getRemoteGraphId ).collect( Collectors.toList());
-        assertThat( idsFromBookmark ).contains( Arrays.stream( graphIds ).toArray( Long[]::new ) );
-        assertTrue( graphStates.stream()
-                .flatMap( gs -> gs.getBookmarks().stream() )
-                .flatMap( b -> b.getSerialisedState().stream() ).noneMatch( String::isEmpty ) );
-    }
-
-    private void verifyBookmarkComposition( Bookmark compositeBookmark, Bookmark... bookmarks )
-    {
-        var remoteBookmarksFromComposite = parseBookmark( compositeBookmark );
-
-        Arrays.stream( bookmarks )
-                .flatMap( b -> parseBookmark( b ).stream() )
-                .forEach( remoteBookmark -> assertTrue(remoteBookmarksFromComposite.contains( remoteBookmark )) );
-    }
-
-    private List<RemoteBookmark> parseBookmark( Bookmark bookmark )
-    {
-        var internalBookmark = (InternalBookmark) bookmark;
-        var parser = new FabricBookmarkParser();
-        return parser.parse( Iterables.asList(internalBookmark.values()) ).stream()
-                .map( b -> (FabricBookmark) b )
-                .flatMap( b -> b.getGraphStates().stream() )
-                .flatMap( gs -> gs.getBookmarks().stream() )
-                .collect( Collectors.toList() );
-    }
-
-    private Bookmark runQuery( String statement, List<Bookmark> bookmarks )
-    {
-        try ( var session = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).withBookmarks( bookmarks ).build() ) )
-        {
-            var result = session.run( statement );
-            result.consume();
-            return session.lastBookmark();
-        }
     }
 
     private <T> T inTx( Function<Transaction, T> workload )

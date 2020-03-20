@@ -7,6 +7,8 @@ package com.neo4j;
 
 import com.neo4j.fabric.bolt.BoltFabricDatabaseManagementService;
 import com.neo4j.fabric.bolt.FabricBookmark;
+import com.neo4j.fabric.bookmark.LocalGraphTransactionIdTracker;
+import com.neo4j.fabric.bookmark.TransactionBookmarkManagerFactory;
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.executor.FabricExecutor;
 import com.neo4j.fabric.localdb.FabricDatabaseManager;
@@ -14,7 +16,7 @@ import com.neo4j.fabric.stream.Record;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.stream.summary.EmptySummary;
 import com.neo4j.fabric.transaction.FabricTransaction;
-import com.neo4j.fabric.transaction.TransactionBookmarkManager;
+import com.neo4j.fabric.bookmark.TransactionBookmarkManager;
 import com.neo4j.fabric.transaction.TransactionManager;
 import com.neo4j.utils.DriverUtils;
 import org.junit.jupiter.api.AfterAll;
@@ -28,7 +30,6 @@ import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +39,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.bolt.txtracking.TransactionIdTracker;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
@@ -101,9 +101,9 @@ class BoltAdapterTest
         when( graphDatabaseFacade.databaseId() ).thenReturn( databaseId );
         when( databaseManager.getDatabase( "mega" ) ).thenReturn( graphDatabaseFacade );
 
-        var transactionIdTracker = mock( TransactionIdTracker.class);
+        var transactionIdTracker = mock( LocalGraphTransactionIdTracker.class);
         var databaseManagementService = new BoltFabricDatabaseManagementService( fabricExecutor, fabricConfig, transactionManager, databaseManager,
-                Duration.ZERO, transactionIdTracker );
+                transactionIdTracker, new TransactionBookmarkManagerFactory( databaseManager ) );
         testServer.addMocks( databaseManagementService, databaseManager );
         testServer.start();
         driver = GraphDatabase.driver( testServer.getBoltDirectUri(), AuthTokens.none(), Config.builder()
@@ -357,7 +357,7 @@ class BoltAdapterTest
         } ).when( fabricTransaction ).rollback();
 
         var bookmarkManager = mock( TransactionBookmarkManager.class );
-        when( bookmarkManager.constructFinalBookmark() ).thenReturn( new FabricBookmark( List.of() ) );
+        when( bookmarkManager.constructFinalBookmark() ).thenReturn( new FabricBookmark( List.of(), List.of() ) );
         when( fabricTransaction.getBookmarkManager() ).thenReturn( bookmarkManager );
     }
 

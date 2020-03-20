@@ -6,21 +6,20 @@
 package com.neo4j.fabric.driver;
 
 import java.util.Objects;
-import java.util.Set;
 
 /**
  * A bookmark received after interacting with a remote graph.
  */
 public class RemoteBookmark
 {
-    private final Set<String> serialisedState;
+    private final String serialisedState;
 
-    public RemoteBookmark( Set<String> serialisedState )
+    public RemoteBookmark( String serialisedState )
     {
         this.serialisedState = serialisedState;
     }
 
-    public Set<String> getSerialisedState()
+    public String getSerialisedState()
     {
         return serialisedState;
     }

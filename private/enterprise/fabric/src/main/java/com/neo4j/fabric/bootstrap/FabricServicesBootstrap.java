@@ -6,6 +6,7 @@
 package com.neo4j.fabric.bootstrap;
 
 import com.neo4j.fabric.auth.CredentialsProvider;
+import com.neo4j.fabric.bookmark.TransactionBookmarkManagerFactory;
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.driver.DriverPool;
 import com.neo4j.fabric.eval.CatalogManager;
@@ -99,6 +100,8 @@ public class FabricServicesBootstrap
             var fabricExecutor =
                     new FabricExecutor( fabricConfig, planner, useEvaluation, catalogManager, internalLogProvider, monitoring, fabricWorkerExecutor );
             serviceBootstrapper.registerService( fabricExecutor, FabricExecutor.class );
+
+            serviceBootstrapper.registerService( new TransactionBookmarkManagerFactory( fabricDatabaseManager ), TransactionBookmarkManagerFactory.class );
         }
     }
 

@@ -5,7 +5,6 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.executor.FabricException;
 import com.neo4j.fabric.executor.Location;
 import com.neo4j.fabric.stream.Records;
@@ -18,7 +17,6 @@ import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
@@ -59,7 +57,7 @@ class AsyncPooledDriverTest
     private final AsyncSession session = mock( AsyncSession.class );
     private final AsyncTransaction asyncTransaction = mock( AsyncTransaction.class );
 
-    private final Location.Remote location = new Location.Remote( 0, null, null );
+    private final Location.Remote location = new Location.Remote.External( 0, null, null, null );
     private final FabricTransactionInfo transactionInfo = new FabricTransactionInfo( null, null, null, null, false, Duration.ZERO, null );
 
     @BeforeEach
@@ -90,7 +88,7 @@ class AsyncPooledDriverTest
         assertEquals( List.of( createFabricRecord( "a1", "b1" ) ), records );
 
         var bookmark = fabricTransaction.commit().block();
-        assertEquals( Set.of( "BB" ), bookmark.getSerialisedState() );
+        assertEquals( "BB", bookmark.getSerialisedState() );
 
         verify( asyncTransaction ).commitAsync();
         verify( session ).closeAsync();
