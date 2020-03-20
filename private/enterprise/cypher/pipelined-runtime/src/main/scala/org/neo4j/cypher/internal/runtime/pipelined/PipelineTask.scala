@@ -34,7 +34,7 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
   /**
    * This _output reference is needed to support reactive results in produce results,
    * and in particular for ProduceResultsOperator to leave continuations. So if all
-   * demand is met before we have produces all output, the _output morsel will be != null,
+   * demand is met before we have produced all output, the _output morsel will be != null,
    * and the next work unit of this task will continue produce output off that _output,
    * and not do any other work.
    *
