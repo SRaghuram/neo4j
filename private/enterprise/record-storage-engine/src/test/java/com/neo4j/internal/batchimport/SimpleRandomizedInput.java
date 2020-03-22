@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.ToIntFunction;
+import java.util.function.ToIntBiFunction;
 
 import org.neo4j.csv.reader.Configuration;
 import org.neo4j.csv.reader.Extractors;
@@ -29,6 +29,7 @@ import org.neo4j.internal.batchimport.input.InputEntity;
 import org.neo4j.internal.batchimport.input.ReadableGroups;
 import org.neo4j.internal.batchimport.input.csv.Header.Entry;
 import org.neo4j.internal.batchimport.input.csv.Type;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.values.storable.Value;
 
 import static java.lang.String.format;
@@ -260,7 +261,7 @@ public class SimpleRandomizedInput implements Input
     }
 
     @Override
-    public Estimates calculateEstimates( ToIntFunction<Value[]> valueSizeCalculator )
+    public Estimates calculateEstimates( ToIntBiFunction<Value[],PageCursorTracer> valueSizeCalculator )
     {
         return Input.knownEstimates( nodeCount, relationshipCount, 0, 0, 0, 0, 0 );
     }
