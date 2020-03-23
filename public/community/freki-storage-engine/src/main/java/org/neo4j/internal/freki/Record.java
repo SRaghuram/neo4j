@@ -44,10 +44,11 @@ class Record
 
     // not stored
     long id;
+    private int dataLength;
 
     // stored
     byte flags;
-    private ByteBuffer data;
+    private final ByteBuffer data;
 
     Record( int sizeExp )
     {
@@ -56,14 +57,15 @@ class Record
 
     Record( int sizeExp, long id )
     {
-        setSizeExp( sizeExp );
-        this.id = id;
+        this( sizeExpAsFlagsByte( sizeExp ), id );
     }
 
     private Record( byte flags, long id )
     {
         this.flags = flags;
         this.id = id;
+        this.dataLength = recordDataSize( sizeExp() );
+        this.data = ByteBuffer.wrap( new byte[dataLength] );
     }
 
     static int recordSize( int sizeExp )
@@ -86,46 +88,14 @@ class Record
         return Integer.numberOfTrailingZeros( xFactor );
     }
 
-    private void createNewDataBuffer()
-    {
-        data = ByteBuffer.wrap( new byte[recordDataSize( sizeExp() )] );
-    }
-
-    ByteBuffer dataForReading( int position )
+    ByteBuffer data( int position )
     {
         return data.position( position );
     }
 
-    ByteBuffer dataForReading()
+    ByteBuffer data()
     {
-        assert data.position() == 0 : data.position();
         return data;
-    }
-
-    ByteBuffer dataForWriting()
-    {
-        if ( data == null )
-        {
-            createNewDataBuffer();
-        }
-        return data;
-    }
-
-    void initializeFromSharedData( Record record )
-    {
-        this.id = record.id;
-        this.flags = record.flags;
-        if ( data == null || data.capacity() < record.data.capacity() )
-        {
-            createNewDataBuffer();
-        }
-        else
-        {
-            data.clear();
-        }
-        System.arraycopy( record.data.array(), 0, data.array(), 0, record.data.limit() );
-        data.position( record.data.limit() );
-        data.flip();
     }
 
     void setFlag( int flag, boolean value )
@@ -145,9 +115,9 @@ class Record
         return (flags & flag) == flag;
     }
 
-    private void setSizeExp( int sizeExp )
+    private static byte sizeExpAsFlagsByte( int sizeExp )
     {
-        flags = (byte) ((flags & ~MASK_SIZE_EXP) | sizeExp);
+        return (byte) sizeExp;
     }
 
     byte sizeExp()
@@ -180,8 +150,7 @@ class Record
         {
             short length = channel.getShort();
             assert length <= recordDataSize( record.sizeExp() ); // if incorrect, fail here instead of OOM
-            ByteBuffer data = record.dataForWriting();
-            channel.get( data.array(), length );
+            channel.get( record.data( 0 ).array(), length );
         }
         return record;
     }
@@ -213,32 +182,23 @@ class Record
 
     void loadRecord( PageCursor cursor, int offset ) throws IOException
     {
-        // First read the header byte in its own shouldRetry-loop because how we read the data depends on this
-        flags = safelyReadFlags( cursor, offset );
-        if ( !hasFlag( FLAG_IN_USE ) )
+        if ( dataLength > cursor.getCurrentPageSize() || dataLength <= 0 )
         {
+            cursor.setCursorException( "Invalid length " + dataLength );
             return;
-        }
-        int sizeExp = sizeExp( flags );
-        int length = recordDataSize( sizeExp );
-        if ( length > cursor.getCurrentPageSize() || length <= 0 )
-        {
-            cursor.setCursorException( "Invalid length " + length );
-            return;
-        }
-        if ( data == null || length > data.capacity() )
-        {
-            createNewDataBuffer();
         }
 
         do
         {
-            cursor.setOffset( offset + HEADER_SIZE );
-            cursor.getBytes( data.array(), 0, length );
-            data.position( length );
+            cursor.setOffset( offset );
+            flags = cursor.getByte();
+            cursor.getBytes( data.array(), 0, dataLength );
+            data.position( dataLength );
             data.flip();
         }
         while ( cursor.shouldRetry() );
+        cursor.checkAndClearBoundsFlag();
+        cursor.checkAndClearCursorException();
     }
 
     private static byte safelyReadFlags( PageCursor cursor, int offset ) throws IOException
@@ -260,17 +220,10 @@ class Record
 
     void copyContentsFrom( Record source )
     {
+        assert source.sizeExp() == sizeExp();
         id = source.id;
         flags = source.flags;
-        if ( source.data != null )
-        {
-            createNewDataBuffer();
-            System.arraycopy( source.data.array(), 0, data.array(), 0, source.data.capacity() );
-        }
-        else
-        {
-            data = null;
-        }
+        System.arraycopy( source.data.array(), 0, data.array(), 0, source.data.capacity() );
     }
 
     @Override
