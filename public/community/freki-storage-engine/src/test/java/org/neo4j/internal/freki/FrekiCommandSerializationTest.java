@@ -348,7 +348,7 @@ public class FrekiCommandSerializationTest
 
     private void fillWithRandomData( Record after )
     {
-        ByteBuffer buffer = after.dataForWriting();
+        ByteBuffer buffer = after.data();
         int length = random.nextInt( buffer.capacity() );
         byte[] data = new byte[length];
         random.nextBytes( data );

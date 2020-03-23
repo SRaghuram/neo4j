@@ -151,7 +151,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     private void gatherDataFromX1( Record x1Record )
     {
         data.x1Loaded = true;
-        ByteBuffer x1Buffer = x1Record.dataForReading( 0 );
+        ByteBuffer x1Buffer = x1Record.data( 0 );
         int x1OffsetsHeader = readOffsetsHeader( x1Buffer );
         data.assignLabelOffset( x1Buffer.position(), x1Buffer );
         data.assignPropertyOffset( propertyOffset( x1OffsetsHeader ), x1Buffer );
@@ -175,7 +175,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     private void gatherDataFromXL( Record xLRecord )
     {
         data.xLLoaded = true;
-        ByteBuffer xLBuffer = xLRecord.dataForReading( 0 );
+        ByteBuffer xLBuffer = xLRecord.data( 0 );
         int xLOffsetsHeader = readOffsetsHeader( xLBuffer );
         data.assignPropertyOffset( propertyOffset( xLOffsetsHeader ), xLBuffer );
         data.assignRelationshipOffset( relationshipOffset( xLOffsetsHeader ), xLBuffer );
