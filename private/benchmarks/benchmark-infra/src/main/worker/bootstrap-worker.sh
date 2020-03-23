@@ -30,7 +30,7 @@ work_dir=/work/run/
 # make sure we start clean with working directory
 # and worker artifact
 rm -rf "${worker_artifact}"
-find ${work_dir:?} -type f -or -type d  -delete
+find ${work_dir:?} -mindepth 1 -delete
 
 # download bootstrap jar
 aws --region eu-north-1 s3 cp "${workerArtifactUri}" "${worker_artifact}"
