@@ -72,7 +72,7 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
     @Override
     public void write( PageCursor cursor, Record record, IdUpdateListener idUpdateListener, PageCursorTracer cursorTracer )
     {
-        Record copy = new Record( 1, 0 );
+        Record copy = new Record( record.sizeExp(), record.id );
         copy.copyContentsFrom( record );
         data.put( record.id, copy );
     }

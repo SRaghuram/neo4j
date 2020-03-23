@@ -193,8 +193,6 @@ public class Store extends BareBoneSingleFileStore implements SimpleStore
             }
             record.id = id;
             record.loadRecord( cursor, offset );
-            cursor.checkAndClearBoundsFlag();
-            cursor.checkAndClearCursorException();
         }
         catch ( IOException e )
         {

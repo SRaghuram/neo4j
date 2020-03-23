@@ -377,7 +377,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
                             {
                                 stats.usedRecords++;
                                 var data = new MutableNodeRecordData( id );
-                                var buffer = record.dataForReading();
+                                var buffer = record.data();
                                 try
                                 {
                                     data.deserialize( buffer, stores.bigPropertyValueStore );
@@ -414,7 +414,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         if ( record.hasFlag( FLAG_IN_USE ) )
         {
             var data = new MutableNodeRecordData( nodeId );
-            data.deserialize( record.dataForReading(), stores.bigPropertyValueStore );
+            data.deserialize( record.data(), stores.bigPropertyValueStore );
             return forwardPointerPointsToDense( data.getForwardPointer() );
         }
         return false;
