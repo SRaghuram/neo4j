@@ -218,6 +218,7 @@ org.neo4j.configuration.GraphDatabaseSettings::scripts_dir org.neo4j.graphdb.con
 org.neo4j.configuration.GraphDatabaseSettings::shutdown_transaction_end_timeout org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
 org.neo4j.configuration.GraphDatabaseSettings::snapshot_query org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
 org.neo4j.configuration.GraphDatabaseSettings::snapshot_query_retries org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
+org.neo4j.configuration.GraphDatabaseSettings::storage_engine org.neo4j.graphdb.config.Setting<java.lang.String> public static final
 org.neo4j.configuration.GraphDatabaseSettings::store_internal_debug_contexts org.neo4j.graphdb.config.Setting<java.util.List<java.lang.String>> public static final
 org.neo4j.configuration.GraphDatabaseSettings::store_internal_log_level org.neo4j.graphdb.config.Setting<org.neo4j.logging.Level> public static final
 org.neo4j.configuration.GraphDatabaseSettings::store_internal_log_max_archives org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
