@@ -39,7 +39,7 @@ class Record
     static int MASK_SIZE_EXP = 0x7;
     static int FLAG_IN_USE = 0x8;
 
-    static final int SIZE_BASE = 128;
+    static final int SIZE_BASE = 64;
     static final int HEADER_SIZE = 1;
 
     // not stored
