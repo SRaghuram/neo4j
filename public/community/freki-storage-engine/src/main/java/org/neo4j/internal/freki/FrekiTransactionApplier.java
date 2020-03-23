@@ -34,6 +34,7 @@ import org.neo4j.internal.freki.FrekiCommand.Mode;
 import org.neo4j.internal.helpers.collection.Visitor;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.IndexDescriptor;
+import org.neo4j.internal.schema.SchemaCache;
 import org.neo4j.internal.schema.SchemaRule;
 import org.neo4j.internal.schema.SchemaState;
 import org.neo4j.io.pagecache.PageCursor;
@@ -155,7 +156,9 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     {
         if ( nodeId != currentNodeId )
         {
-            if ( currentNodeId != NULL )
+            SchemaCache schemaCache = stores.schemaCache;
+            boolean hasIndexes = schemaCache.indexes().iterator().hasNext();
+            if ( currentNodeId != NULL && hasIndexes )
             {
                 EntityUpdates entityUpdates = extractIndexUpdates();
                 Set<IndexDescriptor> relatedIndexes = stores.schemaCache.getIndexesRelatedTo( entityUpdates, EntityType.NODE );
