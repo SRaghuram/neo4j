@@ -179,8 +179,8 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
         }
 
         @Override
-        public Void handle(RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection) throws Exception {
-
+        public Void handle( RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection ) throws Exception
+        {
             encodeLeadershipTransferMessage( leadershipTransferRejection.previousIndex(), leadershipTransferRejection.term(),
                                              leadershipTransferRejection.groups() );
             return null;

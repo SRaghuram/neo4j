@@ -19,8 +19,8 @@ import java.util.Set;
 
 import org.neo4j.logging.Log;
 
-import static com.neo4j.causalclustering.core.consensus.MajorityIncludingSelfQuorum.isQuorum;
 import static com.neo4j.causalclustering.core.consensus.ElectionTimerMode.FAILURE_DETECTION;
+import static com.neo4j.causalclustering.core.consensus.MajorityIncludingSelfQuorum.isQuorum;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.CANDIDATE;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.FOLLOWER;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
@@ -240,7 +240,8 @@ class Candidate implements RaftMessageHandler
         }
 
         @Override
-        public OutcomeBuilder handle(RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection) {
+        public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection )
+        {
             outcomeBuilder.addLeaderTransferRejection( leadershipTransferRejection );
             return outcomeBuilder;
         }

@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.identity.RaftId;
 
 class LeaderTransferContext
 {
+    static final LeaderTransferContext NO_TARGET = new LeaderTransferContext( null, null );
     private final RaftId raftId;
     private final MemberId memberId;
 
@@ -24,7 +25,7 @@ class LeaderTransferContext
         return memberId;
     }
 
-     RaftId raftId()
+    RaftId raftId()
     {
         return raftId;
     }

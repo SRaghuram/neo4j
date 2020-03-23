@@ -26,6 +26,6 @@ class RandomStrategy implements SelectionStrategy
                 return new LeaderTransferContext( validTopology.raftId(), members.get( 0 ) );
             }
         }
-        return null;
+        return LeaderTransferContext.NO_TARGET;
     }
 }

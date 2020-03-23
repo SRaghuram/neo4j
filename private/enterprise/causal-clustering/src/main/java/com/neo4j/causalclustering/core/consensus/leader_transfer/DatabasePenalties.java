@@ -11,6 +11,7 @@ import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -20,8 +21,7 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 
 class DatabasePenalties
 {
-    private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
-    private final Map<MemberId,SuspendedDatabases> memberSuspensions = new HashMap<>();
+    private final Map<MemberId,SuspendedDatabases> memberSuspensions = new ConcurrentHashMap<>();
     private final long suspensionTime;
     private Clock clock;
 
@@ -33,49 +33,36 @@ class DatabasePenalties
 
     void issuePenalty( MemberId member, NamedDatabaseId namedDatabaseId )
     {
-        readWriteLock.writeLock().lock();
-        try
+        memberSuspensions.compute( member, ( memberId, suspendedDatabases ) ->
         {
-            memberSuspensions.compute( member, ( memberId, suspendedDatabases ) -> {
-                if ( suspendedDatabases == null )
-                {
-                    suspendedDatabases = new SuspendedDatabases( suspensionTime, clock );
-                }
-                suspendedDatabases.suspendDatabase( namedDatabaseId );
-                return suspendedDatabases;
-            } );
-        }
-        finally
-        {
-            readWriteLock.writeLock().unlock();
-        }
+            if ( suspendedDatabases == null )
+            {
+                suspendedDatabases = new SuspendedDatabases( suspensionTime, clock );
+            }
+            suspendedDatabases.suspendDatabase( namedDatabaseId );
+            return suspendedDatabases;
+        } );
     }
 
     void clean()
     {
-        readWriteLock.writeLock().lock();
-        try
+        for ( MemberId member : memberSuspensions.keySet() )
         {
-            memberSuspensions.values().forEach( SuspendedDatabases::update );
-            memberSuspensions.entrySet().removeIf( entry -> entry.getValue().isEmpty() );
-        }
-        finally
-        {
-            readWriteLock.writeLock().unlock();
+            memberSuspensions.computeIfPresent( member, ( memberId, suspendedDatabases ) ->
+            {
+                suspendedDatabases.update();
+                if ( suspendedDatabases.isEmpty() )
+                {
+                    return null;
+                }
+                return suspendedDatabases;
+            } );
         }
     }
 
-    public Set<NamedDatabaseId> suspendedDatabases( MemberId memberId )
+    private Set<NamedDatabaseId> suspendedDatabases( MemberId memberId )
     {
-        readWriteLock.readLock().lock();
-        try
-        {
-            return memberSuspensions.containsKey( memberId ) ? memberSuspensions.get( memberId ).suspendedDatabases() : Set.of();
-        }
-        finally
-        {
-            readWriteLock.readLock().unlock();
-        }
+        return memberSuspensions.containsKey( memberId ) ? memberSuspensions.get( memberId ).suspendedDatabases() : Set.of();
     }
 
     public boolean notSuspended( DatabaseId databaseId, MemberId member )

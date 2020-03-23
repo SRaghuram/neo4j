@@ -89,12 +89,12 @@ public class RaftStateBuilder
     public RaftState build() throws IOException
     {
         StateStorage<TermState> termStore = new InMemoryStateStorage<>( new TermState() );
-        StateStorage<VoteState> voteStore = new InMemoryStateStorage<>( new VoteState( ) );
+        StateStorage<VoteState> voteStore = new InMemoryStateStorage<>( new VoteState() );
         StubMembership membership = new StubMembership( votingMembers, replicationMembers );
 
         RaftState state = new RaftState( myself, termStore, membership, entryLog,
-                                         voteStore, new ConsecutiveInFlightCache(), NullLogProvider.getInstance(), supportPreVoting, refusesToBeLeader,
-                                         Set::of );
+                voteStore, new ConsecutiveInFlightCache(), NullLogProvider.getInstance(), supportPreVoting, refusesToBeLeader,
+                Set::of );
 
         state.update( outcome );
 

@@ -198,7 +198,8 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
         }
 
         @Override
-        public Void handle(RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection) throws Exception {
+        public Void handle( RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection ) throws Exception
+        {
             throw new UnsupportedOperationException( "Raft v1 does not support leadership transfer" );
         }
     }

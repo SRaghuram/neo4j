@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.core.consensus.leader_transfer;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.LeadershipTransfer.Proposal;
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Inbound;
@@ -22,6 +23,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
+import static com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferContext.NO_TARGET;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
@@ -56,12 +58,14 @@ class TransferLeader implements Runnable
 
         var leaderTransferContext = createContext( notPrioritisedLeadership(), PRIORITISED_SELECTION_STRATEGY );
 
-        if ( leaderTransferContext == null )
+        // This instance is high priority for all its leaderships, so just do normal load balancing
+        if ( leaderTransferContext == NO_TARGET )
         {
             leaderTransferContext = createContext( myLeaderships(), selectionStrategy );
         }
 
-        if ( leaderTransferContext != null )
+        // If leaderTransferContext is still no target, there is no need to transfer leadership
+        if ( leaderTransferContext != NO_TARGET )
         {
             handleProposal( leaderTransferContext );
         }
@@ -71,20 +75,28 @@ class TransferLeader implements Runnable
     {
         if ( !databaseIds.isEmpty() )
         {
-            var validTopologies = databaseIds.stream().map( topologyService::coreTopologyForDatabase )
-                    .map( ct -> new TopologyContext( ct.databaseId(), ct.raftId(), ct.members().keySet()
-                            .stream().filter( member -> databasePenalties.notSuspended( ct.databaseId(), member ) && !member.equals( myself ) )
-                            .collect( toSet() ) ) ).collect( toList() );
+            var validTopologies = databaseIds.stream()
+                    .map( topologyService::coreTopologyForDatabase )
+                    .map( this::filterValidMembers)
+                    .collect( toList() );
             return selectionStrategy.select( validTopologies );
         }
-        return null;
+        return NO_TARGET;
+    }
+
+    private TopologyContext filterValidMembers( DatabaseCoreTopology topology )
+    {
+        var members = topology.members().keySet().stream()
+                .filter( member -> databasePenalties.notSuspended( topology.databaseId(), member ) && !member.equals( myself ) )
+                .collect( toSet() );
+        return new TopologyContext( topology.databaseId(), topology.raftId(), members );
     }
 
     private void handleProposal( LeaderTransferContext transferContext )
     {
-        messageHandler.handle( RaftMessages.ReceivedInstantRaftIdAwareMessage.of( Instant.now(),
-                                                                                  transferContext.raftId(), new Proposal( myself, transferContext.to(),
-                                                                                                                          getPrioritisedGroups( config ) ) ) );
+        var proposal = new Proposal( myself, transferContext.to(), getPrioritisedGroups( config ) );
+        var message = RaftMessages.ReceivedInstantRaftIdAwareMessage.of( Instant.now(), transferContext.raftId(), proposal );
+        messageHandler.handle( message );
     }
 
     private List<NamedDatabaseId> notPrioritisedLeadership()

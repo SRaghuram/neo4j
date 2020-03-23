@@ -300,16 +300,16 @@ public class Leader implements RaftMessageHandler
         }
 
         @Override
-        public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Request leadershipTransferRequest ) throws IOException
+        public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Request request ) throws IOException
         {
-            if ( leadershipTransferRequest.term() > ctx.term() )
+            if ( request.term() > ctx.term() )
             {
                 stepDownToFollower( outcomeBuilder, ctx );
                 log.info( "Moving to FOLLOWER state after receiving leadership transfer request from %s at term %d (I am at %d)",
-                          leadershipTransferRequest.from(), leadershipTransferRequest.term(), ctx.term() );
+                          request.from(), request.term(), ctx.term() );
             }
-            var rejection = new RaftMessages.LeadershipTransfer.Rejection( leadershipTransferRequest.from(), ctx.commitIndex(), ctx.term(), ctx.serverGroups() );
-            outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( leadershipTransferRequest.from(), rejection ) );
+            var rejection = new RaftMessages.LeadershipTransfer.Rejection( request.from(), ctx.commitIndex(), ctx.term(), ctx.serverGroups() );
+            outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( request.from(), rejection ) );
             return outcomeBuilder;
         }
 
@@ -334,13 +334,13 @@ public class Leader implements RaftMessageHandler
         }
 
         @Override
-        public OutcomeBuilder handle(RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection) throws IOException
+        public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection ) throws IOException
         {
             outcomeBuilder.addLeaderTransferRejection( leadershipTransferRejection );
             return outcomeBuilder;
         }
 
-        private void stepDownToFollower(OutcomeBuilder outcomeBuilder, ReadableRaftState raftState )
+        private void stepDownToFollower( OutcomeBuilder outcomeBuilder, ReadableRaftState raftState )
         {
             outcomeBuilder.steppingDown( raftState.term() )
                     .setRole( Role.FOLLOWER )

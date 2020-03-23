@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.core.consensus.leader_transfer;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -16,7 +15,6 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.kernel.database.DatabaseIdFactory.from;
@@ -30,65 +28,76 @@ class DatabasePenaltiesTest
     private final MemberId member2 = new MemberId( UUID.randomUUID() );
     private final NamedDatabaseId db1 = from( "db-one", UUID.randomUUID() );
     private final NamedDatabaseId db2 = from( "db-two", UUID.randomUUID() );
-    private final DatabasePenalties lts = new DatabasePenalties( suspensionTime, timeUnit, fakeClock );
+    private final DatabasePenalties databasePenalties = new DatabasePenalties( suspensionTime, timeUnit, fakeClock );
 
     @Test
     void shouldSuspendDatabasesForMember()
     {
-        lts.issuePenalty( member1, db2 );
-        lts.issuePenalty( member1, db1 );
-        lts.issuePenalty( member2, db2 );
+        databasePenalties.issuePenalty( member1, db2 );
+        databasePenalties.issuePenalty( member1, db1 );
+        databasePenalties.issuePenalty( member2, db2 );
 
-        assertIsSuspended( lts.suspendedDatabases( member1 ), db1, db2 );
-        assertIsSuspended( lts.suspendedDatabases( member2 ), db2 );
-        assertFalse( lts.notSuspended( db1.databaseId(), member1 ) );
-        assertFalse( lts.notSuspended( db2.databaseId(), member1 ) );
-        assertTrue( lts.notSuspended( db1.databaseId(), member2 ) );
-        assertFalse( lts.notSuspended( db2.databaseId(), member2 ) );
+        assertIsSuspended( databasePenalties, member1, db1, db2 );
+        assertIsSuspended( databasePenalties, member2, db2 );
+        assertNotSuspended( databasePenalties, member2, db1 );
     }
 
     @Test
     void shouldSuspendAndUnsuspendDatabasesForMember()
     {
-        lts.issuePenalty( member1, db1 );
-        lts.issuePenalty( member1, db2 );
-        lts.issuePenalty( member2, db2 );
+        databasePenalties.issuePenalty( member1, db1 );
+        databasePenalties.issuePenalty( member1, db2 );
+        databasePenalties.issuePenalty( member2, db2 );
 
         fakeClock.forward( suspensionTime, timeUnit );
 
-        assertIsSuspended( lts.suspendedDatabases( member1 ), db1, db2 );
-        assertIsSuspended( lts.suspendedDatabases( member2 ), db2 );
+        assertIsSuspended( databasePenalties, member1, db1, db2 );
+        assertIsSuspended( databasePenalties, member2, db2 );
+        assertNotSuspended( databasePenalties, member2, db1 );
 
         fakeClock.forward( 1, timeUnit );
 
-        assertIsSuspended( lts.suspendedDatabases( member1 ) );
-        assertIsSuspended( lts.suspendedDatabases( member2 ) );
+        assertNotSuspended( databasePenalties, member1, db1, db2 );
+        assertNotSuspended( databasePenalties, member2, db1, db2 );
     }
 
     @Test
     void shouldUpdateSuspension()
     {
-        lts.issuePenalty( member1, db2 );
-        lts.issuePenalty( member1, db1 );
-        lts.issuePenalty( member2, db2 );
+        databasePenalties.issuePenalty( member1, db2 );
+        databasePenalties.issuePenalty( member1, db1 );
+        databasePenalties.issuePenalty( member2, db2 );
 
         fakeClock.forward( suspensionTime, timeUnit );
-        lts.issuePenalty( member1, db2 );
+        databasePenalties.issuePenalty( member1, db2 );
 
-        assertIsSuspended( lts.suspendedDatabases( member1 ), db1, db2 );
-        assertIsSuspended( lts.suspendedDatabases( member2 ), db2 );
+        assertIsSuspended( databasePenalties, member1, db1, db2 );
+        assertIsSuspended( databasePenalties, member2, db2 );
+        assertNotSuspended( databasePenalties, member2, db1 );
 
         fakeClock.forward( 1, timeUnit );
 
-        assertIsSuspended( lts.suspendedDatabases( member1 ), db2 );
-        assertIsSuspended( lts.suspendedDatabases( member2 ) );
+        assertIsSuspended( databasePenalties, member1, db2 );
+        assertNotSuspended( databasePenalties, member1, db1 );
+        assertNotSuspended( databasePenalties, member2, db1, db2 );
 
         fakeClock.forward( suspensionTime, timeUnit );
-        assertIsSuspended( lts.suspendedDatabases( member1 ) );
+        assertNotSuspended( databasePenalties, member1, db1, db2 );
     }
 
-    private void assertIsSuspended( Set<NamedDatabaseId> actual, NamedDatabaseId... expected )
+    private static void assertIsSuspended( DatabasePenalties databasePenalties, MemberId memberId, NamedDatabaseId... expected )
     {
-        assertThat( actual ).containsExactlyInAnyOrder( expected );
+        for ( NamedDatabaseId namedDatabaseId : expected )
+        {
+            assertFalse( databasePenalties.notSuspended( namedDatabaseId.databaseId(), memberId ) );
+        }
+    }
+
+    private static void assertNotSuspended( DatabasePenalties databasePenalties, MemberId memberId, NamedDatabaseId... expected )
+    {
+        for ( NamedDatabaseId namedDatabaseId : expected )
+        {
+            assertTrue( databasePenalties.notSuspended( namedDatabaseId.databaseId(), memberId ) );
+        }
     }
 }

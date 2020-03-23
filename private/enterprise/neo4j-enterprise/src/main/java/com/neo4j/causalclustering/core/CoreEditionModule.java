@@ -322,15 +322,13 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         RaftMessageDispatcher raftMessageDispatcher = new RaftMessageDispatcher( logProvider, globalModule.getGlobalClock() );
 
         var globalOtherTracker = globalModule.getOtherMemoryPool().getPoolMemoryTracker();
-        RaftGroupFactory raftGroupFactory = new RaftGroupFactory( myIdentity, globalModule, clusterStateLayout, topologyService, storageFactory,
-                namedDatabaseId -> ((DefaultLeaderService) leaderService).createListener( namedDatabaseId ),
-                globalOtherTracker );
-
-        var leaderTransferService =
-                new LeaderTransferService( globalModule.getJobScheduler(), 10, TimeUnit.SECONDS, topologyService, globalConfig, databaseManager,
-                                           raftMessageDispatcher, myIdentity );
+        var leaderTransferService = new LeaderTransferService( globalModule.getJobScheduler(), 10, TimeUnit.SECONDS, topologyService, globalConfig,
+                databaseManager, raftMessageDispatcher, myIdentity );
 
         globalLife.add( leaderTransferService );
+
+        RaftGroupFactory raftGroupFactory = new RaftGroupFactory( myIdentity, globalModule, clusterStateLayout, topologyService, storageFactory,
+                leaderTransferService, namedDatabaseId -> ((DefaultLeaderService) leaderService).createListener( namedDatabaseId ), globalOtherTracker );
 
         RecoveryFacade recoveryFacade = recoveryFacade( globalModule.getFileSystem(), globalModule.getPageCache(), globalModule.getTracers(), globalConfig,
                 globalModule.getStorageEngineFactory(), globalOtherTracker );

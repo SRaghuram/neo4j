@@ -58,13 +58,15 @@ public class Outcome implements ConsensusOutcome
     private final long steppingDownInTerm;
     private final Set<MemberId> heartbeatResponses;
     private final RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection;
+    private final boolean transferringLeadership;
 
     Outcome( Role role, long term, MemberId leader, long leaderCommit, MemberId votedFor,
             Set<MemberId> votesForMe, Set<MemberId> preVotesForMe, long lastLogIndexBeforeWeBecameLeader,
             FollowerStates<MemberId> followerStates, ElectionTimerMode electionTimerMode,
             Collection<RaftLogCommand> logCommands, Collection<RaftMessages.Directed> outgoingMessages,
             Collection<ShipCommand> shipCommands, long commitIndex, Set<MemberId> heartbeatResponses, boolean isPreElection, boolean electedLeader,
-            long steppingDownInTerm, SnapshotRequirement snapshotRequirement, RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection )
+            long steppingDownInTerm, SnapshotRequirement snapshotRequirement, RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection,
+            boolean transferringLeadership )
     {
         this.role = role;
         this.term = term;
@@ -86,6 +88,7 @@ public class Outcome implements ConsensusOutcome
         this.electedLeader = electedLeader;
         this.snapshotRequirement = snapshotRequirement;
         this.leadershipTransferRejection = leadershipTransferRejection;
+        this.transferringLeadership = transferringLeadership;
     }
 
     @Override
@@ -110,6 +113,7 @@ public class Outcome implements ConsensusOutcome
                ", electedLeader=" + electedLeader +
                ", steppingDownInTerm=" + steppingDownInTerm +
                ", leadershipTransferRejection=" + leadershipTransferRejection +
+               ", transferringLeadership=" + transferringLeadership +
                '}';
     }
 
@@ -220,6 +224,11 @@ public class Outcome implements ConsensusOutcome
         return leadershipTransferRejection;
     }
 
+    public boolean isTransferringLeadership()
+    {
+        return transferringLeadership;
+    }
+
     @Override
     public boolean equals( Object object )
     {
@@ -251,7 +260,8 @@ public class Outcome implements ConsensusOutcome
                Objects.equals( followerStates, outcome.followerStates ) &&
                Objects.equals( shipCommands, outcome.shipCommands ) &&
                Objects.equals( leadershipTransferRejection, outcome.leadershipTransferRejection ) &&
-               Objects.equals( heartbeatResponses, outcome.heartbeatResponses );
+               Objects.equals( heartbeatResponses, outcome.heartbeatResponses ) &&
+               Objects.equals( transferringLeadership, outcome.transferringLeadership );
     }
 
     @Override
@@ -259,6 +269,6 @@ public class Outcome implements ConsensusOutcome
     {
         return Objects.hash( role, term, leader, leaderCommit, logCommands, outgoingMessages, commitIndex, votedFor, electionTimerMode, snapshotRequirement,
                 isPreElection, preVotesForMe, votesForMe, lastLogIndexBeforeWeBecameLeader, followerStates, shipCommands, electedLeader, steppingDownInTerm,
-                heartbeatResponses, leadershipTransferRejection );
+                heartbeatResponses, leadershipTransferRejection, transferringLeadership );
     }
 }

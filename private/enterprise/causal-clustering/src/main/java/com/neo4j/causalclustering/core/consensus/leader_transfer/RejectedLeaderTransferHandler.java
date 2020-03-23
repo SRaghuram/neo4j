@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 @FunctionalInterface
-public interface RejectedLeaderTransferReporter
+public interface RejectedLeaderTransferHandler
 {
-    void report( RaftMessages.LeadershipTransfer.Rejection rejection, NamedDatabaseId namedDatabaseId );
+    void handleRejection( RaftMessages.LeadershipTransfer.Rejection rejection, NamedDatabaseId namedDatabaseId );
 }

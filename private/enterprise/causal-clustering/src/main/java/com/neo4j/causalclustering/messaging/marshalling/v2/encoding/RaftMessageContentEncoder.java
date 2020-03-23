@@ -148,7 +148,8 @@ public class RaftMessageContentEncoder extends MessageToMessageEncoder<RaftMessa
         }
 
         @Override
-        public Void handle(RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection) throws Exception {
+        public Void handle( RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection ) throws Exception
+        {
             return null;
         }
 

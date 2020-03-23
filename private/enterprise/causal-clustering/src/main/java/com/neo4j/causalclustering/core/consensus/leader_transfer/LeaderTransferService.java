@@ -23,7 +23,7 @@ import org.neo4j.scheduler.JobScheduler;
 
 import static java.time.Clock.systemUTC;
 
-public class LeaderTransferService extends LifecycleAdapter implements RejectedLeaderTransferReporter
+public class LeaderTransferService extends LifecycleAdapter implements RejectedLeaderTransferHandler
 {
     private final TransferLeader transferLeader;
     private JobScheduler jobScheduler;
@@ -39,8 +39,8 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
         this.jobScheduler = jobScheduler;
         this.schedulingTime = schedulingTime;
         this.timeUnit = timeUnit;
-        this.transferLeader =
-                new TransferLeader( topologyService, config, databaseManager, messageHandler, myself, databasePenalties, validTopologies -> null );
+        this.transferLeader = new TransferLeader( topologyService, config, databaseManager, messageHandler, myself,
+                                                  databasePenalties, SelectionStrategy.NO_OP );
     }
 
     @Override
@@ -59,8 +59,10 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
     }
 
     @Override
-    public void report( RaftMessages.LeadershipTransfer.Rejection rejection, NamedDatabaseId namedDatabaseId )
+    public void handleRejection( RaftMessages.LeadershipTransfer.Rejection rejection, NamedDatabaseId namedDatabaseId )
     {
         databasePenalties.issuePenalty( rejection.from(), namedDatabaseId );
+
+        // TODO: Either retry request on new member or cancel tx suspension timeouts (when that exists)
     }
 }

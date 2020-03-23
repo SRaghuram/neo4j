@@ -72,7 +72,11 @@ class RaftOutcomeApplier
 
         driveMembership( outcome );
 
-        rejectionConsumer.accept( outcome.getLeaderTransferRejection() );
+        var attemptedTransferWasRejected = outcome.getLeaderTransferRejection();
+        if ( attemptedTransferWasRejected != null )
+        {
+            rejectionConsumer.accept( outcome.getLeaderTransferRejection() );
+        }
 
         return outcome.getRole();
     }

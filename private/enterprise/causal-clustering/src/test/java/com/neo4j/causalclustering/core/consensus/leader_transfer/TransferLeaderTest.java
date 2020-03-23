@@ -84,7 +84,7 @@ class TransferLeaderTest
     {
         TransferLeader transferLeader =
                 new TransferLeader( fakeTopologyService, config, databaseManager, messageHandler, myself, databasePenalties,
-                                    ( validTopologies, myself ) -> null );
+                                    SelectionStrategy.NO_OP );
         var databaseId = databaseIds.iterator().next();
         // I am not leader
         databaseManager.setLeaderFor( databaseId, null );
@@ -103,7 +103,7 @@ class TransferLeaderTest
     {
         TransferLeader transferLeader =
                 new TransferLeader( fakeTopologyService, config, databaseManager, messageHandler, myself, databasePenalties,
-                                    ( validTopologies, myself ) -> null );
+                                    SelectionStrategy.NO_OP );
         var databaseId = databaseIds.iterator().next();
         // I am leader
         databaseManager.setLeaderFor( databaseId, myself );

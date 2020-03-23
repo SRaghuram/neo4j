@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core.consensus;
 import com.neo4j.causalclustering.common.RaftLogImplementation;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.core.consensus.leader_transfer.RejectedLeaderTransferReporter;
+import com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferService;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.MonitoredRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
@@ -73,7 +73,7 @@ public class RaftGroup
     RaftGroup( Config config, DatabaseLogService logService, FileSystemAbstraction fileSystem, JobScheduler jobScheduler, SystemNanoClock clock,
             MemberId myself, LifeSupport life, Monitors monitors, Dependencies dependencies, Outbound<MemberId,RaftMessages.RaftMessage> outbound,
             ClusterStateLayout clusterState, CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, NamedDatabaseId namedDatabaseId,
-            LeaderListener leaderListener, MemoryTracker memoryTracker )
+            LeaderTransferService leaderTransferService, LeaderListener leaderListener, MemoryTracker memoryTracker )
     {
         DatabaseLogProvider logProvider = logService.getInternalLogProvider();
         TimerService timerService = new TimerService( jobScheduler, logProvider );
@@ -115,10 +115,9 @@ public class RaftGroup
                                    logProvider, supportsPreVoting, config.get( refuse_to_be_leader ), serverGroupsSupplier );
 
         var raftMessageTimerResetMonitor = monitors.newMonitor( RaftMessageTimerResetMonitor.class );
-        var rejectedLeaderTransferReporter = dependencies.resolveDependency( RejectedLeaderTransferReporter.class );
         var raftOutcomeApplier = new RaftOutcomeApplier( state, outbound, leaderAvailabilityTimers, raftMessageTimerResetMonitor, logShipping,
                                                          raftMembershipManager, logProvider,
-                                                         rejection -> rejectedLeaderTransferReporter.report( rejection, namedDatabaseId ) );
+                                                         rejection -> leaderTransferService.handleRejection( rejection, namedDatabaseId ) );
 
         raftMachine = new RaftMachine( myself, leaderAvailabilityTimers, logProvider, raftMembershipManager, inFlightCache, raftOutcomeApplier, state );
 

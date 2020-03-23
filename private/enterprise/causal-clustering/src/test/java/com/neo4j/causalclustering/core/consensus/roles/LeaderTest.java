@@ -96,7 +96,7 @@ class LeaderTest
                 .supportsPreVoting( true )
                 .build();
 
-        var message = new RaftMessages.LeadershipTransfer.Proposal( myself, member1 , Set.of());
+        var message = new RaftMessages.LeadershipTransfer.Proposal( myself, member1 , Set.of() );
 
         // when
         Outcome outcome = new Leader().handle( message, state, log() );
