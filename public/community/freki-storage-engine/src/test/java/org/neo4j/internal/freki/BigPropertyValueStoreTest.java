@@ -47,7 +47,6 @@ import static java.nio.ByteBuffer.wrap;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 import static org.neo4j.test.Race.throwing;
 
 @ExtendWith( RandomExtension.class )
@@ -68,11 +67,11 @@ class BigPropertyValueStoreTest
     {
         try ( Lifespan life = new Lifespan() )
         {
-            BigPropertyValueStore store = new BigPropertyValueStore( directory.file( "dude" ), pageCache, false, true, TRACER_SUPPLIER );
+            BigPropertyValueStore store = new BigPropertyValueStore( directory.file( "dude" ), pageCache, false, true );
             life.add( store );
             byte[][] datas = new byte[100][];
             long[] positions = new long[datas.length];
-            try ( PageCursor cursor = store.openWriteCursor() )
+            try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
             {
                 for ( int i = 0; i < datas.length; i++ )
                 {
@@ -95,7 +94,7 @@ class BigPropertyValueStoreTest
         try ( Lifespan life = new Lifespan() )
         {
             // given
-            BigPropertyValueStore store = new BigPropertyValueStore( directory.file( "dude" ), pageCache, false, true, TRACER_SUPPLIER );
+            BigPropertyValueStore store = new BigPropertyValueStore( directory.file( "dude" ), pageCache, false, true );
             life.add( store );
             Race race = new Race();
             MutableLongObjectMap<byte[]>[] expectedData = new MutableLongObjectMap[4];
@@ -108,7 +107,7 @@ class BigPropertyValueStoreTest
             race.addContestants( expectedData.length, i -> throwing( () ->
             {
                 byte[] data = randomData( ThreadLocalRandom.current() );
-                try ( PageCursor cursor = store.openWriteCursor() )
+                try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
                 {
                     long position = store.allocateSpace( data.length );
                     store.write( cursor, ByteBuffer.wrap( data ), position );
@@ -158,11 +157,11 @@ class BigPropertyValueStoreTest
         try ( Lifespan life = new Lifespan() )
         {
             // given
-            BigPropertyValueStore store = new BigPropertyValueStore( directory.file( "dude" ), pageCache, false, true, TRACER_SUPPLIER );
+            BigPropertyValueStore store = new BigPropertyValueStore( directory.file( "dude" ), pageCache, false, true );
             life.add( store );
 
             byte[] data = randomData( ThreadLocalRandom.current() );
-            try ( PageCursor cursor = store.openWriteCursor() )
+            try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
             {
                 long pointer = store.allocateSpace( data.length );
                 store.write( cursor, ByteBuffer.wrap( data ), pointer );
@@ -177,10 +176,10 @@ class BigPropertyValueStoreTest
     {
         try ( Lifespan life = new Lifespan() )
         {
-            BigPropertyValueStore store = new BigPropertyValueStore( directory.file( "dude" ), pageCache, false, true, TRACER_SUPPLIER );
+            BigPropertyValueStore store = new BigPropertyValueStore( directory.file( "dude" ), pageCache, false, true );
             life.add( store );
             long pointer;
-            try ( PageCursor cursor = store.openWriteCursor() )
+            try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
             {
                 pointer = store.allocateSpace( data.length );
                 store.write( cursor, ByteBuffer.wrap( data ), pointer );
@@ -194,9 +193,9 @@ class BigPropertyValueStoreTest
     {
         try ( Lifespan life = new Lifespan() )
         {
-            BigPropertyValueStore store = new BigPropertyValueStore( directory.file( "dude" ), pageCache, true, true, TRACER_SUPPLIER );
+            BigPropertyValueStore store = new BigPropertyValueStore( directory.file( "dude" ), pageCache, true, true );
             life.add( store );
-            try ( PageCursor cursor = store.openReadCursor() )
+            try ( PageCursor cursor = store.openReadCursor( PageCursorTracer.NULL ) )
             {
                 byte[] data = new byte[size];
                 ByteBuffer buffer = ByteBuffer.wrap( data );
@@ -208,7 +207,7 @@ class BigPropertyValueStoreTest
 
     private void readAndVerify( BigPropertyValueStore store, byte[] expectedData, long position ) throws IOException
     {
-        try ( PageCursor cursor = store.openReadCursor() )
+        try ( PageCursor cursor = store.openReadCursor( PageCursorTracer.NULL ) )
         {
             byte[] readData = new byte[expectedData.length];
             store.read( cursor, ByteBuffer.wrap( readData ), position );

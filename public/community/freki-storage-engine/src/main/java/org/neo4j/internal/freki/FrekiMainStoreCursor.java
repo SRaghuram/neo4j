@@ -94,7 +94,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     {
         if ( xCursors[sizeExp] == null )
         {
-            xCursors[sizeExp] = stores.mainStore( sizeExp ).openReadCursor();
+            xCursors[sizeExp] = stores.mainStore( sizeExp ).openReadCursor( cursorTracer );
         }
         return xCursors[sizeExp];
     }

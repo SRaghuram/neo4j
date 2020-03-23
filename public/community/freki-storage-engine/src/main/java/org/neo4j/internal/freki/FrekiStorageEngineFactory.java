@@ -36,7 +36,6 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
-import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.lock.LockService;
 import org.neo4j.logging.LogProvider;
@@ -67,7 +66,8 @@ import org.neo4j.token.TokenHolders;
 public class FrekiStorageEngineFactory implements StorageEngineFactory
 {
     @Override
-    public StoreVersionCheck versionCheck( FileSystemAbstraction fs, DatabaseLayout databaseLayout, Config config, PageCache pageCache, LogService logService )
+    public StoreVersionCheck versionCheck( FileSystemAbstraction fs, DatabaseLayout databaseLayout, Config config, PageCache pageCache, LogService logService,
+            PageCacheTracer pageCacheTracer )
     {
         return new FrekiStoreVersionCheck();
     }
@@ -93,7 +93,7 @@ public class FrekiStorageEngineFactory implements StorageEngineFactory
     {
         return new FrekiStorageEngine( fs, databaseLayout, config, pageCache, tokenHolders, schemaState, constraintSemantics, indexConfigCompleter, lockService,
                 idGeneratorFactory, idController, databaseHealth, logProvider, recoveryCleanupWorkCollector, createStoreIfNotExists, pageCacheTracer,
-                DefaultPageCursorTracerSupplier.TRACER_SUPPLIER, CursorAccessPatternTracer.decidedByFeatureToggle() );
+                CursorAccessPatternTracer.decidedByFeatureToggle() );
     }
 
     @Override
@@ -109,14 +109,15 @@ public class FrekiStorageEngineFactory implements StorageEngineFactory
     }
 
     @Override
-    public TransactionIdStore readOnlyTransactionIdStore( FileSystemAbstraction filySystem, DatabaseLayout databaseLayout, PageCache pageCache )
-            throws IOException
+    public TransactionIdStore readOnlyTransactionIdStore( FileSystemAbstraction filySystem, DatabaseLayout databaseLayout, PageCache pageCache,
+            PageCursorTracer cursorTracer ) throws IOException
     {
         return null;
     }
 
     @Override
-    public LogVersionRepository readOnlyLogVersionRepository( DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException
+    public LogVersionRepository readOnlyLogVersionRepository( DatabaseLayout databaseLayout, PageCache pageCache, PageCursorTracer cursorTracer )
+            throws IOException
     {
         return null;
     }
@@ -130,9 +131,10 @@ public class FrekiStorageEngineFactory implements StorageEngineFactory
     }
 
     @Override
-    public StoreId storeId( DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException
+    public StoreId storeId( DatabaseLayout databaseLayout, PageCache pageCache, PageCursorTracer cursorTracer ) throws IOException
     {
-        try ( GBPTreeMetaDataStore metaDataStore = openMetaDataStore( databaseLayout, pageCache, PageCacheTracer.NULL, PageCursorTracer.NULL ) )
+        // TODO PageCacheTracer should be passed in to this method
+        try ( GBPTreeMetaDataStore metaDataStore = openMetaDataStore( databaseLayout, pageCache, PageCacheTracer.NULL ) )
         {
             return metaDataStore.getStoreId();
         }
@@ -140,7 +142,7 @@ public class FrekiStorageEngineFactory implements StorageEngineFactory
 
     @Override
     public SchemaRuleMigrationAccess schemaRuleMigrationAccess( FileSystemAbstraction fs, PageCache pageCache, Config config, DatabaseLayout databaseLayout,
-            LogService logService, String recordFormats, PageCacheTracer cacheTracer )
+            LogService logService, String recordFormats, PageCacheTracer cacheTracer, PageCursorTracer cursorTracer )
     {
         return null;
     }
@@ -157,10 +159,8 @@ public class FrekiStorageEngineFactory implements StorageEngineFactory
         return FrekiCommandReaderFactory.INSTANCE;
     }
 
-    static GBPTreeMetaDataStore openMetaDataStore( DatabaseLayout databaseLayout, PageCache pageCache, PageCacheTracer pageCacheTracer,
-            PageCursorTracer cursorTracer )
+    static GBPTreeMetaDataStore openMetaDataStore( DatabaseLayout databaseLayout, PageCache pageCache, PageCacheTracer pageCacheTracer )
     {
-        return new GBPTreeMetaDataStore( pageCache, databaseLayout.file( Stores.META_DATA_STORE_FILENAME ), 123456789, false, pageCacheTracer,
-                cursorTracer );
+        return new GBPTreeMetaDataStore( pageCache, databaseLayout.file( Stores.META_DATA_STORE_FILENAME ), 123456789, false, pageCacheTracer );
     }
 }
