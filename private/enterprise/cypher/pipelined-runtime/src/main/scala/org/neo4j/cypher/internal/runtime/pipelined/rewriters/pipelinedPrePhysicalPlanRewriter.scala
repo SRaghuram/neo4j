@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
 import org.neo4j.cypher.internal.util.attribution.IdGen
 import org.neo4j.cypher.internal.util.helpers.fixedPoint
+import org.neo4j.cypher.internal.util.inSequence
 
 /*
  * Rewriters that live here are used to either improve performance, or rewrite specialized
@@ -25,7 +26,7 @@ case object pipelinedPrePhysicalPlanRewriter {
               providedOrders: ProvidedOrders,
               leveragedOrders: LeveragedOrders,
               idGen: IdGen): AnyRef => AnyRef = {
-    org.neo4j.cypher.internal.util.inSequence(
+    inSequence(
       fixedPoint(
         combineCartesianProductOfMultipleIndexSeeks(cardinalities, leveragedOrders)
       ),

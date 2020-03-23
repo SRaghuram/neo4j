@@ -84,6 +84,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.PruningVarLengthExpandTestBa
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultStressTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipCountFromCountStoreTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.RollupApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ShortestPathTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SkipTestBase
@@ -324,6 +325,10 @@ class ParallelRuntimeSemiApplyNoFusingTest extends SemiApplyTestBase(NO_FUSING, 
 // ANTI SEMI APPLY
 class ParallelAntiSemiApplyTest extends AntiSemiApplyTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 class ParallelAntiSemiApplyNoFusingTest extends AntiSemiApplyTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+
+// ROLLUP APPLY
+class ParallelRuntimeRollupApplyTest extends RollupApplyTestBase(FUSING, PARALLEL, SIZE_HINT)
+class ParallelRuntimeRollupApplyNoFusingTest extends RollupApplyTestBase(NO_FUSING, PARALLEL, SIZE_HINT)
 
 // GENERAL
 class ParallelRuntimeMiscTest extends MiscTestBase(FUSING, PARALLEL) with ParallelRuntimeSpecSuite
