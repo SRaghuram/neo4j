@@ -28,7 +28,6 @@ import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 
 import static java.lang.Integer.min;
 
@@ -39,9 +38,9 @@ class BigPropertyValueStore extends BareBoneSingleFileStore implements SimpleBig
 
     private final AtomicLong nextPosition = new AtomicLong( HEADER_SIZE );
 
-    BigPropertyValueStore( File file, PageCache pageCache, boolean readOnly, boolean createIfNotExists, PageCursorTracerSupplier tracerSupplier )
+    BigPropertyValueStore( File file, PageCache pageCache, boolean readOnly, boolean createIfNotExists )
     {
-        super( file, pageCache, readOnly, createIfNotExists, tracerSupplier );
+        super( file, pageCache, readOnly, createIfNotExists );
     }
 
     @Override
@@ -54,7 +53,7 @@ class BigPropertyValueStore extends BareBoneSingleFileStore implements SimpleBig
     @Override
     public void flush( IOLimiter ioLimiter, PageCursorTracer cursorTracer ) throws IOException
     {
-        tryWriteHeader();
+        tryWriteHeader( cursorTracer );
         super.flush( ioLimiter, cursorTracer );
     }
 
@@ -64,7 +63,7 @@ class BigPropertyValueStore extends BareBoneSingleFileStore implements SimpleBig
         {
             if ( mappedFile.getLastPageId() >= 0 )
             {
-                try ( PageCursor cursor = openReadCursor() )
+                try ( PageCursor cursor = openReadCursor( PageCursorTracer.NULL ) )
                 {
                     nextPosition.set( cursor.getLong( 0 ) );
                 }
@@ -72,11 +71,11 @@ class BigPropertyValueStore extends BareBoneSingleFileStore implements SimpleBig
         }
     }
 
-    private void tryWriteHeader() throws IOException
+    private void tryWriteHeader( PageCursorTracer cursorTracer ) throws IOException
     {
         if ( !readOnly )
         {
-            try ( PageCursor cursor = openWriteCursor() )
+            try ( PageCursor cursor = openWriteCursor( cursorTracer ) )
             {
                 cursor.putLong( 0, nextPosition.get() );
             }

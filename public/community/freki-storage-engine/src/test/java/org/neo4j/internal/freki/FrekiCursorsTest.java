@@ -107,7 +107,7 @@ abstract class FrekiCursorsTest
                             FrekiCommand.SparseNode sparseNode = (FrekiCommand.SparseNode) command;
                             Record record = sparseNode.after;
                             SimpleStore store = stores.mainStore( record.sizeExp() );
-                            try ( PageCursor cursor = store.openWriteCursor() )
+                            try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
                             {
                                 store.write( cursor, record, IdUpdateListener.IGNORE, PageCursorTracer.NULL );
                             }

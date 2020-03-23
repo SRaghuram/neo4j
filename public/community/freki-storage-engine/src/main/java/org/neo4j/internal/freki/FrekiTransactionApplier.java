@@ -37,10 +37,11 @@ import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.SchemaRule;
 import org.neo4j.internal.schema.SchemaState;
 import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.storageengine.api.EntityTokenUpdate;
 import org.neo4j.storageengine.api.EntityUpdates;
 import org.neo4j.storageengine.api.IndexUpdateListener;
-import org.neo4j.storageengine.api.NodeLabelUpdate;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
 import org.neo4j.storageengine.util.IdGeneratorUpdatesWorkSync;
@@ -56,7 +57,6 @@ import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPoint
 import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromForwardPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.io.IOUtils.closeAll;
-import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.REVERSE_RECOVERY;
 import static org.neo4j.storageengine.util.IdUpdateListener.IGNORE;
 
@@ -66,6 +66,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     private final FrekiStorageReader reader;
     private final SchemaState schemaState;
     private final IndexUpdateListener indexUpdateListener;
+    private final PageCacheTracer pageCacheTracer;
     private final PageCursorTracer cursorTracer;
     private List<IndexDescriptor> createdIndexes;
     private final IdGeneratorUpdatesWorkSync.Batch idUpdates;
@@ -82,12 +83,13 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
 
     FrekiTransactionApplier( Stores stores, FrekiStorageReader reader, SchemaState schemaState, IndexUpdateListener indexUpdateListener,
             TransactionApplicationMode mode, IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync, LabelIndexUpdatesWorkSync labelIndexUpdatesWorkSync,
-            IndexUpdatesWorkSync indexUpdatesWorkSync, PageCursorTracer cursorTracer )
+            IndexUpdatesWorkSync indexUpdatesWorkSync, PageCacheTracer pageCacheTracer, PageCursorTracer cursorTracer )
     {
         this.stores = stores;
         this.reader = reader;
         this.schemaState = schemaState;
         this.indexUpdateListener = indexUpdateListener;
+        this.pageCacheTracer = pageCacheTracer;
         this.cursorTracer = cursorTracer;
         this.labelIndexUpdates = mode == REVERSE_RECOVERY || labelIndexUpdatesWorkSync == null ? null : labelIndexUpdatesWorkSync.newBatch();
         this.idUpdates = mode == REVERSE_RECOVERY ? null : idGeneratorUpdatesWorkSync.newBatch();
@@ -132,7 +134,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         Record record = node.after;
         int sizeExp = record.sizeExp();
         SimpleStore store = stores.mainStore( sizeExp );
-        try ( PageCursor cursor = store.openWriteCursor() )
+        try ( PageCursor cursor = store.openWriteCursor( cursorTracer ) )
         {
             store.write( cursor, node.after, idUpdates != null ? idUpdates : IGNORE, cursorTracer );
         }
@@ -140,7 +142,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         // reads label information from it and hands off to the label index updates listener.
         if ( sizeExp == 0 && labelIndexUpdates != null )
         {
-            labelIndexUpdates.add( NodeLabelUpdate.labelChanges( node.after.id, parseLabels( node.before ), parseLabels( node.after ) ) );
+            labelIndexUpdates.add( EntityTokenUpdate.tokenChanges( node.after.id, parseLabels( node.before ), parseLabels( node.after ) ) );
         }
 
         if ( indexUpdates != null )
@@ -292,7 +294,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     @Override
     public void handle( FrekiCommand.BigPropertyValue value ) throws IOException
     {
-        try ( PageCursor cursor = stores.bigPropertyValueStore.openWriteCursor() )
+        try ( PageCursor cursor = stores.bigPropertyValueStore.openWriteCursor( cursorTracer ) )
         {
             stores.bigPropertyValueStore.write( cursor, ByteBuffer.wrap( value.bytes ), value.pointer );
         }
@@ -321,19 +323,19 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     @Override
     public void handle( FrekiCommand.LabelToken token ) throws IOException
     {
-        stores.labelTokenStore.writeToken( token.token, TRACER_SUPPLIER.get() );
+        stores.labelTokenStore.writeToken( token.token, cursorTracer );
     }
 
     @Override
     public void handle( FrekiCommand.RelationshipTypeToken token ) throws IOException
     {
-        stores.relationshipTypeTokenStore.writeToken( token.token, TRACER_SUPPLIER.get() );
+        stores.relationshipTypeTokenStore.writeToken( token.token, cursorTracer );
     }
 
     @Override
     public void handle( FrekiCommand.PropertyKeyToken token ) throws IOException
     {
-        stores.propertyKeyTokenStore.writeToken( token.token, TRACER_SUPPLIER.get() );
+        stores.propertyKeyTokenStore.writeToken( token.token, cursorTracer );
     }
 
     @Override
@@ -349,7 +351,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         SchemaRule rule = schema.descriptor;
         if ( schema.mode == Mode.CREATE || schema.mode == Mode.UPDATE )
         {
-            stores.schemaStore.writeRule( rule, TRACER_SUPPLIER.get() );
+            stores.schemaStore.writeRule( rule, cursorTracer );
             if ( rule instanceof IndexDescriptor )
             {
                 if ( schema.mode == Mode.CREATE )
@@ -380,7 +382,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         }
         else
         {
-            if ( stores.schemaStore.deleteRule( rule.getId(), TRACER_SUPPLIER.get() ) )
+            if ( stores.schemaStore.deleteRule( rule.getId(), cursorTracer ) )
             {
                 if ( rule instanceof IndexDescriptor )
                 {
@@ -417,7 +419,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
             AsyncApply indexUpdatesAsyncApply = indexUpdates != null ? indexUpdates.applyAsync( cursorTracer ) : AsyncApply.EMPTY;
             if ( idUpdates != null )
             {
-                idUpdates.apply();
+                idUpdates.apply( pageCacheTracer );
             }
             labelUpdatesAsyncApply.await();
             indexUpdatesAsyncApply.await();

@@ -34,6 +34,7 @@ import java.util.function.Consumer;
 
 import org.neo4j.hashing.HashFunction;
 import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.string.UTF8;
 import org.neo4j.values.ValueMapper;
@@ -995,7 +996,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
             }
 
             ByteBuffer buffer;
-            try ( PageCursor cursor = bigPropertyValueStore.openReadCursor() )
+            try ( PageCursor cursor = bigPropertyValueStore.openReadCursor( PageCursorTracer.NULL ) )
             {
                 int length = bigPropertyValueStore.length( cursor, pointer ); // this is not optimal, as read() re-reads the length.
                 buffer = ByteBuffer.wrap( new byte[length] );
@@ -1092,9 +1093,9 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         }
 
         @Override
-        protected long estimatedPayloadSize()
+        public long estimatedHeapUsage()
         {
-            throw new UnsupportedOperationException( "Not implemented yet" );
+            return Byte.BYTES + Long.BYTES + Byte.BYTES + Long.BYTES + (cachedValue != null ? cachedValue.estimatedHeapUsage() : 0);
         }
 
         @Override

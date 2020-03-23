@@ -69,7 +69,6 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
-import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.lock.ResourceLocker;
@@ -81,10 +80,10 @@ import org.neo4j.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.storageengine.api.CommandCreationContext;
 import org.neo4j.storageengine.api.CommandsToApply;
 import org.neo4j.storageengine.api.Degrees;
+import org.neo4j.storageengine.api.EntityTokenUpdate;
+import org.neo4j.storageengine.api.EntityTokenUpdateListener;
 import org.neo4j.storageengine.api.IndexEntryUpdate;
 import org.neo4j.storageengine.api.IndexUpdateListener;
-import org.neo4j.storageengine.api.NodeLabelUpdate;
-import org.neo4j.storageengine.api.NodeLabelUpdateListener;
 import org.neo4j.storageengine.api.PropertyKeyValue;
 import org.neo4j.storageengine.api.RelationshipDirection;
 import org.neo4j.storageengine.api.StandardConstraintRuleAccessor;
@@ -162,7 +161,6 @@ class FrekiStorageEngineGraphWritesIT
     @BeforeEach
     void start() throws IOException
     {
-        FrekiStorageEngineFactory factory = new FrekiStorageEngineFactory();
         DatabaseLayout layout = Neo4jLayout.of( directory.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
         fs.mkdirs( layout.databaseDirectory() );
         TokenHolders tokenHolders = new TokenHolders(
@@ -176,7 +174,7 @@ class FrekiStorageEngineGraphWritesIT
                 fs, layout, Config.defaults(), pageCache, tokenHolders, mock( SchemaState.class ), new StandardConstraintRuleAccessor(),
                         new NoopIndexConfigCompletor(), NO_LOCK_SERVICE, new DefaultIdGeneratorFactory( fs, RecoveryCleanupWorkCollector.immediate() ),
                         new DefaultIdController(), databaseHealth, NullLogProvider.getInstance(), RecoveryCleanupWorkCollector.immediate(),
-                        true, PageCacheTracer.NULL, DefaultPageCursorTracerSupplier.TRACER_SUPPLIER, CursorAccessPatternTracer.NO_TRACING ) );
+                        true, PageCacheTracer.NULL, CursorAccessPatternTracer.NO_TRACING ) );
         nodeLabelUpdateListener = new RecordingNodeLabelUpdateListener();
         storageEngine.addNodeLabelUpdateListener( nodeLabelUpdateListener );
         indexUpdateListener = new RecordingIndexUpdatesListener();
@@ -526,11 +524,8 @@ class FrekiStorageEngineGraphWritesIT
             target.visitNodeLabelChanges( nodeId, LongSets.immutable.of( SCHEMA_DESCRIPTOR.getLabelId() ), LongSets.immutable.empty() );
             target.visitNodePropertyChanges( nodeId, singleton( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), beforeValue ) ), emptyList(),
                     IntSets.immutable.empty() );
-        }, target ->
-        {
-            target.visitNodePropertyChanges( nodeId, emptyList(), singleton( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), afterValue ) ),
-                    IntSets.immutable.empty() );
-        }, index -> asSet( IndexEntryUpdate.change( nodeId, index, new Value[]{beforeValue}, new Value[]{afterValue} ) ) );
+        }, target -> target.visitNodePropertyChanges( nodeId, emptyList(), singleton( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), afterValue ) ),
+                IntSets.immutable.empty() ), index -> asSet( IndexEntryUpdate.change( nodeId, index, new Value[]{beforeValue}, new Value[]{afterValue} ) ) );
     }
 
     @Test
@@ -1182,16 +1177,16 @@ class FrekiStorageEngineGraphWritesIT
         }
     }
 
-    private static class RecordingNodeLabelUpdateListener implements NodeLabelUpdateListener
+    private static class RecordingNodeLabelUpdateListener implements EntityTokenUpdateListener
     {
         private final MutableLongObjectMap<long[]> nodeLabels = LongObjectMaps.mutable.empty();
 
         @Override
-        public void applyUpdates( Iterable<NodeLabelUpdate> labelUpdates )
+        public void applyUpdates( Iterable<EntityTokenUpdate> labelUpdates )
         {
-            for ( NodeLabelUpdate labelUpdate : labelUpdates )
+            for ( EntityTokenUpdate labelUpdate : labelUpdates )
             {
-                nodeLabels.put( labelUpdate.getNodeId(), labelUpdate.getLabelsAfter() );
+                nodeLabels.put( labelUpdate.getEntityId(), labelUpdate.getTokensAfter() );
             }
         }
 

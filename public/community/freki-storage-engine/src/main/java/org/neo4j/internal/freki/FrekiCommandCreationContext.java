@@ -108,7 +108,7 @@ class FrekiCommandCreationContext implements CommandCreationContext
     private MutableNodeRecordData readAndDeserializeNode( long nodeId, int sizeExp, long id )
     {
         SimpleStore store = stores.mainStore( sizeExp );
-        try ( PageCursor cursor = store.openReadCursor() )
+        try ( PageCursor cursor = store.openReadCursor( cursorTracer ) )
         {
             Record record = store.newRecord();
             if ( store.read( cursor, record, id ) && record.hasFlag( FLAG_IN_USE ) )

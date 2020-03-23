@@ -37,7 +37,6 @@ import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.kernel.lifecycle.Life;
 
 import static org.neo4j.internal.freki.Record.recordXFactor;
@@ -53,7 +52,7 @@ class MainStores extends Life
     protected final List<Pair<IdGeneratorFactory,IdType>> idGeneratorsToRegisterOnTheWorkSync = new ArrayList<>();
 
     MainStores( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache, IdGeneratorFactory idGeneratorFactory,
-            PageCacheTracer pageCacheTracer, PageCursorTracerSupplier cursorTracerSupplier, RecoveryCleanupWorkCollector recoveryCleanupWorkCollector,
+            PageCacheTracer pageCacheTracer, RecoveryCleanupWorkCollector recoveryCleanupWorkCollector,
             boolean createStoreIfNotExists ) throws IOException
     {
         SimpleStore[] mainStores = new SimpleStore[4];
@@ -67,17 +66,16 @@ class MainStores extends Life
                 fs.mkdirs( databaseLayout.databaseDirectory() );
             }
             mainStores[0] = new Store( databaseLayout.file( "main-store-x1" ), pageCache, idGeneratorFactory, IdType.NODE, false, createStoreIfNotExists, 0,
-                    cursorTracerSupplier );
+                    pageCacheTracer );
             idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( idGeneratorFactory, IdType.NODE ) );
             for ( int i = 1; i < mainStores.length; i++ )
             {
                 IdGeneratorFactory separateIdGeneratorFactory = new DefaultIdGeneratorFactory( fs, recoveryCleanupWorkCollector, false );
                 mainStores[i] = new Store( databaseLayout.file( "main-store-x" + recordXFactor( i ) ), pageCache, separateIdGeneratorFactory,
-                        IdType.NODE, false, createStoreIfNotExists, i, cursorTracerSupplier );
+                        IdType.NODE, false, createStoreIfNotExists, i, pageCacheTracer );
                 idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( separateIdGeneratorFactory, IdType.NODE ) );
             }
-            bigPropertyValueStore =
-                    new BigPropertyValueStore( databaseLayout.file( "big-values" ), pageCache, false, createStoreIfNotExists, cursorTracerSupplier );
+            bigPropertyValueStore = new BigPropertyValueStore( databaseLayout.file( "big-values" ), pageCache, false, createStoreIfNotExists );
             denseStore = new DenseRelationshipStore( pageCache, databaseLayout.file( "dense-store" ), recoveryCleanupWorkCollector, false, pageCacheTracer,
                     bigPropertyValueStore );
             success = true;

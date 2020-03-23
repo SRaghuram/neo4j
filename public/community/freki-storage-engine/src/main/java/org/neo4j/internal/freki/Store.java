@@ -30,8 +30,8 @@ import org.neo4j.internal.id.IdType;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.storageengine.util.IdUpdateListener;
 
 import static java.lang.String.format;
@@ -42,72 +42,80 @@ public class Store extends BareBoneSingleFileStore implements SimpleStore
     private final IdGeneratorFactory idGeneratorFactory;
     private final IdType idType;
     private final int recordsPerPage;
+    private final PageCacheTracer pageCacheTracer;
     private final int recordSize;
     private final int sizeExp;
 
     private IdGenerator idGenerator;
 
     public Store( File file, PageCache pageCache, IdGeneratorFactory idGeneratorFactory, IdType idType, boolean readOnly, boolean createIfNotExists,
-            int sizeExp, PageCursorTracerSupplier tracerSupplier )
+            int sizeExp, PageCacheTracer pageCacheTracer )
     {
-        super( file, pageCache, readOnly, createIfNotExists, tracerSupplier );
+        super( file, pageCache, readOnly, createIfNotExists );
         this.idGeneratorFactory = idGeneratorFactory;
         this.idType = idType;
         this.sizeExp = sizeExp;
         this.recordSize = Record.recordSize( sizeExp );
         this.recordsPerPage = pageCache.pageSize() / recordSize;
+        this.pageCacheTracer = pageCacheTracer;
     }
 
     @Override
     public void init() throws IOException
     {
         super.init();
-        idGenerator = idGeneratorFactory.open( pageCache, idFileName(), idType, () -> 0, 1L << (6 * Byte.SIZE), readOnly, tracerSupplier.get(),
-                openOptions( false ) );
+        try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( "Open ID generator" ) )
+        {
+            idGenerator =
+                    idGeneratorFactory.open( pageCache, idFileName(), idType, () -> 0, 1L << (6 * Byte.SIZE), readOnly, cursorTracer, openOptions( false ) );
+        }
     }
 
     @Override
     public void start() throws Exception
     {
         super.start();
-        idGenerator.start( visitor ->
+        try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( "Open ID generator" ) )
         {
-            long highestIdFound = -1;
-            long[] foundIds = new long[recordsPerPage];
-            int foundIdsCursor;
-            try ( PageCursor cursor = openReadCursor() )
+            idGenerator.start( visitor ->
             {
-                while ( cursor.next() ) // <-- will stop after last page, since this is a read cursor
+                long highestIdFound = -1;
+                long[] foundIds = new long[recordsPerPage];
+                int foundIdsCursor;
+                try ( PageCursor cursor = openReadCursor( cursorTracer ) )
                 {
-                    do
+                    while ( cursor.next() ) // <-- will stop after last page, since this is a read cursor
                     {
-                        foundIdsCursor = 0;
-                        long idPageOffset = cursor.getCurrentPageId() * recordsPerPage;
-                        for ( int i = 0; i < recordsPerPage; i++ )
+                        do
                         {
-                            int offset = i * recordSize;
-                            cursor.setOffset( offset );
-                            if ( !Record.isInUse( cursor, offset ) )
+                            foundIdsCursor = 0;
+                            long idPageOffset = cursor.getCurrentPageId() * recordsPerPage;
+                            for ( int i = 0; i < recordsPerPage; i++ )
                             {
-                                foundIds[foundIdsCursor++] = idPageOffset + i;
+                                int offset = i * recordSize;
+                                cursor.setOffset( offset );
+                                if ( !Record.isInUse( cursor, offset ) )
+                                {
+                                    foundIds[foundIdsCursor++] = idPageOffset + i;
+                                }
                             }
                         }
-                    }
-                    while ( cursor.shouldRetry() );
-                    checkIdScanCursorBounds( cursor );
+                        while ( cursor.shouldRetry() );
+                        checkIdScanCursorBounds( cursor );
 
-                    for ( int i = 0; i < foundIdsCursor; i++ )
-                    {
-                        visitor.accept( foundIds[i] );
+                        for ( int i = 0; i < foundIdsCursor; i++ )
+                        {
+                            visitor.accept( foundIds[i] );
+                        }
+                        if ( foundIdsCursor > 0 )
+                        {
+                            highestIdFound = foundIds[foundIdsCursor - 1];
+                        }
                     }
-                    if ( foundIdsCursor > 0 )
-                    {
-                        highestIdFound = foundIds[foundIdsCursor - 1];
-                    }
+                    return highestIdFound;
                 }
-                return highestIdFound;
-            }
-        }, tracerSupplier.get() );
+            }, cursorTracer );
+        }
     }
 
     private void checkIdScanCursorBounds( PageCursor cursor )

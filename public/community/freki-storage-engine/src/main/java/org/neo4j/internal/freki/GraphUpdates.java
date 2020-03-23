@@ -147,7 +147,7 @@ class GraphUpdates
 
         void load()
         {
-            Record x1 = readRecord( stores, 0, nodeId );
+            Record x1 = readRecord( stores, 0, nodeId, cursorTracer );
             if ( x1 == null )
             {
                 throw new IllegalStateException( "Node[" + nodeId + "] should have existed" );
@@ -159,7 +159,7 @@ class GraphUpdates
             long forwardPointer = sparse.data.getForwardPointer();
             if ( forwardPointerPointsToXRecord( forwardPointer ) )
             {
-                Record xL = readRecord( stores, sizeExponentialFromForwardPointer( forwardPointer ), idFromForwardPointer( forwardPointer ) );
+                Record xL = readRecord( stores, sizeExponentialFromForwardPointer( forwardPointer ), idFromForwardPointer( forwardPointer ), cursorTracer );
                 MutableNodeRecordData largeData = new MutableNodeRecordData( nodeId );
                 largeData.deserialize( xL.dataForReading(), stores.bigPropertyValueStore );
                 sparse.data.copyDataFrom( FLAG_PROPERTIES | FLAG_DEGREES | FLAG_RELATIONSHIPS, largeData );
@@ -602,10 +602,10 @@ class GraphUpdates
         return after;
     }
 
-    private static Record readRecord( MainStores stores, int sizeExp, long id )
+    private static Record readRecord( MainStores stores, int sizeExp, long id, PageCursorTracer cursorTracer )
     {
         SimpleStore store = stores.mainStore( sizeExp );
-        try ( PageCursor cursor = store.openReadCursor() )
+        try ( PageCursor cursor = store.openReadCursor( cursorTracer ) )
         {
             if ( store.exists( cursor, id ) )
             {
