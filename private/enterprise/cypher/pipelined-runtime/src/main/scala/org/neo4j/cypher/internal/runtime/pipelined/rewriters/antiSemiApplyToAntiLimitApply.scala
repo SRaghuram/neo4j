@@ -33,9 +33,9 @@ case class antiSemiApplyToAntiLimitApply(cardinalities: Cardinalities,
     case o@AntiSemiApply(lhs: LogicalPlan, rhs: LogicalPlan) =>
       val limit = Limit(rhs, SignedDecimalIntegerLiteral("1")(InputPosition.NONE), DoNotIncludeTies)(idGen)
       val anti = Anti(limit)(idGen)
-      val rhsCardinality = Cardinality.min(cardinalities.get(rhs.id), Cardinality.SINGLE)
+      val lhsCardinality = cardinalities.get(lhs.id)
       def updateAttributes(newPlan: LogicalPlan): Unit = {
-        cardinalities.set(newPlan.id, rhsCardinality)
+        cardinalities.set(newPlan.id, lhsCardinality)
         providedOrders.copy(rhs.id, newPlan.id)
       }
       updateAttributes(limit)

@@ -31,7 +31,7 @@ case class semiApplyToLimitApply(cardinalities: Cardinalities,
   private val instance: Rewriter = bottomUp(Rewriter.lift {
     case o @ SemiApply(lhs: LogicalPlan, rhs: LogicalPlan) =>
       val limit = Limit(rhs, SignedDecimalIntegerLiteral("1")(InputPosition.NONE), DoNotIncludeTies)(idGen)
-      cardinalities.set(limit.id, Cardinality.min(cardinalities.get(rhs.id), Cardinality.SINGLE))
+      cardinalities.set(limit.id, cardinalities.get(lhs.id))
       providedOrders.copy(rhs.id, limit.id)
       Apply(lhs, limit)(SameId(o.id))
   })
