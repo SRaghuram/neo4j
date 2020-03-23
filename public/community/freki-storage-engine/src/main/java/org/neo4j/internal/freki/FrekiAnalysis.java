@@ -52,7 +52,6 @@ import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.internal.freki.Record.recordSize;
 import static org.neo4j.internal.freki.Record.recordXFactor;
 import static org.neo4j.io.ByteUnit.bytesToString;
-import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 import static org.neo4j.storageengine.api.RelationshipDirection.INCOMING;
 import static org.neo4j.storageengine.api.RelationshipDirection.LOOP;
 import static org.neo4j.storageengine.api.RelationshipDirection.OUTGOING;
@@ -66,7 +65,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
 
     public FrekiAnalysis( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException
     {
-        this( new Stores( fs, databaseLayout, pageCache, new DefaultIdGeneratorFactory( fs, immediate() ), PageCacheTracer.NULL, TRACER_SUPPLIER,
+        this( new Stores( fs, databaseLayout, pageCache, new DefaultIdGeneratorFactory( fs, immediate() ), PageCacheTracer.NULL,
                 immediate(), false, new StandardConstraintRuleAccessor(), i -> i, readOnlyTokenHolders() ), true,
                 stores -> new FrekiCursorFactory( stores, NO_TRACING ) );
     }
@@ -260,7 +259,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
     {
         var store = stores.mainStore( sizeExp );
         var record = store.newRecord();
-        try ( var cursor = store.openReadCursor() )
+        try ( var cursor = store.openReadCursor( PageCursorTracer.NULL ) )
         {
             store.read( cursor, record, id );
             return record;
@@ -370,7 +369,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
                     var highId = store.getHighId();
                     var record = store.newRecord();
                     var recordDataSize = store.recordDataSize();
-                    try ( var cursor = store.openReadCursor() )
+                    try ( var cursor = store.openReadCursor( PageCursorTracer.NULL ) )
                     {
                         for ( var id = 0; id < highId; id++ )
                         {

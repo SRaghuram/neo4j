@@ -243,7 +243,7 @@ class FrekiStorageReader extends FrekiCursorFactory implements StorageReader
     @Override
     public boolean nodeExists( long id, PageCursorTracer cursorTracer )
     {
-        try ( PageCursor cursor = stores.mainStore.openReadCursor() )
+        try ( PageCursor cursor = stores.mainStore.openReadCursor( cursorTracer ) )
         {
             return stores.mainStore.exists( cursor, id );
         }

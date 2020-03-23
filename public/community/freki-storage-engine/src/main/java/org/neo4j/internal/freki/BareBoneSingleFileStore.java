@@ -33,7 +33,6 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 import static org.neo4j.internal.helpers.ArrayUtil.concat;
@@ -45,18 +44,16 @@ abstract class BareBoneSingleFileStore extends LifecycleAdapter implements Singl
     final boolean readOnly;
     final int pageSize;
     private final boolean createIfNotExists;
-    final PageCursorTracerSupplier tracerSupplier;
 
     protected PagedFile mappedFile;
 
-    BareBoneSingleFileStore( File file, PageCache pageCache, boolean readOnly, boolean createIfNotExists, PageCursorTracerSupplier tracerSupplier )
+    BareBoneSingleFileStore( File file, PageCache pageCache, boolean readOnly, boolean createIfNotExists )
     {
         this.file = file;
         this.pageCache = pageCache;
         this.pageSize = pageCache.pageSize();
         this.readOnly = readOnly;
         this.createIfNotExists = createIfNotExists;
-        this.tracerSupplier = tracerSupplier;
     }
 
     @Override
@@ -73,17 +70,17 @@ abstract class BareBoneSingleFileStore extends LifecycleAdapter implements Singl
     }
 
     @Override
-    public PageCursor openWriteCursor() throws IOException
+    public PageCursor openWriteCursor( PageCursorTracer cursorTracer ) throws IOException
     {
-        return mappedFile.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, tracerSupplier.get() );
+        return mappedFile.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, cursorTracer );
     }
 
     @Override
-    public PageCursor openReadCursor()
+    public PageCursor openReadCursor( PageCursorTracer cursorTracer )
     {
         try
         {
-            return mappedFile.io( 0, PagedFile.PF_SHARED_READ_LOCK, tracerSupplier.get() );
+            return mappedFile.io( 0, PagedFile.PF_SHARED_READ_LOCK, cursorTracer );
         }
         catch ( IOException e )
         {

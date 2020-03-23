@@ -21,13 +21,14 @@ package org.neo4j.internal.freki;
 
 import java.util.Optional;
 
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.StoreVersion;
 import org.neo4j.storageengine.api.StoreVersionCheck;
 
 class FrekiStoreVersionCheck implements StoreVersionCheck
 {
     @Override
-    public Optional<String> storeVersion()
+    public Optional<String> storeVersion( PageCursorTracer cursorTracer )
     {
         return Optional.empty();
     }
@@ -45,7 +46,7 @@ class FrekiStoreVersionCheck implements StoreVersionCheck
     }
 
     @Override
-    public Result checkUpgrade( String desiredVersion )
+    public Result checkUpgrade( String desiredVersion, PageCursorTracer cursorTracer )
     {
         return new Result( Outcome.ok, FrekiStoreVersion.VERSION, null );
     }

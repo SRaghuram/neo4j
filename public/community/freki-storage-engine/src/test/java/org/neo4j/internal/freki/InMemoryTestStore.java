@@ -64,7 +64,7 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
     }
 
     @Override
-    public PageCursor openWriteCursor()
+    public PageCursor openWriteCursor( PageCursorTracer cursorTracer )
     {
         return NO_PAGE_CURSOR;
     }
@@ -78,7 +78,7 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
     }
 
     @Override
-    public PageCursor openReadCursor()
+    public PageCursor openReadCursor( PageCursorTracer cursorTracer )
     {
         return NO_PAGE_CURSOR;
     }

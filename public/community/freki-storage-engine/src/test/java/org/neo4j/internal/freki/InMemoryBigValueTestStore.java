@@ -43,7 +43,7 @@ class InMemoryBigValueTestStore extends LifecycleAdapter implements SimpleBigVal
         return command ->
         {
             FrekiCommand.BigPropertyValue valueCommand = (FrekiCommand.BigPropertyValue) command;
-            try ( PageCursor cursor = store.openWriteCursor() )
+            try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
             {
                 store.write( cursor, ByteBuffer.wrap( valueCommand.bytes ), valueCommand.pointer );
             }
@@ -58,7 +58,7 @@ class InMemoryBigValueTestStore extends LifecycleAdapter implements SimpleBigVal
     private final MutableLongObjectMap<byte[]> data = LongObjectMaps.mutable.empty();
 
     @Override
-    public PageCursor openWriteCursor()
+    public PageCursor openWriteCursor( PageCursorTracer cursorTracer )
     {
         return NO_PAGE_CURSOR;
     }
@@ -79,7 +79,7 @@ class InMemoryBigValueTestStore extends LifecycleAdapter implements SimpleBigVal
     }
 
     @Override
-    public PageCursor openReadCursor()
+    public PageCursor openReadCursor( PageCursorTracer cursorTracer )
     {
         return NO_PAGE_CURSOR;
     }

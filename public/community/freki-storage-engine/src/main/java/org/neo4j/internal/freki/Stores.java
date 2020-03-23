@@ -41,7 +41,6 @@ import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.storageengine.api.ConstraintRuleAccessor;
 import org.neo4j.storageengine.api.TransactionMetaDataStore;
@@ -64,12 +63,12 @@ public class Stores extends MainStores
     public final GBPTreeTokenStore labelTokenStore;
 
     public Stores( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache, IdGeneratorFactory idGeneratorFactory,
-            PageCacheTracer pageCacheTracer, PageCursorTracerSupplier cursorTracerSupplier, RecoveryCleanupWorkCollector recoveryCleanupWorkCollector,
+            PageCacheTracer pageCacheTracer, RecoveryCleanupWorkCollector recoveryCleanupWorkCollector,
             boolean createStoreIfNotExists, ConstraintRuleAccessor constraintSemantics, IndexConfigCompleter indexConfigCompleter,
             TokenNameLookup tokenNameLookup )
             throws IOException
     {
-        super( fs, databaseLayout, pageCache, idGeneratorFactory, pageCacheTracer, cursorTracerSupplier, recoveryCleanupWorkCollector, createStoreIfNotExists );
+        super( fs, databaseLayout, pageCache, idGeneratorFactory, pageCacheTracer, recoveryCleanupWorkCollector, createStoreIfNotExists );
         GBPTreeMetaDataStore metaDataStore = null;
         GBPTreeCountsStore countsStore = null;
         GBPTreeSchemaStore schemaStore = null;
@@ -77,11 +76,10 @@ public class Stores extends MainStores
         GBPTreeTokenStore relationshipTypeTokenStore = null;
         GBPTreeTokenStore labelTokenStore = null;
         boolean success = false;
-        try
+        try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( "Open stores" ) )
         {
-            PageCursorTracer cursorTracer = cursorTracerSupplier.get();
-            metaDataStore = FrekiStorageEngineFactory.openMetaDataStore( databaseLayout, pageCache, pageCacheTracer, cursorTracer );
-            countsStore = new GBPTreeCountsStore( pageCache, databaseLayout.countStore(), recoveryCleanupWorkCollector,
+            metaDataStore = FrekiStorageEngineFactory.openMetaDataStore( databaseLayout, pageCache, pageCacheTracer );
+            countsStore = new GBPTreeCountsStore( pageCache, databaseLayout.countStore(), fs, recoveryCleanupWorkCollector,
                     initialCountsBuilder( metaDataStore ), false, pageCacheTracer, GBPTreeCountsStore.NO_MONITOR );
             schemaStore = new GBPTreeSchemaStore( pageCache, databaseLayout.schemaStore(), recoveryCleanupWorkCollector, idGeneratorFactory, tokenNameLookup,
                     false, pageCacheTracer, cursorTracer );

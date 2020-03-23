@@ -39,7 +39,6 @@ import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.kernel.lifecycle.Life;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.lock.LockGroup;
@@ -52,9 +51,9 @@ import org.neo4j.storageengine.api.CommandCreationContext;
 import org.neo4j.storageengine.api.CommandsToApply;
 import org.neo4j.storageengine.api.ConstraintRuleAccessor;
 import org.neo4j.storageengine.api.CountsDelta;
+import org.neo4j.storageengine.api.EntityTokenUpdateListener;
 import org.neo4j.storageengine.api.IndexUpdateListener;
 import org.neo4j.storageengine.api.LogVersionRepository;
-import org.neo4j.storageengine.api.NodeLabelUpdateListener;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageReader;
@@ -74,23 +73,13 @@ import static org.neo4j.kernel.lifecycle.LifecycleAdapter.onInit;
 
 public class FrekiStorageEngine extends Life implements StorageEngine
 {
-    private final FileSystemAbstraction fs;
-    private final DatabaseLayout databaseLayout;
-    private final Config config;
     private final PageCache pageCache;
     private final TokenHolders tokenHolders;
     private final SchemaState schemaState;
     private final ConstraintRuleAccessor constraintSemantics;
-    private final IndexConfigCompleter indexConfigCompleter;
-    private final LockService lockService;
     private final IdGeneratorFactory idGeneratorFactory;
-    private final IdController idController;
     private final DatabaseHealth databaseHealth;
-    private final LogProvider logProvider;
-    private final RecoveryCleanupWorkCollector recoveryCleanupWorkCollector;
-    private final boolean createStoreIfNotExists;
     private final PageCacheTracer pageCacheTracer;
-    private final PageCursorTracerSupplier cursorTracerSupplier;
     private final CursorAccessPatternTracer cursorAccessPatternTracer;
 
     private final Stores stores;
@@ -99,35 +88,24 @@ public class FrekiStorageEngine extends Life implements StorageEngine
     private LabelIndexUpdatesWorkSync labelIndexUpdatesWorkSync;
     private IndexUpdatesWorkSync indexUpdatesWorkSync;
     private IndexUpdateListener indexUpdateListener;
-    private NodeLabelUpdateListener nodeLabelUpdateListener;
 
     FrekiStorageEngine( FileSystemAbstraction fs, DatabaseLayout databaseLayout, Config config, PageCache pageCache, TokenHolders tokenHolders,
             SchemaState schemaState, ConstraintRuleAccessor constraintSemantics, IndexConfigCompleter indexConfigCompleter, LockService lockService,
             IdGeneratorFactory idGeneratorFactory, IdController idController, DatabaseHealth databaseHealth, LogProvider logProvider,
             RecoveryCleanupWorkCollector recoveryCleanupWorkCollector, boolean createStoreIfNotExists,
-            PageCacheTracer pageCacheTracer, PageCursorTracerSupplier cursorTracerSupplier, CursorAccessPatternTracer cursorAccessPatternTracer )
+            PageCacheTracer pageCacheTracer, CursorAccessPatternTracer cursorAccessPatternTracer )
             throws IOException
     {
-        this.fs = fs;
-        this.databaseLayout = databaseLayout;
-        this.config = config;
         this.pageCache = pageCache;
         this.tokenHolders = tokenHolders;
         this.schemaState = schemaState;
         this.constraintSemantics = constraintSemantics;
-        this.indexConfigCompleter = indexConfigCompleter;
-        this.lockService = lockService;
         this.idGeneratorFactory = idGeneratorFactory;
-        this.idController = idController;
         this.databaseHealth = databaseHealth;
-        this.logProvider = logProvider;
-        this.recoveryCleanupWorkCollector = recoveryCleanupWorkCollector;
-        this.createStoreIfNotExists = createStoreIfNotExists;
         this.pageCacheTracer = pageCacheTracer;
-        this.cursorTracerSupplier = cursorTracerSupplier;
         this.cursorAccessPatternTracer = cursorAccessPatternTracer;
         this.idGeneratorUpdatesWorkSync = new IdGeneratorUpdatesWorkSync();
-        this.stores = new Stores( fs, databaseLayout, pageCache, idGeneratorFactory, pageCacheTracer, cursorTracerSupplier, recoveryCleanupWorkCollector,
+        this.stores = new Stores( fs, databaseLayout, pageCache, idGeneratorFactory, pageCacheTracer, recoveryCleanupWorkCollector,
                 createStoreIfNotExists, constraintSemantics, indexConfigCompleter, tokenHolders );
         this.singleReader = new FrekiStorageReader( stores, cursorAccessPatternTracer, tokenHolders );
         life.add( stores );
@@ -147,9 +125,8 @@ public class FrekiStorageEngine extends Life implements StorageEngine
     }
 
     @Override
-    public void addNodeLabelUpdateListener( NodeLabelUpdateListener nodeLabelUpdateListener )
+    public void addNodeLabelUpdateListener( EntityTokenUpdateListener nodeLabelUpdateListener )
     {
-        this.nodeLabelUpdateListener = nodeLabelUpdateListener;
         this.labelIndexUpdatesWorkSync = new LabelIndexUpdatesWorkSync( nodeLabelUpdateListener );
     }
 
@@ -195,7 +172,7 @@ public class FrekiStorageEngine extends Life implements StorageEngine
         CommandsToApply initialBatch = batch;
         try ( LockGroup locks = new LockGroup();
                 FrekiTransactionApplier txApplier = new FrekiTransactionApplier( stores, singleReader, schemaState, indexUpdateListener, mode,
-                        idGeneratorUpdatesWorkSync, labelIndexUpdatesWorkSync, indexUpdatesWorkSync, cursorTracerSupplier.get() ) )
+                        idGeneratorUpdatesWorkSync, labelIndexUpdatesWorkSync, indexUpdatesWorkSync, pageCacheTracer, batch.cursorTracer() ) )
         {
             while ( batch != null )
             {
@@ -253,7 +230,13 @@ public class FrekiStorageEngine extends Life implements StorageEngine
     @Override
     public Lifecycle schemaAndTokensLifecycle()
     {
-        return onInit( () -> loadTokensAndSchema( cursorTracerSupplier.get() ) );
+        return onInit( () ->
+        {
+            try ( PageCursorTracer cursorTracer = pageCacheTracer.createPageCursorTracer( "Initi tokens" ) )
+            {
+                loadTokensAndSchema( cursorTracer );
+            }
+        } );
     }
 
     private void loadTokensAndSchema( PageCursorTracer cursorTracer ) throws Exception
