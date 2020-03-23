@@ -70,13 +70,14 @@ case class BufferDefinition(id: BufferId,
                             // reference count for multiple downstream reduce operators,
                             // at potentially different argument depths
                             reducers: IndexedSeq[ArgumentStateMapId],
-                            workCancellers: IndexedSeq[ArgumentStateMapId],
-                            downstreamStates: IndexedSeq[ArgumentStateMapId],
+                            workCancellers: IndexedSeq[Initialization[ArgumentStateMapId]],
                             variant: BufferVariant)(val bufferSlotConfiguration: SlotConfiguration) {
+  val workCancellerIds: IndexedSeq[ArgumentStateMapId] = workCancellers.map(_.receiver)
+
   def withReducers(reducers: IndexedSeq[ArgumentStateMapId]): BufferDefinition =
     copy(reducers = reducers)(bufferSlotConfiguration)
 
-  def withWorkCancellers(workCancellers: IndexedSeq[ArgumentStateMapId]): BufferDefinition =
+  def withWorkCancellers(workCancellers: IndexedSeq[Initialization[ArgumentStateMapId]]): BufferDefinition =
     copy(workCancellers = workCancellers)(bufferSlotConfiguration)
 }
 
@@ -115,6 +116,7 @@ case class Initialization[T](receiver: T, initialCount: Int)
  */
 case class ApplyBufferVariant(argumentSlotOffset: Int,
                               reducersOnRHSReversed: IndexedSeq[Initialization[ArgumentStateMapId]],
+                              downstreamStatesOnRHS: IndexedSeq[ArgumentStateMapId],
                               delegates: IndexedSeq[BufferId]) extends BufferVariant
 
 case class AttachBufferVariant(applyBuffer: BufferDefinition,

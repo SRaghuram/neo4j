@@ -22,7 +22,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.Accumul
  * To allow tracking the data from a
  * particular argument rows, this buffer generates and writes argument row ids into a given `argumentSlotOffset`.
  *
- * @param argumentStatesOnRHSOfThisApply   these are not reducers, so argument states like the one from Limit, which are
+ * @param workCancellersOnRHSOfThisApply   limit or skip on the RHS of the Apply.
+ * @param argumentStatesOnRHSOfThisApply   these are not reducers, so argument states like the one from Distinct, which are
  *                                         not directly related to a Buffer. They live on the RHS of the Apply
  * @param argumentSlotOffset               slot to which argument row ids are written.
  * @param argumentReducersOnRHSOfThisApply ids of downstream logical plans which keep argument state for this apply.
@@ -30,6 +31,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.Accumul
  * @param argumentReducersOnTopOfThisApply ids of reducers _after_ the Apply this Buffer is for.
  */
 class MorselApplyBuffer(id: BufferId,
+                        workCancellersOnRHSOfThisApply: IndexedSeq[Initialization[ArgumentStateMapId]],
                         argumentStatesOnRHSOfThisApply: IndexedSeq[ArgumentStateMapId],
                         argumentReducersOnRHSOfThisApply: IndexedSeq[Initialization[AccumulatingBuffer]],
                         argumentReducersOnTopOfThisApply: IndexedSeq[AccumulatingBuffer],
@@ -57,11 +59,14 @@ class MorselApplyBuffer(id: BufferId,
         // This does not hold for reducers on top of this apply.
 
         // Reducers on the RHS need to be initiated
-        // It is important that the morsel is positioned at the row of the just added argumentRowId, so that the reducer
+        // It is important that the readCursor is positioned at the row of the just added argumentRowId, so that the reducer
         // can read the argument row ids for _its_ downstream reducers from that row of the morsel.
         initiateArgumentReducersHere(argumentReducersOnRHSOfThisApply, argumentRowId, readCursor)
 
-        // Initiate argument states for limit
+        // Initiate canceller argument states for limit/skip
+        initiateWorkCancellerArgumentStatesHere(workCancellersOnRHSOfThisApply, argumentRowId, readCursor)
+
+        // Initiate argument states for distinct
         initiateArgumentStatesHere(argumentStatesOnRHSOfThisApply, argumentRowId, readCursor)
 
         argumentRowId += 1

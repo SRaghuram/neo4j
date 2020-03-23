@@ -74,11 +74,11 @@ object ExecutionGraphVisualizer {
 
     // Pass 1: create the buffer nodes
     executionGraphDefinition.buffers.foreach { buffer =>
-      val BufferDefinition(BufferId(id), _, _, _, _, variant) = buffer
+      val BufferDefinition(BufferId(id), _, _, _, variant) = buffer
       variant match {
         case RegularBufferVariant =>
           bufs(id) = new VirtualNodeHack(Map("name" -> s"Buffer[$id]", "id" -> (id: Integer)), "Buffer")
-        case ApplyBufferVariant(argumentSlotOffset, _, _) =>
+        case ApplyBufferVariant(argumentSlotOffset, _, _, _) =>
           val labels = if (argumentSlotOffset == TopLevelArgument.SLOT_OFFSET) Seq("Start", "Buffer") else Seq("Buffer")
           bufs(id) = new VirtualNodeHack(Map("name" -> s"ApplyBuffer[$id]", "id" -> (id: Integer), "argumentSlotOffset" -> (argumentSlotOffset: Integer)), labels: _*)
         case LHSAccumulatingBufferVariant(_) =>
@@ -99,28 +99,28 @@ object ExecutionGraphVisualizer {
     }
     // Pass 2: connect the buffers
     executionGraphDefinition.buffers.foreach { buffer =>
-      val BufferDefinition(BufferId(id), _, reducers, workCancellers, downstreamStates, variant) = buffer
+      val BufferDefinition(BufferId(id), _, reducers, workCancellers, variant) = buffer
       reducers.foreach {
         case ArgumentStateMapId(reducerId) =>
           rels += new VirtualRelationshipHack(bufs(id), asms(reducerId), Map.empty, "HAS_REDUCER")
       }
       workCancellers.foreach {
-        case ArgumentStateMapId(cancellerId) =>
+        case Initialization(ArgumentStateMapId(cancellerId), _) =>
           rels += new VirtualRelationshipHack(bufs(id), asms(cancellerId), Map.empty, "HAS_CANCELLER")
       }
-      downstreamStates.foreach {
-        case ArgumentStateMapId(stateId) =>
-          rels += new VirtualRelationshipHack(bufs(id), asms(stateId), Map.empty, "HAS_DOWNSTREAM_STATE")
-      }
       variant match {
-        case ApplyBufferVariant(_, reducersOnRHSReversed, delegates) =>
-          delegates.foreach {
-            case BufferId(delegateId) =>
-              rels += new VirtualRelationshipHack(bufs(id), bufs(delegateId), Map.empty, "DELEGATES_TO")
-          }
+        case ApplyBufferVariant(_, reducersOnRHSReversed, downstreamStates, delegates) =>
           reducersOnRHSReversed.foreach {
             case Initialization(ArgumentStateMapId(reducerId), _) =>
               rels += new VirtualRelationshipHack(bufs(id), asms(reducerId), Map.empty, "HAS_REDUCER_ON_RHS")
+          }
+          downstreamStates.foreach {
+            case ArgumentStateMapId(stateId) =>
+              rels += new VirtualRelationshipHack(bufs(id), asms(stateId), Map.empty, "HAS_DOWNSTREAM_STATE")
+          }
+          delegates.foreach {
+            case BufferId(delegateId) =>
+              rels += new VirtualRelationshipHack(bufs(id), bufs(delegateId), Map.empty, "DELEGATES_TO")
           }
         case LHSAccumulatingRHSStreamingBufferVariant(lhsSink, rhsSink, _, _) =>
           rels += new VirtualRelationshipHack(bufs(lhsSink.id.x), bufs(id), Map.empty, "DELEGATES_TO")

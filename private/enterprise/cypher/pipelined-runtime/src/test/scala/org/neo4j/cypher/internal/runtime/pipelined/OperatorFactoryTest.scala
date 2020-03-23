@@ -64,7 +64,7 @@ class OperatorFactoryTest extends CypherFunSuite with AstConstructionTestSupport
   private val theId = new Id(3)
   implicit val idGen: SameId = SameId(theId)
 
-  private val input = BufferDefinition(BufferId(1), Id.INVALID_ID, IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty, RegularBufferVariant)(SlotConfiguration.empty)
+  private val input = BufferDefinition(BufferId(1), Id.INVALID_ID, IndexedSeq.empty, IndexedSeq.empty, RegularBufferVariant)(SlotConfiguration.empty)
   private val source = Argument()
   private val patternParser = new PatternParser
 

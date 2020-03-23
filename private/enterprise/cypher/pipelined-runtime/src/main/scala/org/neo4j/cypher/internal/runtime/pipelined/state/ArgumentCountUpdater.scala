@@ -67,7 +67,7 @@ abstract class ArgumentCountUpdater {
   /**
    * Initiates argument state maps.
    *
-   * In practice, this is only called for Limit.
+   * In practice, this is only called for Distinct.
    *
    * @param argumentStates all argument state maps must be at the same apply nesting level
    * @param argumentRowId argument row at the same apply nesting level as the argument states expect
@@ -81,6 +81,23 @@ abstract class ArgumentCountUpdater {
       // argument states use `ImmutableStateController`s which don't keep a current count since
       // the count would never be updated or queried.
       id => argumentStateMaps(id).initiate(argumentRowId, morsel, null, 1)
+    }
+  }
+
+  /**
+   * Initiates argument state maps for work cancellers.
+   *
+   * In practice, this is only called for Limit/Skip.
+   *
+   * @param argumentStates all argument state maps must be at the same apply nesting level
+   * @param argumentRowId  argument row at the same apply nesting level as the argument states expect
+   * @param morsel         must point at the row of `argumentRowId`
+   */
+  protected def initiateWorkCancellerArgumentStatesHere(argumentStates: IndexedSeq[Initialization[ArgumentStateMapId]],
+                                                        argumentRowId: Long,
+                                                        morsel: MorselReadCursor): Unit = {
+    argumentStates.foreach {
+      case Initialization(id, initialCount) => argumentStateMaps(id).initiate(argumentRowId, morsel, null, initialCount)
     }
   }
 

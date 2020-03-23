@@ -114,8 +114,6 @@ class Buffers(numBuffers: Int,
       return
 
     val reducers = findRHSAccumulatingStateBuffers(i, bufferDefinition.reducers.toArray)
-    val workCancellers = bufferDefinition.workCancellers.toArray
-    val downstreamStates = bufferDefinition.downstreamStates.toArray
 
     buffers(i) =
       bufferDefinition.variant match {
@@ -134,10 +132,12 @@ class Buffers(numBuffers: Int,
             x.argumentSize.nReferences)
 
         case x: ApplyBufferVariant =>
-          val argumentStatesToInitiate = concatWithoutCopy(workCancellers, downstreamStates)
+          val workCancellers = bufferDefinition.workCancellers.toArray
+          val downstreamStates = x.downstreamStatesOnRHS.toArray
           val reducersOnRHS = findRHSAccumulatingStateBuffersWithInitialization(i, x.reducersOnRHSReversed.toArray)
           new MorselApplyBuffer(bufferDefinition.id,
-            argumentStatesToInitiate,
+            workCancellers,
+            downstreamStates,
             reducersOnRHS,
             argumentReducersOnTopOfThisApply = reducers,
             argumentStateMaps,
@@ -191,10 +191,11 @@ class Buffers(numBuffers: Int,
             morselSize)
 
         case RegularBufferVariant =>
+          val workCancellersIds = bufferDefinition.workCancellerIds.toArray
           new MorselBuffer(bufferDefinition.id,
             tracker,
             reducers,
-            workCancellers,
+            workCancellersIds,
             argumentStateMaps,
             stateFactory.newBuffer[Morsel](bufferDefinition.memoryTrackingOperatorId))
       }
@@ -287,17 +288,6 @@ class Buffers(numBuffers: Int,
       }
       i += 1
     }
-  }
-
-  // Specialization to remove overheads from scala collection `++`
-  private def concatWithoutCopy(a: Array[ArgumentStateMapId], b: Array[ArgumentStateMapId]): Array[ArgumentStateMapId] = {
-    if (a.length == 0) return b
-    if (b.length == 0) return a
-
-    val result = new Array[ArgumentStateMapId](a.length + b.length)
-    System.arraycopy(a, 0, result, 0, a.length)
-    System.arraycopy(b, 0, result, a.length, b.length)
-    result
   }
 
   // Specialization to remove overheads from scala collection `map`

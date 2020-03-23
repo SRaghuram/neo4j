@@ -29,10 +29,6 @@ import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.ArgumentSt
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.AttachBufferDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.BufferDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.DelegateBufferDefiner
-import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.DownstreamReduce
-import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.DownstreamState
-import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.DownstreamStateOperator
-import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.DownstreamWorkCanceller
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.ExecutionStateDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.LHSAccumulatingRHSStreamingBufferDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.MorselBufferDefiner
@@ -121,24 +117,24 @@ object PipelineTreeBuilder {
     def result: PipelineDefinition = PipelineDefinition(id, lhs, rhs, headPlanResult, inputBuffer.result, outputDefinition, middlePlans, serial)
   }
 
-  sealed trait DownstreamStateOperator
-  case class DownstreamReduce(id: ArgumentStateMapId) extends DownstreamStateOperator
-  case class DownstreamWorkCanceller(id: ArgumentStateMapId) extends DownstreamStateOperator
-  case class DownstreamState(id: ArgumentStateMapId) extends DownstreamStateOperator
-
   abstract class BufferDefiner(val id: BufferId, val memoryTrackingOperatorId: Id, val bufferConfiguration: SlotConfiguration) {
-    val downstreamStates = new ArrayBuffer[DownstreamStateOperator]
+    val downstreamReducers: mutable.ArrayBuilder[ArgumentStateMapId] = mutable.ArrayBuilder.make[ArgumentStateMapId]()
+
+    // Map from the ArgumentStates of downstream states on the RHS to the initial count they should be initialized with
+    private val downstreamWorkCancellersMap: MutableObjectIntMap[ArgumentStateMapId] = new ObjectIntHashMap[ArgumentStateMapId]()
+    def registerDownstreamWorkCanceller(downstreamWorkCancellerASMID: ArgumentStateMapId): Unit = {
+      downstreamWorkCancellersMap.addToValue(downstreamWorkCancellerASMID, 1)
+    }
 
     def result: BufferDefinition = {
-      val downstreamReducers = downstreamStates.collect { case d: DownstreamReduce => d.id }
-      val workCancellerIDs = downstreamStates.collect { case d: DownstreamWorkCanceller => d.id }
-      val downstreamStateIDs = downstreamStates.collect { case d: DownstreamState => d.id }
+      val downstreamWorkCancellers = mutable.ArrayBuilder.make[Initialization[ArgumentStateMapId]]()
+      downstreamWorkCancellers.sizeHint(downstreamWorkCancellersMap.size())
+      downstreamWorkCancellersMap.forEachKeyValue( (argStateId, initialCount) => downstreamWorkCancellers += Initialization(argStateId, initialCount) )
 
       BufferDefinition(id,
                        memoryTrackingOperatorId,
-                       downstreamReducers.toArray[ArgumentStateMapId],
-                       workCancellerIDs.toArray[ArgumentStateMapId],
-                       downstreamStateIDs.toArray[ArgumentStateMapId],
+                       downstreamReducers.result(),
+                       downstreamWorkCancellers.result(),
                        variant
                      )(bufferConfiguration)
     }
@@ -184,13 +180,15 @@ object PipelineTreeBuilder {
                            val argumentSlotOffset: Int,
                            bufferSlotConfiguration: SlotConfiguration
                           ) extends MorselBufferDefiner(id, memoryTrackingOperatorId, producingPipelineId, bufferSlotConfiguration) {
+    val downstreamStatesOnRHS: mutable.ArrayBuilder[ArgumentStateMapId] = mutable.ArrayBuilder.make[ArgumentStateMapId]()
+
     // Map from the ArgumentStates of reducers on the RHS to the initial count they should be initialized with
     private val reducersOnRHSMap: MutableObjectIntMap[ArgumentStateDefinition] = new ObjectIntHashMap[ArgumentStateDefinition]()
-    val delegates: mutable.ArrayBuilder[BufferId] = mutable.ArrayBuilder.make[BufferId]()
-
     def registerReducerOnRHS(reducer: ArgumentStateDefinition): Unit = {
       reducersOnRHSMap.addToValue(reducer, 1)
     }
+
+    val delegates: mutable.ArrayBuilder[BufferId] = mutable.ArrayBuilder.make[BufferId]()
 
     override protected def variant: BufferVariant = {
       val reducersOnRHS = mutable.ArrayBuilder.make[Initialization[ArgumentStateMapId]]()
@@ -203,6 +201,7 @@ object PipelineTreeBuilder {
 
       ApplyBufferVariant(argumentSlotOffset,
                          reducersOnRHSReversed,
+                         downstreamStatesOnRHS.result(),
                          delegates.result())
     }
   }
@@ -578,13 +577,13 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
 
       case _: Limit | _: Skip =>
         val asm = stateDefiner.newArgumentStateMap(plan.id, argument.argumentSlotOffset)
-        markInUpstreamBuffers(source.inputBuffer, argument, DownstreamWorkCanceller(asm.id))
+        markCancellerInUpstreamBuffers(source.inputBuffer, argument, asm.id)
         source.fuseOrInterpret(plan, isBreaking = true)
         source
 
       case _: Distinct =>
         val asm = stateDefiner.newArgumentStateMap(plan.id, argument.argumentSlotOffset)
-        argument.downstreamStates += DownstreamState(asm.id)
+        argument.downstreamStatesOnRHS += asm.id
         source.fuseOrInterpret(plan, breakingPolicy.breakOn(plan, applyPlans(plan.id)))
         source
 
@@ -711,44 +710,44 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
   private def markReducerInUpstreamBuffers(buffer: BufferDefiner,
                                            applyBuffer: ApplyBufferDefiner,
                                            argumentStateDefinition: ArgumentStateDefinition): Unit = {
-    val downstreamReduce = DownstreamReduce(argumentStateDefinition.id)
+    val downstreamReduceASMID = argumentStateDefinition.id
     traverseBuffers(buffer,
       applyBuffer,
-      inputBuffer => inputBuffer.downstreamStates += downstreamReduce,
+      inputBuffer => inputBuffer.downstreamReducers += downstreamReduceASMID,
       lHSAccumulatingRHSStreamingBufferDefinition => {
-        lHSAccumulatingRHSStreamingBufferDefinition.lhsSink.downstreamStates += downstreamReduce
-        lHSAccumulatingRHSStreamingBufferDefinition.rhsSink.downstreamStates += downstreamReduce
-        lHSAccumulatingRHSStreamingBufferDefinition.downstreamStates += downstreamReduce
+        lHSAccumulatingRHSStreamingBufferDefinition.lhsSink.downstreamReducers += downstreamReduceASMID
+        lHSAccumulatingRHSStreamingBufferDefinition.rhsSink.downstreamReducers += downstreamReduceASMID
+        lHSAccumulatingRHSStreamingBufferDefinition.downstreamReducers += downstreamReduceASMID
       },
       delegateBuffer => {
         val b = delegateBuffer.applyBuffer
-        b.downstreamStates += downstreamReduce
-        delegateBuffer.downstreamStates += downstreamReduce
+        b.downstreamReducers += downstreamReduceASMID
+        delegateBuffer.downstreamReducers += downstreamReduceASMID
       },
       lastDelegateBuffer => {
         val b = lastDelegateBuffer.applyBuffer
         b.registerReducerOnRHS(argumentStateDefinition)
-        lastDelegateBuffer.downstreamStates += downstreamReduce
+        lastDelegateBuffer.downstreamReducers += downstreamReduceASMID
       }
     )
   }
 
-  private def markInUpstreamBuffers(buffer: BufferDefiner,
-                                    applyBuffer: ApplyBufferDefiner,
-                                    downstreamState: DownstreamStateOperator): Unit = {
+  private def markCancellerInUpstreamBuffers(buffer: BufferDefiner,
+                                             applyBuffer: ApplyBufferDefiner,
+                                             workCancellerASMID: ArgumentStateMapId): Unit = {
     traverseBuffers(buffer,
       applyBuffer,
-      inputBuffer => inputBuffer.downstreamStates += downstreamState,
+      inputBuffer => inputBuffer.registerDownstreamWorkCanceller(workCancellerASMID),
       lHSAccumulatingRHSStreamingBufferDefinition => {
-        lHSAccumulatingRHSStreamingBufferDefinition.lhsSink.downstreamStates += downstreamState
-        lHSAccumulatingRHSStreamingBufferDefinition.rhsSink.downstreamStates += downstreamState
-        lHSAccumulatingRHSStreamingBufferDefinition.downstreamStates += downstreamState
+        lHSAccumulatingRHSStreamingBufferDefinition.lhsSink.registerDownstreamWorkCanceller(workCancellerASMID)
+        lHSAccumulatingRHSStreamingBufferDefinition.rhsSink.registerDownstreamWorkCanceller(workCancellerASMID)
+        lHSAccumulatingRHSStreamingBufferDefinition.registerDownstreamWorkCanceller(workCancellerASMID)
       },
-      delegateBuffer => delegateBuffer.downstreamStates += downstreamState,
+      delegateBuffer => delegateBuffer.registerDownstreamWorkCanceller(workCancellerASMID),
       lastDelegateBuffer => {
         val b = lastDelegateBuffer.applyBuffer
-        b.downstreamStates += downstreamState
-        lastDelegateBuffer.downstreamStates += downstreamState
+        b.registerDownstreamWorkCanceller(workCancellerASMID)
+        lastDelegateBuffer.registerDownstreamWorkCanceller(workCancellerASMID)
       }
     )
   }

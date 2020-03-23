@@ -105,13 +105,13 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
       val bd = buffers.getOrElseUpdate(id, BufferDefinition(BufferId(id),
         Id(planId),
         NO_ARGUMENT_STATE_MAPS,
-        NO_ARGUMENT_STATE_MAPS,
-        NO_ARGUMENT_STATE_MAPS,
+        NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
         ApplyBufferVariant(
           if (argumentSlotOffset == UNKNOWN_ARG_SLOT_OFFSET)
             throw new IllegalArgumentException("You have to specify the argumentSlotOffset for new apply buffers")
           else argumentSlotOffset,
           NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
+          NO_ARGUMENT_STATE_MAPS,
           NO_BUFFERS))(SlotConfiguration.empty))
       new ApplyBufferSequence(bd)
     }
@@ -129,9 +129,9 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
       ExecutionGraphDefinitionMatcher.this
     }
 
-    def canceller(id: Int, planId: Int = -1, argumentSlotOffset: Int = -1): ExecutionGraphDefinitionMatcher = {
+    def canceller(id: Int, planId: Int = -1, argumentSlotOffset: Int = -1, initialCount: Int = 1): ExecutionGraphDefinitionMatcher = {
       val asd = registerArgumentState(id, planId, argumentSlotOffset)
-      buffers(bufferDefinition.id.x) = bufferDefinition.withWorkCancellers(bufferDefinition.workCancellers :+ asd.id)
+      buffers(bufferDefinition.id.x) = bufferDefinition.withWorkCancellers(bufferDefinition.workCancellers :+ Initialization(asd.id, initialCount))
       ExecutionGraphDefinitionMatcher.this
     }
   }
@@ -146,8 +146,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
           BufferId(id),
           Id(planId),
           NO_ARGUMENT_STATE_MAPS,
-          NO_ARGUMENT_STATE_MAPS,
-          NO_ARGUMENT_STATE_MAPS,
+          NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
           RegularBufferVariant)(SlotConfiguration.empty))
       val updatedApplyBuffer = bufferDefinition.copy(variant = variant.copy(delegates = variant.delegates :+ bd.id))(SlotConfiguration.empty)
       buffers(bufferDefinition.id.x) = updatedApplyBuffer
@@ -169,9 +168,21 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
       ExecutionGraphDefinitionMatcher.this
     }
 
+    def downstreamStateOnRHS(id: Int, planId: Int = -1, argumentSlotOffset: Int = -1): ExecutionGraphDefinitionMatcher = {
+      val asd = registerArgumentState(id, planId, argumentSlotOffset)
+      val updatedApplyBuffer = bufferDefinition.copy(variant =
+        variant.copy(downstreamStatesOnRHS = variant.downstreamStatesOnRHS :+ asd.id)
+      )(SlotConfiguration.empty)
+      buffers(bufferDefinition.id.x) = updatedApplyBuffer
+
+      updateAttachBuffers(updatedApplyBuffer)
+
+      ExecutionGraphDefinitionMatcher.this
+    }
+
     private def updateAttachBuffers(updatedApplyBuffer: BufferDefinition) = {
       buffers.transform {
-        case (_, bd@BufferDefinition(_, _, _, _, _, atv@AttachBufferVariant(`bufferDefinition`, _, _, _))) =>
+        case (_, bd@BufferDefinition(_, _, _, _, atv@AttachBufferVariant(`bufferDefinition`, _, _, _))) =>
           bd.copy(variant = atv.copy(applyBuffer = updatedApplyBuffer))(SlotConfiguration.empty)
         case (_, x) => x
       }
@@ -192,8 +203,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
           BufferId(lhsSinkId),
           Id(planId),
           NO_ARGUMENT_STATE_MAPS,
-          NO_ARGUMENT_STATE_MAPS,
-          NO_ARGUMENT_STATE_MAPS,
+          NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
           variant = LHSAccumulatingBufferVariant(ArgumentStateMapId(lhsAsmId)),
         )(SlotConfiguration.empty))
       this
@@ -205,9 +215,8 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
           BufferId(id),
           Id(planId),
           NO_ARGUMENT_STATE_MAPS,
-          NO_ARGUMENT_STATE_MAPS,
-          NO_ARGUMENT_STATE_MAPS,
-          ApplyBufferVariant(argumentSlotOffset, NO_ARGUMENT_STATE_MAP_INITIALIZATIONS, NO_BUFFERS))(SlotConfiguration.empty))
+          NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
+          ApplyBufferVariant(argumentSlotOffset, NO_ARGUMENT_STATE_MAP_INITIALIZATIONS, NO_ARGUMENT_STATE_MAPS, NO_BUFFERS))(SlotConfiguration.empty))
 
       buffers(bufferDefinition.id.x) = bufferDefinition.copy(variant = variant.copy(applyBuffer = bd))(SlotConfiguration.empty)
 
@@ -245,8 +254,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
           BufferId(id),
           Id(planId),
           NO_ARGUMENT_STATE_MAPS,
-          NO_ARGUMENT_STATE_MAPS,
-          NO_ARGUMENT_STATE_MAPS,
+          NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
           RegularBufferVariant)(SlotConfiguration.empty))
       val out = MorselBufferOutput(BufferId(id))
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
@@ -259,8 +267,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
           BufferId(id),
           Id(planId),
           NO_ARGUMENT_STATE_MAPS,
-          NO_ARGUMENT_STATE_MAPS,
-          NO_ARGUMENT_STATE_MAPS,
+          NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
           ArgumentStateBufferVariant(ArgumentStateMapId(asmId)))(SlotConfiguration.empty))
       pipelines(matchablePipeline.id.x) =
         matchablePipeline.copy(outputDefinition =
@@ -275,8 +282,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
           BufferId(id),
           Id(planId),
           NO_ARGUMENT_STATE_MAPS,
-          NO_ARGUMENT_STATE_MAPS,
-          NO_ARGUMENT_STATE_MAPS,
+          NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
           OptionalBufferVariant(ArgumentStateMapId(asmId), OptionalType))(SlotConfiguration.empty))
       val out = MorselArgumentStateBufferOutput(BufferId(id),argumentSlotOffset)
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
@@ -289,8 +295,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
           BufferId(id),
           Id(planId),
           NO_ARGUMENT_STATE_MAPS,
-          NO_ARGUMENT_STATE_MAPS,
-          NO_ARGUMENT_STATE_MAPS,
+          NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
           OptionalBufferVariant(ArgumentStateMapId(asmId), AntiType))(SlotConfiguration.empty))
       val out = MorselArgumentStateBufferOutput(BufferId(id),argumentSlotOffset)
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
@@ -303,8 +308,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
           BufferId(id),
           Id(planId),
           NO_ARGUMENT_STATE_MAPS,
-          NO_ARGUMENT_STATE_MAPS,
-          NO_ARGUMENT_STATE_MAPS,
+          NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
           AttachBufferVariant(null, slots, argumentSlotOffset, SlotConfiguration.Size.zero)
         )(SlotConfiguration.empty)
       )
@@ -319,9 +323,8 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
           BufferId(id),
           Id(planId),
           NO_ARGUMENT_STATE_MAPS,
-          NO_ARGUMENT_STATE_MAPS,
-          NO_ARGUMENT_STATE_MAPS,
-          ApplyBufferVariant(argumentSlotOffset, NO_ARGUMENT_STATE_MAP_INITIALIZATIONS, NO_BUFFERS))(SlotConfiguration.empty))
+          NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
+          ApplyBufferVariant(argumentSlotOffset, NO_ARGUMENT_STATE_MAP_INITIALIZATIONS, NO_ARGUMENT_STATE_MAPS, NO_BUFFERS))(SlotConfiguration.empty))
       val out = MorselBufferOutput(BufferId(id))
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
       new ApplyBufferSequence(bd)
@@ -335,8 +338,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
           BufferId(id),
           Id(planId),
           NO_ARGUMENT_STATE_MAPS,
-          NO_ARGUMENT_STATE_MAPS,
-          NO_ARGUMENT_STATE_MAPS,
+          NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
           variant = LHSAccumulatingBufferVariant(ArgumentStateMapId(asmId)),
         )(SlotConfiguration.empty))
       new LhsJoinBufferSequence(lhsSink)
@@ -351,8 +353,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
           BufferId(rhsId),
           Id(planId),
           NO_ARGUMENT_STATE_MAPS,
-          NO_ARGUMENT_STATE_MAPS,
-          NO_ARGUMENT_STATE_MAPS,
+          NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
           variant = RHSStreamingBufferVariant(ArgumentStateMapId(rhsAsmId)),
         )(SlotConfiguration.empty))
       val bd: BufferDefinition = buffers.getOrElseUpdate(sourceId,
@@ -360,8 +361,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
                                          BufferId(sourceId),
                                          Id(planId),
                                          NO_ARGUMENT_STATE_MAPS,
-                                         NO_ARGUMENT_STATE_MAPS,
-                                         NO_ARGUMENT_STATE_MAPS,
+                                         NO_ARGUMENT_STATE_MAP_INITIALIZATIONS,
                                          LHSAccumulatingRHSStreamingBufferVariant(
                                            lhsSink,
                                            rhsSink,
