@@ -2671,10 +2671,11 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
         computeRepresentation(ir = getRefAt(offset), nullCheck = None, nullable = nullable)
 
       case _ =>
-        computeRepresentation(ir =
-                                invoke(LOAD_CONTEXT,
-                                          method[CypherRow, AnyValue, String]("getByName"), constant(name)),
-                              nullCheck = None, nullable = true)
+        val varName = namer.nextVariableName()
+        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], varName, invoke(LOAD_CONTEXT,
+          method[CypherRow, AnyValue, String]("getByName"), constant(name))))
+        computeRepresentation(ir = block(lazySet, load(varName)),
+                              nullCheck = Some(block(lazySet, equal(load(varName), noValue))), nullable = true)
     }
   }
 
