@@ -5,9 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import java.util
 import java.util.concurrent.ConcurrentHashMap
 
+import org.eclipse.collections.impl.factory.Sets
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.block
@@ -100,23 +100,30 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
       workIdentity)
 
   class DistinctStateFactory(memoryTracker: QueryMemoryTracker) extends ArgumentStateFactory[DistinctState] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): DistinctState =
-      new DistinctState(argumentRowId, new util.HashSet[groupings.KeyType](), argumentRowIdsForReducers, memoryTracker)
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): DistinctState = {
+      // TODO: Use HeapTrackingCollections.newSet()
+      val seenSet = Sets.mutable.empty[groupings.KeyType]()
+      val seen = (key: groupings.KeyType) => seenSet.add(key)
+      new DistinctState(argumentRowId, seen, argumentRowIdsForReducers, memoryTracker)
+    }
 
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): DistinctState =
-      new DistinctState(argumentRowId, ConcurrentHashMap.newKeySet[groupings.KeyType](), argumentRowIdsForReducers, memoryTracker)
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): DistinctState = {
+      val seenSet = ConcurrentHashMap.newKeySet[groupings.KeyType]()
+      val seen = (key: groupings.KeyType) => seenSet.add(key)
+      new DistinctState(argumentRowId, seen, argumentRowIdsForReducers, memoryTracker)
+    }
 
     override def completeOnConstruction: Boolean = true
   }
 
   class DistinctState(override val argumentRowId: Long,
-                      seen: util.Set[groupings.KeyType],
+                      seen: groupings.KeyType => Boolean,
                       override val argumentRowIdsForReducers: Array[Long],
                       memoryTracker: QueryMemoryTracker) extends DistinctOperatorState {
 
     override def filterOrProject(row: ReadWriteRow, queryState: QueryState): Boolean = {
       val groupingKey = groupings.computeGroupingKey(row, queryState)
-      if (seen.add(groupingKey)) {
+      if (seen(groupingKey)) {
         // Note: this allocation is currently never de-allocated
         memoryTracker.allocated(groupingKey, id.x)
         groupings.project(row, groupingKey)
@@ -194,23 +201,30 @@ object SerialTopLevelDistinctOperatorTaskTemplate {
   class DistinctStateFactory(id: Id) extends ArgumentStateFactory[SerialTopLevelDistinctState] {
     override def newStandardArgumentState(argumentRowId: Long,
                                           argumentMorsel: MorselReadCursor,
-                                          argumentRowIdsForReducers: Array[Long]): SerialTopLevelDistinctState =
+                                          argumentRowIdsForReducers: Array[Long]): SerialTopLevelDistinctState = {
+      // TODO: Use HeapTrackingCollections.newSet()
+      val seenSet = Sets.mutable.empty[AnyValue]()
+      val seen = (key: AnyValue) => seenSet.add(key)
       new SerialTopLevelDistinctState(argumentRowId,
                                       argumentRowIdsForReducers,
-                                      new util.HashSet[AnyValue], id)
+                                      seen, id)
+    }
 
     override def newConcurrentArgumentState(argumentRowId: Long,
                                             argumentMorsel: MorselReadCursor,
-                                            argumentRowIdsForReducers: Array[Long]): SerialTopLevelDistinctState =
-      new SerialTopLevelDistinctState(argumentRowId, argumentRowIdsForReducers, ConcurrentHashMap.newKeySet[AnyValue](), id)
+                                            argumentRowIdsForReducers: Array[Long]): SerialTopLevelDistinctState = {
+      val seenSet = ConcurrentHashMap.newKeySet[AnyValue]()
+      val seen = (key: AnyValue) => seenSet.add(key)
+      new SerialTopLevelDistinctState(argumentRowId, argumentRowIdsForReducers, seen, id)
+    }
   }
 
   class SerialTopLevelDistinctState(override val argumentRowId: Long,
                                     override val argumentRowIdsForReducers: Array[Long],
-                                    seen: util.Set[AnyValue],
+                                    seen: AnyValue => Boolean,
                                     id: Id) extends ArgumentState {
     def distinct(groupingKey: AnyValue, memoryTracker: QueryMemoryTracker): Boolean = {
-      if (seen.add(groupingKey)) {
+      if (seen(groupingKey)) {
         memoryTracker.allocated(groupingKey, id.x)
         true
       } else false
