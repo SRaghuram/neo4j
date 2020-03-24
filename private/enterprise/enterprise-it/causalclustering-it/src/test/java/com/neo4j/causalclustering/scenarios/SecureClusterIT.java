@@ -67,7 +67,7 @@ class SecureClusterIT
 
         var clusterConfig = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
-                .withNumberOfReadReplicas( 3 )
+                .withNumberOfReadReplicas( 2 )
                 .withSharedCoreParams( coreParams )
                 .withSharedReadReplicaParams( readReplicaParams );
 

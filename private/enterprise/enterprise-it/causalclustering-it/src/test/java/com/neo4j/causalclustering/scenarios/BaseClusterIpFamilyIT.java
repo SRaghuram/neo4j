@@ -37,7 +37,7 @@ abstract class BaseClusterIpFamilyIT
 
     private final ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
             .withNumberOfCoreMembers( 3 )
-            .withNumberOfReadReplicas( 3 )
+            .withNumberOfReadReplicas( 2 )
             .withSharedCoreParam( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() )
             .withSharedReadReplicaParam( CausalClusteringSettings.middleware_logging_level, Level.DEBUG.toString() );
 

@@ -52,7 +52,7 @@ class ClusterIndexProcedureIT
     {
         var clusterConfig = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
-                .withNumberOfReadReplicas( 3 );
+                .withNumberOfReadReplicas( 2 );
 
         cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();

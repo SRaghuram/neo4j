@@ -369,7 +369,7 @@ class OnlineBackupCommandCcIT
     {
         return ClusterConfig.clusterConfig()
                 .withNumberOfCoreMembers( 3 )
-                .withNumberOfReadReplicas( 3 )
+                .withNumberOfReadReplicas( 2 )
                 .withSharedCoreParam( cluster_topology_refresh, "5s" )
                 .withSharedCoreParam( record_format, recordFormat )
                 .withSharedReadReplicaParam( record_format, recordFormat );
@@ -379,7 +379,7 @@ class OnlineBackupCommandCcIT
     {
         ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
                 .withNumberOfCoreMembers( 3 )
-                .withNumberOfReadReplicas( 3 )
+                .withNumberOfReadReplicas( 2 )
                 .withSharedCoreParam( record_format, recordFormat )
                 .withSharedReadReplicaParam( record_format, recordFormat )
                 .withIpFamily( IPV6 )

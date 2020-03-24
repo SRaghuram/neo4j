@@ -65,7 +65,7 @@ class ClusterDatabaseManagementIT
             .withSharedCoreParam( GraphDatabaseSettings.auth_enabled, "true" )
             .withSharedCoreParam( SecuritySettings.authentication_providers, SecuritySettings.NATIVE_REALM_NAME )
             .withNumberOfCoreMembers( 3 )
-            .withNumberOfReadReplicas( 3 );
+            .withNumberOfReadReplicas( 2 );
 
     @Test
     void shouldReplicateDatabaseManagementOperations() throws Exception

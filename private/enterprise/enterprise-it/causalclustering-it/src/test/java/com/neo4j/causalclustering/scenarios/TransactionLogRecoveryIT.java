@@ -55,7 +55,7 @@ class TransactionLogRecoveryIT
     @BeforeAll
     void setup() throws Exception
     {
-        cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 3 ) );
+        cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 2 ) );
         cluster.start();
     }
 

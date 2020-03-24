@@ -58,7 +58,7 @@ class SystemGraphSecurityReplicationIT
 
         var clusterConfig = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
-                .withNumberOfReadReplicas( 3 )
+                .withNumberOfReadReplicas( 2 )
                 .withSharedCoreParams( params )
                 .withSharedReadReplicaParams( params );
 
