@@ -1385,20 +1385,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
       }
 
     //data access
-    case ContainerIndex(container, index) =>
-      for {c <- intermediateCompileExpression(container)
-           idx <- intermediateCompileExpression(index)
-      } yield {
-        val variableName = namer.nextVariableName()
-        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName, noValueOr(c, idx)(
-          invokeStatic(method[CypherFunctions, AnyValue, AnyValue, AnyValue, DbAccess,
-            NodeCursor, RelationshipScanCursor, PropertyCursor]("containerIndex"),
-                       c.ir, idx.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR))))
-        val ops = block(lazySet, load(variableName))
-        val nullChecks = block(lazySet, equal(load(variableName), noValue))
-        IntermediateExpression(
-          ops, c.fields ++ idx.fields, c.variables ++ idx.variables ++ vCURSORS, Set(nullChecks), requireNullCheck = false)
-      }
+    case ContainerIndex(container, index) => containerIndexAccess(container, index, exists = false)
 
     case ParameterFromSlot(offset, name, _) =>
       val parameterVariable = namer.parameterName(name)
@@ -2018,6 +2005,8 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
             in.fields, in.variables ++ vCURSORS, in.nullChecks))
 
         case property: ASTCachedProperty => cachedExists(property)
+        case containerIndex: ContainerIndex =>
+          containerIndexAccess(containerIndex.expr, containerIndex.idx, exists = true)
         case _: PatternExpression => None//TODO
         case _: NestedPipeExpression => None//TODO?
         case _: NestedPlanExpression => throw new InternalException("should have been rewritten away")
@@ -3017,6 +3006,23 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
     val set = new util.HashSet[AnyValue]()
     literals.foreach(l => set.add(ValueUtils.of(l.value)))
     set
+  }
+
+  private def containerIndexAccess(container: Expression, index: Expression, exists: Boolean) = {
+    for {c <- intermediateCompileExpression(container)
+         idx <- intermediateCompileExpression(index)
+         } yield {
+      val variableName = namer.nextVariableName()
+      val methodName = if (exists) "containerIndexExists" else "containerIndex"
+      val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName, noValueOr(c, idx)(noValueOr(c, idx)(
+        invokeStatic(method[CypherFunctions, AnyValue, AnyValue, AnyValue, DbAccess,
+          NodeCursor, RelationshipScanCursor, PropertyCursor](methodName),
+          c.ir, idx.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR)))))
+      val ops = block(lazySet, load(variableName))
+      val nullChecks = block(lazySet, equal(load(variableName), noValue))
+      IntermediateExpression(
+        ops, c.fields ++ idx.fields, c.variables ++ idx.variables ++ vCURSORS, Set(nullChecks), requireNullCheck = false)
+    }
   }
 
   private def cachedExists(property: ASTCachedProperty) = property match {
