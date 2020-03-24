@@ -13,6 +13,7 @@ import org.neo4j.internal.kernel.api.NodeLabelIndexCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
+import org.neo4j.internal.kernel.api.RelationshipTypeIndexCursor;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.internal.kernel.api.exceptions.schema.CreateConstraintFailureException;
 import org.neo4j.internal.schema.ConstraintDescriptor;
@@ -117,6 +118,29 @@ public class EnterpriseConstraintSemantics extends StandardConstraintSemantics
                     throw createConstraintFailure(
                             new RelationshipPropertyExistenceException( descriptor, VERIFICATION,
                                     relationshipCursor.relationshipReference(), tokenNameLookup ) );
+                }
+            }
+        }
+    }
+
+    @Override
+    public void validateRelationshipPropertyExistenceConstraint( RelationshipTypeIndexCursor allRelationships, RelationshipScanCursor relationshipCursor,
+            PropertyCursor propertyCursor, RelationTypeSchemaDescriptor descriptor, TokenNameLookup tokenNameLookup ) throws CreateConstraintFailureException
+    {
+        while ( allRelationships.next() )
+        {
+            allRelationships.relationship( relationshipCursor );
+            while ( relationshipCursor.next() )
+            {
+                for ( int propertyKey : descriptor.getPropertyIds() )
+                {
+                    relationshipCursor.properties( propertyCursor );
+                    if ( noSuchProperty( propertyCursor, propertyKey ) )
+                    {
+                        throw createConstraintFailure(
+                                new RelationshipPropertyExistenceException( descriptor, VERIFICATION,
+                                        relationshipCursor.relationshipReference(), tokenNameLookup ) );
+                    }
                 }
             }
         }
