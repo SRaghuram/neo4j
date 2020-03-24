@@ -10,8 +10,12 @@ import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.dbms.api.DatabaseNotFoundException
 import org.neo4j.exceptions.DatabaseAdministrationException
+import org.neo4j.graphdb.QueryExecutionException
+import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
+
+import scala.collection.JavaConverters.mapAsJavaMapConverter
 
 class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
@@ -303,16 +307,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     // WHEN
     executeOnSystem("joe", "soap", "SHOW USER joe PRIVILEGES", resultHandler = (row, _) => {
       // THEN
-      val res = Map(
-        "access" -> row.get("access"),
-        "action" -> row.get("action"),
-        "resource" -> row.get("resource"),
-        "graph" -> row.get("graph"),
-        "segment" -> row.get("segment"),
-        "role" -> row.get("role"),
-        "user" -> row.get("user")
-      )
-      res should be(access().database(DEFAULT).role(PUBLIC).user("joe").map)
+      asPrivilegesResult(row) should be(access().database(DEFAULT).role(PUBLIC).user("joe").map)
     }) should be(1)
   }
 
@@ -324,16 +319,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     // WHEN
     executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES", resultHandler = (row, _) => {
       // THEN
-      val res = Map(
-        "access" -> row.get("access"),
-        "action" -> row.get("action"),
-        "resource" -> row.get("resource"),
-        "graph" -> row.get("graph"),
-        "segment" -> row.get("segment"),
-        "role" -> row.get("role"),
-        "user" -> row.get("user")
-      )
-      res should be(access().database(DEFAULT).role("PUBLIC").user("joe").map)
+      asPrivilegesResult(row) should be(access().database(DEFAULT).role("PUBLIC").user("joe").map)
     }) should be(1)
   }
 
@@ -1142,4 +1128,35 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
           }
       }
   }
+
+  test("should not be able to override internal parameters from the outside") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
+
+    // WHEN using a parameter name that used to be internal, but is not any more, it should work
+    executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES", resultHandler = (row, _) => {
+      // THEN
+      val res = asPrivilegesResult(row)
+      println(res)
+      res should be(access().database(DEFAULT).role("PUBLIC").user("joe").map)
+    }, params = Map[String, Object]("currentUser" -> "neo4j").asJava) should be(1)
+
+    // WHEN using a parameter name that is the new internal name, an error should occur
+    the[QueryExecutionException] thrownBy {
+      executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES",
+        params = Map[String, Object]("__internal_currentUser" -> "neo4j").asJava)
+    } should have message ("The query contains a parameter with an illegal name: '__internal_currentUser'")
+  }
+
+  private def asPrivilegesResult(row: Result.ResultRow): Map[String, AnyRef] =
+    Map(
+      "access" -> row.get("access"),
+      "action" -> row.get("action"),
+      "resource" -> row.get("resource"),
+      "graph" -> row.get("graph"),
+      "segment" -> row.get("segment"),
+      "role" -> row.get("role"),
+      "user" -> row.get("user")
+    )
 }

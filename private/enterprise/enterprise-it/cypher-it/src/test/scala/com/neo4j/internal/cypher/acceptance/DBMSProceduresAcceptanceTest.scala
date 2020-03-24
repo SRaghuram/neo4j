@@ -7,7 +7,6 @@ package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.graphdb.QueryExecutionException
-import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.kernel.api.security.AuthenticationResult
 
 import scala.collection.JavaConverters.mapAsJavaMapConverter

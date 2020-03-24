@@ -123,7 +123,8 @@ import scala.util.Success
 import scala.util.Try
 
 /**
- * This runtime takes on queries that require no planning, such as multidatabase administration commands
+ * This runtime takes on queries that work on the system database, such as multidatabase and security administration commands.
+ * The planning requirements for these are much simpler than normal Cypher commands, and as such the runtime stack is also different.
  */
 case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: ExecutionEngine, resolver: DependencyResolver) extends AdministrationCommandRuntime {
   private val communityCommandRuntime: CommunityAdministrationCommandRuntime = CommunityAdministrationCommandRuntime(normalExecutionEngine, resolver, logicalToExecutable)
@@ -467,6 +468,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES
     case ShowPrivileges(source, scope) => (context, parameterMapping) =>
+      val currentUserKey = internalKey("currentUser")
       val privilegeMatch =
         """
           |MATCH (r)-[g]->(p:Privilege)-[:SCOPE]->(s:Segment),
@@ -534,12 +536,12 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         case ShowUserPrivileges(None) =>
           ("grantee", Values.NO_VALUE, IdentityConverter, // will generate correct parameter name later and don't want to risk clash
             s"""
-               |OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r:Role) WHERE u.name = $$currentUser WITH r, u
+               |OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r:Role) WHERE u.name = $$$currentUserKey WITH r, u
                |$privilegeMatch
                |WITH g, p, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, u.name, r.name, segment
                |$returnColumns, u.name AS user
                |UNION
-               |MATCH (u:User) WHERE u.name = $$currentUser
+               |MATCH (u:User) WHERE u.name = $$$currentUserKey
                |OPTIONAL MATCH (r:Role) WHERE r.name = 'PUBLIC' WITH u, r
                |$privilegeMatch
                |WITH g, p, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, r.name, segment
@@ -560,7 +562,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       }
       SystemCommandExecutionPlan("ShowPrivileges", normalExecutionEngine, query, VirtualValues.map(Array(nameKey), Array(grantee)),
         source = source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping)),
-        parameterGenerator = (_, securityContext) => VirtualValues.map(Array("currentUser"), Array(Values.utf8Value(securityContext.subject().username()))),
+        parameterGenerator = (_, securityContext) => VirtualValues.map(Array(currentUserKey), Array(Values.utf8Value(securityContext.subject().username()))),
         parameterConverter = converter)
 
     // CREATE [OR REPLACE] DATABASE foo [IF NOT EXISTS]
