@@ -117,6 +117,7 @@ Feature "OptionalMatchAcceptance": Scenario "optional equality with boolean list
 Feature "OptionalMatchAcceptance": Scenario "optional match followed by match with repeated null relationship"
 Feature "OptionalMatchAcceptance": Scenario "optional match with distinct"
 Feature "OptionalMatchAcceptance": Scenario "optional match with OR where clause"
+Feature "OptionalMatchAcceptance": Scenario "optional match followed by aggregation and map-projection"
 Feature "OrderByAcceptance": Scenario "ORDER BY nodes should return null results last in ascending order"
 Feature "OrderByAcceptance": Scenario "ORDER BY relationships should return null results last in ascending order"
 Feature "OrderByAcceptance": Scenario "Ordering is well defined across all types, ascending"
