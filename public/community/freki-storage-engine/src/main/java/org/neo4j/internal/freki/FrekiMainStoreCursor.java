@@ -54,7 +54,6 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     final PageCursorTracer cursorTracer;
 
     FrekiCursorData data;
-    boolean sharedData;
     // State from relationship section, it's here because both relationship cursors as well as property cursor makes use of them
     int[] relationshipTypesInNode;
     int[] relationshipTypeOffsets;
@@ -69,22 +68,12 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         this.cursorAccessTracer = cursorAccessPatternTracer.access();
         this.cursorTracer = cursorTracer;
         this.xCursors = new PageCursor[stores.getNumMainStores()];
-        reset();
     }
 
-    void reset()
+    public void reset()
     {
-        if ( data != null )
-        {
-            if ( sharedData )
-            {
-                data = null;
-            }
-            else
-            {
-                data.reset();
-            }
-        }
+        // TODO this is the other problem... we don't want to invalidate this one always, in fact basically never
+        data = null;
         relationshipTypeOffsets = null;
         relationshipTypesInNode = null;
         firstRelationshipTypeOffset = 0;
@@ -138,14 +127,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
 
     private void ensureFreshDataInstance()
     {
-        if ( data == null )
-        {
-            data = new FrekiCursorData();
-        }
-        else
-        {
-            data.reset();
-        }
+        data = new FrekiCursorData();
     }
 
     private void gatherDataFromX1( Record x1Record )
@@ -193,8 +175,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         {
             return false;
         }
-        otherCursor.ensureFreshDataInstance();
-        otherCursor.data.copyFrom( data );
+        otherCursor.data = data;
         return true;
     }
 

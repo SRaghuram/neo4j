@@ -49,6 +49,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     private FrekiReference referenceToLoad;
     private int[] propertyKeyArray;
     private int propertyKeyIndex;
+    private int nextValuePosition;
     private Value readValue;
     private ByteBuffer buffer;
 
@@ -148,7 +149,8 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
         }
         if ( readValue == null )
         {
-            readValue = readEagerly( buffer, stores.bigPropertyValueStore );
+            readValue = readEagerly( buffer.position( nextValuePosition ), stores.bigPropertyValueStore );
+            nextValuePosition = buffer.position();
         }
         return readValue;
     }
@@ -212,7 +214,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
             if ( readValue == null && propertyKeyIndex > 0 )
             {
                 // We didn't read the value, which means we'll have to figure out the position of the next value ourselves right here
-                buffer.position( buffer.position() + calculatePropertyValueSizeIncludingTypeHeader( buffer ) );
+                nextValuePosition += calculatePropertyValueSizeIncludingTypeHeader( buffer.position( nextValuePosition ) );
             }
             readValue = null;
             return true;
@@ -270,6 +272,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
         }
 
         propertyKeyArray = readIntDeltas( new StreamVByte.IntArrayTarget(), buffer ).array();
+        nextValuePosition = buffer.position();
         propertyKeyIndex = -1;
         return true;
     }

@@ -34,12 +34,6 @@ abstract class FrekiRelationshipCursor extends FrekiMainStoreCursor implements S
         super( stores, cursorAccessPatternTracer, cursorTracer );
     }
 
-    @Override
-    public void reset()
-    {
-        super.reset();
-    }
-
     abstract int currentRelationshipPropertiesOffset();
 
     abstract Iterator<StorageProperty> denseProperties();
