@@ -45,19 +45,6 @@ class FrekiCursorData
     private ByteBuffer relationshipBuffer;
     int endOffset;
 
-    void reset()
-    {
-        nodeId = NULL;
-        x1Loaded = false;
-        forwardPointer = NULL;
-        backwardPointer = NULL;
-        xLLoaded = false;
-        labelOffset = 0;
-        propertyOffset = 0;
-        relationshipOffset = 0;
-        endOffset = 0;
-    }
-
     void assignLabelOffset( int offset, ByteBuffer buffer )
     {
         if ( offset > 0 )
@@ -115,36 +102,9 @@ class FrekiCursorData
         return relationshipBuffer.position( offset );
     }
 
-    /**
-     * This method is a central part of cursor data sharing. For now it copies data for simplicity, but could be changed to
-     * instead simply do a lighter copy somehow.
-     */
-    void copyFrom( FrekiCursorData data )
-    {
-        this.nodeId = data.nodeId;
-        this.x1Loaded = data.x1Loaded;
-        this.forwardPointer = data.forwardPointer;
-        this.xLLoaded = data.xLLoaded;
-
-        this.labelOffset = data.labelOffset;
-        this.labelBuffer = copyBufferData( this.labelBuffer, data.labelBuffer );
-        this.propertyOffset = data.propertyOffset;
-        this.propertyBuffer = data.propertyBuffer == data.labelBuffer ? labelBuffer : copyBufferData( this.propertyBuffer, data.propertyBuffer );
-        this.relationshipOffset = data.relationshipOffset;
-        this.relationshipBuffer = data.relationshipBuffer == data.labelBuffer
-                                  ? labelBuffer : data.relationshipBuffer == data.propertyBuffer
-                                                  ? propertyBuffer : copyBufferData( this.relationshipBuffer, data.relationshipBuffer );
-        this.endOffset = data.endOffset;
-    }
-
     boolean isLoaded()
     {
         return x1Loaded || xLLoaded;
-    }
-
-    private ByteBuffer copyBufferData( ByteBuffer into, ByteBuffer from )
-    {
-        return from == null ? into : from.duplicate();
     }
 
     @Override
