@@ -5,14 +5,14 @@
  */
 package com.neo4j.causalclustering.messaging;
 
-import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedDistributedRaftMessage;
+import com.neo4j.causalclustering.core.consensus.RaftMessages.InboundRaftMessageContainer;
 
 import java.util.function.Function;
 
 @FunctionalInterface
 public interface ComposableMessageHandler
-        extends Function<LifecycleMessageHandler<ReceivedDistributedRaftMessage<?>>, LifecycleMessageHandler<ReceivedDistributedRaftMessage<?>>>
+        extends Function<LifecycleMessageHandler<InboundRaftMessageContainer<?>>, LifecycleMessageHandler<InboundRaftMessageContainer<?>>>
 {
     @Override
-    LifecycleMessageHandler<ReceivedDistributedRaftMessage<?>> apply( LifecycleMessageHandler<ReceivedDistributedRaftMessage<?>> messageHandler );
+    LifecycleMessageHandler<InboundRaftMessageContainer<?>> apply( LifecycleMessageHandler<InboundRaftMessageContainer<?>> messageHandler );
 }

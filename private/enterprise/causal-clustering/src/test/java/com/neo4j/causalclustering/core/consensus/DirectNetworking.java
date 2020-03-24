@@ -18,19 +18,19 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class DirectNetworking
 {
-    private final Map<MemberId,com.neo4j.causalclustering.messaging.Inbound.MessageHandler<RaftMessages.ReceivedDistributedRaftMessage<?>>> handlers =
+    private final Map<MemberId,com.neo4j.causalclustering.messaging.Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>>> handlers =
             new HashMap<>();
-    private final Map<MemberId,Queue<RaftMessages.ReceivedDistributedRaftMessage<?>>> messageQueues = new HashMap<>();
+    private final Map<MemberId,Queue<RaftMessages.InboundRaftMessageContainer<?>>> messageQueues = new HashMap<>();
     private final Set<MemberId> disconnectedMembers = Collections.newSetFromMap( new ConcurrentHashMap<>() );
 
     public void processMessages()
     {
         while ( messagesToBeProcessed() )
         {
-            for ( Map.Entry<MemberId,Queue<RaftMessages.ReceivedDistributedRaftMessage<?>>> entry : messageQueues.entrySet() )
+            for ( Map.Entry<MemberId,Queue<RaftMessages.InboundRaftMessageContainer<?>>> entry : messageQueues.entrySet() )
             {
                 MemberId id = entry.getKey();
-                Queue<RaftMessages.ReceivedDistributedRaftMessage<?>> queue = entry.getValue();
+                Queue<RaftMessages.InboundRaftMessageContainer<?>> queue = entry.getValue();
                 if ( !queue.isEmpty() )
                 {
                     var message = queue.remove();
@@ -42,7 +42,7 @@ public class DirectNetworking
 
     private boolean messagesToBeProcessed()
     {
-        for ( Queue<RaftMessages.ReceivedDistributedRaftMessage<?>> queue : messageQueues.values() )
+        for ( Queue<RaftMessages.InboundRaftMessageContainer<?>> queue : messageQueues.values() )
         {
             if ( !queue.isEmpty() )
             {
@@ -76,7 +76,7 @@ public class DirectNetworking
         {
             if ( canDeliver( to ) )
             {
-                messageQueues.get( to ).add( RaftMessages.ReceivedDistributedRaftMessage.of( Instant.now(), null, message ) );
+                messageQueues.get( to ).add( RaftMessages.InboundRaftMessageContainer.of( Instant.now(), null, message ) );
             }
         }
 
@@ -88,7 +88,7 @@ public class DirectNetworking
         }
     }
 
-    public class Inbound implements com.neo4j.causalclustering.messaging.Inbound<RaftMessages.ReceivedDistributedRaftMessage<?>>
+    public class Inbound implements com.neo4j.causalclustering.messaging.Inbound<RaftMessages.InboundRaftMessageContainer<?>>
     {
         private final MemberId id;
 
@@ -98,7 +98,7 @@ public class DirectNetworking
         }
 
         @Override
-        public void registerHandler( MessageHandler<RaftMessages.ReceivedDistributedRaftMessage<?>> handler )
+        public void registerHandler( MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> handler )
         {
             handlers.put( id, handler );
             messageQueues.put( id, new LinkedList<>() );

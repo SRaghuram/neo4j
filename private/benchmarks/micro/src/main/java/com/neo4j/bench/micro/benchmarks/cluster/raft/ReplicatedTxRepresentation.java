@@ -57,7 +57,7 @@ public class ReplicatedTxRepresentation extends AbstractRaftBenchmark
     }
 
     @Override
-    RaftMessages.DistributedRaftMessage<RaftMessages.RaftMessage> initializeRaftMessage()
+    RaftMessages.OutboundRaftMessageContainer<RaftMessages.RaftMessage> initializeRaftMessage()
     {
         int expectedSize = nbrOfBytes( txSize );
         TxFactory.commitTx( expectedSize, db() );
@@ -66,7 +66,7 @@ public class ReplicatedTxRepresentation extends AbstractRaftBenchmark
         log.info( "Created transaction representation of size: %d. Expected: %d. Diff%%: %f", clusterTx.size(), expectedSize,
                   diffPercent( expectedSize, clusterTx.size() ) );
         var replicatedTx = ReplicatedTransaction.from( clusterTx.txRepresentation(), NAMED_DATABASE_ID );
-        return RaftMessages.DistributedRaftMessage.of( RaftId.from( DATABASE_ID ), new RaftMessages.NewEntry.Request( MEMBER_ID, replicatedTx ) );
+        return RaftMessages.OutboundRaftMessageContainer.of( RaftId.from( DATABASE_ID ), new RaftMessages.NewEntry.Request( MEMBER_ID, replicatedTx ) );
     }
 
     private float diffPercent( int expectedSize, int size )
@@ -81,7 +81,7 @@ public class ReplicatedTxRepresentation extends AbstractRaftBenchmark
         sendOneWay();
     }
 
-    public static void main( String... methods ) throws Exception
+    public static void main( String... methods )
     {
         run( ReplicatedTxRepresentation.class, methods );
     }

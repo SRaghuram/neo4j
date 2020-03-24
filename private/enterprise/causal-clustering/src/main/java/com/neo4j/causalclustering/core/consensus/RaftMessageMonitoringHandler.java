@@ -15,13 +15,13 @@ import java.time.Instant;
 
 import org.neo4j.monitoring.Monitors;
 
-public class RaftMessageMonitoringHandler implements LifecycleMessageHandler<RaftMessages.ReceivedDistributedRaftMessage<?>>
+public class RaftMessageMonitoringHandler implements LifecycleMessageHandler<RaftMessages.InboundRaftMessageContainer<?>>
 {
-    private final LifecycleMessageHandler<RaftMessages.ReceivedDistributedRaftMessage<?>> raftMessageHandler;
+    private final LifecycleMessageHandler<RaftMessages.InboundRaftMessageContainer<?>> raftMessageHandler;
     private final Clock clock;
     private final RaftMessageProcessingMonitor raftMessageDelayMonitor;
 
-    public RaftMessageMonitoringHandler( LifecycleMessageHandler<RaftMessages.ReceivedDistributedRaftMessage<?>> raftMessageHandler,
+    public RaftMessageMonitoringHandler( LifecycleMessageHandler<RaftMessages.InboundRaftMessageContainer<?>> raftMessageHandler,
             Clock clock, Monitors monitors )
     {
         this.raftMessageHandler = raftMessageHandler;
@@ -35,7 +35,7 @@ public class RaftMessageMonitoringHandler implements LifecycleMessageHandler<Raf
     }
 
     @Override
-    public synchronized void handle( RaftMessages.ReceivedDistributedRaftMessage<?> incomingMessage )
+    public synchronized void handle( RaftMessages.InboundRaftMessageContainer<?> incomingMessage )
     {
         Instant start = clock.instant();
 
@@ -44,7 +44,7 @@ public class RaftMessageMonitoringHandler implements LifecycleMessageHandler<Raf
         timeHandle( incomingMessage, start );
     }
 
-    private void timeHandle( RaftMessages.ReceivedDistributedRaftMessage<?> incomingMessage, Instant start )
+    private void timeHandle( RaftMessages.InboundRaftMessageContainer<?> incomingMessage, Instant start )
     {
         try
         {
@@ -57,7 +57,7 @@ public class RaftMessageMonitoringHandler implements LifecycleMessageHandler<Raf
         }
     }
 
-    private void logDelay( RaftMessages.ReceivedDistributedRaftMessage<?> incomingMessage, Instant start )
+    private void logDelay( RaftMessages.InboundRaftMessageContainer<?> incomingMessage, Instant start )
     {
         Duration delay = Duration.between( incomingMessage.receivedAt(), start );
 

@@ -126,17 +126,17 @@ class RaftMessageEncoderDecoderTest
         setupChannels( raftProtocol );
 
         RaftId raftId = RaftIdFactory.random();
-        RaftMessages.ReceivedDistributedRaftMessage<RaftMessage> idAwareMessage =
-                RaftMessages.ReceivedDistributedRaftMessage.of( Instant.now(), raftId, raftMessage );
+        RaftMessages.OutboundRaftMessageContainer<RaftMessage> outboundMessage =
+                RaftMessages.OutboundRaftMessageContainer.of( raftId, raftMessage );
 
-        outbound.writeOutbound( idAwareMessage );
+        outbound.writeOutbound( outboundMessage );
 
         Object o;
         while ( (o = outbound.readOutbound()) != null )
         {
             inbound.writeInbound( o );
         }
-        RaftMessages.ReceivedDistributedRaftMessage<RaftMessage> message = handler.getRaftMessage();
+        RaftMessages.InboundRaftMessageContainer<RaftMessage> message = handler.getRaftMessage();
         assertEquals( raftId, message.raftId() );
         raftMessageEquals( raftMessage, message.message() );
         assertNull( inbound.readInbound() );
@@ -217,18 +217,18 @@ class RaftMessageEncoderDecoderTest
         }
     }
 
-    class RaftMessageHandler extends SimpleChannelInboundHandler<RaftMessages.ReceivedDistributedRaftMessage<RaftMessage>>
+    class RaftMessageHandler extends SimpleChannelInboundHandler<RaftMessages.InboundRaftMessageContainer<RaftMessage>>
     {
 
-        private RaftMessages.ReceivedDistributedRaftMessage<RaftMessage> msg;
+        private RaftMessages.InboundRaftMessageContainer<RaftMessage> msg;
 
         @Override
-        protected void channelRead0( ChannelHandlerContext ctx, RaftMessages.ReceivedDistributedRaftMessage<RaftMessage> msg )
+        protected void channelRead0( ChannelHandlerContext ctx, RaftMessages.InboundRaftMessageContainer<RaftMessage> msg )
         {
             this.msg = msg;
         }
 
-        RaftMessages.ReceivedDistributedRaftMessage<RaftMessage> getRaftMessage()
+        RaftMessages.InboundRaftMessageContainer<RaftMessage> getRaftMessage()
         {
             return msg;
         }

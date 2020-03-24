@@ -970,37 +970,28 @@ public interface RaftMessages
         }
     }
 
-    interface DistributedRaftMessage<RM extends RaftMessage>
-    {
-        RM message();
-
-        RaftId raftId();
-
-        static <RM extends RaftMessage> DistributedRaftMessage<RM> of( RaftId raftId, RM message )
-        {
-            return new DistributedRaftMessageImpl<>( raftId, message );
-        }
-    }
-
-    final class DistributedRaftMessageImpl<RM extends RaftMessage> implements DistributedRaftMessage<RM>
+    final class OutboundRaftMessageContainer<RM extends RaftMessage>
     {
         private final RaftId raftId;
         private final RM message;
 
-        private DistributedRaftMessageImpl( RaftId raftId, RM message )
+        public static <RM extends RaftMessage> OutboundRaftMessageContainer<RM> of( RaftId raftId, RM message )
+        {
+            return new OutboundRaftMessageContainer<>( raftId, message );
+        }
+
+        private OutboundRaftMessageContainer( RaftId raftId, RM message )
         {
             Objects.requireNonNull( message );
             this.raftId = raftId;
             this.message = message;
         }
 
-        @Override
         public RaftId raftId()
         {
             return raftId;
         }
 
-        @Override
         public RM message()
         {
             return message;
@@ -1017,7 +1008,7 @@ public interface RaftMessages
             {
                 return false;
             }
-            DistributedRaftMessageImpl<?> that = (DistributedRaftMessageImpl<?>) o;
+            OutboundRaftMessageContainer<?> that = (OutboundRaftMessageContainer<?>) o;
             return Objects.equals( raftId, that.raftId ) && Objects.equals( message(), that.message() );
         }
 
@@ -1034,18 +1025,18 @@ public interface RaftMessages
         }
     }
 
-    final class ReceivedDistributedRaftMessage<RM extends RaftMessage> implements DistributedRaftMessage<RM>
+    final class InboundRaftMessageContainer<RM extends RaftMessage>
     {
         private final Instant receivedAt;
         private final RaftId raftId;
         private final RM message;
 
-        public static <RM extends RaftMessage> ReceivedDistributedRaftMessage<RM> of( Instant receivedAt, RaftId raftId, RM message )
+        public static <RM extends RaftMessage> InboundRaftMessageContainer<RM> of( Instant receivedAt, RaftId raftId, RM message )
         {
-            return new ReceivedDistributedRaftMessage<>( receivedAt, raftId, message );
+            return new InboundRaftMessageContainer<>( receivedAt, raftId, message );
         }
 
-        private ReceivedDistributedRaftMessage( Instant receivedAt, RaftId raftId, RM message )
+        private InboundRaftMessageContainer( Instant receivedAt, RaftId raftId, RM message )
         {
             Objects.requireNonNull( message );
             this.raftId = raftId;
@@ -1058,13 +1049,11 @@ public interface RaftMessages
             return receivedAt;
         }
 
-        @Override
         public RaftId raftId()
         {
             return raftId;
         }
 
-        @Override
         public RM message()
         {
             return message;
@@ -1081,7 +1070,7 @@ public interface RaftMessages
             {
                 return false;
             }
-            ReceivedDistributedRaftMessage<?> that = (ReceivedDistributedRaftMessage<?>) o;
+            InboundRaftMessageContainer<?> that = (InboundRaftMessageContainer<?>) o;
             return Objects.equals( receivedAt, that.receivedAt ) && Objects.equals( raftId, that.raftId ) && Objects.equals( message(), that.message() );
         }
 

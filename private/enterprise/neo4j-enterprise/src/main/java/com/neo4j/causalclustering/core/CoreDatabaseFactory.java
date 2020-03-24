@@ -15,8 +15,8 @@ import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.RaftGroup;
 import com.neo4j.causalclustering.core.consensus.RaftGroupFactory;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
+import com.neo4j.causalclustering.core.consensus.RaftMessages.InboundRaftMessageContainer;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
-import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedDistributedRaftMessage;
 import com.neo4j.causalclustering.core.consensus.log.pruning.PruningScheduler;
 import com.neo4j.causalclustering.core.replication.ProgressTracker;
 import com.neo4j.causalclustering.core.replication.ProgressTrackerImpl;
@@ -166,7 +166,7 @@ class CoreDatabaseFactory
 
     private final PageCacheTracer pageCacheTracer;
     private final RecoveryFacade recoveryFacade;
-    private final Outbound<SocketAddress,RaftMessages.DistributedRaftMessage<?>> raftSender;
+    private final Outbound<SocketAddress,RaftMessages.OutboundRaftMessageContainer<?>> raftSender;
     private final ReplicatedDatabaseEventService databaseEventService;
     private final ClusterSystemGraphDbmsModel dbmsModel;
     private final DatabaseStartAborter databaseStartAborter;
@@ -176,7 +176,7 @@ class CoreDatabaseFactory
             CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, TemporaryDatabaseFactory temporaryDatabaseFactory,
             Map<NamedDatabaseId,DatabaseInitializer> databaseInitializers, MemberId myIdentity, RaftGroupFactory raftGroupFactory,
             RaftMessageDispatcher raftMessageDispatcher, CatchupComponentsProvider catchupComponentsProvider, RecoveryFacade recoveryFacade,
-            RaftMessageLogger<MemberId> raftLogger, Outbound<SocketAddress,RaftMessages.DistributedRaftMessage<?>> raftSender,
+            RaftMessageLogger<MemberId> raftLogger, Outbound<SocketAddress,RaftMessages.OutboundRaftMessageContainer<?>> raftSender,
             ReplicatedDatabaseEventService databaseEventService,
             ClusterSystemGraphDbmsModel dbmsModel, DatabaseStartAborter databaseStartAborter )
     {
@@ -343,7 +343,7 @@ class CoreDatabaseFactory
         RaftMessageHandlerChainFactory raftMessageHandlerChainFactory = new RaftMessageHandlerChainFactory( jobScheduler, clock, debugLog, monitors, config,
                 raftMessageDispatcher, catchupAddressProvider, panicker );
 
-        LifecycleMessageHandler<ReceivedDistributedRaftMessage<?>> messageHandler = raftMessageHandlerChainFactory.createMessageHandlerChain(
+        LifecycleMessageHandler<InboundRaftMessageContainer<?>> messageHandler = raftMessageHandlerChainFactory.createMessageHandlerChain(
                 raftGroup, downloadService, applicationProcess );
 
         DatabaseTopologyNotifier topologyNotifier = new DatabaseTopologyNotifier( namedDatabaseId, topologyService );

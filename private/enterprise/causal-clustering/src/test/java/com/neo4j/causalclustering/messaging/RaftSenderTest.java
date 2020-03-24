@@ -54,7 +54,8 @@ class RaftSenderTest
 
         // when
         var socketAddress = new SocketAddress( 1 );
-        raftSender.send( socketAddress, RaftMessages.DistributedRaftMessage.of( null, new RaftMessages.Timeout.Election( new MemberId( UUID.randomUUID() ) ) ),
+        raftSender.send( socketAddress,
+                         RaftMessages.OutboundRaftMessageContainer.of( null, new RaftMessages.Timeout.Election( new MemberId( UUID.randomUUID() ) ) ),
                          false );
 
         assertThat( logProvider ).forClass( RaftSender.class ).forLevel( WARN )

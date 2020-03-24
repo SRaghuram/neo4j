@@ -19,7 +19,7 @@ import io.netty.handler.codec.MessageToByteEncoder;
 
 import org.neo4j.io.ByteUnit;
 
-public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.DistributedRaftMessage>
+public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.OutboundRaftMessageContainer>
 {
     private final ChannelMarshal<ReplicatedContent> marshal;
 
@@ -30,7 +30,7 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Distri
 
     @Override
     public synchronized void encode( ChannelHandlerContext ctx,
-            RaftMessages.DistributedRaftMessage decoratedMessage,
+            RaftMessages.OutboundRaftMessageContainer decoratedMessage,
             ByteBuf out ) throws Exception
     {
         RaftMessages.RaftMessage message = decoratedMessage.message();

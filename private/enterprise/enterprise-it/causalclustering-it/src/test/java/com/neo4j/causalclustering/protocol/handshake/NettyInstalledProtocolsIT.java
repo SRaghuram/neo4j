@@ -9,11 +9,9 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol;
-import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 import com.neo4j.causalclustering.protocol.ProtocolInstallerRepository;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import com.neo4j.causalclustering.protocol.init.ClientChannelInitializer;
@@ -31,10 +29,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import org.assertj.core.api.HamcrestCondition;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
+import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -45,7 +40,6 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Stream;
 
@@ -56,14 +50,16 @@ import org.neo4j.test.ports.PortAuthority;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.handshake_timeout;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.inbound_connection_initialization_logging_enabled;
+import static com.neo4j.causalclustering.identity.RaftIdFactory.random;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.RAFT;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.RAFT_2_0;
 import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory.COMPRESSION;
+import static java.lang.String.format;
 import static java.util.Collections.singletonList;
+import static java.util.UUID.randomUUID;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
-import static org.hamcrest.Matchers.contains;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.neo4j.logging.LogAssertions.assertThat;
@@ -96,23 +92,22 @@ class NettyInstalledProtocolsIT
 
     @ParameterizedTest( name = "{0}" )
     @MethodSource( "data" )
-    void shouldSuccessfullySendAndReceiveAMessage( Parameters parameters ) throws Throwable
+    void shouldSuccessfullySendAndReceiveAMessage( Parameters parameters )
     {
         startServerAndConnect( parameters );
 
         // given
-        RaftMessages.Heartbeat raftMessage = new RaftMessages.Heartbeat( new MemberId( UUID.randomUUID() ), 1, 2, 3 );
-        RaftMessages.DistributedRaftMessage<RaftMessages.Heartbeat> networkMessage =
-                RaftMessages.DistributedRaftMessage.of( RaftIdFactory.random(), raftMessage );
+        var heartbeat = new RaftMessages.Heartbeat( new MemberId( randomUUID() ), 1, 2, 3 );
+        var networkMessage =
+                RaftMessages.OutboundRaftMessageContainer.of( random(), heartbeat );
 
         // when
         client.send( networkMessage ).syncUninterruptibly();
 
         // then
         assertEventually(
-                messages -> String.format( "Received messages %s should contain message decorating %s", messages, raftMessage ),
-                () -> server.received(),
-                new HamcrestCondition<>( contains( messageMatches( networkMessage ) ) ), TIMEOUT_SECONDS, SECONDS );
+                messages -> format( "Received messages %s should contain message decorating %s", messages, heartbeat ),
+                () -> server.received(), messageMatches( networkMessage ), TIMEOUT_SECONDS, SECONDS );
     }
 
     @Test
@@ -151,15 +146,15 @@ class NettyInstalledProtocolsIT
 
     private void startServerAndConnect( Parameters parameters, Config.Builder configBuilder )
     {
-        ApplicationProtocolRepository applicationProtocolRepository =
+        var applicationProtocolRepository =
                 new ApplicationProtocolRepository( ApplicationProtocols.values(), parameters.applicationSupportedProtocol );
-        ModifierProtocolRepository modifierProtocolRepository =
+        var modifierProtocolRepository =
                 new ModifierProtocolRepository( ModifierProtocols.values(), parameters.modifierSupportedProtocols );
 
-        NettyPipelineBuilderFactory serverPipelineBuilderFactory = NettyPipelineBuilderFactory.insecure();
-        NettyPipelineBuilderFactory clientPipelineBuilderFactory = NettyPipelineBuilderFactory.insecure();
+        var serverPipelineBuilderFactory = NettyPipelineBuilderFactory.insecure();
+        var clientPipelineBuilderFactory = NettyPipelineBuilderFactory.insecure();
 
-        Config config = configBuilder.set( handshake_timeout, Duration.ofSeconds( TIMEOUT_SECONDS ) ).build();
+        var config = configBuilder.set( handshake_timeout, Duration.ofSeconds( TIMEOUT_SECONDS ) ).build();
 
         server = new Server( serverPipelineBuilderFactory, config );
         server.start( applicationProtocolRepository, modifierProtocolRepository, logProvider );
@@ -225,20 +220,20 @@ class NettyInstalledProtocolsIT
         void start( final ApplicationProtocolRepository applicationProtocolRepository, final ModifierProtocolRepository modifierProtocolRepository,
                 LogProvider logProvider )
         {
-            RaftProtocolServerInstallerV2.Factory raftFactoryV2 =
+            var raftFactoryV2 =
                     new RaftProtocolServerInstallerV2.Factory( nettyHandler, pipelineBuilderFactory, logProvider );
-            ProtocolInstallerRepository<ProtocolInstaller.Orientation.Server> protocolInstallerRepository =
+            var protocolInstallerRepository =
                     new ProtocolInstallerRepository<>( List.of( raftFactoryV2 ), ModifierProtocolInstaller.allServerInstallers );
 
             eventLoopGroup = new NioEventLoopGroup();
 
-            HandshakeServerInitializer handshakeInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
+            var handshakeInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
                     protocolInstallerRepository, pipelineBuilderFactory, logProvider, config );
 
-            ServerChannelInitializer channelInitializer = new ServerChannelInitializer( handshakeInitializer, pipelineBuilderFactory,
+            var channelInitializer = new ServerChannelInitializer( handshakeInitializer, pipelineBuilderFactory,
                     config.get( handshake_timeout ), logProvider, config );
 
-            ServerBootstrap bootstrap = new ServerBootstrap().group( eventLoopGroup )
+            var bootstrap = new ServerBootstrap().group( eventLoopGroup )
                     .channel( NioServerSocketChannel.class )
                     .option( ChannelOption.SO_REUSEADDR, true )
                     .localAddress( PortAuthority.allocatePort() )
@@ -274,21 +269,21 @@ class NettyInstalledProtocolsIT
         Client( ApplicationProtocolRepository applicationProtocolRepository, ModifierProtocolRepository modifierProtocolRepository,
                 NettyPipelineBuilderFactory pipelineBuilderFactory, Config config, LogProvider logProvider )
         {
-            RaftProtocolClientInstallerV2.Factory raftFactoryV2 = new RaftProtocolClientInstallerV2.Factory( pipelineBuilderFactory, logProvider );
-            ProtocolInstallerRepository<ProtocolInstaller.Orientation.Client> protocolInstallerRepository =
+            var raftFactoryV2 = new RaftProtocolClientInstallerV2.Factory( pipelineBuilderFactory, logProvider );
+            var protocolInstallerRepository =
                     new ProtocolInstallerRepository<>( List.of( raftFactoryV2 ), ModifierProtocolInstaller.allClientInstallers );
             eventLoopGroup = new NioEventLoopGroup();
-            Duration handshakeTimeout = config.get( handshake_timeout );
+            var handshakeTimeout = config.get( handshake_timeout );
             handshakeInitializer = new HandshakeClientInitializer( applicationProtocolRepository, modifierProtocolRepository,
                     protocolInstallerRepository, pipelineBuilderFactory, handshakeTimeout, logProvider, logProvider );
-            ClientChannelInitializer channelInitializer = new ClientChannelInitializer( handshakeInitializer, pipelineBuilderFactory,
+            var channelInitializer = new ClientChannelInitializer( handshakeInitializer, pipelineBuilderFactory,
                     handshakeTimeout, logProvider );
             bootstrap = new Bootstrap().group( eventLoopGroup ).channel( NioSocketChannel.class ).handler( channelInitializer );
         }
 
         void connect( int port )
         {
-            ChannelFuture channelFuture = bootstrap.connect( "localhost", port ).syncUninterruptibly();
+            var channelFuture = bootstrap.connect( "localhost", port ).syncUninterruptibly();
             channel = channelFuture.channel();
         }
 
@@ -329,35 +324,20 @@ class NettyInstalledProtocolsIT
         }
     }
 
-    private Matcher<Object> messageMatches( RaftMessages.DistributedRaftMessage<? extends RaftMessages.RaftMessage> expected )
+    private Condition<Collection<Object>> messageMatches( RaftMessages.OutboundRaftMessageContainer<? extends RaftMessages.RaftMessage> expected )
     {
-        return new MessageMatcher( expected );
-    }
-
-    class MessageMatcher extends BaseMatcher<Object>
-    {
-        private final RaftMessages.DistributedRaftMessage<? extends RaftMessages.RaftMessage> expected;
-
-        MessageMatcher( RaftMessages.DistributedRaftMessage<? extends RaftMessages.RaftMessage> expected )
-        {
-            this.expected = expected;
-        }
-
-        @Override
-        public boolean matches( Object item )
-        {
-            if ( item instanceof RaftMessages.DistributedRaftMessage<?> )
-            {
-                RaftMessages.DistributedRaftMessage<?> message = (RaftMessages.DistributedRaftMessage<?>) item;
-                return message.raftId().equals( expected.raftId() ) && message.message().equals( expected.message() );
-            }
-            return false;
-        }
-
-        @Override
-        public void describeTo( Description description )
-        {
-            description.appendText( "Raft ID " ).appendValue( expected.raftId() ).appendText( " message " ).appendValue( expected.message() );
-        }
+        return new Condition<>(
+                messages ->
+                {
+                    for ( Object message : messages )
+                    {
+                        if ( message instanceof RaftMessages.InboundRaftMessageContainer )
+                        {
+                            var inbound = (RaftMessages.InboundRaftMessageContainer) message;
+                            return inbound.raftId().equals( expected.raftId() ) && inbound.message().equals( expected.message() );
+                        }
+                    }
+                    return false;
+                }, "Message matches" );
     }
 }

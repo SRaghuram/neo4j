@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.core.consensus;
 
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import org.junit.Before;
@@ -30,11 +30,11 @@ public class RaftMessageMonitoringHandlerTest
     private Monitors monitors = new Monitors();
     private RaftMessageProcessingMonitor monitor = mock( RaftMessageProcessingMonitor.class );
     @SuppressWarnings( "unchecked" )
-    private LifecycleMessageHandler<RaftMessages.ReceivedDistributedRaftMessage<?>> downstream = mock( LifecycleMessageHandler.class );
+    private LifecycleMessageHandler<RaftMessages.InboundRaftMessageContainer<?>> downstream = mock( LifecycleMessageHandler.class );
 
     private Duration messageQueueDelay = Duration.ofMillis( 5 );
     private Duration messageProcessingDelay = Duration.ofMillis( 7 );
-    private RaftMessages.ReceivedDistributedRaftMessage<?> message = RaftMessages.ReceivedDistributedRaftMessage.of(
+    private RaftMessages.InboundRaftMessageContainer<?> message = RaftMessages.InboundRaftMessageContainer.of(
             now.minus( messageQueueDelay ), RaftIdFactory.random(), new RaftMessages.Heartbeat( new MemberId( UUID.randomUUID() ), 0, 0, 0 )
     );
     private Clock clock = Clocks.tickOnAccessClock( now, messageProcessingDelay );

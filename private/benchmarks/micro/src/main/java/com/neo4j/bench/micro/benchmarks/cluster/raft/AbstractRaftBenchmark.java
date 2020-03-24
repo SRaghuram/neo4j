@@ -31,8 +31,8 @@ public abstract class AbstractRaftBenchmark extends EditionModuleBackedAbstractB
 
     static final MemberId MEMBER_ID = new MemberId( UUID.randomUUID() );
     private final LocalNetworkPlatform platform = new LocalNetworkPlatform();
-    private Inbound.MessageHandler<RaftMessages.ReceivedDistributedRaftMessage<?>> handler;
-    private RaftMessages.DistributedRaftMessage<RaftMessages.RaftMessage> message;
+    private Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> handler;
+    private RaftMessages.OutboundRaftMessageContainer<RaftMessages.RaftMessage> message;
     private Log log = logProvider().getLog( AbstractRaftBenchmark.class );
 
     @Override
@@ -60,7 +60,7 @@ public abstract class AbstractRaftBenchmark extends EditionModuleBackedAbstractB
         return platform.channel();
     }
 
-    private void setHandler( Inbound.MessageHandler<RaftMessages.ReceivedDistributedRaftMessage<?>> handler )
+    private void setHandler( Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> handler )
     {
         this.handler = handler;
     }
@@ -73,7 +73,7 @@ public abstract class AbstractRaftBenchmark extends EditionModuleBackedAbstractB
 
     abstract ProtocolVersion protocolVersion();
 
-    abstract RaftMessages.DistributedRaftMessage<RaftMessages.RaftMessage> initializeRaftMessage();
+    abstract RaftMessages.OutboundRaftMessageContainer<RaftMessages.RaftMessage> initializeRaftMessage();
 
     static int nbrOfBytes( String size )
     {

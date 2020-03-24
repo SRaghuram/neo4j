@@ -53,10 +53,10 @@ public class ReplicatedTxByteArray extends AbstractRaftBenchmark
     }
 
     @Override
-    RaftMessages.DistributedRaftMessage<RaftMessages.RaftMessage> initializeRaftMessage()
+    RaftMessages.OutboundRaftMessageContainer<RaftMessages.RaftMessage> initializeRaftMessage()
     {
         byte[] bytes = new byte[nbrOfBytes( txSize )];
-        return RaftMessages.DistributedRaftMessage.of(
+        return RaftMessages.OutboundRaftMessageContainer.of(
                 RaftId.from( DATABASE_ID ),
                 new RaftMessages.NewEntry.Request( AbstractRaftBenchmark.MEMBER_ID,
                                                    ReplicatedTransaction.from( bytes, DATABASE_ID ) ) );
@@ -69,7 +69,7 @@ public class ReplicatedTxByteArray extends AbstractRaftBenchmark
         sendOneWay();
     }
 
-    public static void main( String... methods ) throws Exception
+    public static void main( String... methods )
     {
         run( ReplicatedTxByteArray.class, methods );
     }

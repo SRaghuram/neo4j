@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.consensus.ContinuousJob;
-import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedDistributedRaftMessage;
+import com.neo4j.causalclustering.core.consensus.RaftMessages.InboundRaftMessageContainer;
 import com.neo4j.causalclustering.core.consensus.ReplicatedString;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
@@ -54,7 +54,7 @@ public class BatchingMessageHandlerTest
     private static final BatchingMessageHandler.Config BATCH_CONFIG = new BatchingMessageHandler.Config( 16, 256 );
     private final Instant now = Instant.now();
     @SuppressWarnings( "unchecked" )
-    private LifecycleMessageHandler<ReceivedDistributedRaftMessage<?>> downstreamHandler = mock( LifecycleMessageHandler.class );
+    private LifecycleMessageHandler<InboundRaftMessageContainer<?>> downstreamHandler = mock( LifecycleMessageHandler.class );
     private RaftId localRaftId = RaftIdFactory.random();
     private ContinuousJob mockJob = mock( ContinuousJob.class );
     private Function<Runnable,ContinuousJob> jobSchedulerFactory = ignored -> mockJob;
@@ -369,7 +369,7 @@ public class BatchingMessageHandlerTest
 
         // then
         verify( downstreamHandler, never() ).handle(
-                ArgumentMatchers.any( ReceivedDistributedRaftMessage.class ) );
+                ArgumentMatchers.any( InboundRaftMessageContainer.class ) );
         assertThat( logProvider ).forClass( BatchingMessageHandler.class ).forLevel( DEBUG )
                 .containsMessageWithArguments( "This handler has been stopped, dropping the message: %s", wrap( message ) );
     }
@@ -461,14 +461,14 @@ public class BatchingMessageHandlerTest
         Mockito.verify( mockJob ).stop();
     }
 
-    private ReceivedDistributedRaftMessage wrap( RaftMessage message )
+    private InboundRaftMessageContainer wrap( RaftMessage message )
     {
         return wrap( now, message );
     }
 
-    private ReceivedDistributedRaftMessage<?> wrap( Instant instant, RaftMessage message )
+    private InboundRaftMessageContainer<?> wrap( Instant instant, RaftMessage message )
     {
-        return ReceivedDistributedRaftMessage.of( instant, localRaftId, message );
+        return InboundRaftMessageContainer.of( instant, localRaftId, message );
     }
 
     private ReplicatedContent content( String content )

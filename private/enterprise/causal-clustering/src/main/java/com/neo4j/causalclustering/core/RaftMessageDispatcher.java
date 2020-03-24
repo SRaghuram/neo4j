@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core;
 
-import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedDistributedRaftMessage;
+import com.neo4j.causalclustering.core.consensus.RaftMessages.InboundRaftMessageContainer;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.Inbound.MessageHandler;
 
@@ -17,9 +17,9 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.CappedLogger;
 
-public class RaftMessageDispatcher implements MessageHandler<ReceivedDistributedRaftMessage<?>>
+public class RaftMessageDispatcher implements MessageHandler<InboundRaftMessageContainer<?>>
 {
-    private final Map<RaftId,MessageHandler<ReceivedDistributedRaftMessage<?>>> handlersById = new ConcurrentHashMap<>();
+    private final Map<RaftId,MessageHandler<InboundRaftMessageContainer<?>>> handlersById = new ConcurrentHashMap<>();
     private final CappedLogger log;
 
     RaftMessageDispatcher( LogProvider logProvider, Clock clock )
@@ -28,10 +28,10 @@ public class RaftMessageDispatcher implements MessageHandler<ReceivedDistributed
     }
 
     @Override
-    public void handle( ReceivedDistributedRaftMessage<?> message )
+    public void handle( InboundRaftMessageContainer<?> message )
     {
         RaftId id = message.raftId();
-        MessageHandler<ReceivedDistributedRaftMessage<?>> head = handlersById.get( id );
+        MessageHandler<InboundRaftMessageContainer<?>> head = handlersById.get( id );
         if ( head == null )
         {
             log.warn( "Unable to process message %s because handler for Raft ID %s is not installed", message, id );
@@ -42,9 +42,9 @@ public class RaftMessageDispatcher implements MessageHandler<ReceivedDistributed
         }
     }
 
-    void registerHandlerChain( RaftId id, MessageHandler<ReceivedDistributedRaftMessage<?>> head )
+    void registerHandlerChain( RaftId id, MessageHandler<InboundRaftMessageContainer<?>> head )
     {
-        MessageHandler<ReceivedDistributedRaftMessage<?>> existingHead = handlersById.putIfAbsent( id, head );
+        MessageHandler<InboundRaftMessageContainer<?>> existingHead = handlersById.putIfAbsent( id, head );
         if ( existingHead != null )
         {
             throw new IllegalArgumentException( "Handler chain for raft ID " + id + " is already registered" );

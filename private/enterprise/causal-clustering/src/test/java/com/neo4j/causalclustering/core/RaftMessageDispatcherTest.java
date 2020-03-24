@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.core;
 
+import com.neo4j.causalclustering.core.consensus.RaftMessages.InboundRaftMessageContainer;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
-import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedDistributedRaftMessage;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.messaging.Inbound.MessageHandler;
@@ -24,17 +24,17 @@ import static org.mockito.Mockito.verify;
 class RaftMessageDispatcherTest
 {
     private final RaftMessageDispatcher dispatcher = new RaftMessageDispatcher( NullLogProvider.getInstance(), Clock.systemUTC() );
-    private final MessageHandler<ReceivedDistributedRaftMessage<?>> handler = newHandlerMock();
-    private final MessageHandler<ReceivedDistributedRaftMessage<?>> otherHandler = newHandlerMock();
+    private final MessageHandler<InboundRaftMessageContainer<?>> handler = newHandlerMock();
+    private final MessageHandler<InboundRaftMessageContainer<?>> otherHandler = newHandlerMock();
 
     @Test
     void shouldDispatchToCorrectHandler()
     {
         RaftId id1 = newId();
-        ReceivedDistributedRaftMessage<RaftMessage> message1 = newMessage( id1 );
+        InboundRaftMessageContainer<RaftMessage> message1 = newMessage( id1 );
 
         RaftId id2 = newId();
-        ReceivedDistributedRaftMessage<RaftMessage> message2 = newMessage( id2 );
+        InboundRaftMessageContainer<RaftMessage> message2 = newMessage( id2 );
 
         dispatcher.registerHandlerChain( id1, handler );
         dispatcher.registerHandlerChain( id2, otherHandler );
@@ -54,7 +54,7 @@ class RaftMessageDispatcherTest
         RaftId knownId = newId();
         RaftId unknownId = newId();
         dispatcher.registerHandlerChain( knownId, handler );
-        ReceivedDistributedRaftMessage<RaftMessage> message = newMessage( unknownId );
+        InboundRaftMessageContainer<RaftMessage> message = newMessage( unknownId );
 
         dispatcher.handle( message );
 
@@ -66,7 +66,7 @@ class RaftMessageDispatcherTest
     {
         RaftId id = newId();
         dispatcher.registerHandlerChain( id, handler );
-        ReceivedDistributedRaftMessage<RaftMessage> message = newMessage( id );
+        InboundRaftMessageContainer<RaftMessage> message = newMessage( id );
 
         dispatcher.deregisterHandlerChain( id );
         dispatcher.handle( message );
@@ -75,7 +75,7 @@ class RaftMessageDispatcherTest
     }
 
     @SuppressWarnings( "unchecked" )
-    private static MessageHandler<ReceivedDistributedRaftMessage<?>> newHandlerMock()
+    private static MessageHandler<InboundRaftMessageContainer<?>> newHandlerMock()
     {
         return mock( MessageHandler.class );
     }
@@ -85,8 +85,8 @@ class RaftMessageDispatcherTest
         return RaftIdFactory.random();
     }
 
-    private static ReceivedDistributedRaftMessage<RaftMessage> newMessage( RaftId id )
+    private static InboundRaftMessageContainer<RaftMessage> newMessage( RaftId id )
     {
-        return ReceivedDistributedRaftMessage.of( Instant.now(), id, mock( RaftMessage.class ) );
+        return InboundRaftMessageContainer.of( Instant.now(), id, mock( RaftMessage.class ) );
     }
 }

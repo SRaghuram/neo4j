@@ -57,7 +57,8 @@ public class RaftMessageComposer extends MessageToMessageDecoder<Object>
         }
         if ( messageComposer != null )
         {
-            Optional<RaftMessages.DistributedRaftMessage> raftIdAwareMessage = messageComposer.maybeCompose( clock, raftLogEntryTerms, replicatedContents );
+            Optional<RaftMessages.InboundRaftMessageContainer> raftIdAwareMessage =
+                    messageComposer.maybeCompose( clock, raftLogEntryTerms, replicatedContents );
             raftIdAwareMessage.ifPresent( message ->
             {
                 clear( message );
@@ -66,14 +67,14 @@ public class RaftMessageComposer extends MessageToMessageDecoder<Object>
         }
     }
 
-    private void clear( RaftMessages.DistributedRaftMessage message )
+    private void clear( RaftMessages.InboundRaftMessageContainer message )
     {
         messageComposer = null;
         if ( !replicatedContents.isEmpty() || !raftLogEntryTerms.isEmpty() )
         {
             throw new IllegalStateException( String.format(
                     "Message [%s] was composed without using all resources in the pipeline. " +
-                            "Pipeline still contains Replicated contents[%s] and RaftLogEntryTerms [%s]",
+                    "Pipeline still contains Replicated contents[%s] and RaftLogEntryTerms [%s]",
                     message, stringify( replicatedContents ), stringify( raftLogEntryTerms ) ) );
         }
     }
