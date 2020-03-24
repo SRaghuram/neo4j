@@ -15,6 +15,7 @@ import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.io.File;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -82,6 +83,7 @@ public class ReadReplica implements ClusterMember
         config.set( GraphDatabaseSettings.record_format, recordFormat );
         config.set( GraphDatabaseSettings.pagecache_memory, "8m" );
         config.set( GraphDatabaseSettings.auth_store, new File( parentDir, "auth" ).toPath().toAbsolutePath() );
+        config.set( GraphDatabaseSettings.transaction_start_timeout, Duration.ZERO );
         config.setRaw( extraParams );
 
         Map<String,String> instanceExtras = new HashMap<>();

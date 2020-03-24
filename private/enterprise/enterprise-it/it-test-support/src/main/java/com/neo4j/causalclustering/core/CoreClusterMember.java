@@ -17,6 +17,7 @@ import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -127,6 +128,7 @@ public class CoreClusterMember implements ClusterMember
         config.set( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( listenAddress, backupPort ) );
         config.set( GraphDatabaseSettings.pagecache_memory, "8m" );
         config.set( GraphDatabaseSettings.auth_store, new File( parentDir, "auth" ).toPath().toAbsolutePath() );
+        config.set( GraphDatabaseSettings.transaction_start_timeout, Duration.ZERO );
         config.setRaw( extraParams );
 
         Map<String,String> instanceExtras = new HashMap<>();
