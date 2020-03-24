@@ -475,6 +475,53 @@
           ]
         }
       }
+    },
+    "MicroBenchmarkRunJobDefintionLargeJDK11": {
+      "Type": "AWS::Batch::JobDefinition",
+      "Properties": {
+        "JobDefinitionName": {
+          "Fn::Sub": "micro-benchmark-job-definition-oracle11-${STAGE}"
+        },
+        "Type": "container",
+        "ContainerProperties": {
+          "Image": {
+            "Ref": "ORACLE11WORKERIMAGE"
+          },
+          "Command": [
+            "/work/bootstrap-worker.sh",
+            "--worker-artifact-uri",
+            "Ref::--worker-artifact-uri",
+            "run-worker",
+            "--artifact-base-uri",
+            "Ref::--artifact-base-uri"
+          ],
+          "Volumes": [
+            {
+              "Host": {
+                "SourcePath": "/work"
+              },
+              "Name": "work"
+            }
+          ],
+          "MountPoints": [
+            {
+              "SourceVolume": "work",
+              "ContainerPath": "/work/run",
+              "ReadOnly": false
+            }
+          ],
+          "Privileged": true,
+          "Vcpus": 8,
+          "Memory": 63000,
+          "Ulimits": [
+            {
+              "Name": "nofile",
+              "SoftLimit": 280000,
+              "HardLimit": 280000
+            }
+          ]
+        }
+      }
     }
   },
   "Outputs": {
