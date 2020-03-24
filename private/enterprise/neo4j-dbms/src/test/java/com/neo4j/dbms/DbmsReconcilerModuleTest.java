@@ -117,7 +117,8 @@ class DbmsReconcilerModuleTest
     {
         // given
         var operator = new LocalDbmsOperator( idRepository );
-        var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), NullLogProvider.getInstance(), jobScheduler );
+        var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
+        var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), NullLogProvider.getInstance(), jobScheduler, transitionsTable );
         var waitingFinished = new CountDownLatch( 1 );
         var result = reconciler.reconcile( List.of( operator ), ReconcilerRequest.simple() );
 
