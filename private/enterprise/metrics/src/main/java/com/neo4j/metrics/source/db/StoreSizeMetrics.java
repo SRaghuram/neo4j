@@ -32,23 +32,28 @@ public class StoreSizeMetrics extends LifecycleAdapter
 
     private static final String PREFIX = "store.size";
 
-    @Documented( "The total size of the database store" )
+    @Documented( "The total size of the database and transaction logs" )
     private static final String TOTAL_STORE_SIZE = name( PREFIX, "total" );
+    @Documented( "The size of the database" )
+    private static final String DATABASE_SIZE = name( PREFIX, "database" );
 
     private final MetricRegistry registry;
     private final String totalStoreSize;
+    private final String databaseSize;
     private final JobScheduler scheduler;
     private final FileSystemAbstraction fileSystem;
     private final DatabaseLayout databaseLayout;
 
     private volatile JobHandle updateValuesHandle;
     private volatile long cachedStoreTotalSize = -1L;
+    private volatile long cachedDatabaseSize = -1L;
 
     public StoreSizeMetrics( String metricsPrefix, MetricRegistry registry, JobScheduler scheduler, FileSystemAbstraction fileSystemAbstraction,
             DatabaseLayout databaseLayout )
     {
         this.registry = registry;
         this.totalStoreSize = name( metricsPrefix, TOTAL_STORE_SIZE );
+        this.databaseSize = name( metricsPrefix, DATABASE_SIZE );
         this.scheduler = scheduler;
         this.fileSystem = fileSystemAbstraction;
         this.databaseLayout = databaseLayout;
@@ -62,11 +67,13 @@ public class StoreSizeMetrics extends LifecycleAdapter
             updateValuesHandle = scheduler.scheduleRecurring( Group.FILE_IO_HELPER, this::updateCachedValues, UPDATE_INTERVAL.toMillis(), MILLISECONDS );
         }
         registry.register( totalStoreSize, (Gauge<Long>) () -> cachedStoreTotalSize );
+        registry.register( databaseSize, (Gauge<Long>) () -> cachedDatabaseSize );
     }
 
     @Override
     public void stop()
     {
+        registry.remove( databaseSize );
         registry.remove( totalStoreSize );
 
         if ( updateValuesHandle != null )
@@ -78,7 +85,8 @@ public class StoreSizeMetrics extends LifecycleAdapter
 
     private void updateCachedValues()
     {
-      cachedStoreTotalSize = getSize( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory() );
+        cachedDatabaseSize = getSize( databaseLayout.databaseDirectory() );
+        cachedStoreTotalSize = cachedDatabaseSize + getSize( databaseLayout.getTransactionLogsDirectory() );
     }
 
     //Paths may overlap

@@ -83,6 +83,17 @@ class StoreSizeMetricsIT
     }
 
     @Test
+    void shouldMonitorDatabaseSizeForAllDatabases()
+    {
+        for ( String name : managementService.listDatabases() )
+        {
+            String msg = name + " store has some size at startup";
+            String metricsName = String.format( "neo4j.%s.store.size.database", name );
+            assertEventually( msg, () -> readLongGaugeValue( metricsCsv( metricsFolder, metricsName ) ), GREATER_THAN_ZERO, 1, MINUTES );
+        }
+    }
+
+    @Test
     void shouldGrowWhenAddingData() throws Exception
     {
         GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
