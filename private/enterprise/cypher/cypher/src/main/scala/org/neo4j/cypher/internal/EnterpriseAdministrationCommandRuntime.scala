@@ -582,7 +582,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       def isDefault(dbName: String) = dbName.equals(defaultDbName)
 
       val virtualKeys: Array[String] = Array(
-        nameKey,
         "status",
         "default",
         "uuid")
@@ -601,12 +600,12 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         val randomId = ThreadLocalRandom.current().nextLong()
         val storeVersion = Standard.LATEST_STORE_VERSION
         VirtualValues.map(
-          asInternalKeys(virtualKeys ++ Array("initialMembers", "creationTime", "randomId", "storeVersion")),
+          nameKey +: asInternalKeys(virtualKeys ++ Array("initialMembers", "creationTime", "randomId", "storeVersion")),
           virtualValues(params) ++ Array(Values.stringArray(initial: _*), Values.longValue(creation), Values.longValue(randomId), Values.utf8Value(storeVersion)))
       }
 
       def virtualMapStandaloneConverter(): MapValue => MapValue = params => {
-        VirtualValues.map(asInternalKeys(virtualKeys), virtualValues(params))
+        VirtualValues.map(nameKey +: asInternalKeys(virtualKeys), virtualValues(params))
       }
 
       val clusterProperties =
@@ -778,7 +777,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
   private def getResourcePart(resource: ActionResource, startOfErrorMessage: String, grantName: String, matchOrMerge: String, keys: Map[String, String]): (Value, Value, String) = resource match {
     case DatabaseResource() => (Values.NO_VALUE, Values.utf8Value(Resource.Type.DATABASE.toString), s"$matchOrMerge (res:Resource {type: $$${keys("resource")}})")
-    case PropertyResource(name) => (Values.utf8Value(name), Values.utf8Value(Resource.Type.PROPERTY.toString), s"$matchOrMerge (res:Resource {type: $$${keys("resource")}, arg1: $$${keys("property")})")
+    case PropertyResource(name) => (Values.utf8Value(name), Values.utf8Value(Resource.Type.PROPERTY.toString), s"$matchOrMerge (res:Resource {type: $$${keys("resource")}, arg1: $$${keys("property")}})")
     case NoResource() => (Values.NO_VALUE, Values.utf8Value(Resource.Type.GRAPH.toString), s"$matchOrMerge (res:Resource {type: $$${keys("resource")}})")
     case AllResource() => (Values.NO_VALUE, Values.utf8Value(Resource.Type.ALL_PROPERTIES.toString), s"$matchOrMerge (res:Resource {type: $$${keys("resource")}})") // The label is just for later printout of results
     case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege $grantName resource type $resource")
@@ -901,7 +900,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |
          |// Find the action connecting the resource and segment
          |$resourceMatch
-         |MATCH (res)<-[:APPLIES_TO]-(p:Privilege {action: $$${privilegeKeys("action")})-[:SCOPE]->(s)
+         |MATCH (res)<-[:APPLIES_TO]-(p:Privilege {action: $$${privilegeKeys("action")}})-[:SCOPE]->(s)
          |
          |// Find the privilege assignment connecting the role to the action
          |OPTIONAL MATCH (r:Role {name: $$$roleKey})
