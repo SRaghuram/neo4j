@@ -5,6 +5,7 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
@@ -1253,6 +1254,35 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
   test("Should support cartesian product with one ordered index and one other plan with no results") {
     executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (a:Awesome), (n:NoResults) WHERE a.prop1 > 40 RETURN a, n").toList should be(empty)
   }
+
+  test("Should keep order through correlated subquery with aggregation") {
+    restartWithConfig(databaseConfig() ++  Map(
+      GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(13),
+      GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(1024),
+    ))
+    val names = for (c <- 'a' to 'b'; i <- 0 until 100) yield {
+      val name = f"$c$i%03d"
+      val node = createLabeledNode(Map("name" -> name, "age" -> i), "Person")
+      name
+    }
+
+    graph.createIndex("Person", "name")
+    val query =
+      """MATCH (p:Person) WHERE p.name STARTS WITH ''
+        |CALL {
+        |  WITH p
+        |  MATCH (p)-->(f)
+        |  RETURN avg(f.age) AS a
+        |}
+        |RETURN p.name, a ORDER BY p.name
+        |""".stripMargin
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+    result.executionPlanDescription() should not(includeSomewhere.aPlan("Sort"))
+
+    val expected = names.map(name => Map("p.name" -> name, "a" -> null))
+    result.toList should equal(expected)
+  }
+
 
   // Some nodes which are suitable for CONTAINS and ENDS WITH testing
   private def createStringyNodes(tx: InternalTransaction) =
