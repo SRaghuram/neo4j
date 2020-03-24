@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.common;
 
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreEditionModule;
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
+import com.neo4j.causalclustering.core.TestCoreGraphDatabase;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
@@ -17,8 +17,8 @@ import com.neo4j.causalclustering.discovery.Topology;
 import com.neo4j.causalclustering.helper.ErrorHandler;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
+import com.neo4j.causalclustering.read_replica.TestReadReplicaGraphDatabase;
 import com.neo4j.causalclustering.readreplica.ReadReplicaEditionModule;
-import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 
 import java.io.File;
@@ -607,7 +607,7 @@ public class Cluster
                 listenAddress,
                 advertisedAddress,
                 ( Config config, GraphDatabaseDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory ) ->
-                        new CoreGraphDatabase( config, dependencies, discoveryServiceFactory, CoreEditionModule::new )
+                        new TestCoreGraphDatabase( config, dependencies, discoveryServiceFactory, CoreEditionModule::new )
         );
     }
 
@@ -641,7 +641,7 @@ public class Cluster
                 advertisedAddress,
                 listenAddress,
                 ( Config config, GraphDatabaseDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId ) ->
-                        new ReadReplicaGraphDatabase( config, dependencies, discoveryServiceFactory, memberId, ReadReplicaEditionModule::new )
+                        new TestReadReplicaGraphDatabase( config, dependencies, discoveryServiceFactory, memberId, ReadReplicaEditionModule::new )
         );
     }
 

@@ -10,14 +10,12 @@ import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.UUID;
-import java.util.function.Function;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
-import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 
 public class ReadReplicaGraphDatabase
@@ -38,9 +36,15 @@ public class ReadReplicaGraphDatabase
     public ReadReplicaGraphDatabase( Config config, ExternalDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId,
             ReadReplicaEditionModuleFactory editionModuleFactory )
     {
-        Function<GlobalModule,AbstractEditionModule> factory =
-                globalModule -> editionModuleFactory.create( globalModule, discoveryServiceFactory, memberId );
-        managementService = new DatabaseManagementServiceFactory( DatabaseInfo.READ_REPLICA, factory ).build( config, dependencies );
+        managementService = createManagementService( config, dependencies, discoveryServiceFactory, memberId, editionModuleFactory );
+    }
+
+    protected DatabaseManagementService createManagementService( Config config, ExternalDependencies dependencies,
+            DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId, ReadReplicaEditionModuleFactory editionModuleFactory )
+    {
+        return new DatabaseManagementServiceFactory( DatabaseInfo.READ_REPLICA,
+                globalModule -> editionModuleFactory.create( globalModule, discoveryServiceFactory, memberId ) )
+                .build( config, dependencies );
     }
 
     public DatabaseManagementService getManagementService()

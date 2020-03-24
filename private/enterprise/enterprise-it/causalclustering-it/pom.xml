@@ -18,6 +18,9 @@
     <properties>
         <moduleName>com.neo4j.enterprise.causalclustering.it</moduleName>
         <ThreadLeakageGuardExtension.PRINT_ONLY>true</ThreadLeakageGuardExtension.PRINT_ONLY>
+        <test.runner.jvm.settings.additional>
+            -Dcom.neo4j.causalclustering.common.TestClusterFileSystem.FORCE=false
+        </test.runner.jvm.settings.additional>
     </properties>
 
     <scm>

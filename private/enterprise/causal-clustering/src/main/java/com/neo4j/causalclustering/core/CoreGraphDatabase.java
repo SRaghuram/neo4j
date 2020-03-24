@@ -27,7 +27,13 @@ public class CoreGraphDatabase
     public CoreGraphDatabase( Config config, ExternalDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory,
             CoreEditionModuleFactory editionModuleFactory )
     {
-        managementService = new DatabaseManagementServiceFactory( DatabaseInfo.CORE,
+        managementService = createManagementService( config, dependencies, discoveryServiceFactory, editionModuleFactory );
+    }
+
+    protected DatabaseManagementService createManagementService( Config config, ExternalDependencies dependencies,
+            DiscoveryServiceFactory discoveryServiceFactory, CoreEditionModuleFactory editionModuleFactory )
+    {
+        return new DatabaseManagementServiceFactory( DatabaseInfo.CORE,
                 globalModule -> editionModuleFactory.create( globalModule, discoveryServiceFactory ) )
                 .build( config, dependencies );
     }
