@@ -445,6 +445,30 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiled, params(mapValue)) should equal(Values.TRUE)
   }
 
+  test("exists on container index") {
+    val compiled = compile(function("exists", containerIndex(parameter(0), parameter(1))))
+    val node = nodeValue(VirtualValues.map(Array("prop"), Array(stringValue("hello"))))
+    val rel = relationshipValue(VirtualValues.map(Array("prop"), Array(stringValue("hello"))))
+    val mapValue = VirtualValues.map(Array("prop"), Array(stringValue("hello")))
+
+    //NO_VALUE
+    evaluate(compiled,params(NO_VALUE, NO_VALUE)) should equal(NO_VALUE)
+    evaluate(compiled,params(node, NO_VALUE)) should equal(NO_VALUE)
+    evaluate(compiled,params(NO_VALUE, stringValue("prop"))) should equal(NO_VALUE)
+
+    //nodes
+    evaluate(compiled,params(node, stringValue("prop"))) should equal(TRUE)
+    evaluate(compiled,params(node, stringValue("wut!?"))) should equal(FALSE)
+
+    //relationships
+    evaluate(compiled,params(rel, stringValue("prop"))) should equal(TRUE)
+    evaluate(compiled,params(rel, stringValue("wut!?"))) should equal(FALSE)
+
+    //maps
+    evaluate(compiled,params(mapValue, stringValue("prop"))) should equal(TRUE)
+    evaluate(compiled,params(mapValue, stringValue("wut!?"))) should equal(FALSE)
+  }
+
   test("head function") {
     val compiled = compile(function("head", parameter(0)))
     val listValue = list(stringValue("hello"), intValue(42))
