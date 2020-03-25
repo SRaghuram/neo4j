@@ -196,14 +196,9 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldNotCreateUserIfInvalidUsername()
     {
-        assertSystemCommandFail( adminSubject, "CALL dbms.security.createUser(null, '1234', true)",
-                "The provided username is empty." );
-        assertSystemCommandFail( adminSubject, "CALL dbms.security.createUser('', '1234', true)",
-                "The provided username is empty." );
-        assertSystemCommandFail( adminSubject, "CALL dbms.security.createUser(',ss!', '1234', true)",
-                "Username ',ss!' contains illegal characters." );
-        assertSystemCommandFail( adminSubject, "CALL dbms.security.createUser(',ss!', '', true)",
-                "Username ',ss!' contains illegal characters." );
+        assertSystemCommandFail( adminSubject, "CALL dbms.security.createUser(null, '1234', true)", "The provided username is empty." );
+        assertSystemCommandFail( adminSubject, "CALL dbms.security.createUser('', '1234', true)", "The provided username is empty." );
+        assertSystemCommandFail( adminSubject, "CALL dbms.security.createUser(',ss!', '1234', true)", "Username ',ss!' contains illegal characters." );
     }
 
     @Test
