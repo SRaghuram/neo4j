@@ -106,6 +106,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
                 if ( forwardPointerPointsToDense( data.forwardPointer ) )
                 {
                     denseProperties = relCursor.denseProperties();
+                    dereferenceData(); // dereference right away, because we won't be needing that data anymore
                 }
                 else
                 {
@@ -169,37 +170,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
             initializedFromEntity = false;
             if ( hasReferenceToLoad )
             {
-                FrekiReference reference = referenceToLoad;
-                referenceToLoad = null;
-
-                boolean inUse = load( reference.sourceNodeId );
-                if ( !inUse )
-                {
-                    return false;
-                }
-
-                if ( reference.relationship )
-                {
-                    if ( forwardPointerPointsToDense( data.forwardPointer ) )
-                    {
-                        DenseRelationshipStore.RelationshipData denseRelationship =
-                                stores.denseStore.getRelationship( reference.sourceNodeId, reference.type, Direction.OUTGOING, reference.endNodeId,
-                                        reference.internalId, cursorTracer );
-                        denseProperties = denseRelationship != null ? denseRelationship.properties() : emptyIterator();
-                        return nextDense();
-                    }
-                    buffer = data.relationshipBuffer();
-                    if ( !placeAtRelationshipPropertiesOffset( buffer, reference ) )
-                    {
-                        return false;
-                    }
-                }
-                else
-                {
-                    // This is properties for a node
-                    buffer = data.propertyBuffer();
-                }
-                if ( !readPropertyKeys( buffer ) )
+                if ( !loadReference() )
                 {
                     return false;
                 }
@@ -209,17 +180,59 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
             if ( propertyKeyIndex >= propertyKeyArray.length )
             {
                 propertyKeyIndex = -1;
+            }
+            else
+            {
+                if ( readValue == null && propertyKeyIndex > 0 )
+                {
+                    // We didn't read the value, which means we'll have to figure out the position of the next value ourselves right here
+                    nextValuePosition += calculatePropertyValueSizeIncludingTypeHeader( buffer.position( nextValuePosition ) );
+                }
+                readValue = null;
+                return true;
+            }
+        }
+        dereferenceData();
+        return false;
+    }
+
+    public boolean loadReference()
+    {
+        FrekiReference reference = referenceToLoad;
+        referenceToLoad = null;
+
+        boolean inUse = load( reference.sourceNodeId );
+        if ( !inUse )
+        {
+            return false;
+        }
+
+        if ( reference.relationship )
+        {
+            if ( forwardPointerPointsToDense( data.forwardPointer ) )
+            {
+                DenseRelationshipStore.RelationshipData denseRelationship =
+                        stores.denseStore.getRelationship( reference.sourceNodeId, reference.type, Direction.OUTGOING, reference.endNodeId,
+                                reference.internalId, cursorTracer );
+                denseProperties = denseRelationship != null ? denseRelationship.properties() : emptyIterator();
+                return nextDense();
+            }
+            buffer = data.relationshipBuffer();
+            if ( !placeAtRelationshipPropertiesOffset( buffer, reference ) )
+            {
                 return false;
             }
-            if ( readValue == null && propertyKeyIndex > 0 )
-            {
-                // We didn't read the value, which means we'll have to figure out the position of the next value ourselves right here
-                nextValuePosition += calculatePropertyValueSizeIncludingTypeHeader( buffer.position( nextValuePosition ) );
-            }
-            readValue = null;
-            return true;
         }
-        return false;
+        else
+        {
+            // This is properties for a node
+            buffer = data.propertyBuffer();
+        }
+        if ( !readPropertyKeys( buffer ) )
+        {
+            return false;
+        }
+        return true;
     }
 
     public boolean nextDense()
