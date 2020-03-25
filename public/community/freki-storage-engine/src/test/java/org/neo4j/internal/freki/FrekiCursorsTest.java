@@ -68,7 +68,8 @@ abstract class FrekiCursorsTest
     InMemoryTestStore store = new InMemoryTestStore( 0 );
     InMemoryTestStore largeStore = new InMemoryTestStore( 3 );
     MainStores stores = new MainStores( new SimpleStore[]{store, null, null, largeStore}, new InMemoryBigValueTestStore(), null );
-    FrekiCursorFactory cursorFactory = new FrekiCursorFactory( stores, CursorAccessPatternTracer.NO_TRACING );
+    SingleThreadedCursorAccessPatternTracer accessPatternTracer = new SingleThreadedCursorAccessPatternTracer();
+    FrekiCursorFactory cursorFactory = new FrekiCursorFactory( stores, accessPatternTracer );
 
     static long[] toLongArray( int[] labelIds )
     {
@@ -163,12 +164,28 @@ abstract class FrekiCursorsTest
             return this;
         }
 
-        long relationship( int type, Node otherNode )
+        Node relationship( int type, Node otherNode )
         {
             return relationship( type, otherNode, IntObjectMaps.immutable.empty() );
         }
 
-        long relationship( int type, Node otherNode, IntObjectMap<Value> properties )
+        Node relationship( int type, Node otherNode, IntObjectMap<Value> properties )
+        {
+            createRelationship( type, otherNode, properties );
+            return this;
+        }
+
+        long relationshipAndReturnItsId( int type, Node otherNode )
+        {
+            return relationshipAndReturnItsId( type, otherNode, IntObjectMaps.immutable.empty() );
+        }
+
+        long relationshipAndReturnItsId( int type, Node otherNode, IntObjectMap<Value> properties )
+        {
+            return createRelationship( type, otherNode, properties );
+        }
+
+        private long createRelationship( int type, Node otherNode, IntObjectMap<Value> properties )
         {
             long internalId = nextInternalId++;
             Collection<StorageProperty> addedProperties = convertPropertiesMap( properties );

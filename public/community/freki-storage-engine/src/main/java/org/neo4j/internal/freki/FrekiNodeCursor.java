@@ -217,7 +217,6 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
         else if ( singleId != NULL )
         {
             boolean loaded = load( singleId );
-            cursorAccessTracer.registerNode( singleId );
             singleId = NULL;
             return loaded;
         }

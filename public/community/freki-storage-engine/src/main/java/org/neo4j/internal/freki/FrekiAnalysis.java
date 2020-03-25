@@ -333,7 +333,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         // - TODO Avg size of big value
     }
 
-    private static double percent( long part, long whole )
+    static double percent( long part, long whole )
     {
         return 100D * part / whole;
     }
