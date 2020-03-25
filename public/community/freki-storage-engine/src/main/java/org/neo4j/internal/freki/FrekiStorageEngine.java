@@ -131,6 +131,12 @@ public class FrekiStorageEngine extends Life implements StorageEngine
     }
 
     @Override
+    public void addRelationshipTypeUpdateListener( EntityTokenUpdateListener entityTokenUpdateListener )
+    {
+        // TODO implement
+    }
+
+    @Override
     public void createCommands( Collection<StorageCommand> target, ReadableTransactionState state, StorageReader storageReader,
             CommandCreationContext creationContext, ResourceLocker locks, long lastTransactionIdWhenStarted, TxStateVisitor.Decorator additionalTxStateVisitor,
             PageCursorTracer cursorTracer )
