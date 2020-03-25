@@ -146,16 +146,16 @@ public enum Reference
         return max;
     }
 
-    public static long decode( PageCursor source )
+    public static long decode( PageCursor cursor )
     {
-        // Dear future maintainers, this code is a little complicated so I'm going to take some time and explain it to
-        // you. Make sure you have some coffee ready.
+        // Dear future maintainers, this code is a little complicated, so I'm going to take some time and explain it
+        // to you. Make sure you have some coffee ready.
         //
         // Before we start, I have one plea: Please don't extract the constants out of this function. It is easier to
-        // make sense of them when they are embedded within the context of the code. Also, while some of the constants
+        // make sense of them when they are embedded within the context of the code. Also, while some constants
         // have the same value, they might change for different reasons, so let's just keep them inlined.
         //
-        // The code is easier to read when it's all together, so I'll keep the code and the comment separate, and make
+        // The code is easier to read when it's all together, so I'll keep the code, and the comment separate, and make
         // the comment refer to the code with <N> marks.
         //
         // <1>
@@ -166,8 +166,8 @@ public enum Reference
         //
         // <2>
         // The header determines how many bytes go into the reference. These are the size marks. If the first bit of
-        // the header is zero, then we have zero size marks and the reference takes up 3 bytes. If the header starts
-        // with the bits 10, then we have one size mark and the reference takes up 4 bytes. We can have up to 5 size
+        // the header is zero, then we have zero size marks, and the reference takes up 3 bytes. If the header starts
+        // with the bits 10, then we have one size mark, and the reference takes up 4 bytes. We can have up to 5 size
         // marks, where the last two options are 11110 for a 7 byte reference, and 11111 for an 8 byte reference.
         // We count the size marks as follows:
         //  1. First extract the 5 high-bits. 0xF8 is 11111000, so xxxx_xxxx & 0xF8 => xxxx_x000.
@@ -205,27 +205,27 @@ public enum Reference
         // up 16 places to make room for the next two bytes of payload.
         //
         // <6>
-        // Then we read the next two bytes (with unsigned mask) and save for the sign-component manipulation, we now
-        // have a complete 3-byte reference.
+        // Then we read the next two bytes (with the unsigned mask) and save for the sign-component manipulation,
+        // we now have a complete 3-byte reference.
         //
         // <7>
         // The size marks determines how many more bytes the reference takes up, so we loop through them and shift the
         // register up 8 places every time, and add in the next byte with an unsigned mask.
         //
         // <8>
-        // Finally XOR the register with the sign component and we have our final value.
+        // Finally XOR the register with the sign component, and we have our final value.
 
-        int header = source.getByte() & 0xFF; // <1>
+        int header = cursor.getByte() & 0xFF; // <1>
         int sizeMarks = Integer.numberOfLeadingZeros( (~(header & 0xF8)) & 0xFF ) - 24; // <2>
         int signShift = 8 - sizeMarks - (sizeMarks == 5 ? 1 : 2); // <3>
         long signComponent = ~((header >>> signShift) & 1) + 1; // <4>
         long register = (header & ((1 << signShift) - 1)) << 16; // <5>
-        register += ((source.getByte() & 0xFF) << 8) + (source.getByte() & 0xFF); // <6>
+        register += ((cursor.getByte() & 0xFF) << 8) + (cursor.getByte() & 0xFF); // <6>
 
         while ( sizeMarks > 0 ) // <7>
         {
             register <<= 8;
-            register += source.getByte() & 0xFF;
+            register += cursor.getByte() & 0xFF;
             sizeMarks--;
         }
 
