@@ -7,7 +7,8 @@ package com.neo4j.internal.recordstorage;
 
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import org.eclipse.collections.api.factory.Sets;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,21 +39,23 @@ class HighLimitRecordRelationshipTraversalCursorTest extends RecordRelationshipT
         return HighLimit.RECORD_FORMATS;
     }
 
-    @Test
-    void mustThrowOnOutOfBoundsWhenRetrievingChainWithUnusedLink() throws IOException
+    @ParameterizedTest
+    @ValueSource( booleans = { true, false } )
+    void mustThrowOnOutOfBoundsWhenRetrievingChainWithUnusedLink( boolean dense ) throws IOException
     {
         RelationshipStore store = neoStores.getRelationshipStore();
-        int recordsPerPage = store.getRecordsPerPage() - 1;
-        store.setHighestPossibleIdInUse( recordsPerPage );
-        createRelationshipStructure( false, homogenousRelationships( recordsPerPage, TYPE1, RelationshipDirection.LOOP ) );
+        int recordsPerPage = store.getRecordsPerPage();
+        createRelationshipStructure( dense, homogenousRelationships( recordsPerPage, TYPE1, RelationshipDirection.LOOP ) );
+        int maxRecordId = recordsPerPage - 1;
+        store.setHighestPossibleIdInUse( maxRecordId );
         File storageFile = store.getStorageFile();
-        unUseRecord( recordsPerPage );
+        unUseRecord( maxRecordId );
 
         // Sabotage the last record in the page, so that reading it will go out of bounds on the page.
         try ( PagedFile pagedFile = pageCache.map( storageFile, 0, Sets.immutable.of( PageCacheOpenOptions.ANY_PAGE_SIZE ) );
               PageCursor cursor = pagedFile.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, PageCursorTracer.NULL ) )
         {
-            int offset = store.getRecordSize() * recordsPerPage;
+            int offset = store.getRecordSize() * maxRecordId;
             assertTrue( cursor.next() );
             cursor.setOffset( offset + 1 );
             do
@@ -62,7 +65,7 @@ class HighLimitRecordRelationshipTraversalCursorTest extends RecordRelationshipT
             while ( cursor.getOffset() < cursor.getCurrentPageSize() - 1 );
         }
 
-        int[] expectedRelationshipIds = new int[recordsPerPage - 1];
+        int[] expectedRelationshipIds = new int[maxRecordId - 1];
         for ( int i = 0; i < expectedRelationshipIds.length; i++ )
         {
             expectedRelationshipIds[i] = i + 1;
