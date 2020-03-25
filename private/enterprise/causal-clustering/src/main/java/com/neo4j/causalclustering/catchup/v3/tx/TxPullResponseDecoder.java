@@ -33,6 +33,7 @@ public class TxPullResponseDecoder extends ByteToMessageDecoder
     public TxPullResponseDecoder( CommandReaderFactory commandReaderFactory )
     {
         reader = new VersionAwareLogEntryReader( commandReaderFactory );
+        setCumulator( COMPOSITE_CUMULATOR );
     }
 
     @Override
