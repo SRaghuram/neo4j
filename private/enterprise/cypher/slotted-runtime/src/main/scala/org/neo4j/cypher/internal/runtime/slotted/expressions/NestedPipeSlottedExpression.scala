@@ -28,7 +28,8 @@ case class NestedPipeSlottedExpression(pipe: Pipe,
 
   override def apply(row: ReadableRow, state: QueryState): AnyValue = {
     val initialContext: SlottedRow = createInitialContext(row, state)
-    val innerState = state.withInitialContext(initialContext).withDecorator(state.decorator.innerDecorator(owningPipe))
+    val innerState = state.withInitialContext(initialContext)
+                          .withDecorator(state.decorator.innerDecorator(owningPipe.id))
 
     val results = pipe.createResults(innerState)
     val all = ListValueBuilder.newListBuilder()
