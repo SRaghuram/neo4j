@@ -28,7 +28,6 @@ import org.neo4j.io.IOUtils;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.NodePropertyAccessor;
 import org.neo4j.values.storable.Value;
-import org.neo4j.values.storable.Values;
 
 /**
  * Generic single-threaded {@link NodePropertyAccessor} given a {@link NodeCursor} and {@link PropertyCursor}.
@@ -62,6 +61,6 @@ class CursorPropertyAccessor implements NodePropertyAccessor, AutoCloseable
         }
 
         nodeCursor.properties( propertyCursor );
-        return propertyCursor.seekProperty( propertyKeyId ) ? propertyCursor.propertyValue() : Values.NO_VALUE;
+        return propertyCursor.seekPropertyValue( propertyKeyId );
     }
 }

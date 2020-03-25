@@ -36,6 +36,7 @@ import org.neo4j.values.storable.ValueGroup;
 
 import static org.neo4j.kernel.impl.newapi.Read.NO_ID;
 import static org.neo4j.token.api.TokenConstants.NO_TOKEN;
+import static org.neo4j.values.storable.Values.NO_VALUE;
 
 public class DefaultPropertyCursor extends TraceableCursor implements PropertyCursor, Supplier<TokenSet>, IntSupplier
 {
@@ -268,6 +269,28 @@ public class DefaultPropertyCursor extends TraceableCursor implements PropertyCu
         {
             return false;
         }
+        boolean found = seekToProperty( property );
+        storeCursor.reset();
+        return found;
+    }
+
+    @Override
+    public Value seekPropertyValue( int property )
+    {
+        if ( property != NO_TOKEN  )
+        {
+            if ( seekToProperty( property ) )
+            {
+                Value value = propertyValue();
+                storeCursor.reset();
+                return value;
+            }
+        }
+        return NO_VALUE;
+    }
+
+    private boolean seekToProperty( int property )
+    {
         while ( next() )
         {
             if ( property == this.propertyKey() )
