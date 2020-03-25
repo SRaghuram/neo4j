@@ -28,6 +28,8 @@ import org.neo4j.token.api.TokenConstants;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
 
+import static org.neo4j.values.storable.Values.NO_VALUE;
+
 public class StubPropertyCursor extends DefaultCloseListenable implements PropertyCursor
 {
     private int offset = -1;
@@ -60,7 +62,6 @@ public class StubPropertyCursor extends DefaultCloseListenable implements Proper
     @Override
     public void closeInternal()
     {
-
     }
 
     @Override
@@ -102,6 +103,12 @@ public class StubPropertyCursor extends DefaultCloseListenable implements Proper
             }
         }
         return false;
+    }
+
+    @Override
+    public Value seekPropertyValue( int property )
+    {
+        return seekProperty( property ) ? propertyValue() : NO_VALUE;
     }
 
     @Override

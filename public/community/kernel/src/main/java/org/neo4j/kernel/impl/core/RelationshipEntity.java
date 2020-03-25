@@ -48,11 +48,13 @@ import org.neo4j.internal.kernel.api.exceptions.schema.TokenCapacityExceededKern
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.storageengine.api.RelationshipVisitor;
+import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
 import static java.lang.String.format;
 import static org.neo4j.internal.kernel.api.Read.NO_ID;
 import static org.neo4j.memory.HeapEstimator.shallowSizeOfInstance;
+import static org.neo4j.values.storable.Values.NO_VALUE;
 
 public class RelationshipEntity implements Relationship, RelationshipVisitor<RuntimeException>
 {
@@ -360,12 +362,12 @@ public class RelationshipEntity implements Relationship, RelationshipVisitor<Run
         }
 
         PropertyCursor properties = initializePropertyCursor( transaction );
-        TokenRead token = transaction.tokenRead();
-        if ( !properties.seekProperty( propertyKey ) )
+        Value value = properties.seekPropertyValue( propertyKey );
+        if ( value == NO_VALUE )
         {
             throw new NotFoundException( format( "No such property, '%s'.", key ) );
         }
-        return properties.propertyValue().asObjectCopy();
+        return value.asObjectCopy();
     }
 
     @Override
@@ -383,7 +385,8 @@ public class RelationshipEntity implements Relationship, RelationshipVisitor<Run
         }
 
         PropertyCursor properties = initializePropertyCursor( transaction );
-        return properties.seekProperty( propertyKey ) ? properties.propertyValue().asObjectCopy() : defaultValue;
+        Value value = properties.seekPropertyValue( propertyKey );
+        return value == NO_VALUE ? defaultValue : value.asObjectCopy();
     }
 
     @Override

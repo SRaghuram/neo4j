@@ -25,10 +25,8 @@ import org.neo4j.codegen.api.IntermediateRepresentation.isNull
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
-import org.neo4j.codegen.api.IntermediateRepresentation.noValue
 import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
-import org.neo4j.codegen.api.IntermediateRepresentation.ternary
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
@@ -825,9 +823,7 @@ case class NodeCursorRepresentation(target: IntermediateRepresentation) extends 
   override def getProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation = {
     block(
       invokeSideEffect(target, method[NodeCursor, Unit, PropertyCursor]("properties"), ExpressionCompilation.PROPERTY_CURSOR),
-      ternary(invoke(ExpressionCompilation.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken),
-        invoke( ExpressionCompilation.PROPERTY_CURSOR, method[PropertyCursor, Value]("propertyValue")),
-        noValue)
+      invoke(ExpressionCompilation.PROPERTY_CURSOR, method[PropertyCursor, Value, Int]("seekPropertyValue"), propertyToken)
     )
   }
 
@@ -885,9 +881,7 @@ case class RelationshipCursorRepresentation(target: IntermediateRepresentation) 
     block(
       invokeSideEffect(target, method[RelationshipTraversalCursor, Unit, PropertyCursor]("properties"),
         ExpressionCompilation.PROPERTY_CURSOR),
-      ternary(invoke(ExpressionCompilation.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken),
-        invoke( ExpressionCompilation.PROPERTY_CURSOR, method[PropertyCursor, Value]("propertyValue")),
-        noValue)
+      invoke(ExpressionCompilation.PROPERTY_CURSOR, method[PropertyCursor, Value, Int]("seekPropertyValue"), propertyToken)
     )
   }
 

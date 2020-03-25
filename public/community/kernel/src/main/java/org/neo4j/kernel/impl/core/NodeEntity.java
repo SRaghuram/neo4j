@@ -56,6 +56,7 @@ import org.neo4j.internal.kernel.api.helpers.RelationshipFactory;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.storageengine.api.Degrees;
+import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
 import static java.lang.String.format;
@@ -68,6 +69,7 @@ import static org.neo4j.kernel.api.StatementConstants.NO_SUCH_LABEL;
 import static org.neo4j.kernel.api.StatementConstants.NO_SUCH_RELATIONSHIP_TYPE;
 import static org.neo4j.memory.HeapEstimator.shallowSizeOfInstance;
 import static org.neo4j.storageengine.api.RelationshipSelection.ALL_RELATIONSHIPS;
+import static org.neo4j.values.storable.Values.NO_VALUE;
 
 public class NodeEntity implements Node, RelationshipFactory<Relationship>
 {
@@ -314,7 +316,8 @@ public class NodeEntity implements Node, RelationshipFactory<Relationship>
         singleNode( transaction, nodes );
         nodes.properties( properties );
 
-        return properties.seekProperty( propertyKey ) ? properties.propertyValue().asObjectCopy() : defaultValue;
+        Value value = properties.seekPropertyValue( propertyKey );// ? properties.propertyValue().asObjectCopy() : defaultValue;
+        return value == NO_VALUE ? defaultValue : value.asObjectCopy();
     }
 
     @Override
@@ -437,11 +440,12 @@ public class NodeEntity implements Node, RelationshipFactory<Relationship>
         PropertyCursor properties = transaction.ambientPropertyCursor();
         singleNode( transaction, nodes );
         nodes.properties( properties );
-        if ( !properties.seekProperty( propertyKey ) )
+        Value value = properties.seekPropertyValue( propertyKey );
+        if ( value == NO_VALUE )
         {
             throw new NotFoundException( format( "No such property, '%s'.", key ) );
         }
-        return properties.propertyValue().asObjectCopy();
+        return value.asObjectCopy();
     }
 
     @Override
