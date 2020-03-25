@@ -751,7 +751,7 @@ object LdbcQueries {
 
     def expectedResult = List(Map("tagName" -> "tag2-ᚠさ丵פش", "postCount" -> 2), Map("tagName" -> "tag5-ᚠさ丵פش", "postCount" -> 2), Map("tagName" -> "tag1-ᚠさ丵פش", "postCount" -> 1))
 
-    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlotted
+    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndPipelined
 
   }
 
@@ -1303,8 +1303,7 @@ object LdbcQueries {
       Map("friendLastName" -> "one one-ᚠさ丵פش", "friendId" -> 11, "companyName" -> "company zero",
         "friendFirstName" -> "friend friend", "workFromYear" -> 3))
 
-    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlotted
-    //Pipelined does not yet support `CartesianProduct if the LHS has a provided order`
+    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndPipelined
 
   }
 
