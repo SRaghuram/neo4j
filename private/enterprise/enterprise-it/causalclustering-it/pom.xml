@@ -43,7 +43,7 @@
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <configuration>
                     <!-- ITs typically do not use all that much CPU, so a high fork count should be fine. -->
-                    <forkCount>8</forkCount>
+                    <forkCount>6</forkCount>
                     <!-- When issues happen, we want as much information as possible. -->
                     <trimStackTrace>false</trimStackTrace>
                     <!-- Fork creation should have a relatively minor impact compared to test run times. Robustness is thus preferred. -->
