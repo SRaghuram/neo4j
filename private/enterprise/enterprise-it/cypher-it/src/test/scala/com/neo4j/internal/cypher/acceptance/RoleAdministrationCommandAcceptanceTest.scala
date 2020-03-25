@@ -321,7 +321,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       """Role name 'my%role' contains illegal characters.
         |Use simple ascii characters, numbers and underscores.""".stripMargin
 
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
+    execute("SHOW ROLES").toSet should be(defaultRoles)
   }
 
   test("should create role from existing role") {
@@ -443,7 +443,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message "Failed to create a role as copy of 'foo': Role does not exist."
 
     // THEN
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
+    execute("SHOW ROLES").toSet should be(defaultRoles)
 
     the[InvalidArgumentsException] thrownBy {
       // WHEN
@@ -452,7 +452,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message "Failed to create a role as copy of 'foo': Role does not exist."
 
     // THEN
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
+    execute("SHOW ROLES").toSet should be(defaultRoles)
 
     // and an invalid (non-existing) one
     the[InvalidArgumentsException] thrownBy {
@@ -462,7 +462,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     } should have message "Failed to create a role as copy of '': Role does not exist."
 
     // THEN
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
+    execute("SHOW ROLES").toSet should be(defaultRoles)
   }
 
   test("should fail when creating role with invalid name from role") {
@@ -616,7 +616,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // WHEN
     execute("DROP ROLE foo")
 
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
+    execute("SHOW ROLES").toSet should be(defaultRoles)
   }
 
   test("should drop role with parameter") {
@@ -628,7 +628,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // WHEN
     execute("DROP ROLE $role", Map("role" -> "foo"))
 
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
+    execute("SHOW ROLES").toSet should be(defaultRoles)
   }
 
   test("should not drop role with reserved name") {
@@ -666,7 +666,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // WHEN
     execute(s"DROP ROLE $$$PUBLIC", Map(PUBLIC -> "foo"))
 
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
+    execute("SHOW ROLES").toSet should be(defaultRoles)
   }
 
   test("should drop existing role using if exists") {
@@ -679,7 +679,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("DROP ROLE foo IF EXISTS")
 
     // THEN
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
+    execute("SHOW ROLES").toSet should be(defaultRoles)
   }
 
   test("should drop built-in role") {
