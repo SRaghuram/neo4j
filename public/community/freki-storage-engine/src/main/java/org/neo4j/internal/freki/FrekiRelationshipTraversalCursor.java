@@ -201,6 +201,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
                 sparseGoToNextType();
             }
         }
+        dereferenceData();
         return false;
     }
 
@@ -208,13 +209,6 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     {
         currentTypeIndex++;
         currentTypeRelationshipIndex = -1;
-
-        // TODO why was this ever needed?
-//        if ( currentTypePropertiesIndex >= 0 && currentTypeIndex < relationshipTypesInNode.length )
-//        {
-//            //Skipping the properties
-//            data.position( relationshipTypeOffset( currentTypeIndex ) );
-//        }
     }
 
     private boolean sparseNextFromCurrentType()

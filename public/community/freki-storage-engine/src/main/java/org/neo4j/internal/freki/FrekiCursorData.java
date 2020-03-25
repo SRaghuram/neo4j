@@ -31,7 +31,9 @@ import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerToStr
  */
 class FrekiCursorData
 {
-    long nodeId;
+    Record[] records;
+
+    long nodeId = NULL;
     boolean x1Loaded;
     long forwardPointer = NULL;
     boolean xLLoaded;
@@ -44,6 +46,13 @@ class FrekiCursorData
     int relationshipOffset;
     private ByteBuffer relationshipBuffer;
     int endOffset;
+
+    int refCount = 1;
+
+    FrekiCursorData( int numMainStores )
+    {
+        this.records = new Record[numMainStores];
+    }
 
     void assignLabelOffset( int offset, ByteBuffer buffer )
     {
@@ -105,6 +114,20 @@ class FrekiCursorData
     boolean isLoaded()
     {
         return x1Loaded || xLLoaded;
+    }
+
+    void reset()
+    {
+        assert refCount == 1;
+        nodeId = NULL;
+        x1Loaded = false;
+        forwardPointer = NULL;
+        xLLoaded = false;
+        backwardPointer = NULL;
+        labelOffset = 0;
+        propertyOffset = 0;
+        relationshipOffset = 0;
+        endOffset = 0;
     }
 
     @Override

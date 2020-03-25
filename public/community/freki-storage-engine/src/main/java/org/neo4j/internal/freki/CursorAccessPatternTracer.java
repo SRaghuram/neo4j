@@ -35,6 +35,7 @@ import java.util.stream.Stream;
 import org.neo4j.util.FeatureToggles;
 
 import static java.lang.Math.max;
+import static org.neo4j.internal.freki.FrekiAnalysis.percent;
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
 
 /**
@@ -61,7 +62,15 @@ public interface CursorAccessPatternTracer
 
     interface ThreadAccess
     {
-        void registerNode( long nodeId );
+        /**
+         * Registers a call to loading a node.
+         *
+         * @param nodeId the node that was loaded.
+         * @param reusableLoad if {@code true} the load was done when no other cursor shared its data
+         * (which is optimal because record instances and buffers can be reused), otherwise {@code false} where new records and buffers
+         * had to be instantiated to not overwrite state of the cursors that currently shared its data.
+         */
+        void registerNode( long nodeId, boolean reusableLoad );
 
         void registerNodeLabelsAccess();
 
@@ -83,7 +92,7 @@ public interface CursorAccessPatternTracer
     ThreadAccess EMPTY_ACCESS = new ThreadAccess()
     {
         @Override
-        public void registerNode( long nodeId )
+        public void registerNode( long nodeId, boolean reusableLoad )
         {
         }
 
@@ -191,6 +200,9 @@ public interface CursorAccessPatternTracer
             System.out.println( "  Avg consecutive accesses for same node: " +
                     (double) allTracers.stream().mapToLong( a -> a.numberOfAccesses ).sum() /
                     allTracers.stream().mapToLong( a -> a.numberOfConsecutivelyDifferentNodeLoads ).sum() );
+            long sumNodeLoads = allTracers.stream().mapToLong( a -> a.numberOfNodeLoads ).sum();
+            long sumReusableNodeLoads = allTracers.stream().mapToLong( a -> a.numberOfReusableNodeLoads ).sum();
+            System.out.printf( "  Reused node loads (higher is better) %.2f%%%n", percent( sumReusableNodeLoads, sumNodeLoads ) );
 
             LongObjectMap<MutableLong> aggregatedNodeLoads = aggregateNodeLoads();
             LongObjectPair<MutableLong>[] nodesLoadsArray = aggregatedNodeLoads.keyValuesView().toArray( new LongObjectPair[aggregatedNodeLoads.size()] );
@@ -238,6 +250,7 @@ public interface CursorAccessPatternTracer
         private int numberOfLoadsForSameNode;
         private int numberOfAccessesForSameNode;
         private long numberOfNodeLoads;
+        private long numberOfReusableNodeLoads;
         private long numberOfAccesses;
         private long numberOfConsecutivelyDifferentNodeLoads;
         private int highestNumberOfConsecutiveNodeLoads;
@@ -252,7 +265,7 @@ public interface CursorAccessPatternTracer
         private long relationshipByReference;
 
         @Override
-        public void registerNode( long nodeId )
+        public void registerNode( long nodeId, boolean reusableLoad )
         {
             if ( nodeId != lastLoadedNodeId )
             {
@@ -268,6 +281,10 @@ public interface CursorAccessPatternTracer
             numberOfAccessesForSameNode++;
             numberOfNodeLoads++;
             numberOfAccesses++;
+            if ( reusableLoad )
+            {
+                numberOfReusableNodeLoads++;
+            }
         }
 
         @Override
@@ -328,13 +345,99 @@ public interface CursorAccessPatternTracer
             numberOfAccesses++;
         }
 
-        private void clear()
+        public LongObjectMap<MutableLong> getNodeLoads()
+        {
+            return nodeLoads;
+        }
+
+        public long getLastLoadedNodeId()
+        {
+            return lastLoadedNodeId;
+        }
+
+        public int getNumberOfLoadsForSameNode()
+        {
+            return numberOfLoadsForSameNode;
+        }
+
+        public int getNumberOfAccessesForSameNode()
+        {
+            return numberOfAccessesForSameNode;
+        }
+
+        public long getNumberOfNodeLoads()
+        {
+            return numberOfNodeLoads;
+        }
+
+        public long getNumberOfReusableNodeLoads()
+        {
+            return numberOfReusableNodeLoads;
+        }
+
+        public long getNumberOfAccesses()
+        {
+            return numberOfAccesses;
+        }
+
+        public long getNumberOfConsecutivelyDifferentNodeLoads()
+        {
+            return numberOfConsecutivelyDifferentNodeLoads;
+        }
+
+        public int getHighestNumberOfConsecutiveNodeLoads()
+        {
+            return highestNumberOfConsecutiveNodeLoads;
+        }
+
+        public int getHighestNumberOfConsecutiveNodeAccesses()
+        {
+            return highestNumberOfConsecutiveNodeAccesses;
+        }
+
+        public long getNodeToPropertyDirect()
+        {
+            return nodeToPropertyDirect;
+        }
+
+        public long getNodeToPropertyByReference()
+        {
+            return nodeToPropertyByReference;
+        }
+
+        public long getNodeToRelationshipsDirect()
+        {
+            return nodeToRelationshipsDirect;
+        }
+
+        public long getNodeToRelationshipsByReference()
+        {
+            return nodeToRelationshipsByReference;
+        }
+
+        public long getRelationshipToPropertyDirect()
+        {
+            return relationshipToPropertyDirect;
+        }
+
+        public long getRelationshipToPropertyByReference()
+        {
+            return relationshipToPropertyByReference;
+        }
+
+        public long getRelationshipByReference()
+        {
+            return relationshipByReference;
+        }
+
+        void clear()
         {
             nodeLoads.clear();
             lastLoadedNodeId = NULL;
             numberOfAccessesForSameNode = 0;
             numberOfLoadsForSameNode = 0;
             numberOfNodeLoads = 0;
+            numberOfReusableNodeLoads = 0;
             numberOfAccesses++;
             numberOfConsecutivelyDifferentNodeLoads = 0;
             highestNumberOfConsecutiveNodeLoads = 0;

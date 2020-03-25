@@ -72,11 +72,39 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
 
     public void reset()
     {
-        // TODO this is the other problem... we don't want to invalidate this one always, in fact basically never
-        data = null;
+        if ( data != null )
+        {
+            resetOrDereferenceData();
+        }
         relationshipTypeOffsets = null;
         relationshipTypesInNode = null;
         firstRelationshipTypeOffset = 0;
+    }
+
+    /**
+     * @return {@code true} if data records were able to be reused, otherwise {@code false}.
+     */
+    public boolean resetOrDereferenceData()
+    {
+        if ( data.refCount > 1 )
+        {
+            dereferenceData();
+            return false;
+        }
+        else if ( data.refCount == 1 )
+        {
+            data.reset();
+        }
+        return true;
+    }
+
+    void dereferenceData()
+    {
+        if ( data != null )
+        {
+            data.refCount--;
+            data = null;
+        }
     }
 
     PageCursor xCursor( int sizeExp )
@@ -88,9 +116,13 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         return xCursors[sizeExp];
     }
 
-    Record x1Record()
+    Record xRecord( int sizeExp )
     {
-        return stores.mainStore.newRecord();
+        if ( data.records[sizeExp] == null )
+        {
+            data.records[sizeExp] = stores.mainStore( sizeExp ).newRecord();
+        }
+        return data.records[sizeExp];
     }
 
     /**
@@ -100,21 +132,22 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
      */
     boolean load( long nodeId )
     {
-        Record x1Record = x1Record();
+        boolean reused = ensureFreshDataInstanceForLoadingNewNode();
+        cursorAccessTracer.registerNode( nodeId, reused );
+        Record x1Record = xRecord( 0 );
         if ( !stores.mainStore.read( xCursor( 0 ), x1Record, nodeId ) || !x1Record.hasFlag( FLAG_IN_USE ) )
         {
             return false;
         }
 
         // From x1 read forward pointer, labels offset and potentially other offsets too
-        ensureFreshDataInstance();
         data.nodeId = nodeId;
         gatherDataFromX1( x1Record );
         if ( forwardPointerPointsToXRecord( data.forwardPointer ) )
         {
             int sizeExp = sizeExponentialFromForwardPointer( data.forwardPointer );
             SimpleStore xLStore = stores.mainStore( sizeExp );
-            Record xLRecord = xLStore.newRecord();
+            Record xLRecord = xRecord( sizeExp );
             if ( !xLStore.read( xCursor( sizeExp ), xLRecord, idFromForwardPointer( data.forwardPointer ) ) || !xLRecord.hasFlag( FLAG_IN_USE ) )
             {
                 // TODO depending on whether we're strict about it we should throw here perhaps?
@@ -125,9 +158,18 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         return true;
     }
 
-    private void ensureFreshDataInstance()
+    private boolean ensureFreshDataInstanceForLoadingNewNode()
     {
-        data = new FrekiCursorData();
+        boolean reused = true;
+        if ( data != null )
+        {
+            reused = resetOrDereferenceData();
+        }
+        if ( data == null )
+        {
+            data = new FrekiCursorData( stores.getNumMainStores() );
+        }
+        return reused;
     }
 
     private void gatherDataFromX1( Record x1Record )
@@ -176,6 +218,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
             return false;
         }
         otherCursor.data = data;
+        data.refCount++;
         return true;
     }
 
@@ -186,7 +229,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
             return false;
         }
 
-        ensureFreshDataInstance();
+        ensureFreshDataInstanceForLoadingNewNode();
         if ( record.sizeExp() == 0 )
         {
             gatherDataFromX1( record );

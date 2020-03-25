@@ -631,7 +631,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
             otherNode.relationship( type1, node );
             node.relationship( type1, otherNode );
         }
-        long relId = node.relationship( type2, otherNode );
+        long relId = node.relationshipAndReturnItsId( type2, otherNode );
         node.store();
         otherNode.store();
 
@@ -653,7 +653,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         Node node = node();
         Node otherNode = node();
         int type = 1;
-        long relId = node.relationship( type, otherNode );
+        long relId = node.relationshipAndReturnItsId( type, otherNode );
         // dont store the nodes (so relationship doesnt exist)
 
         try ( FrekiRelationshipScanCursor relationshipCursor = cursorFactory.allocateRelationshipScanCursor( NULL ) )
