@@ -19,6 +19,7 @@
  */
 package org.neo4j.internal.kernel.api;
 
+import org.neo4j.values.storable.NoValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
 
@@ -34,4 +35,10 @@ public interface PropertyCursor extends Cursor
     Value propertyValue();
 
     boolean seekProperty( int property );
+
+    /**
+     * @param property property key to look for.
+     * @return if found, the value for the property key, otherwise {@link NoValue#NO_VALUE}.
+     */
+    Value seekPropertyValue( int property );
 }

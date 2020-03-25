@@ -118,7 +118,7 @@ public final class CursorUtils
             }
         }
         nodeCursor.properties( propertyCursor );
-        return propertyCursor.seekProperty( prop ) ? propertyCursor.propertyValue() : NO_VALUE;
+        return propertyCursor.seekPropertyValue( prop );
     }
 
     /**
@@ -254,7 +254,7 @@ public final class CursorUtils
             }
         }
         relationshipCursor.properties( propertyCursor );
-        return propertyCursor.seekProperty( prop ) ? propertyCursor.propertyValue() : NO_VALUE;
+        return propertyCursor.seekPropertyValue( prop );
     }
 
     /**

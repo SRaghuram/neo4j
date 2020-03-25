@@ -25,10 +25,8 @@ import org.neo4j.codegen.api.IntermediateRepresentation.isNull
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
-import org.neo4j.codegen.api.IntermediateRepresentation.noValue
 import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
-import org.neo4j.codegen.api.IntermediateRepresentation.ternary
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
@@ -58,9 +56,9 @@ import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
 import org.neo4j.internal.kernel.api.PropertyCursor
-import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
+import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
 
@@ -816,9 +814,7 @@ case class NodeCursorRepresentation(target: IntermediateRepresentation) extends 
   override def getProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation = {
     block(
       invokeSideEffect(target, method[NodeCursor, Unit, PropertyCursor]("properties"), ExpressionCompiler.PROPERTY_CURSOR),
-      ternary(invoke(ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken),
-        invoke( ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Value]("propertyValue")),
-        noValue)
+      invoke(ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Value, Int]("seekPropertyValue"), propertyToken)
     )
   }
 
@@ -876,9 +872,7 @@ case class RelationshipCursorRepresentation(target: IntermediateRepresentation) 
     block(
       invokeSideEffect(target, method[RelationshipTraversalCursor, Unit, PropertyCursor]("properties"),
         ExpressionCompiler.PROPERTY_CURSOR),
-      ternary(invoke(ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken),
-        invoke( ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Value]("propertyValue")),
-        noValue)
+      invoke(ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Value, Int]("seekPropertyValue"), propertyToken)
     )
   }
 
