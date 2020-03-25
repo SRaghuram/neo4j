@@ -153,14 +153,12 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan, maybeOwningPi
       case e: ExpressionVariable =>
         Some(commands.expressions.ExpressionVariable(e.offset, e.name))
       case e: NestedPipeExpression =>
-        val command =
-          slotted.expressions.NestedPipeSlottedExpression(
-            e.pipe,
-            self.toCommandExpression(id, e.projection),
-            physicalPlan.nestedPlanArgumentConfigurations(e.pipe.id),
-            e.availableExpressionVariables.map(commands.expressions.ExpressionVariable.of).toArray)
-        maybeOwningPipe.foreach(p => command.registerOwningPipe(p))
-        Some(command)
+        Some(slotted.expressions.NestedPipeSlottedExpression(
+          e.pipe,
+          self.toCommandExpression(id, e.projection),
+          physicalPlan.nestedPlanArgumentConfigurations(e.pipe.id),
+          e.availableExpressionVariables.map(commands.expressions.ExpressionVariable.of).toArray,
+          id))
       case _ =>
         None
     }

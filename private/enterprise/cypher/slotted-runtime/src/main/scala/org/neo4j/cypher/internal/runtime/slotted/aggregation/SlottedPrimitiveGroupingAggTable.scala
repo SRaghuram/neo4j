@@ -14,7 +14,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.AggregationTable
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.AggregationTableFactory
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExecutionContextFactory
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.GroupingAggTable
@@ -111,10 +110,6 @@ object SlottedPrimitiveGroupingAggTable {
                      aggregations: Map[Int, AggregationExpression]) extends AggregationTableFactory {
     override def table(state: QueryState, executionContextFactory: ExecutionContextFactory, operatorId: Id): AggregationPipe.AggregationTable =
       new SlottedPrimitiveGroupingAggTable(slots, readGrouping, writeGrouping, aggregations, state, operatorId)
-
-    override def registerOwningPipe(pipe: Pipe): Unit = {
-      aggregations.values.foreach(_.registerOwningPipe(pipe))
-    }
   }
 
 }

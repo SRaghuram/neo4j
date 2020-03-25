@@ -25,8 +25,6 @@ case class RollUpApplySlottedPipe(lhs: Pipe, rhs: Pipe,
                                  (val id: Id = Id.INVALID_ID)
   extends PipeWithSource(lhs) {
 
-  identifierToCollect._2.registerOwningPipe(this)
-
   private val getValueToCollectFunction = {
     val expression: Expression = identifierToCollect._2
     state: QueryState => (ctx: CypherRow) => expression(ctx, state)

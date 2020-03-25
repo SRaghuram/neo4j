@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.execution
 import org.neo4j.cypher.internal.runtime.InputDataStream
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.NullPipeDecorator
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber

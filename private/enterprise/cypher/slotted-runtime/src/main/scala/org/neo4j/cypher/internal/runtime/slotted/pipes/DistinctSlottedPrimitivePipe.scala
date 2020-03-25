@@ -24,8 +24,6 @@ case class DistinctSlottedPrimitivePipe(source: Pipe,
                                         groupingExpression: GroupingExpression)
                                        (val id: Id = Id.INVALID_ID)
   extends PipeWithSource(source) {
-  groupingExpression.registerOwningPipe(this)
-
 
   //===========================================================================
   // Runtime code

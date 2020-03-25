@@ -67,9 +67,6 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
     }
   private val toOffset = toSlot.offset
 
-  nodePredicate.registerOwningPipe(this)
-  relationshipPredicate.registerOwningPipe(this)
-
   //===========================================================================
   // Runtime code
   //===========================================================================

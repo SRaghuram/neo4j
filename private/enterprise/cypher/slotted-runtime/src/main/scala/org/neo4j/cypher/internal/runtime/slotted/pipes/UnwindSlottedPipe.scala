@@ -24,7 +24,6 @@ case class UnwindSlottedPipe(source: Pipe,
                              offset: Int,
                              slots: SlotConfiguration)
                             (val id: Id = Id.INVALID_ID) extends PipeWithSource(source) with ListSupport {
-  collection.registerOwningPipe(this)
 
   override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] =
     new UnwindIterator(input, state)

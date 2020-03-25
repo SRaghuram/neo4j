@@ -143,8 +143,6 @@ case class FilteringOptionalExpandIntoSlottedPipe(source: Pipe,
                                                   predicate: Expression)(val id: Id)
   extends OptionalExpandIntoSlottedPipe(source: Pipe, fromSlot, relOffset, toSlot, dir, lazyTypes, slots) {
 
-  predicate.registerOwningPipe(this)
-
   override def findMatchIterator(inputRow: CypherRow,
                                  state: QueryState,
                                  relationships: LongIterator): Iterator[SlottedRow] = {

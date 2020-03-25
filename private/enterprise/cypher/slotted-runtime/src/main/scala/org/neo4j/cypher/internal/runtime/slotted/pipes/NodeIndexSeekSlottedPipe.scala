@@ -39,8 +39,6 @@ case class NodeIndexSeekSlottedPipe(ident: String,
   override val indexPropertySlotOffsets: Array[Int] = properties.map(_.maybeCachedNodePropertySlot).collect{ case Some(o) => o }.toArray
   private val needsValues: Boolean = indexPropertyIndices.nonEmpty
 
-  valueExpr.expressions.foreach(_.registerOwningPipe(this))
-
   protected def internalCreateResults(state: QueryState): Iterator[CypherRow] = {
     val index = state.queryIndexes(queryIndexId)
     val context = SlottedRow(slots)

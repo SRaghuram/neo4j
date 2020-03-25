@@ -95,8 +95,6 @@ case class CreateSlottedPipe(source: Pipe,
                              relationships: IndexedSeq[CreateRelationshipSlottedCommand])
                             (val id: Id = Id.INVALID_ID)
   extends EntityCreateSlottedPipe(source) {
-  nodes.foreach(_.properties.foreach(_.registerOwningPipe(this)))
-  relationships.foreach(_.properties.foreach(_.registerOwningPipe(this)))
 
   override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
     input.map {
@@ -134,8 +132,6 @@ case class MergeCreateNodeSlottedPipe(source: Pipe,
                                      (val id: Id = Id.INVALID_ID)
   extends EntityCreateSlottedPipe(source) {
 
-  command.properties.foreach(_.registerOwningPipe(this))
-
   override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
     input.map {
       row =>
@@ -155,8 +151,6 @@ case class MergeCreateRelationshipSlottedPipe(source: Pipe,
                                               command: CreateRelationshipSlottedCommand)
                                              (val id: Id = Id.INVALID_ID)
   extends EntityCreateSlottedPipe(source) {
-
-  command.properties.foreach(_.registerOwningPipe(this))
 
   override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
     input.map {

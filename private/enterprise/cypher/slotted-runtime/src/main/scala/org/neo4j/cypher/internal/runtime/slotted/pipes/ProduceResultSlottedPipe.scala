@@ -16,8 +16,6 @@ import org.neo4j.cypher.internal.util.attribution.Id
 case class ProduceResultSlottedPipe(source: Pipe, columns: Seq[(String, Expression)])
                                    (val id: Id = Id.INVALID_ID) extends PipeWithSource(source) with Pipe {
 
-  columns.map(_._2).foreach(_.registerOwningPipe(this))
-
   private val columnExpressionArray = columns.map(_._2).toArray
 
   protected def internalCreateResults(input: Iterator[CypherRow],

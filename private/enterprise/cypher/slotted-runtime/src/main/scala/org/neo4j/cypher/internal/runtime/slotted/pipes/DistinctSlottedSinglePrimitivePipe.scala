@@ -31,8 +31,6 @@ case class DistinctSlottedSinglePrimitivePipe(source: Pipe,
   //===========================================================================
   private val setInSlot: (CypherRow, AnyValue) => Unit = makeSetValueInSlotFunctionFor(toSlot)
 
-  expression.registerOwningPipe(this)
-
   //===========================================================================
   // Runtime code
   //===========================================================================

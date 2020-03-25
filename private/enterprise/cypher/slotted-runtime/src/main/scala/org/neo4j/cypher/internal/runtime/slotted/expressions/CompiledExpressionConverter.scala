@@ -30,7 +30,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.ExtendedExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.RandFunction
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter.COMPILE_LIMIT
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
@@ -139,8 +138,6 @@ object CompiledExpressionConverter {
 
 case class CompileWrappingDistinctGroupingExpression(grouping: CompiledGroupingExpression, isEmpty: Boolean) extends GroupingExpression {
 
-  override def registerOwningPipe(pipe: Pipe): Unit = {}
-
   override type KeyType = AnyValue
 
   override def computeGroupingKey(context: ReadableRow, state: QueryState): AnyValue =
@@ -156,8 +153,6 @@ case class CompileWrappingDistinctGroupingExpression(grouping: CompiledGroupingE
 }
 
 case class CompileWrappingProjection(projection: CompiledProjection, isEmpty: Boolean) extends CommandProjection {
-
-  override def registerOwningPipe(pipe: Pipe): Unit = {}
 
   override def project(ctx: ReadWriteRow, state: QueryState): Unit =
     projection.project(ctx, state.query, state.params, state.cursors, state.expressionVariables)

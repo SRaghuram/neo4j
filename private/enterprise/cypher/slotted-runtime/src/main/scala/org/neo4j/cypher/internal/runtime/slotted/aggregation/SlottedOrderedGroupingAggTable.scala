@@ -13,7 +13,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.Aggre
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExecutionContextFactory
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.OrderedAggregationTableFactory
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.OrderedChunkReceiver
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.OrderedGroupingAggTable
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -62,11 +61,5 @@ object SlottedOrderedGroupingAggTable {
 
     override def table(state: QueryState, executionContextFactory: ExecutionContextFactory, operatorId: Id): AggregationTable with OrderedChunkReceiver =
       new SlottedOrderedGroupingAggTable(slots, orderedGroupingColumns,unorderedGroupingColumns, aggregations, state, operatorId)
-
-    override def registerOwningPipe(pipe: Pipe): Unit = {
-      orderedGroupingColumns.registerOwningPipe(pipe)
-      unorderedGroupingColumns.registerOwningPipe(pipe)
-      aggregations.values.foreach(_.registerOwningPipe(pipe))
-    }
   }
 }

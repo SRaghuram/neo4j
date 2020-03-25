@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expres
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.ListValueBuilder
 
@@ -22,14 +23,15 @@ import org.neo4j.values.virtual.ListValueBuilder
 case class NestedPipeSlottedExpression(pipe: Pipe,
                                        inner: Expression,
                                        slots: SlotConfiguration,
-                                       availableExpressionVariables: Array[ExpressionVariable]) extends Expression {
+                                       availableExpressionVariables: Array[ExpressionVariable],
+                                       owningPlanId: Id) extends Expression {
 
   private val expVarSlotsInNestedPlan = availableExpressionVariables.map(ev => slots.getReferenceOffsetFor(ev.name))
 
   override def apply(row: ReadableRow, state: QueryState): AnyValue = {
     val initialContext: SlottedRow = createInitialContext(row, state)
     val innerState = state.withInitialContext(initialContext)
-                          .withDecorator(state.decorator.innerDecorator(owningPipe.id))
+                          .withDecorator(state.decorator.innerDecorator(owningPlanId))
 
     val results = pipe.createResults(innerState)
     val all = ListValueBuilder.newListBuilder()
@@ -52,7 +54,7 @@ case class NestedPipeSlottedExpression(pipe: Pipe,
   }
 
   override def rewrite(f: Expression => Expression): Expression =
-    f(NestedPipeSlottedExpression(pipe, inner.rewrite(f), slots, availableExpressionVariables))
+    f(NestedPipeSlottedExpression(pipe, inner.rewrite(f), slots, availableExpressionVariables, owningPlanId))
 
   override def arguments = List(inner)
 

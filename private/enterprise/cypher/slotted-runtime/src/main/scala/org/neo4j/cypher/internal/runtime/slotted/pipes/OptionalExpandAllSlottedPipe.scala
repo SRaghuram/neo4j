@@ -127,8 +127,6 @@ case class FilteringOptionalExpandAllSlottedPipe(source: Pipe,
                                                  predicate: Expression)(val id: Id)
   extends OptionalExpandAllSlottedPipe(source: Pipe, fromSlot, relOffset, toOffset, dir, types, slots) {
 
-  predicate.registerOwningPipe(this)
-
   override def filter(iterator: Iterator[SlottedRow], state: QueryState): Iterator[SlottedRow] =
     iterator.filter(ctx => predicate(ctx, state) eq Values.TRUE)
 }

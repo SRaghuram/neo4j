@@ -22,8 +22,6 @@ case class DistinctSlottedPipe(source: Pipe,
                               (val id: Id = Id.INVALID_ID)
   extends PipeWithSource(source) {
 
-  groupingExpression.registerOwningPipe(this)
-
   protected def internalCreateResults(input: Iterator[CypherRow],
                                       state: QueryState): Iterator[CypherRow] = {
     new PrefetchingIterator[CypherRow] {

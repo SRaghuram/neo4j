@@ -26,9 +26,6 @@ case class ValueHashJoinSlottedPipe(leftSide: Expression,
                                    (val id: Id = Id.INVALID_ID)
   extends AbstractHashJoinPipe[AnyValue, Expression](left, right, slots) {
 
-  leftSide.registerOwningPipe(this)
-  rightSide.registerOwningPipe(this)
-
   override def computeKey(context: CypherRow, keyColumns: Expression, queryState: QueryState): Option[AnyValue] = {
     val value = keyColumns.apply(context, queryState)
     if (value eq NO_VALUE)
