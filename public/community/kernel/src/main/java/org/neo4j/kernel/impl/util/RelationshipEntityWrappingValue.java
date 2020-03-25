@@ -95,7 +95,7 @@ public class RelationshipEntityWrappingValue extends RelationshipValue
             {
                 writer.writeVirtualRelationshipHack( relationship );
             }
-            
+
             writer.writeRelationship( id(), startNodeId(), endNodeId(), type(), p );
         }
     }
