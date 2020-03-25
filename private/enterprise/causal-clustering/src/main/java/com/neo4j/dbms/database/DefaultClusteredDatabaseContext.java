@@ -81,7 +81,8 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
                                                     clusterDatabaseMonitors, null, cacheTracer );
     }
 
-    public static DefaultClusteredDatabaseContext core( Database database, GraphDatabaseFacade facade, LogFiles txLogs, StoreFiles storeFiles, LogProvider logProvider,
+    public static DefaultClusteredDatabaseContext core( Database database, GraphDatabaseFacade facade, LogFiles txLogs, StoreFiles storeFiles,
+            LogProvider logProvider,
             CatchupComponentsFactory catchupComponentsFactory, ClusteredDatabase clusterDatabase, Monitors clusterDatabaseMonitors,
             LeaderLocator leaderLocator, PageCacheTracer cacheTracer )
     {

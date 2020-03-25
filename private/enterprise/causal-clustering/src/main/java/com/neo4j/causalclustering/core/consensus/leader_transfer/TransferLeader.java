@@ -122,7 +122,7 @@ class TransferLeader implements Runnable
     {
         return context.leaderLocator().map( leaderLocator ->
                                             {
-                                                var leader = leaderLocator.getLeader();
+                                                var leader = leaderLocator.getLeaderInfo().memberId();
                                                 return leader != null && leader.equals( myself );
                                             } ).orElse( false );
     }

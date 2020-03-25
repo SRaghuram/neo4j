@@ -21,7 +21,7 @@ import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
-public class LeaderTransferIT
+class LeaderTransferIT
 {
     @Inject
     ClusterFactory clusterFactory;

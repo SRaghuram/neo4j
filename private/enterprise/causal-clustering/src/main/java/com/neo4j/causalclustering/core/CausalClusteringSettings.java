@@ -77,6 +77,11 @@ public class CausalClusteringSettings implements SettingsDeclaration
             newBuilder( "causal_clustering.failure_resolution_window", DURATION_RANGE, DurationRange.fromSeconds( 3, 6 ) ).build();
 
     @Internal
+    @Description( "The time limit within which a leadership transfer request should be completed, otherwise the leader will resume accepting writes." )
+    public static final Setting<Duration> leader_transfer_timeout =
+            newBuilder( "causal_clustering.leader_transfer_timeout", DURATION, ofSeconds( 3 ) ).build();
+
+    @Internal
     @Description( "Configures the time after which we give up trying to bind to a cluster formed of the other initial discovery members." )
     public static final Setting<Duration> cluster_binding_timeout =
             newBuilder( "causal_clustering.cluster_binding_timeout", DURATION, ofMinutes( 5 ) ).build();

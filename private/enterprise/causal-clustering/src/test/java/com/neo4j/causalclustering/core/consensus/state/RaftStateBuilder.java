@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.state;
 
+import com.neo4j.causalclustering.core.consensus.leader_transfer.ExpiringSet;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.cache.ConsecutiveInFlightCache;
@@ -21,6 +22,7 @@ import java.io.IOException;
 import java.util.Set;
 
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.time.FakeClock;
 
 import static java.util.Collections.emptySet;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
@@ -43,6 +45,7 @@ public class RaftStateBuilder
     private RaftLog entryLog = new InMemoryRaftLog();
     private boolean supportPreVoting;
     private boolean refusesToBeLeader;
+    private ExpiringSet<MemberId> leadershipTransfers = new ExpiringSet<>( 1000L, new FakeClock() );
 
     public RaftStateBuilder myself( MemberId myself )
     {
@@ -86,6 +89,12 @@ public class RaftStateBuilder
         return this;
     }
 
+    public RaftStateBuilder setLeadershipTransferRequests( ExpiringSet<MemberId> ongoingRequests )
+    {
+        this.leadershipTransfers = ongoingRequests;
+        return this;
+    }
+
     public RaftState build() throws IOException
     {
         StateStorage<TermState> termStore = new InMemoryStateStorage<>( new TermState() );
@@ -94,7 +103,7 @@ public class RaftStateBuilder
 
         RaftState state = new RaftState( myself, termStore, membership, entryLog,
                 voteStore, new ConsecutiveInFlightCache(), NullLogProvider.getInstance(), supportPreVoting, refusesToBeLeader,
-                Set::of );
+                Set::of, leadershipTransfers );
 
         state.update( outcome );
 

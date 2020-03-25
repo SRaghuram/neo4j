@@ -51,4 +51,6 @@ public interface ReadableRaftState
     boolean refusesToBeLeader();
 
     Set<String> serverGroups();
+
+    boolean areTransferringLeadership();
 }

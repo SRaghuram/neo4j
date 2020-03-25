@@ -62,7 +62,5 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
     public void handleRejection( RaftMessages.LeadershipTransfer.Rejection rejection, NamedDatabaseId namedDatabaseId )
     {
         databasePenalties.issuePenalty( rejection.from(), namedDatabaseId );
-
-        // TODO: Either retry request on new member or cancel tx suspension timeouts (when that exists)
     }
 }

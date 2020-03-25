@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.core.consensus.leader_transfer;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.common.ClusteredDatabase;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.LeaderListener;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
@@ -216,9 +217,9 @@ class TransferLeaderTest
         }
 
         @Override
-        public MemberId getLeader()
+        public LeaderInfo getLeaderInfo()
         {
-            return leader;
+            return new LeaderInfo( leader, 0 );
         }
 
         @Override

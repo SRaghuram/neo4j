@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.common.RaftLogImplementation;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferService;
+import com.neo4j.causalclustering.core.consensus.leader_transfer.ExpiringSet;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.MonitoredRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
@@ -111,8 +112,10 @@ public class RaftGroup
 
         Supplier<Set<String>> serverGroupsSupplier = () -> copyOf( config.get( CausalClusteringSettings.server_groups ) );
 
+        var leaderTransferTimer = new ExpiringSet<MemberId>( config.get( CausalClusteringSettings.leader_transfer_timeout ).toMillis(), clock );
+
         var state = new RaftState( myself, termState, raftMembershipManager, raftLog, voteState, inFlightCache,
-                                   logProvider, supportsPreVoting, config.get( refuse_to_be_leader ), serverGroupsSupplier );
+                                   logProvider, supportsPreVoting, config.get( refuse_to_be_leader ), serverGroupsSupplier, leaderTransferTimer );
 
         var raftMessageTimerResetMonitor = monitors.newMonitor( RaftMessageTimerResetMonitor.class );
         var raftOutcomeApplier = new RaftOutcomeApplier( state, outbound, leaderAvailabilityTimers, raftMessageTimerResetMonitor, logShipping,

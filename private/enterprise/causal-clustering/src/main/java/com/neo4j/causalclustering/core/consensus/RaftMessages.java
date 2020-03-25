@@ -1343,6 +1343,7 @@ public interface RaftMessages
                 return Objects.hash( super.hashCode(), proposed, priorityGroups );
             }
         }
+
     }
 
     abstract class RaftMessage

@@ -181,6 +181,12 @@ public class ComparableRaftState implements ReadableRaftState
         return Set.of();
     }
 
+    @Override
+    public boolean areTransferringLeadership()
+    {
+        return false;
+    }
+
     public void update( Outcome outcome ) throws IOException
     {
         term = outcome.getTerm();
