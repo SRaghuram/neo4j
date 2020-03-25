@@ -56,10 +56,10 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      showTransaction("*").database("foo").role("role").map,
-      showTransaction("*").database("bar").role("role").map,
-      showTransaction("user1").database(DEFAULT).role("role").map,
-      showTransaction("user2").database(DEFAULT).role("role").map
+      granted(showTransaction("*")).database("foo").role("role").map,
+      granted(showTransaction("*")).database("bar").role("role").map,
+      granted(showTransaction("user1")).database(DEFAULT).role("role").map,
+      granted(showTransaction("user2")).database(DEFAULT).role("role").map
     ))
   }
 
@@ -74,9 +74,9 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      showTransaction("*", DENIED).database("foo").role("role").map,
-      showTransaction("user1", DENIED).database(DEFAULT).role("role").map,
-      showTransaction("user2", DENIED).database(DEFAULT).role("role").map
+      denied(showTransaction("*")).database("foo").role("role").map,
+      denied(showTransaction("user1")).database(DEFAULT).role("role").map,
+      denied(showTransaction("user2")).database(DEFAULT).role("role").map
     ))
   }
 
@@ -93,7 +93,7 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
     execute("REVOKE SHOW TRANSACTION (user1,user2) ON DEFAULT DATABASE FROM role")
 
     // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(transaction("*").database("foo").role("role").map))
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(granted(transaction("*")).database("foo").role("role").map))
   }
 
   test("should grant terminate transaction privilege") {
@@ -107,9 +107,9 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      terminateTransaction("*").database("foo").role("role").map,
-      terminateTransaction("user1").database(DEFAULT).role("role").map,
-      terminateTransaction("user2").database(DEFAULT).role("role").map
+      granted(terminateTransaction("*")).database("foo").role("role").map,
+      granted(terminateTransaction("user1")).database(DEFAULT).role("role").map,
+      granted(terminateTransaction("user2")).database(DEFAULT).role("role").map
     ))
   }
 
@@ -126,10 +126,10 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      terminateTransaction("*", DENIED).database("foo").role("role").map,
-      terminateTransaction("*", DENIED).database("bar").role("role").map,
-      terminateTransaction("user1", DENIED).database(DEFAULT).role("role").map,
-      terminateTransaction("user2", DENIED).database(DEFAULT).role("role").map
+      denied(terminateTransaction("*")).database("foo").role("role").map,
+      denied(terminateTransaction("*")).database("bar").role("role").map,
+      denied(terminateTransaction("user1")).database(DEFAULT).role("role").map,
+      denied(terminateTransaction("user2")).database(DEFAULT).role("role").map
     ))
   }
 
@@ -146,7 +146,7 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
     execute("REVOKE TERMINATE TRANSACTION (user1,user2) ON DEFAULT DATABASE FROM $r", Map("r" -> "role"))
 
     // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(transaction("*").database("foo").role("role").map))
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(granted(transaction("*")).database("foo").role("role").map))
   }
 
   test("should grant transaction management privilege") {
@@ -161,10 +161,10 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      transaction("*").database("foo").role("role").map,
-      transaction("*").database(DEFAULT).role("role").map,
-      transaction("user1").role("role").map,
-      transaction("user2").role("role").map
+      granted(transaction("*")).database("foo").role("role").map,
+      granted(transaction("*")).database(DEFAULT).role("role").map,
+      granted(transaction("user1")).role("role").map,
+      granted(transaction("user2")).role("role").map
     ))
   }
 
@@ -180,10 +180,10 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      transaction("*", DENIED).database("foo").role("role").map,
-      transaction("*", DENIED).database(DEFAULT).role("role").map,
-      transaction("user1", DENIED).role("role").map,
-      transaction("user2", DENIED).role("role").map
+      denied(transaction("*")).database("foo").role("role").map,
+      denied(transaction("*")).database(DEFAULT).role("role").map,
+      denied(transaction("user1")).role("role").map,
+      denied(transaction("user2")).role("role").map
     ))
   }
 
@@ -208,8 +208,8 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      showTransaction("*").database("foo").role("role").map,
-      terminateTransaction("*").database("foo").role("role").map
+      granted(showTransaction("*")).database("foo").role("role").map,
+      granted(terminateTransaction("*")).database("foo").role("role").map
     ))
   }
 }

@@ -7,8 +7,6 @@ package com.neo4j.internal.cypher.acceptance
 
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
-import org.neo4j.dbms.api.DatabaseNotFoundException
-import org.neo4j.exceptions.DatabaseAdministrationException
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.security.AuthorizationViolationException
@@ -117,11 +115,11 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
     // THEN
     val expected = Set(
-      access().role("editor").map,
-      matchPrivilege().role("editor").node("*").map,
-      matchPrivilege().role("editor").relationship("*").map,
-      write().role("editor").node("*").map,
-      write().role("editor").relationship("*").map,
+      granted(access).role("editor").map,
+      granted(matchPrivilege).role("editor").node("*").map,
+      granted(matchPrivilege).role("editor").relationship("*").map,
+      granted(write).role("editor").node("*").map,
+      granted(write).role("editor").relationship("*").map,
     )
 
     result.toSet should be(expected)
@@ -133,11 +131,11 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
     // THEN
     val expected = Set(
-      access().role("editor").map,
-      matchPrivilege().role("editor").node("*").map,
-      matchPrivilege().role("editor").relationship("*").map,
-      write().role("editor").node("*").map,
-      write().role("editor").relationship("*").map,
+      granted(access).role("editor").map,
+      granted(matchPrivilege).role("editor").node("*").map,
+      granted(matchPrivilege).role("editor").relationship("*").map,
+      granted(write).role("editor").node("*").map,
+      granted(write).role("editor").relationship("*").map,
     )
 
     result.toSet should be(expected)
@@ -184,16 +182,16 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
     // THEN
     val expected = Set(
-      access().database(DEFAULT).role(PUBLIC).user("neo4j").map,
-      access().role("admin").user("neo4j").map,
-      matchPrivilege().role("admin").user("neo4j").node("*").map,
-      matchPrivilege().role("admin").user("neo4j").relationship("*").map,
-      write().role("admin").user("neo4j").node("*").map,
-      write().role("admin").user("neo4j").relationship("*").map,
-      nameManagement().role("admin").user("neo4j").map,
-      indexManagement().role("admin").user("neo4j").map,
-      constraintManagement().role("admin").user("neo4j").map,
-      grantAdmin().role("admin").user("neo4j").map,
+      granted(access).database(DEFAULT).role(PUBLIC).user("neo4j").map,
+      granted(access).role("admin").user("neo4j").map,
+      granted(matchPrivilege).role("admin").user("neo4j").node("*").map,
+      granted(matchPrivilege).role("admin").user("neo4j").relationship("*").map,
+      granted(write).role("admin").user("neo4j").node("*").map,
+      granted(write).role("admin").user("neo4j").relationship("*").map,
+      granted(nameManagement).role("admin").user("neo4j").map,
+      granted(indexManagement).role("admin").user("neo4j").map,
+      granted(constraintManagement).role("admin").user("neo4j").map,
+      granted(admin).role("admin").user("neo4j").map,
     )
 
     result.toSet should be(expected)
@@ -205,16 +203,16 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
     // THEN
     val expected = Set(
-      access().database(DEFAULT).role(PUBLIC).user("neo4j").map,
-      access().role("admin").user("neo4j").map,
-      matchPrivilege().role("admin").user("neo4j").node("*").map,
-      matchPrivilege().role("admin").user("neo4j").relationship("*").map,
-      write().role("admin").user("neo4j").node("*").map,
-      write().role("admin").user("neo4j").relationship("*").map,
-      nameManagement().role("admin").user("neo4j").map,
-      indexManagement().role("admin").user("neo4j").map,
-      constraintManagement().role("admin").user("neo4j").map,
-      grantAdmin().role("admin").user("neo4j").map,
+      granted(access).database(DEFAULT).role(PUBLIC).user("neo4j").map,
+      granted(access).role("admin").user("neo4j").map,
+      granted(matchPrivilege).role("admin").user("neo4j").node("*").map,
+      granted(matchPrivilege).role("admin").user("neo4j").relationship("*").map,
+      granted(write).role("admin").user("neo4j").node("*").map,
+      granted(write).role("admin").user("neo4j").relationship("*").map,
+      granted(nameManagement).role("admin").user("neo4j").map,
+      granted(indexManagement).role("admin").user("neo4j").map,
+      granted(constraintManagement).role("admin").user("neo4j").map,
+      granted(admin).role("admin").user("neo4j").map,
     )
 
     result.toSet should be(expected)
@@ -227,7 +225,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     // WHEN
     executeOnSystem("joe", "soap", "SHOW USER joe PRIVILEGES", resultHandler = (row, _) => {
       // THEN
-      asPrivilegesResult(row) should be(access().database(DEFAULT).role(PUBLIC).user("joe").map)
+      asPrivilegesResult(row) should be(granted(access).database(DEFAULT).role(PUBLIC).user("joe").map)
     }) should be(1)
   }
 
@@ -238,7 +236,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     // WHEN
     executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES", resultHandler = (row, _) => {
       // THEN
-      asPrivilegesResult(row) should be(access().database(DEFAULT).role("PUBLIC").user("joe").map)
+      asPrivilegesResult(row) should be(granted(access).database(DEFAULT).role("PUBLIC").user("joe").map)
     }) should be(1)
   }
 
@@ -279,7 +277,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("DROP DATABASE foo")
 
     // THEN
-    execute("SHOW USER bar PRIVILEGES").toSet should be(Set(access().role(PUBLIC).database(DEFAULT).user("bar").map))
+    execute("SHOW USER bar PRIVILEGES").toSet should be(Set(granted(access).role(PUBLIC).database(DEFAULT).user("bar").map))
   }
 
   test("should not show user privileges on a dropped role") {
@@ -291,22 +289,22 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     execute("DROP ROLE custom")
 
     // THEN
-    execute("SHOW USER bar PRIVILEGES").toSet should be(Set(access().role(PUBLIC).database(DEFAULT).user("bar").map))
+    execute("SHOW USER bar PRIVILEGES").toSet should be(Set(granted(access).role(PUBLIC).database(DEFAULT).user("bar").map))
   }
 
   // Tests for granting and denying privileges
 
   Seq(
-    ("grant", "GRANTED"),
-    ("deny", "DENIED"),
+    ("grant", granted: privilegeFunction),
+    ("deny", denied: privilegeFunction),
   ).foreach {
-    case (grantOrDeny, grantOrDenyRelType) =>
+    case (grantOrDeny, grantedOrDenied: privilegeFunction) =>
       val grantOrDenyCommand = grantOrDeny.toUpperCase
 
       Seq(
-        ("traversal", "TRAVERSE", traverse(grantOrDenyRelType)),
-        ("read", "READ {*}", read(grantOrDenyRelType)),
-        ("match", "MATCH {*}", matchPrivilege(grantOrDenyRelType))
+        ("traversal", "TRAVERSE", grantedOrDenied(traverse)),
+        ("read", "READ {*}", grantedOrDenied(read)),
+        ("match", "MATCH {*}", grantedOrDenied(matchPrivilege))
       ).foreach {
         case (actionName, actionCommand, startExpected) =>
 
@@ -607,12 +605,12 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse().role("custom").database("bar").node("A").map,
-      traverse("DENIED").role("custom").database("bar").relationship("B").map,
-      read().role("custom").database("bar").property("prop").node("A").map,
-      read("DENIED").role("custom").database("bar").property("prop2").node("B").map,
-      matchPrivilege().role("custom").database("bar").property("prop3").node("C").map,
-      matchPrivilege("DENIED").role("custom").database("bar").property("prop4").node("D").map
+      granted(traverse).role("custom").database("bar").node("A").map,
+      denied(traverse).role("custom").database("bar").relationship("B").map,
+      granted(read).role("custom").database("bar").property("prop").node("A").map,
+      denied(read).role("custom").database("bar").property("prop2").node("B").map,
+      granted(matchPrivilege).role("custom").database("bar").property("prop3").node("C").map,
+      denied(matchPrivilege).role("custom").database("bar").property("prop4").node("D").map
     ))
 
     // WHEN
@@ -622,23 +620,23 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
     //THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      traverse("DENIED").role("custom").database("bar").relationship("B").map,
-      read().role("custom").database("bar").property("prop").node("A").map,
-      matchPrivilege("DENIED").role("custom").database("bar").property("prop4").node("D").map
+      denied(traverse).role("custom").database("bar").relationship("B").map,
+      granted(read).role("custom").database("bar").property("prop").node("A").map,
+      denied(matchPrivilege).role("custom").database("bar").property("prop4").node("D").map
     ))
   }
 
   // Tests for granting and denying privileges on properties
   Seq(
-    ("grant", "GRANTED"),
-    ("deny", "DENIED"),
+    ("grant", granted: privilegeFunction),
+    ("deny", denied: privilegeFunction),
   ).foreach {
-    case (grantOrDeny, grantOrDenyRelType) =>
+    case (grantOrDeny, grantedOrDenied) =>
       val grantOrDenyCommand = grantOrDeny.toUpperCase
 
       Seq(
-        ("read", "READ", read(grantOrDenyRelType)),
-        ("match", "MATCH", matchPrivilege(grantOrDenyRelType))
+        ("read", "READ", grantedOrDenied(read)),
+        ("match", "MATCH", grantedOrDenied(matchPrivilege))
       ).foreach {
         case (actionName, actionCommand, startExpected) =>
 
@@ -934,7 +932,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       // THEN
       val res = asPrivilegesResult(row)
       println(res)
-      res should be(access().database(DEFAULT).role("PUBLIC").user("joe").map)
+      res should be(granted(access).database(DEFAULT).role("PUBLIC").user("joe").map)
     }, params = Map[String, Object]("currentUser" -> "neo4j").asJava) should be(1)
 
     // WHEN using a parameter name that is the new internal name, an error should occur

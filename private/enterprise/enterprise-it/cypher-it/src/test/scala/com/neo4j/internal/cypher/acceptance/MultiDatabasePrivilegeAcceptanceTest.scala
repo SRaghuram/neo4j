@@ -64,8 +64,8 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      startDatabase().database("foo").role("role").map,
-      stopDatabase().database("foo").role("role").map
+      granted(startDatabase).database("foo").role("role").map,
+      granted(stopDatabase).database("foo").role("role").map
     ))
 
     // WHEN
@@ -74,8 +74,8 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      startDatabase().role("role").map,
-      stopDatabase().database("foo").role("role").map
+      granted(startDatabase).role("role").map,
+      granted(stopDatabase).database("foo").role("role").map
     ))
 
     // WHEN
@@ -83,9 +83,9 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      startDatabase().role("role").map,
-      stopDatabase().database("foo").role("role").map,
-      startDatabase(DENIED).database("bar").role("role").map
+      granted(startDatabase).role("role").map,
+      granted(stopDatabase).database("foo").role("role").map,
+      denied(startDatabase).database("bar").role("role").map
     ))
 
     // WHEN
@@ -93,8 +93,8 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      startDatabase().role("role").map,
-      stopDatabase().database("foo").role("role").map
+      granted(startDatabase).role("role").map,
+      granted(stopDatabase).database("foo").role("role").map
     ))
 
     // WHEN
@@ -102,9 +102,9 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      startDatabase().role("role").map,
-      stopDatabase().database("foo").role("role").map,
-      stopDatabase(DENIED).database(DEFAULT).role("role").map
+      granted(startDatabase).role("role").map,
+      granted(stopDatabase).database("foo").role("role").map,
+      denied(stopDatabase).database(DEFAULT).role("role").map
     ))
   }
 
@@ -118,7 +118,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      access().database(DEFAULT_DATABASE_NAME).role("custom").map
+      granted(access).database(DEFAULT_DATABASE_NAME).role("custom").map
     ))
 
     // WHEN
@@ -126,8 +126,8 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      access().database(DEFAULT_DATABASE_NAME).role("custom").map,
-      access(DENIED).database(SYSTEM_DATABASE_NAME).role("custom").map
+      granted(access).database(DEFAULT_DATABASE_NAME).role("custom").map,
+      denied(access).database(SYSTEM_DATABASE_NAME).role("custom").map
     ))
 
     // WHEN
@@ -135,7 +135,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      access().database(DEFAULT_DATABASE_NAME).role("custom").map
+      granted(access).database(DEFAULT_DATABASE_NAME).role("custom").map
     ))
 
     // WHEN
@@ -143,8 +143,8 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      access().database(DEFAULT_DATABASE_NAME).role("custom").map,
-      access(DENIED).database(DEFAULT).role("custom").map
+      granted(access).database(DEFAULT_DATABASE_NAME).role("custom").map,
+      denied(access).database(DEFAULT).role("custom").map
     ))
 
     // WHEN
@@ -152,8 +152,8 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      access().database(DEFAULT_DATABASE_NAME).role("custom").map,
-      access(DENIED).database(DEFAULT).role("custom").map
+      granted(access).database(DEFAULT_DATABASE_NAME).role("custom").map,
+      denied(access).database(DEFAULT).role("custom").map
     ))
 
     // WHEN
@@ -161,8 +161,8 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      access().database(DEFAULT_DATABASE_NAME).role("custom").map,
-      access(DENIED).database(DEFAULT).role("custom").map
+      granted(access).database(DEFAULT_DATABASE_NAME).role("custom").map,
+      denied(access).database(DEFAULT).role("custom").map
     ))
   }
 
@@ -178,7 +178,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      access().database(DEFAULT).role("role").map
+      granted(access).database(DEFAULT).role("role").map
     ))
 
     // WHEN
@@ -187,7 +187,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      startDatabase(DENIED).database(DEFAULT).role("role").map
+      denied(startDatabase).database(DEFAULT).role("role").map
     ))
 
     // WHEN
@@ -196,7 +196,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      stopDatabase().database(DEFAULT).role("role").map
+      granted(stopDatabase).database(DEFAULT).role("role").map
     ))
 
     // WHEN
@@ -221,11 +221,11 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      startDatabase().role("custom").database("bar").map,
-      stopDatabase("DENIED").role("custom").database("bar").map,
-      access().role("custom").database("bar").map,
-      createPropertyKey().role("custom").database("bar").map,
-      indexManagement().role("custom").database("bar").map
+      granted(startDatabase).role("custom").database("bar").map,
+      denied(stopDatabase).role("custom").database("bar").map,
+      granted(access).role("custom").database("bar").map,
+      granted(createPropertyKey).role("custom").database("bar").map,
+      granted(indexManagement).role("custom").database("bar").map
     ))
 
     // WHEN
@@ -235,8 +235,8 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
         // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      access().role("custom").database("bar").map,
-      createPropertyKey().role("custom").database("bar").map
+      granted(access).role("custom").database("bar").map,
+      granted(createPropertyKey).role("custom").database("bar").map
     ))
   }
 
@@ -420,7 +420,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"GRANT START ON DEFAULT DATABASE TO role")
 
     // THEN: Get privilege on default
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(startDatabase().database(DEFAULT).role("role").map))
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(granted(startDatabase).database(DEFAULT).role("role").map))
 
     // WHEN: Starting the databases
     executeOnSystem("alice", "abc", s"START DATABASE $DEFAULT_DATABASE_NAME")
@@ -444,7 +444,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, offlineStatus, default = true)))
 
     // THEN: confirm privilege
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(startDatabase().database(DEFAULT).role("role").map))
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(granted(startDatabase).database(DEFAULT).role("role").map))
 
     // WHEN: Starting the databases
     the[AuthorizationViolationException] thrownBy {
@@ -646,7 +646,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"GRANT STOP ON DEFAULT DATABASE TO role")
 
     // THEN: Get privilege on default
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(stopDatabase().database(DEFAULT).role("role").map))
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(granted(stopDatabase).database(DEFAULT).role("role").map))
 
     // WHEN: Stopping the databases
     executeOnSystem("alice", "abc", s"STOP DATABASE $DEFAULT_DATABASE_NAME")
@@ -670,7 +670,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, onlineStatus, default = true)))
 
     // THEN: confirm privilege
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(stopDatabase().database(DEFAULT).role("role").map))
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(granted(stopDatabase).database(DEFAULT).role("role").map))
 
     // WHEN: Stopping the databases
     the[AuthorizationViolationException] thrownBy {
@@ -772,7 +772,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"GRANT ACCESS ON DEFAULT DATABASE TO role")
 
     // THEN: Get privilege on default
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(access().database(DEFAULT).role("role").map))
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(granted(access).database(DEFAULT).role("role").map))
 
     // WHEN & THEN: accessing the databases
     executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", "MATCH (n) RETURN n") should be(0)
@@ -789,7 +789,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"SHOW DEFAULT DATABASE").toSet should be(Set(defaultDb(newDefaultDatabase)))
 
     // THEN: confirm privilege
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(access().database(DEFAULT).role("role").map))
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(granted(access).database(DEFAULT).role("role").map))
 
     // WHEN & THEN: accessing the databases
     the[AuthorizationViolationException] thrownBy {
@@ -933,7 +933,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
   }
 
   private def testAlwaysAllowedForAdmin(populatedRoles: Int): Unit = {
-    // create and alter users
+    // create and alter granted(users
     executeOnSystem("Alice", "oldSecret", "ALTER CURRENT USER SET PASSWORD FROM 'oldSecret' TO 'secret'")
     executeOnSystem("Alice", "secret", "CREATE USER Bob SET PASSWORD 'notSecret'")
     executeOnSystem("Alice", "secret", "ALTER USER Bob SET PASSWORD 'newSecret'")

@@ -317,10 +317,10 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE ROLE foo")
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO foo")
     execute("GRANT READ {a,b,c} ON GRAPH * NODES A (*) TO foo")
-    val expected = Set(traverse().node("*").map,
-      read().property("a").node("A").map,
-      read().property("b").node("A").map,
-      read().property("c").node("A").map
+    val expected = Set(granted(traverse).node("*").map,
+      granted(read).property("a").node("A").map,
+      granted(read).property("b").node("A").map,
+      granted(read).property("c").node("A").map
     )
     val expectedFoo = expected.map(_ ++ Map("role" -> "foo"))
     val expectedBar = expected.map(_ ++ Map("role" -> "bar"))
@@ -347,21 +347,21 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles ++ baseRoles ++ Set(role("bar").map))
-    execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set(traverse().role("bar").node("A").map))
+    execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set(granted(traverse).role("bar").node("A").map))
 
     // WHEN: replacing
     execute("CREATE OR REPLACE ROLE bar AS COPY OF base2")
 
     // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles ++ baseRoles ++ Set(role("bar").map))
-    execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set(traverse().role("bar").node("B").map))
+    execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set(granted(traverse).role("bar").node("B").map))
 
     // WHEN: replacing with parameters
     execute("CREATE OR REPLACE ROLE $role1 AS COPY OF $role2", Map("role1" -> "bar", "role2" -> "base1"))
 
     // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles ++ baseRoles ++ Set(role("bar").map))
-    execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set(traverse().role("bar").node("A").map))
+    execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set(granted(traverse).role("bar").node("A").map))
   }
 
   test("should fail when creating from non-existing role") {
@@ -463,7 +463,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map, role("bar").map))
-    execute("SHOW ROLE foo PRIVILEGES").toSet should be(Set(traverse().role("foo").node("*").map))
+    execute("SHOW ROLE foo PRIVILEGES").toSet should be(Set(granted(traverse).role("foo").node("*").map))
     execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set.empty)
   }
 

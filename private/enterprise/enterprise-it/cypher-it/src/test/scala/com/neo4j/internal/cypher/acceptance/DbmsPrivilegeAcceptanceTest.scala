@@ -11,252 +11,252 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   // Privilege tests
 
-  Seq(("GRANT", GRANTED), ("DENY", DENIED)).foreach {
-    case (grant, relType) =>
-      test(s"should $grant create role privilege") {
+  Seq(("GRANT", granted: privilegeFunction), ("DENY", denied: privilegeFunction)).foreach {
+    case (grantOrDeny, grantedOrDenied) =>
+      test(s"should $grantOrDeny create role privilege") {
         // GIVEN
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grant CREATE ROLE ON DBMS TO custom")
+        execute(s"$grantOrDeny CREATE ROLE ON DBMS TO custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          adminAction("create_role", relType).role("custom").map
+         grantedOrDenied(adminAction("create_role")).role("custom").map
         ))
       }
 
-      test(s"should $grant drop role privilege") {
+      test(s"should $grantOrDeny drop role privilege") {
         // GIVEN
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grant DROP ROLE ON DBMS TO $$role", Map("role" -> "custom"))
+        execute(s"$grantOrDeny DROP ROLE ON DBMS TO $$role", Map("role" -> "custom"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          adminAction("drop_role", relType).role("custom").map
+          grantedOrDenied(adminAction("drop_role")).role("custom").map
         ))
       }
 
-      test(s"should $grant assign role privilege") {
+      test(s"should $grantOrDeny assign role privilege") {
         // GIVEN
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grant ASSIGN ROLE ON DBMS TO custom")
+        execute(s"$grantOrDeny ASSIGN ROLE ON DBMS TO custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          adminAction("assign_role", relType).role("custom").map
+          grantedOrDenied(adminAction("assign_role")).role("custom").map
         ))
       }
 
-      test(s"should $grant remove role privilege") {
+      test(s"should $grantOrDeny remove role privilege") {
         // GIVEN
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grant REMOVE ROLE ON DBMS TO custom")
+        execute(s"$grantOrDeny REMOVE ROLE ON DBMS TO custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          adminAction("remove_role", relType).role("custom").map
+          grantedOrDenied(adminAction("remove_role")).role("custom").map
         ))
       }
 
-      test(s"should $grant show role privilege") {
+      test(s"should $grantOrDeny show role privilege") {
         // GIVEN
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grant SHOW ROLE ON DBMS TO custom")
+        execute(s"$grantOrDeny SHOW ROLE ON DBMS TO custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          adminAction("show_role", relType).role("custom").map
+          grantedOrDenied(adminAction("show_role")).role("custom").map
         ))
       }
 
-      test(s"should $grant role management privilege") {
+      test(s"should $grantOrDeny role management privilege") {
         // GIVEN
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grant ROLE MANAGEMENT ON DBMS TO custom")
+        execute(s"$grantOrDeny ROLE MANAGEMENT ON DBMS TO custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          adminAction("role_management", relType).role("custom").map
+          grantedOrDenied(adminAction("role_management")).role("custom").map
         ))
       }
 
-      test(s"should $grant create user privilege") {
+      test(s"should $grantOrDeny create user privilege") {
         // GIVEN
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grant CREATE USER ON DBMS TO custom")
+        execute(s"$grantOrDeny CREATE USER ON DBMS TO custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          adminAction("create_user", relType).role("custom").map
+          grantedOrDenied(adminAction("create_user")).role("custom").map
         ))
       }
 
-      test(s"should $grant drop user privilege") {
+      test(s"should $grantOrDeny drop user privilege") {
         // GIVEN
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grant DROP USER ON DBMS TO custom")
+        execute(s"$grantOrDeny DROP USER ON DBMS TO custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          adminAction("drop_user", relType).role("custom").map
+          grantedOrDenied(adminAction("drop_user")).role("custom").map
         ))
       }
 
-      test(s"should $grant show user privilege") {
+      test(s"should $grantOrDeny show user privilege") {
         // GIVEN
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grant SHOW USER ON DBMS TO $$role", Map("role" -> "custom"))
+        execute(s"$grantOrDeny SHOW USER ON DBMS TO $$role", Map("role" -> "custom"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          adminAction("show_user", relType).role("custom").map
+          grantedOrDenied(adminAction("show_user")).role("custom").map
         ))
       }
 
-      test(s"should $grant alter user privilege") {
+      test(s"should $grantOrDeny alter user privilege") {
         // GIVEN
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grant ALTER USER ON DBMS TO custom")
+        execute(s"$grantOrDeny ALTER USER ON DBMS TO custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          adminAction("alter_user", relType).role("custom").map
+          grantedOrDenied(adminAction("alter_user")).role("custom").map
         ))
       }
 
-      test(s"should $grant user management privilege") {
+      test(s"should $grantOrDeny user management privilege") {
         // GIVEN
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grant USER MANAGEMENT ON DBMS TO custom")
+        execute(s"$grantOrDeny USER MANAGEMENT ON DBMS TO custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          adminAction("user_management", relType).role("custom").map
+          grantedOrDenied(adminAction("user_management")).role("custom").map
         ))
       }
 
-      test(s"should $grant create database privilege") {
+      test(s"should $grantOrDeny create database privilege") {
         // GIVEN
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grant CREATE DATABASE ON DBMS TO custom")
+        execute(s"$grantOrDeny CREATE DATABASE ON DBMS TO custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          adminAction("create_database", relType).role("custom").map
+          grantedOrDenied(adminAction("create_database")).role("custom").map
         ))
       }
 
-      test(s"should $grant drop database privilege") {
+      test(s"should $grantOrDeny drop database privilege") {
         // GIVEN
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grant DROP DATABASE ON DBMS TO custom")
+        execute(s"$grantOrDeny DROP DATABASE ON DBMS TO custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          adminAction("drop_database", relType).role("custom").map
+          grantedOrDenied(adminAction("drop_database")).role("custom").map
         ))
       }
 
-      test(s"should $grant database management privilege") {
+      test(s"should $grantOrDeny database management privilege") {
         // GIVEN
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grant DATABASE MANAGEMENT ON DBMS TO $$role", Map("role" -> "custom"))
+        execute(s"$grantOrDeny DATABASE MANAGEMENT ON DBMS TO $$role", Map("role" -> "custom"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          adminAction("database_management", relType).role("custom").map
+          grantedOrDenied(adminAction("database_management")).role("custom").map
         ))
       }
 
-      test(s"should $grant show privilege privilege") {
+      test(s"should $grantOrDeny show privilege privilege") {
         // GIVEN
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grant SHOW PRIVILEGE ON DBMS TO custom")
+        execute(s"$grantOrDeny SHOW PRIVILEGE ON DBMS TO custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          adminAction("show_privilege", relType).role("custom").map
+          grantedOrDenied(adminAction("show_privilege")).role("custom").map
         ))
       }
 
-      test(s"should $grant assign privilege privilege") {
+      test(s"should $grantOrDeny assign privilege privilege") {
         // GIVEN
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grant ASSIGN PRIVILEGE ON DBMS TO custom")
+        execute(s"$grantOrDeny ASSIGN PRIVILEGE ON DBMS TO custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          adminAction("assign_privilege", relType).role("custom").map
+          grantedOrDenied(adminAction("assign_privilege")).role("custom").map
         ))
       }
 
-      test(s"should $grant remove privilege privilege") {
+      test(s"should $grantOrDeny remove privilege privilege") {
         // GIVEN
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grant REMOVE PRIVILEGE ON DBMS TO $$role", Map("role" -> "custom"))
+        execute(s"$grantOrDeny REMOVE PRIVILEGE ON DBMS TO $$role", Map("role" -> "custom"))
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          adminAction("remove_privilege", relType).role("custom").map
+          grantedOrDenied(adminAction("remove_privilege")).role("custom").map
         ))
       }
 
-      test(s"should $grant privilege management privilege") {
+      test(s"should $grantOrDeny privilege management privilege") {
         // GIVEN
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grant PRIVILEGE MANAGEMENT ON DBMS TO custom")
+        execute(s"$grantOrDeny PRIVILEGE MANAGEMENT ON DBMS TO custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          adminAction("privilege_management", relType).role("custom").map
+          grantedOrDenied(adminAction("privilege_management")).role("custom").map
         ))
       }
 
-      test(s"should $grant all dbms privilege privilege") {
+      test(s"should $grantOrDeny all dbms privilege privilege") {
         // GIVEN
         execute("CREATE ROLE custom")
 
         // WHEN
-        execute(s"$grant ALL DBMS PRIVILEGES ON DBMS TO custom")
+        execute(s"$grantOrDeny ALL DBMS PRIVILEGES ON DBMS TO custom")
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          adminAction("dbms_actions", relType).role("custom").map
+          grantedOrDenied(adminAction("dbms_actions")).role("custom").map
         ))
       }
   }
@@ -277,12 +277,12 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantAdmin().role("custom").map,
-      adminAction("create_role").role("custom").map,
-      adminAction("drop_role").role("custom").map,
-      adminAction("assign_role").role("custom").map,
-      adminAction("remove_role").role("custom").map,
-      adminAction("show_role").role("custom").map
+      granted(admin).role("custom").map,
+      granted(adminAction("create_role")).role("custom").map,
+      granted(adminAction("drop_role")).role("custom").map,
+      granted(adminAction("assign_role")).role("custom").map,
+      granted(adminAction("remove_role")).role("custom").map,
+      granted(adminAction("show_role")).role("custom").map
     ))
   }
 
@@ -301,11 +301,11 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantAdmin().role("custom").map,
-      adminAction("create_user").role("custom").map,
-      adminAction("drop_user").role("custom").map,
-      adminAction("alter_user").role("custom").map,
-      adminAction("show_user").role("custom").map
+      granted(admin).role("custom").map,
+      granted(adminAction("create_user")).role("custom").map,
+      granted(adminAction("drop_user")).role("custom").map,
+      granted(adminAction("alter_user")).role("custom").map,
+      granted(adminAction("show_user")).role("custom").map
     ))
   }
 
@@ -322,9 +322,9 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantAdmin().role("custom").map,
-      adminAction("create_database").role("custom").map,
-      adminAction("drop_database").role("custom").map
+      granted(admin).role("custom").map,
+      granted(adminAction("create_database")).role("custom").map,
+      granted(adminAction("drop_database")).role("custom").map
     ))
   }
 
@@ -342,10 +342,10 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantAdmin().role("custom").map,
-      adminAction("show_privilege").role("custom").map,
-      adminAction("assign_privilege").role("custom").map,
-      adminAction("remove_privilege").role("custom").map
+      granted(admin).role("custom").map,
+      granted(adminAction("show_privilege")).role("custom").map,
+      granted(adminAction("assign_privilege")).role("custom").map,
+      granted(adminAction("remove_privilege")).role("custom").map
     ))
   }
 
@@ -360,25 +360,25 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantAdmin().role("custom").map,
-      adminAction("create_role").role("custom").map,
-      adminAction("drop_role").role("custom").map,
-      adminAction("assign_role").role("custom").map,
-      adminAction("remove_role").role("custom").map,
-      adminAction("show_role").role("custom").map,
-      adminAction("role_management").role("custom").map,
-      adminAction("create_user").role("custom").map,
-      adminAction("drop_user").role("custom").map,
-      adminAction("alter_user").role("custom").map,
-      adminAction("show_user").role("custom").map,
-      adminAction("user_management").role("custom").map,
-      adminAction("create_database").role("custom").map,
-      adminAction("drop_database").role("custom").map,
-      adminAction("database_management").role("custom").map,
-      adminAction("show_privilege").role("custom").map,
-      adminAction("assign_privilege").role("custom").map,
-      adminAction("remove_privilege").role("custom").map,
-      adminAction("privilege_management").role("custom").map
+      granted(admin).role("custom").map,
+      granted(adminAction("create_role")).role("custom").map,
+      granted(adminAction("drop_role")).role("custom").map,
+      granted(adminAction("assign_role")).role("custom").map,
+      granted(adminAction("remove_role")).role("custom").map,
+      granted(adminAction("show_role")).role("custom").map,
+      granted(adminAction("role_management")).role("custom").map,
+      granted(adminAction("create_user")).role("custom").map,
+      granted(adminAction("drop_user")).role("custom").map,
+      granted(adminAction("alter_user")).role("custom").map,
+      granted(adminAction("show_user")).role("custom").map,
+      granted(adminAction("user_management")).role("custom").map,
+      granted(adminAction("create_database")).role("custom").map,
+      granted(adminAction("drop_database")).role("custom").map,
+      granted(adminAction("database_management")).role("custom").map,
+      granted(adminAction("show_privilege")).role("custom").map,
+      granted(adminAction("assign_privilege")).role("custom").map,
+      granted(adminAction("remove_privilege")).role("custom").map,
+      granted(adminAction("privilege_management")).role("custom").map
     ))
   }
 
@@ -405,8 +405,8 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // Then
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantAdmin().role("custom").map,
-      adminAction("role_management").role("custom").map
+      granted(admin).role("custom").map,
+      granted(adminAction("role_management")).role("custom").map
     ))
   }
 
@@ -431,8 +431,8 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // Then
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantAdmin().role("custom").map,
-      adminAction("user_management").role("custom").map
+      granted(admin).role("custom").map,
+      granted(adminAction("user_management")).role("custom").map
     ))
   }
 
@@ -452,7 +452,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // Then
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      adminAction("database_management").role("custom").map
+      granted(adminAction("database_management")).role("custom").map
     ))
   }
 
@@ -474,7 +474,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // Then
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      adminAction("privilege_management").role("custom").map
+      granted(adminAction("privilege_management")).role("custom").map
     ))
   }
 
@@ -490,8 +490,8 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // Then
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      grantAdmin().role("custom").map,
-      adminAction("dbms_actions").role("custom").map
+      granted(admin).role("custom").map,
+      granted(adminAction("dbms_actions")).role("custom").map
     ))
   }
 
@@ -531,7 +531,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     ).foreach(queryPart => execute(s"REVOKE $queryPart FROM custom"))
 
     // Then
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantAdmin().role("custom").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(granted(admin).role("custom").map))
   }
 
   // Enforcement tests
@@ -1309,26 +1309,26 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   Seq(
     // Graph commands
-    ("TRAVERSE", "TRAVERSE ON GRAPH * NODES A", Set(traverse().node("A"))),
-    ("READ", "READ {prop} ON GRAPH * NODES *", Set(read().node("*").property("prop"))),
-    ("MATCH", "MATCH {prop} ON GRAPH * NODES A", Set(matchPrivilege().node("A").property("prop"))),
-    ("WRITE", "WRITE ON GRAPH *", Set(write().node("*"), write().relationship("*"))),
+    ("TRAVERSE", "TRAVERSE ON GRAPH * NODES A", Set(traverse ++ Map("segment" -> "NODE(A)"))),
+    ("READ", "READ {prop} ON GRAPH * NODES *", Set(read ++ Map("segment" -> "NODE(*)", "resource" -> "property(prop)"))),
+    ("MATCH", "MATCH {prop} ON GRAPH * NODES A", Set(matchPrivilege ++ Map("segment" -> "NODE(A)", "resource" -> "property(prop)"))),
+    ("WRITE", "WRITE ON GRAPH *", Set(write ++ Map("segment" -> "NODE(*)"), write ++ Map("segment" -> "RELATIONSHIP(*)"))),
 
     // Database commands
-    ("ACCESS", "ACCESS ON DATABASE *", Set(access())),
-    ("START", "START ON DATABASE *", Set(startDatabase())),
-    ("STOP", "STOP ON DATABASE *", Set(stopDatabase())),
-    ("CREATE INDEX", "CREATE INDEX ON DATABASE *", Set(createIndex())),
-    ("DROP INDEX", "DROP INDEX ON DATABASE *", Set(dropIndex())),
-    ("INDEX MANAGEMENT", "INDEX MANAGEMENT ON DATABASE *", Set(indexManagement())),
-    ("CREATE CONSTRAINT", "CREATE CONSTRAINT ON DATABASE *", Set(createConstraint())),
-    ("DROP CONSTRAINT", "DROP CONSTRAINT ON DATABASE *", Set(dropConstraint())),
-    ("CONSTRAINT MANAGEMENT", "CONSTRAINT MANAGEMENT ON DATABASE *", Set(constraintManagement())),
-    ("CREATE NEW LABEL", "CREATE NEW LABEL ON DATABASE *", Set(createNodeLabel())),
-    ("CREATE NEW TYPE", "CREATE NEW TYPE ON DATABASE *", Set(createRelationshipType())),
-    ("CREATE NEW NAME", "CREATE NEW NAME ON DATABASE *", Set(createPropertyKey())),
-    ("NAME MANAGEMENT", "NAME MANAGEMENT ON DATABASE *", Set(nameManagement())),
-    ("ALL DATABASE", "ALL ON DATABASE *", Set(allDatabasePrivilege())),
+    ("ACCESS", "ACCESS ON DATABASE *", Set(access)),
+    ("START", "START ON DATABASE *", Set(startDatabase)),
+    ("STOP", "STOP ON DATABASE *", Set(stopDatabase)),
+    ("CREATE INDEX", "CREATE INDEX ON DATABASE *", Set(createIndex)),
+    ("DROP INDEX", "DROP INDEX ON DATABASE *", Set(dropIndex)),
+    ("INDEX MANAGEMENT", "INDEX MANAGEMENT ON DATABASE *", Set(indexManagement)),
+    ("CREATE CONSTRAINT", "CREATE CONSTRAINT ON DATABASE *", Set(createConstraint)),
+    ("DROP CONSTRAINT", "DROP CONSTRAINT ON DATABASE *", Set(dropConstraint)),
+    ("CONSTRAINT MANAGEMENT", "CONSTRAINT MANAGEMENT ON DATABASE *", Set(constraintManagement)),
+    ("CREATE NEW LABEL", "CREATE NEW LABEL ON DATABASE *", Set(createNodeLabel)),
+    ("CREATE NEW TYPE", "CREATE NEW TYPE ON DATABASE *", Set(createRelationshipType)),
+    ("CREATE NEW NAME", "CREATE NEW NAME ON DATABASE *", Set(createPropertyKey)),
+    ("NAME MANAGEMENT", "NAME MANAGEMENT ON DATABASE *", Set(nameManagement)),
+    ("ALL DATABASE", "ALL ON DATABASE *", Set(allDatabasePrivilege)),
     ("SHOW TRANSACTION", "SHOW TRANSACTION ON DATABASE *", Set(showTransaction("*"))),
     ("TERMINATE TRANSACTION", "TERMINATE TRANSACTION ON DATABASE *", Set(terminateTransaction("*"))),
     ("TRANSACTION MANAGEMENT", "TRANSACTION MANAGEMENT ON DATABASE *", Set(transaction("*"))),
@@ -1365,7 +1365,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
         // THEN
         executeOnSystem("foo", "bar", s"GRANT $command TO otherRole")
-        execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(showPrivileges.map(p => p.role("otherRole").map))
+        execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(showPrivileges.map(p => granted(p).role("otherRole").map))
 
         // WHEN
         execute("REVOKE ASSIGN PRIVILEGE ON DBMS FROM custom")
@@ -1389,7 +1389,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
         // THEN
         executeOnSystem("foo", "bar", s"DENY $command TO otherRole")
-        execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(showPrivileges.map(p => p.role("otherRole").privType(DENIED).map))
+        execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(showPrivileges.map(p => denied(p).role("otherRole").map))
 
         // WHEN
         execute("REVOKE ASSIGN PRIVILEGE ON DBMS FROM custom")
@@ -1445,7 +1445,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
           executeOnSystem("foo", "bar", s"REVOKE $command FROM otherRole")
         } should have message "Permission denied."
 
-        execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(showPrivileges.map(p => p.role("otherRole").map))
+        execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(showPrivileges.map(p => granted(p).role("otherRole").map))
       }
 
       test(s"should fail when revoking $privilege privileges when denied remove privilege privilege") {
@@ -1462,7 +1462,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
           executeOnSystem("foo", "bar", s"REVOKE $command FROM otherRole")
         } should have message "Permission denied."
 
-        execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(showPrivileges.map(p => p.role("otherRole").map))
+        execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(showPrivileges.map(p => granted(p).role("otherRole").map))
       }
   }
 
@@ -1487,7 +1487,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
         "segment" -> row.get("segment"),
         "role" -> row.get("role"),
       )
-      res should be(traverse().node("A").role("otherRole").map)
+      res should be(granted(traverse).node("A").role("otherRole").map)
     }) should be(1)
 
     executeOnSystem("foo", "bar", "GRANT TRAVERSE ON GRAPH * NODES B TO otherRole")
@@ -1496,8 +1496,8 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(
       Set(
-        traverse().node("B").role("otherRole").database("*").map,
-        traverse(DENIED).node("C").role("otherRole").database("*").map
+        granted(traverse).node("B").role("otherRole").database("*").map,
+        denied(traverse).node("C").role("otherRole").database("*").map
       )
     )
 
@@ -1525,7 +1525,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     } should have message "Permission denied."
 
     execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(
-      Set(traverse().node("A").role("otherRole").database("*").map)
+      Set(granted(traverse).node("A").role("otherRole").database("*").map)
     )
   }
 
@@ -1560,7 +1560,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     } should have message "Permission denied."
 
     execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(
-      Set(traverse().node("A").role("otherRole").database("*").map)
+      Set(granted(traverse).node("A").role("otherRole").database("*").map)
     )
   }
 
@@ -1589,7 +1589,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // Should be able to do privilege management
     executeOnSystem("foo", "bar", "GRANT TRAVERSE ON GRAPH * NODES A TO otherRole")
-    execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set(traverse().node("A").role("otherRole").database("*").map))
+    execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set(granted(traverse).node("A").role("otherRole").database("*").map))
 
     // WHEN
     execute("REVOKE ALL DBMS PRIVILEGES ON DBMS FROM custom")
@@ -1618,7 +1618,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "GRANT TRAVERSE ON GRAPH * NODES B TO otherRole")
     } should have message "Permission denied."
-    execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set(traverse().node("A").role("otherRole").database("*").map))
+    execute("SHOW ROLE otherRole PRIVILEGES").toSet should be(Set(granted(traverse).node("A").role("otherRole").database("*").map))
   }
 
   test("should fail dbms management when denied all dbms privileges privilege") {
@@ -1668,7 +1668,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     execute(s"REVOKE NAME ON DATABASE * FROM $name")
     execute(s"REVOKE INDEX ON DATABASE * FROM $name")
     execute(s"REVOKE CONSTRAINT ON DATABASE * FROM $name")
-    execute(s"SHOW ROLE $name PRIVILEGES").toSet should be(Set(grantAdmin().role(name).map))
+    execute(s"SHOW ROLE $name PRIVILEGES").toSet should be(Set(granted(admin).role(name).map))
   }
 
   private def allDbmsPrivileges(privType: String, includingCompound: Boolean): Unit = {

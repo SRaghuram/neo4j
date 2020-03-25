@@ -34,10 +34,10 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
   }
 
   Seq(
-    ("grant", "GRANT", "GRANTED"),
-    ("deny", "DENY", "DENIED"),
+    ("grant", "GRANT", granted: privilegeFunction),
+    ("deny", "DENY", denied: privilegeFunction),
   ).foreach {
-    case (grantOrDeny, grantOrDenyCommand, grantOrDenyRelType) =>
+    case (grantOrDeny, grantOrDenyCommand, grantedOrDenied) =>
 
       // Tests for granting and denying write privileges
 
@@ -50,8 +50,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          write(grantOrDenyRelType).role("custom").node("*").map,
-          write(grantOrDenyRelType).role("custom").relationship("*").map
+          grantedOrDenied(write).role("custom").node("*").map,
+          grantedOrDenied(write).role("custom").relationship("*").map
         ))
       }
 
@@ -65,8 +65,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          write(grantOrDenyRelType).role("custom").database("foo").node("*").map,
-          write(grantOrDenyRelType).role("custom").database("foo").relationship("*").map
+          grantedOrDenied(write).role("custom").database("foo").node("*").map,
+          grantedOrDenied(write).role("custom").database("foo").relationship("*").map
         ))
       }
 
@@ -79,8 +79,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          write(grantOrDenyRelType).database(DEFAULT_DATABASE_NAME).role("custom").node("*").map,
-          write(grantOrDenyRelType).database(DEFAULT_DATABASE_NAME).role("custom").relationship("*").map
+          grantedOrDenied(write).database(DEFAULT_DATABASE_NAME).role("custom").node("*").map,
+          grantedOrDenied(write).database(DEFAULT_DATABASE_NAME).role("custom").relationship("*").map
         ))
       }
 
@@ -96,8 +96,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
         // THEN
         val expected: Seq[PrivilegeMapBuilder] = Seq(
-          write(grantOrDenyRelType).database("foo").node("*"),
-          write(grantOrDenyRelType).database("foo").relationship("*")
+          grantedOrDenied(write).database("foo").node("*"),
+          grantedOrDenied(write).database("foo").relationship("*")
         )
 
         execute("SHOW ROLE role1 PRIVILEGES").toSet should be(expected.map(_.role("role1").map).toSet)
@@ -130,10 +130,10 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          write(grantOrDenyRelType).role("custom").node("*").map,
-          write(grantOrDenyRelType).role("custom").node("*").database("bar").map,
-          write(grantOrDenyRelType).role("custom").relationship("*").map,
-          write(grantOrDenyRelType).role("custom").relationship("*").database("bar").map
+          grantedOrDenied(write).role("custom").node("*").map,
+          grantedOrDenied(write).role("custom").node("*").database("bar").map,
+          grantedOrDenied(write).role("custom").relationship("*").map,
+          grantedOrDenied(write).role("custom").relationship("*").database("bar").map
         ))
 
         // WHEN
@@ -141,8 +141,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          write(grantOrDenyRelType).role("custom").node("*").database("bar").map,
-          write(grantOrDenyRelType).role("custom").relationship("*").database("bar").map
+          grantedOrDenied(write).role("custom").node("*").database("bar").map,
+          grantedOrDenied(write).role("custom").relationship("*").database("bar").map
         ))
       }
 
@@ -155,8 +155,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          write(grantOrDenyRelType).role("custom").node("*").map,
-          write(grantOrDenyRelType).role("custom").relationship("*").map
+          grantedOrDenied(write).role("custom").node("*").map,
+          grantedOrDenied(write).role("custom").relationship("*").map
         ))
 
         // WHEN
@@ -191,8 +191,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          write(grantOrDenyRelType).role("custom").node("*").map,
-          write(grantOrDenyRelType).role("custom").relationship("*").map
+          grantedOrDenied(write).role("custom").node("*").map,
+          grantedOrDenied(write).role("custom").relationship("*").map
         ))
       }
 
@@ -228,13 +228,13 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("REVOKE WRITE ON GRAPH foo ELEMENTS * (*) FROM custom")
 
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      write(GRANTED).role("custom").node("*").map,
-      write(GRANTED).role("custom").node("*").database("bar").map,
-      write(DENIED).role("custom").node("*").map,
+      granted(write).role("custom").node("*").map,
+      granted(write).role("custom").node("*").database("bar").map,
+      denied(write).role("custom").node("*").map,
 
-      write(GRANTED).role("custom").relationship("*").map,
-      write(GRANTED).role("custom").relationship("*").database("bar").map,
-      write(DENIED).role("custom").relationship("*").map,
+      granted(write).role("custom").relationship("*").map,
+      granted(write).role("custom").relationship("*").database("bar").map,
+      denied(write).role("custom").relationship("*").map,
     ))
 
     // WHEN
@@ -242,8 +242,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      write(GRANTED).role("custom").node("*").database("bar").map,
-      write(GRANTED).role("custom").relationship("*").database("bar").map,
+      granted(write).role("custom").node("*").database("bar").map,
+      granted(write).role("custom").relationship("*").database("bar").map,
     ))
 
     // WHEN
@@ -278,10 +278,10 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute(s"REVOKE WRITE ON GRAPH * ELEMENTS * (*) FROM role")
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      write(GRANTED).role("custom").node("*").map,
-      write(GRANTED).role("custom").relationship("*").map,
-      write(DENIED).role("custom").node("*").map,
-      write(DENIED).role("custom").relationship("*").map
+      granted(write).role("custom").node("*").map,
+      granted(write).role("custom").relationship("*").map,
+      denied(write).role("custom").node("*").map,
+      denied(write).role("custom").relationship("*").map
     ))
   }
 
@@ -297,10 +297,10 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      write().role("custom").node("*").map,
-      write().role("custom").relationship("*").map,
-      write(DENIED).role("custom").node("*").map,
-      write(DENIED).role("custom").relationship("*").map
+      granted(write).role("custom").node("*").map,
+      granted(write).role("custom").relationship("*").map,
+      denied(write).role("custom").node("*").map,
+      denied(write).role("custom").relationship("*").map
     ))
   }
 
@@ -315,8 +315,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      write(DENIED).role("custom").node("*").map,
-      write(DENIED).role("custom").relationship("*").map,
+      denied(write).role("custom").node("*").map,
+      denied(write).role("custom").relationship("*").map,
     ))
 
     // WHEN
@@ -325,8 +325,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      write(GRANTED).role("custom").node("*").map,
-      write(GRANTED).role("custom").relationship("*").map
+      granted(write).role("custom").node("*").map,
+      granted(write).role("custom").relationship("*").map
     ))
   }
 
@@ -339,8 +339,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute(s"REVOKE GRANT WRITE ON GRAPH * ELEMENTS * (*) FROM custom")
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      write(DENIED).role("custom").node("*").map,
-      write(DENIED).role("custom").relationship("*").map
+      denied(write).role("custom").node("*").map,
+      denied(write).role("custom").relationship("*").map
     ))
   }
 
@@ -354,8 +354,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      write().role("custom").node("*").map,
-      write().role("custom").relationship("*").map
+      granted(write).role("custom").node("*").map,
+      granted(write).role("custom").relationship("*").map
     ))
   }
 
@@ -371,8 +371,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      write(DENIED).role("custom").database("foo").node("*").map,
-      write(DENIED).role("custom").database("foo").relationship("*").map
+      denied(write).role("custom").database("foo").node("*").map,
+      denied(write).role("custom").database("foo").relationship("*").map
     ))
 
     // WHEN
@@ -393,10 +393,10 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      write().role("custom").database("bar").node("*").map,
-      write().role("custom").database("bar").relationship("*").map,
-      write("DENIED").role("custom").database("bar").node("*").map,
-      write("DENIED").role("custom").database("bar").relationship(("*")).map
+      granted(write).role("custom").database("bar").node("*").map,
+      granted(write).role("custom").database("bar").relationship("*").map,
+      denied(write).role("custom").database("bar").node("*").map,
+      denied(write).role("custom").database("bar").relationship("*").map
     ))
 
     // WHEN

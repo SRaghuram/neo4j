@@ -122,7 +122,7 @@ class FailureAdministrationCommandAcceptanceTest extends AdministrationCommandAc
     execute("REVOKE GRANT SHOW TRANSACTION (*) ON DATABASE foo FROM custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(showTransaction("*").database("*").role("custom").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(granted(showTransaction("*")).database("*").role("custom").map))
   }
 
   test("REVOKE DENY on non-existing database should do nothing") {

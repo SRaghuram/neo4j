@@ -39,8 +39,6 @@ import org.neo4j.server.security.auth.InMemoryUserRepository
 import org.neo4j.server.security.auth.SecurityTestUtils
 
 abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFunSuite with EnterpriseGraphDatabaseTestSupport {
-  val GRANTED: String = "GRANTED"
-  val DENIED: String = "DENIED"
   val DEFAULT: String = "DEFAULT"
 
   val neo4jUser: Map[String, Any] = user("neo4j", Seq(PredefinedRoles.ADMIN))
@@ -67,43 +65,43 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   )
 
   lazy val defaultRolePrivileges: Set[Map[String, AnyRef]] = Set(
-    access().database(DEFAULT).role(PredefinedRoles.PUBLIC).map,
+    granted(access).database(DEFAULT).role(PredefinedRoles.PUBLIC).map,
 
-    access().role("reader").map,
-    matchPrivilege().role("reader").node("*").map,
-    matchPrivilege().role("reader").relationship("*").map,
+    granted(access).role("reader").map,
+    granted(matchPrivilege).role("reader").node("*").map,
+    granted(matchPrivilege).role("reader").relationship("*").map,
 
-    access().role("editor").map,
-    matchPrivilege().role("editor").node("*").map,
-    matchPrivilege().role("editor").relationship("*").map,
-    write().role("editor").node("*").map,
-    write().role("editor").relationship("*").map,
+    granted(access).role("editor").map,
+    granted(matchPrivilege).role("editor").node("*").map,
+    granted(matchPrivilege).role("editor").relationship("*").map,
+    granted(write).role("editor").node("*").map,
+    granted(write).role("editor").relationship("*").map,
 
-    access().role("publisher").map,
-    matchPrivilege().role("publisher").node("*").map,
-    matchPrivilege().role("publisher").relationship("*").map,
-    write().role("publisher").node("*").map,
-    write().role("publisher").relationship("*").map,
-    nameManagement().role("publisher").map,
+    granted(access).role("publisher").map,
+    granted(matchPrivilege).role("publisher").node("*").map,
+    granted(matchPrivilege).role("publisher").relationship("*").map,
+    granted(write).role("publisher").node("*").map,
+    granted(write).role("publisher").relationship("*").map,
+    granted(nameManagement).role("publisher").map,
 
-    access().role("architect").map,
-    matchPrivilege().role("architect").node("*").map,
-    matchPrivilege().role("architect").relationship("*").map,
-    write().role("architect").node("*").map,
-    write().role("architect").relationship("*").map,
-    nameManagement().role("architect").map,
-    indexManagement().role("architect").map,
-    constraintManagement().role("architect").map,
+    granted(access).role("architect").map,
+    granted(matchPrivilege).role("architect").node("*").map,
+    granted(matchPrivilege).role("architect").relationship("*").map,
+    granted(write).role("architect").node("*").map,
+    granted(write).role("architect").relationship("*").map,
+    granted(nameManagement).role("architect").map,
+    granted(indexManagement).role("architect").map,
+    granted(constraintManagement).role("architect").map,
 
-    access().role("admin").map,
-    matchPrivilege().role("admin").node("*").map,
-    matchPrivilege().role("admin").relationship("*").map,
-    write().role("admin").node("*").map,
-    write().role("admin").relationship("*").map,
-    nameManagement().role("admin").map,
-    indexManagement().role("admin").map,
-    constraintManagement().role("admin").map,
-    grantAdmin().role("admin").map,
+    granted(access).role("admin").map,
+    granted(matchPrivilege).role("admin").node("*").map,
+    granted(matchPrivilege).role("admin").relationship("*").map,
+    granted(write).role("admin").node("*").map,
+    granted(write).role("admin").relationship("*").map,
+    granted(nameManagement).role("admin").map,
+    granted(indexManagement).role("admin").map,
+    granted(constraintManagement).role("admin").map,
+    granted(admin).role("admin").map,
   )
 
   def defaultRolePrivilegesFor(role: String): Set[Map[String, AnyRef]] = defaultRolePrivileges.filter(m => m("role") == role)
@@ -188,45 +186,48 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     def user(user: String) = PrivilegeMapBuilder(map + ("user" -> user))
 
     def property(property: String) = PrivilegeMapBuilder(map + ("resource" -> s"property($property)"))
-
-    def privType(grant: String)  = PrivilegeMapBuilder(map + ("access" -> grant))
   }
 
-  def baseMap(grant: String = GRANTED): Map[String, String] = Map("access" -> grant, "graph" -> "*", "segment" -> "database")
+  private val baseMap: Map[String, String] = Map("graph" -> "*", "segment" -> "database")
 
-  def adminAction(action: String, grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ( "resource" -> "database" )).action(action)
+  def granted(privilegeMap: Map[String,String]): PrivilegeMapBuilder = PrivilegeMapBuilder( privilegeMap + ("access" -> "GRANTED"))
+  def denied(privilegeMap: Map[String,String]): PrivilegeMapBuilder = PrivilegeMapBuilder( privilegeMap + ("access" -> "DENIED"))
 
-  def startDatabase(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("start_database")
-  def stopDatabase(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("stop_database")
+  type privilegeFunction = Map[String, String] => PrivilegeMapBuilder
 
-  def createIndex(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("create_index")
-  def dropIndex(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("drop_index")
-  def indexManagement(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("index")
+  def adminAction(action: String): Map[String, String] = baseMap + ("resource" -> "database", "action" -> action)
 
-  def createConstraint(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("create_constraint")
-  def dropConstraint(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("drop_constraint")
-  def constraintManagement(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("constraint")
+  val startDatabase: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "start_database")
+  val stopDatabase: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "stop_database")
 
-  def createNodeLabel(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("create_label")
-  def createRelationshipType(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("create_reltype")
-  def createPropertyKey(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("create_propertykey")
-  def nameManagement(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("token")
+  val createIndex: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "create_index")
+  val dropIndex: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "drop_index")
+  val indexManagement: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "index")
 
-  def access(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("access")
-  def traverse(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "graph")).action("traverse")
-  def read(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "all_properties")).action("read")
-  def matchPrivilege(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "all_properties")).action("match")
-  def write(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "graph")).action("write")
+  val createConstraint: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "create_constraint")
+  val dropConstraint: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "drop_constraint")
+  val constraintManagement: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "constraint")
 
-  def allDatabasePrivilege(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("database_actions")
-  def grantAdmin(): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap() + ("resource" -> "database")).action("admin")
+  val createNodeLabel: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "create_label")
+  val createRelationshipType: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "create_reltype")
+  val createPropertyKey: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "create_propertykey")
+  val nameManagement: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "token")
 
-  def showTransaction(username: String, grant: String = GRANTED): PrivilegeMapBuilder =
-    PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database", "segment" -> s"USER($username)")).action("show_transaction")
-  def terminateTransaction(username: String, grant: String = GRANTED): PrivilegeMapBuilder =
-    PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database", "segment" -> s"USER($username)")).action("terminate_transaction")
-  def transaction(username: String, grant: String = GRANTED): PrivilegeMapBuilder =
-    PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database", "segment" -> s"USER($username)")).action("transaction_management")
+  val access: Map[String, String] = baseMap + ("resource" -> "database", "action" ->"access")
+  val traverse: Map[String, String] = baseMap + ("resource" -> "graph", "action" -> "traverse")
+  val read: Map[String, String] = baseMap + ("resource" -> "all_properties", "action" -> "read")
+  val matchPrivilege: Map[String, String] = baseMap + ("resource" -> "all_properties", "action" -> "match")
+  val write: Map[String, String] = baseMap + ("resource" -> "graph", "action" -> "write")
+
+  val allDatabasePrivilege: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "database_actions")
+  val admin:  Map[String, String] = baseMap + ("resource" -> "database", "action" -> "admin")
+
+  def showTransaction(username: String): Map[String, String] =
+    baseMap + ("resource" -> "database", "segment" -> s"USER($username)", "action" -> "show_transaction")
+  def terminateTransaction(username: String): Map[String, String] =
+    baseMap + ("resource" -> "database", "segment" -> s"USER($username)", "action" -> "terminate_transaction")
+  def transaction(username: String): Map[String, String] =
+    baseMap + ("resource" -> "database", "segment" -> s"USER($username)", "action" -> "transaction_management")
 
   type builderType = (PrivilegeMapBuilder, String) => PrivilegeMapBuilder
   def addNode(source: PrivilegeMapBuilder, name: String): PrivilegeMapBuilder = source.node(name)
