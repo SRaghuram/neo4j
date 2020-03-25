@@ -274,7 +274,6 @@ class FrekiCursorSharingTest extends FrekiCursorsTest
         assertThat( accessPatternTracer.access.getNumberOfNodeLoads() ).isEqualTo( accessPatternTracer.access.getNumberOfReusableNodeLoads() );
     }
 
-
     @Test
     void shouldReuseRecordAfterSharedRelationshipCursorWithPropertiesExhausted()
     {
