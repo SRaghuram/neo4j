@@ -139,6 +139,7 @@ import org.neo4j.values.storable.Values
 import org.neo4j.values.storable.Values.EMPTY_STRING
 import org.neo4j.values.storable.Values.FALSE
 import org.neo4j.values.storable.Values.NO_VALUE
+import org.neo4j.values.storable.Values.TRUE
 import org.neo4j.values.storable.Values.booleanValue
 import org.neo4j.values.storable.Values.charValue
 import org.neo4j.values.storable.Values.doubleValue
