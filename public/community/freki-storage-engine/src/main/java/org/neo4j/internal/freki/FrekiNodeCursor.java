@@ -33,7 +33,6 @@ import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 import org.neo4j.storageengine.util.EagerDegrees;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_LONG_ARRAY;
-import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPointsToDense;
 import static org.neo4j.internal.freki.StreamVByte.nonEmptyIntDeltas;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
 import static org.neo4j.internal.freki.StreamVByte.readInts;
@@ -86,7 +85,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public int[] relationshipTypes()
     {
-        readRelationshipTypesAndOffsets();
+        readRelationshipTypes();
         return relationshipTypesInNode.clone();
     }
 
@@ -94,9 +93,9 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     public Degrees degrees( RelationshipSelection selection )
     {
         // Dense
-        if ( forwardPointerPointsToDense( data.forwardPointer ) )
+        if ( data.isDense )
         {
-            ByteBuffer buffer = readRelationshipTypesAndOffsets();
+            ByteBuffer buffer = readRelationshipTypes();
             EagerDegrees degrees = new EagerDegrees();
             if ( relationshipTypesInNode.length == 0 )
             {
@@ -151,7 +150,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public boolean supportsFastDegreeLookup()
     {
-        return MutableNodeRecordData.forwardPointerPointsToDense( data.forwardPointer );
+        return data.isDense;
     }
 
     @Override

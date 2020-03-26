@@ -54,8 +54,7 @@ import org.neo4j.values.storable.Value;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_LONG_ARRAY;
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
-import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPointsToXRecord;
-import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromForwardPointer;
+import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromRecordPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.io.IOUtils.closeAll;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.REVERSE_RECOVERY;
@@ -270,9 +269,9 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         if ( smallRecord.hasFlag( FLAG_IN_USE ) )
         {
             nodeCursor.initializeFromRecord( smallRecord );
-            return !forwardPointerPointsToXRecord( nodeCursor.data.forwardPointer )
+            return nodeCursor.data.forwardPointer == NULL
                    ? smallRecord
-                   : recordFunction.apply( currentSparseNodeCommands[sizeExponentialFromForwardPointer( nodeCursor.data.forwardPointer )] );
+                   : recordFunction.apply( currentSparseNodeCommands[sizeExponentialFromRecordPointer( nodeCursor.data.forwardPointer )] );
         }
         return null;
     }

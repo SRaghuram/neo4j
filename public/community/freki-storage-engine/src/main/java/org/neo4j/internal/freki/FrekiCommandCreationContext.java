@@ -34,10 +34,9 @@ import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
 import static org.neo4j.internal.freki.MutableNodeRecordData.ARTIFICIAL_MAX_RELATIONSHIP_COUNTER;
 import static org.neo4j.internal.freki.MutableNodeRecordData.FIRST_RELATIONSHIP_ID;
 import static org.neo4j.internal.freki.MutableNodeRecordData.externalRelationshipId;
-import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPointsToDense;
-import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerToString;
-import static org.neo4j.internal.freki.MutableNodeRecordData.idFromForwardPointer;
-import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromForwardPointer;
+import static org.neo4j.internal.freki.MutableNodeRecordData.idFromRecordPointer;
+import static org.neo4j.internal.freki.MutableNodeRecordData.recordPointerToString;
+import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromRecordPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.util.Preconditions.checkState;
 
@@ -84,16 +83,16 @@ class FrekiCommandCreationContext implements CommandCreationContext
                 return new MutableInt( FIRST_RELATIONSHIP_ID );
             }
 
-            long forwardPointer = data.getForwardPointer();
-            if ( forwardPointer != NULL && !forwardPointerPointsToDense( forwardPointer ) )
+            long forwardPointer = data.getRecordPointer();
+            if ( forwardPointer != NULL && !data.isDense() )
             {
-                int sizeExp = sizeExponentialFromForwardPointer( forwardPointer );
-                long id = idFromForwardPointer( forwardPointer );
+                int sizeExp = sizeExponentialFromRecordPointer( forwardPointer );
+                long id = idFromRecordPointer( forwardPointer );
                 data = readAndDeserializeNode( sourceNode, sizeExp, id );
                 if ( data == null )
                 {
                     throw new IllegalStateException(
-                            "Node " + sourceNode + " links to a larger record " + forwardPointerToString( forwardPointer ) + " which isn't in use" );
+                            "Node " + sourceNode + " links to a larger record " + recordPointerToString( forwardPointer ) + " which isn't in use" );
                 }
             }
 
