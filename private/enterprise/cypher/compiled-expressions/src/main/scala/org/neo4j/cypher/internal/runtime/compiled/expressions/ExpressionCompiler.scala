@@ -645,7 +645,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
 
     case Variable(name) =>
       val (variableAccess, nullCheck) = accessVariable(name)
-      Some(IntermediateExpression(variableAccess, Seq.empty, Seq.empty, nullCheck.toSet))
+      Some(IntermediateExpression(variableAccess, Seq.empty, Seq.empty, nullCheck.toSet, requireNullCheck = false))
 
     case e: ExpressionVariable =>
       val varLoad = loadExpressionVariable(e)
@@ -2649,23 +2649,21 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
 
   private def accessVariable(name: String): (IntermediateRepresentation, Option[IntermediateRepresentation]) = {
 
-    def computeRepresentation(ir: IntermediateRepresentation, nullCheck: Option[IntermediateRepresentation], nullable: Boolean): (IntermediateRepresentation, Option[IntermediateRepresentation]) = {
+    def computeRepresentation(ir: IntermediateRepresentation,
+                              nullCheck: Option[IntermediateRepresentation],
+                              nullable: Boolean): (IntermediateRepresentation, Option[IntermediateRepresentation]) = {
         (ir, if (nullable) nullCheck else None)
       }
 
     slots.get(name) match {
       case Some(LongSlot(offset, nullable, CTNode)) =>
-        computeRepresentation(ir = ternary(equal(getLongAt(offset), constant(-1L)), noValue,
-                                        invoke(DB_ACCESS, method[DbAccess, NodeValue, Long]("nodeById"),
-                                               getLongAt(offset))),
-                              nullCheck = Some(equal(getLongAt(offset), constant(-1L))),
-                              nullable = nullable)
+        val nodeById = invoke(DB_ACCESS, method[DbAccess, NodeValue, Long]("nodeById"), getLongAt(offset))
+        val ir = if (nullable) ternary(equal(getLongAt(offset), constant(-1L)), noValue, nodeById) else nodeById
+        computeRepresentation(ir = ir, nullCheck = Some(equal(getLongAt(offset), constant(-1L))), nullable = nullable)
       case Some(LongSlot(offset, nullable, CTRelationship)) =>
-        computeRepresentation(ir = ternary(equal(getLongAt(offset), constant(-1L)), noValue,
-                                        invoke(DB_ACCESS, method[DbAccess, RelationshipValue, Long]("relationshipById"),
-                                               getLongAt(offset))),
-                              nullCheck = Some(equal(getLongAt(offset), constant(-1L))),
-                              nullable = nullable)
+        val relById = invoke(DB_ACCESS, method[DbAccess, RelationshipValue, Long]("relationshipById"), getLongAt(offset))
+        val ir = if (nullable) ternary(equal(getLongAt(offset), constant(-1L)), noValue, relById) else relById
+        computeRepresentation(ir = ir, nullCheck = Some(equal(getLongAt(offset), constant(-1L))), nullable = nullable)
 
       case Some(RefSlot(offset, nullable, _)) =>
         computeRepresentation(ir = getRefAt(offset), nullCheck = Some(equal(getRefAt(offset), noValue)), nullable = nullable)
