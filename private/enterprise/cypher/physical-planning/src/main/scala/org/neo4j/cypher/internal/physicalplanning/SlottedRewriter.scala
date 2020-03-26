@@ -18,15 +18,17 @@ import org.neo4j.cypher.internal.expressions.IsNull
 import org.neo4j.cypher.internal.expressions.LabelName
 import org.neo4j.cypher.internal.expressions.LogicalProperty
 import org.neo4j.cypher.internal.expressions.NODE_TYPE
-import org.neo4j.cypher.internal.expressions.RELATIONSHIP_TYPE
 import org.neo4j.cypher.internal.expressions.Not
 import org.neo4j.cypher.internal.expressions.Or
 import org.neo4j.cypher.internal.expressions.Property
 import org.neo4j.cypher.internal.expressions.PropertyKeyName
+import org.neo4j.cypher.internal.expressions.RELATIONSHIP_TYPE
 import org.neo4j.cypher.internal.expressions.True
 import org.neo4j.cypher.internal.expressions.Variable
 import org.neo4j.cypher.internal.logical.plans.AggregatingPlan
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.NestedPlanCollectExpression
+import org.neo4j.cypher.internal.logical.plans.NestedPlanExistsExpression
 import org.neo4j.cypher.internal.logical.plans.NestedPlanExpression
 import org.neo4j.cypher.internal.logical.plans.Projection
 import org.neo4j.cypher.internal.logical.plans.ValueHashJoin
@@ -46,6 +48,7 @@ import org.neo4j.cypher.internal.physicalplanning.ast.NodePropertyExistsLate
 import org.neo4j.cypher.internal.physicalplanning.ast.NodePropertyLate
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheck
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckProperty
+import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckReference
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckVariable
 import org.neo4j.cypher.internal.physicalplanning.ast.PrimitiveEquals
 import org.neo4j.cypher.internal.physicalplanning.ast.ReferenceFromSlot
@@ -58,8 +61,6 @@ import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipTypeFromSlot
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.ast.RuntimeProperty
 import org.neo4j.cypher.internal.runtime.ast.RuntimeVariable
-import org.neo4j.cypher.internal.expressions
-import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckReference
 import org.neo4j.cypher.internal.util.Rewriter
 import org.neo4j.cypher.internal.util.attribution.SameId
 import org.neo4j.cypher.internal.util.symbols.CTNode
@@ -160,8 +161,13 @@ class SlottedRewriter(tokenContext: TokenContext) {
         val innerSlotConf = slotConfigurations.getOrElse(e.plan.id,
           throw new InternalException(s"Missing slot configuration for plan with ${e.plan.id}"))
         val rewriter = rewriteCreator(innerSlotConf, thisPlan, slotConfigurations)
-        val rewrittenProjection = e.projection.endoRewrite(rewriter)
-        e.copy(plan = rewrittenPlan, projection = rewrittenProjection)(e.position)
+        e match {
+          case ce@NestedPlanCollectExpression(_, projection) =>
+            val rewrittenProjection = projection.endoRewrite(rewriter)
+            ce.copy(plan = rewrittenPlan, projection = rewrittenProjection)(e.position)
+          case ee: NestedPlanExistsExpression =>
+            ee.copy(plan = rewrittenPlan)(e.position)
+        }
 
       case prop@Property(Variable(key), PropertyKeyName(propKey)) =>
 

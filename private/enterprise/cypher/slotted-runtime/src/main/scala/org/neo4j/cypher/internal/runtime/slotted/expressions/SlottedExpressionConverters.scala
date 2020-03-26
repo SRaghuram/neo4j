@@ -25,7 +25,8 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeCollectExpression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExistsExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.slotted
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
@@ -152,10 +153,16 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan, maybeOwningPi
         Some(slotted.expressions.IsPrimitiveNull(offset))
       case e: ExpressionVariable =>
         Some(commands.expressions.ExpressionVariable(e.offset, e.name))
-      case e: NestedPipeExpression =>
+      case e: NestedPipeCollectExpression =>
         Some(slotted.expressions.NestedPipeSlottedExpression(
           e.pipe,
           self.toCommandExpression(id, e.projection),
+          physicalPlan.nestedPlanArgumentConfigurations(e.pipe.id),
+          e.availableExpressionVariables.map(commands.expressions.ExpressionVariable.of).toArray,
+          id))
+      case e: NestedPipeExistsExpression =>
+        Some(slotted.expressions.NestedPipeExistsSlottedExpression(
+          e.pipe,
           physicalPlan.nestedPlanArgumentConfigurations(e.pipe.id),
           e.availableExpressionVariables.map(commands.expressions.ExpressionVariable.of).toArray,
           id))

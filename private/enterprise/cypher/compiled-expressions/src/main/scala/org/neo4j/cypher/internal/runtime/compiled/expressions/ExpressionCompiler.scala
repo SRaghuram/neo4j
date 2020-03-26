@@ -191,7 +191,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.vNODE_CURSOR
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.vPROPERTY_CURSOR
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.vRELATIONSHIP_CURSOR
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeCollectExpression
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.symbols.CTBoolean
 import org.neo4j.cypher.internal.util.symbols.CTDate
@@ -2008,7 +2008,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
         case containerIndex: ContainerIndex =>
           containerIndexAccess(containerIndex.expr, containerIndex.idx, exists = true)
         case _: PatternExpression => None//TODO
-        case _: NestedPipeExpression => None//TODO?
+        case _: NestedPipeCollectExpression => None//TODO?
         case _: NestedPlanExpression => throw new InternalException("should have been rewritten away")
         case _ => None
       }

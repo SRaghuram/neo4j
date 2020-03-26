@@ -59,6 +59,7 @@ import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.MergeCreateNode
 import org.neo4j.cypher.internal.logical.plans.MergeCreateRelationship
 import org.neo4j.cypher.internal.logical.plans.MultiNodeIndexSeek
+import org.neo4j.cypher.internal.logical.plans.NestedPlanCollectExpression
 import org.neo4j.cypher.internal.logical.plans.NestedPlanExpression
 import org.neo4j.cypher.internal.logical.plans.NodeCountFromCountStore
 import org.neo4j.cypher.internal.logical.plans.NodeHashJoin
@@ -385,7 +386,11 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
             // Allocate slots for the projection expression, based on the resulting slot configuration
             // from the inner plan
             val nestedSlots = nestedPhysicalPlan.slotConfigurations(e.plan.id)
-            allocateExpressionsInternal(e.projection, nullable, nestedSlots, semanticTable, shouldAllocateLhs, planId)
+            e match {
+              case NestedPlanCollectExpression(_, projection) =>
+                allocateExpressionsInternal(projection, nullable, nestedSlots, semanticTable, shouldAllocateLhs, planId)
+              case _ => // do nothing
+            }
 
             // Since we did allocation for nested plan and projection explicitly we do not need to traverse into children
             // The inner slot configuration does not need to affect the accumulated result of the outer plan

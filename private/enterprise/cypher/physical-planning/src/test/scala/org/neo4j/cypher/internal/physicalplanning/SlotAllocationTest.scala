@@ -35,7 +35,7 @@ import org.neo4j.cypher.internal.logical.plans.GetValue
 import org.neo4j.cypher.internal.logical.plans.IndexSeek
 import org.neo4j.cypher.internal.logical.plans.LeftOuterHashJoin
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
-import org.neo4j.cypher.internal.logical.plans.NestedPlanExpression
+import org.neo4j.cypher.internal.logical.plans.NestedPlanCollectExpression
 import org.neo4j.cypher.internal.logical.plans.NodeByLabelScan
 import org.neo4j.cypher.internal.logical.plans.NodeHashJoin
 import org.neo4j.cypher.internal.logical.plans.Optional
@@ -1008,7 +1008,7 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
   test("should handle nested plan expression") {
     val nestedPlan = AllNodesScan("x", Set.empty)
     val argument = Argument()
-    val plan = Projection(argument, Map("z" -> NestedPlanExpression(nestedPlan, literalString("foo"))(pos)))
+    val plan = Projection(argument, Map("z" -> NestedPlanCollectExpression(nestedPlan, literalString("foo"))(pos)))
     val availableExpressionVariables = new AvailableExpressionVariables
     availableExpressionVariables.set(nestedPlan.id, Seq.empty)
 
