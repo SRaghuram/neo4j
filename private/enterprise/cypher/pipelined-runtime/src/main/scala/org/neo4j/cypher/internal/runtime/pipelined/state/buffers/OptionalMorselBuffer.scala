@@ -32,8 +32,8 @@ class OptionalMorselBuffer(id: BufferId,
   override def take(): MorselData = {
     // To achieve streaming behavior, we peek at the data, even if it is not completed yet.
     // To keep input order (i.e., place the null rows at the right position), we give the
-    // data out in ascending argument row id order.
-    val argumentState = argumentStateMap.takeNextIfCompletedOrElsePeek()
+    // data out in ascending argument row id order (only in pipelined).
+    val argumentState = argumentStateMap.takeOneIfCompletedOrElsePeek()
     val data: MorselData =
       if (argumentState != null) {
         argumentState match {
@@ -70,7 +70,7 @@ class OptionalMorselBuffer(id: BufferId,
   }
 
   override def hasData: Boolean = {
-    argumentStateMap.nextArgumentStateIsCompletedOr(state => state.hasData)
+    argumentStateMap.someArgumentStateIsCompletedOr(state => state.hasData)
   }
 
   override def close(data: MorselData): Unit = {

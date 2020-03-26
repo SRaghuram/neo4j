@@ -25,9 +25,6 @@ class ConcurrentSingletonArgumentStateMap[STATE <: ArgumentState](val argumentSt
   @volatile
   override protected var hasController = true
 
-  @volatile
-  override protected var lastCompletedArgumentId: Long = -1
-
   override protected def newStateController(argument: Long,
                                             argumentMorsel: MorselReadCursor,
                                             argumentRowIdsForReducers: Array[Long],
