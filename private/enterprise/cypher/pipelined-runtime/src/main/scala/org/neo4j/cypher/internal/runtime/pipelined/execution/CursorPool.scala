@@ -19,6 +19,7 @@ import org.neo4j.internal.kernel.api.PropertyCursor
 import org.neo4j.internal.kernel.api.RelationshipIndexCursor
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
+import org.neo4j.internal.kernel.api.RelationshipTypeIndexCursor
 import org.neo4j.io.IOUtils
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
 
@@ -78,6 +79,8 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
   override def allocateNodeLabelIndexCursor(): NodeLabelIndexCursor = nodeLabelIndexCursorPool.allocate()
 
   override def allocateRelationshipIndexCursor(): RelationshipIndexCursor = fail("RelationshipIndexCursor")
+
+  override def allocateRelationshipTypeIndexCursor(): RelationshipTypeIndexCursor = fail("RelationshipTypeIndexCursor")
 
   private def fail(cursor: String) = throw new IllegalStateException(s"This cursor pool doesn't support allocating $cursor")
 }

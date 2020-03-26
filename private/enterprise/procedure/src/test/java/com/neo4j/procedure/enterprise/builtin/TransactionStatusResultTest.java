@@ -19,6 +19,7 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.collection.pool.Pool;
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.index.label.LabelScanStore;
+import org.neo4j.internal.index.label.RelationshipTypeScanStore;
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
 import org.neo4j.internal.schema.SchemaState;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
@@ -236,17 +237,17 @@ class TransactionStatusResultTest
             Dependencies dependencies = new Dependencies();
             dependencies.satisfyDependency( mock( DefaultValueMapper.class ) );
             KernelTransactionImplementation transaction = new KernelTransactionImplementation( Config.defaults(),
-                        mock( DatabaseTransactionEventListeners.class ),
-                        mock( ConstraintIndexCreator.class ), mock( GlobalProcedures.class ),
-                        mock( TransactionCommitProcess.class ), new DatabaseTransactionStats(),
-                        mock( Pool.class ), Clocks.fakeClock(),
-                        new AtomicReference<>( CpuClock.NOT_AVAILABLE ), new AtomicReference<>( HeapAllocation.NOT_AVAILABLE ),
-                        mock( DatabaseTracers.class, RETURNS_MOCKS ),
-                        mock( StorageEngine.class, RETURNS_MOCKS ), new CanWrite(),
-                        EmptyVersionContextSupplier.EMPTY, ON_HEAP, new StandardConstraintSemantics(), mock( SchemaState.class),
-                        mockedTokenHolders(), mock( IndexingService.class ), mock( LabelScanStore.class ),
-                        mock( IndexStatisticsStore.class ), dependencies, new TestDatabaseIdRepository().defaultDatabase(),
-                        LeaseService.NO_LEASES, MemoryPools.NO_TRACKING )
+                    mock( DatabaseTransactionEventListeners.class ),
+                    mock( ConstraintIndexCreator.class ), mock( GlobalProcedures.class ),
+                    mock( TransactionCommitProcess.class ), new DatabaseTransactionStats(),
+                    mock( Pool.class ), Clocks.fakeClock(),
+                    new AtomicReference<>( CpuClock.NOT_AVAILABLE ), new AtomicReference<>( HeapAllocation.NOT_AVAILABLE ),
+                    mock( DatabaseTracers.class, RETURNS_MOCKS ),
+                    mock( StorageEngine.class, RETURNS_MOCKS ), new CanWrite(),
+                    EmptyVersionContextSupplier.EMPTY, ON_HEAP, new StandardConstraintSemantics(), mock( SchemaState.class ),
+                    mockedTokenHolders(), mock( IndexingService.class ), mock( LabelScanStore.class ),
+                    mock( RelationshipTypeScanStore.class ), mock( IndexStatisticsStore.class ), dependencies,
+                    new TestDatabaseIdRepository().defaultDatabase(), LeaseService.NO_LEASES, MemoryPools.NO_TRACKING )
             {
                 @Override
                 public Statistics getStatistics()
