@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal.runtime.pipelined.execution
 
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.runtime.InputDataStream
-import org.neo4j.cypher.internal.runtime.MEMORY_BOUND
 import org.neo4j.cypher.internal.runtime.MEMORY_TRACKING
 import org.neo4j.cypher.internal.runtime.MemoryTracking
 import org.neo4j.cypher.internal.runtime.NO_TRACKING
@@ -57,11 +56,11 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
 
     DebugLog.log("CallingThreadQueryExecutor.execute()")
 
+    val transactionMemoryTracker = queryContext.transactionalContext.transaction.memoryTracker()
     val stateFactory =
       memoryTracking match {
         case NO_TRACKING => new StandardStateFactory
-        case MEMORY_TRACKING => new MemoryTrackingStandardStateFactory(Long.MaxValue)
-        case MEMORY_BOUND(maxAllocatedBytes) => new MemoryTrackingStandardStateFactory(maxAllocatedBytes)
+        case MEMORY_TRACKING => new MemoryTrackingStandardStateFactory(transactionMemoryTracker)
       }
 
     val resources = new QueryResources(cursors: CursorFactory, queryContext.transactionalContext.transaction.pageCursorTracer())

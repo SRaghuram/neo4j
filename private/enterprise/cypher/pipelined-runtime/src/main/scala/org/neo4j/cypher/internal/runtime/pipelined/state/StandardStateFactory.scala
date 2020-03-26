@@ -22,6 +22,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.memory.Measurable
+import org.neo4j.memory.MemoryTracker
 
 /**
  * Implementation of [[StateFactory]] which creates not thread-safe implementation of the state management classes.
@@ -53,8 +54,8 @@ class StandardStateFactory extends StateFactory {
   override val memoryTracker: QueryMemoryTracker = NoMemoryTracker
 }
 
-class MemoryTrackingStandardStateFactory(transactionMaxMemory: Long) extends StandardStateFactory {
-  override val memoryTracker: QueryMemoryTracker = new BoundedMemoryTracker(transactionMaxMemory)
+class MemoryTrackingStandardStateFactory(transactionMemoryTracker: MemoryTracker) extends StandardStateFactory {
+  override val memoryTracker: QueryMemoryTracker = new BoundedMemoryTracker(transactionMemoryTracker)
 
   override def newBuffer[T <: Measurable](operatorId: Id): Buffer[T] = new MemoryTrackingStandardBuffer[T](memoryTracker, operatorId)
 }

@@ -48,6 +48,8 @@ class SlottedExecutionResultBuilderFactory(pipe: Pipe,
                                             subscriber: QuerySubscriber,
                                             doProfile: Boolean): QueryState = {
 
+      val transactionMemoryTracker = queryContext.transactionalContext.transaction.memoryTracker()
+
       new QueryState(queryContext,
         externalResource,
         createParameterArray(params, parameterMapping),
@@ -55,7 +57,7 @@ class SlottedExecutionResultBuilderFactory(pipe: Pipe,
         queryIndexes.initiateLabelAndSchemaIndexes(queryContext),
         new Array[AnyValue](nExpressionSlots),
         subscriber,
-        QueryMemoryTracker(memoryTrackingController.memoryTracking(doProfile)),
+        QueryMemoryTracker(memoryTrackingController.memoryTracking(doProfile), transactionMemoryTracker),
         pipeDecorator,
         lenientCreateRelationship = lenientCreateRelationship,
         prePopulateResults = prePopulateResults,

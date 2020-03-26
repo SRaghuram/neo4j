@@ -36,6 +36,7 @@ import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.impl.api.ClockContext;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
+import org.neo4j.memory.MemoryTracker;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -314,6 +315,12 @@ class StubKernelTransaction implements KernelTransaction
 
     @Override
     public PageCursorTracer pageCursorTracer()
+    {
+        return null;
+    }
+
+    @Override
+    public MemoryTracker memoryTracker()
     {
         return null;
     }

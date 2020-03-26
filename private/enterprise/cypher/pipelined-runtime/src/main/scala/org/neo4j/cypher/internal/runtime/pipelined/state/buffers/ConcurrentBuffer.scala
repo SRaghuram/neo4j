@@ -6,10 +6,6 @@
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
-
-import org.neo4j.exceptions.TransactionOutOfMemoryException
-import org.neo4j.memory.Measurable
 
 /**
  * Implementation of a concurrent [[Buffer]] of elements of type `T`.
@@ -57,24 +53,4 @@ class ConcurrentBuffer[T <: AnyRef] extends Buffer[T] {
   }
 
   override def iterator: java.util.Iterator[T] = data.iterator()
-}
-
-class BoundedConcurrentBuffer[T <: Measurable](bound: Int) extends ConcurrentBuffer[T] {
-  private val heapSize = new AtomicLong(0)
-
-  override def put(t: T): Unit = {
-    val _size = heapSize.addAndGet(t.estimatedHeapUsage)
-    if (_size > bound) {
-      throw new TransactionOutOfMemoryException()
-    }
-    super.put(t)
-  }
-
-  override def take(): T = {
-    val t = super.take()
-    if (t != null) {
-      heapSize.addAndGet(-t.estimatedHeapUsage)
-    }
-    t
-  }
 }
