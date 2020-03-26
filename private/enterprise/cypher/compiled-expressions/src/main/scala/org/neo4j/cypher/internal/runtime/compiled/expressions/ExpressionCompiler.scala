@@ -3013,15 +3013,21 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
          idx <- intermediateCompileExpression(index)
          } yield {
       val variableName = namer.nextVariableName()
-      val methodName = if (exists) "containerIndexExists" else "containerIndex"
-      val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName, noValueOr(c, idx)(noValueOr(c, idx)(
+      val invocation = if (exists) {
+        ternary(
+          invokeStatic(method[CypherFunctions, Boolean, AnyValue, AnyValue, DbAccess,
+            NodeCursor, RelationshipScanCursor, PropertyCursor]("containerIndexExists"),
+            c.ir, idx.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
+          trueValue, falseValue)
+      } else {
         invokeStatic(method[CypherFunctions, AnyValue, AnyValue, AnyValue, DbAccess,
-          NodeCursor, RelationshipScanCursor, PropertyCursor](methodName),
-          c.ir, idx.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR)))))
+          NodeCursor, RelationshipScanCursor, PropertyCursor]("containerIndex"),
+          c.ir, idx.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR)
+      }
+      val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], variableName, noValueOr(c, idx)(invocation)))
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
-      IntermediateExpression(
-        ops, c.fields ++ idx.fields, c.variables ++ idx.variables ++ vCURSORS, Set(nullChecks), requireNullCheck = false)
+      IntermediateExpression(ops, c.fields ++ idx.fields, c.variables ++ idx.variables ++ vCURSORS, Set(nullChecks), requireNullCheck = false)
     }
   }
 
