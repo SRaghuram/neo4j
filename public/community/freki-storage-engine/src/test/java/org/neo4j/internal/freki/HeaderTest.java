@@ -23,6 +23,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
@@ -46,12 +49,16 @@ class HeaderTest
 
         // when/then
         assertReadAndWrite( header, 1 );
-        assertAddOffsetAndReadAndWrite( header, 0, 3 );
-        assertAddOffsetAndReadAndWrite( header, 1, 4 );
-        assertAddOffsetAndReadAndWrite( header, 2, 5 );
-        assertAddOffsetAndReadAndWrite( header, 3, 6 );
-        assertAddOffsetAndReadAndWrite( header, 4, 8 );
-        assertAddOffsetAndReadAndWrite( header, 5, 9 );
+
+        List<Integer> offsets = new ArrayList<>( List.of( 0, 1, 2, 3, 4, 5 ) );
+        Collections.shuffle( offsets, random.random() );
+
+        assertAddOffsetAndReadAndWrite( header, offsets.get( 0 ), 3 );
+        assertAddOffsetAndReadAndWrite( header, offsets.get( 1 ), 4 );
+        assertAddOffsetAndReadAndWrite( header, offsets.get( 2 ), 5 );
+        assertAddOffsetAndReadAndWrite( header, offsets.get( 3 ), 6 );
+        assertAddOffsetAndReadAndWrite( header, offsets.get( 4 ), 8 );
+        assertAddOffsetAndReadAndWrite( header, offsets.get( 5 ), 9 );
     }
 
     private void assertReadAndWrite( Header header, int expectedSize )
