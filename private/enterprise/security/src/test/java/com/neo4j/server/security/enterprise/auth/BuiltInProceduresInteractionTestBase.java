@@ -80,6 +80,7 @@ import static org.hamcrest.core.Every.everyItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
@@ -575,6 +576,18 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
 
         read1.closeAndAssertSuccess();
         read2.closeAndAssertSuccess();
+    }
+
+    @Test
+    void listMemoryPools()
+    {
+        assertSuccess( adminSubject, "CALL dbms.listPools()", r ->
+        {
+            List<Map<String,Object>> maps = collectResults( r );
+            assertEquals( 2, maps.size() );
+            assertTrue( maps.stream().anyMatch( map -> "neo4j transactions pool".equals( map.get( "poolName" ) ) ) );
+            assertTrue( maps.stream().anyMatch( map -> "system transactions pool".equals( map.get( "poolName" ) ) ) );
+        } );
     }
 
     @Test

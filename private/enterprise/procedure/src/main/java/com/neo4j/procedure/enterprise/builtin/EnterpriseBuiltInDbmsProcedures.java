@@ -57,6 +57,8 @@ import org.neo4j.kernel.impl.query.QueryExecutionEngine;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.logging.Log;
+import org.neo4j.memory.MemoryPools;
+import org.neo4j.memory.NamedMemoryPool;
 import org.neo4j.procedure.Admin;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
@@ -72,6 +74,7 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
+import static org.neo4j.io.ByteUnit.bytesToString;
 import static org.neo4j.procedure.Mode.DBMS;
 
 @SuppressWarnings( "unused" )
@@ -332,6 +335,17 @@ public class EnterpriseBuiltInDbmsProcedures
             }
         }
         return result.stream();
+    }
+
+    @SystemProcedure
+    @Description( "List all memory pools currently registered at this instance that are visible to the user." )
+    @Procedure( name = "dbms.listPools", mode = DBMS )
+    public Stream<MemoryPoolResult> listMemoryPools()
+    {
+        var memoryPools = resolver.resolveDependency( MemoryPools.class );
+        var registeredPools = memoryPools.getPools();
+        registeredPools.sort( Comparator.comparing( NamedMemoryPool::name ) );
+        return registeredPools.stream().map( MemoryPoolResult::new );
     }
 
     @SystemProcedure
@@ -728,6 +742,33 @@ public class EnterpriseBuiltInDbmsProcedures
         public ProfileResult( String profile )
         {
             this.profile = profile;
+        }
+    }
+
+    public static class MemoryPoolResult
+    {
+        private static final String UNBOUNDED = "Unbounded";
+        public final String poolName;
+        public final String group;
+        public final String memoryUsed;
+        public final String freeMemory;
+        public final String totalPoolMemory;
+
+        public MemoryPoolResult( NamedMemoryPool memoryPool )
+        {
+            this.poolName = memoryPool.name();
+            this.group = memoryPool.group().getName();
+            this.memoryUsed = bytesToString( memoryPool.used() );
+            if ( memoryPool.totalSize() != Long.MAX_VALUE )
+            {
+                this.freeMemory = bytesToString( memoryPool.free() );
+                this.totalPoolMemory = bytesToString( memoryPool.totalSize() );
+            }
+            else
+            {
+                this.freeMemory = UNBOUNDED;
+                this.totalPoolMemory = UNBOUNDED;
+            }
         }
     }
 }
