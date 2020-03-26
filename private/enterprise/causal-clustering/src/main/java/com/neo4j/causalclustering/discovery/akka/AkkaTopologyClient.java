@@ -182,6 +182,12 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
+    public LeaderInfo getLeader( NamedDatabaseId namedDatabaseId )
+    {
+        return globalTopologyState.getLeader( namedDatabaseId );
+    }
+
+    @Override
     public MemberId memberId()
     {
         return myself;

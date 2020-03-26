@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state.machines.lease;
 
+import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.replication.DirectReplicator;
 import com.neo4j.causalclustering.core.replication.ReplicationResult;
@@ -18,6 +19,7 @@ import org.neo4j.kernel.impl.api.LeaseClient;
 import org.neo4j.kernel.impl.api.LeaseException;
 
 import static com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState.INITIAL_LEASE_STATE;
+import static com.neo4j.causalclustering.identity.RaftTestMember.leader;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -33,6 +35,8 @@ class ClusterLeaseCoordinatorTest
 
     private final MemberId myself = member( 0 );
     private final MemberId other = member( 1 );
+    private final LeaderInfo myselfAsLeader = leader( 0, 1 );
+    private final LeaderInfo otherAsLeader = leader( 1, 1 );
 
     private final ReplicatedLeaseStateMachine stateMachine = new ReplicatedLeaseStateMachine( new InMemoryStateStorage<>( INITIAL_LEASE_STATE ) );
     private final DirectReplicator replicator = new DirectReplicator<>( stateMachine );
@@ -52,7 +56,7 @@ class ClusterLeaseCoordinatorTest
     void shouldAcquireLeaseAsLeader() throws Exception
     {
         // given
-        when( leaderLocator.getLeader() ).thenReturn( myself );
+        when( leaderLocator.getLeaderInfo() ).thenReturn( myselfAsLeader );
         LeaseClient client = coordinator.newClient();
 
         // when
@@ -66,8 +70,7 @@ class ClusterLeaseCoordinatorTest
     void shouldNotAcquireLeaseWhenNotLeader() throws Exception
     {
         // given
-        LeaderLocator leaderLocator = mock( LeaderLocator.class );
-        when( leaderLocator.getLeader() ).thenReturn( other );
+        when( leaderLocator.getLeaderInfo() ).thenReturn( otherAsLeader );
 
         LeaseClient client = coordinator.newClient();
 
@@ -79,7 +82,7 @@ class ClusterLeaseCoordinatorTest
     void shouldConsiderInvalidatedLeaseInvalid() throws Exception
     {
         // given
-        when( leaderLocator.getLeader() ).thenReturn( myself );
+        when( leaderLocator.getLeaderInfo() ).thenReturn( myselfAsLeader );
         LeaseClient client = coordinator.newClient();
 
         client.ensureValid();
@@ -96,7 +99,7 @@ class ClusterLeaseCoordinatorTest
     void shouldReturnValidLeaseToNewClient() throws Exception
     {
         // given
-        when( leaderLocator.getLeader() ).thenReturn( myself );
+        when( leaderLocator.getLeaderInfo() ).thenReturn( myselfAsLeader );
         LeaseClient clientA = coordinator.newClient();
         clientA.ensureValid();
 
@@ -114,7 +117,7 @@ class ClusterLeaseCoordinatorTest
     void shouldNotReturnInvalidatedLeaseToNewClient() throws Exception
     {
         // given
-        when( leaderLocator.getLeader() ).thenReturn( myself );
+        when( leaderLocator.getLeaderInfo() ).thenReturn( myselfAsLeader );
         LeaseClient clientA = coordinator.newClient();
         clientA.ensureValid();
         assertEquals( 0, clientA.leaseId() );
@@ -147,7 +150,7 @@ class ClusterLeaseCoordinatorTest
     void shouldConsiderLeaseFromPreviousLifeInvalid() throws Exception
     {
         // given
-        when( leaderLocator.getLeader() ).thenReturn( myself );
+        when( leaderLocator.getLeaderInfo() ).thenReturn( myselfAsLeader );
         ReplicatedLeaseRequest oldLease = new ReplicatedLeaseRequest( myself, 0, namedDatabaseId.databaseId() );
         ReplicationResult result = replicator.replicate( oldLease );
         assertEquals( true, result.stateMachineResult().consume() );
@@ -165,7 +168,7 @@ class ClusterLeaseCoordinatorTest
     void shouldAllocateAfterSwitch() throws Exception
     {
         // when
-        when( leaderLocator.getLeader() ).thenReturn( myself );
+        when( leaderLocator.getLeaderInfo() ).thenReturn( myselfAsLeader );
         LeaseClient clientA = coordinator.newClient();
         clientA.ensureValid();
         assertEquals( 0, clientA.leaseId() );

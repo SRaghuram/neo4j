@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.upstream.strategies;
 
+import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
@@ -96,6 +97,12 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     public RoleInfo lookupRole( NamedDatabaseId namedDatabaseId, MemberId memberId )
     {
         return RoleInfo.UNKNOWN;
+    }
+
+    @Override
+    public LeaderInfo getLeader( NamedDatabaseId namedDatabaseId )
+    {
+        return null;
     }
 
     @Override

@@ -35,7 +35,7 @@ class RaftOutcomeApplier
     private final RaftLogShippingManager logShipping;
     private final RaftMembershipManager membershipManager;
 
-    private volatile MemberId leaderId;
+    private volatile LeaderInfo leaderInfo;
     private final Collection<LeaderListener> leaderListeners = new ArrayList<>();
 
     RaftOutcomeApplier( RaftState state, Outbound<MemberId,RaftMessages.RaftMessage> outbound, LeaderAvailabilityTimers leaderAvailabilityTimers,
@@ -60,7 +60,7 @@ class RaftOutcomeApplier
         handleTimers( outcome );
         handleLogShipping( outcome );
 
-        leaderId = outcome.getLeader();
+        leaderInfo = new LeaderInfo( outcome.getLeader(), outcome.getTerm() );
 
         if ( newLeaderWasElected )
         {
@@ -144,9 +144,9 @@ class RaftOutcomeApplier
         }
     }
 
-    Optional<MemberId> getLeader()
+    Optional<LeaderInfo> getLeaderInfo()
     {
-        return Optional.ofNullable( leaderId );
+        return Optional.ofNullable( leaderInfo );
     }
 
     synchronized void registerListener( LeaderListener listener )

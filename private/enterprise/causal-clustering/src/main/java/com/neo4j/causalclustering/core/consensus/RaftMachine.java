@@ -116,9 +116,9 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
     }
 
     @Override
-    public MemberId getLeader()
+    public LeaderInfo getLeaderInfo()
     {
-        return outcomeApplier.getLeader().orElse( null );
+        return outcomeApplier.getLeaderInfo().orElse( null );
     }
 
     @Override
@@ -177,7 +177,7 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
                ", currentRole=" + currentRole +
                ", term=" + term() +
                ", votingMembers=" + votingMembers() +
-               ", leader=" + outcomeApplier.getLeader() +
+               ", leader=" + outcomeApplier.getLeaderInfo() +
                '}';
     }
 

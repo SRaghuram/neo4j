@@ -273,6 +273,11 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         return topology != null ? topology : DatabaseReadReplicaTopology.empty( databaseId );
     }
 
+    public LeaderInfo getLeader( NamedDatabaseId namedDatabaseId )
+    {
+        return remoteDbLeaderMap.get( namedDatabaseId.databaseId() );
+    }
+
     SocketAddress retrieveCatchupServerAddress( MemberId memberId )
     {
         CoreServerInfo coreServerInfo = coresByMemberId.get( memberId );

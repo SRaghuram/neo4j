@@ -61,6 +61,7 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.cluster_a
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForReadReplica;
 import static com.neo4j.causalclustering.discovery.TestTopology.readReplicaInfoMap;
+import static com.neo4j.causalclustering.identity.RaftTestMember.leader;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static java.util.Collections.emptyMap;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -497,7 +498,7 @@ class GetRoutingTableProcedureForSingleDCTest
         var leaderLocator = mock( LeaderLocator.class );
         var leaderLocatorForDatabase = mock( LeaderLocatorForDatabase.class );
 
-        when( leaderLocator.getLeader() ).thenReturn( null );
+        when( leaderLocator.getLeaderInfo() ).thenReturn( null );
         when( leaderLocatorForDatabase.getLeader( namedDatabaseId ) ).thenReturn( Optional.of( leaderLocator ) );
         return leaderLocatorForDatabase;
     }
@@ -512,7 +513,7 @@ class GetRoutingTableProcedureForSingleDCTest
         var leaderLocator = mock( LeaderLocator.class );
         var leaderLocatorForDatabase = mock( LeaderLocatorForDatabase.class );
 
-        when( leaderLocator.getLeader() ).thenReturn( member( memberId ) );
+        when( leaderLocator.getLeaderInfo() ).thenReturn( leader( memberId, 1 ) );
         when( leaderLocatorForDatabase.getLeader( databaseId ) ).thenReturn( Optional.of( leaderLocator ) );
         return leaderLocatorForDatabase;
     }

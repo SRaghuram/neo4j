@@ -372,6 +372,12 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
+    public LeaderInfo getLeader( NamedDatabaseId namedDatabaseId )
+    {
+        return globalTopologyState.getLeader( namedDatabaseId );
+    }
+
+    @Override
     public Map<MemberId,CoreServerInfo> allCoreServers()
     {
         return globalTopologyState.allCoreServers();

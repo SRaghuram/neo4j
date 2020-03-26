@@ -32,6 +32,7 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.cluster_a
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.load_balancing_shuffle;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForReadReplica;
+import static com.neo4j.causalclustering.identity.RaftTestMember.leader;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.anyOf;
@@ -231,11 +232,11 @@ public class AddressCollectorTest
 
         if ( leaderIndex < 0 )
         {
-            when( leaderLocator.getLeader() ).thenReturn( null );
+            when( leaderLocator.getLeaderInfo() ).thenReturn( null );
         }
         else
         {
-            when( leaderLocator.getLeader() ).thenReturn( member( leaderIndex ) );
+            when( leaderLocator.getLeaderInfo() ).thenReturn( leader( leaderIndex, 1 ) );
         }
         when( leaderLocatorForDatabase.getLeader( namedDatabaseId ) ).thenReturn( Optional.of( leaderLocator ) );
 

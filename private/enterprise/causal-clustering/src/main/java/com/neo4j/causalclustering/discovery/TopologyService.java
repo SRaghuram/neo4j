@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
+import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.dbms.DatabaseStateChangedListener;
@@ -36,6 +37,8 @@ public interface TopologyService extends Lifecycle, DatabaseStateChangedListener
     DatabaseReadReplicaTopology readReplicaTopologyForDatabase( NamedDatabaseId namedDatabaseId );
 
     SocketAddress lookupCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException;
+
+    LeaderInfo getLeader( NamedDatabaseId namedDatabaseId );
 
     RoleInfo lookupRole( NamedDatabaseId namedDatabaseId, MemberId memberId );
 

@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
+import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseToMember;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -222,6 +223,15 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
             return isReadReplica ? RoleInfo.READ_REPLICA : RoleInfo.UNKNOWN;
         }
         return role;
+    }
+
+    @Override
+    public LeaderInfo getLeader( NamedDatabaseId namedDatabaseId )
+    {
+        return coreRoles.entrySet().stream()
+                        .filter( entry -> entry.getValue() == RoleInfo.LEADER )
+                        .map( entry -> new LeaderInfo( entry.getKey(), 1 ) )
+                        .findFirst().orElse( null );
     }
 
     @Override

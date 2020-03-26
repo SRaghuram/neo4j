@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing;
 
+import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.discovery.ClientConnector;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
@@ -65,7 +66,7 @@ public class DefaultLeaderService implements LeaderService
 
     private static Optional<MemberId> getLeaderIdFromLeaderLocator( LeaderLocator leaderLocator )
     {
-        return Optional.ofNullable( leaderLocator.getLeader() );
+        return Optional.ofNullable( leaderLocator.getLeaderInfo() ).map( LeaderInfo::memberId );
     }
 
     private Optional<MemberId> getLeaderIdFromTopologyService( NamedDatabaseId namedDatabaseId )

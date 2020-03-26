@@ -210,7 +210,7 @@ class RaftOutcomeApplierTest
 
         raftOutcomeApplier.handle( outcome );
 
-        assertThat( raftOutcomeApplier.getLeader(), contains( outcome.getLeader() ) );
+        assertThat( raftOutcomeApplier.getLeaderInfo().map( LeaderInfo::memberId ), contains( outcome.getLeader() ) );
     }
 
     @Test

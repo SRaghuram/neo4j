@@ -330,8 +330,10 @@ class CoreDatabaseFactory
         UpstreamDatabaseStrategySelector catchupStrategySelector = createUpstreamDatabaseStrategySelector(
                 myIdentity, config, debugLog, topologyService, defaultStrategy );
 
+        LeaderProvider leaderProvider = new LeaderProvider( raftGroup.raftMachine(), topologyService );
+
         CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider =
-                new CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider( raftGroup.raftMachine(), topologyService, catchupStrategySelector );
+                new CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider( leaderProvider, topologyService, catchupStrategySelector );
 
         dependencies.satisfyDependency( raftGroup.raftMachine() );
 

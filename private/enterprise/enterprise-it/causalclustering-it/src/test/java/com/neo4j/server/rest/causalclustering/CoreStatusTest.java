@@ -6,6 +6,7 @@
 package com.neo4j.server.rest.causalclustering;
 
 import com.neo4j.causalclustering.core.consensus.DurationSinceLastMessageMonitor;
+import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipManager;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
@@ -186,7 +187,7 @@ class CoreStatusTest
     {
         // given ideal normal conditions
         commandIndexTracker.setAppliedCommandIndex( 123 );
-        when( raftMachine.getLeader() ).thenReturn( core2 );
+        when( raftMachine.getLeaderInfo() ).thenReturn( new LeaderInfo( core2, 1 ) );
         raftMessageTimerResetMonitor.timerReset();
         when( throughputMonitor.throughput() ).thenReturn( Optional.of( 423.0 ) );
         clock.forward( Duration.ofSeconds( 1 ) );

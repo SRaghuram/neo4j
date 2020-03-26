@@ -6,8 +6,8 @@
 package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
+import com.neo4j.causalclustering.core.LeaderProvider;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 
 import org.neo4j.configuration.helpers.SocketAddress;
@@ -81,14 +81,14 @@ public interface CatchupAddressProvider
      */
     class LeaderOrUpstreamStrategyBasedAddressProvider implements CatchupAddressProvider
     {
-        private final LeaderLocator leaderLocator;
+        private final LeaderProvider leaderProvider;
         private final TopologyService topologyService;
         private final UpstreamAddressLookup secondaryUpstreamAddressLookup;
 
-        public LeaderOrUpstreamStrategyBasedAddressProvider( LeaderLocator leaderLocator, TopologyService topologyService,
+        public LeaderOrUpstreamStrategyBasedAddressProvider( LeaderProvider leaderProvider, TopologyService topologyService,
                 UpstreamDatabaseStrategySelector strategySelector )
         {
-            this.leaderLocator = leaderLocator;
+            this.leaderProvider = leaderProvider;
             this.topologyService = topologyService;
             this.secondaryUpstreamAddressLookup = new UpstreamAddressLookup( strategySelector, topologyService );
         }
@@ -96,7 +96,7 @@ public interface CatchupAddressProvider
         @Override
         public SocketAddress primary( NamedDatabaseId namedDatabaseId ) throws CatchupAddressResolutionException
         {
-            MemberId leadMember = leaderLocator.getLeader();
+            var leadMember = leaderProvider.getLeader( namedDatabaseId );
             if ( leadMember == null )
             {
                 throw new CatchupAddressResolutionException( new IllegalStateException( "No Leader Found" ) );

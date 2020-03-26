@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 public interface LeaderLocator
 {
-    MemberId getLeader();
+    LeaderInfo getLeaderInfo();
 
     void registerListener( LeaderListener listener );
 

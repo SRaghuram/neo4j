@@ -352,7 +352,7 @@ public class RaftMachineTest
         // When
         // There is no leader
         // Then
-        assertNull( raft.getLeader() );
+        assertNull( raft.getLeaderInfo() );
     }
 
     @Test
@@ -430,7 +430,7 @@ public class RaftMachineTest
         // When
         // There is no leader
         // Then
-        assertNull( raft.getLeader() );
+        assertNull( raft.getLeaderInfo() );
     }
 
     @Test
