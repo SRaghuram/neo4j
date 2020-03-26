@@ -63,7 +63,7 @@ public class ServerDatabase implements Database
 
     private static String generateBoltUriString()
     {
-        // TODO reviewer: will be changed before merge - need to find smarter solution
+        // NOTE: need to find smarter solution
         return "127.0.0.1:7687";
     }
 

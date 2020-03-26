@@ -49,7 +49,7 @@ public class Neo4jStore extends Store
     @Override
     public Neo4jStore makeTemporaryCopy()
     {
-        return new Neo4jStore( StoreUtils.makeTemporaryCopy( homeDir ), databaseName, true );
+        return new Neo4jStore( StoreUtils.makeCopy( homeDir ), databaseName, true );
     }
 
     @Override
@@ -95,7 +95,7 @@ public class Neo4jStore extends Store
     {
         DatabaseLayout databaseLayout = layout.databaseLayout( databaseName.name() );
         Arrays.stream( Objects.requireNonNull( databaseLayout.getTransactionLogsDirectory().listFiles() ) )
-                .forEach( File::delete );
+              .forEach( File::delete );
     }
 
     @Override
@@ -108,8 +108,8 @@ public class Neo4jStore extends Store
     public String toString()
     {
         return "Neo4jStore\n" +
-                "\tHome : " + homeDir.toAbsolutePath() + "\n" +
-                "\tDB   : " + databaseName + "\n" +
-                "\tSize : " + BenchmarkUtil.bytesToString( bytes() );
+               "\tHome : " + homeDir.toAbsolutePath() + "\n" +
+               "\tDB   : " + databaseName + "\n" +
+               "\tSize : " + BenchmarkUtil.bytesToString( bytes() );
     }
 }

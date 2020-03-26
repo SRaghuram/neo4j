@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.neo4j.bench.common.util.BenchmarkUtil.deleteDir;
 import static java.util.stream.Collectors.toList;
 
 public class AutoDetectStore extends Store
@@ -37,11 +36,6 @@ public class AutoDetectStore extends Store
         return new AutoDetectStore( originalTopLevelDir, false );
     }
 
-    public static AutoDetectStore createTemporaryFrom( Path originalTopLevelDir )
-    {
-        return new AutoDetectStore( originalTopLevelDir, true );
-    }
-
     /**
      * Store directory will be automatically deleted on close.
      *
@@ -50,7 +44,7 @@ public class AutoDetectStore extends Store
     @Override
     public AutoDetectStore makeTemporaryCopy()
     {
-        return new AutoDetectStore( StoreUtils.makeTemporaryCopy( topLevelDir ), true );
+        return new AutoDetectStore( StoreUtils.makeCopy( topLevelDir ), true );
     }
 
     private AutoDetectStore( Path topLevelDir, boolean isTemporaryCopy )
@@ -78,10 +72,9 @@ public class AutoDetectStore extends Store
 
     private static List<Path> discoverGraphDbs( Path topLevelDir )
     {
-        try
+        try ( Stream<Path> files = Files.walk( topLevelDir ) )
         {
-            return Files.walk( topLevelDir )
-                        .filter( Files::isDirectory )
+            return files.filter( Files::isDirectory )
                         .filter( AutoDetectStore::isGraphDb )
                         .filter( path -> !path.endsWith( SYSTEM_DATABASE_NAME ) )
                         .collect( Collectors.toList() );
@@ -94,10 +87,9 @@ public class AutoDetectStore extends Store
 
     private static boolean isGraphDb( Path maybeGraphDb )
     {
-        try
+        try ( Stream<Path> files = Files.list( maybeGraphDb ) )
         {
-            return Files.list( maybeGraphDb )
-                        .anyMatch( file -> file.getFileName().startsWith( "neostore" ) );
+            return files.anyMatch( file -> file.getFileName().startsWith( "neostore" ) );
         }
         catch ( IOException e )
         {

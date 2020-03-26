@@ -56,10 +56,9 @@ public class StoreUtils
         return copyParent.resolve( nameOf( originalStore ) + "-copy-" + UUID.randomUUID().toString() );
     }
 
-    static Path makeTemporaryCopy( Path source )
+    static Path makeCopy( Path source )
     {
         Path target = StoreUtils.storeCopyPath( source, source.getParent() );
-        System.out.println( "Making temporary store copy..." );
         StoreUtils.copy( source, target );
         return target;
     }
@@ -80,7 +79,7 @@ public class StoreUtils
         {
             this.fromPath = fromPath;
             this.toPath = toPath;
-            executorService = Executors.newFixedThreadPool( 6 );
+            executorService = Executors.newFixedThreadPool( Runtime.getRuntime().availableProcessors() );
             copyingProcesses = new ArrayList<>();
         }
 

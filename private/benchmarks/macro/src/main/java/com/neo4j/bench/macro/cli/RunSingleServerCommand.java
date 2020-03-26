@@ -174,7 +174,9 @@ public class RunSingleServerCommand implements Runnable
             Workload workload = Workload.fromName( workloadName, resources, deploymentMode );
 
             QueryRunner queryRunner = QueryRunner.queryRunnerFor( executionMode,
-                                                                  forkDirectory -> ServerDatabase.connectClient( boltUri, workload.getDatabaseName(), new Pid( neo4jPid ) ) );
+                                                                  forkDirectory -> ServerDatabase.connectClient( boltUri,
+                                                                                                                 workload.getDatabaseName(),
+                                                                                                                 new Pid( neo4jPid ) ) );
 
             QueryRunner.runSingleCommand( queryRunner,
                                           Jvm.bestEffortOrFail( jvmFile ),

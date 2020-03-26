@@ -371,7 +371,7 @@ public class Stores
         {
             this.fromPath = fromPath;
             this.toPath = toPath;
-            executorService = Executors.newFixedThreadPool( 6 );
+            executorService = Executors.newFixedThreadPool( Runtime.getRuntime().availableProcessors() );
             copyingProcesses = new ArrayList<>();
         }
 
