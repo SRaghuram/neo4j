@@ -25,6 +25,7 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.Read;
+import org.neo4j.values.storable.Value;
 
 import static com.neo4j.bench.micro.Main.run;
 import static com.neo4j.bench.micro.benchmarks.core.ReadNodeProperty.NODE_COUNT;
@@ -51,6 +52,7 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
+import static org.neo4j.values.storable.Values.NO_VALUE;
 
 @BenchmarkEnabled( true )
 @OutputTimeUnit( MICROSECONDS )
@@ -148,12 +150,10 @@ public class ReadNodeProperty extends AbstractKernelBenchmark
         txState.read.singleNode( 1, txState.node );
         txState.node.next();
         txState.node.properties( txState.property );
-        while ( txState.property.next() )
+        Value value = txState.property.seekPropertyValue( txState.propertyKeyId );
+        if ( value != NO_VALUE )
         {
-            if ( txState.property.propertyKey() == txState.propertyKeyId )
-            {
-                return txState.property.propertyValue();
-            }
+            return value;
         }
         throw new Kaboom();
     }
@@ -165,12 +165,9 @@ public class ReadNodeProperty extends AbstractKernelBenchmark
         txState.read.singleNode( 1, txState.node );
         txState.node.next();
         txState.node.properties( txState.property );
-        while ( txState.property.next() )
+        if ( txState.property.seekProperty( txState.propertyKeyId ) )
         {
-            if ( txState.property.propertyKey() == txState.propertyKeyId )
-            {
-                return true;
-            }
+            return true;
         }
         throw new Kaboom();
     }
@@ -184,12 +181,10 @@ public class ReadNodeProperty extends AbstractKernelBenchmark
         txState.read.singleNode( rngState.rng.nextInt( NODE_COUNT ), txState.node );
         txState.node.next();
         txState.node.properties( txState.property );
-        while ( txState.property.next() )
+        Value value = txState.property.seekPropertyValue( txState.propertyKeyId );
+        if ( value != NO_VALUE )
         {
-            if ( txState.property.propertyKey() == txState.propertyKeyId )
-            {
-                return txState.property.propertyValue();
-            }
+            return value;
         }
         throw new Kaboom();
     }
@@ -201,12 +196,9 @@ public class ReadNodeProperty extends AbstractKernelBenchmark
         txState.read.singleNode( rngState.rng.nextInt( NODE_COUNT ), txState.node );
         txState.node.next();
         txState.node.properties( txState.property );
-        while ( txState.property.next() )
+        if ( txState.property.seekProperty( txState.propertyKeyId ) )
         {
-            if ( txState.property.propertyKey() == txState.propertyKeyId )
-            {
-                return true;
-            }
+            return true;
         }
         throw new Kaboom();
     }
