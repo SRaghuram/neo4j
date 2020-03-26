@@ -71,7 +71,7 @@ trait ExecutionState extends ArgumentStateMapCreator {
    *
    * @return the ready morsel accumulator, or `null` if no accumulators are ready
    */
-  def takeAccumulator[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId): ACC
+  def takeAccumulators[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId, n: Int): IndexedSeq[ACC]
 
   /**
    * Take one accumulator that is ready (LHS) and a morsel (RHS) together from the [[LHSAccumulatingRHSStreamingSource]] with id `bufferId`.
@@ -117,9 +117,9 @@ trait ExecutionState extends ArgumentStateMapCreator {
    * Close a pipeline task which was executing over some input morsel accumulator.
    *
    * @param pipeline the executing pipeline
-   * @param accumulator the input morsel accumulator
+   * @param accumulators the input morsel accumulator
    */
-  def closeAccumulatorTask(pipeline: ExecutablePipeline, accumulator: MorselAccumulator[_]): Unit
+  def closeAccumulatorsTask(pipeline: ExecutablePipeline, accumulators: IndexedSeq[MorselAccumulator[_]]): Unit
 
   /**
    * Close a pipeline task which was executing over some input morsel accumulator (LHS) and a morsel (RHS) from a [[LHSAccumulatingRHSStreamingSource]].

@@ -37,9 +37,10 @@ trait OperatorInput {
   /**
    * Take the next input accumulator
    *
+   * @param n the maximum number of accumulators to take
    * @return the input accumulator, or `null` if no input is available
    */
-  def takeAccumulator[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](): ACC
+  def takeAccumulators[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](n: Int): IndexedSeq[ACC]
 
   /**
    * Take the next input accumulator from the LHS and morsel from the RHS.
@@ -73,8 +74,11 @@ trait OperatorCloser {
   /**
    * Close input accumulators.
    */
-  def closeAccumulator(accumulator: MorselAccumulator[_]): Unit
+  def closeAccumulators(accumulators: IndexedSeq[MorselAccumulator[_]]): Unit
 
+  /**
+    * Close input morsel and accumulator.
+    */
   def closeMorselAndAccumulatorTask(morsel: Morsel, accumulator: MorselAccumulator[_]): Unit
 
   /**
@@ -147,12 +151,14 @@ trait OperatorState {
  */
 trait ReduceOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extends OperatorState {
 
+  def accumulatorsPerTask(morselSize: Int): Int
+
   final override def nextTasks(state: PipelinedQueryState,
                                operatorInput: OperatorInput,
                                parallelism: Int,
                                resources: QueryResources,
-                               argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithAccumulator[DATA, ACC]] = {
-    val input = operatorInput.takeAccumulator[DATA, ACC]()
+                               argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithAccumulators[DATA, ACC]] = {
+    val input = operatorInput.takeAccumulators[DATA, ACC](accumulatorsPerTask(state.morselSize))
     if (input != null) {
       try {
         nextTasks(state, input, resources)
@@ -169,8 +175,8 @@ trait ReduceOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extend
    * Initialize new tasks for this operator.
    */
   def nextTasks(state: PipelinedQueryState,
-                input: ACC,
-                resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulator[DATA, ACC]]
+                input: IndexedSeq[ACC],
+                resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[DATA, ACC]]
 }
 
 /**
@@ -302,15 +308,22 @@ trait ContinuableOperatorTaskWithMorsel extends ContinuableOperatorTask {
   override def estimatedHeapUsage: Long = inputMorsel.estimatedHeapUsage
 }
 
-trait ContinuableOperatorTaskWithAccumulator[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extends ContinuableOperatorTask {
-  val accumulator: ACC
+trait ContinuableOperatorTaskWithAccumulators[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extends ContinuableOperatorTask {
+  val accumulators: IndexedSeq[ACC]
 
   override protected def closeInput(operatorCloser: OperatorCloser): Unit = {
-    operatorCloser.closeAccumulator(accumulator)
+    operatorCloser.closeAccumulators(accumulators)
   }
 
   override def filterCancelledArguments(operatorCloser: OperatorCloser): Boolean = {
-    operatorCloser.filterCancelledArguments(accumulator)
+    var cancelled = true
+    var i = 0
+    while (i < accumulators.size) {
+      val accumulator = accumulators(i)
+      cancelled = cancelled && operatorCloser.filterCancelledArguments(accumulator)
+      i += 1
+    }
+    cancelled
   }
 
   override def producingWorkUnitEvent: WorkUnitEvent = null
@@ -324,8 +337,8 @@ trait ContinuableOperatorTaskWithAccumulator[DATA <: AnyRef, ACC <: MorselAccumu
 }
 
 trait ContinuableOperatorTaskWithMorselAndAccumulator[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]]
-  extends ContinuableOperatorTaskWithMorsel
-  with ContinuableOperatorTaskWithAccumulator[DATA, ACC] {
+  extends ContinuableOperatorTaskWithMorsel {
+  val accumulator: ACC
 
   override protected def closeInput(operatorCloser: OperatorCloser): Unit = {
     operatorCloser.closeMorselAndAccumulatorTask(inputMorsel, accumulator)
@@ -336,4 +349,7 @@ trait ContinuableOperatorTaskWithMorselAndAccumulator[DATA <: AnyRef, ACC <: Mor
   }
 
   override def producingWorkUnitEvent: WorkUnitEvent = inputMorsel.producingWorkUnitEvent
+
+  // These operators have no cursors
+  override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
 }

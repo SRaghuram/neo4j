@@ -33,6 +33,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.expressions
+import org.neo4j.cypher.internal.macros.AssertMacros
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
@@ -255,6 +256,8 @@ case class AggregationOperator(workIdentity: WorkIdentity,
     extends Operator
     with ReduceOperatorState[AggPreMap, AggregatingAccumulator] {
 
+    override def accumulatorsPerTask(morselSize: Int): Int = 1
+
     override def workIdentity: WorkIdentity = AggregationOperator.this.workIdentity
 
     override def createState(argumentStateCreator: ArgumentStateMapCreator,
@@ -265,15 +268,15 @@ case class AggregationOperator(workIdentity: WorkIdentity,
       this
     }
 
-    override def nextTasks(state: PipelinedQueryState,
-                           input: AggregatingAccumulator,
-                           resources: QueryResources
-                          ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[AggPreMap, AggregatingAccumulator]] = {
+    override def nextTasks(state: PipelinedQueryState, input: IndexedSeq[AggregatingAccumulator], resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[AggPreMap, AggregatingAccumulator]] = {
       Array(new OTask(input))
     }
 
-    class OTask(override val accumulator: AggregatingAccumulator)
-      extends ContinuableOperatorTaskWithAccumulator[AggPreMap, AggregatingAccumulator] {
+    class OTask(override val accumulators: IndexedSeq[AggregatingAccumulator])
+      extends ContinuableOperatorTaskWithAccumulators[AggPreMap, AggregatingAccumulator] {
+
+      AssertMacros.checkOnlyWhenAssertionsAreEnabled(accumulators.size == 1)
+      private val accumulator = accumulators.head
 
       override def workIdentity: WorkIdentity = AggregationOperator.this.workIdentity
 

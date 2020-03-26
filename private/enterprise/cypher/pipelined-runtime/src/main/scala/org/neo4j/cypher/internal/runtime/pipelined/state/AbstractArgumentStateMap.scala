@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.util.Preconditions
 
 import scala.collection.JavaConverters.asScalaIteratorConverter
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * All functionality of either standard or concurrent ASM that can be written without knowing the concrete Map type.
@@ -74,18 +75,28 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
       )
   }
 
-  override def takeOneCompleted(): STATE = {
+  override def takeCompleted(n: Int): IndexedSeq[STATE] = {
     val iterator = controllers.values().iterator()
+    val builder = new ArrayBuffer[STATE]
 
-    while(iterator.hasNext) {
+    while(iterator.hasNext && builder.size < n) {
       val controller = iterator.next()
       if (controller.tryTake()) {
-        controllers.remove(controller.state.argumentRowId)
         DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, controller.state.argumentRowId)
-        return controller.state
+        builder += controller.state
       }
     }
-    null.asInstanceOf[STATE]
+
+    var i = 0
+    while (i < builder.length) {
+      controllers.remove(builder(i).argumentRowId)
+      i += 1
+    }
+
+    if (builder.isEmpty)
+      null.asInstanceOf[IndexedSeq[STATE]]
+    else
+      builder
   }
 
   override def takeNextIfCompleted(): STATE = {

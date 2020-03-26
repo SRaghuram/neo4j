@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import java.util.Comparator
 import java.util.PriorityQueue
 
+import org.neo4j.cypher.internal.macros.AssertMacros
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
@@ -39,6 +40,8 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
 
   private val comparator: Comparator[MorselRow] = MorselSorting.createComparator(orderBy)
 
+  override def accumulatorsPerTask(morselSize: Int): Int = 1
+
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
                            state: PipelinedQueryState,
@@ -47,10 +50,7 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
     this
   }
 
-  override def nextTasks(state: PipelinedQueryState,
-                         input: ArgumentStateBuffer,
-                         resources: QueryResources
-                        ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[Morsel, ArgumentStateBuffer]] = {
+  override def nextTasks(state: PipelinedQueryState, input: IndexedSeq[ArgumentStateBuffer], resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[Morsel, ArgumentStateBuffer]] = {
     Array(new OTask(input))
   }
 
@@ -59,13 +59,15 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
   produced, we remove the first morsel and consume the current row. If there is more data left, we re-insert
   the morsel, now pointing to the next row.
    */
-  class OTask(override val accumulator: ArgumentStateBuffer) extends ContinuableOperatorTaskWithAccumulator[Morsel, ArgumentStateBuffer] {
+  class OTask(override val accumulators: IndexedSeq[ArgumentStateBuffer]) extends ContinuableOperatorTaskWithAccumulators[Morsel, ArgumentStateBuffer] {
 
     override def workIdentity: WorkIdentity = SortMergeOperator.this.workIdentity
 
     override def toString: String = "SortMergeTask"
 
-    var sortedInputPerArgument: PriorityQueue[MorselReadCursor] = _
+    AssertMacros.checkOnlyWhenAssertionsAreEnabled(accumulators.size == 1)
+    private val accumulator = accumulators.head
+    private var sortedInputPerArgument: PriorityQueue[MorselReadCursor] = _
 
     override def operate(outputMorsel: Morsel,
                          state: PipelinedQueryState,

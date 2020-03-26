@@ -58,13 +58,25 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
   override def hasData: Boolean = argumentStateMap.hasCompleted
 
   override def take(): ACC = {
-    val accumulator = argumentStateMap.takeOneCompleted()
-    if (accumulator != null) {
+    // NOTE: At time of writing we only use take(n) with this buffer.
+    val accumulators = take(1)
+    if (accumulators != null) {
+      accumulators.head
+    } else {
+      null.asInstanceOf[ACC]
+    }
+  }
+
+  override def take(n: Int): IndexedSeq[ACC] = {
+    val accumulators = argumentStateMap.takeCompleted(n)
+    if (accumulators != null) {
       if (DebugSupport.BUFFERS.enabled) {
-        DebugSupport.BUFFERS.log(s"[take]  $this -> $accumulator")
+        for (acc <- accumulators) {
+          DebugSupport.BUFFERS.log(s"[take]  $this -> $acc")
+        }
       }
     }
-    accumulator
+    accumulators
   }
 
   override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor, initialCount: Int): Unit = {

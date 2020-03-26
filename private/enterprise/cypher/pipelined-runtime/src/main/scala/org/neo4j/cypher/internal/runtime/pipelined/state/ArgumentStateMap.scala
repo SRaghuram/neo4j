@@ -100,8 +100,10 @@ trait UnorderedArgumentStateMapReader[S <: ArgumentState] {
   /**
    * Take the [[ArgumentState]] of one complete argument. The [[ArgumentState]] will
    * be removed from the [[ArgumentStateMap]] and cannot be taken again or modified after this call.
+    *
+    * @param n the maximum number of arguments to take
    */
-  def takeOneCompleted(): S
+  def takeCompleted(n: Int): IndexedSeq[S]
 
   /**
    * Returns the [[ArgumentState]] of each completed argument, but does not remove them from the [[ArgumentStateMap]].

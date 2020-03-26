@@ -215,8 +215,8 @@ class PipelineState(val pipeline: ExecutablePipeline,
     executionState.takeMorsel(pipeline.inputBuffer.id)
   }
 
-  override def takeAccumulator[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](): ACC = {
-    executionState.takeAccumulator(pipeline.inputBuffer.id)
+  override def takeAccumulators[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](n: Int): IndexedSeq[ACC] = {
+    executionState.takeAccumulators(pipeline.inputBuffer.id, n)
   }
 
   override def takeAccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](): AccumulatorAndMorsel[DATA, ACC] = {
@@ -237,8 +237,8 @@ class PipelineState(val pipeline: ExecutablePipeline,
     executionState.closeData(pipeline, data)
   }
 
-  override def closeAccumulator(accumulator: MorselAccumulator[_]): Unit = {
-    executionState.closeAccumulatorTask(pipeline, accumulator)
+  override def closeAccumulators(accumulators: IndexedSeq[MorselAccumulator[_]]): Unit = {
+    executionState.closeAccumulatorsTask(pipeline, accumulators)
   }
 
   override def closeMorselAndAccumulatorTask(morsel: Morsel, accumulator: MorselAccumulator[_]): Unit = {

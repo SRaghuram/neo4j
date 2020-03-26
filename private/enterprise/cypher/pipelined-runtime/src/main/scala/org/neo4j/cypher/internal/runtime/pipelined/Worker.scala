@@ -153,8 +153,8 @@ class Worker(val workerId: Int,
         SchedulingResult(null, someTaskWasFilteredOut = true)
 
       // Failure in nextTask of a pipeline, after taking Accumulator
-      case NextTaskException(pipeline, SchedulingInputException(acc: MorselAccumulator[_], cause)) =>
-        executingQuery.executionState.closeAccumulatorTask(pipeline, acc)
+      case NextTaskException(pipeline, SchedulingInputException(acc: IndexedSeq[MorselAccumulator[_]], cause)) =>
+        executingQuery.executionState.closeAccumulatorsTask(pipeline, acc)
         executingQuery.executionState.failQuery(cause, resources, pipeline)
         SchedulingResult(null, someTaskWasFilteredOut = true)
 

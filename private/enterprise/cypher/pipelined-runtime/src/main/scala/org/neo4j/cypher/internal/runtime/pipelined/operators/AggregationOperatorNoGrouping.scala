@@ -150,6 +150,8 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
     extends Operator
     with ReduceOperatorState[Array[Updater], AggregatingAccumulator] {
 
+    override def accumulatorsPerTask(morselSize: Int): Int = morselSize
+
     override def createState(argumentStateCreator: ArgumentStateMapCreator,
                              stateFactory: StateFactory,
                              state: PipelinedQueryState,
@@ -158,14 +160,11 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
       this
     }
 
-    override def nextTasks(state: PipelinedQueryState,
-                           input: AggregatingAccumulator,
-                           resources: QueryResources
-                          ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[Array[Updater], AggregatingAccumulator]] = {
+    override def nextTasks(state: PipelinedQueryState, input: IndexedSeq[AggregatingAccumulator], resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[Array[Updater], AggregatingAccumulator]] = {
       Array(new OTask(input))
     }
 
-    class OTask(override val accumulator: AggregatingAccumulator) extends ContinuableOperatorTaskWithAccumulator[Array[Updater], AggregatingAccumulator] {
+    class OTask(override val accumulators: IndexedSeq[AggregatingAccumulator]) extends ContinuableOperatorTaskWithAccumulators[Array[Updater], AggregatingAccumulator] {
 
       override def workIdentity: WorkIdentity = AggregationReduceOperatorNoGrouping.this.workIdentity
 
@@ -173,14 +172,18 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
                            state: PipelinedQueryState,
                            resources: QueryResources): Unit = {
 
-        var i = 0
         val outputCursor = outputMorsel.writeCursor(onFirstRow = true)
-        outputCursor.copyFrom(accumulator.argumentRow)
-        while (i < aggregations.length) {
-          outputCursor.setRefAt(reducerOutputSlots(i), accumulator.result(i))
-          i += 1
+        val iter = accumulators.iterator
+        while (iter.hasNext) { // guaranteed to be < morsel size
+          val accumulator = iter.next()
+          outputCursor.copyFrom(accumulator.argumentRow)
+          var i = 0
+          while (i < aggregations.length) {
+            outputCursor.setRefAt(reducerOutputSlots(i), accumulator.result(i))
+            i += 1
+          }
+          outputCursor.next()
         }
-        outputCursor.next()
         outputCursor.truncate()
       }
 

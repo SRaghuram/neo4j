@@ -136,8 +136,8 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     buffers.morselBuffer(bufferId).take()
   }
 
-  override def takeAccumulator[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId): ACC = {
-    buffers.source[ACC](bufferId).take()
+  override def takeAccumulators[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId, n: Int): IndexedSeq[ACC] = {
+    buffers.source[ACC](bufferId).take(n)
   }
 
   override def takeAccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId): AccumulatorAndMorsel[DATA, ACC] = {
@@ -164,9 +164,13 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     buffers.closingSource(pipeline.inputBuffer.id).close(data)
   }
 
-  override def closeAccumulatorTask(pipeline: ExecutablePipeline, accumulator: MorselAccumulator[_]): Unit = {
+  override def closeAccumulatorsTask(pipeline: ExecutablePipeline, accumulators: IndexedSeq[MorselAccumulator[_]]): Unit = {
     closeWorkUnit(pipeline)
-    buffers.argumentStateBuffer(pipeline.inputBuffer.id).close(accumulator)
+    var i = 0
+    while (i < accumulators.size) {
+      buffers.argumentStateBuffer(pipeline.inputBuffer.id).close(accumulators(i))
+      i += 1
+    }
   }
 
   override def closeMorselAndAccumulatorTask(pipeline: ExecutablePipeline,

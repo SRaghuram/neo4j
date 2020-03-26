@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AntiOperatorTask
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTask
-import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTaskWithAccumulator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTaskWithAccumulators
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTaskWithMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.operators.InputLoopTask
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalOperatorTask
@@ -37,8 +37,10 @@ object PipelinedDebugSupport {
           task.morselDatas.flatMap(prettyStreamedData) :+
           prettyWorkIdentity(workIdentity)
 
-      case withAccumulator: ContinuableOperatorTaskWithAccumulator[_, _] =>
-        Seq("INPUT:", withAccumulator.accumulator.toString, prettyWorkIdentity(withAccumulator.workIdentity))
+      case withAccumulator: ContinuableOperatorTaskWithAccumulators[_, _] =>
+        Array("INPUT:") ++
+          withAccumulator.accumulators.map(acc => acc.toString) :+
+          prettyWorkIdentity(withAccumulator.workIdentity)
     }
   }
 

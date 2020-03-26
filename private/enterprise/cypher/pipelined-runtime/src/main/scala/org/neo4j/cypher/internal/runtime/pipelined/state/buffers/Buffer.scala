@@ -69,9 +69,25 @@ trait Source[+T <: AnyRef] {
   /**
    * This modifies the source and removes the returned element.
    *
-   * @return the T to take, or `null` if nothing is available
+   * @return the taken T, or `null` if nothing is available
    */
   def take(): T
+
+  /**
+   * This modifies the source and removes the returned elements.
+   *
+   * @param n the maximum number of elements to take.
+   * @return the taken Ts, or `null` if nothing is available
+   */
+  def take(n: Int): IndexedSeq[T] = {
+    val builder = IndexedSeq.newBuilder[T]
+    var i = 0
+    while (i < n) {
+      builder += take()
+      i += 1
+    }
+    builder.result()
+  }
 }
 
 /**

@@ -75,14 +75,14 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
       row => predicate(filterState, row))
   }
 
-  override def takeOneCompleted(): STATE = {
+  override def takeCompleted(n: Int): IndexedSeq[STATE] = {
     if (hasController && controller.tryTake()) {
       val completedState = controller.state
       hasController = false
       DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, completedState.argumentRowId)
-      return completedState
+      return IndexedSeq(completedState)
     }
-    null.asInstanceOf[STATE]
+    null
   }
 
   override def takeNextIfCompleted(): STATE = {

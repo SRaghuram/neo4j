@@ -10,6 +10,7 @@ import java.util.Comparator
 import java.util.concurrent.ConcurrentHashMap
 
 import org.neo4j.cypher.internal.DefaultComparatorTopTable
+import org.neo4j.cypher.internal.macros.AssertMacros
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
@@ -106,6 +107,8 @@ case class TopOperator(workIdentity: WorkIdentity,
 
     override def workIdentity: WorkIdentity = TopOperator.this.workIdentity
 
+    override def accumulatorsPerTask(morselSize: Int): Int = 1
+
     override def createState(argumentStateCreator: ArgumentStateMapCreator,
                              stateFactory: StateFactory,
                              state: PipelinedQueryState,
@@ -116,20 +119,19 @@ case class TopOperator(workIdentity: WorkIdentity,
       this
     }
 
-    override def nextTasks(state: PipelinedQueryState,
-                           input: TopTable,
-                           resources: QueryResources
-                          ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[Morsel, TopTable]] = {
+    override def nextTasks(state: PipelinedQueryState, input: IndexedSeq[TopTable], resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[Morsel, TopTable]] = {
       Array(new OTask(input))
     }
 
-    class OTask(override val accumulator: TopTable) extends ContinuableOperatorTaskWithAccumulator[Morsel, TopTable] {
+    class OTask(override val accumulators: IndexedSeq[TopTable]) extends ContinuableOperatorTaskWithAccumulators[Morsel, TopTable] {
 
       override def workIdentity: WorkIdentity = TopOperator.this.workIdentity
 
       override def toString: String = "TopMergeTask"
 
-      var sortedInputPerArgument: util.Iterator[MorselRow] = _
+      AssertMacros.checkOnlyWhenAssertionsAreEnabled(accumulators.size == 1)
+      private val accumulator = accumulators.head
+      private var sortedInputPerArgument: util.Iterator[MorselRow] = _
 
       override def operate(outputMorsel: Morsel,
                            state: PipelinedQueryState,
