@@ -492,3 +492,5 @@ class PipelinedMemoryManagementBigMorselProfiling extends MemoryManagementProfil
   with PipelinedSpecSuite
 class PipelinedMemoryManagementSmallMorselProfiling extends MemoryManagementProfilingBase(ENTERPRISE_PROFILING, PIPELINED, DEFAULT_MORSEL_SIZE_SMALL)
   with PipelinedSpecSuite
+class PipelinedMemoryManagementCustomProfiling extends MemoryManagementProfilingBase(ENTERPRISE_PROFILING, PIPELINED, DEFAULT_MORSEL_SIZE_BIG,
+                                                                                     runtimeSuffix="after") with PipelinedSpecSuite

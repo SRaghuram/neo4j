@@ -53,6 +53,7 @@ abstract class AbstractHashJoinPipe[Key, T](left: Pipe,
     result.flatten
   }
 
+  // TODO: Memory tracking
   private def buildProbeTable(input: Iterator[CypherRow], queryState: QueryState): mutable.HashMap[Key, mutable.MutableList[CypherRow]] = {
     val table = new mutable.HashMap[Key, mutable.MutableList[CypherRow]]
 

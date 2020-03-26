@@ -85,7 +85,7 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsOffset: Int,
           if(nodeId != -1) {
             val innerMatches = probeTable.get(nodeId)
             if(innerMatches != null) {
-              matches = innerMatches.iterator()
+              matches = innerMatches.iterator() // TODO: Use a MemoryDeallocatingIterator? It is not really deallocated at this point but it is taken out of the context where it was tracked
               return produceNext()
             }
           }

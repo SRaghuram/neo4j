@@ -36,6 +36,8 @@ import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.util.test_helpers.TimeLimitedCypherTest
 import org.neo4j.kernel.api.Kernel
 import org.neo4j.scheduler.JobScheduler
+import org.neo4j.values.storable.Values
+import org.neo4j.values.virtual.VirtualValues
 
 import scala.util.Random
 
@@ -164,7 +166,8 @@ trait ProfilingInputStreams[CONTEXT <: RuntimeContext] extends InputStreams[CONT
 abstract class MemoryManagementProfilingBase[CONTEXT <: EnterpriseRuntimeContext](
                                                                                    edition: Edition[CONTEXT],
                                                                                    runtime: CypherRuntime[CONTEXT],
-                                                                                   morselSize: Int = MemoryManagementProfilingBase.DEFAULT_MORSEL_SIZE_BIG
+                                                                                   morselSize: Int = MemoryManagementProfilingBase.DEFAULT_MORSEL_SIZE_BIG,
+                                                                                   runtimeSuffix: String = ""
                                                                                  )
   extends RuntimeTestSuite[CONTEXT](edition.copyWith(
     GraphDatabaseSettings.track_query_allocation -> TRUE,
@@ -173,7 +176,8 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: EnterpriseRuntimeContext
     GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(morselSize)), runtime
   ) with ProfilingInputStreams[CONTEXT] with TimeLimitedCypherTest {
 
-  private val runtimeName = if (runtime.isInstanceOf[PipelinedRuntime]) s"${runtime.name}_$morselSize" else runtime.name
+  private val runtimeName = (if (runtime.isInstanceOf[PipelinedRuntime]) s"${runtime.name}_$morselSize" else runtime.name) +
+    (if (runtimeSuffix.nonEmpty) s"_$runtimeSuffix" else "")
 
   test("measure grouping aggregation 1") {
     val testName = "agg_grp1"
@@ -187,8 +191,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: EnterpriseRuntimeContext
       .build()
 
     // when
-    val data: Array[Array[Any]] = (1L to 10000L).map { i => Array[Any](i) }.toArray
-
+    val data: Array[Array[Any]] = (1L to 10000L).map(Array[Any](_)).toArray
     val input = finiteCyclicInputWithPeriodicHeapDump(data, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
 
     // then
@@ -196,7 +199,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: EnterpriseRuntimeContext
     consume(result)
 
     val queryProfile = result.runtimeResult.queryProfile()
-    printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile)
+    printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
   }
 
   test("measure sort 1") {
@@ -212,7 +215,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: EnterpriseRuntimeContext
 
     // when
     val random = new Random(seed = 1337)
-    val data: Array[Array[Any]] = (1L to 10000L).map { i => Array[Any](random.nextInt(10000)) }.toArray
+    val data: Array[Array[Any]] = (1L to 10000L).map { _ => Array[Any](random.nextInt(10000)) }.toArray
 
     val input = finiteCyclicInputWithPeriodicHeapDump(data, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
 
@@ -221,7 +224,200 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: EnterpriseRuntimeContext
     consume(result)
 
     val queryProfile = result.runtimeResult.queryProfile()
-    printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile)
+    printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
+  }
+
+  test("measure distinct 1 pct") {
+    val testName = "distinct1pct"
+    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_${runtimeName}"
+
+    // given
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .distinct("x AS x")
+      .input(variables = Seq("x"))
+      .build()
+
+    // when
+    val random = new Random(seed = 1337)
+    val data = (1L to 10000L).map(Array[Any](_))
+    val shuffledData = random.shuffle(data).toArray
+    val input = finiteCyclicInputWithPeriodicHeapDump(shuffledData, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
+
+    // then
+    val result = profile(logicalQuery, runtime, input)
+    consume(result)
+
+    val queryProfile = result.runtimeResult.queryProfile()
+    printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
+  }
+
+  test("measure distinct 100 pct") {
+    val testName = "distinct100pct"
+    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_${runtimeName}"
+
+    // given
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .distinct("x AS x")
+      .input(variables = Seq("x"))
+      .build()
+
+    // when
+    val random = new Random(seed = 1337)
+    val data = (1L to DEFAULT_INPUT_LIMIT).map(Array[Any](_))
+    val shuffledData = random.shuffle(data).toArray
+    val input = finiteCyclicInputWithPeriodicHeapDump(shuffledData, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
+
+    // then
+    val result = profile(logicalQuery, runtime, input)
+    consume(result)
+
+    val queryProfile = result.runtimeResult.queryProfile()
+    printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
+  }
+
+  test("measure hash join 1-1 - single node") {
+    val testName = "nodehashjoin1-1"
+    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_${runtimeName}"
+
+    // given
+    val nodes = given { nodeGraph(DEFAULT_INPUT_LIMIT.toInt) }
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .nodeHashJoin("x")
+      .|.allNodeScan("x")
+      .input(nodes = Seq("x"))
+      .build()
+
+    // when
+    val random = new Random(seed = 1337)
+    val data = nodes.map(Array[Any](_))
+    val shuffledData = random.shuffle(data).toArray
+    val input = finiteCyclicInputWithPeriodicHeapDump(shuffledData, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
+
+    // then
+    val result = profile(logicalQuery, runtime, input)
+    consume(result)
+
+    val queryProfile = result.runtimeResult.queryProfile()
+    printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
+  }
+
+  test("measure hash join 1-1 - multiple nodes") {
+    val testName = "nodehashjoin-multi1-1"
+    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_${runtimeName}"
+
+    // given
+    val n = DEFAULT_INPUT_LIMIT.toInt
+    val paths = given { chainGraphs(n, "R") }
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .nodeHashJoin("x", "y")
+      .|.expandAll("(x)-[r:R]->(y)")
+      .|.allNodeScan("x")
+      .input(nodes = Seq("x", "y"))
+      .build()
+
+    // when
+    val random = new Random(seed = 1337)
+    val data = (0 until n).map { i => Array[Any](paths(i).startNode, paths(i).endNode()) }
+    val shuffledData = random.shuffle(data).toArray
+    val input = finiteCyclicInputWithPeriodicHeapDump(shuffledData, n, n/2, heapDumpFileNamePrefix)
+
+    // then
+    val result = profile(logicalQuery, runtime, input)
+    consume(result)
+
+    val queryProfile = result.runtimeResult.queryProfile()
+    printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
+  }
+
+  test("measure hash join 1-1 - single node with payload") {
+    val testName = "nodehashjoin1-1-pay"
+    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_${runtimeName}"
+    val random = new Random(seed = 1337)
+
+    // given
+    val n = DEFAULT_INPUT_LIMIT.toInt
+    val payload = (1L to n).map { _ => VirtualValues.list((1 to 8).map(Values.longValue(_)).toArray: _*)}.toArray
+    val nodes = given { nodeGraph(n) }.toArray[Any]
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x", "payload")
+      .nodeHashJoin("x")
+      .|.allNodeScan("x")
+      .input(nodes = Seq("x"), variables = Seq("payload"))
+      .build()
+
+    // when
+    val data = (0 until n).map { i => Array[Any](nodes(i), payload(i)) }
+    val shuffledData = random.shuffle(data).toArray
+    val input = finiteCyclicInputWithPeriodicHeapDump(shuffledData, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
+
+    // then
+    val result = profile(logicalQuery, runtime, input)
+    consume(result)
+
+    val queryProfile = result.runtimeResult.queryProfile()
+    printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
+  }
+
+  test("measure hash join 1-1 - single node with payload under limit") { // Force use of FilteringMorsel by adding a (otherwise useless) limit
+    val testName = "nodehashjoin1-1-pay2"
+    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_${runtimeName}"
+    val random = new Random(seed = 1337)
+
+    // given
+    val n = DEFAULT_INPUT_LIMIT.toInt
+    val payload = (1L to n).map { _ => VirtualValues.list((1 to 8).map(Values.longValue(_)).toArray: _*)}.toArray
+    val nodes = given { nodeGraph(n) }.toArray[Any]
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x", "payload")
+      .limit(n)
+      .nodeHashJoin("x")
+      .|.allNodeScan("x")
+      .input(nodes = Seq("x"), variables = Seq("payload"))
+      .build()
+
+    // when
+    val data = (0 until n).map { i => Array[Any](nodes(i), payload(i)) }
+    val shuffledData = random.shuffle(data).toArray
+    val input = finiteCyclicInputWithPeriodicHeapDump(shuffledData, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
+
+    // then
+    val result = profile(logicalQuery, runtime, input)
+    consume(result)
+
+    val queryProfile = result.runtimeResult.queryProfile()
+    printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
+  }
+
+  test("measure pruning-var-expand 1") {
+    val testName = "prunvarexp-circ1"
+    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_${runtimeName}"
+
+    // given
+    val (nodes, rels) = circleGraph(DEFAULT_INPUT_LIMIT.toInt)
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("y")
+      .pruningVarExpand("(x)-[*..1]->(y)")
+      .input(nodes=Seq("x"))
+      .build()
+
+    // when
+    val random = new Random(seed = 1337)
+    val data = nodes.map(Array[Any](_))
+    val shuffledData = random.shuffle(data).toArray
+    val input = finiteCyclicInputWithPeriodicHeapDump(shuffledData, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
+
+    // TODO: We need another mechanism to heap dump when the usage is at its actual peak here
+
+    // then
+    val result = profile(logicalQuery, runtime, input)
+    consume(result)
+
+    val queryProfile = result.runtimeResult.queryProfile()
+    printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
   }
 
 }
