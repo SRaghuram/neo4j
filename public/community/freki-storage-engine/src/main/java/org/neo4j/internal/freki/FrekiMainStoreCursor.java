@@ -28,6 +28,7 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_INT_ARRAY;
+import static org.neo4j.internal.freki.MutableNodeRecordData.HAS_DEGREES;
 import static org.neo4j.internal.freki.MutableNodeRecordData.containsBackPointer;
 import static org.neo4j.internal.freki.MutableNodeRecordData.containsForwardPointer;
 import static org.neo4j.internal.freki.MutableNodeRecordData.endOffset;
@@ -187,7 +188,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         if ( containsForwardPointer( x1OffsetsHeader ) )
         {
             x1Buffer.position( endOffset( x1OffsetsHeader ) );
-            if ( data.relationshipOffset > 0 )
+            if ( data.relationshipOffset > 0 && x1Buffer.get( data.relationshipOffset ) != HAS_DEGREES )
             {
                 readIntDeltas( SKIP, x1Buffer );
             }
@@ -243,25 +244,28 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         return true;
     }
 
-    void readRelationshipTypesAndOffsets()
+    ByteBuffer readRelationshipTypesAndOffsets()
     {
         if ( data.relationshipOffset == 0 )
         {
             relationshipTypesInNode = EMPTY_INT_ARRAY;
             relationshipTypeOffsets = EMPTY_INT_ARRAY;
-            return;
+            return null;
         }
 
-        ByteBuffer buffer = data.relationshipBuffer( data.relationshipOffset + 1 /*the HAS_DEGREES byte*/ );
+        ByteBuffer buffer = data.relationshipBuffer( data.relationshipOffset );
+        boolean hasDegrees = buffer.get() == HAS_DEGREES;
         relationshipTypesInNode = readIntDeltas( new IntArrayTarget(), buffer ).array();
-        // Right after the types array the relationship group data starts, so this is the offset for the first type
-        firstRelationshipTypeOffset = buffer.position();
 
-        // Then read the rest of the offsets for type indexes > 0 after all the relationship data groups, i.e. at endOffset
-        // The values in the typeOffsets array are relative to the firstTypeOffset
-        IntArrayTarget typeOffsetsTarget = new IntArrayTarget();
-        readIntDeltas( typeOffsetsTarget, buffer.array(), data.endOffset );
-        relationshipTypeOffsets = typeOffsetsTarget.array();
+        if ( !hasDegrees )
+        {
+            // Right after the types array the relationship group data starts, so this is the offset for the first type
+            firstRelationshipTypeOffset = buffer.position();
+            // Then read the rest of the offsets for type indexes > 0 after all the relationship data groups, i.e. at endOffset
+            // The values in the typeOffsets array are relative to the firstTypeOffset
+            relationshipTypeOffsets = readIntDeltas( new IntArrayTarget(), buffer.position( data.endOffset ) ).array();
+        }
+        return buffer;
     }
 
     int relationshipPropertiesOffset( ByteBuffer buffer, int relationshipGroupPropertiesOffset, int relationshipIndexInGroup )

@@ -643,7 +643,6 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
             assertEquals( otherNode.id(), relationshipCursor.targetNodeReference() );
             assertEquals( type2, relationshipCursor.type() );
         }
-
     }
 
     @Test
