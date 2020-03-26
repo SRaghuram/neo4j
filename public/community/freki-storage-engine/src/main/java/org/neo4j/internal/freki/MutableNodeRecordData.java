@@ -52,19 +52,15 @@ import static org.neo4j.internal.helpers.Numbers.safeCastIntToUnsignedByte;
 import static org.neo4j.util.Preconditions.checkState;
 
 /**
- *                 propertyOffset             relationshipOffset    endOffset
- *                       |                             |                |
- * [IN_USE|OFFSETS|LABELS|PROPERTY_KEYS,PROPERTY_VALUES|REL_TYPES|RELS[]|REL_TYPE_OFFSETS|FW/BW]
- * <--------------------------------------- Record -------------------------------------------->
- *         <---------------------- MutableNodeRecordData -------------------------------------->
+ * [IN_USE|OFFSETS|LABELS|PROPERTY_KEYS,PROPERTY_VALUES|REL_TYPES|RELS[]|REL_TYPE_OFFSETS|RECORD_POINTER]
+ * <--------------------------------------- Record ----------------------------------------------------->
+ *         <---------------------- MutableNodeRecordData ----------------------------------------------->
  */
 class MutableNodeRecordData
 {
     static final int ARTIFICIAL_MAX_RELATIONSHIP_COUNTER = 0xFFFFFF;
-    static final int SIZE_SLOT_HEADER = 4;
     static final int ARRAY_ENTRIES_PER_RELATIONSHIP = 2;
     static final int FIRST_RELATIONSHIP_ID = 1;
-    static final int HAS_DEGREES = 1;
 
     static final int FLAG_LABELS = 0x1;
     static final int FLAG_PROPERTIES = 0x2;
@@ -77,8 +73,8 @@ class MutableNodeRecordData
     final MutableIntObjectMap<Relationships> relationships = IntObjectMaps.mutable.empty();
     final EagerDegrees degrees = new EagerDegrees(); // only really for dense nodes
     long nextInternalRelationshipId = FIRST_RELATIONSHIP_ID;
-    private long forwardPointer = NULL;
-    private long backPointer = NULL;
+    private long recordPointer = NULL;
+    private boolean isDense;
 
     MutableNodeRecordData( long nodeId )
     {
@@ -98,7 +94,7 @@ class MutableNodeRecordData
         }
         MutableNodeRecordData that = (MutableNodeRecordData) o;
         return nodeId == that.nodeId && nextInternalRelationshipId == that.nextInternalRelationshipId &&
-                forwardPointer == that.forwardPointer && backPointer == that.backPointer &&
+                recordPointer == that.recordPointer && isDense == that.isDense &&
                 labels.equals( that.labels ) && Objects.equals( properties, that.properties ) && Objects.equals( relationships, that.relationships ) &&
                 degrees.equals( that.degrees );
     }
@@ -106,7 +102,7 @@ class MutableNodeRecordData
     @Override
     public int hashCode()
     {
-        int result = Objects.hash( nodeId, properties, relationships, degrees, nextInternalRelationshipId, forwardPointer, backPointer );
+        int result = Objects.hash( nodeId, properties, relationships, degrees, nextInternalRelationshipId, recordPointer, isDense );
         result = 31 * result + labels.hashCode();
         return result;
     }
@@ -114,8 +110,8 @@ class MutableNodeRecordData
     @Override
     public String toString()
     {
-        return String.format( "ID:%s, labels:%s, properties:%s, relationships:%s, degrees:%s, fw:%s, bw:%d, nextRelId:%d", nodeId, labels, properties,
-                relationships, degrees, forwardPointerToString( forwardPointer ), backPointer, nextInternalRelationshipId );
+        return String.format( "ID:%s, labels:%s, properties:%s, relationships:%s, degrees:%s, pointer:%s, nextRelId:%d", nodeId, labels, properties,
+                relationships, degrees, recordPointerToString( recordPointer ), nextInternalRelationshipId );
     }
 
     void copyDataFrom( int flags, MutableNodeRecordData from )
@@ -361,150 +357,174 @@ class MutableNodeRecordData
 
     // [ssff,ffff][ffff,ffff][ffff,ffff][ffff,ffff] [ffff,ffff][ffff,ffff][ffff,ffff][ffff,ffff]
     // s: sizeExp
-    // f: forward pointer id
-    void setForwardPointer( long forwardPointer )
+    // f: record pointer id
+    void setRecordPointer( long recordPointer )
     {
-        this.forwardPointer = forwardPointer;
+        this.recordPointer = recordPointer;
     }
 
-    long getForwardPointer()
+    long getRecordPointer()
     {
-        return this.forwardPointer;
+        return this.recordPointer;
     }
 
-    void setBackPointer( long backPointer )
+    void setDense( boolean isDense )
     {
-        // For "large" records this is the node id, i.e. back-ref to the small record
-        this.backPointer = backPointer;
+        this.isDense = isDense;
     }
 
-    // offsets (incl. relationshipOffset etc)
-    // labels
-    // properties
-    // 1B hasDegrees
+    boolean isDense()
+    {
+        return this.isDense;
+    }
 
     void serialize( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore, Consumer<StorageCommand> commandConsumer )
     {
         buffer.clear();
-        int offsetHeaderPosition = buffer.position();
-        // labels
-        buffer.position( offsetHeaderPosition + SIZE_SLOT_HEADER );
-        writeIntDeltas( labels.toSortedArray(), buffer );
-
-        // properties
-        // format being something like:
-        // - StreamVByte array of sorted keys
-        // - for each key: type/value   [externalType,internalType]
-
-        int propertiesOffset = 0;
-        if ( properties.notEmpty() )
+        int headerOffset = buffer.position();
+        Header headerBuilder = new Header();
+        if ( !labels.isEmpty() )
         {
-            propertiesOffset = buffer.position();
+            headerBuilder.setFlag( Header.FLAG_LABELS );
+        }
+        if ( isDense )
+        {
+            headerBuilder.setFlag( Header.FLAG_IS_DENSE );
+            headerBuilder.markHasOffset( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
+        }
+        if ( !degrees.isEmpty() )
+        {
+            headerBuilder.markHasOffset( Header.OFFSET_DEGREES );
+        }
+        if ( !properties.isEmpty() )
+        {
+            headerBuilder.markHasOffset( Header.OFFSET_PROPERTIES );
+        }
+        if ( !relationships.isEmpty() )
+        {
+            headerBuilder.markHasOffset( Header.OFFSET_RELATIONSHIPS );
+            headerBuilder.markHasOffset( Header.OFFSET_RELATIONSHIP_TYPE_OFFSETS );
+        }
+        if ( recordPointer != NULL )
+        {
+            headerBuilder.markHasOffset( Header.OFFSET_RECORD_POINTER );
+        }
+        headerBuilder.allocateSpace( buffer );
+
+        if ( headerBuilder.hasFlag( Header.FLAG_LABELS ) )
+        {
+            writeLabels( buffer );
+        }
+        if ( headerBuilder.hasOffset( Header.OFFSET_PROPERTIES ) )
+        {
+            headerBuilder.setOffset( Header.OFFSET_PROPERTIES, buffer.position() );
             writeProperties( properties, buffer, bigPropertyValueStore, commandConsumer );
         }
-        boolean hasDegrees = !degrees.isEmpty();
-        boolean hasRelationships = relationships.notEmpty();
-        assert (!hasRelationships && !hasDegrees) || (hasRelationships != hasDegrees) : "Cannot have both degrees and relationships at the same time";
-        int relationshipsOffset = hasRelationships || hasDegrees ? buffer.position() : 0;
+        if ( headerBuilder.hasOffset( Header.OFFSET_DEGREES ) )
+        {
+            headerBuilder.setOffset( Header.OFFSET_DEGREES, buffer.position() );
+            writeDegrees( buffer );
+        }
+        if ( headerBuilder.hasOffset( Header.OFFSET_RELATIONSHIPS ) )
+        {
+            headerBuilder.setOffset( Header.OFFSET_RELATIONSHIPS, buffer.position() );
+            int[] typeOffsets = writeRelationships( buffer, bigPropertyValueStore, commandConsumer );
 
-        // relationships
-        // - StreamVByte array of types
-        // - StreamVByte array (of length types-1) w/ offsets to starts of type data blocks
-        // - For each type:
-        // -   Number of relationships
-        // -   Rel1 (dir+hasProperties+otherNode+internalId)
-        // -   Rel2 (dir+hasProperties+otherNode+internalId)
-        // -   ...
+            headerBuilder.setOffset( Header.OFFSET_RELATIONSHIP_TYPE_OFFSETS, buffer.position() );
+            writeTypeOffsets( buffer, typeOffsets );
+        }
+        if ( headerBuilder.hasOffset( Header.OFFSET_RECORD_POINTER ) )
+        {
+            headerBuilder.setOffset( Header.OFFSET_RECORD_POINTER, buffer.position() );
+            writeRecordPointer( buffer );
+        }
+        if ( headerBuilder.hasOffset( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID ) )
+        {
+            headerBuilder.setOffset( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID, buffer.position() );
+            writeNextInternalRelationshipId( buffer );
+        }
 
         int endOffset = buffer.position();
-        if ( hasRelationships || hasDegrees )
-        {
-            buffer.put( (byte) (hasDegrees ? HAS_DEGREES : 0) );
-            if ( hasDegrees )
-            {
-                int[] types = degrees.types();
-                Arrays.sort( types );
-                writeIntDeltas( types, buffer );
-                int[] degreesArray = new int[types.length * 3];
-                for ( int t = 0, i = 0; t < types.length; t++ )
-                {
-                    EagerDegrees.Degree typeDegrees = degrees.findDegree( types[t] );
-                    // TODO Potentially optimize away loop somehow since it's 99,99% zero anyways
-                    degreesArray[i++] = typeDegrees.outgoing();
-                    degreesArray[i++] = typeDegrees.incoming();
-                    degreesArray[i++] = typeDegrees.loop();
-                }
-                writeInts( degreesArray, buffer );
-                endOffset = buffer.position();
-            }
-            else
-            {
-                Relationships[] allRelationships = this.relationships.toArray( new Relationships[relationships.size()] );
-                Arrays.sort( allRelationships );
-                writeIntDeltas( typesOf( allRelationships ), buffer );
-                int firstTypeOffset = buffer.position();
-                long[][] allPackedRelationships = new long[allRelationships.length][];
-                for ( int i = 0; i < allRelationships.length; i++ )
-                {
-                    allPackedRelationships[i] = allRelationships[i].packIntoLongArray();
-                }
-                // end of types header, below is the relationship data
-                int[] typeOffsets = new int[allRelationships.length - 1];
-                for ( int i = 0; i < allPackedRelationships.length; i++ )
-                {
-                    //First write all the relationships of the type
-                    writeLongs( allPackedRelationships[i], buffer );
-                    //Then write the properties
-                    for ( Relationship relationship : allRelationships[i].relationships )
-                    {
-                        if ( relationship.properties.notEmpty() )
-                        {
-                            // Relationship properties will have a 1-byte header which is the size of the keys+values block,
-                            // this to efficiently be able to skip through to a specific properties set
-                            int blockSizeHeaderOffset = buffer.position();
-                            buffer.put( (byte) 0 );
-                            writeProperties( relationship.properties, buffer, bigPropertyValueStore, commandConsumer );
-                            int blockSize = buffer.position() - blockSizeHeaderOffset;
-                            buffer.put( blockSizeHeaderOffset, safeCastIntToUnsignedByte( blockSize ) );
-                        }
+        headerBuilder.serialize( buffer.position( headerOffset ) );
+        buffer.position( endOffset ).flip();
+    }
 
-                        // We don't quite need the offset to _after_ the last type data block
-                        if ( i < allRelationships.length - 1 )
-                        {
-                            typeOffsets[i] = buffer.position() - firstTypeOffset;
-                        }
-                    }
+    private void writeNextInternalRelationshipId( ByteBuffer buffer )
+    {
+        writeLongs( new long[]{nextInternalRelationshipId}, buffer );
+    }
+
+    private void writeRecordPointer( ByteBuffer buffer )
+    {
+        writeLongs( new long[]{recordPointer}, buffer );
+    }
+
+    private void writeLabels( ByteBuffer buffer )
+    {
+        writeIntDeltas( labels.toSortedArray(), buffer );
+    }
+
+    private int[] writeRelationships( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore, Consumer<StorageCommand> commandConsumer )
+    {
+        Relationships[] allRelationships = this.relationships.toArray( new Relationships[relationships.size()] );
+        Arrays.sort( allRelationships );
+        writeIntDeltas( typesOf( allRelationships ), buffer );
+        int firstTypeOffset = buffer.position();
+        long[][] allPackedRelationships = new long[allRelationships.length][];
+        for ( int i = 0; i < allRelationships.length; i++ )
+        {
+            allPackedRelationships[i] = allRelationships[i].packIntoLongArray();
+        }
+        // end of types header, below is the relationship data
+        int[] typeOffsets = new int[allRelationships.length - 1];
+        for ( int i = 0; i < allPackedRelationships.length; i++ )
+        {
+            //First write all the relationships of the type
+            writeLongs( allPackedRelationships[i], buffer );
+            //Then write the properties
+            for ( Relationship relationship : allRelationships[i].relationships )
+            {
+                if ( relationship.properties.notEmpty() )
+                {
+                    // Relationship properties will have a 1-byte header which is the size of the keys+values block,
+                    // this to efficiently be able to skip through to a specific properties set
+                    int blockSizeHeaderOffset = buffer.position();
+                    buffer.put( (byte) 0 );
+                    writeProperties( relationship.properties, buffer, bigPropertyValueStore, commandConsumer );
+                    int blockSize = buffer.position() - blockSizeHeaderOffset;
+                    buffer.put( blockSizeHeaderOffset, safeCastIntToUnsignedByte( blockSize ) );
                 }
-                endOffset = buffer.position();
-                writeIntDeltas( typeOffsets, buffer );
+
+                // We don't quite need the offset to _after_ the last type data block
+                if ( i < allRelationships.length - 1 )
+                {
+                    typeOffsets[i] = buffer.position() - firstTypeOffset;
+                }
             }
         }
+        return typeOffsets;
+    }
 
-        if ( forwardPointer != NULL )
+    private void writeTypeOffsets( ByteBuffer buffer, int[] typeOffsets )
+    {
+        writeIntDeltas( typeOffsets, buffer );
+    }
+
+    private void writeDegrees( ByteBuffer buffer )
+    {
+        int[] types = degrees.types();
+        Arrays.sort( types );
+        writeIntDeltas( types, buffer );
+        int[] degreesArray = new int[types.length * 3];
+        for ( int t = 0, i = 0; t < types.length; t++ )
         {
-            writeLongs( new long[]{forwardPointer}, buffer );
-            if ( forwardPointerPointsToDense( forwardPointer ) )
-            {
-                writeLongs( new long[]{nextInternalRelationshipId}, buffer );
-            }
+            EagerDegrees.Degree typeDegrees = degrees.findDegree( types[t] );
+            // TODO Potentially optimize away loop somehow since it's 99,99% zero anyways
+            degreesArray[i++] = typeDegrees.outgoing();
+            degreesArray[i++] = typeDegrees.incoming();
+            degreesArray[i++] = typeDegrees.loop();
         }
-        else if ( backPointer != NULL )
-        {
-            writeLongs( new long[]{backPointer}, buffer );
-        }
-
-        // Write the offsets (properties,relationships,end) at the reserved offsets header position at the beginning
-        // [bfee,eeee][eeee,eeee][rrrr,rrrr][rrpp,pppp][pppp,pppp]
-        // b: this record contains back pointer, i.e. node id
-        // f: this record contains forward pointer
-        // e: end offset
-        // r: relationships offset
-        // p: properties offset
-        int fw = forwardPointer == NULL ? 0 : 0x40000000;
-        int bw = backPointer == NULL ? 0 : 0x80000000;
-        buffer.putInt( offsetHeaderPosition, bw | fw | ((endOffset & 0x3FF) << 20) | ((relationshipsOffset & 0x3FF) << 10) | propertiesOffset & 0x3FF );
-
-        buffer.flip();
+        writeInts( degreesArray, buffer );
     }
 
     private static void writeProperties( MutableIntObjectMap<Value> properties, ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore,
@@ -545,92 +565,99 @@ class MutableNodeRecordData
     void deserialize( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore /*temporary, should not be necessary in this scenario*/ )
     {
         assert buffer.position() == 0 : buffer.position();
-        int offsetHeader = buffer.getInt(); // [_fee][eeee][eeee][rrrr][rrrr][rrpp][pppp][pppp]
-        int labelsOffset = buffer.position();
-        int propertiesOffset = propertyOffset( offsetHeader );
-        int relationshipOffset = relationshipOffset( offsetHeader );
-        boolean hasDegrees = relationshipOffset > 0 && buffer.get( relationshipOffset ) == HAS_DEGREES;
-        int endOffset = endOffset( offsetHeader );
-        boolean containsForwardPointer = containsForwardPointer( offsetHeader );
-        boolean containsBackPointer = containsBackPointer( offsetHeader );
-        if ( containsForwardPointer || containsBackPointer )
-        {
-            buffer.position( endOffset );
-            if ( relationshipOffset != 0 && !hasDegrees )
-            {
-                readIntDeltas( StreamVByte.SKIP, buffer );
-            }
-            if ( containsForwardPointer )
-            {
-                forwardPointer = readLongs( buffer )[0];
-                if ( forwardPointerPointsToDense( forwardPointer ) )
-                {
-                    nextInternalRelationshipId = readLongs( buffer )[0];
-                }
-            }
-            else
-            {
-                nextInternalRelationshipId = FIRST_RELATIONSHIP_ID;
-            }
-            if ( containsBackPointer )
-            {
-                backPointer = readLongs( buffer )[0];
-            }
-        }
+        Header headerBuilder = new Header();
+        headerBuilder.deserialize( buffer );
 
-        buffer.position( labelsOffset );
         labels.clear();
-        labels.addAll( readIntDeltas( intArrayTarget(), buffer ).array() );
         properties.clear();
-        if ( propertiesOffset != 0 )
-        {
-            checkState( buffer.position() == propertiesOffset, "Mismatching properties offset:%d and expected offset:%d", buffer.position(), propertiesOffset );
-            readProperties( properties, buffer, bigPropertyValueStore );
-        }
-
         relationships.clear();
         degrees.clear();
-        if ( relationshipOffset != 0 )
-        {
-            buffer.get(); // skip the "has degrees" byte
-            int[] relationshipTypes = readIntDeltas( intArrayTarget(), buffer ).array();
-            if ( hasDegrees )
-            {
-                int[] degreesArray = readInts( new StreamVByte.IntArrayTarget(), buffer ).array();
-                for ( int t = 0, i = 0; t < relationshipTypes.length; t++ )
-                {
-                    degrees.add( relationshipTypes[t], degreesArray[i++], degreesArray[i++], degreesArray[i++] );
-                }
-            }
-            else
-            {
-                for ( int relationshipType : relationshipTypes )
-                {
-                    Relationships relationships = new Relationships( relationshipType );
-                    long[] packedRelationships = readLongs( buffer );
-                    int numRelationships = packedRelationships.length / ARRAY_ENTRIES_PER_RELATIONSHIP;
-                    for ( int i = 0; i < numRelationships; i++ )
-                    {
-                        int relationshipArrayIndex = i * ARRAY_ENTRIES_PER_RELATIONSHIP;
-                        long otherNodeRaw = packedRelationships[ relationshipArrayIndex ];
-                        boolean outgoing =  relationshipIsOutgoing( otherNodeRaw );
-                        long internalId = packedRelationships[ relationshipArrayIndex + 1 ];
 
-                        if ( outgoing && internalId >= nextInternalRelationshipId )
-                        {
-                            nextInternalRelationshipId = internalId + 1;
-                        }
-                        Relationship relationship = relationships.add( internalId, nodeId, otherNodeOf( otherNodeRaw ), relationshipType, outgoing );
-                        if ( relationshipHasProperties( otherNodeRaw ) )
-                        {
-                            buffer.get(); //blocksize
-                            readProperties( relationship.properties, buffer, bigPropertyValueStore );
-                        }
-                    }
-                    this.relationships.put( relationships.type, relationships );
+        if ( headerBuilder.hasFlag( Header.FLAG_LABELS ) )
+        {
+            readLabels( buffer );
+        }
+        isDense = headerBuilder.hasFlag( Header.FLAG_IS_DENSE );
+        if ( headerBuilder.hasOffset( Header.OFFSET_PROPERTIES ) )
+        {
+            buffer.position( headerBuilder.getOffset( Header.OFFSET_PROPERTIES ) );
+            readProperties( properties, buffer, bigPropertyValueStore );
+        }
+        if ( headerBuilder.hasOffset( Header.OFFSET_DEGREES ) )
+        {
+            buffer.position( headerBuilder.getOffset( Header.OFFSET_DEGREES ) );
+            readDegrees( buffer );
+        }
+        if ( headerBuilder.hasOffset( Header.OFFSET_RELATIONSHIPS ) )
+        {
+            buffer.position( headerBuilder.getOffset( Header.OFFSET_RELATIONSHIPS ) );
+            readRelationships( buffer, bigPropertyValueStore );
+        }
+        if ( headerBuilder.hasOffset( Header.OFFSET_RECORD_POINTER ) )
+        {
+            buffer.position( headerBuilder.getOffset( Header.OFFSET_RECORD_POINTER ) );
+            readRecordPointer( buffer );
+        }
+        if ( headerBuilder.hasOffset( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID ) )
+        {
+            buffer.position( headerBuilder.getOffset( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID ) );
+            readNextInternalRelationshipId( buffer );
+        }
+    }
+
+    private void readNextInternalRelationshipId( ByteBuffer buffer )
+    {
+        nextInternalRelationshipId = readLongs( buffer )[0];
+    }
+
+    private void readRecordPointer( ByteBuffer buffer )
+    {
+        recordPointer = readLongs( buffer )[0];
+    }
+
+    private void readRelationships( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore )
+    {
+        int[] relationshipTypes = readIntDeltas( intArrayTarget(), buffer ).array();
+        for ( int relationshipType : relationshipTypes )
+        {
+            Relationships relationships = new Relationships( relationshipType );
+            long[] packedRelationships = readLongs( buffer );
+            int numRelationships = packedRelationships.length / ARRAY_ENTRIES_PER_RELATIONSHIP;
+            for ( int i = 0; i < numRelationships; i++ )
+            {
+                int relationshipArrayIndex = i * ARRAY_ENTRIES_PER_RELATIONSHIP;
+                long otherNodeRaw = packedRelationships[ relationshipArrayIndex ];
+                boolean outgoing =  relationshipIsOutgoing( otherNodeRaw );
+                long internalId = packedRelationships[ relationshipArrayIndex + 1 ];
+
+                if ( outgoing && internalId >= nextInternalRelationshipId )
+                {
+                    nextInternalRelationshipId = internalId + 1;
+                }
+                Relationship relationship = relationships.add( internalId, nodeId, otherNodeOf( otherNodeRaw ), relationshipType, outgoing );
+                if ( relationshipHasProperties( otherNodeRaw ) )
+                {
+                    buffer.get(); //blocksize
+                    readProperties( relationship.properties, buffer, bigPropertyValueStore );
                 }
             }
+            this.relationships.put( relationships.type, relationships );
         }
+    }
+
+    private void readDegrees( ByteBuffer buffer )
+    {
+        int[] relationshipTypes = readIntDeltas( intArrayTarget(), buffer ).array();
+        int[] degreesArray = readInts( new StreamVByte.IntArrayTarget(), buffer ).array();
+        for ( int t = 0, i = 0; t < relationshipTypes.length; t++ )
+        {
+            degrees.add( relationshipTypes[t], degreesArray[i++], degreesArray[i++], degreesArray[i++] );
+        }
+    }
+
+    private void readLabels( ByteBuffer buffer )
+    {
+        labels.addAll( readIntDeltas( intArrayTarget(), buffer ).array() );
     }
 
     private int[] typesOf( Relationships[] relationshipsArray )
@@ -641,36 +668,6 @@ class MutableNodeRecordData
             keys[i] = relationshipsArray[i].type;
         }
         return keys;
-    }
-
-    static int readOffsetsHeader( ByteBuffer buffer )
-    {
-        return buffer.getInt();
-    }
-
-    static int propertyOffset( int offsetHeader )
-    {
-        return offsetHeader & 0x3FF;
-    }
-
-    static int relationshipOffset( int offsetHeader )
-    {
-        return (offsetHeader >>> 10) & 0x3FF;
-    }
-
-    static int endOffset( int offsetHeader )
-    {
-        return (offsetHeader >>> 20) & 0x3FF;
-    }
-
-    static boolean containsForwardPointer( int offsetHeader )
-    {
-        return (offsetHeader & 0x40000000) != 0;
-    }
-
-    static boolean containsBackPointer( int offsetsHeader )
-    {
-        return (offsetsHeader & 0x80000000) != 0;
     }
 
     static long externalRelationshipId( long sourceNode, long internalRelationshipId )
@@ -694,58 +691,36 @@ class MutableNodeRecordData
         return relationshipId >>> 40;
     }
 
-    // Forward pointer: [    ,    ][iiii,iiii][iiii,iiii][iiii,iiii]  [iiii,iiii][iiii,iiii][iiii,iiii][iiii,issd]
+    // Record pointer: [    ,    ][iiii,iiii][iiii,iiii][iiii,iiii]  [iiii,iiii][iiii,iiii][iiii,iiii][iiii,iiss]
     // i: id of the record to point to
     // s: size exponential of the record id
-    // d: 1 if this node has data in dense store, otherwise 0
     // examples:
-    // NULL (-1): no forward pointer at all
-    // i=5, s=1, d=0: fw pointer to x2 w/ id 5
-    // i=3, s=2, d=1: fw pointer to x4 w/ id 3 and more data is in dense store too
-    // i=0, s=0, d=1: more data is in dense store
-    static boolean forwardPointerPointsToDense( long forwardPointer )
+    // NULL (-1): no record pointer at all
+    // i=5, s=1: record pointer to x2 w/ id 5
+    // i=3, s=2: record pointer to x4 w/ id 3
+    static int sizeExponentialFromRecordPointer( long recordPointer )
     {
-        return forwardPointer != NULL && (forwardPointer & 0x1) != 0;
+        Preconditions.checkArgument( recordPointer != NULL, "NULL FW pointer" );
+        return (int) (recordPointer & 0x3);
     }
 
-    static boolean forwardPointerPointsToXRecord( long forwardPointer )
+    static long idFromRecordPointer( long recordPointer )
     {
-        return forwardPointer != NULL && (forwardPointer & 0x6L) != 0;
+        Preconditions.checkArgument( recordPointer != NULL, "NULL FW pointer" );
+        return recordPointer >>> 2;
     }
 
-    static int sizeExponentialFromForwardPointer( long forwardPointer )
+    static long buildRecordPointer( int sizeExp, long id )
     {
-        Preconditions.checkArgument( forwardPointer != NULL, "NULL FW pointer" );
-        return (int) ((forwardPointer >>> 1) & 0x3);
+        return (id << 2) | sizeExp;
     }
 
-    static long idFromForwardPointer( long forwardPointer )
+    static String recordPointerToString( long recordPointer )
     {
-        Preconditions.checkArgument( forwardPointer != NULL, "NULL FW pointer" );
-        return forwardPointer >>> 3;
-    }
-
-    static long buildForwardPointer( int sizeExp, long id, boolean hasDense )
-    {
-        return (id << 3) | (sizeExp << 1) | (hasDense ? 0x1 : 0);
-    }
-
-    static String forwardPointerToString( long forwardPointer )
-    {
-        if ( forwardPointer == NULL )
+        if ( recordPointer == NULL )
         {
             return "NULL";
         }
-        StringBuilder builder = new StringBuilder();
-        if ( forwardPointerPointsToXRecord( forwardPointer ) )
-        {
-            builder.append( String.format( "->[x%d]%d",
-                    recordXFactor( sizeExponentialFromForwardPointer( forwardPointer ) ), idFromForwardPointer( forwardPointer ) ) );
-        }
-        if ( forwardPointerPointsToDense( forwardPointer ) )
-        {
-            builder.append( "->DENSE" );
-        }
-        return builder.toString();
+        return String.format( "->[x%d]%d", recordXFactor( sizeExponentialFromRecordPointer( recordPointer ) ), idFromRecordPointer( recordPointer ) );
     }
 }

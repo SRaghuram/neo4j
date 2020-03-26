@@ -28,18 +28,16 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_INT_ARRAY;
-import static org.neo4j.internal.freki.MutableNodeRecordData.HAS_DEGREES;
-import static org.neo4j.internal.freki.MutableNodeRecordData.containsBackPointer;
-import static org.neo4j.internal.freki.MutableNodeRecordData.containsForwardPointer;
-import static org.neo4j.internal.freki.MutableNodeRecordData.endOffset;
-import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPointsToXRecord;
-import static org.neo4j.internal.freki.MutableNodeRecordData.idFromForwardPointer;
-import static org.neo4j.internal.freki.MutableNodeRecordData.propertyOffset;
-import static org.neo4j.internal.freki.MutableNodeRecordData.readOffsetsHeader;
-import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipOffset;
-import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromForwardPointer;
+import static org.neo4j.internal.freki.Header.FLAG_IS_DENSE;
+import static org.neo4j.internal.freki.Header.FLAG_LABELS;
+import static org.neo4j.internal.freki.Header.OFFSET_DEGREES;
+import static org.neo4j.internal.freki.Header.OFFSET_PROPERTIES;
+import static org.neo4j.internal.freki.Header.OFFSET_RECORD_POINTER;
+import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIPS;
+import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIP_TYPE_OFFSETS;
+import static org.neo4j.internal.freki.MutableNodeRecordData.idFromRecordPointer;
+import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromRecordPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
-import static org.neo4j.internal.freki.StreamVByte.SKIP;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
 import static org.neo4j.internal.freki.StreamVByte.readLongs;
 import static org.neo4j.util.Preconditions.checkState;
@@ -54,6 +52,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     final CursorAccessPatternTracer.ThreadAccess cursorAccessTracer;
     final PageCursorTracer cursorTracer;
 
+    private Header header;
     FrekiCursorData data;
     // State from relationship section, it's here because both relationship cursors as well as property cursor makes use of them
     int[] relationshipTypesInNode;
@@ -144,12 +143,12 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         // From x1 read forward pointer, labels offset and potentially other offsets too
         data.nodeId = nodeId;
         gatherDataFromX1( x1Record );
-        if ( forwardPointerPointsToXRecord( data.forwardPointer ) )
+        if ( data.forwardPointer != NULL )
         {
-            int sizeExp = sizeExponentialFromForwardPointer( data.forwardPointer );
+            int sizeExp = sizeExponentialFromRecordPointer( data.forwardPointer );
             SimpleStore xLStore = stores.mainStore( sizeExp );
             Record xLRecord = xRecord( sizeExp );
-            if ( !xLStore.read( xCursor( sizeExp ), xLRecord, idFromForwardPointer( data.forwardPointer ) ) || !xLRecord.hasFlag( FLAG_IN_USE ) )
+            if ( !xLStore.read( xCursor( sizeExp ), xLRecord, idFromRecordPointer( data.forwardPointer ) ) || !xLRecord.hasFlag( FLAG_IN_USE ) )
             {
                 // TODO depending on whether we're strict about it we should throw here perhaps?
                 return false;
@@ -161,6 +160,11 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
 
     private boolean ensureFreshDataInstanceForLoadingNewNode()
     {
+        if ( header == null )
+        {
+            header = new Header();
+        }
+
         boolean reused = true;
         if ( data != null )
         {
@@ -177,23 +181,11 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     {
         data.x1Loaded = true;
         ByteBuffer x1Buffer = x1Record.data( 0 );
-        int x1OffsetsHeader = readOffsetsHeader( x1Buffer );
-        data.assignLabelOffset( x1Buffer.position(), x1Buffer );
-        data.assignPropertyOffset( propertyOffset( x1OffsetsHeader ), x1Buffer );
-        data.assignRelationshipOffset( relationshipOffset( x1OffsetsHeader ), x1Buffer );
-        data.endOffset = endOffset( x1OffsetsHeader );
-
-        // Check if there's more data to load from a larger x record
-        // TODO an optimization would be to load xL lazily instead (e.g. if you would only need labels)
-        if ( containsForwardPointer( x1OffsetsHeader ) )
+        header.deserialize( x1Buffer );
+        assignDataOffsets( x1Buffer );
+        if ( header.hasOffset( OFFSET_RECORD_POINTER ) )
         {
-            x1Buffer.position( endOffset( x1OffsetsHeader ) );
-            if ( data.relationshipOffset > 0 && x1Buffer.get( data.relationshipOffset ) != HAS_DEGREES )
-            {
-                readIntDeltas( SKIP, x1Buffer );
-            }
-            data.forwardPointer = readLongs( x1Buffer )[0];
-            assert data.forwardPointer != NULL;
+            data.forwardPointer = readRecordPointer( x1Buffer );
         }
     }
 
@@ -201,14 +193,38 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     {
         data.xLLoaded = true;
         ByteBuffer xLBuffer = xLRecord.data( 0 );
-        int xLOffsetsHeader = readOffsetsHeader( xLBuffer );
-        data.assignPropertyOffset( propertyOffset( xLOffsetsHeader ), xLBuffer );
-        data.assignRelationshipOffset( relationshipOffset( xLOffsetsHeader ), xLBuffer );
+        header.deserialize( xLBuffer );
+        assignDataOffsets( xLBuffer );
+        assert header.hasOffset( OFFSET_RECORD_POINTER );
+        data.backwardPointer = readRecordPointer( xLBuffer );
+    }
 
-        assert containsBackPointer( xLOffsetsHeader );
-        if ( data.relationshipOffset > 0 )
+    private long readRecordPointer( ByteBuffer xLBuffer )
+    {
+        return readLongs( xLBuffer.position( header.getOffset( OFFSET_RECORD_POINTER ) ) )[0];
+    }
+
+    private void assignDataOffsets( ByteBuffer x1Buffer )
+    {
+        if ( header.hasFlag( FLAG_IS_DENSE ) )
         {
-            data.endOffset = endOffset( xLOffsetsHeader );
+            data.isDense = true;
+        }
+        if ( header.hasFlag( FLAG_LABELS ) )
+        {
+            data.assignLabelOffset( x1Buffer.position(), x1Buffer );
+        }
+        if ( header.hasOffset( OFFSET_PROPERTIES ) )
+        {
+            data.assignPropertyOffset( header.getOffset( OFFSET_PROPERTIES ), x1Buffer );
+        }
+        if ( header.hasOffset( OFFSET_RELATIONSHIPS ) )
+        {
+            data.assignRelationshipOffset( header.getOffset( OFFSET_RELATIONSHIPS ), x1Buffer, header.getOffset( OFFSET_RELATIONSHIP_TYPE_OFFSETS ) );
+        }
+        if ( header.hasOffset( OFFSET_DEGREES ) )
+        {
+            data.assignDegreesOffset( header.getOffset( OFFSET_DEGREES ), x1Buffer );
         }
     }
 
@@ -244,28 +260,33 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         return true;
     }
 
-    ByteBuffer readRelationshipTypesAndOffsets()
+    ByteBuffer readRelationshipTypes()
     {
         if ( data.relationshipOffset == 0 )
         {
             relationshipTypesInNode = EMPTY_INT_ARRAY;
-            relationshipTypeOffsets = EMPTY_INT_ARRAY;
             return null;
         }
-
-        ByteBuffer buffer = data.relationshipBuffer( data.relationshipOffset );
-        boolean hasDegrees = buffer.get() == HAS_DEGREES;
-        relationshipTypesInNode = readIntDeltas( new IntArrayTarget(), buffer ).array();
-
-        if ( !hasDegrees )
+        else
         {
+            ByteBuffer buffer = data.relationshipBuffer();
+            relationshipTypesInNode = readIntDeltas( new IntArrayTarget(), buffer ).array();
             // Right after the types array the relationship group data starts, so this is the offset for the first type
             firstRelationshipTypeOffset = buffer.position();
-            // Then read the rest of the offsets for type indexes > 0 after all the relationship data groups, i.e. at endOffset
-            // The values in the typeOffsets array are relative to the firstTypeOffset
-            relationshipTypeOffsets = readIntDeltas( new IntArrayTarget(), buffer.position( data.endOffset ) ).array();
+            return buffer;
         }
-        return buffer;
+    }
+
+    void readRelationshipTypesAndOffsets()
+    {
+        if ( readRelationshipTypes() == null )
+        {
+            relationshipTypeOffsets = EMPTY_INT_ARRAY;
+        }
+        else
+        {
+            relationshipTypeOffsets = readIntDeltas( new IntArrayTarget(), data.relationshipBuffer( data.relationshipTypeOffsetsOffset ) ).array();
+        }
     }
 
     int relationshipPropertiesOffset( ByteBuffer buffer, int relationshipGroupPropertiesOffset, int relationshipIndexInGroup )

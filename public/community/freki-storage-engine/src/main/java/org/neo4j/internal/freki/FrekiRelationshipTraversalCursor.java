@@ -34,7 +34,6 @@ import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 
 import static org.neo4j.internal.freki.MutableNodeRecordData.ARRAY_ENTRIES_PER_RELATIONSHIP;
 import static org.neo4j.internal.freki.MutableNodeRecordData.externalRelationshipId;
-import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPointsToDense;
 import static org.neo4j.internal.freki.MutableNodeRecordData.otherNodeOf;
 import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipHasProperties;
 import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipIsOutgoing;
@@ -134,7 +133,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     {
         if ( !loadedCorrectNode )
         {
-            if ( !load( nodeId ) || (!forwardPointerPointsToDense( data.forwardPointer ) && data.relationshipOffset == 0) )
+            if ( !load( nodeId ) || (!data.isDense && data.relationshipOffset == 0) )
             {
                 return false;
             }
@@ -143,7 +142,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
             readRelationshipTypesAndOffsets();
         }
 
-        if ( forwardPointerPointsToDense( data.forwardPointer ) )
+        if ( data.isDense )
         {
             // TODO We could be clever and place a type[] in the quick access record so that we know which types even exist for this node
             //      if we do this we don't have to make a tree seek for every relationship type when there will be nothing there

@@ -46,9 +46,8 @@ import static java.util.Arrays.stream;
 import static java.util.stream.Stream.of;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.internal.freki.CursorAccessPatternTracer.NO_TRACING;
-import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPointsToDense;
-import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPointsToXRecord;
-import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromForwardPointer;
+import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
+import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromRecordPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.internal.freki.Record.recordSize;
 import static org.neo4j.internal.freki.Record.recordXFactor;
@@ -192,9 +191,9 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         // More physical
         System.out.println( nodeCursor.toString() );
         printRawRecordContents( nodeCursor.data.records[0], 0 );
-        if ( forwardPointerPointsToXRecord( nodeCursor.data.forwardPointer ) )
+        if ( nodeCursor.data.forwardPointer != NULL )
         {
-            int sizeExp = sizeExponentialFromForwardPointer( nodeCursor.data.forwardPointer );
+            int sizeExp = sizeExponentialFromRecordPointer( nodeCursor.data.forwardPointer );
             printRawRecordContents( nodeCursor.data.records[sizeExp], nodeCursor.entityReference() );
         }
     }
@@ -400,7 +399,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
                                 }
                                 stats.bytesOccupiedInUsedRecords += Record.HEADER_SIZE + buffer.position();
                                 stats.bytesVacantInUsedRecords += recordDataSize - buffer.position();
-                                if ( forwardPointerPointsToDense( data.getForwardPointer() ) )
+                                if ( data.isDense() )
                                 {
                                     stats.numDenseNodes++;
                                 }
@@ -425,7 +424,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         {
             var data = new MutableNodeRecordData( nodeId );
             data.deserialize( record.data(), stores.bigPropertyValueStore );
-            return forwardPointerPointsToDense( data.getForwardPointer() );
+            return data.isDense();
         }
         return false;
     }
