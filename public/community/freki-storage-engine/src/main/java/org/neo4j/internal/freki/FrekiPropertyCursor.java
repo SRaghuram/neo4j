@@ -34,7 +34,6 @@ import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
 
 import static java.util.Collections.emptyIterator;
-import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPointsToDense;
 import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipHasProperties;
 import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValueSizeIncludingTypeHeader;
 import static org.neo4j.internal.freki.PropertyValueFormat.readEagerly;
@@ -103,7 +102,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
             FrekiRelationshipCursor relCursor = (FrekiRelationshipCursor) relationshipCursor;
             if ( relCursor.initializeOtherCursorFromStateOfThisCursor( this ) )
             {
-                if ( forwardPointerPointsToDense( data.forwardPointer ) )
+                if ( data.isDense )
                 {
                     denseProperties = relCursor.denseProperties();
                     dereferenceData(); // dereference right away, because we won't be needing that data anymore
@@ -209,7 +208,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
 
         if ( reference.relationship )
         {
-            if ( forwardPointerPointsToDense( data.forwardPointer ) )
+            if ( data.isDense )
             {
                 DenseRelationshipStore.RelationshipData denseRelationship =
                         stores.denseStore.getRelationship( reference.sourceNodeId, reference.type, Direction.OUTGOING, reference.endNodeId,
@@ -228,11 +227,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
             // This is properties for a node
             buffer = data.propertyBuffer();
         }
-        if ( !readPropertyKeys( buffer ) )
-        {
-            return false;
-        }
-        return true;
+        return readPropertyKeys( buffer );
     }
 
     public boolean nextDense()

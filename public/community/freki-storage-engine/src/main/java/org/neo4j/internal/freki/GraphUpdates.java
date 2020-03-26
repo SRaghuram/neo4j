@@ -48,11 +48,9 @@ import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
 import static org.neo4j.internal.freki.MutableNodeRecordData.FLAG_DEGREES;
 import static org.neo4j.internal.freki.MutableNodeRecordData.FLAG_PROPERTIES;
 import static org.neo4j.internal.freki.MutableNodeRecordData.FLAG_RELATIONSHIPS;
-import static org.neo4j.internal.freki.MutableNodeRecordData.buildForwardPointer;
-import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPointsToDense;
-import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPointsToXRecord;
-import static org.neo4j.internal.freki.MutableNodeRecordData.idFromForwardPointer;
-import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromForwardPointer;
+import static org.neo4j.internal.freki.MutableNodeRecordData.buildRecordPointer;
+import static org.neo4j.internal.freki.MutableNodeRecordData.idFromRecordPointer;
+import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromRecordPointer;
 import static org.neo4j.internal.freki.PropertyUpdate.add;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 
@@ -156,16 +154,16 @@ class GraphUpdates
             sparse.data.deserialize( x1.data(), stores.bigPropertyValueStore );
             x1Before = x1;
 
-            long forwardPointer = sparse.data.getForwardPointer();
-            if ( forwardPointerPointsToXRecord( forwardPointer ) )
+            long recordPointer = sparse.data.getRecordPointer();
+            if ( recordPointer != NULL )
             {
-                Record xL = readRecord( stores, sizeExponentialFromForwardPointer( forwardPointer ), idFromForwardPointer( forwardPointer ), cursorTracer );
+                Record xL = readRecord( stores, sizeExponentialFromRecordPointer( recordPointer ), idFromRecordPointer( recordPointer ), cursorTracer );
                 MutableNodeRecordData largeData = new MutableNodeRecordData( nodeId );
                 largeData.deserialize( xL.data(), stores.bigPropertyValueStore );
                 sparse.data.copyDataFrom( FLAG_PROPERTIES | FLAG_DEGREES | FLAG_RELATIONSHIPS, largeData );
                 xLBefore = xL;
             }
-            if ( forwardPointerPointsToDense( forwardPointer ) )
+            if ( sparse.data.isDense() )
             {
                 dense = new DenseRecordAndData( sparse, stores.denseStore, stores.bigPropertyValueStore, bigValueCommandConsumer, cursorTracer );
             }
@@ -255,10 +253,8 @@ class GraphUpdates
             // === ATTEMPT serialize everything into x1 ===
             // The reason we try x1 first is that there'll be overhead in the form of forward pointer and potentially next-relationship-id inside x1
             // if points to a larger record.
-            long prevForwardPointer = sparse.data.getForwardPointer();
-            sparse.data.setForwardPointer( forwardPointerPointsToDense( prevForwardPointer )
-                                           ? buildForwardPointer( 0, 0, forwardPointerPointsToDense( prevForwardPointer ) )
-                                           : NULL );
+            long prevRecordPointer = sparse.data.getRecordPointer();
+            sparse.data.setRecordPointer( NULL );
             if ( trySerialize( sparse.data, smallBuffer.clear() ) )
             {
                 x1Command( smallBuffer, otherCommands );
@@ -269,7 +265,7 @@ class GraphUpdates
             }
             else
             {
-                sparse.data.setForwardPointer( prevForwardPointer );
+                sparse.data.setRecordPointer( prevRecordPointer );
                 // Then try various constellations of larger records (make sure sparse.data is left with correct data to be serialized as part of this call)
                 moveDataToAndSerializeLargerRecords( maxBuffer, otherCommands );
 
@@ -301,13 +297,12 @@ class GraphUpdates
             {
                 MutableNodeRecordData largeData = new MutableNodeRecordData( nodeId );
                 largeData.copyDataFrom( FLAG_PROPERTIES | FLAG_DEGREES | FLAG_RELATIONSHIPS, sparse.data );
-                largeData.setBackPointer( nodeId );
+                largeData.setRecordPointer( buildRecordPointer( 0, nodeId ) );
                 if ( trySerialize( largeData, maxBuffer.clear() ) )
                 {
                     // We were able to fit properties and relationships into this larger store.
                     SimpleStore store = stores.storeSuitableForRecordSize( maxBuffer.limit(), 1 );
-                    xLargeCommands( maxBuffer, store, otherCommands, d -> d.clearData( FLAG_PROPERTIES | FLAG_DEGREES | FLAG_RELATIONSHIPS ),
-                            forwardPointerPointsToDense( sparse.data.getForwardPointer() ) );
+                    xLargeCommands( maxBuffer, store, otherCommands, d -> d.clearData( FLAG_PROPERTIES | FLAG_DEGREES | FLAG_RELATIONSHIPS ) );
                     return;
                 }
             }
@@ -317,13 +312,15 @@ class GraphUpdates
                 moveDataToDense();
                 MutableNodeRecordData largeData = new MutableNodeRecordData( nodeId );
                 largeData.copyDataFrom( FLAG_PROPERTIES | FLAG_DEGREES, sparse.data );
-                largeData.setBackPointer( nodeId );
+                largeData.setRecordPointer( buildRecordPointer( 0, nodeId ) );
+                sparse.data.setDense( true );
+                largeData.setDense( true );
                 if ( trySerialize( largeData, maxBuffer.clear() ) )
                 {
                     // We were able to fit properties and relationships into this larger store. The reason we try x1 first is that there'll be overhead
                     // in the form of forward pointer and potentially next-relationship-id inside x1 if points to a larger record.
                     SimpleStore store = stores.storeSuitableForRecordSize( maxBuffer.limit(), 1 );
-                    xLargeCommands( maxBuffer, store, otherCommands, d -> d.clearData( FLAG_PROPERTIES | FLAG_DEGREES ), true );
+                    xLargeCommands( maxBuffer, store, otherCommands, d -> d.clearData( FLAG_PROPERTIES | FLAG_DEGREES ) );
                     return;
                 }
             }
@@ -371,7 +368,7 @@ class GraphUpdates
         }
 
         private void xLargeCommands( ByteBuffer maxBuffer, SimpleStore store, Consumer<StorageCommand> commands,
-                Consumer<MutableNodeRecordData> smallDataModifier, boolean pointToDenseToo )
+                Consumer<MutableNodeRecordData> smallDataModifier )
         {
             Record after;
             int sizeExp = store.recordSizeExponential();
@@ -396,7 +393,7 @@ class GraphUpdates
                         new FrekiCommand.SparseNode( nodeId, new Record( sizeExp, recordId ), after = recordForData( recordId, maxBuffer, sizeExp ) ) );
             }
 
-            sparse.data.setForwardPointer( buildForwardPointer( after.sizeExp(), after.id, pointToDenseToo ) );
+            sparse.data.setRecordPointer( buildRecordPointer( after.sizeExp(), after.id ) );
             smallDataModifier.accept( sparse.data );
         }
 

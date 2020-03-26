@@ -34,7 +34,7 @@ import org.neo4j.values.storable.CoordinateReferenceSystem;
 import org.neo4j.values.storable.Values;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.neo4j.internal.freki.MutableNodeRecordData.buildForwardPointer;
+import static org.neo4j.internal.freki.MutableNodeRecordData.buildRecordPointer;
 
 @ExtendWith( RandomExtension.class )
 class MutableNodeRecordDataTest
@@ -177,7 +177,8 @@ class MutableNodeRecordDataTest
     void canHaveDegreesForDenseNode()
     {
         // given
-        record.setForwardPointer( buildForwardPointer( 0, 0, true ) );
+        record.setRecordPointer( buildRecordPointer( 0, 0 ) );
+        record.setDense( true );
 
         // when
         record.degrees.add( 3, 33, 333, 3333 );
