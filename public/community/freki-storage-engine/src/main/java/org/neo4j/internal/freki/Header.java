@@ -21,6 +21,8 @@ package org.neo4j.internal.freki;
 
 import java.nio.ByteBuffer;
 
+import static java.lang.Integer.numberOfTrailingZeros;
+
 class Header
 {
     static final int FLAG_LABELS = 0x1;
@@ -95,7 +97,7 @@ class Header
         byte allBits = (byte) ((flags << NUM_OFFSETS) | offsetBits);
         buffer.put( allBits );
         long data = 0;
-        for ( int offsetSlot = 0; offsetSlot < offsets.length; offsetSlot++ )
+        for ( int offsetSlot = NUM_OFFSETS - 1; offsetSlot >= 0; offsetSlot-- )
         {
             if ( hasOffset( offsetSlot ) )
             {
@@ -122,13 +124,14 @@ class Header
             long b = buffer.get() & 0xFF;
             data |= b << (i * Byte.SIZE);
         }
-        for ( int i = NUM_OFFSETS - 1; i >= 0; i-- )
+
+        int bits = offsetBits;
+        while ( bits > 0 )
         {
-            if ( hasOffset( i ) )
-            {
-                offsets[i] = (int) (data & MASK_OFFSET);
-                data >>>= BITS_PER_OFFSET;
-            }
+            int offsetSlot = numberOfTrailingZeros( bits );
+            offsets[offsetSlot] = (int) (data & MASK_OFFSET);
+            data >>>= BITS_PER_OFFSET;
+            bits &= bits-1;
         }
     }
 }
