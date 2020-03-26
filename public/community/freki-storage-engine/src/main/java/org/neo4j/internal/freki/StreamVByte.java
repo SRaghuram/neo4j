@@ -44,12 +44,27 @@ class StreamVByte
             0x000000FF_FF000000L,
             0xFFFFFF00_00000000L};
 
+    static void writeInts( int[] source, ByteBuffer buffer )
+    {
+        writeInts( new IntArraySource( source ), buffer );
+    }
+
     static void writeIntDeltas( int[] source, ByteBuffer buffer )
     {
         writeIntDeltas( new IntArraySource( source ), buffer );
     }
 
+    static void writeInts( Source source, ByteBuffer buffer )
+    {
+        writeInts( source, buffer, false );
+    }
+
     static void writeIntDeltas( Source source, ByteBuffer buffer )
+    {
+        writeInts( source, buffer, true );
+    }
+
+    private static void writeInts( Source source, ByteBuffer buffer, boolean deltas )
     {
         byte[] serialized = buffer.array();
         int offset = buffer.position();
@@ -65,7 +80,7 @@ class StreamVByte
                 for ( int j = 0; j < currentBlockCount; j++, i++, c++ )
                 {
                     int value = source.valueAt( i );
-                    offset = writeIntValue( serialized, offset, headerOffset, j, value - prev );
+                    offset = writeIntValue( serialized, offset, headerOffset, j, deltas ? value - prev : value );
                     prev = value;
                 }
                 if ( currentBlockCount == 4 )
@@ -128,6 +143,14 @@ class StreamVByte
         return offset;
     }
 
+    static <TARGET extends Target> TARGET readInts( TARGET target, ByteBuffer buffer )
+    {
+        byte[] serialized = buffer.array();
+        int offset = buffer.position();
+        buffer.position( readInts( target, serialized, offset ) );
+        return target;
+    }
+
     static <TARGET extends Target> TARGET readIntDeltas( TARGET target, ByteBuffer buffer )
     {
         byte[] serialized = buffer.array();
@@ -136,7 +159,17 @@ class StreamVByte
         return target;
     }
 
+    static int readInts( Target target, byte[] serialized, int offset )
+    {
+        return readInts( target, serialized, offset, false );
+    }
+
     static int readIntDeltas( Target target, byte[] serialized, int offset )
+    {
+        return readInts( target, serialized, offset, true );
+    }
+
+    private static int readInts( Target target, byte[] serialized, int offset, boolean deltas )
     {
         int currentChunkCount = Byte.MAX_VALUE;
         for ( int i = 0, prev = 0; currentChunkCount == Byte.MAX_VALUE; )
@@ -163,7 +196,7 @@ class StreamVByte
                     int size = (headerByte >>> (j * 2)) & 0b11;
                     int readValue = readIntValue( serialized, offset, size );
                     int value = prev + readValue;
-                    target.accept( i, value );
+                    target.accept( i, deltas ? prev + readValue : readValue );
                     offset += size + 1; // because e.g. size==0 uses 1B, size==1 uses 2B a.s.o.
                     prev = value;
                 }

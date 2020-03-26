@@ -241,7 +241,7 @@ class Record
             dataString = diff >= 8 ? Arrays.toString( Arrays.copyOf( data.array(), findHighestNonZeroLimit() ) ) + "..." + diff + " more zeros"
                                    : Arrays.toString( Arrays.copyOf( data.array(), data.limit() ) );
         }
-        return "Record{" + "id=" + id + ", flags=" + flags + ", data=" + dataString + '}';
+        return "Record{x" + recordXFactor( sizeExp() ) + ", id=" + id + ", flags=" + flags + ", data=" + dataString + '}';
     }
 
     private int findHighestNonZeroLimit()

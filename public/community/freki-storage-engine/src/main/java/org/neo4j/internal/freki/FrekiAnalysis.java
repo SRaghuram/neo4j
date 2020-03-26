@@ -48,6 +48,7 @@ import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.imme
 import static org.neo4j.internal.freki.CursorAccessPatternTracer.NO_TRACING;
 import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPointsToDense;
 import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointerPointsToXRecord;
+import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromForwardPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.internal.freki.Record.recordSize;
 import static org.neo4j.internal.freki.Record.recordXFactor;
@@ -190,11 +191,20 @@ public class FrekiAnalysis extends Life implements AutoCloseable
 
         // More physical
         System.out.println( nodeCursor.toString() );
-        System.out.println( "TODO print x1 raw bytes" );
+        printRawRecordContents( nodeCursor.data.records[0], 0 );
         if ( forwardPointerPointsToXRecord( nodeCursor.data.forwardPointer ) )
         {
-            System.out.println( "TODO print xL raw bytes" );
+            int sizeExp = sizeExponentialFromForwardPointer( nodeCursor.data.forwardPointer );
+            printRawRecordContents( nodeCursor.data.records[sizeExp], nodeCursor.entityReference() );
         }
+    }
+
+    private void printRawRecordContents( Record record, long nodeId )
+    {
+        System.out.println( record );
+        MutableNodeRecordData data = new MutableNodeRecordData( nodeId );
+        data.deserialize( record.data( 0 ), stores.bigPropertyValueStore );
+        System.out.println( "  " + data );
     }
 
     public void dumpLogicalRepresentation( FrekiNodeCursor nodeCursor, FrekiPropertyCursor propertyCursor,
@@ -385,7 +395,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
                                 catch ( Exception e )
                                 {
                                     System.err.println( "Caught exception when processing id " + id + " in store x" +
-                                            Record.recordXFactor( store.recordSizeExponential() ) );
+                                            recordXFactor( store.recordSizeExponential() ) );
                                     throw e;
                                 }
                                 stats.bytesOccupiedInUsedRecords += Record.HEADER_SIZE + buffer.position();

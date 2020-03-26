@@ -43,8 +43,10 @@ import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
 import static org.neo4j.internal.freki.Record.recordXFactor;
 import static org.neo4j.internal.freki.StreamVByte.intArrayTarget;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
+import static org.neo4j.internal.freki.StreamVByte.readInts;
 import static org.neo4j.internal.freki.StreamVByte.readLongs;
 import static org.neo4j.internal.freki.StreamVByte.writeIntDeltas;
+import static org.neo4j.internal.freki.StreamVByte.writeInts;
 import static org.neo4j.internal.freki.StreamVByte.writeLongs;
 import static org.neo4j.internal.helpers.Numbers.safeCastIntToUnsignedByte;
 import static org.neo4j.util.Preconditions.checkState;
@@ -376,6 +378,11 @@ class MutableNodeRecordData
         this.backPointer = backPointer;
     }
 
+    // offsets (incl. relationshipOffset etc)
+    // labels
+    // properties
+    // 1B hasDegrees
+
     void serialize( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore, Consumer<StorageCommand> commandConsumer )
     {
         buffer.clear();
@@ -413,23 +420,22 @@ class MutableNodeRecordData
         if ( hasRelationships || hasDegrees )
         {
             buffer.put( (byte) (hasDegrees ? HAS_DEGREES : 0) );
-            int[] typeOffsets;
             if ( hasDegrees )
             {
                 int[] types = degrees.types();
                 Arrays.sort( types );
                 writeIntDeltas( types, buffer );
-                int firstTypeOffset = buffer.position();
-                typeOffsets = new int[types.length - 1];
-                for ( int i = 0; i < types.length; i++ )
+                int[] degreesArray = new int[types.length * 3];
+                for ( int t = 0, i = 0; t < types.length; t++ )
                 {
-                    EagerDegrees.Degree typeDegrees = degrees.findDegree( types[i] );
-                    writeIntDeltas( new int[]{typeDegrees.outgoing(), typeDegrees.incoming(), typeDegrees.loop()}, buffer );
-                    if ( i < types.length - 1 )
-                    {
-                        typeOffsets[i] = buffer.position() - firstTypeOffset;
-                    }
+                    EagerDegrees.Degree typeDegrees = degrees.findDegree( types[t] );
+                    // TODO Potentially optimize away loop somehow since it's 99,99% zero anyways
+                    degreesArray[i++] = typeDegrees.outgoing();
+                    degreesArray[i++] = typeDegrees.incoming();
+                    degreesArray[i++] = typeDegrees.loop();
                 }
+                writeInts( degreesArray, buffer );
+                endOffset = buffer.position();
             }
             else
             {
@@ -443,7 +449,7 @@ class MutableNodeRecordData
                     allPackedRelationships[i] = allRelationships[i].packIntoLongArray();
                 }
                 // end of types header, below is the relationship data
-                typeOffsets = new int[allRelationships.length - 1];
+                int[] typeOffsets = new int[allRelationships.length - 1];
                 for ( int i = 0; i < allPackedRelationships.length; i++ )
                 {
                     //First write all the relationships of the type
@@ -469,9 +475,9 @@ class MutableNodeRecordData
                         }
                     }
                 }
+                endOffset = buffer.position();
+                writeIntDeltas( typeOffsets, buffer );
             }
-            endOffset = buffer.position();
-            writeIntDeltas( typeOffsets, buffer );
         }
 
         if ( forwardPointer != NULL )
@@ -543,13 +549,14 @@ class MutableNodeRecordData
         int labelsOffset = buffer.position();
         int propertiesOffset = propertyOffset( offsetHeader );
         int relationshipOffset = relationshipOffset( offsetHeader );
+        boolean hasDegrees = relationshipOffset > 0 && buffer.get( relationshipOffset ) == HAS_DEGREES;
         int endOffset = endOffset( offsetHeader );
         boolean containsForwardPointer = containsForwardPointer( offsetHeader );
         boolean containsBackPointer = containsBackPointer( offsetHeader );
         if ( containsForwardPointer || containsBackPointer )
         {
             buffer.position( endOffset );
-            if ( relationshipOffset != 0 )
+            if ( relationshipOffset != 0 && !hasDegrees )
             {
                 readIntDeltas( StreamVByte.SKIP, buffer );
             }
@@ -585,14 +592,14 @@ class MutableNodeRecordData
         degrees.clear();
         if ( relationshipOffset != 0 )
         {
-            boolean hasDegrees = buffer.get() == HAS_DEGREES;
+            buffer.get(); // skip the "has degrees" byte
             int[] relationshipTypes = readIntDeltas( intArrayTarget(), buffer ).array();
             if ( hasDegrees )
             {
-                for ( int relationshipType : relationshipTypes )
+                int[] degreesArray = readInts( new StreamVByte.IntArrayTarget(), buffer ).array();
+                for ( int t = 0, i = 0; t < relationshipTypes.length; t++ )
                 {
-                    int[] typeDegrees = readIntDeltas( new StreamVByte.IntArrayTarget(), buffer ).array();
-                    degrees.add( relationshipType, typeDegrees[0], typeDegrees[1], typeDegrees[2] );
+                    degrees.add( relationshipTypes[t], degreesArray[i++], degreesArray[i++], degreesArray[i++] );
                 }
             }
             else
@@ -740,10 +747,5 @@ class MutableNodeRecordData
             builder.append( "->DENSE" );
         }
         return builder.toString();
-    }
-
-    static int not( int flags )
-    {
-        return ~flags;
     }
 }
