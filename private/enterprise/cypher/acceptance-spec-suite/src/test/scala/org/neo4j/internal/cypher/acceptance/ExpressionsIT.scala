@@ -2939,6 +2939,55 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
              context) should equal(VirtualValues.map(Array("prop", "foo"), Array(stringValue("hello"), NO_VALUE)))
   }
 
+  test("map projection on null from longslot") {
+    //given
+    val offset = 0
+    val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
+
+    SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
+    val context = SlottedRow(slots)
+    context.setLongAt(offset, -1L)
+
+    //when
+    val map = mapProjection("n", includeAllProps = true, "foo" -> function("toString", nullLiteral))
+
+    //then
+    evaluate(compile(map, slots), context) should equal(NO_VALUE)
+  }
+
+  test("map projection on null from refslot") {
+    //given
+    val offset = 0
+    val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTMap)
+
+    //needed for interpreted
+    SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
+    val context = SlottedRow(slots)
+    context.setRefAt(offset, NO_VALUE)
+
+    //when
+    val map = mapProjection("n", includeAllProps = true, "foo" -> function("toString", nullLiteral))
+
+    //then
+    evaluate(compile(map, slots), context) should equal(NO_VALUE)
+  }
+
+  test("map projection on null when slot not known") {
+    //given
+    val offset = 0
+    val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTMap)
+    //needed for interpreted
+    SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
+    val context = SlottedRow(slots)
+    context.setRefAt(offset, NO_VALUE)
+
+    //when
+    val map = mapProjection("n", includeAllProps = true, "foo" -> function("toString", nullLiteral))
+
+    //then, use empty slot here to mimic the situation of missing slot info at compile time
+    evaluate(compile(map, SlotConfiguration.empty), context) should equal(NO_VALUE)
+  }
+
   test("call function by id") {
     // given
     registerUserDefinedFunction("foo") { builder =>
