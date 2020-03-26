@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state.machines.tx;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
@@ -23,10 +23,10 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.neo4j.kernel.impl.transaction.tracing.CommitEvent.NULL;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
 
-public class ReplayableCommitProcessTest
+class ReplayableCommitProcessTest
 {
     @Test
-    public void shouldCommitTransactions() throws Exception
+    void shouldCommitTransactions() throws Exception
     {
         // given
         TransactionToApply newTx1 = mock( TransactionToApply.class );
@@ -48,7 +48,7 @@ public class ReplayableCommitProcessTest
     }
 
     @Test
-    public void shouldNotCommitTransactionsThatAreAlreadyCommittedLocally() throws Exception
+    void shouldNotCommitTransactionsThatAreAlreadyCommittedLocally() throws Exception
     {
         // given
         TransactionToApply alreadyCommittedTx1 = mock( TransactionToApply.class );

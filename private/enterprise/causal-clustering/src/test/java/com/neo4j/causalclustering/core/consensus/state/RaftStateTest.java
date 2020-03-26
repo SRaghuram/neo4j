@@ -21,7 +21,8 @@ import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -38,15 +39,12 @@ import static com.neo4j.causalclustering.core.consensus.outcome.OutcomeTestBuild
 import static com.neo4j.causalclustering.core.consensus.roles.Role.CANDIDATE;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static java.util.Collections.emptySet;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 
-public class RaftStateTest
+class RaftStateTest
 {
 
     @Test
-    public void shouldUpdateCacheState() throws Exception
+    void shouldUpdateCacheState() throws Exception
     {
         //Test that updates applied to the raft state will be reflected in the entry cache.
 
@@ -66,7 +64,7 @@ public class RaftStateTest
             add( new AppendLogEntry( 3, new RaftLogEntry( 0L, valueOf( 5 ) ) ) );
         }};
 
-        OutcomeBuilder raftTestMemberOutcome = builder().setRole( CANDIDATE ).renewElectionTimeout( ACTIVE_ELECTION );
+        OutcomeBuilder raftTestMemberOutcome = builder().setRole( CANDIDATE ).renewElectionTimer( ACTIVE_ELECTION );
 
         for ( RaftLogCommand logCommand : logCommands )
         {
@@ -77,15 +75,15 @@ public class RaftStateTest
         raftState.update( raftTestMemberOutcome.build() );
 
         //then
-        assertNotNull( cache.get( 1L ) );
-        assertNotNull( cache.get( 2L ) );
-        assertNotNull( cache.get( 3L ) );
-        assertEquals( valueOf( 5 ), cache.get( 3L ).content() );
-        assertNull( cache.get( 4L ) );
+        Assertions.assertNotNull( cache.get( 1L ) );
+        Assertions.assertNotNull( cache.get( 2L ) );
+        Assertions.assertNotNull( cache.get( 3L ) );
+        Assertions.assertEquals( valueOf( 5 ), cache.get( 3L ).content() );
+        Assertions.assertNull( cache.get( 4L ) );
     }
 
     @Test
-    public void shouldRemoveFollowerStateAfterBecomingLeader() throws Exception
+    void shouldRemoveFollowerStateAfterBecomingLeader() throws Exception
     {
         // given
         RaftState raftState = new RaftState( member( 0 ),
@@ -95,13 +93,13 @@ public class RaftStateTest
                 new ConsecutiveInFlightCache(), NullLogProvider.getInstance(),
                 false, false );
 
-        raftState.update( builder().setRole( CANDIDATE ).replaceFollowerStates( initialFollowerStates() ).renewElectionTimeout( ACTIVE_ELECTION ).build() );
+        raftState.update( builder().setRole( CANDIDATE ).replaceFollowerStates( initialFollowerStates() ).renewElectionTimer( ACTIVE_ELECTION ).build() );
 
         // when
-        raftState.update( builder().setRole( CANDIDATE ).replaceFollowerStates( new FollowerStates<>() ).renewElectionTimeout( ACTIVE_ELECTION ).build() );
+        raftState.update( builder().setRole( CANDIDATE ).replaceFollowerStates( new FollowerStates<>() ).renewElectionTimer( ACTIVE_ELECTION ).build() );
 
         // then
-        assertEquals( 0, raftState.followerStates().size() );
+        Assertions.assertEquals( 0, raftState.followerStates().size() );
     }
 
     private Collection<RaftMessages.Directed> emptyOutgoingMessages()

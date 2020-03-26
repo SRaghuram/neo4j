@@ -5,18 +5,15 @@
  */
 package com.neo4j.causalclustering.core.consensus.log;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-
-public class RaftLogMetadataCacheTest
+class RaftLogMetadataCacheTest
 {
     @Test
-    public void shouldReturnNullWhenMissingAnEntryInTheCache()
+    void shouldReturnNullWhenMissingAnEntryInTheCache()
     {
         // given
         final RaftLogMetadataCache cache = new RaftLogMetadataCache( 2 );
@@ -25,11 +22,11 @@ public class RaftLogMetadataCacheTest
         final RaftLogMetadataCache.RaftLogEntryMetadata metadata = cache.getMetadata( 42 );
 
         // then
-        assertNull( metadata );
+        Assertions.assertNull( metadata );
     }
 
     @Test
-    public void shouldReturnTheTxValueTIfInTheCached()
+    void shouldReturnTheTxValueTIfInTheCached()
     {
         // given
         final RaftLogMetadataCache cache = new RaftLogMetadataCache( 2 );
@@ -42,11 +39,11 @@ public class RaftLogMetadataCacheTest
         final RaftLogMetadataCache.RaftLogEntryMetadata metadata = cache.getMetadata( index );
 
         // then
-        assertEquals( new RaftLogMetadataCache.RaftLogEntryMetadata( term, position ), metadata );
+        Assertions.assertEquals( new RaftLogMetadataCache.RaftLogEntryMetadata( term, position ), metadata );
     }
 
     @Test
-    public void shouldClearTheCache()
+    void shouldClearTheCache()
     {
         // given
         final RaftLogMetadataCache cache = new RaftLogMetadataCache( 2 );
@@ -60,11 +57,11 @@ public class RaftLogMetadataCacheTest
         RaftLogMetadataCache.RaftLogEntryMetadata metadata = cache.getMetadata( index );
 
         // then
-        assertNull( metadata );
+        Assertions.assertNull( metadata );
     }
 
     @Test
-    public void shouldRemoveUpTo()
+    void shouldRemoveUpTo()
     {
         // given
         int cacheSize = 100;
@@ -83,18 +80,18 @@ public class RaftLogMetadataCacheTest
         long i = 0;
         for ( ; i <= upTo; i++ )
         {
-            assertNull( cache.getMetadata( i ) );
+            Assertions.assertNull( cache.getMetadata( i ) );
         }
         for ( ; i < cacheSize; i++ )
         {
             RaftLogMetadataCache.RaftLogEntryMetadata metadata = cache.getMetadata( i );
-            assertNotNull( metadata );
-            assertEquals( i, metadata.getEntryTerm() );
+            Assertions.assertNotNull( metadata );
+            Assertions.assertEquals( i, metadata.getEntryTerm() );
         }
     }
 
     @Test
-    public void shouldRemoveUpwardsFrom()
+    void shouldRemoveUpwardsFrom()
     {
         // given
         int cacheSize = 100;
@@ -114,17 +111,17 @@ public class RaftLogMetadataCacheTest
         for ( ; i < upFrom; i++ )
         {
             RaftLogMetadataCache.RaftLogEntryMetadata metadata = cache.getMetadata( i );
-            assertNotNull( metadata );
-            assertEquals( i, metadata.getEntryTerm() );
+            Assertions.assertNotNull( metadata );
+            Assertions.assertEquals( i, metadata.getEntryTerm() );
         }
         for ( ; i < cacheSize; i++ )
         {
-            assertNull( cache.getMetadata( i ) );
+            Assertions.assertNull( cache.getMetadata( i ) );
         }
     }
 
     @Test
-    public void shouldAcceptAndReturnIndexesInRangeJustDeleted()
+    void shouldAcceptAndReturnIndexesInRangeJustDeleted()
     {
         // given
         int cacheSize = 100;
@@ -149,14 +146,14 @@ public class RaftLogMetadataCacheTest
         int i = upFrom;
         for ( ; i < insertedIndex; i++ )
         {
-            assertNull( cache.getMetadata( i ) );
+            Assertions.assertNull( cache.getMetadata( i ) );
         }
         // i here should be insertedIndex
-        assertEquals( insertedTerm, cache.getMetadata( i ).getEntryTerm() );
+        Assertions.assertEquals( insertedTerm, cache.getMetadata( i ).getEntryTerm() );
         i++; // to continue iteration in the rest of the deleted range
         for (; i < cacheSize; i++ )
         {
-            assertNull( cache.getMetadata( i ) );
+            Assertions.assertNull( cache.getMetadata( i ) );
         }
     }
 }

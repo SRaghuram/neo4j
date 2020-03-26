@@ -11,17 +11,15 @@ import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.NetworkReadableChannel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
-public class MemberIdMarshalTest
+class MemberIdMarshalTest
 {
     @Test
-    public void shouldSerializeAndDeserialize() throws Exception
+    void shouldSerializeAndDeserialize() throws Exception
     {
         // given
         MemberId.Marshal marshal = new MemberId.Marshal();
@@ -34,11 +32,11 @@ public class MemberIdMarshalTest
         final MemberId recovered = marshal.unmarshal( new NetworkReadableChannel( buffer ) );
 
         // then
-        assertEquals( member, recovered );
+        Assertions.assertEquals( member, recovered );
     }
 
     @Test
-    public void shouldThrowExceptionForHalfWrittenInstance() throws Exception
+    void shouldThrowExceptionForHalfWrittenInstance() throws Exception
     {
         // given
         // a CoreMember and a ByteBuffer to write it to
@@ -55,7 +53,7 @@ public class MemberIdMarshalTest
         try
         {
             marshal.unmarshal( new NetworkReadableChannel( bufferWithMissingBytes ) );
-            fail( "Should have thrown exception" );
+            Assertions.fail( "Should have thrown exception" );
         }
         catch ( EndOfStreamException e )
         {

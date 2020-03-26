@@ -7,7 +7,8 @@ package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.BoundedPriorityQueue.Config;
 import com.neo4j.causalclustering.core.BoundedPriorityQueue.Removable;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -22,12 +23,8 @@ import static com.neo4j.causalclustering.core.BoundedPriorityQueue.Result.E_COUN
 import static com.neo4j.causalclustering.core.BoundedPriorityQueue.Result.E_SIZE_EXCEEDED;
 import static com.neo4j.causalclustering.core.BoundedPriorityQueue.Result.OK;
 import static java.util.Comparator.comparingInt;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
-public class BoundedPriorityQueueTest
+class BoundedPriorityQueueTest
 {
     private final Config BASE_CONFIG = new Config( 0, 5, 100 );
     private final Comparator<Integer> NO_PRIORITY = ( a, b ) -> 0;
@@ -35,140 +32,140 @@ public class BoundedPriorityQueueTest
     private final ThreadLocalRandom tlr = ThreadLocalRandom.current();
 
     @Test
-    public void shouldReportTotalCountAndSize()
+    void shouldReportTotalCountAndSize()
     {
         BoundedPriorityQueue<Integer> queue = new BoundedPriorityQueue<>( BASE_CONFIG, Integer::longValue, NO_PRIORITY );
 
-        assertEquals( 0, queue.bytes() );
-        assertEquals( 0, queue.count() );
+        Assertions.assertEquals( 0, queue.bytes() );
+        Assertions.assertEquals( 0, queue.count() );
 
         queue.offer( 10 );
-        assertEquals( 1, queue.count() );
-        assertEquals( 10, queue.bytes() );
+        Assertions.assertEquals( 1, queue.count() );
+        Assertions.assertEquals( 10, queue.bytes() );
 
         queue.offer( 20 );
-        assertEquals( 2, queue.count() );
-        assertEquals( 30, queue.bytes() );
+        Assertions.assertEquals( 2, queue.count() );
+        Assertions.assertEquals( 30, queue.bytes() );
 
         queue.poll();
-        assertEquals( 1, queue.count() );
-        assertEquals( 20, queue.bytes() );
+        Assertions.assertEquals( 1, queue.count() );
+        Assertions.assertEquals( 20, queue.bytes() );
 
         queue.poll();
-        assertEquals( 0, queue.count() );
-        assertEquals( 0, queue.bytes() );
+        Assertions.assertEquals( 0, queue.count() );
+        Assertions.assertEquals( 0, queue.bytes() );
     }
 
     @Test
-    public void shouldNotAllowMoreThanMaxBytes()
+    void shouldNotAllowMoreThanMaxBytes()
     {
         BoundedPriorityQueue<Integer> queue = new BoundedPriorityQueue<>( BASE_CONFIG, Integer::longValue, NO_PRIORITY );
 
-        assertEquals( E_SIZE_EXCEEDED, queue.offer( 101 ) );
-        assertEquals( OK, queue.offer( 99 ) );
-        assertEquals( OK, queue.offer( 1 ) );
-        assertEquals( E_SIZE_EXCEEDED, queue.offer( 1 ) );
+        Assertions.assertEquals( E_SIZE_EXCEEDED, queue.offer( 101 ) );
+        Assertions.assertEquals( OK, queue.offer( 99 ) );
+        Assertions.assertEquals( OK, queue.offer( 1 ) );
+        Assertions.assertEquals( E_SIZE_EXCEEDED, queue.offer( 1 ) );
     }
 
     @Test
-    public void shouldAllowMinCountDespiteSizeLimit()
+    void shouldAllowMinCountDespiteSizeLimit()
     {
         Config config = new Config( 2, 5, 100 );
         BoundedPriorityQueue<Integer> queue = new BoundedPriorityQueue<>( config, Integer::longValue, NO_PRIORITY );
 
-        assertEquals( OK, queue.offer( 101 ) );
-        assertEquals( OK, queue.offer( 101 ) );
-        assertEquals( E_SIZE_EXCEEDED, queue.offer( 1 ) );
+        Assertions.assertEquals( OK, queue.offer( 101 ) );
+        Assertions.assertEquals( OK, queue.offer( 101 ) );
+        Assertions.assertEquals( E_SIZE_EXCEEDED, queue.offer( 1 ) );
     }
 
     @Test
-    public void shouldAllowZeroSizedItemsDespiteSizeLimit()
+    void shouldAllowZeroSizedItemsDespiteSizeLimit()
     {
         BoundedPriorityQueue<Integer> queue = new BoundedPriorityQueue<>( BASE_CONFIG, Integer::longValue, NO_PRIORITY );
 
-        assertEquals( OK, queue.offer( 100 ) );
-        assertEquals( E_SIZE_EXCEEDED, queue.offer( 1 ) );
+        Assertions.assertEquals( OK, queue.offer( 100 ) );
+        Assertions.assertEquals( E_SIZE_EXCEEDED, queue.offer( 1 ) );
 
-        assertEquals( OK, queue.offer( 0 ) );
-        assertEquals( OK, queue.offer( 0 ) );
+        Assertions.assertEquals( OK, queue.offer( 0 ) );
+        Assertions.assertEquals( OK, queue.offer( 0 ) );
     }
 
     @Test
-    public void shouldNotAllowMoreThanMaxCount()
+    void shouldNotAllowMoreThanMaxCount()
     {
         BoundedPriorityQueue<Integer> queue = new BoundedPriorityQueue<>( BASE_CONFIG, Integer::longValue, NO_PRIORITY );
 
-        assertEquals( OK, queue.offer( 1 ) );
-        assertEquals( OK, queue.offer( 1 ) );
-        assertEquals( OK, queue.offer( 1 ) );
-        assertEquals( OK, queue.offer( 1 ) );
-        assertEquals( OK, queue.offer( 1 ) );
+        Assertions.assertEquals( OK, queue.offer( 1 ) );
+        Assertions.assertEquals( OK, queue.offer( 1 ) );
+        Assertions.assertEquals( OK, queue.offer( 1 ) );
+        Assertions.assertEquals( OK, queue.offer( 1 ) );
+        Assertions.assertEquals( OK, queue.offer( 1 ) );
 
-        assertEquals( E_COUNT_EXCEEDED, queue.offer( 1 ) );
+        Assertions.assertEquals( E_COUNT_EXCEEDED, queue.offer( 1 ) );
     }
 
     @Test
-    public void shouldNotAllowMoreThanMaxCountDespiteZeroSize()
+    void shouldNotAllowMoreThanMaxCountDespiteZeroSize()
     {
         BoundedPriorityQueue<Integer> queue = new BoundedPriorityQueue<>( BASE_CONFIG, Integer::longValue, NO_PRIORITY );
 
-        assertEquals( OK, queue.offer( 0 ) );
-        assertEquals( OK, queue.offer( 0 ) );
-        assertEquals( OK, queue.offer( 0 ) );
-        assertEquals( OK, queue.offer( 0 ) );
-        assertEquals( OK, queue.offer( 0 ) );
+        Assertions.assertEquals( OK, queue.offer( 0 ) );
+        Assertions.assertEquals( OK, queue.offer( 0 ) );
+        Assertions.assertEquals( OK, queue.offer( 0 ) );
+        Assertions.assertEquals( OK, queue.offer( 0 ) );
+        Assertions.assertEquals( OK, queue.offer( 0 ) );
 
-        assertEquals( E_COUNT_EXCEEDED, queue.offer( 0 ) );
+        Assertions.assertEquals( E_COUNT_EXCEEDED, queue.offer( 0 ) );
     }
 
     @Test
-    public void shouldBeAbleToPeekEntries()
+    void shouldBeAbleToPeekEntries()
     {
         BoundedPriorityQueue<Integer> queue = new BoundedPriorityQueue<>( BASE_CONFIG, Integer::longValue, NO_PRIORITY );
 
-        assertEquals( OK, queue.offer( 1 ) );
-        assertEquals( OK, queue.offer( 2 ) );
-        assertEquals( OK, queue.offer( 3 ) );
+        Assertions.assertEquals( OK, queue.offer( 1 ) );
+        Assertions.assertEquals( OK, queue.offer( 2 ) );
+        Assertions.assertEquals( OK, queue.offer( 3 ) );
 
-        assertEquals( Optional.of( 1 ), queue.peek().map( Removable::get ) );
-        assertEquals( Optional.of( 1 ), queue.peek().map( Removable::get ) );
-        assertEquals( Optional.of( 1 ), queue.peek().map( Removable::get ) );
+        Assertions.assertEquals( Optional.of( 1 ), queue.peek().map( Removable::get ) );
+        Assertions.assertEquals( Optional.of( 1 ), queue.peek().map( Removable::get ) );
+        Assertions.assertEquals( Optional.of( 1 ), queue.peek().map( Removable::get ) );
 
-        assertEquals( 3, queue.count() );
-        assertEquals( 6, queue.bytes() );
+        Assertions.assertEquals( 3, queue.count() );
+        Assertions.assertEquals( 6, queue.bytes() );
     }
 
     @Test
-    public void shouldBeAbleToRemovePeekedEntries()
+    void shouldBeAbleToRemovePeekedEntries()
     {
         BoundedPriorityQueue<Integer> queue = new BoundedPriorityQueue<>( BASE_CONFIG, Integer::longValue, NO_PRIORITY );
 
-        assertEquals( OK, queue.offer( 1 ) );
-        assertEquals( OK, queue.offer( 2 ) );
-        assertEquals( OK, queue.offer( 3 ) );
-        assertEquals( 3, queue.count() );
-        assertEquals( 6, queue.bytes() );
+        Assertions.assertEquals( OK, queue.offer( 1 ) );
+        Assertions.assertEquals( OK, queue.offer( 2 ) );
+        Assertions.assertEquals( OK, queue.offer( 3 ) );
+        Assertions.assertEquals( 3, queue.count() );
+        Assertions.assertEquals( 6, queue.bytes() );
 
-        assertTrue( queue.peek().isPresent() );
-        assertTrue( queue.peek().get().remove() );
-        assertEquals( 2, queue.count() );
-        assertEquals( 5, queue.bytes() );
+        Assertions.assertTrue( queue.peek().isPresent() );
+        Assertions.assertTrue( queue.peek().get().remove() );
+        Assertions.assertEquals( 2, queue.count() );
+        Assertions.assertEquals( 5, queue.bytes() );
 
-        assertTrue( queue.peek().isPresent() );
-        assertTrue( queue.peek().get().remove() );
-        assertEquals( 1, queue.count() );
-        assertEquals( 3, queue.bytes() );
+        Assertions.assertTrue( queue.peek().isPresent() );
+        Assertions.assertTrue( queue.peek().get().remove() );
+        Assertions.assertEquals( 1, queue.count() );
+        Assertions.assertEquals( 3, queue.bytes() );
 
-        assertTrue( queue.peek().isPresent() );
-        assertTrue( queue.peek().get().remove() );
-        assertEquals( 0, queue.count() );
-        assertEquals( 0, queue.bytes() );
+        Assertions.assertTrue( queue.peek().isPresent() );
+        Assertions.assertTrue( queue.peek().get().remove() );
+        Assertions.assertEquals( 0, queue.count() );
+        Assertions.assertEquals( 0, queue.bytes() );
 
-        assertFalse( queue.peek().isPresent() );
+        Assertions.assertFalse( queue.peek().isPresent() );
         try
         {
             queue.peek().get().remove();
-            fail();
+            Assertions.fail();
         }
         catch ( NoSuchElementException ignored )
         {
@@ -176,7 +173,7 @@ public class BoundedPriorityQueueTest
     }
 
     @Test
-    public void shouldRespectPriority()
+    void shouldRespectPriority()
     {
         int count = 100;
         Config config = new Config( 0, count, 0 );
@@ -193,12 +190,12 @@ public class BoundedPriorityQueueTest
 
         for ( int i = 0; i < count; i++ )
         {
-            assertEquals( Optional.of( i ), queue.poll() );
+            Assertions.assertEquals( Optional.of( i ), queue.poll() );
         }
     }
 
     @Test
-    public void shouldHaveStablePriority()
+    void shouldHaveStablePriority()
     {
         int count = 100;
         int priorities = 3;
@@ -229,7 +226,7 @@ public class BoundedPriorityQueueTest
 
             for ( Element element : filteredInsertionOrder )
             {
-                assertEquals( Optional.of( element ), queue.poll() );
+                Assertions.assertEquals( Optional.of( element ), queue.poll() );
             }
         }
     }

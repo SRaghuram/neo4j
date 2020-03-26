@@ -9,13 +9,10 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLogProvider;
@@ -24,31 +21,22 @@ import static com.neo4j.causalclustering.core.consensus.MessageUtils.messageFor;
 import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.voteRequest;
 import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.builder;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Most behaviour for handling vote requests is identical for all roles.
  */
-@RunWith( Parameterized.class )
-public class VoteRequestTest
+class VoteRequestTest
 {
-    @Parameterized.Parameters( name = "{0}" )
-    public static Collection data()
-    {
-        return Arrays.asList( Role.values() );
-    }
-
-    @Parameterized.Parameter
-    public Role role;
-
     private MemberId myself = member( 0 );
     private MemberId member1 = member( 1 );
     private MemberId member2 = member( 2 );
 
-    @Test
-    public void shouldVoteForCandidateInLaterTerm() throws Exception
+    @ParameterizedTest
+    @EnumSource( Role.class )
+    void shouldVoteForCandidateInLaterTerm( Role role ) throws Exception
     {
         // given
         RaftState state = newState();
@@ -64,8 +52,9 @@ public class VoteRequestTest
         assertTrue( ((RaftMessages.Vote.Response) messageFor( outcome, member1 )).voteGranted() );
     }
 
-    @Test
-    public void shouldDenyForCandidateInPreviousTerm() throws Exception
+    @ParameterizedTest
+    @EnumSource( Role.class )
+    void shouldDenyForCandidateInPreviousTerm( Role role ) throws Exception
     {
         // given
         RaftState state = newState();
@@ -82,8 +71,9 @@ public class VoteRequestTest
         assertEquals( role, outcome.getRole() );
     }
 
-    @Test
-    public void shouldVoteForOnlyOneCandidatePerTerm() throws Exception
+    @ParameterizedTest
+    @EnumSource( Role.class )
+    void shouldVoteForOnlyOneCandidatePerTerm( Role role ) throws Exception
     {
         // given
         RaftState state = newState();
@@ -105,8 +95,9 @@ public class VoteRequestTest
         assertFalse( ((RaftMessages.Vote.Response) messageFor( outcome2, member2 )).voteGranted() );
     }
 
-    @Test
-    public void shouldStayInCurrentRoleOnRequestFromCurrentTerm() throws Exception
+    @ParameterizedTest
+    @EnumSource( Role.class )
+    void shouldStayInCurrentRoleOnRequestFromCurrentTerm( Role role ) throws Exception
     {
         // given
         RaftState state = newState();
@@ -122,8 +113,9 @@ public class VoteRequestTest
         assertEquals( role, outcome.getRole() );
     }
 
-    @Test
-    public void shouldMoveToFollowerIfRequestIsFromLaterTerm() throws Exception
+    @ParameterizedTest
+    @EnumSource( Role.class )
+    void shouldMoveToFollowerIfRequestIsFromLaterTerm( Role role ) throws Exception
     {
         // given
         RaftState state = newState();
@@ -139,8 +131,9 @@ public class VoteRequestTest
         assertEquals( Role.FOLLOWER, outcome.getRole() );
     }
 
-    @Test
-    public void shouldUpdateTermIfRequestIsFromLaterTerm() throws Exception
+    @ParameterizedTest
+    @EnumSource( Role.class )
+    void shouldUpdateTermIfRequestIsFromLaterTerm( Role role ) throws Exception
     {
         // given
         RaftState state = newState();
@@ -156,7 +149,7 @@ public class VoteRequestTest
         assertEquals( candidateTerm, outcome.getTerm() );
     }
 
-    public RaftState newState() throws IOException
+    RaftState newState() throws IOException
     {
         return builder().myself( myself ).build();
     }

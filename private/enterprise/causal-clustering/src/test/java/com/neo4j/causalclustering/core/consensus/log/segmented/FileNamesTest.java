@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.LinkedList;
@@ -16,17 +16,17 @@ import java.util.SortedMap;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.Log;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class FileNamesTest
+class FileNamesTest
 {
     @Test
-    public void shouldProperlyFormatFilenameForVersion()
+    void shouldProperlyFormatFilenameForVersion()
     {
         // Given
         File base = new File( "base" );
@@ -43,7 +43,7 @@ public class FileNamesTest
     }
 
     @Test
-    public void shouldWorkCorrectlyOnReasonableDirectoryContents()
+    void shouldWorkCorrectlyOnReasonableDirectoryContents()
     {
         // Given
         // a raft log directory with just the expected files, without gaps
@@ -78,7 +78,7 @@ public class FileNamesTest
     }
 
     @Test
-    public void shouldIgnoreUnexpectedLogDirectoryContents()
+    void shouldIgnoreUnexpectedLogDirectoryContents()
     {
         // Given
         // a raft log directory with just the expected files, without gaps

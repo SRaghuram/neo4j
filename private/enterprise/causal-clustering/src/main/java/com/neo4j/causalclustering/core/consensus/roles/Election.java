@@ -67,7 +67,7 @@ public class Election
         currentMembers.stream().filter( member -> !member.equals( ctx.myself() ) ).forEach( member ->
                 outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( member, preVoteForMe ) )
         );
-        outcome.renewElectionTimer( ACTIVE_ELECTION );
+        outcomeBuilder.renewElectionTimer( ACTIVE_ELECTION );
 
         log.info( "Pre-election started with: %s and members: %s", preVoteForMe, currentMembers );
         return true;

@@ -6,8 +6,8 @@
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
@@ -17,11 +17,11 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.time.Clocks;
 
 import static java.util.Collections.emptyList;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
-public class EntryCursorTest
+class EntryCursorTest
 {
     private final FileSystemAbstraction fsa = new EphemeralFileSystemAbstraction();
     private final File bam = new File( "bam" );
@@ -35,14 +35,14 @@ public class EntryCursorTest
         fsa.mkdir( bam );
     }
 
-    @After
-    public void tearDown() throws Exception
+    @AfterEach
+    void tearDown() throws Exception
     {
         fsa.close();
     }
 
     @Test
-    public void ifFileExistsButEntryDoesNotExist() throws Exception
+    void ifFileExistsButEntryDoesNotExist() throws Exception
     {
         // When
         segments.rotate( -1, -1, -1 );
@@ -57,7 +57,7 @@ public class EntryCursorTest
     }
 
     @Test
-    public void requestedSegmentHasBeenPruned() throws Exception
+    void requestedSegmentHasBeenPruned() throws Exception
     {
         // When
         segments.rotate( -1, -1, -1 );
@@ -74,7 +74,7 @@ public class EntryCursorTest
     }
 
     @Test
-    public void requestedSegmentHasNotExistedYet() throws Exception
+    void requestedSegmentHasNotExistedYet() throws Exception
     {
         // When
         segments.rotate( -1, -1, -1 );

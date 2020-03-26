@@ -49,10 +49,10 @@ import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createScheduler;
 
 @ExtendWith( LifeExtension.class )
-public class RaftLogShipperTest
+class RaftLogShipperTest
 {
     @Inject
-    public LifeSupport life;
+    private LifeSupport life;
 
     private JobScheduler scheduler = createScheduler();
     private OutboundMessageCollector outbound;

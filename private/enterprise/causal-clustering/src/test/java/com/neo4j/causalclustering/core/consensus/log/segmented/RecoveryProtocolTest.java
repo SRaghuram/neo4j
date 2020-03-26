@@ -8,46 +8,45 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 import com.neo4j.causalclustering.core.consensus.log.DummyRaftableContentSerializer;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.function.Function;
 
-import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.EphemeralTestDirectoryExtension;
 import org.neo4j.time.Clocks;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.fail;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
-public class RecoveryProtocolTest
+@EphemeralTestDirectoryExtension
+class RecoveryProtocolTest
 {
-    @Rule
-    public final EphemeralFileSystemRule fileSystemRule = new EphemeralFileSystemRule();
+    @Inject
+    private FileSystemAbstraction fsa;
 
-    private EphemeralFileSystemAbstraction fsa = fileSystemRule.get();
     private Function<Integer,ChannelMarshal<ReplicatedContent>> contentMarshal = ignored -> new DummyRaftableContentSerializer();
     private final File root = new File( "root" );
     private FileNames fileNames = new FileNames( root );
     private SegmentHeader.Marshal headerMarshal = new SegmentHeader.Marshal();
-    private ReaderPool readerPool = new ReaderPool( 0, getInstance(), fileNames, fsa, Clocks.fakeClock() );
+    private ReaderPool readerPool;
 
-    @Before
-    public void setup()
+    @BeforeEach
+    void setup() throws IOException
     {
         fsa.mkdirs( root );
+        readerPool = new ReaderPool( 0, getInstance(), fileNames, fsa, Clocks.fakeClock() );
     }
 
     @Test
-    public void shouldReturnEmptyStateOnEmptyDirectory() throws Exception
+    void shouldReturnEmptyStateOnEmptyDirectory() throws Exception
     {
         // given
         RecoveryProtocol protocol = new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal, NullLogProvider.getInstance() );
@@ -56,15 +55,15 @@ public class RecoveryProtocolTest
         State state = protocol.run();
 
         // then
-        assertEquals( -1, state.appendIndex );
-        assertEquals( -1, state.terms.latest() );
-        assertEquals( -1, state.prevIndex );
-        assertEquals( -1, state.prevTerm );
-        assertEquals( 0, state.segments.last().header().segmentNumber() );
+        Assertions.assertEquals( -1, state.appendIndex );
+        Assertions.assertEquals( -1, state.terms.latest() );
+        Assertions.assertEquals( -1, state.prevIndex );
+        Assertions.assertEquals( -1, state.prevTerm );
+        Assertions.assertEquals( 0, state.segments.last().header().segmentNumber() );
     }
 
     @Test
-    public void shouldFailIfThereAreGapsInVersionNumberSequence() throws Exception
+    void shouldFailIfThereAreGapsInVersionNumberSequence() throws Exception
     {
         // given
         createLogFile( fsa, -1, 0, 0, -1, -1 );
@@ -76,7 +75,7 @@ public class RecoveryProtocolTest
         {
             // when
             protocol.run();
-            fail( "Expected an exception" );
+            Assertions.fail( "Expected an exception" );
         }
         catch ( DamagedLogStorageException e )
         {
@@ -85,7 +84,7 @@ public class RecoveryProtocolTest
     }
 
     @Test
-    public void shouldFailIfTheVersionNumberInTheHeaderAndFileNameDiffer() throws Exception
+    void shouldFailIfTheVersionNumberInTheHeaderAndFileNameDiffer() throws Exception
     {
         // given
         createLogFile( fsa, -1, 0, 1, -1, -1 );
@@ -96,7 +95,7 @@ public class RecoveryProtocolTest
         {
             // when
             protocol.run();
-            fail( "Expected an exception" );
+            Assertions.fail( "Expected an exception" );
         }
         catch ( DamagedLogStorageException e )
         {
@@ -105,7 +104,7 @@ public class RecoveryProtocolTest
     }
 
     @Test
-    public void shouldFailIfANonLastFileIsMissingHeader() throws Exception
+    void shouldFailIfANonLastFileIsMissingHeader() throws Exception
     {
         // given
         createLogFile( fsa, -1, 0, 0, -1, -1 );
@@ -118,7 +117,7 @@ public class RecoveryProtocolTest
         {
             // when
             protocol.run();
-            fail( "Expected an exception" );
+            Assertions.fail( "Expected an exception" );
         }
         catch ( DamagedLogStorageException e )
         {
@@ -127,7 +126,7 @@ public class RecoveryProtocolTest
     }
 
     @Test
-    public void shouldRecoverEvenIfLastHeaderIsMissing() throws Exception
+    void shouldRecoverEvenIfLastHeaderIsMissing() throws Exception
     {
         // given
         createLogFile( fsa, -1, 0, 0, -1, -1 );
@@ -139,16 +138,16 @@ public class RecoveryProtocolTest
         protocol.run();
 
         // then
-        assertNotEquals( 0, fsa.getFileSize( fileNames.getForSegment( 1 ) ) );
+        Assertions.assertNotEquals( 0, fsa.getFileSize( fileNames.getForSegment( 1 ) ) );
     }
 
     @Test
-    public void shouldRecoverAndBeAbleToRotate() throws Exception
+    void shouldRecoverAndBeAbleToRotate() throws Exception
     {
         // given
         createLogFile( fsa, -1, 0, 0, -1, -1 );
-        createLogFile( fsa, 10, 1, 1, 10,  0 );
-        createLogFile( fsa, 20, 2, 2, 20,  1 );
+        createLogFile( fsa, 10, 1, 1, 10, 0 );
+        createLogFile( fsa, 20, 2, 2, 20, 1 );
 
         RecoveryProtocol protocol = new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal, NullLogProvider.getInstance() );
 
@@ -157,19 +156,19 @@ public class RecoveryProtocolTest
         SegmentFile newFile = state.segments.rotate( 20, 20, 1 );
 
         // then
-        assertEquals( 20, newFile.header().prevFileLastIndex() );
-        assertEquals(  3, newFile.header().segmentNumber() );
-        assertEquals( 20, newFile.header().prevIndex() );
-        assertEquals(  1, newFile.header().prevTerm() );
+        Assertions.assertEquals( 20, newFile.header().prevFileLastIndex() );
+        Assertions.assertEquals( 3, newFile.header().segmentNumber() );
+        Assertions.assertEquals( 20, newFile.header().prevIndex() );
+        Assertions.assertEquals( 1, newFile.header().prevTerm() );
     }
 
     @Test
-    public void shouldRecoverAndBeAbleToTruncate() throws Exception
+    void shouldRecoverAndBeAbleToTruncate() throws Exception
     {
         // given
         createLogFile( fsa, -1, 0, 0, -1, -1 );
-        createLogFile( fsa, 10, 1, 1, 10,  0 );
-        createLogFile( fsa, 20, 2, 2, 20,  1 );
+        createLogFile( fsa, 10, 1, 1, 10, 0 );
+        createLogFile( fsa, 20, 2, 2, 20, 1 );
 
         RecoveryProtocol protocol = new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal, NullLogProvider.getInstance() );
 
@@ -178,19 +177,19 @@ public class RecoveryProtocolTest
         SegmentFile newFile = state.segments.truncate( 20, 15, 0 );
 
         // then
-        assertEquals( 20, newFile.header().prevFileLastIndex() );
-        assertEquals(  3, newFile.header().segmentNumber() );
-        assertEquals( 15, newFile.header().prevIndex() );
-        assertEquals(  0, newFile.header().prevTerm() );
+        Assertions.assertEquals( 20, newFile.header().prevFileLastIndex() );
+        Assertions.assertEquals( 3, newFile.header().segmentNumber() );
+        Assertions.assertEquals( 15, newFile.header().prevIndex() );
+        Assertions.assertEquals( 0, newFile.header().prevTerm() );
     }
 
     @Test
-    public void shouldRecoverAndBeAbleToSkip() throws Exception
+    void shouldRecoverAndBeAbleToSkip() throws Exception
     {
         // given
         createLogFile( fsa, -1, 0, 0, -1, -1 );
-        createLogFile( fsa, 10, 1, 1, 10,  0 );
-        createLogFile( fsa, 20, 2, 2, 20,  1 );
+        createLogFile( fsa, 10, 1, 1, 10, 0 );
+        createLogFile( fsa, 20, 2, 2, 20, 1 );
 
         RecoveryProtocol protocol = new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal, NullLogProvider.getInstance() );
 
@@ -199,14 +198,14 @@ public class RecoveryProtocolTest
         SegmentFile newFile = state.segments.skip( 20, 40, 2 );
 
         // then
-        assertEquals( 20, newFile.header().prevFileLastIndex() );
-        assertEquals(  3, newFile.header().segmentNumber() );
-        assertEquals( 40, newFile.header().prevIndex() );
-        assertEquals(  2, newFile.header().prevTerm() );
+        Assertions.assertEquals( 20, newFile.header().prevFileLastIndex() );
+        Assertions.assertEquals( 3, newFile.header().segmentNumber() );
+        Assertions.assertEquals( 40, newFile.header().prevIndex() );
+        Assertions.assertEquals( 2, newFile.header().prevTerm() );
     }
 
     @Test
-    public void shouldRecoverBootstrappedEntry() throws Exception
+    void shouldRecoverBootstrappedEntry() throws Exception
     {
         for ( int bootstrapIndex = 0; bootstrapIndex < 5; bootstrapIndex++ )
         {
@@ -231,24 +230,24 @@ public class RecoveryProtocolTest
         State state = protocol.run();
 
         // then
-        assertEquals( bootstrapIndex, state.prevIndex );
-        assertEquals( bootstrapTerm, state.prevTerm );
+        Assertions.assertEquals( bootstrapIndex, state.prevIndex );
+        Assertions.assertEquals( bootstrapTerm, state.prevTerm );
 
-        assertEquals( -1, state.terms.get( -1 ) );
-        assertEquals( -1, state.terms.get( bootstrapIndex - 1 ) );
-        assertEquals( bootstrapTerm, state.terms.get( bootstrapIndex ) );
-        assertEquals( -1, state.terms.get( bootstrapIndex + 1 ) );
+        Assertions.assertEquals( -1, state.terms.get( -1 ) );
+        Assertions.assertEquals( -1, state.terms.get( bootstrapIndex - 1 ) );
+        Assertions.assertEquals( bootstrapTerm, state.terms.get( bootstrapIndex ) );
+        Assertions.assertEquals( -1, state.terms.get( bootstrapIndex + 1 ) );
 
-        assertEquals( bootstrapTerm, state.terms.latest() );
+        Assertions.assertEquals( bootstrapTerm, state.terms.latest() );
     }
 
     @Test
-    public void shouldRecoverSeveralSkips() throws Exception
+    void shouldRecoverSeveralSkips() throws Exception
     {
         // given
         createLogFile( fsa, 10, 1, 1, 20, 9 );
-        createLogFile( fsa, 100, 2, 2, 200,  99 );
-        createLogFile( fsa, 1000, 3, 3, 2000,  999 );
+        createLogFile( fsa, 100, 2, 2, 200, 99 );
+        createLogFile( fsa, 1000, 3, 3, 2000, 999 );
 
         RecoveryProtocol protocol = new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal,
                 NullLogProvider.getInstance() );
@@ -257,20 +256,20 @@ public class RecoveryProtocolTest
         State state = protocol.run();
 
         // then
-        assertEquals( 2000, state.prevIndex );
-        assertEquals( 999, state.prevTerm );
+        Assertions.assertEquals( 2000, state.prevIndex );
+        Assertions.assertEquals( 999, state.prevTerm );
 
-        assertEquals( -1, state.terms.get( 20 ) );
-        assertEquals( -1, state.terms.get( 200 ) );
-        assertEquals( -1, state.terms.get( 1999 ) );
+        Assertions.assertEquals( -1, state.terms.get( 20 ) );
+        Assertions.assertEquals( -1, state.terms.get( 200 ) );
+        Assertions.assertEquals( -1, state.terms.get( 1999 ) );
 
-        assertEquals( 999, state.terms.get( 2000 ) );
-        assertEquals( -1, state.terms.get( 2001 ) );
+        Assertions.assertEquals( 999, state.terms.get( 2000 ) );
+        Assertions.assertEquals( -1, state.terms.get( 2001 ) );
 
-        assertEquals( 999, state.terms.latest() );
+        Assertions.assertEquals( 999, state.terms.latest() );
     }
 
-    private void createLogFile( EphemeralFileSystemAbstraction fsa, long prevFileLastIndex, long fileNameVersion,
+    private void createLogFile( FileSystemAbstraction fsa, long prevFileLastIndex, long fileNameVersion,
             long headerVersion, long prevIndex, long prevTerm ) throws IOException
     {
         StoreChannel channel = fsa.write( fileNames.getForSegment( fileNameVersion ) );
@@ -280,7 +279,7 @@ public class RecoveryProtocolTest
         channel.close();
     }
 
-    private void createEmptyLogFile( EphemeralFileSystemAbstraction fsa, long fileNameVersion ) throws IOException
+    private void createEmptyLogFile( FileSystemAbstraction fsa, long fileNameVersion ) throws IOException
     {
         StoreChannel channel = fsa.write( fileNames.getForSegment( fileNameVersion ) );
         channel.close();

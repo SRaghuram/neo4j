@@ -8,24 +8,22 @@ package com.neo4j.causalclustering.core.consensus.membership;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogCursor;
 import com.neo4j.causalclustering.core.consensus.log.ReadableRaftLog;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerState;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
-public class CatchupGoalTrackerTest
+class CatchupGoalTrackerTest
 {
 
     private static final long ROUND_TIMEOUT = 15;
     private static final long CATCHUP_TIMEOUT = 1_000;
 
     @Test
-    public void shouldAchieveGoalIfWithinRoundTimeout()
+    void shouldAchieveGoalIfWithinRoundTimeout()
     {
         FakeClock clock = Clocks.fakeClock();
         StubLog log = new StubLog();
@@ -36,12 +34,12 @@ public class CatchupGoalTrackerTest
         clock.forward( ROUND_TIMEOUT - 5, TimeUnit.MILLISECONDS );
         catchupGoalTracker.updateProgress( new FollowerState().onSuccessResponse( 10 ) );
 
-        assertTrue( catchupGoalTracker.isGoalAchieved() );
-        assertTrue( catchupGoalTracker.isFinished() );
+        Assertions.assertTrue( catchupGoalTracker.isGoalAchieved() );
+        Assertions.assertTrue( catchupGoalTracker.isFinished() );
     }
 
     @Test
-    public void shouldNotAchieveGoalIfBeyondRoundTimeout()
+    void shouldNotAchieveGoalIfBeyondRoundTimeout()
     {
         FakeClock clock = Clocks.fakeClock();
         StubLog log = new StubLog();
@@ -52,12 +50,12 @@ public class CatchupGoalTrackerTest
         clock.forward( ROUND_TIMEOUT + 5, TimeUnit.MILLISECONDS );
         catchupGoalTracker.updateProgress( new FollowerState().onSuccessResponse( 10 ) );
 
-        assertFalse( catchupGoalTracker.isGoalAchieved() );
-        assertFalse( catchupGoalTracker.isFinished() );
+        Assertions.assertFalse( catchupGoalTracker.isGoalAchieved() );
+        Assertions.assertFalse( catchupGoalTracker.isFinished() );
     }
 
     @Test
-    public void shouldFailToAchieveGoalDueToCatchupTimeoutExpiring()
+    void shouldFailToAchieveGoalDueToCatchupTimeoutExpiring()
     {
         FakeClock clock = Clocks.fakeClock();
         StubLog log = new StubLog();
@@ -70,12 +68,12 @@ public class CatchupGoalTrackerTest
         catchupGoalTracker.updateProgress( new FollowerState().onSuccessResponse( 4 ) );
 
         // then
-        assertFalse( catchupGoalTracker.isGoalAchieved() );
-        assertTrue( catchupGoalTracker.isFinished() );
+        Assertions.assertFalse( catchupGoalTracker.isGoalAchieved() );
+        Assertions.assertTrue( catchupGoalTracker.isFinished() );
     }
 
     @Test
-    public void shouldFailToAchieveGoalDueToCatchupTimeoutExpiringEvenThoughWeDoEventuallyAchieveTarget()
+    void shouldFailToAchieveGoalDueToCatchupTimeoutExpiringEvenThoughWeDoEventuallyAchieveTarget()
     {
         FakeClock clock = Clocks.fakeClock();
         StubLog log = new StubLog();
@@ -88,12 +86,12 @@ public class CatchupGoalTrackerTest
         catchupGoalTracker.updateProgress( new FollowerState().onSuccessResponse( 10 ) );
 
         // then
-        assertFalse( catchupGoalTracker.isGoalAchieved() );
-        assertTrue( catchupGoalTracker.isFinished() );
+        Assertions.assertFalse( catchupGoalTracker.isGoalAchieved() );
+        Assertions.assertTrue( catchupGoalTracker.isFinished() );
     }
 
     @Test
-    public void shouldFailToAchieveGoalDueToRoundExhaustion()
+    void shouldFailToAchieveGoalDueToRoundExhaustion()
     {
         FakeClock clock = Clocks.fakeClock();
         StubLog log = new StubLog();
@@ -111,12 +109,12 @@ public class CatchupGoalTrackerTest
         }
 
         // then
-        assertFalse( catchupGoalTracker.isGoalAchieved() );
-        assertTrue( catchupGoalTracker.isFinished() );
+        Assertions.assertFalse( catchupGoalTracker.isGoalAchieved() );
+        Assertions.assertTrue( catchupGoalTracker.isFinished() );
     }
 
     @Test
-    public void shouldNotFinishIfRoundsNotExhausted()
+    void shouldNotFinishIfRoundsNotExhausted()
     {
         FakeClock clock = Clocks.fakeClock();
         StubLog log = new StubLog();
@@ -134,8 +132,8 @@ public class CatchupGoalTrackerTest
         }
 
         // then
-        assertFalse( catchupGoalTracker.isGoalAchieved() );
-        assertFalse( catchupGoalTracker.isFinished() );
+        Assertions.assertFalse( catchupGoalTracker.isGoalAchieved() );
+        Assertions.assertFalse( catchupGoalTracker.isFinished() );
     }
 
     private class StubLog implements ReadableRaftLog

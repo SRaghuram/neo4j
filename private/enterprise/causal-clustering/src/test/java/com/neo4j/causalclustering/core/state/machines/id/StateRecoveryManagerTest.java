@@ -7,49 +7,45 @@ package com.neo4j.causalclustering.core.state.machines.id;
 
 import com.neo4j.causalclustering.core.state.StateRecoveryManager;
 import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.memory.ByteBuffers;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.EphemeralTestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
-public class StateRecoveryManagerTest
+@EphemeralTestDirectoryExtension
+class StateRecoveryManagerTest
 {
 
-    private final TestDirectory testDir = TestDirectory.testDirectory();
-    private final EphemeralFileSystemRule fileSystemRule = new EphemeralFileSystemRule();
-
-    @Rule
-    public final RuleChain ruleChain = RuleChain.outerRule( fileSystemRule ).around( testDir );
+    @Inject
+    private TestDirectory testDir;
+    @Inject
+    private FileSystemAbstraction fsa;
 
     private final int NUMBER_OF_RECORDS_PER_FILE = 100;
     private final int NUMBER_OF_BYTES_PER_RECORD = 10;
 
-    @Before
-    public void checkArgs()
+    @BeforeEach
+    void checkArgs()
     {
-        assertEquals( 0, NUMBER_OF_RECORDS_PER_FILE % NUMBER_OF_BYTES_PER_RECORD );
+        Assertions.assertEquals( 0, NUMBER_OF_RECORDS_PER_FILE % NUMBER_OF_BYTES_PER_RECORD );
     }
 
     @Test
-    public void shouldFailIfBothFilesAreEmpty() throws Exception
+    void shouldFailIfBothFilesAreEmpty() throws Exception
     {
         // given
-        EphemeralFileSystemAbstraction fsa = fileSystemRule.get();
         fsa.mkdir( testDir.homeDir() );
 
         File fileA = fileA();
@@ -64,7 +60,7 @@ public class StateRecoveryManagerTest
         {
             // when
             StateRecoveryManager.RecoveryStatus recoveryStatus = manager.recover( fileA, fileB );
-            fail();
+            Assertions.fail();
         }
         catch ( IllegalStateException ex )
         {
@@ -74,10 +70,9 @@ public class StateRecoveryManagerTest
     }
 
     @Test
-    public void shouldReturnPreviouslyInactiveWhenOneFileFullAndOneEmpty() throws Exception
+    void shouldReturnPreviouslyInactiveWhenOneFileFullAndOneEmpty() throws Exception
     {
         // given
-        EphemeralFileSystemAbstraction fsa = fileSystemRule.get();
         fsa.mkdir( testDir.homeDir() );
 
         File fileA = fileA();
@@ -94,14 +89,13 @@ public class StateRecoveryManagerTest
         final StateRecoveryManager.RecoveryStatus recoveryStatus = manager.recover( fileA, fileB );
 
         // then
-        assertEquals( fileB, recoveryStatus.activeFile() );
+        Assertions.assertEquals( fileB, recoveryStatus.activeFile() );
     }
 
     @Test
-    public void shouldReturnTheEmptyFileAsPreviouslyInactiveWhenActiveContainsCorruptEntry() throws Exception
+    void shouldReturnTheEmptyFileAsPreviouslyInactiveWhenActiveContainsCorruptEntry() throws Exception
     {
         // given
-        EphemeralFileSystemAbstraction fsa = fileSystemRule.get();
         fsa.mkdir( testDir.homeDir() );
 
         File fileA = fileA();
@@ -121,16 +115,15 @@ public class StateRecoveryManagerTest
         final StateRecoveryManager.RecoveryStatus recoveryStatus = manager.recover( fileA, fileB );
 
         // then
-        assertEquals( 999L, recoveryStatus.recoveredState() );
-        assertEquals( fileB, recoveryStatus.activeFile() );
+        Assertions.assertEquals( 999L, recoveryStatus.recoveredState() );
+        Assertions.assertEquals( fileB, recoveryStatus.activeFile() );
     }
 
     @Test
-    public void shouldReturnTheFullFileAsPreviouslyInactiveWhenActiveContainsCorruptEntry()
+    void shouldReturnTheFullFileAsPreviouslyInactiveWhenActiveContainsCorruptEntry()
             throws Exception
     {
         // given
-        EphemeralFileSystemAbstraction fsa = fileSystemRule.get();
         fsa.mkdir( testDir.homeDir() );
 
         File fileA = fileA();
@@ -155,14 +148,13 @@ public class StateRecoveryManagerTest
         final StateRecoveryManager.RecoveryStatus recoveryStatus = manager.recover( fileA, fileB );
 
         // then
-        assertEquals( fileB, recoveryStatus.activeFile() );
+        Assertions.assertEquals( fileB, recoveryStatus.activeFile() );
     }
 
     @Test
-    public void shouldRecoverFromPartiallyWrittenEntriesInBothFiles() throws Exception
+    void shouldRecoverFromPartiallyWrittenEntriesInBothFiles() throws Exception
     {
         // given
-        EphemeralFileSystemAbstraction fsa = fileSystemRule.get();
         fsa.mkdir( testDir.homeDir() );
 
         StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal() );
@@ -176,8 +168,8 @@ public class StateRecoveryManagerTest
         final StateRecoveryManager.RecoveryStatus recovered = manager.recover( fileA(), fileB() );
 
         // then
-        assertEquals( fileA(), recovered.activeFile() );
-        assertEquals( 6L, recovered.recoveredState() );
+        Assertions.assertEquals( fileA(), recovered.activeFile() );
+        Assertions.assertEquals( 6L, recovered.recoveredState() );
     }
 
     private File fileA()
@@ -190,7 +182,7 @@ public class StateRecoveryManagerTest
         return new File( testDir.homeDir(), "file.B" );
     }
 
-    private void writeSomeGarbage( EphemeralFileSystemAbstraction fsa, File file ) throws IOException
+    private void writeSomeGarbage( FileSystemAbstraction fsa, File file ) throws IOException
     {
         final StoreChannel channel = fsa.write( file );
         ByteBuffer buffer = ByteBuffers.allocate( 4 );
@@ -201,7 +193,7 @@ public class StateRecoveryManagerTest
         channel.close();
     }
 
-    private void writeSomeLongsIn( EphemeralFileSystemAbstraction fsa, File file, long... longs ) throws IOException
+    private void writeSomeLongsIn( FileSystemAbstraction fsa, File file, long... longs ) throws IOException
     {
         final StoreChannel channel = fsa.write( file );
         ByteBuffer buffer = ByteBuffers.allocate( longs.length * 8 );

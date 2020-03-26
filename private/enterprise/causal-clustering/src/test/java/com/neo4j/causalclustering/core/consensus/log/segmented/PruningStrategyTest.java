@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,7 +37,7 @@ abstract class PruningStrategyTest
         return list;
     }
 
-    @Before
+    @BeforeEach
     public void mockSegmentVisitor()
     {
         doAnswer( invocation ->

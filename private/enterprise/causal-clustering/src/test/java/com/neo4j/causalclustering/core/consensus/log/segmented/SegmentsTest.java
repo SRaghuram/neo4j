@@ -8,8 +8,9 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 import com.neo4j.causalclustering.core.consensus.log.EntryRecord;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.Collections;
@@ -23,10 +24,6 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.time.Clocks;
 
 import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.RETURNS_MOCKS;
 import static org.mockito.Mockito.doThrow;
@@ -39,7 +36,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
-public class SegmentsTest
+class SegmentsTest
 {
     private final FileSystemAbstraction fsa = mock( FileSystemAbstraction.class, RETURNS_MOCKS );
     private final File baseDirectory = new File( "." );
@@ -59,14 +56,14 @@ public class SegmentsTest
 
     private final List<SegmentFile> segmentFiles = asList( fileA, fileB );
 
-    @Before
-    public void before()
+    @BeforeEach
+    void before()
     {
         when( fsa.deleteFile( any() ) ).thenReturn( true );
     }
 
     @Test
-    public void shouldCreateNext() throws Exception
+    void shouldCreateNext() throws Exception
     {
         // Given
         try ( Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshals,
@@ -78,14 +75,14 @@ public class SegmentsTest
             SegmentFile last = segments.last();
 
             // Then
-            assertEquals( 10, last.header().prevFileLastIndex() );
-            assertEquals( 10, last.header().prevIndex() );
-            assertEquals( 12, last.header().prevTerm() );
+            Assertions.assertEquals( 10, last.header().prevFileLastIndex() );
+            Assertions.assertEquals( 10, last.header().prevIndex() );
+            Assertions.assertEquals( 12, last.header().prevTerm() );
         }
     }
 
     @Test
-    public void shouldDeleteOnPrune() throws Exception
+    void shouldDeleteOnPrune() throws Exception
     {
         verifyNoInteractions( fsa );
         // Given
@@ -107,7 +104,7 @@ public class SegmentsTest
     }
 
     @Test
-    public void shouldNeverDeleteOnTruncate() throws Exception
+    void shouldNeverDeleteOnTruncate() throws Exception
     {
         // Given
         try ( Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshals,
@@ -127,7 +124,7 @@ public class SegmentsTest
     }
 
     @Test
-    public void shouldDeleteTruncatedFilesOnPrune() throws Exception
+    void shouldDeleteTruncatedFilesOnPrune() throws Exception
     {
         // Given
         try ( Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshals,
@@ -153,7 +150,7 @@ public class SegmentsTest
     }
 
     @Test
-    public void shouldCloseTheSegments()
+    void shouldCloseTheSegments()
     {
         // Given
         Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshals, logProvider, -1 );
@@ -169,7 +166,7 @@ public class SegmentsTest
     }
 
     @Test
-    public void shouldNotSwallowExceptionOnClose()
+    void shouldNotSwallowExceptionOnClose()
     {
         // Given
         doThrow( new RuntimeException() ).when( fileA ).close();
@@ -181,19 +178,19 @@ public class SegmentsTest
         try
         {
             segments.close();
-            fail( "should have thrown" );
+            Assertions.fail( "should have thrown" );
         }
         catch ( RuntimeException ex )
         {
             // Then
             Throwable[] suppressed = ex.getSuppressed();
-            assertEquals( 1, suppressed.length );
-            assertTrue( suppressed[0] instanceof RuntimeException );
+            Assertions.assertEquals( 1, suppressed.length );
+            Assertions.assertTrue( suppressed[0] instanceof RuntimeException );
         }
     }
 
     @Test
-    public void shouldAllowOutOfBoundsPruneIndex() throws Exception
+    void shouldAllowOutOfBoundsPruneIndex() throws Exception
     {
         //Given a prune index of n, if the smallest value for a segment file is n+c, the pruning should not remove
         // any files and not result in a failure.
@@ -214,13 +211,13 @@ public class SegmentsTest
 
         //then
         SegmentHeader header = oldestNotDisposed.header();
-        assertEquals( 10, header.prevFileLastIndex() );
-        assertEquals( 10, header.prevIndex() );
-        assertEquals( 2, header.prevTerm() );
+        Assertions.assertEquals( 10, header.prevFileLastIndex() );
+        Assertions.assertEquals( 10, header.prevIndex() );
+        Assertions.assertEquals( 2, header.prevTerm() );
     }
 
     @Test
-    public void attemptsPruningUntilOpenFileIsFound() throws Exception
+    void attemptsPruningUntilOpenFileIsFound() throws Exception
     {
         /**
          * prune stops attempting to prune files after finding one that is open.
@@ -263,9 +260,9 @@ public class SegmentsTest
         OpenEndRangeMap.ValueRange<Long,SegmentFile> shouldAlsoNotBePruned = segments.getForIndex( 25 );
 
         //then
-        assertFalse( shouldBePruned.value().isPresent() );
-        assertTrue( shouldNotBePruned.value().isPresent() );
-        assertTrue( shouldAlsoNotBePruned.value().isPresent() );
+        Assertions.assertFalse( shouldBePruned.value().isPresent() );
+        Assertions.assertTrue( shouldNotBePruned.value().isPresent() );
+        Assertions.assertTrue( shouldAlsoNotBePruned.value().isPresent() );
 
         //when
         reader.close();
@@ -276,8 +273,8 @@ public class SegmentsTest
         shouldAlsoNotBePruned = segments.getForIndex( 25 );
 
         //then
-        assertFalse( shouldBePruned.value().isPresent() );
-        assertFalse( shouldNotBePruned.value().isPresent() );
-        assertFalse( shouldAlsoNotBePruned.value().isPresent() );
+        Assertions.assertFalse( shouldBePruned.value().isPresent() );
+        Assertions.assertFalse( shouldNotBePruned.value().isPresent() );
+        Assertions.assertFalse( shouldAlsoNotBePruned.value().isPresent() );
     }
 }

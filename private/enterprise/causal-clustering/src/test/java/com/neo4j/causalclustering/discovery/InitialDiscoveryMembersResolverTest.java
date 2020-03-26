@@ -5,10 +5,8 @@
  */
 package com.neo4j.causalclustering.discovery;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.List;
@@ -24,15 +22,13 @@ import static java.util.function.Function.identity;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
-import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@RunWith( MockitoJUnitRunner.class )
-public class InitialDiscoveryMembersResolverTest
+class InitialDiscoveryMembersResolverTest
 {
-    @Mock
-    private HostnameResolver hostnameResolver;
+    private HostnameResolver hostnameResolver = mock( HostnameResolver.class );
 
     private SocketAddress input1 = new SocketAddress( "foo.bar", 123 );
     private SocketAddress input2 = new SocketAddress( "baz.bar", 432 );
@@ -45,7 +41,7 @@ public class InitialDiscoveryMembersResolverTest
     private List<SocketAddress> inputAddresses = List.of( input1, input2, input3 );
 
     @Test
-    public void shouldReturnEmptyCollectionIfEmptyInitialMembers()
+    void shouldReturnEmptyCollectionIfEmptyInitialMembers()
     {
         // given
         Config config = Config.defaults( initial_discovery_members, List.of() );
@@ -57,11 +53,11 @@ public class InitialDiscoveryMembersResolverTest
         Collection<SocketAddress> result = hostnameResolvingInitialDiscoveryMembersResolver.resolve( identity() );
 
         // then
-        assertThat( result, empty() );
+        MatcherAssert.assertThat( result, empty() );
     }
 
     @Test
-    public void shouldResolveAndReturnAllConfiguredAddresses()
+    void shouldResolveAndReturnAllConfiguredAddresses()
     {
         // given
         Config config = Config.defaults( initial_discovery_members, inputAddresses );
@@ -77,11 +73,11 @@ public class InitialDiscoveryMembersResolverTest
         Collection<SocketAddress> result = hostnameResolvingInitialDiscoveryMembersResolver.resolve( identity() );
 
         // then
-        assertThat( result, containsInAnyOrder( output1, output2, output3 ) );
+        MatcherAssert.assertThat( result, containsInAnyOrder( output1, output2, output3 ) );
     }
 
     @Test
-    public void shouldDeDupeConfiguredAddresses()
+    void shouldDeDupeConfiguredAddresses()
     {
         // given
         Config config = Config.defaults( initial_discovery_members, inputAddresses );
@@ -95,15 +91,15 @@ public class InitialDiscoveryMembersResolverTest
         Collection<SocketAddress> result = hostnameResolvingInitialDiscoveryMembersResolver.resolve( identity() );
 
         // then
-        assertThat( result, contains( output1 ) );
+        MatcherAssert.assertThat( result, contains( output1 ) );
     }
 
     /**
-     * A consistent order of addresses appears to prevent some flakiness in integration tests. Presumably this would also prevent some flakiness in
-     * production deployments.
+     * A consistent order of addresses appears to prevent some flakiness in integration tests. Presumably this would also prevent some flakiness in production
+     * deployments.
      */
     @Test
-    public void shouldReturnConfiguredAddressesInOrder()
+    void shouldReturnConfiguredAddressesInOrder()
     {
         // given
         Config config = Config.defaults( initial_discovery_members, inputAddresses );
@@ -111,7 +107,7 @@ public class InitialDiscoveryMembersResolverTest
         when( hostnameResolver.resolve( any() ) )
                 .thenReturn( singletonList( output3 ) )
                 .thenReturn( singletonList( output1 ) )
-                .thenReturn( singletonList( output2  ));
+                .thenReturn( singletonList( output2 ) );
 
         InitialDiscoveryMembersResolver
                 hostnameResolvingInitialDiscoveryMembersResolver = new InitialDiscoveryMembersResolver( hostnameResolver, config );
@@ -120,11 +116,11 @@ public class InitialDiscoveryMembersResolverTest
         Collection<SocketAddress> result = hostnameResolvingInitialDiscoveryMembersResolver.resolve( identity() );
 
         // then
-        assertThat( result, contains( output1, output2, output3 ) );
+        MatcherAssert.assertThat( result, contains( output1, output2, output3 ) );
     }
 
     @Test
-    public void shouldApplyTransform()
+    void shouldApplyTransform()
     {
         // given
         SocketAddress input1 = new SocketAddress( "foo.bar", 123 );
@@ -142,6 +138,6 @@ public class InitialDiscoveryMembersResolverTest
         Collection<String> result = hostnameResolvingInitialDiscoveryMembersResolver.resolve( address -> address.toString().toUpperCase() );
 
         // then
-        assertThat( result, containsInAnyOrder( output1.toString().toUpperCase() ) );
+        MatcherAssert.assertThat( result, containsInAnyOrder( output1.toString().toUpperCase() ) );
     }
 }

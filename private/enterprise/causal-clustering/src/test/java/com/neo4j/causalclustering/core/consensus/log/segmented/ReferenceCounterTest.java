@@ -5,36 +5,32 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-public class ReferenceCounterTest
+class ReferenceCounterTest
 {
     private ReferenceCounter refCount = new ReferenceCounter();
 
     @Test
-    public void shouldHaveValidInitialBehaviour()
+    void shouldHaveValidInitialBehaviour()
     {
-        assertEquals( 0, refCount.get() );
-        assertTrue( refCount.tryDispose() );
+        Assertions.assertEquals( 0, refCount.get() );
+        Assertions.assertTrue( refCount.tryDispose() );
     }
 
     @Test
-    public void shouldNotBeAbleToDisposeWhenActive()
+    void shouldNotBeAbleToDisposeWhenActive()
     {
         // when
         refCount.increase();
 
         // then
-        assertFalse( refCount.tryDispose() );
+        Assertions.assertFalse( refCount.tryDispose() );
     }
 
     @Test
-    public void shouldBeAbleToDisposeInactive()
+    void shouldBeAbleToDisposeInactive()
     {
         // given
         refCount.increase();
@@ -42,45 +38,45 @@ public class ReferenceCounterTest
 
         // when / then
         refCount.decrease();
-        assertFalse( refCount.tryDispose() );
+        Assertions.assertFalse( refCount.tryDispose() );
 
         // when / then
         refCount.decrease();
-        assertTrue( refCount.tryDispose() );
+        Assertions.assertTrue( refCount.tryDispose() );
     }
 
     @Test
-    public void shouldNotGiveReferenceWhenDisposed()
+    void shouldNotGiveReferenceWhenDisposed()
     {
         // given
         refCount.tryDispose();
 
         // then
-        assertFalse( refCount.increase() );
+        Assertions.assertFalse( refCount.increase() );
     }
 
     @Test
-    public void shouldAdjustCounterWithReferences()
+    void shouldAdjustCounterWithReferences()
     {
         // when / then
         refCount.increase();
-        assertEquals( 1, refCount.get() );
+        Assertions.assertEquals( 1, refCount.get() );
 
         // when / then
         refCount.increase();
-        assertEquals( 2, refCount.get() );
+        Assertions.assertEquals( 2, refCount.get() );
 
         // when / then
         refCount.decrease();
-        assertEquals( 1, refCount.get() );
+        Assertions.assertEquals( 1, refCount.get() );
 
         // when / then
         refCount.decrease();
-        assertEquals( 0, refCount.get() );
+        Assertions.assertEquals( 0, refCount.get() );
     }
 
     @Test
-    public void shouldThrowIllegalStateExceptionWhenDecreasingPastZero()
+    void shouldThrowIllegalStateExceptionWhenDecreasingPastZero()
     {
         // given
         refCount.increase();
@@ -90,7 +86,7 @@ public class ReferenceCounterTest
         try
         {
             refCount.decrease();
-            fail();
+            Assertions.fail();
         }
         catch ( IllegalStateException e )
         {
@@ -99,7 +95,7 @@ public class ReferenceCounterTest
     }
 
     @Test
-    public void shouldThrowIllegalStateExceptionWhenDecreasingOnDisposed()
+    void shouldThrowIllegalStateExceptionWhenDecreasingOnDisposed()
     {
         // given
         refCount.tryDispose();
@@ -108,7 +104,7 @@ public class ReferenceCounterTest
         try
         {
             refCount.decrease();
-            fail();
+            Assertions.fail();
         }
         catch ( IllegalStateException e )
         {

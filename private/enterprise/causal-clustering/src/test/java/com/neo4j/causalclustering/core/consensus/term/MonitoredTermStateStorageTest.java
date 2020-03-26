@@ -7,16 +7,15 @@ package com.neo4j.causalclustering.core.consensus.term;
 
 import com.neo4j.causalclustering.core.consensus.log.monitoring.RaftTermMonitor;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.monitoring.Monitors;
 
-import static org.junit.Assert.assertEquals;
-
-public class MonitoredTermStateStorageTest
+class MonitoredTermStateStorageTest
 {
     @Test
-    public void shouldMonitorTerm() throws Exception
+    void shouldMonitorTerm() throws Exception
     {
         // given
         Monitors monitors = new Monitors();
@@ -31,7 +30,7 @@ public class MonitoredTermStateStorageTest
         monitoredTermStateStorage.writeState( state );
 
         // then
-        assertEquals( 7, raftTermMonitor.term() );
+        Assertions.assertEquals( 7, raftTermMonitor.term() );
     }
 
     private static class StubRaftTermMonitor implements RaftTermMonitor

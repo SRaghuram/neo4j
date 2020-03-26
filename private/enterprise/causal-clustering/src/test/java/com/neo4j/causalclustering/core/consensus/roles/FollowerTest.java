@@ -19,7 +19,8 @@ import com.neo4j.causalclustering.core.consensus.outcome.OutcomeBuilder;
 import com.neo4j.causalclustering.core.consensus.outcome.OutcomeTestBuilder;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -36,12 +37,9 @@ import static com.neo4j.causalclustering.core.consensus.roles.Role.FOLLOWER;
 import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.builder;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
-public class FollowerTest
+class FollowerTest
 {
     private MemberId myself = member( 0 );
 
@@ -52,7 +50,7 @@ public class FollowerTest
     private MemberId member4 = member( 4 );
 
     @Test
-    public void shouldInstigateAnElectionAfterTimeout() throws Exception
+    void shouldInstigateAnElectionAfterTimeout() throws Exception
     {
         // given
         RaftState state = builder()
@@ -64,12 +62,12 @@ public class FollowerTest
         Outcome outcome = new Follower().handle( new Election( myself ), state, log() );
 
         // then
-        assertEquals( RaftMessages.Type.VOTE_REQUEST, messageFor( outcome, member1 ).type() );
-        assertEquals( RaftMessages.Type.VOTE_REQUEST, messageFor( outcome, member2 ).type() );
+        Assertions.assertEquals( RaftMessages.Type.VOTE_REQUEST, messageFor( outcome, member1 ).type() );
+        Assertions.assertEquals( RaftMessages.Type.VOTE_REQUEST, messageFor( outcome, member2 ).type() );
     }
 
     @Test
-    public void shouldBecomeCandidateOnReceivingElectionTimeoutMessage() throws Exception
+    void shouldBecomeCandidateOnReceivingElectionTimeoutMessage() throws Exception
     {
         // given
         RaftState state = builder()
@@ -81,11 +79,11 @@ public class FollowerTest
         Outcome outcome = new Follower().handle( new Election( myself ), state, log() );
 
         // then
-        assertEquals( CANDIDATE, outcome.getRole() );
+        Assertions.assertEquals( CANDIDATE, outcome.getRole() );
     }
 
     @Test
-    public void shouldNotInstigateElectionOnElectionTimeoutIfRefusingToBeLeaderAndPreVoteNotSupported() throws Throwable
+    void shouldNotInstigateElectionOnElectionTimeoutIfRefusingToBeLeaderAndPreVoteNotSupported() throws Throwable
     {
         // given
         RaftState state = builder()
@@ -101,7 +99,7 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldIgnoreAnElectionTimeoutIfRefusingToBeLeaderAndPreVoteNotSupported() throws Throwable
+    void shouldIgnoreAnElectionTimeoutIfRefusingToBeLeaderAndPreVoteNotSupported() throws Throwable
     {
         // given
         RaftState state = builder()
@@ -113,11 +111,11 @@ public class FollowerTest
         Outcome outcome = new Follower().handle( new Election( myself ), state, log() );
 
         // then
-        assertEquals( OutcomeBuilder.builder( Role.FOLLOWER, state ).build(), outcome );
+        Assertions.assertEquals( OutcomeBuilder.builder( Role.FOLLOWER, state ).build(), outcome );
     }
 
     @Test
-    public void shouldSetPreElectionOnTimeoutIfSupportedAndIAmVoterAndIRefuseToLead() throws Throwable
+    void shouldSetPreElectionOnTimeoutIfSupportedAndIAmVoterAndIRefuseToLead() throws Throwable
     {
         // given
         RaftState state = builder()
@@ -131,11 +129,11 @@ public class FollowerTest
         Outcome outcome = new Follower().handle( new Election( myself ), state, log() );
 
         // then
-        assertTrue( outcome.isPreElection() );
+        Assertions.assertTrue( outcome.isPreElection() );
     }
 
     @Test
-    public void shouldNotSetPreElectionOnTimeoutIfSupportedAndIAmNotVoterAndIRefuseToLead() throws Throwable
+    void shouldNotSetPreElectionOnTimeoutIfSupportedAndIAmNotVoterAndIRefuseToLead() throws Throwable
     {
         // given
         RaftState state = builder()
@@ -149,11 +147,11 @@ public class FollowerTest
         Outcome outcome = new Follower().handle( new Election( myself ), state, log() );
 
         // then
-        assertFalse( outcome.isPreElection() );
+        Assertions.assertFalse( outcome.isPreElection() );
     }
 
     @Test
-    public void shouldNotSolicitPreVotesOnTimeoutEvenIfSupportedIfRefuseToLead() throws Throwable
+    void shouldNotSolicitPreVotesOnTimeoutEvenIfSupportedIfRefuseToLead() throws Throwable
     {
         // given
         RaftState state = builder()
@@ -169,7 +167,7 @@ public class FollowerTest
     }
 
     @Test
-    public void followerReceivingHeartbeatIndicatingClusterIsAheadShouldElicitAppendResponse() throws Exception
+    void followerReceivingHeartbeatIndicatingClusterIsAheadShouldElicitAppendResponse() throws Exception
     {
         // given
         int term = 1;
@@ -192,15 +190,15 @@ public class FollowerTest
 
         Outcome outcome = follower.handle( heartbeat, state, log() );
 
-        assertEquals( 1, outcome.getOutgoingMessages().size() );
+        Assertions.assertEquals( 1, outcome.getOutgoingMessages().size() );
         RaftMessage outgoing = outcome.getOutgoingMessages().iterator().next().message();
-        assertEquals( RaftMessages.Type.APPEND_ENTRIES_RESPONSE, outgoing.type() );
+        Assertions.assertEquals( RaftMessages.Type.APPEND_ENTRIES_RESPONSE, outgoing.type() );
         RaftMessages.AppendEntries.Response response = (AppendEntries.Response) outgoing;
-        assertFalse( response.success() );
+        Assertions.assertFalse( response.success() );
     }
 
     @Test
-    public void shouldTruncateIfTermDoesNotMatch() throws Exception
+    void shouldTruncateIfTermDoesNotMatch() throws Exception
     {
         // given
         RaftLog entryLog = new InMemoryRaftLog();
@@ -229,13 +227,13 @@ public class FollowerTest
         state.update( outcome );
 
         // then
-        assertEquals( 1, state.entryLog().appendIndex() );
-        assertEquals( 1, state.entryLog().readEntryTerm( 1 ) );
+        Assertions.assertEquals( 1, state.entryLog().appendIndex() );
+        Assertions.assertEquals( 1, state.entryLog().readEntryTerm( 1 ) );
     }
 
     // TODO move this to outcome tests
     @Test
-    public void followerLearningAboutHigherCommitCausesValuesTobeAppliedToItsLog() throws Exception
+    void followerLearningAboutHigherCommitCausesValuesTobeAppliedToItsLog() throws Exception
     {
         // given
         RaftLog entryLog = new InMemoryRaftLog();
@@ -256,11 +254,11 @@ public class FollowerTest
         state.update( outcome );
 
         // then
-        assertEquals( 4, state.commitIndex() );
+        Assertions.assertEquals( 4, state.commitIndex() );
     }
 
     @Test
-    public void shouldUpdateCommitIndexIfNecessary() throws Exception
+    void shouldUpdateCommitIndexIfNecessary() throws Exception
     {
         //  If leaderCommit > commitIndex, set commitIndex = min( leaderCommit, index of last new entry )
 
@@ -286,8 +284,8 @@ public class FollowerTest
         state.update( raftTestMemberOutcome.build() );
 
         // then
-        assertEquals( localAppendIndex, state.entryLog().appendIndex() );
-        assertEquals( localCommitIndex, state.commitIndex() );
+        Assertions.assertEquals( localAppendIndex, state.entryLog().appendIndex() );
+        Assertions.assertEquals( localCommitIndex, state.commitIndex() );
 
         // when
         // an append req comes in with leader commit index > localAppendIndex but localCommitIndex < localAppendIndex
@@ -300,11 +298,11 @@ public class FollowerTest
 
         // then
         // The local commit index must be brought as far along as possible
-        assertEquals( 3, state.commitIndex() );
+        Assertions.assertEquals( 3, state.commitIndex() );
     }
 
     @Test
-    public void shouldNotRenewElectionTimeoutOnReceiptOfHeartbeatInLowerTerm() throws Exception
+    void shouldNotRenewElectionTimeoutOnReceiptOfHeartbeatInLowerTerm() throws Exception
     {
         // given
         RaftState state = builder()
@@ -318,11 +316,11 @@ public class FollowerTest
                 state, log() );
 
         // then
-        assertEquals( outcome.electionTimerChanged(), Optional.empty() );
+        assertThat( outcome.electionTimerChanged() ).isEmpty();
     }
 
     @Test
-    public void shouldAcknowledgeHeartbeats() throws Exception
+    void shouldAcknowledgeHeartbeats() throws Exception
     {
         // given
         RaftState state = builder()
@@ -337,12 +335,12 @@ public class FollowerTest
 
         // then
         Collection<RaftMessages.Directed> outgoingMessages = outcome.getOutgoingMessages();
-        assertTrue( outgoingMessages.contains( new RaftMessages.Directed( state.leader(),
+        Assertions.assertTrue( outgoingMessages.contains( new RaftMessages.Directed( state.leader(),
                 new RaftMessages.HeartbeatResponse( myself ) ) ) );
     }
 
     @Test
-    public void shouldRespondPositivelyToPreVoteRequestsIfWouldVoteForCandidate() throws Exception
+    void shouldRespondPositivelyToPreVoteRequestsIfWouldVoteForCandidate() throws Exception
     {
         // given
         RaftState raftState = preElectionActive();
@@ -357,7 +355,7 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldRespondPositivelyToPreVoteRequestsEvenIfAlreadyVotedInRealElection() throws Exception
+    void shouldRespondPositivelyToPreVoteRequestsEvenIfAlreadyVotedInRealElection() throws Exception
     {
         // given
         RaftState raftState = preElectionActive();
@@ -373,7 +371,7 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldRespondNegativelyToPreVoteRequestsIfNotInPreVoteMyself() throws Exception
+    void shouldRespondNegativelyToPreVoteRequestsIfNotInPreVoteMyself() throws Exception
     {
         // given
         RaftState raftState = builder()
@@ -392,7 +390,7 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldRespondNegativelyToPreVoteRequestsIfWouldNotVoteForCandidate() throws Exception
+    void shouldRespondNegativelyToPreVoteRequestsIfWouldNotVoteForCandidate() throws Exception
     {
         // given
         RaftState raftState = builder()
@@ -412,7 +410,7 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldRespondPositivelyToPreVoteRequestsToMultipleMembersIfWouldVoteForAny() throws Exception
+    void shouldRespondPositivelyToPreVoteRequestsToMultipleMembersIfWouldVoteForAny() throws Exception
     {
         // given
         RaftState raftState = preElectionActive();
@@ -431,7 +429,7 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldUseTermFromPreVoteRequestIfHigherThanOwn() throws Exception
+    void shouldUseTermFromPreVoteRequestIfHigherThanOwn() throws Exception
     {
         // given
         RaftState raftState = preElectionActive();
@@ -448,7 +446,7 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldUpdateOutcomeWithTermFromPreVoteRequestOfLaterTermIfInPreVoteState() throws Throwable
+    void shouldUpdateOutcomeWithTermFromPreVoteRequestOfLaterTermIfInPreVoteState() throws Throwable
     {
         // given
         RaftState raftState = preElectionActive();
@@ -458,11 +456,11 @@ public class FollowerTest
         Outcome outcome = new Follower().handle( new RaftMessages.PreVote.Request( member1, newTerm, member1, 0, 0 ), raftState, log() );
 
         // then
-        assertEquals( newTerm, outcome.getTerm() );
+        Assertions.assertEquals( newTerm, outcome.getTerm() );
     }
 
     @Test
-    public void shouldUpdateOutcomeWithTermFromPreVoteRequestOfLaterTermIfNotInPreVoteState() throws Throwable
+    void shouldUpdateOutcomeWithTermFromPreVoteRequestOfLaterTermIfNotInPreVoteState() throws Throwable
     {
         // given
         RaftState raftState = builder()
@@ -477,11 +475,11 @@ public class FollowerTest
 
         // then
 
-        assertEquals( newTerm, outcome.getTerm() );
+        Assertions.assertEquals( newTerm, outcome.getTerm() );
     }
 
     @Test
-    public void shouldInstigatePreElectionIfSupportedAndNotActiveAndReceiveTimeout() throws Throwable
+    void shouldInstigatePreElectionIfSupportedAndNotActiveAndReceiveTimeout() throws Throwable
     {
         // given
         RaftState raftState = builder()
@@ -495,12 +493,12 @@ public class FollowerTest
         Outcome outcome = new Follower().handle( new Election( myself ), raftState, log() );
 
         // then
-        assertEquals( RaftMessages.Type.PRE_VOTE_REQUEST, messageFor( outcome, member1 ).type() );
-        assertEquals( RaftMessages.Type.PRE_VOTE_REQUEST, messageFor( outcome, member2 ).type() );
+        Assertions.assertEquals( RaftMessages.Type.PRE_VOTE_REQUEST, messageFor( outcome, member1 ).type() );
+        Assertions.assertEquals( RaftMessages.Type.PRE_VOTE_REQUEST, messageFor( outcome, member2 ).type() );
     }
 
     @Test
-    public void shouldSetPreElectionActiveWhenReceiveTimeout() throws Throwable
+    void shouldSetPreElectionActiveWhenReceiveTimeout() throws Throwable
     {
         // given
         RaftState raftState = builder()
@@ -514,11 +512,11 @@ public class FollowerTest
         Outcome outcome = new Follower().handle( new Election( myself ), raftState, log() );
 
         // then
-        assertTrue( outcome.isPreElection() );
+        Assertions.assertTrue( outcome.isPreElection() );
     }
 
     @Test
-    public void shouldInstigatePreElectionIfSupportedAndActiveAndReceiveTimeout() throws Throwable
+    void shouldInstigatePreElectionIfSupportedAndActiveAndReceiveTimeout() throws Throwable
     {
         // given
         RaftState raftState = preElectionActive();
@@ -527,13 +525,13 @@ public class FollowerTest
         Outcome outcome = new Follower().handle( new Election( myself ), raftState, log() );
 
         // then
-        assertEquals( RaftMessages.Type.PRE_VOTE_REQUEST, messageFor( outcome, member1 ).type() );
-        assertEquals( RaftMessages.Type.PRE_VOTE_REQUEST, messageFor( outcome, member2 ).type() );
-        assertEquals( RaftMessages.Type.PRE_VOTE_REQUEST, messageFor( outcome, member3 ).type() );
+        Assertions.assertEquals( RaftMessages.Type.PRE_VOTE_REQUEST, messageFor( outcome, member1 ).type() );
+        Assertions.assertEquals( RaftMessages.Type.PRE_VOTE_REQUEST, messageFor( outcome, member2 ).type() );
+        Assertions.assertEquals( RaftMessages.Type.PRE_VOTE_REQUEST, messageFor( outcome, member3 ).type() );
     }
 
     @Test
-    public void shouldKeepPreElectionActiveWhenReceiveTimeout() throws Throwable
+    void shouldKeepPreElectionActiveWhenReceiveTimeout() throws Throwable
     {
         // given
         RaftState raftState = preElectionActive();
@@ -542,11 +540,11 @@ public class FollowerTest
         Outcome outcome = new Follower().handle( new Election( myself ), raftState, log() );
 
         // then
-        assertTrue( outcome.isPreElection() );
+        Assertions.assertTrue( outcome.isPreElection() );
     }
 
     @Test
-    public void shouldAbortPreElectionIfReceivePreVoteResponseFromNewerTerm() throws Throwable
+    void shouldAbortPreElectionIfReceivePreVoteResponseFromNewerTerm() throws Throwable
     {
         // given
         RaftState raftState = preElectionActive();
@@ -556,12 +554,12 @@ public class FollowerTest
         Outcome outcome = new Follower().handle( new RaftMessages.PreVote.Response( member1, newTerm, false ), raftState, log() );
 
         // then
-        assertEquals( newTerm, outcome.getTerm() );
-        assertFalse( outcome.isPreElection() );
+        Assertions.assertEquals( newTerm, outcome.getTerm() );
+        Assertions.assertFalse( outcome.isPreElection() );
     }
 
     @Test
-    public void shouldIgnoreVotesFromEarlierTerms() throws Throwable
+    void shouldIgnoreVotesFromEarlierTerms() throws Throwable
     {
         // given
         RaftState raftState = preElectionActive();
@@ -571,11 +569,11 @@ public class FollowerTest
         Outcome outcome = new Follower().handle( new RaftMessages.PreVote.Response( member1, oldTerm, true ), raftState, log() );
 
         // then
-        assertEquals( OutcomeBuilder.builder( Role.FOLLOWER, raftState ).build(), outcome );
+        Assertions.assertEquals( OutcomeBuilder.builder( Role.FOLLOWER, raftState ).build(), outcome );
     }
 
     @Test
-    public void shouldIgnoreVotesDeclining() throws Throwable
+    void shouldIgnoreVotesDeclining() throws Throwable
     {
         // given
         RaftState raftState = preElectionActive();
@@ -584,11 +582,11 @@ public class FollowerTest
         Outcome outcome = new Follower().handle( new RaftMessages.PreVote.Response( member1, raftState.term(), false ), raftState, log() );
 
         // then
-        assertEquals( OutcomeBuilder.builder( Role.FOLLOWER, raftState ).build(), outcome );
+        Assertions.assertEquals( OutcomeBuilder.builder( Role.FOLLOWER, raftState ).build(), outcome );
     }
 
     @Test
-    public void shouldAddVoteFromADifferentMember() throws Throwable
+    void shouldAddVoteFromADifferentMember() throws Throwable
     {
         // given
         RaftState raftState = preElectionActive();
@@ -601,7 +599,7 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldNotAddVoteFromMyself() throws Throwable
+    void shouldNotAddVoteFromMyself() throws Throwable
     {
         // given
         RaftState raftState = preElectionActive();
@@ -614,7 +612,7 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldNotStartElectionIfHaveNotReachedQuorum() throws Throwable
+    void shouldNotStartElectionIfHaveNotReachedQuorum() throws Throwable
     {
         // given
         RaftState raftState = preElectionActive();
@@ -623,11 +621,11 @@ public class FollowerTest
         Outcome outcome = new Follower().handle( new RaftMessages.PreVote.Response( member1, raftState.term(), true ), raftState, log() );
 
         // then
-        assertEquals( Role.FOLLOWER, outcome.getRole() );
+        Assertions.assertEquals( Role.FOLLOWER, outcome.getRole() );
     }
 
     @Test
-    public void shouldTransitionToCandidateIfHaveReachedQuorum() throws Throwable
+    void shouldTransitionToCandidateIfHaveReachedQuorum() throws Throwable
     {
         // given
         RaftState raftState = preElectionActive();
@@ -638,11 +636,11 @@ public class FollowerTest
         Outcome outcome2 = new Follower().handle( new RaftMessages.PreVote.Response( member2, raftState.term(), true ), raftState, log() );
 
         // then
-        assertEquals( Role.CANDIDATE, outcome2.getRole() );
+        Assertions.assertEquals( Role.CANDIDATE, outcome2.getRole() );
     }
 
     @Test
-    public void shouldInstigateElectionIfHaveReachedQuorum() throws Throwable
+    void shouldInstigateElectionIfHaveReachedQuorum() throws Throwable
     {
         // given
         RaftState raftState = preElectionActive();
@@ -653,13 +651,13 @@ public class FollowerTest
         Outcome outcome2 = new Follower().handle( new RaftMessages.PreVote.Response( member2, raftState.term(), true ), raftState, log() );
 
         // then
-        assertEquals( RaftMessages.Type.VOTE_REQUEST, messageFor( outcome2, member1 ).type() );
-        assertEquals( RaftMessages.Type.VOTE_REQUEST, messageFor( outcome2, member2 ).type() );
-        assertEquals( RaftMessages.Type.VOTE_REQUEST, messageFor( outcome2, member3 ).type() );
+        Assertions.assertEquals( RaftMessages.Type.VOTE_REQUEST, messageFor( outcome2, member1 ).type() );
+        Assertions.assertEquals( RaftMessages.Type.VOTE_REQUEST, messageFor( outcome2, member2 ).type() );
+        Assertions.assertEquals( RaftMessages.Type.VOTE_REQUEST, messageFor( outcome2, member3 ).type() );
     }
 
     @Test
-    public void shouldIgnorePreVoteResponsesIfPreVoteInactive() throws Throwable
+    void shouldIgnorePreVoteResponsesIfPreVoteInactive() throws Throwable
     {
         // given
         RaftState raftState = builder()
@@ -671,11 +669,11 @@ public class FollowerTest
         // when
         Outcome outcome = new Follower().handle( new RaftMessages.PreVote.Response( member1, raftState.term(), true ), raftState, log() );
 
-        assertEquals( OutcomeBuilder.builder( Role.FOLLOWER, raftState ).build(), outcome );
+        Assertions.assertEquals( OutcomeBuilder.builder( Role.FOLLOWER, raftState ).build(), outcome );
     }
 
     @Test
-    public void shouldIgnorePreVoteRequestsIfPreVoteUnsupported() throws Throwable
+    void shouldIgnorePreVoteRequestsIfPreVoteUnsupported() throws Throwable
     {
         // given
         RaftState raftState = builder()
@@ -687,11 +685,11 @@ public class FollowerTest
         // when
         Outcome outcome = new Follower().handle( new RaftMessages.PreVote.Request( member1, raftState.term(), member1, 0, 0 ), raftState, log() );
 
-        assertEquals( OutcomeBuilder.builder( Role.FOLLOWER, raftState ).build(), outcome );
+        Assertions.assertEquals( OutcomeBuilder.builder( Role.FOLLOWER, raftState ).build(), outcome );
     }
 
     @Test
-    public void shouldIgnorePreVoteResponsesIfPreVoteUnsupported() throws Throwable
+    void shouldIgnorePreVoteResponsesIfPreVoteUnsupported() throws Throwable
     {
         // given
         RaftState raftState = builder()
@@ -703,11 +701,11 @@ public class FollowerTest
         // when
         Outcome outcome = new Follower().handle( new RaftMessages.PreVote.Response( member1, raftState.term(), true ), raftState, log() );
 
-        assertEquals( OutcomeBuilder.builder( Role.FOLLOWER, raftState ).build(), outcome );
+        Assertions.assertEquals( OutcomeBuilder.builder( Role.FOLLOWER, raftState ).build(), outcome );
     }
 
     @Test
-    public void shouldIgnorePreVoteResponseWhenPreElectionFalseRefuseToBeLeader() throws Throwable
+    void shouldIgnorePreVoteResponseWhenPreElectionFalseRefuseToBeLeader() throws Throwable
     {
         // given
         RaftState raftState = builder()
@@ -721,11 +719,11 @@ public class FollowerTest
         Outcome outcome = new Follower().handle( new RaftMessages.PreVote.Response( member1, raftState.term(), true ), raftState, log() );
 
         // then
-        assertEquals( OutcomeBuilder.builder( Role.FOLLOWER, raftState ).build(), outcome );
+        Assertions.assertEquals( OutcomeBuilder.builder( Role.FOLLOWER, raftState ).build(), outcome );
     }
 
     @Test
-    public void shouldIgnorePreVoteResponseWhenPreElectionTrueAndRefuseLeader() throws Throwable
+    void shouldIgnorePreVoteResponseWhenPreElectionTrueAndRefuseLeader() throws Throwable
     {
         // given
         RaftState raftState = builder()
@@ -740,11 +738,11 @@ public class FollowerTest
         Outcome outcome = new Follower().handle( new RaftMessages.PreVote.Response( member1, raftState.term(), true ), raftState, log() );
 
         // then
-        assertEquals( OutcomeBuilder.builder( Role.FOLLOWER, raftState ).build(), outcome );
+        Assertions.assertEquals( OutcomeBuilder.builder( Role.FOLLOWER, raftState ).build(), outcome );
     }
 
     @Test
-    public void shouldNotInstigateElectionOnPreVoteResponseWhenPreElectionTrueAndRefuseLeader() throws Throwable
+    void shouldNotInstigateElectionOnPreVoteResponseWhenPreElectionTrueAndRefuseLeader() throws Throwable
     {
         // given
         RaftState raftState = builder()
@@ -763,7 +761,7 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldDeclinePreVoteRequestsIfPreElectionNotActiveAndRefusesToLead() throws Throwable
+    void shouldDeclinePreVoteRequestsIfPreElectionNotActiveAndRefusesToLead() throws Throwable
     {
         // given
         RaftState raftState = builder()
@@ -777,11 +775,11 @@ public class FollowerTest
         Outcome outcome = new Follower().handle( new RaftMessages.PreVote.Request( member1, raftState.term(), member1, 0, 0 ), raftState, log() );
 
         // then
-        assertFalse( ((RaftMessages.PreVote.Response) messageFor( outcome, member1 )).voteGranted() );
+        Assertions.assertFalse( ((RaftMessages.PreVote.Response) messageFor( outcome, member1 )).voteGranted() );
     }
 
     @Test
-    public void shouldApprovePreVoteRequestIfPreElectionActiveAndRefusesToLead() throws Throwable
+    void shouldApprovePreVoteRequestIfPreElectionActiveAndRefusesToLead() throws Throwable
     {
         // given
         RaftState raftState = builder()
@@ -796,11 +794,11 @@ public class FollowerTest
         Outcome outcome = new Follower().handle( new RaftMessages.PreVote.Request( member1, raftState.term(), member1, 0, 0 ), raftState, log() );
 
         // then
-        assertTrue( ((RaftMessages.PreVote.Response) messageFor( outcome, member1 )).voteGranted() );
+        Assertions.assertTrue( ((RaftMessages.PreVote.Response) messageFor( outcome, member1 )).voteGranted() );
     }
 
     @Test
-    public void shouldSetPreElectionOnElectionTimeout() throws Exception
+    void shouldSetPreElectionOnElectionTimeout() throws Exception
     {
         // given
         RaftState state = preElectionSupported();
@@ -815,7 +813,7 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldSendPreVoteRequestsOnElectionTimeout() throws Exception
+    void shouldSendPreVoteRequestsOnElectionTimeout() throws Exception
     {
         // given
         RaftState state = preElectionSupported();
@@ -830,7 +828,7 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldProceedToRealElectionIfReceiveQuorumOfPositivePreVoteResponses() throws Exception
+    void shouldProceedToRealElectionIfReceiveQuorumOfPositivePreVoteResponses() throws Exception
     {
         // given
         RaftState state = preElectionSupported();
@@ -850,7 +848,7 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldIgnorePreVotePositiveResponsesFromOlderTerm() throws Exception
+    void shouldIgnorePreVotePositiveResponsesFromOlderTerm() throws Exception
     {
         // given
         RaftState state = builder()
@@ -875,7 +873,7 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldIgnorePositivePreVoteResponsesIfNotInPreVotingStage() throws Exception
+    void shouldIgnorePositivePreVoteResponsesIfNotInPreVotingStage() throws Exception
     {
         // given
         RaftState state = preElectionSupported();
@@ -892,7 +890,7 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldNotMoveToRealElectionWithoutPreVoteQuorum() throws Exception
+    void shouldNotMoveToRealElectionWithoutPreVoteQuorum() throws Exception
     {
         // given
         RaftState state = builder()
@@ -915,7 +913,7 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldMoveToRealElectionWithPreVoteQuorumOf5() throws Exception
+    void shouldMoveToRealElectionWithPreVoteQuorumOf5() throws Exception
     {
         // given
         RaftState state = builder()
@@ -939,7 +937,7 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldNotCountPreVotesVotesFromSameMemberTwice() throws Exception
+    void shouldNotCountPreVotesVotesFromSameMemberTwice() throws Exception
     {
         // given
         RaftState state = builder()
@@ -963,7 +961,7 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldResetPreVotesWhenMovingBackToFollower() throws Exception
+    void shouldResetPreVotesWhenMovingBackToFollower() throws Exception
     {
         // given
         RaftState state = preElectionSupported();
@@ -982,7 +980,7 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldSendRealVoteRequestsIfReceivePositivePreVoteResponses() throws Exception
+    void shouldSendRealVoteRequestsIfReceivePositivePreVoteResponses() throws Exception
     {
         // given
         RaftState state = preElectionSupported();
@@ -1001,7 +999,7 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldNotProceedToRealElectionIfReceiveNegativePreVoteResponses() throws Exception
+    void shouldNotProceedToRealElectionIfReceiveNegativePreVoteResponses() throws Exception
     {
         // given
         RaftState state = preElectionSupported();
@@ -1023,7 +1021,7 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldNotSendRealVoteRequestsIfReceiveNegativePreVoteResponses() throws Exception
+    void shouldNotSendRealVoteRequestsIfReceiveNegativePreVoteResponses() throws Exception
     {
         // given
         RaftState state = preElectionSupported();
@@ -1044,7 +1042,7 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldResetPreVoteIfReceiveHeartbeatFromLeader() throws Exception
+    void shouldResetPreVoteIfReceiveHeartbeatFromLeader() throws Exception
     {
         // given
         RaftState state = preElectionSupported();
@@ -1064,7 +1062,7 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldResetPreVoteIfReceiveAppendEntriesRequestFromLeader() throws Exception
+    void shouldResetPreVoteIfReceiveAppendEntriesRequestFromLeader() throws Exception
     {
         // given
         RaftState state = preElectionSupported();

@@ -5,7 +5,9 @@
  */
 package com.neo4j.causalclustering.core.consensus;
 
-import org.junit.Test;
+import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
@@ -18,17 +20,15 @@ import org.neo4j.scheduler.JobScheduler;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.Matchers.lessThan;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 
-public class ContinuousJobTest
+class ContinuousJobTest
 {
     private static final long DEFAULT_TIMEOUT_MS = 15_000;
     private final JobScheduler scheduler = createInitialisedScheduler();
 
     @Test
-    public void shouldRunJobContinuously() throws Throwable
+    void shouldRunJobContinuously() throws Throwable
     {
         // given
         CountDownLatch latch = new CountDownLatch( 10 );
@@ -41,12 +41,12 @@ public class ContinuousJobTest
         try ( Lifespan ignored = new Lifespan( scheduler, continuousJob ) )
         {
             //then
-            assertTrue( latch.await( DEFAULT_TIMEOUT_MS, MILLISECONDS ) );
+            Assertions.assertTrue( latch.await( DEFAULT_TIMEOUT_MS, MILLISECONDS ) );
         }
     }
 
     @Test
-    public void shouldTerminateOnStop() throws Exception
+    void shouldTerminateOnStop() throws Exception
     {
         // given: this task is gonna take >20 ms total
         Semaphore semaphore = new Semaphore( -20 );
@@ -69,7 +69,7 @@ public class ContinuousJobTest
         long runningTime = System.currentTimeMillis() - startTime;
 
         // then
-        assertThat( runningTime, lessThan( DEFAULT_TIMEOUT_MS ) );
+        MatcherAssert.assertThat( runningTime, lessThan( DEFAULT_TIMEOUT_MS ) );
 
         //noinspection StatementWithEmptyBody
         while ( semaphore.tryAcquire() )

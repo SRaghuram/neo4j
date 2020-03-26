@@ -11,10 +11,11 @@ import akka.cluster.MemberStatus;
 import akka.cluster.UniqueAddress;
 import co.unruly.matchers.OptionalMatchers;
 import co.unruly.matchers.StreamMatchers;
+import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import scala.collection.immutable.HashSet;
 
 import java.util.Arrays;
@@ -27,18 +28,17 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.hamcrest.Matchers.empty;
-import static org.junit.Assert.assertThat;
 
 public class ClusterViewMessageTest
 {
-    @BeforeClass
-    public static void setUp() throws NoSuchMethodException
+    @BeforeAll
+    static void setUp() throws NoSuchMethodException
     {
         setMemberConstructor( true );
     }
 
-    @AfterClass
-    public static void tearDown() throws NoSuchMethodException
+    @AfterAll
+    static void tearDown() throws NoSuchMethodException
     {
         setMemberConstructor( false );
     }
@@ -62,39 +62,39 @@ public class ClusterViewMessageTest
     }
 
     @Test
-    public void shouldHaveEmptyAvailableMembersIfNoMembers()
+    void shouldHaveEmptyAvailableMembersIfNoMembers()
     {
         // given
         ClusterViewMessage clusterView = ClusterViewMessage.EMPTY;
 
         // then
-        assertThat( clusterView.availableMembers(), StreamMatchers.empty() );
+        MatcherAssert.assertThat( clusterView.availableMembers(), StreamMatchers.empty() );
     }
 
     @Test
-    public void shouldIncludeAllMembersInAvailableIfAllReachableAndUp()
+    void shouldIncludeAllMembersInAvailableIfAllReachableAndUp()
     {
         // given
         ClusterViewMessage clusterView = createClusterViewWithMembers( MemberStatus.up() );
         UniqueAddress[] members = clusterView.members().stream().map( Member::uniqueAddress ).toArray( UniqueAddress[]::new );
 
         // then
-        assertThat( clusterView.availableMembers(), StreamMatchers.contains( members ) );
+        MatcherAssert.assertThat( clusterView.availableMembers(), StreamMatchers.contains( members ) );
     }
 
     @Test
-    public void shouldIncludeAllMembersInAvailableIfAllReachableAndWeaklyUp()
+    void shouldIncludeAllMembersInAvailableIfAllReachableAndWeaklyUp()
     {
         // given
         ClusterViewMessage clusterView = createClusterViewWithMembers( MemberStatus.weaklyUp() );
         UniqueAddress[] members = clusterView.members().stream().map( Member::uniqueAddress ).toArray( UniqueAddress[]::new );
 
         // then
-        assertThat( clusterView.availableMembers(), StreamMatchers.contains( members ) );
+        MatcherAssert.assertThat( clusterView.availableMembers(), StreamMatchers.contains( members ) );
     }
 
     @Test
-    public void shouldExcludeFromAvailableUnreachableMembers()
+    void shouldExcludeFromAvailableUnreachableMembers()
     {
         // given
         ClusterViewMessage clusterView = createClusterViewWithMembers( MemberStatus.up() );
@@ -114,12 +114,12 @@ public class ClusterViewMessageTest
                 .toArray( UniqueAddress[]::new );
 
         // then
-        assertThat( clusterView.availableMembers().count(), Matchers.equalTo( (long) reachableMembers.length ) );
-        assertThat( clusterView.availableMembers(), StreamMatchers.contains( reachableMembers ) );
+        MatcherAssert.assertThat( clusterView.availableMembers().count(), Matchers.equalTo( (long) reachableMembers.length ) );
+        MatcherAssert.assertThat( clusterView.availableMembers(), StreamMatchers.contains( reachableMembers ) );
     }
 
     @Test
-    public void shouldNotIncludeNonUpMembersWhenConstructing()
+    void shouldNotIncludeNonUpMembersWhenConstructing()
     {
         // given
         TreeSet<Member> members = new TreeSet<>( Member.ordering() );
@@ -129,12 +129,12 @@ public class ClusterViewMessageTest
         ClusterViewMessage clusterView = new ClusterViewMessage( false, members, Collections.emptySet() );
 
         // then
-        assertThat( clusterView.members(), Matchers.hasSize( 2 ) );
-        assertThat( clusterView.members(), Matchers.containsInAnyOrder( memberup, memberweaklyUp ) );
+        MatcherAssert.assertThat( clusterView.members(), Matchers.hasSize( 2 ) );
+        MatcherAssert.assertThat( clusterView.members(), Matchers.containsInAnyOrder( memberup, memberweaklyUp ) );
     }
 
     @Test
-    public void shouldNotIncludeNonUpMembersWhenAdding()
+    void shouldNotIncludeNonUpMembersWhenAdding()
     {
         // given
         ClusterViewMessage clusterView = ClusterViewMessage.EMPTY;
@@ -146,12 +146,12 @@ public class ClusterViewMessageTest
         }
 
         // then
-        assertThat( clusterView.members(), Matchers.hasSize( 2 ) );
-        assertThat( clusterView.members(), Matchers.containsInAnyOrder( memberup, memberweaklyUp ) );
+        MatcherAssert.assertThat( clusterView.members(), Matchers.hasSize( 2 ) );
+        MatcherAssert.assertThat( clusterView.members(), Matchers.containsInAnyOrder( memberup, memberweaklyUp ) );
     }
 
     @Test
-    public void shouldBeAbleToAddAnUpMemberThatWasJoiningAtConstruction()
+    void shouldBeAbleToAddAnUpMemberThatWasJoiningAtConstruction()
     {
         // given
         Member member = createMember( 1, MemberStatus.joining() );
@@ -164,11 +164,11 @@ public class ClusterViewMessageTest
         ClusterViewMessage modifiedClusterView = clusterView.withMember( memberUp );
 
         // then
-        assertThat( modifiedClusterView.members(), Matchers.contains( memberUp ) );
+        MatcherAssert.assertThat( modifiedClusterView.members(), Matchers.contains( memberUp ) );
     }
 
     @Test
-    public void shouldBeAbleToUpdateAMemberFromWeaklyUpToUp()
+    void shouldBeAbleToUpdateAMemberFromWeaklyUpToUp()
     {
         // given
         ClusterViewMessage clusterView = ClusterViewMessage.EMPTY.withMember( memberweaklyUp );
@@ -179,13 +179,13 @@ public class ClusterViewMessageTest
         ClusterViewMessage result = clusterView.withMember( memberUp );
 
         // then
-        assertThat( result.members(), Matchers.contains( memberUp ) );
+        MatcherAssert.assertThat( result.members(), Matchers.contains( memberUp ) );
         Optional<Member> returnedMember = result.members().stream().filter( m -> m.equals( memberUp ) ).findFirst();
-        assertThat( returnedMember.map( Member::status ), OptionalMatchers.contains( Matchers.equalTo( MemberStatus.up() ) ) );
+        MatcherAssert.assertThat( returnedMember.map( Member::status ), OptionalMatchers.contains( Matchers.equalTo( MemberStatus.up() ) ) );
     }
 
     @Test
-    public void shouldNotIncludeInUnreachableWhenUpdatingFromWeaklyUpToUp()
+    void shouldNotIncludeInUnreachableWhenUpdatingFromWeaklyUpToUp()
     {
         // given
         ClusterViewMessage clusterView = ClusterViewMessage.EMPTY.withMember( memberweaklyUp );
@@ -196,11 +196,11 @@ public class ClusterViewMessageTest
         ClusterViewMessage result = clusterView.withMember( memberUp );
 
         // then
-        assertThat( result.unreachable(), empty() );
+        MatcherAssert.assertThat( result.unreachable(), empty() );
     }
 
     @Test
-    public void shouldBeAbleToUpdateUnreachableMemberFromWeaklyUpToUp()
+    void shouldBeAbleToUpdateUnreachableMemberFromWeaklyUpToUp()
     {
         // given
         ClusterViewMessage initial = ClusterViewMessage.EMPTY
@@ -213,13 +213,13 @@ public class ClusterViewMessageTest
         ClusterViewMessage result = initial.withMember( memberUp );
 
         // then
-        assertThat( result.unreachable(), Matchers.contains( memberUp ) );
+        MatcherAssert.assertThat( result.unreachable(), Matchers.contains( memberUp ) );
         Optional<Member> returnedMember = result.unreachable().stream().filter( m -> m.equals( memberUp ) ).findFirst();
-        assertThat( returnedMember.map( Member::status ), OptionalMatchers.contains( Matchers.equalTo( MemberStatus.up() ) ) );
+        MatcherAssert.assertThat( returnedMember.map( Member::status ), OptionalMatchers.contains( Matchers.equalTo( MemberStatus.up() ) ) );
     }
 
     @Test
-    public void shouldRemoveFromUnreachableWhenRemovingFromView()
+    void shouldRemoveFromUnreachableWhenRemovingFromView()
     {
         // given
         ClusterViewMessage initial = ClusterViewMessage.EMPTY
@@ -230,7 +230,7 @@ public class ClusterViewMessageTest
         ClusterViewMessage result = initial.withoutMember( memberup );
 
         // then
-        assertThat( result.unreachable(), empty() );
+        MatcherAssert.assertThat( result.unreachable(), empty() );
     }
 
     private ClusterViewMessage createClusterViewWithMembers( MemberStatus status )
@@ -242,7 +242,7 @@ public class ClusterViewMessageTest
         return new ClusterViewMessage( false, members, Collections.emptySet() );
     }
 
-    public static Member createMember( int port, MemberStatus status )
+    static Member createMember( int port, MemberStatus status )
     {
         return createMember( new UniqueAddress( new Address( "protocol", "system", "host", port ), 0L ), status );
     }

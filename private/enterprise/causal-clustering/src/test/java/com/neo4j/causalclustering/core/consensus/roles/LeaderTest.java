@@ -24,9 +24,8 @@ import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
 import com.neo4j.causalclustering.core.consensus.state.ReadableRaftState;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -41,17 +40,13 @@ import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.b
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
-@RunWith( MockitoJUnitRunner.class )
-public class LeaderTest
+class LeaderTest
 {
     private MemberId myself = member( 0 );
 
@@ -64,7 +59,7 @@ public class LeaderTest
     private static final ReplicatedString CONTENT = ReplicatedString.valueOf( "some-content-to-raft" );
 
     @Test
-    public void leaderShouldNotRespondToSuccessResponseFromFollowerThatWillSoonUpToDateViaInFlightMessages()
+    void leaderShouldNotRespondToSuccessResponseFromFollowerThatWillSoonUpToDateViaInFlightMessages()
             throws Exception
     {
         // given
@@ -100,14 +95,14 @@ public class LeaderTest
 
         // then
         // The leader should not be trying to send any messages to that instance
-        assertTrue( outcome.getOutgoingMessages().isEmpty() );
+        Assertions.assertTrue( outcome.getOutgoingMessages().isEmpty() );
         // And the follower state should be updated
         FollowerStates<MemberId> leadersViewOfFollowerStates = outcome.getFollowerStates();
-        assertEquals( 90, leadersViewOfFollowerStates.get( instance2 ).getMatchIndex() );
+        Assertions.assertEquals( 90, leadersViewOfFollowerStates.get( instance2 ).getMatchIndex() );
     }
 
     @Test
-    public void leaderShouldNotRespondToSuccessResponseThatIndicatesUpToDateFollower() throws Exception
+    void leaderShouldNotRespondToSuccessResponseThatIndicatesUpToDateFollower() throws Exception
     {
         // given
         /*
@@ -142,14 +137,14 @@ public class LeaderTest
 
         // then
         // The leader should not be trying to send any messages to that instance
-        assertTrue( outcome.getOutgoingMessages().isEmpty() );
+        Assertions.assertTrue( outcome.getOutgoingMessages().isEmpty() );
         // And the follower state should be updated
         FollowerStates<MemberId> updatedFollowerStates = outcome.getFollowerStates();
-        assertEquals( 100, updatedFollowerStates.get( instance2 ).getMatchIndex() );
+        Assertions.assertEquals( 100, updatedFollowerStates.get( instance2 ).getMatchIndex() );
     }
 
     @Test
-    public void leaderShouldRespondToSuccessResponseThatIndicatesLaggingFollowerWithJustWhatItsMissing()
+    void leaderShouldRespondToSuccessResponseThatIndicatesLaggingFollowerWithJustWhatItsMissing()
             throws Exception
     {
         // given
@@ -201,7 +196,7 @@ public class LeaderTest
     }
 
     @Test
-    public void leaderShouldIgnoreSuccessResponseThatIndicatesLaggingWhileLocalStateIndicatesFollowerIsCaughtUp()
+    void leaderShouldIgnoreSuccessResponseThatIndicatesLaggingWhileLocalStateIndicatesFollowerIsCaughtUp()
             throws Exception
     {
         // given
@@ -242,10 +237,10 @@ public class LeaderTest
 
         // then the leader should not send anything, since this is a delayed, out of order response to a previous append
         // request
-        assertTrue( outcome.getOutgoingMessages().isEmpty() );
+        Assertions.assertTrue( outcome.getOutgoingMessages().isEmpty() );
         // The follower state should not be touched
         FollowerStates<MemberId> updatedFollowerStates = outcome.getFollowerStates();
-        assertEquals( 100, updatedFollowerStates.get( instance2 ).getMatchIndex() );
+        Assertions.assertEquals( 100, updatedFollowerStates.get( instance2 ).getMatchIndex() );
     }
 
     private static FollowerState createArtificialFollowerState( long matchIndex )
@@ -255,7 +250,7 @@ public class LeaderTest
 
     // TODO: rethink this test, it does too much
     @Test
-    public void leaderShouldSpawnMismatchCommandOnFailure() throws Exception
+    void leaderShouldSpawnMismatchCommandOnFailure() throws Exception
     {
         // given
         /*
@@ -310,7 +305,7 @@ public class LeaderTest
     }
 
     @Test
-    public void shouldSendCompactionInfoIfFailureWithNoEarlierEntries() throws Exception
+    void shouldSendCompactionInfoIfFailureWithNoEarlierEntries() throws Exception
     {
         // given
         Leader leader = new Leader();
@@ -344,7 +339,7 @@ public class LeaderTest
     }
 
     @Test
-    public void shouldIgnoreAppendResponsesFromOldTerms() throws Exception
+    void shouldIgnoreAppendResponsesFromOldTerms() throws Exception
     {
         // given
         Leader leader = new Leader();
@@ -372,7 +367,7 @@ public class LeaderTest
     }
 
     @Test
-    public void leaderShouldRejectAppendEntriesResponseWithNewerTermAndBecomeAFollower() throws Exception
+    void leaderShouldRejectAppendEntriesResponseWithNewerTermAndBecomeAFollower() throws Exception
     {
         // given
         RaftState state = builder().myself( myself ).build();
@@ -387,16 +382,16 @@ public class LeaderTest
         Outcome outcome = leader.handle( message, state, log() );
 
         // then
-        assertEquals( 0, count( outcome.getOutgoingMessages() ) );
-        assertEquals( FOLLOWER, outcome.getRole() );
-        assertEquals( 0, count( outcome.getLogCommands() ) );
-        assertEquals( state.term() + 1, outcome.getTerm() );
+        Assertions.assertEquals( 0, count( outcome.getOutgoingMessages() ) );
+        Assertions.assertEquals( FOLLOWER, outcome.getRole() );
+        Assertions.assertEquals( 0, count( outcome.getLogCommands() ) );
+        Assertions.assertEquals( state.term() + 1, outcome.getTerm() );
     }
 
     // TODO: test that shows we don't commit for previous terms
 
     @Test
-    public void leaderShouldSendHeartbeatsToAllClusterMembersOnReceiptOfHeartbeatTick() throws Exception
+    void leaderShouldSendHeartbeatsToAllClusterMembersOnReceiptOfHeartbeatTick() throws Exception
     {
         // given
         RaftState state = builder()
@@ -411,12 +406,12 @@ public class LeaderTest
         Outcome outcome = leader.handle( new Heartbeat( myself ), state, log() );
 
         // then
-        assertTrue( messageFor( outcome, member1 ) instanceof RaftMessages.Heartbeat );
-        assertTrue( messageFor( outcome, member2 ) instanceof RaftMessages.Heartbeat );
+        Assertions.assertTrue( messageFor( outcome, member1 ) instanceof RaftMessages.Heartbeat );
+        Assertions.assertTrue( messageFor( outcome, member2 ) instanceof RaftMessages.Heartbeat );
     }
 
     @Test
-    public void leaderShouldStepDownWhenLackingHeartbeatResponses() throws Exception
+    void leaderShouldStepDownWhenLackingHeartbeatResponses() throws Exception
     {
         // given
         RaftState state = builder()
@@ -432,11 +427,11 @@ public class LeaderTest
 
         // then
         assertThat( outcome.getRole() ).isNotEqualTo( LEADER );
-        assertNull( outcome.getLeader() );
+        Assertions.assertNull( outcome.getLeader() );
     }
 
     @Test
-    public void leaderShouldNotStepDownWhenReceivedQuorumOfHeartbeatResponses() throws Exception
+    void leaderShouldNotStepDownWhenReceivedQuorumOfHeartbeatResponses() throws Exception
     {
         // given
         RaftState state = builder()
@@ -457,7 +452,7 @@ public class LeaderTest
     }
 
     @Test
-    public void oldHeartbeatResponseShouldNotPreventStepdown() throws Exception
+    void oldHeartbeatResponseShouldNotPreventStepdown() throws Exception
     {
         // given
         RaftState state = builder()
@@ -482,7 +477,7 @@ public class LeaderTest
     }
 
     @Test
-    public void leaderShouldDecideToAppendToItsLogAndSendAppendEntriesMessageOnReceiptOfClientProposal()
+    void leaderShouldDecideToAppendToItsLogAndSendAppendEntriesMessageOnReceiptOfClientProposal()
             throws Exception
     {
         // given
@@ -500,17 +495,17 @@ public class LeaderTest
 
         // then
         AppendLogEntry logCommand = (AppendLogEntry) single( outcome.getLogCommands() );
-        assertEquals( 0, logCommand.index );
-        assertEquals( 0, logCommand.entry.term() );
+        Assertions.assertEquals( 0, logCommand.index );
+        Assertions.assertEquals( 0, logCommand.entry.term() );
 
         ShipCommand.NewEntries shipCommand = (ShipCommand.NewEntries) single( outcome.getShipCommands() );
 
-        assertEquals( shipCommand,
+        Assertions.assertEquals( shipCommand,
                 new ShipCommand.NewEntries( -1, -1, new RaftLogEntry[]{new RaftLogEntry( 0, CONTENT )} ) );
     }
 
     @Test
-    public void leaderShouldHandleBatch() throws Exception
+    void leaderShouldHandleBatch() throws Exception
     {
         // given
         RaftState state = builder()
@@ -529,16 +524,16 @@ public class LeaderTest
         // then
         BatchAppendLogEntries logCommand = (BatchAppendLogEntries) single( outcome.getLogCommands() );
 
-        assertEquals( 0, logCommand.baseIndex );
+        Assertions.assertEquals( 0, logCommand.baseIndex );
         for ( int i = 0; i < BATCH_SIZE; i++ )
         {
-            assertEquals( 0, logCommand.entries[i].term() );
-            assertEquals( i, ((ReplicatedInteger) logCommand.entries[i].content()).get() );
+            Assertions.assertEquals( 0, logCommand.entries[i].term() );
+            Assertions.assertEquals( i, ((ReplicatedInteger) logCommand.entries[i].content()).get() );
         }
 
         ShipCommand.NewEntries shipCommand = (ShipCommand.NewEntries) single( outcome.getShipCommands() );
 
-        assertEquals( shipCommand, new ShipCommand.NewEntries( -1, -1, new RaftLogEntry[]{
+        Assertions.assertEquals( shipCommand, new ShipCommand.NewEntries( -1, -1, new RaftLogEntry[]{
                 new RaftLogEntry( 0, valueOf( 0 ) ),
                 new RaftLogEntry( 0, valueOf( 1 ) ),
                 new RaftLogEntry( 0, valueOf( 2 ) )
@@ -546,7 +541,7 @@ public class LeaderTest
     }
 
     @Test
-    public void leaderShouldCommitOnMajorityResponse() throws Exception
+    void leaderShouldCommitOnMajorityResponse() throws Exception
     {
         // given
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
@@ -567,13 +562,13 @@ public class LeaderTest
                 leader.handle( new RaftMessages.AppendEntries.Response( member1, 0, true, 0, 0 ), state, log() );
 
         // then
-        assertEquals( 0L, outcome.getCommitIndex() );
-        assertEquals( 0L, outcome.getLeaderCommit() );
+        Assertions.assertEquals( 0L, outcome.getCommitIndex() );
+        Assertions.assertEquals( 0L, outcome.getLeaderCommit() );
     }
 
     // TODO move this someplace else, since log no longer holds the commit
     @Test
-    public void leaderShouldCommitAllPreviouslyAppendedEntriesWhenCommittingLaterEntryInSameTerm() throws Exception
+    void leaderShouldCommitAllPreviouslyAppendedEntriesWhenCommittingLaterEntryInSameTerm() throws Exception
     {
         // given
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
@@ -596,11 +591,11 @@ public class LeaderTest
         state.update( outcome );
 
         // then
-        assertEquals( 2, state.commitIndex() );
+        Assertions.assertEquals( 2, state.commitIndex() );
     }
 
     @Test
-    public void shouldSendNegativeResponseForVoteRequestFromTermNotGreaterThanLeader() throws Exception
+    void shouldSendNegativeResponseForVoteRequestFromTermNotGreaterThanLeader() throws Exception
     {
         // given
         long leaderTerm = 5;
@@ -626,7 +621,7 @@ public class LeaderTest
     }
 
     @Test
-    public void shouldStepDownIfReceiveVoteRequestFromGreaterTermThanLeader() throws Exception
+    void shouldStepDownIfReceiveVoteRequestFromGreaterTermThanLeader() throws Exception
     {
         // given
         long leaderTerm = 1;
@@ -653,7 +648,7 @@ public class LeaderTest
     }
 
     @Test
-    public void shouldIgnoreHeartbeatFromOlderTerm() throws Exception
+    void shouldIgnoreHeartbeatFromOlderTerm() throws Exception
     {
         // given
         long leaderTerm = 5;
@@ -674,7 +669,7 @@ public class LeaderTest
     }
 
     @Test
-    public void shouldStepDownIfHeartbeatReceivedWithGreaterOrEqualTerm() throws Exception
+    void shouldStepDownIfHeartbeatReceivedWithGreaterOrEqualTerm() throws Exception
     {
         // given
         long leaderTerm = 1;
@@ -696,7 +691,7 @@ public class LeaderTest
     }
 
     @Test
-    public void shouldRespondNegativelyToAppendEntriesRequestFromEarlierTerm() throws Exception
+    void shouldRespondNegativelyToAppendEntriesRequestFromEarlierTerm() throws Exception
     {
         // given
         long leaderTerm = 5;
@@ -726,7 +721,7 @@ public class LeaderTest
     }
 
     @Test
-    public void shouldStepDownIfAppendEntriesRequestFromLaterTerm() throws Exception
+    void shouldStepDownIfAppendEntriesRequestFromLaterTerm() throws Exception
     {
         // given
         long leaderTerm = 1;

@@ -5,37 +5,36 @@
  */
 package com.neo4j.causalclustering.core.state.machines.tx;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import static com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding.decodeLogIndexFromTxHeader;
 import static com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding.encodeLogIndexAsTxHeader;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
-public class LogIndexTxHeaderEncodingTest
+class LogIndexTxHeaderEncodingTest
 {
     @Test
-    public void shouldEncodeIndexAsBytes()
+    void shouldEncodeIndexAsBytes()
     {
         long index = 123_456_789_012_567L;
         byte[] bytes = encodeLogIndexAsTxHeader( index );
-        assertEquals( index, decodeLogIndexFromTxHeader( bytes ) );
+        Assertions.assertEquals( index, decodeLogIndexFromTxHeader( bytes ) );
     }
 
     @Test
-    public void shouldThrowExceptionForAnEmptyByteArray()
+    void shouldThrowExceptionForAnEmptyByteArray()
     {
         // given
         try
         {
             // when
             decodeLogIndexFromTxHeader( new byte[0] );
-            fail( "Should have thrown an exception because there's no way to decode this " );
+            Assertions.fail( "Should have thrown an exception because there's no way to decode this " );
         }
         catch ( IllegalArgumentException e )
         {
             // expected
-            assertEquals( "Unable to decode RAFT log index from transaction header", e.getMessage() );
+            Assertions.assertEquals( "Unable to decode RAFT log index from transaction header", e.getMessage() );
         }
     }
 }

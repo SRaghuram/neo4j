@@ -9,12 +9,10 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.io.IOException;
-import java.util.Collection;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLogProvider;
@@ -23,27 +21,17 @@ import static com.neo4j.causalclustering.core.consensus.MessageUtils.messageFor;
 import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.voteRequest;
 import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.builder;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
-import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
-@RunWith( Parameterized.class )
-public class NonFollowerVoteRequestTest
+class NonFollowerVoteRequestTest
 {
-    @Parameterized.Parameters( name = "{0}" )
-    public static Collection data()
-    {
-        return asList( Role.CANDIDATE, Role.LEADER );
-    }
-
-    @Parameterized.Parameter
-    public Role role;
-
     private MemberId myself = member( 0 );
     private MemberId member1 = member( 1 );
 
-    @Test
-    public void shouldRejectVoteRequestFromCurrentTerm() throws Exception
+    @ParameterizedTest
+    @EnumSource( value = Role.class, mode = EnumSource.Mode.EXCLUDE, names = {"FOLLOWER"} )
+    void shouldRejectVoteRequestFromCurrentTerm( Role role ) throws Exception
     {
         RaftState state = newState();
 
@@ -59,8 +47,9 @@ public class NonFollowerVoteRequestTest
         assertEquals( role, outcome.getRole() );
     }
 
-    @Test
-    public void shouldRejectVoteRequestFromPreviousTerm() throws Exception
+    @ParameterizedTest
+    @EnumSource( value = Role.class, mode = EnumSource.Mode.EXCLUDE, names = {"FOLLOWER"} )
+    void shouldRejectVoteRequestFromPreviousTerm( Role role ) throws Exception
     {
         RaftState state = newState();
 
@@ -76,7 +65,7 @@ public class NonFollowerVoteRequestTest
         assertEquals( role, outcome.getRole() );
     }
 
-    public RaftState newState() throws IOException
+    RaftState newState() throws IOException
     {
         return builder().myself( myself ).build();
     }

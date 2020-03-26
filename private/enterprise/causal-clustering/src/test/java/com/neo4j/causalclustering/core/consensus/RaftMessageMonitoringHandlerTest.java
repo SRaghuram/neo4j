@@ -9,8 +9,8 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.time.Clock;
@@ -24,7 +24,7 @@ import org.neo4j.time.Clocks;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-public class RaftMessageMonitoringHandlerTest
+class RaftMessageMonitoringHandlerTest
 {
     private Instant now = Instant.now();
     private Monitors monitors = new Monitors();
@@ -41,14 +41,14 @@ public class RaftMessageMonitoringHandlerTest
 
     private RaftMessageMonitoringHandler handler = new RaftMessageMonitoringHandler( downstream, clock, monitors );
 
-    @Before
-    public void setUp()
+    @BeforeEach
+    void setUp()
     {
         monitors.addMonitorListener( monitor );
     }
 
     @Test
-    public void shouldSendMessagesToDelegate()
+    void shouldSendMessagesToDelegate()
     {
         // when
         handler.handle( message );
@@ -58,7 +58,7 @@ public class RaftMessageMonitoringHandlerTest
     }
 
     @Test
-    public void shouldUpdateDelayMonitor()
+    void shouldUpdateDelayMonitor()
     {
         // when
         handler.handle( message );
@@ -68,7 +68,7 @@ public class RaftMessageMonitoringHandlerTest
     }
 
     @Test
-    public void shouldTimeDelegate()
+    void shouldTimeDelegate()
     {
         // when
         handler.handle( message );
@@ -78,7 +78,7 @@ public class RaftMessageMonitoringHandlerTest
     }
 
     @Test
-    public void shouldDelegateStart() throws Throwable
+    void shouldDelegateStart() throws Throwable
     {
         // given
         RaftId raftId = RaftIdFactory.random();
@@ -91,7 +91,7 @@ public class RaftMessageMonitoringHandlerTest
     }
 
     @Test
-    public void shouldDelegateStop() throws Throwable
+    void shouldDelegateStop() throws Throwable
     {
         // when
         handler.stop();

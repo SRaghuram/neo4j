@@ -16,10 +16,8 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftTestMemberSetBuilder;
 import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.causalclustering.messaging.Outbound;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
@@ -29,18 +27,16 @@ import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.vote
 import static com.neo4j.causalclustering.core.consensus.roles.Role.CANDIDATE;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
-import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
-
-@RunWith( MockitoJUnitRunner.class )
-public class ElectionTest
+class ElectionTest
 {
     private MemberId myself = member( 0 );
 
@@ -48,13 +44,11 @@ public class ElectionTest
     private MemberId member1 = member( 1 );
     private MemberId member2 = member( 2 );
 
-    @Mock
-    private Inbound inbound;
-    @Mock
-    private Outbound<MemberId, RaftMessages.RaftMessage> outbound;
+    private Inbound inbound = mock( Inbound.class );
+    private Outbound<MemberId,RaftMessages.RaftMessage> outbound = mock( Outbound.class );
 
     @Test
-    public void candidateShouldWinElectionAndBecomeLeader() throws Exception
+    void candidateShouldWinElectionAndBecomeLeader() throws Exception
     {
         // given
         FakeClock fakeClock = Clocks.fakeClock();
@@ -65,7 +59,7 @@ public class ElectionTest
                 .clock( fakeClock )
                 .build();
 
-        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 )  ) ) );
+        raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 ) ) ) );
         raft.postRecoveryActions();
 
         timeouts.invoke( RaftMachine.Timeouts.ELECTION );
@@ -75,8 +69,8 @@ public class ElectionTest
         raft.handle( voteResponse().from( member2 ).term( 1 ).grant().build() );
 
         // then
-        assertEquals( 1, raft.term() );
-        assertEquals( LEADER, raft.currentRole() );
+        Assertions.assertEquals( 1, raft.term() );
+        Assertions.assertEquals( LEADER, raft.currentRole() );
 
         /*
          * We require atLeast here because RaftMachine has its own scheduled service, which can spuriously wake up and
@@ -88,7 +82,7 @@ public class ElectionTest
     }
 
     @Test
-    public void candidateShouldLoseElectionAndRemainCandidate() throws Exception
+    void candidateShouldLoseElectionAndRemainCandidate() throws Exception
     {
         // Note the etcd implementation seems to diverge from the paper here, since the paper suggests that it should
         // remain as a candidate
@@ -103,7 +97,7 @@ public class ElectionTest
                 .build();
 
         raft.installCoreState(
-                new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 ) ) ));
+                new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 ) ) ) );
         raft.postRecoveryActions();
 
         timeouts.invoke( RaftMachine.Timeouts.ELECTION );
@@ -113,15 +107,15 @@ public class ElectionTest
         raft.handle( voteResponse().from( member2 ).term( 1 ).deny().build() );
 
         // then
-        assertEquals( 1, raft.term() );
-        assertEquals( CANDIDATE, raft.currentRole() );
+        Assertions.assertEquals( 1, raft.term() );
+        Assertions.assertEquals( CANDIDATE, raft.currentRole() );
 
         verify( outbound, never() ).send( eq( member1 ), isA( RaftMessages.AppendEntries.Request.class ) );
         verify( outbound, never() ).send( eq( member2 ), isA( RaftMessages.AppendEntries.Request.class ) );
     }
 
     @Test
-    public void candidateShouldVoteForTheSameCandidateInTheSameTerm() throws Exception
+    void candidateShouldVoteForTheSameCandidateInTheSameTerm() throws Exception
     {
         // given
         FakeClock fakeClock = Clocks.fakeClock();

@@ -6,7 +6,9 @@
 package com.neo4j.causalclustering.core.consensus.log.pruning;
 
 import com.neo4j.causalclustering.core.state.RaftLogPruner;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -16,9 +18,6 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.test.DoubleLatch;
 import org.neo4j.test.OnDemandJobScheduler;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -27,40 +26,40 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
-public class PruningSchedulerTest
+class PruningSchedulerTest
 {
     private final RaftLogPruner logPruner = mock( RaftLogPruner.class );
     private final OnDemandJobScheduler jobScheduler = spy( new OnDemandJobScheduler() );
 
     @Test
-    public void shouldScheduleTheCheckPointerJobOnStart()
+    void shouldScheduleTheCheckPointerJobOnStart()
     {
         // given
         PruningScheduler scheduler = new PruningScheduler( logPruner, jobScheduler, 20L, NullLogProvider.getInstance() );
 
-        assertNull( jobScheduler.getJob() );
+        Assertions.assertNull( jobScheduler.getJob() );
 
         // when
         scheduler.start();
 
         // then
-        assertNotNull( jobScheduler.getJob() );
+        Assertions.assertNotNull( jobScheduler.getJob() );
         verify( jobScheduler ).schedule( eq( Group.RAFT_LOG_PRUNING ), any( Runnable.class ),
                 eq( 20L ), eq( TimeUnit.MILLISECONDS ) );
     }
 
     @Test
-    public void shouldRescheduleTheJobAfterARun() throws Throwable
+    void shouldRescheduleTheJobAfterARun() throws Throwable
     {
         // given
         PruningScheduler scheduler = new PruningScheduler( logPruner, jobScheduler, 20L, NullLogProvider.getInstance() );
 
-        assertNull( jobScheduler.getJob() );
+        Assertions.assertNull( jobScheduler.getJob() );
 
         scheduler.start();
 
         Object scheduledJob = jobScheduler.getJob();
-        assertNotNull( scheduledJob );
+        Assertions.assertNotNull( scheduledJob );
 
         // when
         jobScheduler.runJob();
@@ -69,30 +68,30 @@ public class PruningSchedulerTest
         verify( jobScheduler, times( 2 ) ).schedule( eq( Group.RAFT_LOG_PRUNING ), any( Runnable.class ),
                 eq( 20L ), eq( TimeUnit.MILLISECONDS ) );
         verify( logPruner ).prune();
-        assertEquals( scheduledJob, jobScheduler.getJob() );
+        Assertions.assertEquals( scheduledJob, jobScheduler.getJob() );
     }
 
     @Test
-    public void shouldNotRescheduleAJobWhenStopped()
+    void shouldNotRescheduleAJobWhenStopped()
     {
         // given
         PruningScheduler scheduler = new PruningScheduler( logPruner, jobScheduler, 20L, NullLogProvider.getInstance() );
 
-        assertNull( jobScheduler.getJob() );
+        Assertions.assertNull( jobScheduler.getJob() );
 
         scheduler.start();
 
-        assertNotNull( jobScheduler.getJob() );
+        Assertions.assertNotNull( jobScheduler.getJob() );
 
         // when
         scheduler.stop();
 
         // then
-        assertNull( jobScheduler.getJob() );
+        Assertions.assertNull( jobScheduler.getJob() );
     }
 
     @Test
-    public void stoppedJobCantBeInvoked() throws Throwable
+    void stoppedJobCantBeInvoked() throws Throwable
     {
         PruningScheduler scheduler = new PruningScheduler( logPruner, jobScheduler, 10L, NullLogProvider.getInstance() );
         scheduler.start();
@@ -110,8 +109,9 @@ public class PruningSchedulerTest
         verifyNoMoreInteractions( logPruner );
     }
 
-    @Test( timeout = 5000 )
-    public void shouldWaitOnStopUntilTheRunningCheckpointIsDone() throws Throwable
+    @Test
+    @Timeout( 5_000 )
+    void shouldWaitOnStopUntilTheRunningCheckpointIsDone() throws Throwable
     {
         // given
         final AtomicReference<Throwable> ex = new AtomicReference<>();
@@ -154,6 +154,6 @@ public class PruningSchedulerTest
 
         stopper.join();
 
-        assertNull( ex.get() );
+        Assertions.assertNull( ex.get() );
     }
 }

@@ -85,7 +85,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldResetRaftMessageResetMonitorIfElectionRenewed() throws IOException
     {
-        var outcome = outcomeTestBuilder.renewElectionTimeout( ACTIVE_ELECTION ).build();
+        var outcome = outcomeTestBuilder.renewElectionTimer( ACTIVE_ELECTION ).build();
 
         raftOutcomeApplier.handle( outcome );
 
@@ -116,7 +116,7 @@ class RaftOutcomeApplierTest
     @EnumSource( ElectionTimerMode.class )
     void shouldRenewLeaderAvailabilityTimerAndResetRaftMessageResetMonitorIfElectionTimerModeSet( ElectionTimerMode mode ) throws IOException
     {
-        var outcome = outcomeTestBuilder.renewElectionTimeout( mode ).build();
+        var outcome = outcomeTestBuilder.renewElectionTimer( mode ).build();
 
         raftOutcomeApplier.handle( outcome );
 

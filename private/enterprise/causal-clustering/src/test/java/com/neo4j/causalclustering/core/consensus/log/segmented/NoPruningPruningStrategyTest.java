@@ -5,16 +5,16 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class NoPruningPruningStrategyTest
+class NoPruningPruningStrategyTest
 {
     @Test
-    public void shouldNotExcludeAnySegmentPages()
+    void shouldNotExcludeAnySegmentPages()
     {
-         NoPruningPruningStrategy strategy = new NoPruningPruningStrategy();
+        NoPruningPruningStrategy strategy = new NoPruningPruningStrategy();
 
         //when
         long indexToKeep = strategy.getIndexToKeep( null );

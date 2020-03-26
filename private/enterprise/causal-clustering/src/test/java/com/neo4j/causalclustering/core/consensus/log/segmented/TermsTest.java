@@ -5,20 +5,18 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.util.function.LongFunction;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
-public class TermsTest
+class TermsTest
 {
     private Terms terms;
 
     @Test
-    public void shouldHaveCorrectInitialValues()
+    void shouldHaveCorrectInitialValues()
     {
         // given
         long prevIndex = 5;
@@ -27,12 +25,12 @@ public class TermsTest
 
         // then
         assertTermInRange( -1, prevIndex, index -> -1L );
-        assertEquals( prevTerm, terms.get( prevIndex ) );
+        Assertions.assertEquals( prevTerm, terms.get( prevIndex ) );
         assertTermInRange( prevIndex + 1, prevIndex + 10, index -> -1L );
     }
 
     @Test
-    public void shouldReturnAppendedTerms()
+    void shouldReturnAppendedTerms()
     {
         // given
         terms = new Terms( -1, -1 );
@@ -43,12 +41,12 @@ public class TermsTest
 
         // then
         assertTermInRange( 0, count, index -> index * 2L );
-        assertEquals( -1, terms.get( -1 ) );
-        assertEquals( -1, terms.get( count ) );
+        Assertions.assertEquals( -1, terms.get( -1 ) );
+        Assertions.assertEquals( -1, terms.get( count ) );
     }
 
     @Test
-    public void shouldReturnAppendedTermsLongerRanges()
+    void shouldReturnAppendedTermsLongerRanges()
     {
         terms = new Terms( -1, -1 );
         int count = 10;
@@ -67,7 +65,7 @@ public class TermsTest
     }
 
     @Test
-    public void shouldOnlyAcceptInOrderIndexes()
+    void shouldOnlyAcceptInOrderIndexes()
     {
         // given
         long prevIndex = 3;
@@ -78,7 +76,7 @@ public class TermsTest
         {
             // when
             terms.append( prevIndex, term );
-            fail();
+            Assertions.fail();
         }
         catch ( IllegalStateException e )
         {
@@ -93,7 +91,7 @@ public class TermsTest
         {
             // when
             terms.append( prevIndex + 5, term );
-            fail();
+            Assertions.fail();
         }
         catch ( IllegalStateException e )
         {
@@ -106,7 +104,7 @@ public class TermsTest
     }
 
     @Test
-    public void shouldOnlyAcceptMonotonicTerms()
+    void shouldOnlyAcceptMonotonicTerms()
     {
         // given
         long term = 5;
@@ -124,7 +122,7 @@ public class TermsTest
         try
         {
             terms.append( prevIndex + 7, term + 1 );
-            fail();
+            Assertions.fail();
         }
         catch ( IllegalStateException e )
         {
@@ -133,7 +131,7 @@ public class TermsTest
     }
 
     @Test
-    public void shouldNotTruncateNegativeIndexes()
+    void shouldNotTruncateNegativeIndexes()
     {
         // given
         terms = new Terms( -1, -1 );
@@ -143,7 +141,7 @@ public class TermsTest
         try
         {
             terms.truncate( -1 );
-            fail();
+            Assertions.fail();
         }
         catch ( IllegalStateException e )
         {
@@ -152,7 +150,7 @@ public class TermsTest
     }
 
     @Test
-    public void shouldNotTruncateLessThanLowestIndex()
+    void shouldNotTruncateLessThanLowestIndex()
     {
         // given
         terms = new Terms( 5, 1 );
@@ -161,7 +159,7 @@ public class TermsTest
         try
         {
             terms.truncate( 4 );
-            fail();
+            Assertions.fail();
         }
         catch ( IllegalStateException e )
         {
@@ -170,7 +168,7 @@ public class TermsTest
     }
 
     @Test
-    public void shouldTruncateInCurrentRange()
+    void shouldTruncateInCurrentRange()
     {
         // given
         long term = 5;
@@ -178,7 +176,7 @@ public class TermsTest
         terms = new Terms( prevIndex, term );
 
         appendRange( prevIndex + 1, 20, term );
-        assertEquals( term, terms.get( 19 ) );
+        Assertions.assertEquals( term, terms.get( 19 ) );
 
         // when
         long truncateFromIndex = 15;
@@ -190,7 +188,7 @@ public class TermsTest
     }
 
     @Test
-    public void shouldTruncateAtExactBoundary()
+    void shouldTruncateAtExactBoundary()
     {
         // given
         long term = 5;
@@ -210,7 +208,7 @@ public class TermsTest
     }
 
     @Test
-    public void shouldTruncateCompleteCurrentRange()
+    void shouldTruncateCompleteCurrentRange()
     {
         // given
         long term = 5;
@@ -232,7 +230,7 @@ public class TermsTest
     }
 
     @Test
-    public void shouldTruncateSeveralCompleteRanges()
+    void shouldTruncateSeveralCompleteRanges()
     {
         // given
         long term = 5;
@@ -253,7 +251,7 @@ public class TermsTest
     }
 
     @Test
-    public void shouldAppendAfterTruncate()
+    void shouldAppendAfterTruncate()
     {
         // given
         long term = 5;
@@ -274,7 +272,7 @@ public class TermsTest
     }
 
     @Test
-    public void shouldAppendAfterSkip()
+    void shouldAppendAfterSkip()
     {
         // given
         long term = 5;
@@ -291,7 +289,7 @@ public class TermsTest
 
         // then
         assertTermInRange( prevIndex, skipIndex, -1 );
-        assertEquals( skipTerm, terms.get( skipIndex ) );
+        Assertions.assertEquals( skipTerm, terms.get( skipIndex ) );
 
         // when
         appendRange( skipIndex + 1, skipIndex + 20, skipTerm );
@@ -301,7 +299,7 @@ public class TermsTest
     }
 
     @Test
-    public void shouldNotPruneAnythingIfBeforeMin() throws Exception
+    void shouldNotPruneAnythingIfBeforeMin() throws Exception
     {
         // given
         long term = 5;
@@ -311,8 +309,8 @@ public class TermsTest
         appendRange( prevIndex + 1, prevIndex + 10, term );
         appendRange( prevIndex + 10, prevIndex + 20, term + 1 );
 
-        assertEquals( 2, getIndexesSize() );
-        assertEquals( 2, getTermsSize() );
+        Assertions.assertEquals( 2, getIndexesSize() );
+        Assertions.assertEquals( 2, getTermsSize() );
 
         // when
         terms.prune( prevIndex );
@@ -322,12 +320,12 @@ public class TermsTest
         assertTermInRange( prevIndex, prevIndex + 10, term );
         assertTermInRange( prevIndex + 10, prevIndex + 20, term + 1 );
 
-        assertEquals( 2, getIndexesSize() );
-        assertEquals( 2, getTermsSize() );
+        Assertions.assertEquals( 2, getIndexesSize() );
+        Assertions.assertEquals( 2, getTermsSize() );
     }
 
     @Test
-    public void shouldPruneInMiddleOfFirstRange() throws Exception
+    void shouldPruneInMiddleOfFirstRange() throws Exception
     {
         // given
         long term = 5;
@@ -337,8 +335,8 @@ public class TermsTest
         appendRange( prevIndex + 1, prevIndex + 10, term ); // half-pruned
         appendRange( prevIndex + 10, prevIndex + 20, term + 1 );
 
-        assertEquals( 2, getIndexesSize() );
-        assertEquals( 2, getTermsSize() );
+        Assertions.assertEquals( 2, getIndexesSize() );
+        Assertions.assertEquals( 2, getTermsSize() );
 
         // when
         long pruneIndex = prevIndex + 5;
@@ -349,12 +347,12 @@ public class TermsTest
         assertTermInRange( pruneIndex, prevIndex + 10, term );
         assertTermInRange( prevIndex + 10, prevIndex + 20, term + 1 );
 
-        assertEquals( 2, getIndexesSize() );
-        assertEquals( 2, getTermsSize() );
+        Assertions.assertEquals( 2, getIndexesSize() );
+        Assertions.assertEquals( 2, getTermsSize() );
     }
 
     @Test
-    public void shouldPruneAtBoundaryOfRange() throws Exception
+    void shouldPruneAtBoundaryOfRange() throws Exception
     {
         // given
         long term = 5;
@@ -364,23 +362,23 @@ public class TermsTest
         appendRange( prevIndex + 1, prevIndex + 10, term ); // completely pruned
         appendRange( prevIndex + 10, prevIndex + 20, term + 1 );
 
-        assertEquals( 2, getIndexesSize() );
-        assertEquals( 2, getTermsSize() );
+        Assertions.assertEquals( 2, getIndexesSize() );
+        Assertions.assertEquals( 2, getTermsSize() );
 
         // when
         long pruneIndex = prevIndex + 10;
         terms.prune( pruneIndex );
 
         // then
-        assertTermInRange( prevIndex - 10, pruneIndex , -1 );
+        assertTermInRange( prevIndex - 10, pruneIndex, -1 );
         assertTermInRange( prevIndex + 10, prevIndex + 20, term + 1 );
 
-        assertEquals( 1, getIndexesSize() );
-        assertEquals( 1, getTermsSize() );
+        Assertions.assertEquals( 1, getIndexesSize() );
+        Assertions.assertEquals( 1, getTermsSize() );
     }
 
     @Test
-    public void shouldPruneJustBeyondBoundaryOfRange() throws Exception
+    void shouldPruneJustBeyondBoundaryOfRange() throws Exception
     {
         // given
         long term = 5;
@@ -390,23 +388,23 @@ public class TermsTest
         appendRange( prevIndex + 1, prevIndex + 10, term ); // completely pruned
         appendRange( prevIndex + 10, prevIndex + 20, term + 1 );
 
-        assertEquals( 2, getIndexesSize() );
-        assertEquals( 2, getTermsSize() );
+        Assertions.assertEquals( 2, getIndexesSize() );
+        Assertions.assertEquals( 2, getTermsSize() );
 
         // when
         long pruneIndex = prevIndex + 11;
         terms.prune( pruneIndex );
 
         // then
-        assertTermInRange( prevIndex - 10, pruneIndex , -1 );
+        assertTermInRange( prevIndex - 10, pruneIndex, -1 );
         assertTermInRange( prevIndex + 11, prevIndex + 20, term + 1 );
 
-        assertEquals( 1, getIndexesSize() );
-        assertEquals( 1, getTermsSize() );
+        Assertions.assertEquals( 1, getIndexesSize() );
+        Assertions.assertEquals( 1, getTermsSize() );
     }
 
     @Test
-    public void shouldPruneSeveralCompleteRanges() throws Exception
+    void shouldPruneSeveralCompleteRanges() throws Exception
     {
         // given
         long term = 5;
@@ -419,25 +417,25 @@ public class TermsTest
         appendRange( prevIndex + 30, prevIndex + 40, term + 3 );
         appendRange( prevIndex + 40, prevIndex + 50, term + 4 );
 
-        assertEquals( 5, getIndexesSize() );
-        assertEquals( 5, getTermsSize() );
+        Assertions.assertEquals( 5, getIndexesSize() );
+        Assertions.assertEquals( 5, getTermsSize() );
 
         // when
         long pruneIndex = prevIndex + 25;
         terms.prune( pruneIndex );
 
         // then
-        assertTermInRange( prevIndex - 10, pruneIndex , -1 );
+        assertTermInRange( prevIndex - 10, pruneIndex, -1 );
         assertTermInRange( pruneIndex, prevIndex + 30, term + 2 );
         assertTermInRange( prevIndex + 30, prevIndex + 40, term + 3 );
         assertTermInRange( prevIndex + 40, prevIndex + 50, term + 4 );
 
-        assertEquals( 3, getIndexesSize() );
-        assertEquals( 3, getTermsSize() );
+        Assertions.assertEquals( 3, getIndexesSize() );
+        Assertions.assertEquals( 3, getTermsSize() );
     }
 
     @Test
-    public void shouldAppendNewItemsIfThereAreNoEntries() throws Exception
+    void shouldAppendNewItemsIfThereAreNoEntries() throws Exception
     {
         // given
         long term = 5;
@@ -448,19 +446,19 @@ public class TermsTest
         terms.truncate( prevIndex );
 
         // then
-        assertEquals( -1, terms.get( prevIndex ) );
-        assertEquals( -1, terms.latest() );
-        assertEquals( 0, getIndexesSize() );
-        assertEquals( 0, getTermsSize() );
+        Assertions.assertEquals( -1, terms.get( prevIndex ) );
+        Assertions.assertEquals( -1, terms.latest() );
+        Assertions.assertEquals( 0, getIndexesSize() );
+        Assertions.assertEquals( 0, getTermsSize() );
 
         // and when
         terms.append( prevIndex, 5 );
 
         // then
-        assertEquals( term, terms.get( prevIndex ) );
-        assertEquals( term, terms.latest() );
-        assertEquals( 1, getIndexesSize() );
-        assertEquals( 1, getTermsSize() );
+        Assertions.assertEquals( term, terms.get( prevIndex ) );
+        Assertions.assertEquals( term, terms.latest() );
+        Assertions.assertEquals( 1, getIndexesSize() );
+        Assertions.assertEquals( 1, getTermsSize() );
     }
 
     private int getTermsSize() throws NoSuchFieldException, IllegalAccessException
@@ -490,7 +488,7 @@ public class TermsTest
     {
         for ( long index = from; index < to; index++ )
         {
-            assertEquals( "For index: " + index, (long) expectedTermFunction.apply( index ), terms.get( index ) );
+            Assertions.assertEquals( (long) expectedTermFunction.apply( index ), terms.get( index ), "For index: " + index );
         }
     }
 

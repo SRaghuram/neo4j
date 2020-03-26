@@ -14,9 +14,10 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentMatchers;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
@@ -48,7 +49,7 @@ import static org.neo4j.internal.helpers.ArrayUtil.lastOf;
 import static org.neo4j.logging.AssertableLogProvider.Level.DEBUG;
 import static org.neo4j.logging.LogAssertions.assertThat;
 
-public class BatchingMessageHandlerTest
+class BatchingMessageHandlerTest
 {
     private static final BoundedPriorityQueue.Config IN_QUEUE_CONFIG = new BoundedPriorityQueue.Config( 64, 1024 );
     private static final BatchingMessageHandler.Config BATCH_CONFIG = new BatchingMessageHandler.Config( 16, 256 );
@@ -62,21 +63,21 @@ public class BatchingMessageHandlerTest
     private ExecutorService executor;
     private MemberId leader = new MemberId( UUID.randomUUID() );
 
-    @Before
-    public void before()
+    @BeforeEach
+    void before()
     {
         executor = Executors.newCachedThreadPool();
     }
 
-    @After
-    public void after() throws InterruptedException
+    @AfterEach
+    void after() throws InterruptedException
     {
         executor.shutdown();
         executor.awaitTermination( 60, TimeUnit.SECONDS );
     }
 
     @Test
-    public void shouldInvokeInnerHandlerWhenRun()
+    void shouldInvokeInnerHandlerWhenRun()
     {
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
@@ -96,7 +97,7 @@ public class BatchingMessageHandlerTest
     }
 
     @Test
-    public void shouldInvokeHandlerOnQueuedMessage() throws Throwable
+    void shouldInvokeHandlerOnQueuedMessage() throws Throwable
     {
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
@@ -122,7 +123,7 @@ public class BatchingMessageHandlerTest
     }
 
     @Test
-    public void shouldBatchRequests()
+    void shouldBatchRequests()
     {
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
@@ -145,7 +146,7 @@ public class BatchingMessageHandlerTest
     }
 
     @Test
-    public void shouldBatchUsingReceivedInstantOfFirstReceivedMessage()
+    void shouldBatchUsingReceivedInstantOfFirstReceivedMessage()
     {
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
@@ -168,7 +169,7 @@ public class BatchingMessageHandlerTest
     }
 
     @Test
-    public void shouldBatchNewEntriesAndHandleOtherMessagesFirst()
+    void shouldBatchNewEntriesAndHandleOtherMessagesFirst()
     {
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
@@ -202,7 +203,7 @@ public class BatchingMessageHandlerTest
     }
 
     @Test
-    public void shouldBatchSingleEntryAppendEntries()
+    void shouldBatchSingleEntryAppendEntries()
     {
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
                 BATCH_CONFIG, jobSchedulerFactory, NullLogProvider.getInstance() );
@@ -236,7 +237,7 @@ public class BatchingMessageHandlerTest
     }
 
     @Test
-    public void shouldBatchMultipleEntryAppendEntries()
+    void shouldBatchMultipleEntryAppendEntries()
     {
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
                 BATCH_CONFIG, jobSchedulerFactory, NullLogProvider.getInstance() );
@@ -284,7 +285,7 @@ public class BatchingMessageHandlerTest
     }
 
     @Test
-    public void shouldNotBatchAppendEntriesDifferentLeaderTerms()
+    void shouldNotBatchAppendEntriesDifferentLeaderTerms()
     {
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
                 BATCH_CONFIG, jobSchedulerFactory, NullLogProvider.getInstance() );
@@ -320,7 +321,7 @@ public class BatchingMessageHandlerTest
     }
 
     @Test
-    public void shouldPrioritiseCorrectly()
+    void shouldPrioritiseCorrectly()
     {
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
                 BATCH_CONFIG, jobSchedulerFactory, NullLogProvider.getInstance() );
@@ -353,7 +354,7 @@ public class BatchingMessageHandlerTest
     }
 
     @Test
-    public void shouldDropMessagesAfterBeingStopped() throws Throwable
+    void shouldDropMessagesAfterBeingStopped() throws Throwable
     {
         // given
         AssertableLogProvider logProvider = new AssertableLogProvider();
@@ -374,8 +375,9 @@ public class BatchingMessageHandlerTest
                 .containsMessageWithArguments( "This handler has been stopped, dropping the message: %s", wrap( message ) );
     }
 
-    @Test( timeout = 5_000 /* 5 seconds */ )
-    public void shouldGiveUpAddingMessagesInTheQueueIfTheHandlerHasBeenStopped() throws Throwable
+    @Test
+    @Timeout( 5_000 )
+    void shouldGiveUpAddingMessagesInTheQueueIfTheHandlerHasBeenStopped() throws Throwable
     {
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler,
@@ -404,7 +406,7 @@ public class BatchingMessageHandlerTest
     }
 
     @Test
-    public void shouldDelegateStart() throws Throwable
+    void shouldDelegateStart() throws Throwable
     {
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
@@ -419,7 +421,7 @@ public class BatchingMessageHandlerTest
     }
 
     @Test
-    public void shouldDelegateStop() throws Throwable
+    void shouldDelegateStop() throws Throwable
     {
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
@@ -433,7 +435,7 @@ public class BatchingMessageHandlerTest
     }
 
     @Test
-    public void shouldStartJob() throws Throwable
+    void shouldStartJob() throws Throwable
     {
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
@@ -448,7 +450,7 @@ public class BatchingMessageHandlerTest
     }
 
     @Test
-    public void shouldStopJob() throws Throwable
+    void shouldStopJob() throws Throwable
     {
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,

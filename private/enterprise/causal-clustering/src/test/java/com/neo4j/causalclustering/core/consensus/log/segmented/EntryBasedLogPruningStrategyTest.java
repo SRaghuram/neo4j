@@ -5,21 +5,19 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import org.neo4j.logging.LogProvider;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.mock;
-
-public class EntryBasedLogPruningStrategyTest extends PruningStrategyTest
+class EntryBasedLogPruningStrategyTest extends PruningStrategyTest
 {
     @Test
-    public void indexToKeepTest()
+    void indexToKeepTest()
     {
         // given
         files = createSegmentFiles( 10 );
-        EntryBasedLogPruningStrategy strategy = new EntryBasedLogPruningStrategy( 6, mock( LogProvider.class ) );
+        EntryBasedLogPruningStrategy strategy = new EntryBasedLogPruningStrategy( 6, nullLogProvider() );
 
         // when
         long indexToKeep = strategy.getIndexToKeep( segments );
@@ -29,11 +27,11 @@ public class EntryBasedLogPruningStrategyTest extends PruningStrategyTest
     }
 
     @Test
-    public void pruneStrategyExceedsNumberOfEntriesTest()
+    void pruneStrategyExceedsNumberOfEntriesTest()
     {
         //given
         files = createSegmentFiles( 10 ).subList( 5, 10 );
-        EntryBasedLogPruningStrategy strategy = new EntryBasedLogPruningStrategy( 7, mock( LogProvider.class ) );
+        EntryBasedLogPruningStrategy strategy = new EntryBasedLogPruningStrategy( 7, nullLogProvider() );
 
         //when
         long indexToKeep = strategy.getIndexToKeep( segments );
@@ -43,11 +41,11 @@ public class EntryBasedLogPruningStrategyTest extends PruningStrategyTest
     }
 
     @Test
-    public void onlyFirstActiveLogFileTest()
+    void onlyFirstActiveLogFileTest()
     {
         //given
         files = createSegmentFiles( 1 );
-        EntryBasedLogPruningStrategy strategy = new EntryBasedLogPruningStrategy( 6, mock( LogProvider.class ) );
+        EntryBasedLogPruningStrategy strategy = new EntryBasedLogPruningStrategy( 6, nullLogProvider() );
 
         //when
         long indexToKeep = strategy.getIndexToKeep( segments );
@@ -57,11 +55,11 @@ public class EntryBasedLogPruningStrategyTest extends PruningStrategyTest
     }
 
     @Test
-    public void onlyOneActiveLogFileTest()
+    void onlyOneActiveLogFileTest()
     {
         //given
         files = createSegmentFiles( 6 ).subList( 4, 6 );
-        EntryBasedLogPruningStrategy strategy = new EntryBasedLogPruningStrategy( 6, mock( LogProvider.class ) );
+        EntryBasedLogPruningStrategy strategy = new EntryBasedLogPruningStrategy( 6, nullLogProvider() );
 
         //when
         long indexToKeep = strategy.getIndexToKeep( segments );
