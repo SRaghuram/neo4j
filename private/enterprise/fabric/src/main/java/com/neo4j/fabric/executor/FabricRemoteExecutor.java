@@ -128,7 +128,7 @@ public class FabricRemoteExecutor
 
         private Mono<StatementResult> runInTx( Mono<FabricDriverTransaction> tx, String query, MapValue params )
         {
-            return tx.map( rxTransaction -> rxTransaction.run( query, params ) );
+            return tx.map( rxTransaction -> rxTransaction.run( query, params ) ).cache();
         }
     }
 

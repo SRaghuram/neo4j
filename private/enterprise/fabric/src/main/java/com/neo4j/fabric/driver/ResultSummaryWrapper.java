@@ -5,28 +5,56 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.stream.summary.EmptySummary;
+import com.neo4j.fabric.stream.summary.EmptyExecutionPlanDescription;
+import com.neo4j.fabric.stream.summary.Summary;
 
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.neo4j.driver.summary.Plan;
+import org.neo4j.driver.summary.ProfiledPlan;
 import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.driver.summary.SummaryCounters;
+import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.InputPosition;
 import org.neo4j.graphdb.Notification;
 import org.neo4j.graphdb.QueryStatistics;
 import org.neo4j.graphdb.SeverityLevel;
 
-public class ResultSummaryWrapper extends EmptySummary
+public class ResultSummaryWrapper implements Summary
 {
     private final QueryStatistics statistics;
     private final List<Notification> notifications;
+    private final ResultSummary summary;
 
     public ResultSummaryWrapper( ResultSummary summary )
     {
         this.statistics = new SummaryCountersWrapper( summary.counters() );
-        this.notifications = summary.notifications().stream().map( NotificationWrapper::new ).collect( Collectors.toList() );
+        this.notifications = summary.notifications().stream()
+                .map( NotificationWrapper::new )
+                .collect( Collectors.toList() );
+        this.summary = summary;
+    }
+
+    @Override
+    public ExecutionPlanDescription executionPlanDescription()
+    {
+        if ( summary.hasProfile() )
+        {
+            return new ProfiledPlanDescriptionWrapper( summary.profile() );
+        }
+
+        if ( summary.hasPlan() )
+        {
+            return new PlanDescriptionWrapper( summary.plan() );
+        }
+
+        return new EmptyExecutionPlanDescription();
     }
 
     @Override
@@ -41,7 +69,157 @@ public class ResultSummaryWrapper extends EmptySummary
         return statistics;
     }
 
-    static class NotificationWrapper implements Notification
+    private static class PlanDescriptionWrapper implements ExecutionPlanDescription
+    {
+
+        private final Plan driverPlan;
+
+        PlanDescriptionWrapper( Plan driverPlan )
+        {
+            this.driverPlan = driverPlan;
+        }
+
+        @Override
+        public String getName()
+        {
+            return driverPlan.operatorType();
+        }
+
+        @Override
+        public List<ExecutionPlanDescription> getChildren()
+        {
+            return driverPlan.children().stream()
+                    .map( PlanDescriptionWrapper::new )
+                    .collect( Collectors.toList());
+        }
+
+        @Override
+        public Map<String,Object> getArguments()
+        {
+            var recordConverter = new RecordConverter();
+
+            Map<String,Object> convertedArguments = new HashMap<>();
+            driverPlan.arguments().forEach( ( key, value ) -> convertedArguments.put( key, recordConverter.convertValue( value ) ) );
+
+            return convertedArguments;
+        }
+
+        @Override
+        public Set<String> getIdentifiers()
+        {
+            return new HashSet<>( driverPlan.identifiers() );
+        }
+
+        @Override
+        public boolean hasProfilerStatistics()
+        {
+            return false;
+        }
+
+        @Override
+        public ProfilerStatistics getProfilerStatistics()
+        {
+            return null;
+        }
+    }
+
+    private static class ProfiledPlanDescriptionWrapper extends PlanDescriptionWrapper
+    {
+
+        private final ProfiledPlan profiledDriverPlan;
+
+        ProfiledPlanDescriptionWrapper( ProfiledPlan profiledDriverPlan )
+        {
+            super( profiledDriverPlan );
+            this.profiledDriverPlan = profiledDriverPlan;
+        }
+
+        @Override
+        public boolean hasProfilerStatistics()
+        {
+            return true;
+        }
+
+        @Override
+        public ProfilerStatistics getProfilerStatistics()
+        {
+            return new ProfilerStatisticsImpl( profiledDriverPlan );
+        }
+
+        @Override
+        public List<ExecutionPlanDescription> getChildren()
+        {
+            return profiledDriverPlan.children().stream()
+                    .map( ProfiledPlanDescriptionWrapper::new )
+                    .collect( Collectors.toList());
+        }
+    }
+
+    private static class ProfilerStatisticsImpl implements ExecutionPlanDescription.ProfilerStatistics
+    {
+        private final ProfiledPlan profiledDriverPlan;
+
+        ProfilerStatisticsImpl( ProfiledPlan profiledDriverPlan )
+        {
+            this.profiledDriverPlan = profiledDriverPlan;
+        }
+
+        @Override
+        public boolean hasRows()
+        {
+            return profiledDriverPlan.records() > 0;
+        }
+
+        @Override
+        public long getRows()
+        {
+            return profiledDriverPlan.records();
+        }
+
+        @Override
+        public boolean hasDbHits()
+        {
+            return profiledDriverPlan.dbHits() > 0;
+        }
+
+        @Override
+        public long getDbHits()
+        {
+            return profiledDriverPlan.dbHits();
+        }
+
+        @Override
+        public boolean hasPageCacheStats()
+        {
+            return profiledDriverPlan.hasPageCacheStats();
+        }
+
+        @Override
+        public long getPageCacheHits()
+        {
+            return profiledDriverPlan.pageCacheHits();
+        }
+
+        @Override
+        public long getPageCacheMisses()
+        {
+            return profiledDriverPlan.pageCacheMisses();
+        }
+
+        @Override
+        public boolean hasTime()
+        {
+            return profiledDriverPlan.time() > 0;
+        }
+
+        @Override
+        public long getTime()
+        {
+            return profiledDriverPlan.time();
+        }
+    }
+
+    private static class NotificationWrapper implements Notification
     {
         private final org.neo4j.driver.summary.Notification notification;
 
@@ -82,7 +260,7 @@ public class ResultSummaryWrapper extends EmptySummary
         }
     }
 
-    public static class SummaryCountersWrapper implements QueryStatistics
+    private static class SummaryCountersWrapper implements QueryStatistics
     {
         private final SummaryCounters counters;
 

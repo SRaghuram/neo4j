@@ -981,50 +981,6 @@ class EndToEndTest
         assertThat( ex.getMessage() ).contains( "Writing in read access mode not allowed" );
     }
 
-    @Test
-    void testQuerySummaryCounters()
-    {
-        ResultSummary r = inMegaTx( tx ->
-        {
-            var query = joinAsLines(
-                    "UNWIND [1, 2, 3] AS x",
-                    "CALL {",
-                    "  WITH x",
-                    "  USE mega.graph(0)",
-                    "  CREATE (n:T {p: x})",
-                    "  RETURN n",
-                    "}",
-                    "CALL {",
-                    "  USE mega.graph(0)",
-                    "  MATCH (m:T {p: 1})",
-                    "  CREATE (m)-[r:R]->(x:X)",
-                    "  SET x:Y, x.y = 10",
-                    "  REMOVE x:Y",
-                    "  REMOVE x.y",
-                    "  DETACH DELETE m",
-                    "  RETURN m",
-                    "}",
-                    "RETURN x"
-            );
-
-            return tx.run( query ).consume();
-        } );
-
-        assertThat( r.queryType() ).isEqualTo( QueryType.READ_WRITE );
-        assertThat( r.counters().containsUpdates() ).isEqualTo( true );
-        assertThat( r.counters().nodesCreated() ).isEqualTo( 4 );
-        assertThat( r.counters().nodesDeleted() ).isEqualTo( 1 );
-        assertThat( r.counters().relationshipsCreated() ).isEqualTo( 1 );
-        assertThat( r.counters().relationshipsDeleted() ).isEqualTo( 1 );
-        assertThat( r.counters().propertiesSet() ).isEqualTo( 5 );
-        assertThat( r.counters().labelsAdded() ).isEqualTo( 5 );
-        assertThat( r.counters().labelsRemoved() ).isEqualTo( 1 );
-        assertThat( r.counters().indexesAdded() ).isEqualTo( 0 );
-        assertThat( r.counters().indexesRemoved() ).isEqualTo( 0 );
-        assertThat( r.counters().constraintsAdded() ).isEqualTo( 0 );
-        assertThat( r.counters().constraintsRemoved() ).isEqualTo( 0 );
-    }
-
     private <T> T inMegaTx( Function<Transaction, T> workload )
     {
         return driverUtils.inTx( clientDriver, workload );

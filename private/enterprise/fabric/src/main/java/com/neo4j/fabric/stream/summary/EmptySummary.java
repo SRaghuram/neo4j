@@ -10,20 +10,12 @@ import java.util.Collections;
 
 import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.Notification;
-import org.neo4j.graphdb.QueryExecutionType;
 import org.neo4j.graphdb.QueryStatistics;
 
-import static org.neo4j.graphdb.QueryExecutionType.QueryType.READ_WRITE;
 import static org.neo4j.graphdb.QueryStatistics.EMPTY;
 
 public class EmptySummary implements Summary
 {
-    @Override
-    public QueryExecutionType executionType()
-    {
-        return QueryExecutionType.query( READ_WRITE );
-    }
-
     @Override
     public ExecutionPlanDescription executionPlanDescription()
     {

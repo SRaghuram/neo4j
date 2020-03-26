@@ -6,6 +6,9 @@
 package com.neo4j.fabric.stream;
 
 import com.neo4j.fabric.executor.FabricException;
+import com.neo4j.fabric.executor.LocalExecutionSummary;
+import com.neo4j.fabric.stream.summary.EmptySummary;
+import com.neo4j.fabric.stream.summary.EmptySummary;
 import com.neo4j.fabric.stream.summary.Summary;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -13,6 +16,7 @@ import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
@@ -48,7 +52,7 @@ public final class StatementResults
             return create(
                     Flux.fromArray( queryExecution.fieldNames() ),
                     Flux.from( querySubject ),
-                    Mono.empty()
+                    querySubject.getSummary()
             );
         }
         catch ( RuntimeException re )
@@ -134,8 +138,11 @@ public final class StatementResults
 
     private static class QuerySubject extends RecordQuerySubscriber implements Publisher<Record>
     {
+        private final CompletableFuture<Summary> summaryFuture = new CompletableFuture<>();
+
         private Subscriber<? super Record> subscriber;
         private QueryExecution queryExecution;
+        private QueryStatistics statistics;
         private Throwable cachedError;
         private boolean cachedCompleted;
         private boolean errorReceived;
@@ -143,6 +150,11 @@ public final class StatementResults
         void setQueryExecution( QueryExecution queryExecution )
         {
             this.queryExecution = queryExecution;
+        }
+
+        Mono<Summary> getSummary()
+        {
+            return Mono.fromFuture( summaryFuture );
         }
 
         @Override
@@ -164,11 +176,14 @@ public final class StatementResults
             {
                 subscriber.onError( throwable );
             }
+
+            summaryFuture.completeExceptionally( throwable );
         }
 
         @Override
         public void onResultCompleted( QueryStatistics statistics )
         {
+            this.statistics = statistics;
             if ( subscriber == null )
             {
                 cachedCompleted = true;
@@ -176,7 +191,13 @@ public final class StatementResults
             else
             {
                 subscriber.onComplete();
+                completeSummary();
             }
+        }
+
+        private void completeSummary()
+        {
+            summaryFuture.complete( new LocalExecutionSummary( queryExecution, statistics ) );
         }
 
         @Override
@@ -271,6 +292,12 @@ public final class StatementResults
                     {
                         // ignore
                     }
+
+
+                    if ( !summaryFuture.isDone() )
+                    {
+                        summaryFuture.complete( new EmptySummary() );
+                    }
                 }
             };
             subscriber.onSubscribe( subscription );
@@ -288,6 +315,7 @@ public final class StatementResults
             {
                 subscriber.onComplete();
                 cachedCompleted = false;
+                completeSummary();
             }
         }
     }

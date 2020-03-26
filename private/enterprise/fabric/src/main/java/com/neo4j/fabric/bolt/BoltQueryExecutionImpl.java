@@ -7,9 +7,9 @@ package com.neo4j.fabric.bolt;
 
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.executor.Exceptions;
+import com.neo4j.fabric.stream.FabricExecutionStatementResult;
 import com.neo4j.fabric.stream.Record;
 import com.neo4j.fabric.stream.Rx2SyncStream;
-import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.stream.summary.Summary;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -32,11 +32,12 @@ public class BoltQueryExecutionImpl implements BoltQueryExecution
 {
     private final QueryExecutionImpl queryExecution;
 
-    public BoltQueryExecutionImpl( StatementResult statementResult, QuerySubscriber subscriber, FabricConfig fabricConfig )
+    public BoltQueryExecutionImpl( FabricExecutionStatementResult statementResult, QuerySubscriber subscriber, FabricConfig fabricConfig )
     {
         var config = fabricConfig.getDataStream();
         var rx2SyncStream = new Rx2SyncStream( statementResult.records(), config.getBatchSize() );
-        queryExecution = new QueryExecutionImpl( rx2SyncStream, subscriber, statementResult.columns(), statementResult.summary() );
+        queryExecution =
+                new QueryExecutionImpl( rx2SyncStream, subscriber, statementResult.columns(), statementResult.summary(), statementResult.queryExecutionType() );
     }
 
     @Override
@@ -65,13 +66,16 @@ public class BoltQueryExecutionImpl implements BoltQueryExecution
         private boolean hasMore = true;
         private boolean initialised;
         private final Mono<Summary> summary;
+        private final Mono<QueryExecutionType> queryExecutionType;
         private final Supplier<List<String>> columns;
 
-        private QueryExecutionImpl( Rx2SyncStream rx2SyncStream, QuerySubscriber subscriber, Flux<String> columns, Mono<Summary> summary )
+        private QueryExecutionImpl( Rx2SyncStream rx2SyncStream, QuerySubscriber subscriber, Flux<String> columns, Mono<Summary> summary,
+                Mono<QueryExecutionType> queryExecutionType )
         {
             this.rx2SyncStream = rx2SyncStream;
             this.subscriber = subscriber;
             this.summary = summary;
+            this.queryExecutionType = queryExecutionType;
 
             AtomicReference<List<String>> columnsStore = new AtomicReference<>();
             this.columns = () ->
@@ -87,13 +91,13 @@ public class BoltQueryExecutionImpl implements BoltQueryExecution
 
         private Summary getSummary()
         {
-            return summary.block();
+            return summary.cache().block();
         }
 
         @Override
         public QueryExecutionType executionType()
         {
-            return getSummary().executionType();
+            return queryExecutionType.cache().block();
         }
 
         @Override

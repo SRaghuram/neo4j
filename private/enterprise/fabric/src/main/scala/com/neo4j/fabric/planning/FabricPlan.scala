@@ -17,6 +17,7 @@ case class FabricPlan(
   debugOptions: DebugOptions,
   obfuscationMetadata: ObfuscationMetadata,
   inFabricContext: Boolean,
+  singleGraphQuery: Boolean
 )
 
 object FabricPlan {

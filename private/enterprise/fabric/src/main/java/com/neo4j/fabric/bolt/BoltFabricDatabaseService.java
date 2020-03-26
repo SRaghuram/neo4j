@@ -9,7 +9,7 @@ import com.neo4j.fabric.bookmark.LocalGraphTransactionIdTracker;
 import com.neo4j.fabric.bookmark.TransactionBookmarkManagerFactory;
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.executor.FabricExecutor;
-import com.neo4j.fabric.stream.StatementResult;
+import com.neo4j.fabric.stream.FabricExecutionStatementResult;
 import com.neo4j.fabric.transaction.FabricTransaction;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
 import com.neo4j.fabric.transaction.TransactionManager;
@@ -146,7 +146,7 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
         @Override
         public BoltQueryExecution executeQuery( String query, MapValue parameters, boolean prePopulate, QuerySubscriber subscriber )
         {
-            StatementResult statementResult = fabricExecutor.run( fabricTransaction, query, parameters );
+            FabricExecutionStatementResult statementResult = fabricExecutor.run( fabricTransaction, query, parameters );
             return new BoltQueryExecutionImpl( statementResult, subscriber, config );
         }
     }

@@ -9,19 +9,16 @@ import java.util.Collection;
 import java.util.List;
 
 import org.neo4j.graphdb.Notification;
-import org.neo4j.graphdb.QueryExecutionType;
 import org.neo4j.graphdb.QueryStatistics;
 
 public class PartialSummary extends EmptySummary
 {
     private final QueryStatistics queryStatistics;
-    private final QueryExecutionType executionType;
     private final List<Notification> notifications;
 
-    public PartialSummary( QueryStatistics queryStatistics, QueryExecutionType executionType, List<Notification> notifications )
+    public PartialSummary( QueryStatistics queryStatistics, List<Notification> notifications )
     {
         this.queryStatistics = queryStatistics;
-        this.executionType = executionType;
         this.notifications = notifications;
     }
 
@@ -29,12 +26,6 @@ public class PartialSummary extends EmptySummary
     public QueryStatistics getQueryStatistics()
     {
         return queryStatistics;
-    }
-
-    @Override
-    public QueryExecutionType executionType()
-    {
-        return executionType;
     }
 
     @Override

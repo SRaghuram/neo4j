@@ -12,8 +12,8 @@ import com.neo4j.fabric.bookmark.TransactionBookmarkManagerFactory;
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.executor.FabricExecutor;
 import com.neo4j.fabric.localdb.FabricDatabaseManager;
+import com.neo4j.fabric.stream.FabricExecutionStatementResult;
 import com.neo4j.fabric.stream.Record;
-import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.stream.summary.EmptySummary;
 import com.neo4j.fabric.transaction.FabricTransaction;
 import com.neo4j.fabric.bookmark.TransactionBookmarkManager;
@@ -45,6 +45,7 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.exceptions.DatabaseException;
+import org.neo4j.graphdb.QueryExecutionType;
 import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -74,7 +75,7 @@ class BoltAdapterTest
     private static FabricConfig fabricConfig;
     private static DriverUtils driverUtils;
     private final ResultPublisher publisher = new ResultPublisher();
-    private final StatementResult statementResult = mock( StatementResult.class );
+    private final FabricExecutionStatementResult statementResult = mock( FabricExecutionStatementResult.class );
     private final CountDownLatch transactionLatch = new CountDownLatch( 1 );
     private final FabricTransaction fabricTransaction = mock( FabricTransaction.class );
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
@@ -122,6 +123,7 @@ class BoltAdapterTest
         when( statementResult.columns() ).thenReturn( Flux.just( "c1", "c2" ) );
         when( statementResult.records() ).thenReturn( Flux.from( publisher ) );
         when( statementResult.summary() ).thenReturn( Mono.just( new EmptySummary() ) );
+        when( statementResult.queryExecutionType() ).thenReturn( Mono.just( QueryExecutionType.query( QueryExecutionType.QueryType.READ_WRITE ) ) );
 
         when( fabricExecutor.run( any(), any(), any() ) ).thenReturn( statementResult );
 

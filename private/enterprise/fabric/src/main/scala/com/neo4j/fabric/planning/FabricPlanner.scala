@@ -77,6 +77,7 @@ case class FabricPlanner(
       val stitching = FabricStitcher(query.statement, fabricContext, fabricContextName)
       val stitchedFragments = stitching.convert(fragments)
 
+      val singleGraphFragment = isSingleGraphFragment(fragments)
       FabricPlan(
         query = stitchedFragments,
         queryType = QueryType.recursive(stitchedFragments),
@@ -85,8 +86,15 @@ case class FabricPlanner(
         debugOptions = DebugOptions.from(query.options.debugOptions),
         obfuscationMetadata = prepared.obfuscationMetadata(),
         inFabricContext = fabricContext,
+        singleGraphQuery = singleGraphFragment
       )
     }
+
+    private def isSingleGraphFragment(fragment: Fragment): Boolean =
+      fragment match {
+        case Leaf(_: Init, _, _) => true
+        case _ => false
+      }
 
     private def trace(compute: => FabricPlan): FabricPlan = {
       val event = pipeline.traceStart()

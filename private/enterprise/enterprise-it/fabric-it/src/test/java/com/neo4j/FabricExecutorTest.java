@@ -436,7 +436,7 @@ class FabricExecutorTest
         when( stats1.containsSystemUpdates() ).thenReturn( true );
 
         when( graph0Result.summary() ).thenReturn( Mono.just( new PartialSummary(
-                stats0, null,
+                stats0,
                 List.of( NotificationCode.DEPRECATED_PROCEDURE.notification( new InputPosition( 100, 10, 5 ) ) )
         ) ) );
 
@@ -445,7 +445,7 @@ class FabricExecutorTest
         );
 
         when( graph1Result.summary() ).thenReturn( Mono.just( new PartialSummary(
-                stats1, null,
+                stats1,
                 List.of( NotificationCode.RUNTIME_UNSUPPORTED.notification( new InputPosition( 1, 1, 1 ) ) )
         ) ) );
 

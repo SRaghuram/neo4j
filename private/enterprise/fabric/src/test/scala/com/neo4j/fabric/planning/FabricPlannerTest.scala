@@ -71,6 +71,10 @@ class FabricPlannerTest
   private val config = makeConfig("mega")
   private val planner = FabricPlanner(config, cypherConfig, monitors, signatures)
 
+  // Even if we don't want to test parsing, we need something that parses,
+  // because it will be used when computing the Cypher execution mode
+  private def instance(): planner.PlannerInstance = instance("RETURN 1")
+
   private def instance(query: String, params: MapValue = params, fabricContext: Boolean = false): planner.PlannerInstance =
     planner.instance(query, params, defaultGraphName).withForceFabricContext(fabricContext)
 
@@ -501,14 +505,34 @@ class FabricPlannerTest
     }
 
     "disallow PROFILE" in {
-      val q =
-        """PROFILE
-          |RETURN 1 AS x
-          |""".stripMargin
+      "allow single graph PROFILE" in {
+        val q =
+          """PROFILE
+            |RETURN 1 AS x
+            |""".stripMargin
 
-      the[InvalidSemanticsException].thrownBy(plan(q))
-        .check(_.getMessage.should(include("Query option: 'PROFILE' is not supported in Fabric")))
-    }
+        plan(q, params)
+          .check(_.executionType.shouldEqual(FabricPlan.PROFILE))
+          .check(_.query.shouldEqual(
+            init(defaultUse).leaf(Seq(return_(literal(1).as("x"))), Seq("x"))
+          ))
+      }
+
+      "disallow multi graph PROFILE" in {
+        val q =
+          """PROFILE
+            |UNWIND [0, 1] AS gid
+            |CALL {
+            | USE graph(gid)
+            | RETURN 1
+            |}
+            |RETURN 1 AS x
+            |""".stripMargin
+
+        the[InvalidSemanticsException].thrownBy(plan(q, params))
+          .check(_.getMessage.should(include("Query option: 'PROFILE' not supported in Fabric database")))
+          .check(_.getMessage.should(include("'PROFILE' not supported for multi graph queries")))
+      }
 
     "allow fabric debug options" in {
       val q =

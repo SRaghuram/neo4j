@@ -9,16 +9,10 @@ import java.util.Collection;
 
 import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.Notification;
-import org.neo4j.graphdb.QueryExecutionType;
 import org.neo4j.graphdb.QueryStatistics;
 
 public interface Summary
 {
-    /**
-     * The {@link QueryExecutionType} of the query,
-     */
-    QueryExecutionType executionType();
-
     /**
      * @return The plan description of the query.
      */
