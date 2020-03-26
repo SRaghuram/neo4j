@@ -131,7 +131,7 @@ class Header
             int offsetSlot = numberOfTrailingZeros( bits );
             offsets[offsetSlot] = (int) (data & MASK_OFFSET);
             data >>>= BITS_PER_OFFSET;
-            bits &= bits-1;
+            bits &= bits - 1;
         }
     }
 }
