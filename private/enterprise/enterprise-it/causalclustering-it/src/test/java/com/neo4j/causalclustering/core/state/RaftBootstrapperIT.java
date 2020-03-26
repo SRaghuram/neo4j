@@ -104,7 +104,7 @@ class RaftBootstrapperIT
     @BeforeEach
     void setup()
     {
-        this.temporaryDatabaseFactory = new EnterpriseTemporaryDatabaseFactory( pageCache );
+        this.temporaryDatabaseFactory = new EnterpriseTemporaryDatabaseFactory( pageCache, fileSystem );
         this.neo4jHome = testDirectory.homeDir();
         this.defaultConfig = Config.defaults( GraphDatabaseSettings.neo4j_home, neo4jHome.toPath() );
         this.dataDirectory = defaultConfig.get( GraphDatabaseSettings.data_directory ).toFile();

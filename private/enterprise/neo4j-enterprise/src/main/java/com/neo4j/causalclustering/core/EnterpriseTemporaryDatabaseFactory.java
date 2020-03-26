@@ -17,6 +17,7 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.ExternallyManagedPageCache;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.logging.NullLogProvider;
@@ -24,10 +25,12 @@ import org.neo4j.logging.NullLogProvider;
 public class EnterpriseTemporaryDatabaseFactory implements TemporaryDatabaseFactory
 {
     private final PageCache pageCache;
+    private final FileSystemAbstraction fileSystem;
 
-    public EnterpriseTemporaryDatabaseFactory( PageCache pageCache )
+    public EnterpriseTemporaryDatabaseFactory( PageCache pageCache, FileSystemAbstraction fileSystem )
     {
         this.pageCache = pageCache;
+        this.fileSystem = fileSystem;
     }
 
     @Override
@@ -35,6 +38,7 @@ public class EnterpriseTemporaryDatabaseFactory implements TemporaryDatabaseFact
     {
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependency( new ExternallyManagedPageCache( pageCache ) );
+        dependencies.satisfyDependency( fileSystem );
         var managementServiceBuilder = new EnterpriseDatabaseManagementServiceBuilder( rootDirectory )
                 .setUserLogProvider( NullLogProvider.getInstance() )
                 .setExternalDependencies( dependencies );

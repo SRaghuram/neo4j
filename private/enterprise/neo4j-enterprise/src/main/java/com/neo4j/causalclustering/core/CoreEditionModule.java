@@ -173,7 +173,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var clusterStateMigrator = createClusterStateMigrator( globalModule, clusterStateLayout, storageFactory );
         globalLife.add( clusterStateMigrator );
 
-        temporaryDatabaseFactory = new EnterpriseTemporaryDatabaseFactory( globalModule.getPageCache() );
+        temporaryDatabaseFactory = new EnterpriseTemporaryDatabaseFactory( globalModule.getPageCache(), globalModule.getFileSystem() );
 
         panicService = new PanicService( globalModule.getJobScheduler(), logService );
         globalDependencies.satisfyDependencies( panicService ); // used by test
