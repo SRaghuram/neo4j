@@ -26,12 +26,10 @@ import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.bolt.runtime.Bookmark;
 import org.neo4j.bolt.txtracking.TransactionIdTracker;
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
-import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.database.NamedDatabaseId;
-import org.neo4j.kernel.impl.query.QueryExecutionKernelException;
 import org.neo4j.kernel.impl.query.QuerySubscriber;
 import org.neo4j.values.virtual.MapValue;
 
@@ -105,24 +103,21 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
 
     private class BoltTransactionImpl implements BoltTransaction
     {
-
-        private final FabricTransactionInfo transactionInfo;
         private final FabricTransaction fabricTransaction;
 
         BoltTransactionImpl( FabricTransactionInfo transactionInfo, FabricTransaction fabricTransaction )
         {
-            this.transactionInfo = transactionInfo;
             this.fabricTransaction = fabricTransaction;
         }
 
         @Override
-        public void commit() throws TransactionFailureException
+        public void commit()
         {
             fabricTransaction.commit();
         }
 
         @Override
-        public void rollback() throws TransactionFailureException
+        public void rollback()
         {
             fabricTransaction.rollback();
         }
@@ -153,7 +148,6 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
 
         @Override
         public BoltQueryExecution executeQuery( String query, MapValue parameters, boolean prePopulate, QuerySubscriber subscriber )
-                throws QueryExecutionKernelException
         {
             StatementResult statementResult = fabricExecutor.run( fabricTransaction, query, parameters );
             return new BoltQueryExecutionImpl( statementResult, subscriber, config );

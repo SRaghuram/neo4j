@@ -171,7 +171,7 @@ class DriverConfigFactory
         }
     }
 
-    private SSLContext createSslContext( SslPolicy sslPolicy )
+    private static SSLContext createSslContext( SslPolicy sslPolicy )
     {
         try
         {

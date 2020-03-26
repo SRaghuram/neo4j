@@ -52,7 +52,7 @@ public class InputDataStreamImpl implements InputDataStream
         }
 
         @Override
-        public void close() throws Exception
+        public void close()
         {
             // TODO what exactly is close on the cursor supposed to do?
         }

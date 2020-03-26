@@ -125,11 +125,11 @@ public class FabricBookmark extends BookmarkMetadata implements Bookmark
         private String serialize()
         {
             return bookmarks.stream()
-                    .map( this::serialize )
+                    .map( GraphState::serialize0 )
                     .collect( Collectors.joining( ",", remoteGraphId + ":", "" ) );
         }
 
-        private String serialize( RemoteBookmark remoteBookmark )
+        private static String serialize0( RemoteBookmark remoteBookmark )
         {
             return remoteBookmark.getSerialisedState().stream()
                     .map( bookmarkPart -> Base64.getEncoder().encodeToString( bookmarkPart.getBytes( StandardCharsets.UTF_8 ) ) )

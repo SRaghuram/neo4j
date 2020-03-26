@@ -74,7 +74,7 @@ public class MergedSummary implements Summary
         return statistics;
     }
 
-    private QueryExecutionType queryExecutionType( FabricPlan plan, AccessMode accessMode )
+    private static QueryExecutionType queryExecutionType( FabricPlan plan, AccessMode accessMode )
     {
         if ( plan.executionType() == FabricPlan.EXECUTE() )
         {
@@ -94,12 +94,12 @@ public class MergedSummary implements Summary
         }
     }
 
-    private QueryExecutionType.QueryType queryType( FabricPlan plan, AccessMode accessMode )
+    private static QueryExecutionType.QueryType queryType( FabricPlan plan, AccessMode accessMode )
     {
        return EffectiveQueryType.effectiveQueryType( accessMode, plan.queryType());
     }
 
-    private IllegalArgumentException unexpected( String type, String got )
+    private static IllegalArgumentException unexpected( String type, String got )
     {
         return new IllegalArgumentException( "Unexpected " + type + ": " + got );
     }

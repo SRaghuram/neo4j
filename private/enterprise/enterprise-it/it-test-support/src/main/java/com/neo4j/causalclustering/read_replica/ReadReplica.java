@@ -36,6 +36,7 @@ import org.neo4j.logging.Level;
 import org.neo4j.monitoring.Monitors;
 
 import static com.neo4j.causalclustering.common.Cluster.TOPOLOGY_REFRESH_INTERVAL;
+import static java.lang.Boolean.TRUE;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
 import static org.neo4j.configuration.helpers.SocketAddress.format;
@@ -82,7 +83,7 @@ public class ReadReplica implements ClusterMember
         config.set( GraphDatabaseSettings.store_internal_log_level, Level.DEBUG );
         config.set( GraphDatabaseSettings.record_format, recordFormat );
         config.set( GraphDatabaseSettings.pagecache_memory, "8m" );
-        config.set( GraphDatabaseSettings.auth_store, new File( parentDir, "auth" ).toPath().toAbsolutePath() );
+        config.set( GraphDatabaseSettings.auth_store, parentDir.toPath().resolve( "auth" ).toAbsolutePath() );
         config.set( GraphDatabaseSettings.transaction_start_timeout, Duration.ZERO );
         config.setRaw( extraParams );
 
@@ -90,11 +91,11 @@ public class ReadReplica implements ClusterMember
         instanceExtraParams.forEach( ( setting, function ) -> instanceExtras.put( setting, function.apply( serverId ) ) );
         config.setRaw( instanceExtras );
 
-        config.set( BoltConnector.enabled, true );
+        config.set( BoltConnector.enabled, TRUE );
         config.set( BoltConnector.listen_address, new SocketAddress( listenAddress, boltPort ) );
         config.set( BoltConnector.advertised_address, new SocketAddress( advertisedAddress, boltPort ) );
         config.set( BoltConnector.encryption_level, DISABLED );
-        config.set( HttpConnector.enabled, true );
+        config.set( HttpConnector.enabled, TRUE );
         config.set( HttpConnector.listen_address, new SocketAddress( listenAddress, httpPort ) );
         config.set( HttpConnector.advertised_address, new SocketAddress( advertisedAddress, httpPort ) );
 
@@ -105,7 +106,7 @@ public class ReadReplica implements ClusterMember
         config.set( CausalClusteringSettings.transaction_advertised_address, new SocketAddress( txPort ) );
         config.set( CausalClusteringSettings.cluster_topology_refresh, TOPOLOGY_REFRESH_INTERVAL );
         config.set( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( listenAddress, backupPort ) );
-        config.set( GraphDatabaseSettings.transaction_logs_root_path, new File( neo4jHome, "replica-tx-logs-" + serverId ).toPath().toAbsolutePath() );
+        config.set( GraphDatabaseSettings.transaction_logs_root_path, neo4jHome.toPath().resolve( "replica-tx-logs-" + serverId ).toAbsolutePath() );
         memberConfig = config.build();
 
         this.discoveryServiceFactory = discoveryServiceFactory;
@@ -198,7 +199,7 @@ public class ReadReplica implements ClusterMember
     }
 
     @Override
-    public String toString()
+    public final String toString()
     {
         return "ReadReplica{serverId=" + serverId + ", memberId=" + memberId + "}";
     }

@@ -185,7 +185,6 @@ public class DriverPool extends LifecycleAdapter
 
     private static class Key
     {
-
         private final Location.RemoteUri uri;
         private final AuthToken auth;
 

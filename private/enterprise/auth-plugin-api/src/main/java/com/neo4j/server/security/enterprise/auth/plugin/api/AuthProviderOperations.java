@@ -30,7 +30,7 @@ public interface AuthProviderOperations
      * Settings are recommended to be stored in a separate file. You can use {@link AuthProviderOperations#neo4jHome()}
      * to resolve your configuration file, e.g. {@code neo4jHome().resolve("conf/myPlugin.conf" );}
      */
-    @Deprecated
+    @Deprecated( since = "4.0.0", forRemoval = true )
     Optional<Path> neo4jConfigFile();
 
     /**

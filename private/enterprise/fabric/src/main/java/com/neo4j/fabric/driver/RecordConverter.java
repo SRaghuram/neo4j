@@ -75,7 +75,7 @@ class RecordConverter
         this.sourceTagValue = shiftToMsb( sourceTag );
     }
 
-    private long shiftToMsb( long value )
+    private static long shiftToMsb( long value )
     {
         return value << ID_MAX_BITS;
     }
@@ -295,7 +295,7 @@ class RecordConverter
 
     private MapValue convertMap( Map<String,Object> driverValue )
     {
-        if ( driverValue.size() == 0 )
+        if ( driverValue.isEmpty() )
         {
             return VirtualValues.EMPTY_MAP;
         }

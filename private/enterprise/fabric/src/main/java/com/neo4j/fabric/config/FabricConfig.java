@@ -5,8 +5,6 @@
  */
 package com.neo4j.fabric.config;
 
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.eclipse.collections.api.multimap.set.MutableSetMultimap;
 import org.eclipse.collections.impl.factory.Multimaps;
@@ -19,7 +17,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -128,14 +125,6 @@ public class FabricConfig
     public int hashCode()
     {
         return Objects.hash( database, fabricServers, routingTtl, transactionTimeout, globalDriverConfig, dataStream );
-    }
-
-    private static String join( String... parts )
-    {
-        return Stream.of( parts )
-                .flatMap( p -> Stream.of( ".", p ) )
-                .skip( 1 )
-                .collect( Collectors.joining() );
     }
 
     public static FabricConfig from( Config config )

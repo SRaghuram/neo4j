@@ -104,7 +104,7 @@ class FabricConfigTest
         var e = assertThrows( IllegalArgumentException.class,
                 () -> FabricConfig.from( config ) );
 
-        assertEquals( e.getMessage(), "Graphs with ids: 0, 1, have conflicting names" );
+        assertEquals( "Graphs with ids: 0, 1, have conflicting names", e.getMessage() );
     }
 
     @Test
@@ -130,7 +130,7 @@ class FabricConfigTest
         var e = assertThrows( IllegalArgumentException.class,
                 () -> FabricConfig.from( config ) );
 
-        assertEquals( e.getMessage(), "Graphs with ids: 0, 1, 3, have conflicting names" );
+        assertEquals( "Graphs with ids: 0, 1, 3, have conflicting names", e.getMessage() );
     }
 
     @Test
@@ -214,8 +214,8 @@ class FabricConfigTest
     {
         var fabricConfig = doTestRemoteUri( "bolt://core-1:1111?key=value,bolt://core-2:2222?key=value" );
         var uri = fabricConfig.getDatabase().getGraphs().stream().findFirst().get().getUri();
-        assertEquals( uri.getScheme(), "bolt" );
-        assertEquals( uri.getQuery(), "key=value" );
+        assertEquals( "bolt", uri.getScheme() );
+        assertEquals( "key=value", uri.getQuery() );
         assertThat( uri.getAddresses() ).contains( new SocketAddress( "core-1", 1111 ), new SocketAddress( "core-2", 2222 ) );
     }
 

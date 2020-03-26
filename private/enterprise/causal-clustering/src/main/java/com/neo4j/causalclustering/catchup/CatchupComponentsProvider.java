@@ -100,9 +100,7 @@ public final class CatchupComponentsProvider
                 .bootstrapConfig( clientConfig( config ) )
                 .commandReader( storageEngineFactory.commandReaderFactory() )
                 .handShakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
-                .debugLogProvider( logProvider )
-                .userLogProvider( userLogProvider )
-                .build();
+                .debugLogProvider( logProvider ).build();
         globalLife.add( catchupClient );
         return catchupClient;
     }

@@ -12,6 +12,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Locale;
 import java.util.concurrent.Callable;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
@@ -20,8 +21,8 @@ import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 
 public class MetricsTestHelper
 {
@@ -57,7 +58,7 @@ public class MetricsTestHelper
         M1_RATE( "m1_rate" ),
         M5_RATE( "m5_rate" ),
         M15_RATE( "m15_rate" ),
-        RATE_UNIt( "rate_unit" );
+        RATE_UNIT( "rate_unit" );
 
         private final String header;
 
@@ -85,7 +86,7 @@ public class MetricsTestHelper
         @Override
         public String header()
         {
-            return name().toLowerCase();
+            return name().toLowerCase( Locale.ROOT );
         }
     }
 
@@ -209,7 +210,7 @@ public class MetricsTestHelper
             }
             catch ( IOException e )
             {
-                return false;
+                return Boolean.FALSE;
             }
         };
     }

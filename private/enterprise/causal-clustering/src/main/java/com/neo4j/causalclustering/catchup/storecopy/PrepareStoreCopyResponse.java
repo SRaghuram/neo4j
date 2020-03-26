@@ -86,8 +86,8 @@ public class PrepareStoreCopyResponse
         }
         PrepareStoreCopyResponse that = (PrepareStoreCopyResponse) o;
         return lastCheckPointedTransactionId == that.lastCheckPointedTransactionId &&
-               Arrays.equals( files, that.files ) &&
-               status == that.status;
+                status == that.status &&
+                Arrays.equals( files, that.files );
     }
 
     @Override

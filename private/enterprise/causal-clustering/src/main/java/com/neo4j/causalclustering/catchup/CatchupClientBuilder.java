@@ -53,7 +53,6 @@ public final class CatchupClientBuilder
         private Collection<ModifierSupportedProtocols> modifierProtocols;
         private JobScheduler scheduler;
         private LogProvider debugLogProvider = NullLogProvider.getInstance();
-        private LogProvider userLogProvider = NullLogProvider.getInstance();
         private Duration inactivityTimeout;
         private Duration handshakeTimeout = Duration.ofSeconds( 5 );
         private Clock clock = systemClock();
@@ -117,13 +116,6 @@ public final class CatchupClientBuilder
         public AcceptsOptionalParams debugLogProvider( LogProvider debugLogProvider )
         {
             this.debugLogProvider = debugLogProvider;
-            return this;
-        }
-
-        @Override
-        public AcceptsOptionalParams userLogProvider( LogProvider userLogProvider )
-        {
-            this.userLogProvider = userLogProvider;
             return this;
         }
 
@@ -208,7 +200,6 @@ public final class CatchupClientBuilder
         AcceptsOptionalParams handShakeTimeout( Duration handshakeTimeout );
         AcceptsOptionalParams clock( Clock clock );
         AcceptsOptionalParams debugLogProvider( LogProvider debugLogProvider );
-        AcceptsOptionalParams userLogProvider( LogProvider userLogProvider );
         CatchupClientFactory build();
     }
 }

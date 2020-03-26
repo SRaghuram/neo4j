@@ -127,8 +127,7 @@ public class BackupSupportingClassesFactory
                 .commandReader( storageEngineFactory.commandReaderFactory() )
                 .handShakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
                 .clock( clock )
-                .debugLogProvider( logProvider )
-                .userLogProvider( logProvider ).build();
+                .debugLogProvider( logProvider ).build();
     }
 
     private SslPolicy loadSslPolicy( Config config )

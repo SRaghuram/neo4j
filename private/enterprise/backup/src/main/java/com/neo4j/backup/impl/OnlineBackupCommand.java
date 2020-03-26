@@ -29,6 +29,7 @@ import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.DEFAULT_BACKUP_HOST;
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.DEFAULT_BACKUP_PORT;
+import static java.lang.Boolean.FALSE;
 import static java.lang.String.format;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -154,8 +155,8 @@ public class OnlineBackupCommand extends AbstractCommand
                 .fromFileNoThrow( additionalConfigFile )
                 .set( GraphDatabaseSettings.neo4j_home, backupDirectory )
                 .set( pagecache_memory, pagecacheMemory )
-                .set( pagecache_warmup_enabled, false )
-                .set( OnlineBackupSettings.online_backup_enabled, false )
+                .set( pagecache_warmup_enabled, FALSE )
+                .set( OnlineBackupSettings.online_backup_enabled, FALSE )
                 .build();
         ConfigUtils.disableAllConnectors( cfg );
 

@@ -83,7 +83,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.shuffle;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
@@ -132,7 +131,6 @@ public final class CausalClusteringTestHelpers
                 .bootstrapConfig( clientConfig( Config.defaults() ) )
                 .commandReader( StorageEngineFactory.selectStorageEngine().commandReaderFactory() )
                 .debugLogProvider( logProvider )
-                .userLogProvider( logProvider )
                 .build();
     }
 
@@ -378,7 +376,6 @@ public final class CausalClusteringTestHelpers
 
     private static EnterpriseOperatorState memberDatabaseState( ClusterMember member, String databaseName )
     {
-        var databaseStateService = member.resolveDependency( SYSTEM_DATABASE_NAME, DatabaseStateService.class );
         GraphDatabaseFacade database;
         try
         {
@@ -388,6 +385,7 @@ public final class CausalClusteringTestHelpers
         {
             return EnterpriseOperatorState.UNKNOWN;
         }
+        var databaseStateService = member.resolveDependency( SYSTEM_DATABASE_NAME, DatabaseStateService.class );
         return (EnterpriseOperatorState) databaseStateService.stateOfDatabase( database.databaseId() );
     }
 
@@ -514,7 +512,7 @@ public final class CausalClusteringTestHelpers
         return members[ThreadLocalRandom.current().nextInt( members.length )];
     }
 
-    private static Server raftServer( CoreClusterMember member )
+    private static Server raftServer( ClusterMember member )
     {
         return member.defaultDatabase().getDependencyResolver().resolveDependency( Server.class, new RaftServerSelectionStrategy() );
     }
@@ -527,7 +525,7 @@ public final class CausalClusteringTestHelpers
     private static class RaftServerSelectionStrategy implements DependencyResolver.SelectionStrategy
     {
         @Override
-        public <T> T select( Class<T> type, Iterable<? extends T> candidates ) throws IllegalArgumentException
+        public <T> T select( Class<T> type, Iterable<? extends T> candidates )
         {
             assertThat( type, is( Server.class ) );
             return Iterables.stream( candidates )

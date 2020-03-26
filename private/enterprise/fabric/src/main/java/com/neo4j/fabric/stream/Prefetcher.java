@@ -69,7 +69,7 @@ public class Prefetcher
     {
         prefetchOperators.remove( operator );
 
-        if ( prefetchOperators.size() > 0 )
+        if ( !prefetchOperators.isEmpty() )
         {
             var operatorsCount = prefetchOperators.size();
             var newLowWatermark = computeLowWatermark( operatorsCount );

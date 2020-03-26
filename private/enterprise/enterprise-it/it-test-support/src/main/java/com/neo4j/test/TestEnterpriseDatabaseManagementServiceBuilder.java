@@ -29,6 +29,8 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.time.SystemNanoClock;
 
+import static java.lang.Boolean.FALSE;
+
 public class TestEnterpriseDatabaseManagementServiceBuilder extends TestDatabaseManagementServiceBuilder
 {
     public TestEnterpriseDatabaseManagementServiceBuilder()
@@ -56,7 +58,7 @@ public class TestEnterpriseDatabaseManagementServiceBuilder extends TestDatabase
     {
         config = super.augmentConfig( config );
         config.setIfNotSet( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( "127.0.0.1",0 ) );
-        config.setIfNotSet( OnlineBackupSettings.online_backup_enabled, false );
+        config.setIfNotSet( OnlineBackupSettings.online_backup_enabled, FALSE );
         return config;
     }
 

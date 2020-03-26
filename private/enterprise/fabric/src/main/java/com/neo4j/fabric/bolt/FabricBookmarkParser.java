@@ -72,12 +72,12 @@ public class FabricBookmarkParser implements CustomBookmarkFormatParser
         }
 
         var remoteBookmarks = Arrays.stream( parts[1].split( "," ) )
-                .map( this::decodeRemoteBookmark )
+                .map( FabricBookmarkParser::decodeRemoteBookmark )
                 .collect( Collectors.toList() );
         return new FabricBookmark.GraphState( graphId, remoteBookmarks );
     }
 
-    private RemoteBookmark decodeRemoteBookmark( String encodedBookmark )
+    private static RemoteBookmark decodeRemoteBookmark( String encodedBookmark )
     {
         var decodedBookmarkState = Arrays.stream( encodedBookmark.split( "\\|" ) )
                 .map( bookmarkPart -> Base64.getDecoder().decode( bookmarkPart ) )

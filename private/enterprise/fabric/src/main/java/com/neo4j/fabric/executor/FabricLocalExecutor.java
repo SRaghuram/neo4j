@@ -193,7 +193,7 @@ public class FabricLocalExecutor
         }
     }
 
-    private class KernelTxWrapper implements SingleDbTransaction
+    private static class KernelTxWrapper implements SingleDbTransaction
     {
 
         private final FabricKernelTransaction fabricKernelTransaction;

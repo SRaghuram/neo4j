@@ -10,12 +10,12 @@ import java.util.Objects;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 
-public abstract class Location
+public class Location
 {
     private final long graphId;
     private final String databaseName;
 
-    public Location( long graphId, String databaseName )
+    private Location( long graphId, String databaseName )
     {
         this.graphId = graphId;
         this.databaseName = databaseName;

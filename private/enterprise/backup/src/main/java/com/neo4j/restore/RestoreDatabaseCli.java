@@ -13,7 +13,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 import org.neo4j.cli.AbstractCommand;
-import org.neo4j.cli.Converters;
 import org.neo4j.cli.Converters.DatabaseNameConverter;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.configuration.Config;

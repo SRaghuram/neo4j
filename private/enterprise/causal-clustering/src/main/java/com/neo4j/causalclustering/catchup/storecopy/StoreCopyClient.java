@@ -140,7 +140,7 @@ public class StoreCopyClient
         }
     }
 
-    private void awaitAndIncrementTimeout( TimeoutStrategy.Timeout timeout ) throws StoreCopyFailedException
+    private static void awaitAndIncrementTimeout( TimeoutStrategy.Timeout timeout ) throws StoreCopyFailedException
     {
         try
         {

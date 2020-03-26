@@ -14,6 +14,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 import org.neo4j.graphdb.QueryStatistics;
 import org.neo4j.kernel.api.exceptions.Status;
@@ -21,10 +22,13 @@ import org.neo4j.kernel.impl.query.QueryExecution;
 import org.neo4j.kernel.impl.query.QuerySubscriber;
 import org.neo4j.values.AnyValue;
 
-public class StatementResults
+public final class StatementResults
 {
+    private StatementResults()
+    {
+    }
 
-    public static StatementResult map( StatementResult statementResult, Function<Flux<Record>,Flux<Record>> func )
+    public static StatementResult map( StatementResult statementResult, UnaryOperator<Flux<Record>> func )
     {
         return new BasicStatementResult( statementResult.columns(), func.apply( statementResult.records() ), statementResult.summary() );
     }
