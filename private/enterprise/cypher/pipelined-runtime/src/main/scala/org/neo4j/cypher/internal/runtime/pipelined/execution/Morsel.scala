@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.symbols.CTRelationship
 import org.neo4j.exceptions.InternalException
 import org.neo4j.graphdb.NotFoundException
+import org.neo4j.memory.HeapEstimator.shallowSizeOfInstance
 import org.neo4j.memory.Measurable
 import org.neo4j.util.Preconditions
 import org.neo4j.values.AnyValue
@@ -29,6 +30,8 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 object Morsel {
+  final val INSTANCE_SIZE = shallowSizeOfInstance(classOf[Morsel])
+
   def apply(longs: Array[Long], refs: Array[AnyValue], slots: SlotConfiguration, maxNumberOfRows: Int) =
     new Morsel(longs, refs, slots, maxNumberOfRows, 0, maxNumberOfRows)
 
@@ -373,17 +376,28 @@ class Morsel(private[execution] final val longs: Array[Long],
     * Total heap usage of all valid rows (can be a view, so might not be the whole morsel).
     * The reasoning behind this is that the other parts of the morsel would be part of other views in other buffers/argument states and will
     * also be accounted for.
+    *
+    * TODO: When we have morsel reuse we can track the actual memory usage of the morsel data more correctly and just add the overhead of each view separately
+    *       (and then we can use the more accurate HeapEstimator.sizeOf(longs) + HeapEstimator.shallowSizeOf(refs.asInstanceOf[Array[Object]]) etc.)
     */
   override def estimatedHeapUsage: Long = {
-    var usage = longsPerRow * numberOfRows * 8L
-    var i = startRow * refsPerRow
-    val limit = endRow * refsPerRow
-    while (i < limit) {
-      val ref = refs(i)
-      if (ref != null) {
-        usage += refs(i).estimatedHeapUsage()
+    Morsel.INSTANCE_SIZE + estimatedHeapUsageOfView
+  }
+
+  protected def estimatedHeapUsageOfView: Long = {
+    val nRows = numberOfRows
+    var usage = longsPerRow * nRows * 8L
+    if (refsPerRow > 0) {
+      usage += refsPerRow * nRows * org.neo4j.memory.HeapEstimator.OBJECT_REFERENCE_BYTES
+      var i = startRow * refsPerRow
+      val limit = endRow * refsPerRow
+      while (i < limit) {
+        val ref = refs(i)
+        if (ref != null) {
+          usage += ref.estimatedHeapUsage()
+        }
+        i += 1
       }
-      i += 1
     }
     usage
   }

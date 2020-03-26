@@ -7,11 +7,16 @@ package org.neo4j.cypher.internal.runtime.pipelined.execution
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
+import org.neo4j.memory.HeapEstimator
+import org.neo4j.memory.HeapEstimator.shallowSizeOfInstance
 import org.neo4j.values.AnyValue
 
 import scala.collection.mutable
 
 object FilteringMorsel {
+  final val INSTANCE_SIZE = shallowSizeOfInstance(classOf[FilteringMorsel])
+  final val BITSET_INSTANCE_SIZE = shallowSizeOfInstance(classOf[java.util.BitSet])
+
   def apply(source: Morsel) =
     new FilteringMorsel(source.longs, source.refs, source.slots, source.maxNumberOfRows, source.startRow, source.endRow, source.producingWorkUnitEvent)
 }
@@ -148,6 +153,23 @@ class FilteringMorsel(longs: Array[Long],
       endRow = startRow + input.numberOfRows
       cancelledRows = null
     }
+  }
+
+  /**
+   * Total heap usage of all valid rows (can be a view, so might not be the whole morsel).
+   * The reasoning behind this is that the other parts of the morsel would be part of other views in other buffers/argument states and will
+   * also be accounted for.
+   *
+   * NOTE: We do not `override def estimatedHeapUsageOfView: Long` here since even cancelled rows still retain heap memory
+   */
+  override def estimatedHeapUsage: Long = {
+    var usage = FilteringMorsel.INSTANCE_SIZE + estimatedHeapUsageOfView
+    if (cancelledRows != null) {
+      usage += FilteringMorsel.BITSET_INSTANCE_SIZE +
+        HeapEstimator.ARRAY_HEADER_BYTES + // there is an internal array
+        cancelledRows.size() >> 3 // size() returns the size in bits of the internal array, so divide by 8 to get size in bytes
+    }
+    usage
   }
 
   override def toString: String = {
