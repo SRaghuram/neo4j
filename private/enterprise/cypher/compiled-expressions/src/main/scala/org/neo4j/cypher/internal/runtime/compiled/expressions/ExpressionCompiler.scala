@@ -2668,7 +2668,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
                               nullable = nullable)
 
       case Some(RefSlot(offset, nullable, _)) =>
-        computeRepresentation(ir = getRefAt(offset), nullCheck = None, nullable = nullable)
+        computeRepresentation(ir = getRefAt(offset), nullCheck = Some(equal(getRefAt(offset), noValue)), nullable = nullable)
 
       case _ =>
         val varName = namer.nextVariableName()
