@@ -5,14 +5,12 @@
  */
 package com.neo4j.causalclustering.core.consensus.state;
 
-import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.cache.ConsecutiveInFlightCache;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembership;
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
-import com.neo4j.causalclustering.core.consensus.outcome.RaftLogCommand;
-import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
+import com.neo4j.causalclustering.core.consensus.outcome.OutcomeTestBuilder;
 import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
@@ -20,9 +18,6 @@ import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 
 import org.neo4j.logging.NullLogProvider;
@@ -32,31 +27,38 @@ import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 public class RaftStateBuilder
 {
-    public static RaftStateBuilder raftState()
+    private RaftStateBuilder()
+    {
+    }
+
+    public static RaftStateBuilder builder()
     {
         return new RaftStateBuilder();
     }
 
+    private Outcome outcome = OutcomeTestBuilder.builder().build();
     public MemberId myself;
     private Set<MemberId> votingMembers = emptySet();
     private Set<MemberId> replicationMembers = emptySet();
-    public long term;
-    public MemberId leader;
-    public long leaderCommit = -1;
-    private MemberId votedFor;
     private RaftLog entryLog = new InMemoryRaftLog();
     private boolean supportPreVoting;
-    private Set<MemberId> votesForMe = emptySet();
-    private Set<MemberId> preVotesForMe = emptySet();
-    private long lastLogIndexBeforeWeBecameLeader = -1;
-    public long commitIndex = -1;
-    private FollowerStates<MemberId> followerStates = new FollowerStates<>();
-    private boolean isPreElection;
     private boolean refusesToBeLeader;
 
     public RaftStateBuilder myself( MemberId myself )
     {
         this.myself = myself;
+        return this;
+    }
+
+    public RaftStateBuilder addInitialOutcome( Outcome outcome )
+    {
+        this.outcome = outcome;
+        return this;
+    }
+
+    public RaftStateBuilder supportsPreVoting( boolean supportPreVoting )
+    {
+        this.supportPreVoting = supportPreVoting;
         return this;
     }
 
@@ -72,63 +74,9 @@ public class RaftStateBuilder
         return this;
     }
 
-    public RaftStateBuilder term( long term )
-    {
-        this.term = term;
-        return this;
-    }
-
-    public RaftStateBuilder leader( MemberId leader )
-    {
-        this.leader = leader;
-        return this;
-    }
-
-    public RaftStateBuilder leaderCommit( long leaderCommit )
-    {
-        this.leaderCommit = leaderCommit;
-        return this;
-    }
-
-    public RaftStateBuilder votedFor( MemberId votedFor )
-    {
-        this.votedFor = votedFor;
-        return this;
-    }
-
     public RaftStateBuilder entryLog( RaftLog entryLog )
     {
         this.entryLog = entryLog;
-        return this;
-    }
-
-    public RaftStateBuilder votesForMe( Set<MemberId> votesForMe )
-    {
-        this.votesForMe = votesForMe;
-        return this;
-    }
-
-    public RaftStateBuilder supportsPreVoting( boolean supportPreVoting )
-    {
-        this.supportPreVoting = supportPreVoting;
-        return this;
-    }
-
-    public RaftStateBuilder lastLogIndexBeforeWeBecameLeader( long lastLogIndexBeforeWeBecameLeader )
-    {
-        this.lastLogIndexBeforeWeBecameLeader = lastLogIndexBeforeWeBecameLeader;
-        return this;
-    }
-
-    public RaftStateBuilder commitIndex( long commitIndex )
-    {
-        this.commitIndex = commitIndex;
-        return this;
-    }
-
-    public RaftStateBuilder setPreElection( boolean isPreElection )
-    {
-        this.isPreElection = isPreElection;
         return this;
     }
 
@@ -147,12 +95,7 @@ public class RaftStateBuilder
         RaftState state = new RaftState( myself, termStore, membership, entryLog,
                 voteStore, new ConsecutiveInFlightCache(), NullLogProvider.getInstance(), supportPreVoting, refusesToBeLeader );
 
-        Collection<RaftMessages.Directed> noMessages = Collections.emptyList();
-        List<RaftLogCommand> noLogCommands = Collections.emptyList();
-
-        state.update( new Outcome( null, term, leader, leaderCommit, votedFor, votesForMe, preVotesForMe,
-                lastLogIndexBeforeWeBecameLeader, followerStates, null, noLogCommands,
-                noMessages, emptySet(), commitIndex, emptySet(), isPreElection ) );
+        state.update( outcome );
 
         return state;
     }

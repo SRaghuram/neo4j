@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.core.consensus.state;
 
-import com.neo4j.causalclustering.core.consensus.ElectionTimerMode;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
@@ -13,7 +12,7 @@ import com.neo4j.causalclustering.core.consensus.log.cache.ConsecutiveInFlightCa
 import com.neo4j.causalclustering.core.consensus.log.cache.InFlightCache;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembership;
 import com.neo4j.causalclustering.core.consensus.outcome.AppendLogEntry;
-import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
+import com.neo4j.causalclustering.core.consensus.outcome.OutcomeBuilder;
 import com.neo4j.causalclustering.core.consensus.outcome.RaftLogCommand;
 import com.neo4j.causalclustering.core.consensus.outcome.TruncateLogCommand;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerState;
@@ -35,6 +34,7 @@ import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.core.consensus.ElectionTimerMode.ACTIVE_ELECTION;
 import static com.neo4j.causalclustering.core.consensus.ReplicatedInteger.valueOf;
+import static com.neo4j.causalclustering.core.consensus.outcome.OutcomeTestBuilder.builder;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.CANDIDATE;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static java.util.Collections.emptySet;
@@ -56,7 +56,7 @@ public class RaftStateTest
                 new InMemoryStateStorage<>( new TermState() ), new FakeMembership(), new InMemoryRaftLog(),
                 new InMemoryStateStorage<>( new VoteState() ), cache, NullLogProvider.getInstance(), false, false );
 
-        List<RaftLogCommand> logCommands = new LinkedList<RaftLogCommand>()
+        List<RaftLogCommand> logCommands = new LinkedList<>()
         {{
             add( new AppendLogEntry( 1, new RaftLogEntry( 0L, valueOf( 0 ) ) ) );
             add( new AppendLogEntry( 2, new RaftLogEntry( 0L, valueOf( 1 ) ) ) );
@@ -66,12 +66,15 @@ public class RaftStateTest
             add( new AppendLogEntry( 3, new RaftLogEntry( 0L, valueOf( 5 ) ) ) );
         }};
 
-        Outcome raftTestMemberOutcome =
-                new Outcome( CANDIDATE, 0, null, -1, null, emptySet(), emptySet(), -1, initialFollowerStates(), ACTIVE_ELECTION,
-                             logCommands, emptyOutgoingMessages(), emptySet(), -1, emptySet(), false );
+        OutcomeBuilder raftTestMemberOutcome = builder().setRole( CANDIDATE ).renewElectionTimeout( ACTIVE_ELECTION );
+
+        for ( RaftLogCommand logCommand : logCommands )
+        {
+            raftTestMemberOutcome.addLogCommand( logCommand );
+        }
 
         //when
-        raftState.update(raftTestMemberOutcome);
+        raftState.update( raftTestMemberOutcome.build() );
 
         //then
         assertNotNull( cache.get( 1L ) );
@@ -88,16 +91,14 @@ public class RaftStateTest
         RaftState raftState = new RaftState( member( 0 ),
                 new InMemoryStateStorage<>( new TermState() ),
                 new FakeMembership(), new InMemoryRaftLog(),
-                new InMemoryStateStorage<>( new VoteState( ) ),
+                new InMemoryStateStorage<>( new VoteState() ),
                 new ConsecutiveInFlightCache(), NullLogProvider.getInstance(),
                 false, false );
 
-        raftState.update( new Outcome( CANDIDATE, 1, null, -1, null, emptySet(), emptySet(), -1, initialFollowerStates(), ACTIVE_ELECTION, emptyLogCommands(),
-                emptyOutgoingMessages(), emptySet(), -1, emptySet(), false ) );
+        raftState.update( builder().setRole( CANDIDATE ).replaceFollowerStates( initialFollowerStates() ).renewElectionTimeout( ACTIVE_ELECTION ).build() );
 
         // when
-        raftState.update( new Outcome( CANDIDATE, 1, null, -1, null, emptySet(), emptySet(), -1, new FollowerStates<>(), ACTIVE_ELECTION, emptyLogCommands(),
-                emptyOutgoingMessages(), emptySet(), -1, emptySet(), false ) );
+        raftState.update( builder().setRole( CANDIDATE ).replaceFollowerStates( new FollowerStates<>() ).renewElectionTimeout( ACTIVE_ELECTION ).build() );
 
         // then
         assertEquals( 0, raftState.followerStates().size() );
@@ -118,7 +119,7 @@ public class RaftStateTest
         return Collections.emptyList();
     }
 
-    private class FakeMembership implements RaftMembership
+    private static class FakeMembership implements RaftMembership
     {
         @Override
         public Set<MemberId> votingMembers()

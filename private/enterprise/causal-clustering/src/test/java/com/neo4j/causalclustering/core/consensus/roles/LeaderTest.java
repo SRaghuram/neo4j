@@ -17,6 +17,7 @@ import com.neo4j.causalclustering.core.consensus.log.ReadableRaftLog;
 import com.neo4j.causalclustering.core.consensus.outcome.AppendLogEntry;
 import com.neo4j.causalclustering.core.consensus.outcome.BatchAppendLogEntries;
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
+import com.neo4j.causalclustering.core.consensus.outcome.OutcomeTestBuilder;
 import com.neo4j.causalclustering.core.consensus.outcome.ShipCommand;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerState;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
@@ -36,19 +37,12 @@ import static com.neo4j.causalclustering.core.consensus.ReplicatedInteger.valueO
 import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.appendEntriesResponse;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.FOLLOWER;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
-import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.raftState;
+import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.builder;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static java.util.Arrays.asList;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -203,7 +197,7 @@ public class LeaderTest
             }
         }
 
-        assertThat( matchCount, greaterThan( 0 ) );
+        assertThat( matchCount ).isGreaterThan( 0 );
     }
 
     @Test
@@ -312,7 +306,7 @@ public class LeaderTest
             }
         }
 
-        assertThat( mismatchCount, greaterThan( 0 ) );
+        assertThat( mismatchCount ).isGreaterThan( 0 );
     }
 
     @Test
@@ -327,8 +321,8 @@ public class LeaderTest
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
         raftLog.skip( leaderPrevIndex, term );
 
-        RaftState state = raftState()
-                .term( term )
+        RaftState state = builder()
+                .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( term ).build() )
                 .entryLog( raftLog )
                 .build();
 
@@ -343,10 +337,10 @@ public class LeaderTest
 
         // then
         RaftMessages.RaftMessage outgoingMessage = messageFor( outcome, member1 );
-        assertThat( outgoingMessage, instanceOf( RaftMessages.LogCompactionInfo.class ) );
+        assertThat( outgoingMessage ).isInstanceOf( RaftMessages.LogCompactionInfo.class );
 
         RaftMessages.LogCompactionInfo typedOutgoingMessage = (RaftMessages.LogCompactionInfo) outgoingMessage;
-        assertThat( typedOutgoingMessage.prevIndex(), equalTo( leaderPrevIndex ) );
+        assertThat( typedOutgoingMessage.prevIndex() ).isEqualTo( leaderPrevIndex );
     }
 
     @Test
@@ -357,11 +351,11 @@ public class LeaderTest
         long leaderTerm = 5;
         long followerTerm = 3;
 
-        RaftState state = raftState()
-                .term( leaderTerm )
+        RaftState state = builder()
+                .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( leaderTerm ).build() )
                 .build();
 
-                RaftMessages.AppendEntries.Response incomingResponse = appendEntriesResponse()
+        RaftMessages.AppendEntries.Response incomingResponse = appendEntriesResponse()
                 .failure()
                 .term( followerTerm )
                 .from( member1 ).build();
@@ -370,18 +364,18 @@ public class LeaderTest
         Outcome outcome = leader.handle( incomingResponse, state, log() );
 
         // then
-        assertThat( outcome.getTerm(), equalTo( leaderTerm ) );
-        assertThat( outcome.getRole(), equalTo( LEADER ) );
+        assertThat( outcome.getTerm() ).isEqualTo( leaderTerm );
+        assertThat( outcome.getRole() ).isEqualTo( LEADER );
 
-        assertThat( outcome.getOutgoingMessages(), empty() );
-        assertThat( outcome.getShipCommands(), empty() );
+        assertThat( outcome.getOutgoingMessages() ).isEmpty();
+        assertThat( outcome.getShipCommands() ).isEmpty();
     }
 
     @Test
     public void leaderShouldRejectAppendEntriesResponseWithNewerTermAndBecomeAFollower() throws Exception
     {
         // given
-        RaftState state = raftState().myself( myself ).build();
+        RaftState state = builder().myself( myself ).build();
 
         Leader leader = new Leader();
 
@@ -405,7 +399,7 @@ public class LeaderTest
     public void leaderShouldSendHeartbeatsToAllClusterMembersOnReceiptOfHeartbeatTick() throws Exception
     {
         // given
-        RaftState state = raftState()
+        RaftState state = builder()
                 .votingMembers( myself, member1, member2 )
                 .replicationMembers( myself, member1, member2 )
                 .build();
@@ -425,9 +419,9 @@ public class LeaderTest
     public void leaderShouldStepDownWhenLackingHeartbeatResponses() throws Exception
     {
         // given
-        RaftState state = raftState()
+        RaftState state = builder()
                 .votingMembers( asSet( myself, member1, member2 ) )
-                .leader( myself )
+                .addInitialOutcome( OutcomeTestBuilder.builder().setLeader( myself ).build() )
                 .build();
 
         Leader leader = new Leader();
@@ -437,7 +431,7 @@ public class LeaderTest
         Outcome outcome = leader.handle( new RaftMessages.Timeout.Election( myself ), state, log() );
 
         // then
-        assertThat( outcome.getRole(), not( LEADER ) );
+        assertThat( outcome.getRole() ).isNotEqualTo( LEADER );
         assertNull( outcome.getLeader() );
     }
 
@@ -445,7 +439,7 @@ public class LeaderTest
     public void leaderShouldNotStepDownWhenReceivedQuorumOfHeartbeatResponses() throws Exception
     {
         // given
-        RaftState state = raftState()
+        RaftState state = builder()
                 .votingMembers( asSet( myself, member1, member2 ) )
                 .build();
 
@@ -459,14 +453,14 @@ public class LeaderTest
         outcome = leader.handle( new RaftMessages.Timeout.Election( myself ), state, log() );
 
         // then
-        assertThat( outcome.getRole(), is( LEADER ) );
+        assertThat( outcome.getRole() ).isEqualTo( LEADER );
     }
 
     @Test
     public void oldHeartbeatResponseShouldNotPreventStepdown() throws Exception
     {
         // given
-        RaftState state = raftState()
+        RaftState state = builder()
                 .votingMembers( asSet( myself, member1, member2 ) )
                 .build();
 
@@ -478,13 +472,13 @@ public class LeaderTest
         outcome = leader.handle( new RaftMessages.Timeout.Election( myself ), state, log() );
         state.update( outcome );
 
-        assertThat( outcome.getRole(), is( LEADER ) );
+        assertThat( outcome.getRole() ).isEqualTo( LEADER );
 
         // when
         outcome = leader.handle( new RaftMessages.Timeout.Election( myself ), state, log() );
 
         // then
-        assertThat( outcome.getRole(), is( FOLLOWER ) );
+        assertThat( outcome.getRole() ).isEqualTo( FOLLOWER );
     }
 
     @Test
@@ -492,7 +486,7 @@ public class LeaderTest
             throws Exception
     {
         // given
-        RaftState state = raftState()
+        RaftState state = builder()
                 .votingMembers( asSet( myself, member1, member2 ) )
                 .build();
 
@@ -519,7 +513,7 @@ public class LeaderTest
     public void leaderShouldHandleBatch() throws Exception
     {
         // given
-        RaftState state = raftState()
+        RaftState state = builder()
                 .votingMembers( asSet( myself, member1, member2 ) )
                 .build();
 
@@ -558,12 +552,9 @@ public class LeaderTest
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
         raftLog.append( new RaftLogEntry( 0, new ReplicatedString( "lalalala" ) ) );
 
-        RaftState state = raftState()
+        RaftState state = builder()
                 .votingMembers( member1, member2 )
-                .term( 0 )
-                .lastLogIndexBeforeWeBecameLeader( -1 )
-                .leader( myself )
-                .leaderCommit( -1 )
+                .addInitialOutcome( OutcomeTestBuilder.builder().setLeader( myself ).build() )
                 .entryLog( raftLog )
                 .messagesSentToFollower( member1, raftLog.appendIndex() + 1 )
                 .messagesSentToFollower( member2, raftLog.appendIndex() + 1 )
@@ -590,9 +581,8 @@ public class LeaderTest
         raftLog.append( new RaftLogEntry( 0, new ReplicatedString( "second" ) ) );
         raftLog.append( new RaftLogEntry( 0, new ReplicatedString( "third" ) ) );
 
-        RaftState state = raftState()
+        RaftState state = builder()
                 .votingMembers( myself, member1, member2 )
-                .term( 0 )
                 .entryLog( raftLog )
                 .messagesSentToFollower( member1, raftLog.appendIndex() + 1 )
                 .messagesSentToFollower( member2, raftLog.appendIndex() + 1 )
@@ -618,22 +608,21 @@ public class LeaderTest
         long rivalTerm = leaderTerm - 1;
 
         Leader leader = new Leader();
-        RaftState state = raftState()
-                .term( leaderTerm )
-                .commitIndex( leaderCommitIndex )
+        RaftState state = builder()
+                .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( leaderTerm ).setCommitIndex( leaderCommitIndex ).build() )
                 .build();
 
         // when
         Outcome outcome = leader.handle( new RaftMessages.Vote.Request( member1, rivalTerm, member1, leaderCommitIndex, leaderTerm ), state, log() );
 
         // then
-        assertThat( outcome.getRole(), equalTo( LEADER) );
-        assertThat( outcome.getTerm(), equalTo( leaderTerm ) );
+        assertThat( outcome.getRole() ).isEqualTo( LEADER );
+        assertThat( outcome.getTerm() ).isEqualTo( leaderTerm );
 
         RaftMessages.RaftMessage response = messageFor( outcome, member1 );
-        assertThat( response, instanceOf( RaftMessages.Vote.Response.class ) );
+        assertThat( response ).isInstanceOf( RaftMessages.Vote.Response.class );
         RaftMessages.Vote.Response typedResponse = (RaftMessages.Vote.Response) response;
-        assertThat( typedResponse.voteGranted(), equalTo( false ) );
+        assertThat( typedResponse.voteGranted() ).isFalse();
     }
 
     @Test
@@ -645,23 +634,22 @@ public class LeaderTest
         long rivalTerm = leaderTerm + 1;
 
         Leader leader = new Leader();
-        RaftState state = raftState()
-                .term( leaderTerm )
-                .commitIndex( leaderCommitIndex )
+        RaftState state = builder()
+                .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( leaderTerm ).setCommitIndex( leaderCommitIndex ).build() )
                 .build();
 
         // when
         Outcome outcome = leader.handle( new RaftMessages.Vote.Request( member1, rivalTerm, member1, leaderCommitIndex, leaderTerm ), state, log() );
 
         // then
-        assertThat( outcome.getRole(), equalTo( FOLLOWER ) );
-        assertThat( outcome.getLeader(), nullValue() );
-        assertThat( outcome.getTerm(), equalTo( rivalTerm ) );
+        assertThat( outcome.getRole() ).isEqualTo( FOLLOWER );
+        assertThat( outcome.getLeader() ).isNull();
+        assertThat( outcome.getTerm() ).isEqualTo( rivalTerm );
 
         RaftMessages.RaftMessage response = messageFor( outcome, member1 );
-        assertThat( response, instanceOf( RaftMessages.Vote.Response.class ) );
+        assertThat( response ).isInstanceOf( RaftMessages.Vote.Response.class );
         RaftMessages.Vote.Response typedResponse = (RaftMessages.Vote.Response) response;
-        assertThat( typedResponse.voteGranted(), equalTo( true ) );
+        assertThat( typedResponse.voteGranted() ).isTrue();
     }
 
     @Test
@@ -673,17 +661,16 @@ public class LeaderTest
         long rivalTerm = leaderTerm - 1;
 
         Leader leader = new Leader();
-        RaftState state = raftState()
-                .term( leaderTerm )
-                .commitIndex( leaderCommitIndex )
+        RaftState state = builder()
+                .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( leaderTerm ).setCommitIndex( leaderCommitIndex ).build() )
                 .build();
 
         // when
         Outcome outcome = leader.handle( new RaftMessages.Heartbeat( member1, rivalTerm, leaderCommitIndex, leaderTerm ), state, log() );
 
         // then
-        assertThat( outcome.getRole(), equalTo( LEADER) );
-        assertThat( outcome.getTerm(), equalTo( leaderTerm ) );
+        assertThat( outcome.getRole() ).isEqualTo( LEADER );
+        assertThat( outcome.getTerm() ).isEqualTo( leaderTerm );
     }
 
     @Test
@@ -695,18 +682,17 @@ public class LeaderTest
         long rivalTerm = leaderTerm + 1;
 
         Leader leader = new Leader();
-        RaftState state = raftState()
-                .term( leaderTerm )
-                .commitIndex( leaderCommitIndex )
+        RaftState state = builder()
+                .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( leaderTerm ).setCommitIndex( leaderCommitIndex ).build() )
                 .build();
 
         // when
         Outcome outcome = leader.handle( new RaftMessages.Heartbeat( member1, rivalTerm, leaderCommitIndex, leaderTerm ), state, log() );
 
         // then
-        assertThat( outcome.getRole(), equalTo( FOLLOWER ) );
-        assertThat( outcome.getLeader(), equalTo( member1 ) );
-        assertThat( outcome.getTerm(), equalTo( rivalTerm ) );
+        assertThat( outcome.getRole() ).isEqualTo( FOLLOWER );
+        assertThat( outcome.getLeader() ).isEqualTo( member1 );
+        assertThat( outcome.getTerm() ).isEqualTo( rivalTerm );
     }
 
     @Test
@@ -717,12 +703,11 @@ public class LeaderTest
         long leaderCommitIndex = 10;
         long rivalTerm = leaderTerm - 1;
         long logIndex = 20;
-        RaftLogEntry[] entries = { new RaftLogEntry( rivalTerm, ReplicatedInteger.valueOf( 99 ) ) };
+        RaftLogEntry[] entries = {new RaftLogEntry( rivalTerm, ReplicatedInteger.valueOf( 99 ) )};
 
         Leader leader = new Leader();
-        RaftState state = raftState()
-                .term( leaderTerm )
-                .commitIndex( leaderCommitIndex )
+        RaftState state = builder()
+                .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( leaderTerm ).setCommitIndex( leaderCommitIndex ).build() )
                 .build();
 
         // when
@@ -730,14 +715,14 @@ public class LeaderTest
                 leader.handle( new RaftMessages.AppendEntries.Request( member1, rivalTerm, logIndex, leaderTerm, entries, leaderCommitIndex ), state, log() );
 
         // then
-        assertThat( outcome.getRole(), equalTo( LEADER) );
-        assertThat( outcome.getTerm(), equalTo( leaderTerm ) );
+        assertThat( outcome.getRole() ).isEqualTo( LEADER );
+        assertThat( outcome.getTerm() ).isEqualTo( leaderTerm );
 
         RaftMessages.RaftMessage response = messageFor( outcome, member1 );
-        assertThat( response, instanceOf( RaftMessages.AppendEntries.Response.class ) );
+        assertThat( response ).isInstanceOf( RaftMessages.AppendEntries.Response.class );
         RaftMessages.AppendEntries.Response typedResponse = (RaftMessages.AppendEntries.Response) response;
-        assertThat( typedResponse.term(), equalTo( leaderTerm ) );
-        assertThat( typedResponse.success(), equalTo( false ) );
+        assertThat( typedResponse.term() ).isEqualTo( leaderTerm );
+        assertThat( typedResponse.success() ).isFalse();
     }
 
     @Test
@@ -748,12 +733,11 @@ public class LeaderTest
         long leaderCommitIndex = 10;
         long rivalTerm = leaderTerm + 1;
         long logIndex = 20;
-        RaftLogEntry[] entries = { new RaftLogEntry( rivalTerm, ReplicatedInteger.valueOf( 99 ) ) };
+        RaftLogEntry[] entries = {new RaftLogEntry( rivalTerm, ReplicatedInteger.valueOf( 99 ) )};
 
         Leader leader = new Leader();
-        RaftState state = raftState()
-                .term( leaderTerm )
-                .commitIndex( leaderCommitIndex )
+        RaftState state = builder()
+                .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( leaderTerm ).setCommitIndex( leaderCommitIndex ).build() )
                 .build();
 
         // when
@@ -761,14 +745,14 @@ public class LeaderTest
                 leader.handle( new RaftMessages.AppendEntries.Request( member1, rivalTerm, logIndex, leaderTerm, entries, leaderCommitIndex ), state, log() );
 
         // then
-        assertThat( outcome.getRole(), equalTo( FOLLOWER ) );
-        assertThat( outcome.getLeader(), equalTo( member1 ) );
-        assertThat( outcome.getTerm(), equalTo( rivalTerm ) );
+        assertThat( outcome.getRole() ).isEqualTo( FOLLOWER );
+        assertThat( outcome.getLeader() ).isEqualTo( member1 );
+        assertThat( outcome.getTerm() ).isEqualTo( rivalTerm );
 
         RaftMessages.RaftMessage response = messageFor( outcome, member1 );
-        assertThat( response, instanceOf( RaftMessages.AppendEntries.Response.class ) );
+        assertThat( response ).isInstanceOf( RaftMessages.AppendEntries.Response.class );
         RaftMessages.AppendEntries.Response typedResponse = (RaftMessages.AppendEntries.Response) response;
-        assertThat( typedResponse.term(), equalTo( rivalTerm ) );
+        assertThat( typedResponse.term() ).isEqualTo( rivalTerm );
         // Not checking success or failure of append
     }
 

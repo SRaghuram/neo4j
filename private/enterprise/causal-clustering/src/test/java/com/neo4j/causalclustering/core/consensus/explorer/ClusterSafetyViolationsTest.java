@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.consensus.explorer;
 
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
-import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
+import com.neo4j.causalclustering.core.consensus.outcome.OutcomeBuilder;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.Test;
@@ -151,8 +151,8 @@ public class ClusterSafetyViolationsTest
     private void commit( ClusterState clusterState, MemberId member, long commitIndex ) throws IOException
     {
         ComparableRaftState state = clusterState.states.get( member );
-        Outcome outcome = new Outcome( clusterState.roles.get( member ), state );
+        OutcomeBuilder outcome = OutcomeBuilder.builder( clusterState.roles.get( member ), state );
         outcome.setCommitIndex( commitIndex );
-        state.update( outcome );
+        state.update( outcome.build() );
     }
 }

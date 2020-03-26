@@ -22,7 +22,7 @@ import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.core.consensus.MessageUtils.messageFor;
 import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.voteRequest;
-import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.raftState;
+import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.builder;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -158,7 +158,7 @@ public class VoteRequestTest
 
     public RaftState newState() throws IOException
     {
-        return raftState().myself( myself ).build();
+        return builder().myself( myself ).build();
     }
 
     private Log log()

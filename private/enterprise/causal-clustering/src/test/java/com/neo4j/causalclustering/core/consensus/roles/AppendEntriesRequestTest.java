@@ -12,10 +12,10 @@ import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.consensus.outcome.BatchAppendLogEntries;
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
+import com.neo4j.causalclustering.core.consensus.outcome.OutcomeTestBuilder;
 import com.neo4j.causalclustering.core.consensus.outcome.TruncateLogCommand;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.hamcrest.Matchers;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -30,13 +30,11 @@ import org.neo4j.logging.NullLogProvider;
 import static com.neo4j.causalclustering.core.consensus.MessageUtils.messageFor;
 import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.appendEntriesRequest;
 import static com.neo4j.causalclustering.core.consensus.roles.AppendEntriesRequestTest.ContentGenerator.content;
-import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.raftState;
+import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.builder;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
-import static org.hamcrest.CoreMatchers.hasItem;
-import static org.hamcrest.Matchers.empty;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 @RunWith( Parameterized.class )
@@ -51,7 +49,7 @@ public class AppendEntriesRequestTest
         } );
     }
 
-    @Parameterized.Parameter( value = 0 )
+    @Parameterized.Parameter()
     public Role role;
 
     @Parameterized.Parameter( value = 1 )
@@ -64,7 +62,7 @@ public class AppendEntriesRequestTest
     public void shouldAcceptInitialEntryAfterBootstrap() throws Exception
     {
         RaftLog raftLog = bootstrappedLog();
-        RaftState state = raftState()
+        RaftState state = builder()
                 .entryLog( raftLog )
                 .myself( myself )
                 .build();
@@ -83,14 +81,14 @@ public class AppendEntriesRequestTest
 
         // then
         assertTrue( ((Response) messageFor( outcome, leader )).success() );
-        assertThat( outcome.getLogCommands(), hasItem( new BatchAppendLogEntries( 1, 0, new RaftLogEntry[]{ logEntry } ) ) );
+        assertThat( outcome.getLogCommands() ).contains( new BatchAppendLogEntries( 1, 0, new RaftLogEntry[]{logEntry} ) );
     }
 
     @Test
     public void shouldAcceptInitialEntriesAfterBootstrap() throws Exception
     {
         RaftLog raftLog = bootstrappedLog();
-        RaftState state = raftState()
+        RaftState state = builder()
                 .entryLog( raftLog )
                 .myself( myself )
                 .build();
@@ -111,8 +109,7 @@ public class AppendEntriesRequestTest
 
         // then
         assertTrue( ((Response) messageFor( outcome, leader )).success() );
-        assertThat( outcome.getLogCommands(), hasItem( new BatchAppendLogEntries( 1, 0,
-                new RaftLogEntry[]{logEntry1, logEntry2} ) ) );
+        assertThat( outcome.getLogCommands() ).contains( new BatchAppendLogEntries( 1, 0, new RaftLogEntry[]{logEntry1, logEntry2} ) );
     }
 
     private RaftLog bootstrappedLog()
@@ -126,7 +123,7 @@ public class AppendEntriesRequestTest
     public void shouldRejectDiscontinuousEntries() throws Exception
     {
         // given
-        RaftState state = raftState()
+        RaftState state = builder()
                 .myself( myself )
                 .build();
 
@@ -151,7 +148,7 @@ public class AppendEntriesRequestTest
     public void shouldAcceptContinuousEntries() throws Exception
     {
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
-        RaftState state = raftState()
+        RaftState state = builder()
                 .myself( myself )
                 .entryLog( raftLog )
                 .build();
@@ -177,9 +174,9 @@ public class AppendEntriesRequestTest
     {
         // given
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
-        RaftState state = raftState()
+        RaftState state = builder()
                 .myself( myself )
-                .term( 5 )
+                .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( 5 ).build() )
                 .entryLog( raftLog )
                 .build();
 
@@ -199,7 +196,7 @@ public class AppendEntriesRequestTest
 
         // then
         assertTrue( ((Response) messageFor( outcome, leader )).success() );
-        assertThat( outcome.getLogCommands(), hasItem( new TruncateLogCommand( 1 ) ) );
+        assertThat( outcome.getLogCommands() ).contains( new TruncateLogCommand( 1 ) );
     }
 
     @Test
@@ -207,7 +204,7 @@ public class AppendEntriesRequestTest
     {
         // given
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
-        RaftState state = raftState()
+        RaftState state = builder()
                 .entryLog( raftLog )
                 .myself( myself )
                 .build();
@@ -226,7 +223,7 @@ public class AppendEntriesRequestTest
 
         // then
         assertTrue( ((Response) messageFor( outcome, leader )).success() );
-        assertThat( outcome.getCommitIndex(), Matchers.equalTo( 0L ) );
+        assertThat( outcome.getCommitIndex() ).isEqualTo( 0 );
     }
 
     @Test
@@ -234,7 +231,7 @@ public class AppendEntriesRequestTest
     {
         // given
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
-        RaftState state = raftState()
+        RaftState state = builder()
                 .entryLog( raftLog )
                 .myself( myself )
                 .build();
@@ -256,9 +253,9 @@ public class AppendEntriesRequestTest
 
         // then
         assertTrue( ((Response) messageFor( outcome, leader )).success() );
-        assertThat( outcome.getCommitIndex(), Matchers.equalTo( 0L ) );
-        assertThat( outcome.getLogCommands(), hasItem( new BatchAppendLogEntries( 1, 0,
-                new RaftLogEntry[]{ newLogEntry } ) ) );
+        assertThat( outcome.getCommitIndex() ).isEqualTo( 0 );
+        assertThat( outcome.getLogCommands() ).contains( new BatchAppendLogEntries( 1, 0,
+                new RaftLogEntry[]{newLogEntry} ) );
     }
 
     @Test
@@ -266,7 +263,7 @@ public class AppendEntriesRequestTest
     {
         // given
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
-        RaftState state = raftState()
+        RaftState state = builder()
                 .entryLog( raftLog )
                 .myself( myself )
                 .build();
@@ -286,12 +283,12 @@ public class AppendEntriesRequestTest
 
         // then
         assertFalse( ((Response) messageFor( outcome, leader )).success() );
-        assertThat( outcome.getLogCommands(), empty() );
+        assertThat( outcome.getLogCommands() ).isEmpty();
     }
 
     public RaftState newState() throws IOException
     {
-        return raftState().myself( myself ).build();
+        return builder().myself( myself ).build();
     }
 
     private Log log()

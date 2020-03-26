@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
 import com.neo4j.causalclustering.core.consensus.state.RaftState;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.hamcrest.Matchers;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -24,10 +23,9 @@ import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.heartbeat;
 import static com.neo4j.causalclustering.core.consensus.roles.AppendEntriesRequestTest.ContentGenerator.content;
-import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.raftState;
+import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.builder;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
-import static org.hamcrest.Matchers.empty;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @RunWith( Parameterized.class )
 public class HeartbeatTest
@@ -53,7 +51,7 @@ public class HeartbeatTest
     public void shouldNotResultInCommitIfReferringToFutureEntries() throws Exception
     {
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
-        RaftState state = raftState()
+        RaftState state = builder()
                 .myself( myself )
                 .entryLog( raftLog )
                 .build();
@@ -70,14 +68,14 @@ public class HeartbeatTest
 
         Outcome outcome = role.handler.handle( heartbeat, state, log() );
 
-        assertThat( outcome.getLogCommands(), empty());
+        assertThat( outcome.getLogCommands() ).isEmpty();
     }
 
     @Test
     public void shouldNotResultInCommitIfHistoryMismatches() throws Exception
     {
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
-        RaftState state = raftState()
+        RaftState state = builder()
                 .myself( myself )
                 .entryLog( raftLog )
                 .build();
@@ -94,14 +92,14 @@ public class HeartbeatTest
 
         Outcome outcome = role.handler.handle( heartbeat, state, log() );
 
-        assertThat( outcome.getCommitIndex(), Matchers.equalTo(0L) );
+        assertThat( outcome.getCommitIndex() ).isEqualTo( 0L );
     }
 
     @Test
     public void shouldResultInCommitIfHistoryMatches() throws Exception
     {
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
-        RaftState state = raftState()
+        RaftState state = builder()
                 .myself( myself )
                 .entryLog( raftLog )
                 .build();
@@ -118,7 +116,7 @@ public class HeartbeatTest
 
         Outcome outcome = role.handler.handle( heartbeat, state, log() );
 
-        assertThat( outcome.getLogCommands(), empty() );
+        assertThat( outcome.getLogCommands() ).isEmpty();
 
     }
 

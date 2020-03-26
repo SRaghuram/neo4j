@@ -9,195 +9,88 @@ import com.neo4j.causalclustering.core.consensus.ElectionTimerMode;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
-import com.neo4j.causalclustering.core.consensus.state.ReadableRaftState;
 import com.neo4j.causalclustering.identity.MemberId;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
 
-import static java.util.Collections.emptySet;
-
 /**
- * Holds the outcome of a RAFT role's handling of a message. The role handling logic is stateless and responds to RAFT messages in the context of a supplied
- * state. The outcome is later consumed to update the state and do operations embedded as commands within the outcome.
- * <p>
- * A state update could be to change role, change term, etc. A command could be to append to the RAFT log, tell the log shipper that there was a mismatch, etc.
+ * Holds the outcome of a RAFT role's handling of a message. The role handling logic is stateless
+ * and responds to RAFT messages in the context of a supplied state. The outcome is consumed
+ * to update the state and do operations embedded as commands within the outcome.
+ *
+ * A state update could be to change role, change term, etc.
+ * A command could be to append to the RAFT log, tell the log shipper that there was a mismatch, etc.
  */
 public class Outcome implements ConsensusOutcome
 {
     /* Common */
-    private Role nextRole;
+    private final Role role;
 
-    private long term;
-    private MemberId leader;
+    private final long term;
+    private final MemberId leader;
 
-    private long leaderCommit;
+    private final long leaderCommit;
 
-    private Collection<RaftLogCommand> logCommands = new ArrayList<>();
-    private Collection<RaftMessages.Directed> outgoingMessages = new ArrayList<>();
+    private final Collection<RaftLogCommand> logCommands;
+    private final Collection<RaftMessages.Directed> outgoingMessages;
 
-    private long commitIndex;
+    private final long commitIndex;
 
     /* Follower */
-    private MemberId votedFor;
-    private ElectionTimerMode electionTimerMode;
-    private SnapshotRequirement snapshotRequirement;
-    private boolean isPreElection;
-    private Set<MemberId> preVotesForMe;
+    private final MemberId votedFor;
+    private final ElectionTimerMode electionTimerMode;
+    private final SnapshotRequirement snapshotRequirement;
+    private final boolean isPreElection;
+    private final Set<MemberId> preVotesForMe;
 
     /* Candidate */
-    private Set<MemberId> votesForMe;
-    private long lastLogIndexBeforeWeBecameLeader;
+    private final Set<MemberId> votesForMe;
+    private final long lastLogIndexBeforeWeBecameLeader;
 
     /* Leader */
-    private FollowerStates<MemberId> followerStates;
-    private Collection<ShipCommand> shipCommands = new ArrayList<>();
-    private boolean electedLeader;
-    private OptionalLong steppingDownInTerm;
-    private Set<MemberId> heartbeatResponses;
+    private final FollowerStates<MemberId> followerStates;
+    private final Collection<ShipCommand> shipCommands;
+    private final boolean electedLeader;
+    private final long steppingDownInTerm;
+    private final Set<MemberId> heartbeatResponses;
 
-    public Outcome( Role currentRole, ReadableRaftState ctx )
+    Outcome( Role role, long term, MemberId leader, long leaderCommit, MemberId votedFor,
+            Set<MemberId> votesForMe, Set<MemberId> preVotesForMe, long lastLogIndexBeforeWeBecameLeader,
+            FollowerStates<MemberId> followerStates, ElectionTimerMode electionTimerMode,
+            Collection<RaftLogCommand> logCommands, Collection<RaftMessages.Directed> outgoingMessages,
+            Collection<ShipCommand> shipCommands, long commitIndex, Set<MemberId> heartbeatResponses, boolean isPreElection, boolean electedLeader,
+            long steppingDownInTerm, SnapshotRequirement snapshotRequirement )
     {
-        defaults( currentRole, ctx );
-    }
-
-    public Outcome( Role nextRole, long term, MemberId leader, long leaderCommit, MemberId votedFor,
-                    Set<MemberId> votesForMe, Set<MemberId> preVotesForMe, long lastLogIndexBeforeWeBecameLeader,
-                    FollowerStates<MemberId> followerStates, ElectionTimerMode electionTimerMode,
-                    Collection<RaftLogCommand> logCommands, Collection<RaftMessages.Directed> outgoingMessages,
-                    Collection<ShipCommand> shipCommands, long commitIndex, Set<MemberId> heartbeatResponses, boolean isPreElection )
-    {
-        this.nextRole = nextRole;
+        this.role = role;
         this.term = term;
         this.leader = leader;
         this.leaderCommit = leaderCommit;
         this.votedFor = votedFor;
-        this.votesForMe = new HashSet<>( votesForMe );
-        this.preVotesForMe = new HashSet<>( preVotesForMe );
+        this.votesForMe = votesForMe;
+        this.preVotesForMe = preVotesForMe;
         this.lastLogIndexBeforeWeBecameLeader = lastLogIndexBeforeWeBecameLeader;
         this.followerStates = followerStates;
         this.electionTimerMode = electionTimerMode;
-        this.heartbeatResponses = new HashSet<>( heartbeatResponses );
-
-        this.logCommands.addAll( logCommands );
-        this.outgoingMessages.addAll( outgoingMessages );
-        this.shipCommands.addAll( shipCommands );
+        this.heartbeatResponses = Set.copyOf( heartbeatResponses );
+        this.logCommands = logCommands;
+        this.outgoingMessages = outgoingMessages;
+        this.shipCommands = shipCommands;
         this.commitIndex = commitIndex;
         this.isPreElection = isPreElection;
-        this.steppingDownInTerm = OptionalLong.empty();
-    }
-
-    private void defaults( Role currentRole, ReadableRaftState ctx )
-    {
-        nextRole = currentRole;
-
-        term = ctx.term();
-        leader = ctx.leader();
-
-        leaderCommit = ctx.leaderCommit();
-
-        votedFor = ctx.votedFor();
-        electionTimerMode = null;
-
-        isPreElection = (currentRole == Role.FOLLOWER) && ctx.isPreElection();
-        steppingDownInTerm = OptionalLong.empty();
-        preVotesForMe = isPreElection ? new HashSet<>( ctx.preVotesForMe() ) : emptySet();
-        votesForMe = (currentRole == Role.CANDIDATE) ? new HashSet<>( ctx.votesForMe() ) : emptySet();
-        heartbeatResponses = (currentRole == Role.LEADER) ? new HashSet<>( ctx.heartbeatResponses() ) : emptySet();
-
-        lastLogIndexBeforeWeBecameLeader = (currentRole == Role.LEADER) ? ctx.lastLogIndexBeforeWeBecameLeader() : -1;
-        followerStates = (currentRole == Role.LEADER) ? ctx.followerStates() : new FollowerStates<>();
-
-        commitIndex = ctx.commitIndex();
-    }
-
-    public void setNextRole( Role nextRole )
-    {
-        this.nextRole = nextRole;
-    }
-
-    public void setNextTerm( long nextTerm )
-    {
-        this.term = nextTerm;
-    }
-
-    public void setLeader( MemberId leader )
-    {
-        this.leader = leader;
-    }
-
-    public void setLeaderCommit( long leaderCommit )
-    {
-        this.leaderCommit = leaderCommit;
-    }
-
-    public void addLogCommand( RaftLogCommand logCommand )
-    {
-        this.logCommands.add( logCommand );
-    }
-
-    public void addOutgoingMessage( RaftMessages.Directed message )
-    {
-        this.outgoingMessages.add( message );
-    }
-
-    public void setVotedFor( MemberId votedFor )
-    {
-        this.votedFor = votedFor;
-    }
-
-    public void renewElectionTimer( ElectionTimerMode electionTimerMode )
-    {
-        this.electionTimerMode = electionTimerMode;
-    }
-
-    public void markNeedForFreshSnapshot( long leaderPrevIndex, long localAppendIndex )
-    {
-        this.snapshotRequirement = new SnapshotRequirement( leaderPrevIndex, localAppendIndex );
-    }
-
-    public void addVoteForMe( MemberId voteFrom )
-    {
-        this.votesForMe.add( voteFrom );
-    }
-
-    public void setLastLogIndexBeforeWeBecameLeader( long lastLogIndexBeforeWeBecameLeader )
-    {
-        this.lastLogIndexBeforeWeBecameLeader = lastLogIndexBeforeWeBecameLeader;
-    }
-
-    public void replaceFollowerStates( FollowerStates<MemberId> followerStates )
-    {
-        this.followerStates = followerStates;
-    }
-
-    public void addShipCommand( ShipCommand shipCommand )
-    {
-        shipCommands.add( shipCommand );
-    }
-
-    public void electedLeader()
-    {
-        assert !isSteppingDown();
-        this.electedLeader = true;
-    }
-
-    public void steppingDown( long stepDownTerm )
-    {
-        assert !electedLeader;
-        steppingDownInTerm = OptionalLong.of( stepDownTerm );
+        this.steppingDownInTerm = steppingDownInTerm;
+        this.electedLeader = electedLeader;
+        this.snapshotRequirement = snapshotRequirement;
     }
 
     @Override
     public String toString()
     {
         return "Outcome{" +
-               "nextRole=" + nextRole +
+               "role=" + role +
                ", term=" + term +
                ", leader=" + leader +
                ", leaderCommit=" + leaderCommit +
@@ -219,7 +112,7 @@ public class Outcome implements ConsensusOutcome
 
     public Role getRole()
     {
-        return nextRole;
+        return role;
     }
 
     public long getTerm()
@@ -290,12 +183,12 @@ public class Outcome implements ConsensusOutcome
 
     public boolean isSteppingDown()
     {
-        return steppingDownInTerm.isPresent();
+        return steppingDownInTerm != -1;
     }
 
     public OptionalLong stepDownTerm()
     {
-        return steppingDownInTerm;
+        return isSteppingDown() ? OptionalLong.of( steppingDownInTerm ) : OptionalLong.empty();
     }
 
     @Override
@@ -304,34 +197,14 @@ public class Outcome implements ConsensusOutcome
         return commitIndex;
     }
 
-    public void setCommitIndex( long commitIndex )
-    {
-        this.commitIndex = commitIndex;
-    }
-
-    public void addHeartbeatResponse( MemberId from )
-    {
-        this.heartbeatResponses.add( from );
-    }
-
     public Set<MemberId> getHeartbeatResponses()
     {
         return heartbeatResponses;
     }
 
-    public void setPreElection( boolean isPreElection )
-    {
-        this.isPreElection = isPreElection;
-    }
-
     public boolean isPreElection()
     {
         return isPreElection;
-    }
-
-    public void addPreVoteForMe( MemberId from )
-    {
-        this.preVotesForMe.add( from );
     }
 
     public Set<MemberId> getPreVotesForMe()
@@ -340,33 +213,43 @@ public class Outcome implements ConsensusOutcome
     }
 
     @Override
-    public boolean equals( Object o )
+    public boolean equals( Object object )
     {
-        if ( this == o )
+        if ( this == object )
         {
             return true;
         }
-        if ( o == null || getClass() != o.getClass() )
+        if ( object == null || getClass() != object.getClass() )
         {
             return false;
         }
-        Outcome outcome = (Outcome) o;
-        return term == outcome.term && leaderCommit == outcome.leaderCommit && commitIndex == outcome.commitIndex &&
-                electionTimerMode == outcome.electionTimerMode && Objects.equals( snapshotRequirement, outcome.snapshotRequirement ) &&
-                isPreElection == outcome.isPreElection && lastLogIndexBeforeWeBecameLeader == outcome.lastLogIndexBeforeWeBecameLeader &&
-                electedLeader == outcome.electedLeader && nextRole == outcome.nextRole &&
-                Objects.equals( steppingDownInTerm, outcome.steppingDownInTerm ) && Objects.equals( leader, outcome.leader ) &&
-                Objects.equals( logCommands, outcome.logCommands ) && Objects.equals( outgoingMessages, outcome.outgoingMessages ) &&
-                Objects.equals( votedFor, outcome.votedFor ) && Objects.equals( preVotesForMe, outcome.preVotesForMe ) &&
-                Objects.equals( votesForMe, outcome.votesForMe ) && Objects.equals( followerStates, outcome.followerStates ) &&
-                Objects.equals( shipCommands, outcome.shipCommands ) && Objects.equals( heartbeatResponses, outcome.heartbeatResponses );
+        Outcome outcome = (Outcome) object;
+        return term == outcome.term &&
+               leaderCommit == outcome.leaderCommit &&
+               commitIndex == outcome.commitIndex &&
+               electionTimerMode == outcome.electionTimerMode &&
+               isPreElection == outcome.isPreElection &&
+               lastLogIndexBeforeWeBecameLeader == outcome.lastLogIndexBeforeWeBecameLeader &&
+               electedLeader == outcome.electedLeader &&
+               steppingDownInTerm == outcome.steppingDownInTerm &&
+               role == outcome.role &&
+               Objects.equals( leader, outcome.leader ) &&
+               Objects.equals( logCommands, outcome.logCommands ) &&
+               Objects.equals( outgoingMessages, outcome.outgoingMessages ) &&
+               Objects.equals( votedFor, outcome.votedFor ) &&
+               Objects.equals( snapshotRequirement, outcome.snapshotRequirement ) &&
+               Objects.equals( preVotesForMe, outcome.preVotesForMe ) &&
+               Objects.equals( votesForMe, outcome.votesForMe ) &&
+               Objects.equals( followerStates, outcome.followerStates ) &&
+               Objects.equals( shipCommands, outcome.shipCommands ) &&
+               Objects.equals( heartbeatResponses, outcome.heartbeatResponses );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( nextRole, term, leader, leaderCommit, logCommands, outgoingMessages, commitIndex, votedFor, electionTimerMode,
-                snapshotRequirement, isPreElection, preVotesForMe, votesForMe, lastLogIndexBeforeWeBecameLeader, followerStates, shipCommands, electedLeader,
-                steppingDownInTerm, heartbeatResponses );
+        return Objects.hash( role, term, leader, leaderCommit, logCommands, outgoingMessages, commitIndex, votedFor, electionTimerMode, snapshotRequirement,
+                isPreElection, preVotesForMe, votesForMe, lastLogIndexBeforeWeBecameLeader, followerStates, shipCommands, electedLeader, steppingDownInTerm,
+                heartbeatResponses );
     }
 }

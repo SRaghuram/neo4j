@@ -21,10 +21,9 @@ import java.util.Collection;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLogProvider;
 
-import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.raftState;
+import static com.neo4j.causalclustering.core.consensus.state.RaftStateBuilder.builder;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
-import static org.hamcrest.Matchers.hasItem;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @RunWith( Parameterized.class )
 public class PruningTest
@@ -47,7 +46,7 @@ public class PruningTest
     {
         // given
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
-        RaftState state = raftState()
+        RaftState state = builder()
                 .myself( myself )
                 .entryLog( raftLog )
                 .build();
@@ -57,7 +56,7 @@ public class PruningTest
         Outcome outcome = role.handler.handle( pruneRequest, state, log() );
 
         // then
-        assertThat( outcome.getLogCommands(), hasItem( new PruneLogCommand( 1000 ) ) );
+        assertThat( outcome.getLogCommands() ).contains( new PruneLogCommand( 1000 ) );
     }
 
     private Log log()

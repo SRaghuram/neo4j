@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.consensus.roles;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
+import com.neo4j.causalclustering.core.consensus.outcome.OutcomeBuilder;
 import com.neo4j.causalclustering.core.consensus.state.ReadableRaftState;
 
 import java.io.IOException;
@@ -19,7 +19,7 @@ class Heart
     {
     }
 
-    static void beat( ReadableRaftState state, Outcome outcome, RaftMessages.Heartbeat request, Log log )
+    static void beat( ReadableRaftState state, OutcomeBuilder outcomeBuilder, RaftMessages.Heartbeat request, Log log )
             throws IOException
     {
         if ( request.leaderTerm() < state.term() )
@@ -27,18 +27,17 @@ class Heart
             return;
         }
 
-        outcome.setPreElection( false );
-        outcome.setNextTerm( request.leaderTerm() );
-        outcome.setLeader( request.from() );
-        outcome.setLeaderCommit( request.commitIndex() );
-        outcome.addOutgoingMessage( new RaftMessages.Directed( request.from(),
-                new RaftMessages.HeartbeatResponse( state.myself() ) ) );
+        outcomeBuilder.setPreElection( false )
+                .setTerm( request.leaderTerm() )
+                .setLeader( request.from() )
+                .setLeaderCommit( request.commitIndex() )
+                .addOutgoingMessage( new RaftMessages.Directed( request.from(), new RaftMessages.HeartbeatResponse( state.myself() ) ) );
 
         if ( !Follower.logHistoryMatches( state, request.commitIndex(), request.commitIndexTerm() ) )
         {
             return;
         }
 
-        Follower.commitToLogOnUpdate( state, request.commitIndex(), request.commitIndex(), outcome );
+        Follower.commitToLogOnUpdate( state, request.commitIndex(), request.commitIndex(), outcomeBuilder );
     }
 }
