@@ -37,7 +37,7 @@ import org.neo4j.kernel.impl.store.record.RelationshipRecord;
  * 4B   end node chain next relationship
  * => 28B
  */
-class RelationshipRecordFormat extends BaseHighLimitRecordFormat<RelationshipRecord>
+public class RelationshipRecordFormat extends BaseHighLimitRecordFormat<RelationshipRecord>
 {
     static final int RECORD_SIZE = 32;
     static final int FIXED_FORMAT_RECORD_SIZE = HEADER_BYTE +
@@ -55,9 +55,9 @@ class RelationshipRecordFormat extends BaseHighLimitRecordFormat<RelationshipRec
 
     private static final int FIRST_IN_FIRST_CHAIN_BIT = 0b0000_1000;
     private static final int FIRST_IN_SECOND_CHAIN_BIT = 0b0001_0000;
-    private static final int HAS_FIRST_CHAIN_NEXT_BIT = 0b0010_0000;
-    private static final int HAS_SECOND_CHAIN_NEXT_BIT = 0b0100_0000;
-    private static final int HAS_PROPERTY_BIT = 0b1000_0000;
+    public static final int HAS_FIRST_CHAIN_NEXT_BIT = 0b0010_0000;
+    public static final int HAS_SECOND_CHAIN_NEXT_BIT = 0b0100_0000;
+    public static final int HAS_PROPERTY_BIT = 0b1000_0000;
 
     private static final long FIRST_NODE_BIT = 0b0000_0001L;
     private static final long SECOND_NODE_BIT = 0b0000_0010L;

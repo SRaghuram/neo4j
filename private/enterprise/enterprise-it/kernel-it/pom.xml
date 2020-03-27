@@ -71,6 +71,13 @@
         </dependency>
         <dependency>
             <groupId>org.neo4j.community</groupId>
+            <artifactId>record-storage-engine-it</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j.community</groupId>
             <artifactId>kernel-it</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>

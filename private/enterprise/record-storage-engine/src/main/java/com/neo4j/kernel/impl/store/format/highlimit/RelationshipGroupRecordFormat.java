@@ -34,7 +34,7 @@ import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
  * 4B   owning node
  * => 24B
  */
-class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<RelationshipGroupRecord>
+public class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<RelationshipGroupRecord>
 {
     private static final int TYPE_BYTES = 3;
 
@@ -48,10 +48,10 @@ class RelationshipGroupRecordFormat extends BaseHighLimitRecordFormat<Relationsh
                                                 Integer.BYTES /* first loop */ +
                                                 Integer.BYTES /* owning node */;
 
-    private static final int HAS_OUTGOING_BIT = 0b0000_1000;
-    private static final int HAS_INCOMING_BIT = 0b0001_0000;
-    private static final int HAS_LOOP_BIT     = 0b0010_0000;
-    private static final int HAS_NEXT_BIT     = 0b0100_0000;
+    public static final int HAS_OUTGOING_BIT = 0b0000_1000;
+    public static final int HAS_INCOMING_BIT = 0b0001_0000;
+    public static final int HAS_LOOP_BIT     = 0b0010_0000;
+    public static final int HAS_NEXT_BIT     = 0b0100_0000;
 
     private static final int NEXT_RECORD_BIT = 0b0000_0001;
     private static final int FIRST_OUT_BIT = 0b0000_0010;

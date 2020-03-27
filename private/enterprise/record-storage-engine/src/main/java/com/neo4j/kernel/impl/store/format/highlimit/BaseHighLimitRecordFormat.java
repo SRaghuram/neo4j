@@ -74,7 +74,7 @@ import static org.neo4j.kernel.impl.store.RecordPageLocationCalculator.pageIdFor
  *
  * @param <RECORD> type of {@link AbstractBaseRecord}
  */
-abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
+public abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
         extends BaseOneByteHeaderRecordFormat<RECORD>
 {
     static final int HEADER_BYTE = Byte.BYTES;
@@ -82,7 +82,7 @@ abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
     static final long NULL = Record.NULL_REFERENCE.intValue();
     static final int HEADER_BIT_RECORD_UNIT = 0b0000_0010;
     static final int HEADER_BIT_FIRST_RECORD_UNIT = 0b0000_0100;
-    static final int HEADER_BIT_FIXED_REFERENCE = 0b0000_0100;
+    public static final int HEADER_BIT_FIXED_REFERENCE = 0b0000_0100;
 
     protected BaseHighLimitRecordFormat( Function<StoreHeader,Integer> recordSize, int recordHeaderSize, int maxIdBits )
     {
@@ -168,7 +168,7 @@ abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
     {
         if ( record.inUse() )
         {
-            // Let the specific implementation provide the additional header bits and we'll provide the core format bits.
+            // Let the specific implementation provide the additional header bits, and we'll provide the core format bits.
             byte headerByte = headerBits( record );
             assert (headerByte & 0x7) == 0 : "Format-specific header bits (" + headerByte +
                     ") collides with format-generic header bits";
