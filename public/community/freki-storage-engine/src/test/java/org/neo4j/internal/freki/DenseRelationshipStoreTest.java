@@ -57,6 +57,7 @@ import static org.neo4j.graphdb.Direction.BOTH;
 import static org.neo4j.graphdb.Direction.INCOMING;
 import static org.neo4j.graphdb.Direction.OUTGOING;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
+import static org.neo4j.internal.freki.InMemoryBigValueTestStore.applyToStoreImmediately;
 import static org.neo4j.internal.freki.PropertyUpdate.add;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.internal.helpers.collection.Iterators.loop;
@@ -78,12 +79,13 @@ class DenseRelationshipStoreTest
     @Inject
     private RandomRule random;
 
+    private InMemoryBigValueTestStore bigPropertyValueStore = new InMemoryBigValueTestStore();
     private DenseRelationshipStore store;
 
     @BeforeEach
     void start()
     {
-        store = new DenseRelationshipStore( pageCache, directory.file( "store" ), immediate(), false, PageCacheTracer.NULL, null );
+        store = new DenseRelationshipStore( pageCache, directory.file( "store" ), immediate(), false, PageCacheTracer.NULL, bigPropertyValueStore );
     }
 
     @AfterEach
@@ -175,6 +177,48 @@ class DenseRelationshipStoreTest
         }
     }
 
+    @Test
+    void shouldLoadSerializedPropertiesWhenDeleteRelationships() throws IOException
+    {
+        // given
+        long nodeId = random.nextLong( 0xFFFFFF_FFFFFFFFL );
+        Set<Rel> relationships = new HashSet<>();
+        try ( DenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+        {
+            for ( int i = 0; i < 100; i++ )
+            {
+                boolean outgoing = random.nextBoolean();
+                long otherNodeId = random.nextLong( 0xFFFFFF_FFFFFFFFL );
+                Set<StorageProperty> properties = new HashSet<>();
+                int numProperties = random.nextInt( 3 );
+                for ( int p = 0; p < numProperties; p++ )
+                {
+                    properties.add( new PropertyKeyValue( p, random.nextValue() ) );
+                }
+                Rel relationship = new Rel( i, nodeId, random.nextInt( 4 ), otherNodeId,
+                        outgoing ? RelationshipDirection.OUTGOING : RelationshipDirection.INCOMING, properties );
+                createRelationship( updater, relationship );
+                relationships.add( relationship );
+            }
+        }
+        assertRelationships( nodeId, ANY_RELATIONSHIP_TYPE, BOTH, relationships );
+
+        while ( !relationships.isEmpty() )
+        {
+            // when
+            Rel relationship = random.among( new ArrayList<>( relationships ) );
+            try ( DenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+            {
+                updater.deleteRelationship( relationship.internalId, relationship.originNodeId, relationship.type, relationship.neighbourNodeId,
+                        relationship.isOutgoing() );
+            }
+            relationships.remove( relationship );
+
+            // then
+            assertRelationships( nodeId, ANY_RELATIONSHIP_TYPE, BOTH, relationships );
+        }
+    }
+
     private void assertRelationships( long sourceNodeId, int type, Direction direction, Set<Rel> expectedRelationships )
     {
         Set<Rel> readRelationships = new HashSet<>();
@@ -232,7 +276,7 @@ class DenseRelationshipStoreTest
     private ByteBuffer serialize( Value value )
     {
         ByteBuffer buffer = ByteBuffer.wrap( new byte[256] );
-        PropertyValueFormat format = new PropertyValueFormat( null, null, buffer );
+        PropertyValueFormat format = new PropertyValueFormat( bigPropertyValueStore, applyToStoreImmediately( bigPropertyValueStore ), buffer );
         value.writeTo( format );
         buffer.flip();
         return buffer;
@@ -285,6 +329,11 @@ class DenseRelationshipStoreTest
         public RelationshipDirection direction()
         {
             return direction;
+        }
+
+        boolean isOutgoing()
+        {
+            return direction != RelationshipDirection.INCOMING;
         }
 
         @Override
