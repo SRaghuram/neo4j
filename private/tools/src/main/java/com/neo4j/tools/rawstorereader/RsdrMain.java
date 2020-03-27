@@ -44,7 +44,7 @@ import org.neo4j.string.HexString;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory.createPageCache;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
-import static org.neo4j.kernel.impl.store.record.RecordLoad.CHECK;
+import static org.neo4j.kernel.impl.store.record.RecordLoad.FORCE;
 import static org.neo4j.kernel.impl.transaction.log.LogVersionBridge.NO_MORE_CHANNELS;
 
 /**
@@ -229,7 +229,7 @@ public class RsdrMain
 
                 try
                 {
-                    AbstractBaseRecord record = store.getRecord( i, store.newRecord(), CHECK, PageCursorTracer.NULL );
+                    AbstractBaseRecord record = store.getRecord( i, store.newRecord(), FORCE, PageCursorTracer.NULL );
                     use = record.inUse() ? "+" : "-";
                     str = record.toString();
                 }
