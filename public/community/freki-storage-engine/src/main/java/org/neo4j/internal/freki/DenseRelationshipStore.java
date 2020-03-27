@@ -210,7 +210,7 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
             {
                 assert currentValue == null;
                 int from = relationshipData.position();
-                int length = calculatePropertyValueSizeIncludingTypeHeader( relationshipData );
+                int length = propertyKeys.length == 1 ? relationshipData.remaining() : calculatePropertyValueSizeIncludingTypeHeader( relationshipData );
                 return ByteBuffer.wrap( Arrays.copyOfRange( relationshipData.array(), from, from + length ) );
             }
 
