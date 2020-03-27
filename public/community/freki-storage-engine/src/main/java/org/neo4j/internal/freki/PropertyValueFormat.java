@@ -541,7 +541,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         if ( length > MAX_INLINED_STRING_SIZE )
         {
             long pointer = bigPropertyValueStore.allocateSpace( bytes.length );
-            writePointer( EXTERNAL_TYPE_STRING, pointer );
+            writePointer( EXTERNAL_TYPE_STRING, pointer, false );
             commands.accept( new FrekiCommand.BigPropertyValue( pointer, bytes ) );
         }
         else
@@ -553,9 +553,14 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         endWriteProperty();
     }
 
-    private void writePointer( byte externalType, long pointer )
+    private void writePointer( byte externalType, long pointer, boolean isArray )
     {
-        buffer.put( (byte) (externalType | SPECIAL_TYPE_MASK | SPECIAL_TYPE_POINTER) );
+        byte typeByte = (byte) (externalType | SPECIAL_TYPE_MASK | SPECIAL_TYPE_POINTER);
+        if ( isArray )
+        {
+            typeByte |= SPECIAL_TYPE_ARRAY;
+        }
+        buffer.put( typeByte );
         writeInteger( pointer );
     }
 
@@ -1041,7 +1046,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         @Override
         public <E extends Exception> void writeTo( ValueWriter<E> writer )
         {
-            ((PropertyValueFormat) writer).writePointer( externalType, pointer );
+            ((PropertyValueFormat) writer).writePointer( externalType, pointer, isArray );
         }
 
         @Override
@@ -1077,7 +1082,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         @Override
         protected int computeHash()
         {
-            throw new UnsupportedOperationException( "Not implemented yet" );
+            return bigValue().hashCode();
         }
 
         @Override
