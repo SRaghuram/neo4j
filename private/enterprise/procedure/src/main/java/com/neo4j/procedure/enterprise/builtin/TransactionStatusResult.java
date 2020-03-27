@@ -56,6 +56,8 @@ public class TransactionStatusResult
     public final String initializationStackTrace;
     /** @since Neo4j 4.0 */
     public final String database;
+    public final Long estimatedUsedHeapMemory;
+    public final Long usedDirectMemory;
 
     public TransactionStatusResult( String database, KernelTransactionHandle transaction,
             TransactionDependenciesResolver transactionDependenciesResolver,
@@ -72,6 +74,8 @@ public class TransactionStatusResult
         cpuTimeMillis = statistic.getCpuTimeMillis();
         allocatedBytes = statistic.getHeapAllocatedBytes();
         allocatedDirectBytes = statistic.getDirectAllocatedBytes();
+        estimatedUsedHeapMemory = statistic.getEstimatedUsedHeapMemory();
+        usedDirectMemory = statistic.getUsedDirectMemory();
         waitTimeMillis = statistic.getWaitTimeMillis();
         idleTimeMillis = statistic.getIdleTimeMillis();
         pageHits = statistic.getPageHits();
