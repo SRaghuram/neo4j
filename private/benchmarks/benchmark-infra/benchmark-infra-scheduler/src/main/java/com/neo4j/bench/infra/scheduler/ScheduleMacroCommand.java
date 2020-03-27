@@ -174,12 +174,9 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
             }
             else
             {
-                //We we to update this to better support the -FOR-BENCHMARKING
-                workspace = Workspace.defaultMacroWorkspace( workspacePath,
-                                                             runMacroWorkloadParams.neo4jVersion(),
-                                                             runMacroWorkloadParams.neo4jEdition()
-                );
+                workspace = Workspace.defaultMacroEmbeddedWorkspace( workspacePath );
             }
+            workspace.assertArtifactsExist();
 
             // then store job params as JSON
             InfraParams infraParams = new InfraParams( awsSecret,

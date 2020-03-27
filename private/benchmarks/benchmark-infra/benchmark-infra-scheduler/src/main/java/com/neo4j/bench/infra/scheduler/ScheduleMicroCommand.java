@@ -144,6 +144,7 @@ public class ScheduleMicroCommand extends BaseRunWorkloadCommand
             File jobParameterJson = workspacePath.resolve( Workspace.JOB_PARAMETERS_JSON ).toFile();
             jobParameterJson.createNewFile();
             Workspace workspace = Workspace.defaultMicroWorkspace( workspacePath );
+            workspace.assertArtifactsExist();
             // first store job params as JSON
             InfraParams infraParams = new InfraParams( awsSecret,
                                                        awsKey,

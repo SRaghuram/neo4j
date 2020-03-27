@@ -51,7 +51,6 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunToolMacroWorkl
     {
 
         RunMacroWorkloadParams runMacroWorkloadParams = runToolMacroWorkloadParams.runMacroWorkloadParams();
-        Workspace.assertMacroWorkspace( artifactsWorkspace, runMacroWorkloadParams.neo4jVersion(), runMacroWorkloadParams.neo4jEdition() );
 
         Path macroDir = workspacePath.resolve( "macro" );
 

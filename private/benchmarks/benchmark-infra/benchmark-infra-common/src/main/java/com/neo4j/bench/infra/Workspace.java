@@ -8,14 +8,13 @@ package com.neo4j.bench.infra;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
-import com.neo4j.bench.common.options.Edition;
-import com.neo4j.bench.common.options.Version;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import java.io.FileFilter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -27,6 +26,7 @@ import static java.lang.String.format;
 
 /**
  * Describes structure of benchmarking workspace, which contains build artifacts.
+ * <p>
  * Workspace has a base directory and a set of build artifacts (e.g., benchmarks jar or run scripts).
  */
 public class Workspace
@@ -40,13 +40,12 @@ public class Workspace
     public static final String RUN_SCRIPT = "run_script";
     public static final String NEO4J_ARCHIVE = "neo4j_archive";
 
-    public static Workspace defaultMacroWorkspace( Path workspaceDir, Version neo4jVersion, Edition neo4jEdition )
+    public static Workspace defaultMacroEmbeddedWorkspace( Path workspaceDir )
     {
         return Workspace
                 .create( workspaceDir )
                 .withArtifact( NEO4J_CONFIG, "neo4j.conf" )
                 .withArtifact( WORKER_JAR, "benchmark-infra-worker.jar" )
-                .withArtifact( NEO4J_ARCHIVE, format( "neo4j-%s-%s-unix.tar.gz", neo4jEdition.name().toLowerCase(), neo4jVersion.fullVersion() ) )
                 .withArtifact( BENCHMARKING_JAR, "macro/target/macro.jar" )
                 .withArtifact( RUN_SCRIPT, "macro/run-report-benchmarks.sh" )
                 .withArtifact( JOB_PARAMETERS_JSON, JOB_PARAMETERS_JSON )
@@ -79,18 +78,23 @@ public class Workspace
                 .build();
     }
 
-    public static void assertMacroWorkspace( Workspace artifactsWorkspace, Version neo4jVersion, Edition neo4jEdition )
+    /**
+     * Asserts that <code>newWorkspace</code> has the same keys defined as <code>otherDefinition</code>.
+     * <p>
+     * Additionally asserts that for every key defined in <code>newWorkspace</code> the corresponding file exists.
+     */
+    public static void assertWorkspaceAreEqual( Workspace otherDefinition, Workspace newWorkspace )
     {
-        Workspace defaultMacroWorkspace = defaultMacroWorkspace( artifactsWorkspace.baseDir, neo4jVersion, neo4jEdition );
-        assertWorkspaceAreEqual( defaultMacroWorkspace, artifactsWorkspace );
-    }
-
-    public static void assertWorkspaceAreEqual( Workspace original, Workspace newWorkspace )
-    {
-        if ( !newWorkspace.allArtifacts.keySet().equals( original.allArtifacts.keySet() ) )
+        if ( !newWorkspace.allArtifacts.keySet().equals( otherDefinition.allArtifacts.keySet() ) )
         {
             throw new IllegalArgumentException( "workspace doesn't contain all required paths" );
         }
+        newWorkspace.assertArtifactsExist();
+    }
+
+    public void assertArtifactsExist()
+    {
+        allArtifacts.values().forEach( relativePathString -> Files.exists( Paths.get( baseDir.toString(), relativePathString ) ) );
     }
 
     public static void assertMicroWorkspace( Workspace artifactsWorkspace )
@@ -185,8 +189,7 @@ public class Workspace
     }
 
     /**
-     * Workspace's base dir.
-     * All artifacts are relative to base dir.
+     * Workspace's base dir. All artifacts are relative to base dir.
      *
      * @return
      */
