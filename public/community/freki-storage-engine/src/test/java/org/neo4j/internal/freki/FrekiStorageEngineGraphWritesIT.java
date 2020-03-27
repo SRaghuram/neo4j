@@ -24,6 +24,7 @@ import org.apache.commons.lang3.mutable.MutableLong;
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.api.set.primitive.ImmutableLongSet;
 import org.eclipse.collections.api.set.primitive.LongSet;
+import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.factory.primitive.IntSets;
 import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
@@ -37,9 +38,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -198,7 +201,7 @@ class FrekiStorageEngineGraphWritesIT
         LongSet labelIds = LongSets.immutable.of( 1, 3, 6 );
         Set<StorageProperty> nodeProperties = asSet( new PropertyKeyValue( 1, intValue( 101 ) ), new PropertyKeyValue( 2, stringValue( "abc" ) ) );
         Set<StorageProperty> relationshipProperties = asSet( new PropertyKeyValue( 5, intValue( 202 ) ) );
-        Set<RelationshipSpec> relationships = asSet( new RelationshipSpec( nodeId1, 99, nodeId2, relationshipProperties ) );
+        Set<RelationshipSpec> relationships = asSet( new RelationshipSpec( nodeId1, 99, nodeId2, relationshipProperties, commandCreationContext ) );
 
         // when
         createAndApplyTransaction( target ->
@@ -207,7 +210,7 @@ class FrekiStorageEngineGraphWritesIT
             target.visitNodeLabelChanges( nodeId1, labelIds, LongSets.immutable.empty() );
             target.visitCreatedNode( nodeId2 );
             target.visitNodePropertyChanges( nodeId1, nodeProperties, Collections.emptyList(), IntSets.immutable.empty() );
-            target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId1 ), 99, nodeId1, nodeId2, relationshipProperties );
+            relationships.forEach( r -> r.create( target ) );
         } );
 
         // then
@@ -233,7 +236,7 @@ class FrekiStorageEngineGraphWritesIT
 
         // when
         Set<StorageProperty> relationshipProperties = asSet( new PropertyKeyValue( 5, intValue( 202 ) ) );
-        Set<RelationshipSpec> relationships = asSet( new RelationshipSpec( nodeId1, 99, nodeId2, relationshipProperties ) );
+        Set<RelationshipSpec> relationships = asSet( new RelationshipSpec( nodeId1, 99, nodeId2, relationshipProperties, commandCreationContext ) );
         createAndApplyTransaction( target ->
         {
             LongSet addedLabels = LongSets.immutable.of( 3, 6 );
@@ -242,11 +245,7 @@ class FrekiStorageEngineGraphWritesIT
             Set<StorageProperty> addedNodeProperties = asSet( new PropertyKeyValue( 2, longValue( 202 ) ) );
             target.visitNodePropertyChanges( nodeId1, addedNodeProperties, Collections.emptyList(), IntSets.immutable.empty() );
             nodeProperties.addAll( addedNodeProperties );
-            for ( RelationshipSpec relationship : relationships )
-            {
-                target.visitCreatedRelationship( commandCreationContext.reserveRelationship( relationship.startNodeId ), relationship.type,
-                        relationship.startNodeId, relationship.endNodeId, relationshipProperties );
-            }
+            relationships.forEach( r -> r.create( target ) );
         } );
 
         // then
@@ -277,8 +276,7 @@ class FrekiStorageEngineGraphWritesIT
                 long otherNodeId = nodeId + i + 1;
                 int type = i % 3;
                 target.visitCreatedNode( otherNodeId );
-                target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId ), type, nodeId, otherNodeId, emptyList() );
-                relationships.add( new RelationshipSpec( nodeId, type, otherNodeId, emptySet() ) );
+                relationships.add( createRelationship( target, commandCreationContext, nodeId, type, otherNodeId, emptySet() ) );
             }
         } );
 
@@ -308,8 +306,7 @@ class FrekiStorageEngineGraphWritesIT
                 long otherNodeId = commandCreationContext.reserveNode();
                 int type = i % 3;
                 target.visitCreatedNode( otherNodeId );
-                target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId ), type, nodeId, otherNodeId, emptyList() );
-                relationships.add( new RelationshipSpec( nodeId, type, otherNodeId, emptySet() ) );
+                relationships.add( createRelationship( target, commandCreationContext, nodeId, type, otherNodeId, emptySet() ) );
             }
         } );
 
@@ -321,8 +318,7 @@ class FrekiStorageEngineGraphWritesIT
                 long otherNodeId = commandCreationContext.reserveNode();
                 int type = i % 3;
                 target.visitCreatedNode( otherNodeId );
-                target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId ), type, nodeId, otherNodeId, emptyList() );
-                relationships.add( new RelationshipSpec( nodeId, type, otherNodeId, emptySet() ) );
+                relationships.add( createRelationship( target, commandCreationContext, nodeId, type, otherNodeId, emptySet() ) );
             }
         } );
 
@@ -355,8 +351,7 @@ class FrekiStorageEngineGraphWritesIT
                 long otherNodeId = commandCreationContext.reserveNode();
                 target.visitCreatedNode( otherNodeId );
                 int type = i % 20;
-                target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId ), type, nodeId, otherNodeId, relationshipProperties );
-                relationships.add( new RelationshipSpec( nodeId, type, otherNodeId, relationshipProperties ) );
+                relationships.add( createRelationship( target, commandCreationContext, nodeId, type, otherNodeId, relationshipProperties ) );
             }
         } );
 
@@ -390,8 +385,7 @@ class FrekiStorageEngineGraphWritesIT
                 {
                     long otherNodeId = nextOtherNodeId.getAndIncrement();
                     target.visitCreatedNode( otherNodeId );
-                    target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId ), 0, nodeId, otherNodeId, emptyList() );
-                    relationships.add( new RelationshipSpec( nodeId, 0, otherNodeId, emptySet() ) );
+                    relationships.add( createRelationship( target, commandCreationContext, nodeId, 0, otherNodeId, emptySet() ) );
                 }
                 PropertyKeyValue property = new PropertyKeyValue( nextPropertyKey.getAndIncrement(), intValue( 1010 ) );
                 target.visitNodePropertyChanges( nodeId, singletonList( property ), emptyList(), IntSets.immutable.empty() );
@@ -402,8 +396,6 @@ class FrekiStorageEngineGraphWritesIT
             assertContentsOfNode( nodeId, labels, nodeProperties, relationships );
         }
     }
-
-    // TODO shouldUpdateDenseNode
 
     @Test
     void shouldOverwriteRecordMultipleTimes() throws Exception
@@ -428,17 +420,9 @@ class FrekiStorageEngineGraphWritesIT
                 {
                     long startNode = nodes[random.nextInt( nodes.length )];
                     long endNode = nodes[random.nextInt( nodes.length )];
-                    Set<RelationshipSpec> startNodeRelationshipSet = expectedRelationships.getIfAbsentPut( startNode, HashSet::new );
-                    Set<RelationshipSpec> endNodeRelationshipSet = expectedRelationships.getIfAbsentPut( endNode, HashSet::new );
-                    RelationshipSpec spec = null;
-                    do
-                    {
-                        spec = new RelationshipSpec( startNode, spec == null ? 0 : spec.type + 1, endNode, emptySet() );
-                    }
-                    while ( startNodeRelationshipSet.contains( spec ) || endNodeRelationshipSet.contains( spec ) );
-                    startNodeRelationshipSet.add( spec );
-                    endNodeRelationshipSet.add( spec );
-                    target.visitCreatedRelationship( commandCreationContext.reserveRelationship( startNode ), spec.type, startNode, endNode, emptyList() );
+                    RelationshipSpec relationship = createRelationship( target, commandCreationContext, startNode, random.nextInt( 4 ), endNode, emptySet() );
+                    expectedRelationships.getIfAbsentPut( startNode, HashSet::new ).add( relationship );
+                    expectedRelationships.getIfAbsentPut( endNode, HashSet::new ).add( relationship );
                 }
             } );
 
@@ -476,13 +460,8 @@ class FrekiStorageEngineGraphWritesIT
             for ( int i = 0; i < numberOfRelationships; i++ )
             {
                 boolean outgoing = random.nextBoolean();
-                RelationshipSpec relationshipSpec = new RelationshipSpec( outgoing ? nodeId1 : nodeId2, random.nextInt( 3 ), outgoing ? nodeId2 : nodeId1,
-                        asSet( new PropertyKeyValue( 0, intValue( i ) ) ) );
-                relationships.add( relationshipSpec );
-                long id = commandCreationContext.reserveRelationship( relationshipSpec.startNodeId );
-                target.visitCreatedRelationship( id, relationshipSpec.type,
-                        relationshipSpec.startNodeId, relationshipSpec.endNodeId, relationshipSpec.properties );
-                relationshipSpec.id = id;
+                relationships.add( createRelationship( target, commandCreationContext, outgoing ? nodeId1 : nodeId2, random.nextInt( 3 ),
+                        outgoing ? nodeId2 : nodeId1, asSet( new PropertyKeyValue( 0, intValue( i ) ) ) ) );
             }
         } );
 
@@ -732,9 +711,7 @@ class FrekiStorageEngineGraphWritesIT
                 long otherNode = commandCreationContext.reserveNode();
                 target.visitCreatedNode( otherNode );
                 Set<StorageProperty> properties = asSet( new PropertyKeyValue( 0, intValue( i ) ) );
-                long id = commandCreationContext.reserveRelationship( nodeId );
-                target.visitCreatedRelationship( id, 0, nodeId, otherNode, properties );
-                relationships.add( new RelationshipSpec( nodeId, 0, otherNode, properties, id ) );
+                relationships.add( createRelationship( target, commandCreationContext, nodeId, 0, otherNode, properties ) );
             }
         } );
 
@@ -814,8 +791,7 @@ class FrekiStorageEngineGraphWritesIT
         long initializeBigValuePosition = storageEngine.stores().bigPropertyValueStore.position();
         String value = random.nextAlphaNumericString( 100, 100 );
         RelationshipSpec relationship =
-                new RelationshipSpec( nodeId, 0, otherNodeId, asSet( new PropertyKeyValue( 0, stringValue( value ) ) ),
-                        commandCreationContext.reserveRelationship( nodeId ) );
+                new RelationshipSpec( nodeId, 0, otherNodeId, asSet( new PropertyKeyValue( 0, stringValue( value ) ) ), commandCreationContext );
         createAndApplyTransaction( target ->
         {
             target.visitCreatedNode( nodeId );
@@ -908,6 +884,129 @@ class FrekiStorageEngineGraphWritesIT
         assertThat( constraintDescriptor.type() ).isEqualTo( ConstraintType.EXISTS );
     }
 
+    @Test
+    void shouldCreateAndDeleteRandomDataInMultipleTransactions() throws Exception
+    {
+        // given
+        long nodeId = commandCreationContext.reserveNode();
+        createAndApplyTransaction( target ->
+        {
+            target.visitCreatedNode( nodeId );
+        } );
+        List<Long> nodeIds = new ArrayList<>();
+        nodeIds.add( nodeId );
+        for ( int i = 0; i < 100; i++ )
+        {
+            nodeIds.add( commandCreationContext.reserveNode() );
+        }
+        MutableLongSet existenceOfNodeIds = LongSets.mutable.empty();
+        existenceOfNodeIds.add( nodeId );
+
+        // when
+        MutableLongSet expectedLabels = LongSets.mutable.empty();
+        Map<Integer,StorageProperty> expectedNodeProperties = new HashMap<>();
+        Set<RelationshipSpec> expectedRelationships = new HashSet<>();
+        int numRounds = 30;
+        for ( int r = 0; r < numRounds; r++ )
+        {
+            int round = r;
+            createAndApplyTransaction( target ->
+            {
+                CommandCreationContext txCommandCreationContext = storageEngine.newCommandCreationContext( NULL );
+
+                // === random label changes
+                int numLabelChanges = random.nextInt( 4 );
+                MutableLongSet addedLabels = LongSets.mutable.empty();
+                MutableLongSet removedLabels = LongSets.mutable.empty();
+                for ( int i = 0; i < numLabelChanges; i++ )
+                {
+                    long labelId = random.nextInt( 10 );
+                    (expectedLabels.contains( labelId ) ? removedLabels : addedLabels).add( labelId );
+                }
+                target.visitNodeLabelChanges( nodeId, addedLabels, removedLabels );
+                expectedLabels.addAll( addedLabels );
+                expectedLabels.removeAll( removedLabels );
+
+                // === random property changes
+                int numPropertyChanges = random.nextInt( 4 );
+                Set<StorageProperty> addedProperties = new HashSet<>();
+                Set<StorageProperty> changedProperties = new HashSet<>();
+                MutableIntSet removedProperties = IntSets.mutable.empty();
+                 for ( int i = 0; i < numPropertyChanges; i++ )
+                {
+                    int propertyKeyId = random.nextInt( 10 );
+                    if ( expectedNodeProperties.containsKey( propertyKeyId ) )
+                    {
+                        if ( random.nextBoolean() )
+                        {
+                            removedProperties.add( propertyKeyId );
+                        }
+                        else
+                        {
+                            changedProperties.add( new PropertyKeyValue( propertyKeyId, random.nextValue() ) );
+                        }
+                    }
+                    else
+                    {
+                        addedProperties.add( new PropertyKeyValue( propertyKeyId, random.nextValue() ) );
+                    }
+                }
+                target.visitNodePropertyChanges( nodeId, addedProperties, changedProperties, removedProperties );
+                addedProperties.forEach( p -> expectedNodeProperties.put( p.propertyKeyId(), p ) );
+                changedProperties.forEach( p -> expectedNodeProperties.put( p.propertyKeyId(), p ) );
+                removedProperties.forEach( expectedNodeProperties::remove );
+
+                // === random relationship changes
+                Set<RelationshipSpec> createdRelationships = new HashSet<>();
+                int relationshipCountCap = round < 10 ? 60 : Integer.MAX_VALUE;
+                for ( int i = 0; i < numRounds - round && (expectedRelationships.size() + createdRelationships.size()) < relationshipCountCap; i++ )
+                {
+                    long otherNodeId = random.among( nodeIds );
+                    if ( existenceOfNodeIds.add( otherNodeId ) )
+                    {
+                        target.visitCreatedNode( otherNodeId );
+                    }
+                    long startNode;
+                    long endNode;
+                    if ( random.nextBoolean() )
+                    {
+                        startNode = nodeId;
+                        endNode = otherNodeId;
+                    }
+                    else
+                    {
+                        startNode = otherNodeId;
+                        endNode = nodeId;
+                    }
+                    RelationshipSpec relationship =
+                            createRelationship( target, txCommandCreationContext, startNode, random.nextInt( 4 ), endNode, randomRelationshipProperties() );
+                    createdRelationships.add( relationship );
+                }
+                for ( int i = 0; i < round && !expectedRelationships.isEmpty(); i++ )
+                {
+                    RelationshipSpec relationship = random.among( new ArrayList<>( expectedRelationships ) );
+                    target.visitDeletedRelationship( relationship.id, relationship.type, relationship.startNodeId, relationship.endNodeId );
+                    expectedRelationships.remove( relationship );
+                }
+                expectedRelationships.addAll( createdRelationships );
+            } );
+
+            // then
+            assertContentsOfNode( nodeId, expectedLabels, new HashSet<>( expectedNodeProperties.values() ), expectedRelationships );
+        }
+    }
+
+    private Set<StorageProperty> randomRelationshipProperties()
+    {
+        Set<StorageProperty> properties = new HashSet<>();
+        int numProperties = random.nextInt( 3 );
+        for ( int i = 0; i < numProperties; i++ )
+        {
+            properties.add( new PropertyKeyValue( i, random.nextValue() ) );
+        }
+        return properties;
+    }
+
     // TODO: 2020-03-06 addingBigValueRelationshipPropertyShouldOnlyCreateOneShared (sparse/dense)
 
     // TODO since we don't quite support removing and reusing big value record space then wait with these until we do
@@ -971,7 +1070,7 @@ class FrekiStorageEngineGraphWritesIT
                 relationshipCursor.properties( propertyCursor );
                 RelationshipSpec relationship =
                         new RelationshipSpec( relationshipCursor.sourceNodeReference(), relationshipCursor.type(), relationshipCursor.targetNodeReference(),
-                                readProperties( propertyCursor ) );
+                                readProperties( propertyCursor ), relationshipCursor.entityReference() );
                 readRelationships.add( relationship );
             }
             assertThat( readRelationships ).isEqualTo( relationships );
@@ -1050,6 +1149,14 @@ class FrekiStorageEngineGraphWritesIT
         assertThat( storageEngine.analysis().nodeIsDense( nodeId ) ).isTrue();
     }
 
+    private RelationshipSpec createRelationship( TxStateVisitor target, CommandCreationContext commandCreationContext, long startNodeId, int type,
+            long otherNodeId, Set<StorageProperty> properties )
+    {
+        RelationshipSpec relationship = new RelationshipSpec( startNodeId, type, otherNodeId, properties, commandCreationContext );
+        relationship.create( target );
+        return relationship;
+    }
+
     private static class SimpleTokenCreator implements TokenCreator
     {
         private final AtomicInteger highId = new AtomicInteger( 1 );
@@ -1116,16 +1223,15 @@ class FrekiStorageEngineGraphWritesIT
 
     private static class RelationshipSpec
     {
+        private final long id;
         private final long startNodeId;
         private final int type;
         private final long endNodeId;
         private final Set<StorageProperty> properties;
 
-        private long id;
-
-        RelationshipSpec( long startNodeId, int type, long endNodeId, Set<StorageProperty> properties )
+        RelationshipSpec( long startNodeId, int type, long endNodeId, Set<StorageProperty> properties, CommandCreationContext commandCreationContext )
         {
-            this( startNodeId, type, endNodeId, properties, 0 );
+            this( startNodeId, type, endNodeId, properties, commandCreationContext.reserveRelationship( startNodeId ) );
         }
 
         RelationshipSpec( long startNodeId, int type, long endNodeId, Set<StorageProperty> properties, long id )
@@ -1162,18 +1268,26 @@ class FrekiStorageEngineGraphWritesIT
                 return false;
             }
             RelationshipSpec that = (RelationshipSpec) o;
-            return startNodeId == that.startNodeId && type == that.type && endNodeId == that.endNodeId && Objects.equals( properties, that.properties );
+            return startNodeId == that.startNodeId && type == that.type && endNodeId == that.endNodeId && Objects.equals( properties, that.properties ) &&
+                    id == that.id;
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash( startNodeId, type, endNodeId, properties );
+            return Objects.hash( id, startNodeId, type, endNodeId, properties );
         }
 
-        void create( TxStateVisitor target ) throws ConstraintValidationException
+        void create( TxStateVisitor target )
         {
-            target.visitCreatedRelationship( id, type, startNodeId, endNodeId, properties );
+            try
+            {
+                target.visitCreatedRelationship( id, type, startNodeId, endNodeId, properties );
+            }
+            catch ( ConstraintValidationException e )
+            {
+                throw new RuntimeException( e );
+            }
         }
     }
 
