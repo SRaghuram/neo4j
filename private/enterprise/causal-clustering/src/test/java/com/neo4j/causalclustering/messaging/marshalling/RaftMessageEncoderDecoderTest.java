@@ -3,13 +3,15 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.messaging.marshalling.v2;
+package com.neo4j.causalclustering.messaging.marshalling;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
+import com.neo4j.causalclustering.core.consensus.protocol.v3.RaftProtocolClientInstallerV3;
+import com.neo4j.causalclustering.core.consensus.protocol.v3.RaftProtocolServerInstallerV3;
 import com.neo4j.causalclustering.core.replication.DistributedOperation;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.core.replication.session.GlobalSession;
@@ -20,8 +22,8 @@ import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenReque
 import com.neo4j.causalclustering.core.state.machines.token.TokenType;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
+import com.neo4j.causalclustering.messaging.marshalling.v2.SupportedMessagesV2;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocolVersion;
@@ -33,13 +35,11 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.stream.ChunkedInput;
-import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -51,10 +51,14 @@ import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.logging.FormattedLogProvider;
 
+import static com.neo4j.causalclustering.messaging.marshalling.SupportedMessages.SUPPORT_ALL;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.RAFT;
+import static io.netty.util.ReferenceCountUtil.release;
+import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Warning! This test ensures that all raft protocol work as expected in their current implementation. However, it does not know about changes to the
@@ -101,8 +105,10 @@ class RaftMessageEncoderDecoderTest
                 new RaftMessages.PreVote.Request( MEMBER_ID, Long.MAX_VALUE, MEMBER_ID, Long.MIN_VALUE, 1 ),
                 new RaftMessages.PreVote.Response( MEMBER_ID, 1, true ),
                 new RaftMessages.LogCompactionInfo( MEMBER_ID, Long.MAX_VALUE, Long.MIN_VALUE ),
+                new RaftMessages.LeadershipTransfer.Request( MEMBER_ID, 2, 1, Set.of() ),
                 new RaftMessages.LeadershipTransfer.Request( MEMBER_ID, 2, 1, Set.of( "EU", "US" ) ),
-                new RaftMessages.LeadershipTransfer.Rejection( MEMBER_ID, 2, 1, Set.of( "EU" ) ) } );
+                new RaftMessages.LeadershipTransfer.Rejection( MEMBER_ID, 2, 1, Set.of( "EU" ) ),
+                new RaftMessages.LeadershipTransfer.Rejection( MEMBER_ID, 2, 1, Set.of() )} );
     }
 
     private static Stream<Arguments> setUpParams( RaftMessage[] messages )
@@ -126,11 +132,11 @@ class RaftMessageEncoderDecoderTest
     @MethodSource( "data" )
     void shouldEncodeDecodeRaftMessage( RaftMessage raftMessage, ApplicationProtocolVersion raftProtocol ) throws Exception
     {
+        assumeTrue( isSupported( raftProtocol, raftMessage ), format( "Message '%s' is not supported on this protocol '%s'", raftMessage, raftProtocol ) );
         setupChannels( raftProtocol );
 
-        RaftId raftId = RaftIdFactory.random();
-        RaftMessages.OutboundRaftMessageContainer<RaftMessage> outboundMessage =
-                RaftMessages.OutboundRaftMessageContainer.of( raftId, raftMessage );
+        var raftId = RaftIdFactory.random();
+        var outboundMessage = RaftMessages.OutboundRaftMessageContainer.of( raftId, raftMessage );
 
         outbound.writeOutbound( outboundMessage );
 
@@ -139,11 +145,24 @@ class RaftMessageEncoderDecoderTest
         {
             inbound.writeInbound( o );
         }
-        RaftMessages.InboundRaftMessageContainer<RaftMessage> message = handler.getRaftMessage();
+        var message = handler.getRaftMessage();
         assertEquals( raftId, message.raftId() );
         raftMessageEquals( raftMessage, message.message() );
         assertNull( inbound.readInbound() );
-        ReferenceCountUtil.release( handler.msg );
+        release( handler.msg );
+    }
+
+    private static Boolean isSupported( ApplicationProtocolVersion raftProtocol, RaftMessage raftMessage ) throws Exception
+    {
+        if ( ApplicationProtocols.RAFT_3_0.implementation().equals( raftProtocol ) )
+        {
+            return raftMessage.dispatch( SUPPORT_ALL );
+        }
+        else if ( ApplicationProtocols.RAFT_2_0.implementation().equals( raftProtocol ) )
+        {
+            return raftMessage.dispatch( new SupportedMessagesV2() );
+        }
+        throw new IllegalArgumentException( "Unknown raft protocol " + raftProtocol );
     }
 
     private void setupChannels( ApplicationProtocolVersion raftProtocol ) throws Exception
@@ -153,6 +172,13 @@ class RaftMessageEncoderDecoderTest
             new RaftProtocolClientInstallerV2( NettyPipelineBuilderFactory.insecure(), Collections.emptyList(),
                     FormattedLogProvider.toOutputStream( System.out ) ).install( outbound );
             new RaftProtocolServerInstallerV2( handler, NettyPipelineBuilderFactory.insecure(), Collections.emptyList(),
+                    FormattedLogProvider.toOutputStream( System.out ) ).install( inbound );
+        }
+        else if ( ApplicationProtocols.RAFT_3_0.implementation().equals( raftProtocol ) )
+        {
+            new RaftProtocolClientInstallerV3( NettyPipelineBuilderFactory.insecure(), Collections.emptyList(),
+                    FormattedLogProvider.toOutputStream( System.out ) ).install( outbound );
+            new RaftProtocolServerInstallerV3( handler, NettyPipelineBuilderFactory.insecure(), Collections.emptyList(),
                     FormattedLogProvider.toOutputStream( System.out ) ).install( inbound );
         }
         else

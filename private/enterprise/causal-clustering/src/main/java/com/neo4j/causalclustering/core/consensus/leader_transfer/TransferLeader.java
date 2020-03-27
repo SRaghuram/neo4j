@@ -33,13 +33,13 @@ class TransferLeader implements Runnable
     private final TopologyService topologyService;
     private final Config config;
     private DatabaseManager<ClusteredDatabaseContext> databaseManager;
-    private Inbound.MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> messageHandler;
+    private Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler;
     private MemberId myself;
     private DatabasePenalties databasePenalties;
     private SelectionStrategy selectionStrategy;
 
     TransferLeader( TopologyService topologyService, Config config, DatabaseManager<ClusteredDatabaseContext> databaseManager,
-            Inbound.MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> messageHandler, MemberId myself,
+            Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler, MemberId myself,
             DatabasePenalties databasePenalties, SelectionStrategy leaderLoadBalancing )
     {
         this.topologyService = topologyService;
@@ -95,7 +95,7 @@ class TransferLeader implements Runnable
     private void handleProposal( LeaderTransferContext transferContext )
     {
         var proposal = new Proposal( myself, transferContext.to(), getPrioritisedGroups( config ) );
-        var message = RaftMessages.ReceivedInstantRaftIdAwareMessage.of( Instant.now(), transferContext.raftId(), proposal );
+        var message = RaftMessages.InboundRaftMessageContainer.of( Instant.now(), transferContext.raftId(), proposal );
         messageHandler.handle( message );
     }
 

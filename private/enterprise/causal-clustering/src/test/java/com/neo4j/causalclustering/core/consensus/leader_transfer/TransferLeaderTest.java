@@ -235,16 +235,16 @@ class TransferLeaderTest
         }
     }
 
-    private static class TrackingMessageHandler implements Inbound.MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>>
+    private static class TrackingMessageHandler implements Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>>
     {
-        private final ArrayList<RaftMessages.RaftIdAwareMessage<RaftMessages.LeadershipTransfer.Proposal>> proposals = new ArrayList<>();
+        private final ArrayList<RaftMessages.InboundRaftMessageContainer<RaftMessages.LeadershipTransfer.Proposal>> proposals = new ArrayList<>();
 
         @Override
-        public void handle( RaftMessages.ReceivedInstantRaftIdAwareMessage<?> message )
+        public void handle( RaftMessages.InboundRaftMessageContainer<?> message )
         {
             if ( message.message() instanceof RaftMessages.LeadershipTransfer.Proposal )
             {
-                proposals.add( (RaftMessages.ReceivedInstantRaftIdAwareMessage<RaftMessages.LeadershipTransfer.Proposal>) message );
+                proposals.add( (RaftMessages.InboundRaftMessageContainer<RaftMessages.LeadershipTransfer.Proposal>) message );
             }
             else
             {

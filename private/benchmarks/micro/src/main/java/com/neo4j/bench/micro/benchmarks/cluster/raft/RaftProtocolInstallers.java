@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMessageNettyHandler;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
+import com.neo4j.causalclustering.core.consensus.protocol.v3.RaftProtocolClientInstallerV3;
 import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
@@ -42,6 +43,10 @@ public class RaftProtocolInstallers implements ProtocolInstallers
         if ( version == ProtocolVersion.V2 )
         {
             return new RaftProtocolClientInstallerV2( pipelineBuilderFactory, emptyList(), logProvider );
+        }
+        if ( version == ProtocolVersion.V3 )
+        {
+            return new RaftProtocolClientInstallerV3( pipelineBuilderFactory, emptyList(), logProvider );
         }
         throw new IllegalArgumentException( "Can't handle: " + version );
     }

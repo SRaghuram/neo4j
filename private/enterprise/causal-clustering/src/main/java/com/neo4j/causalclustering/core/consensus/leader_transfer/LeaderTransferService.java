@@ -34,7 +34,7 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
 
     public LeaderTransferService( JobScheduler jobScheduler, long schedulingTime, TimeUnit timeUnit, TopologyService topologyService, Config config,
             DatabaseManager<ClusteredDatabaseContext> databaseManager,
-            Inbound.MessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> messageHandler, MemberId myself )
+            Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler, MemberId myself )
     {
         this.jobScheduler = jobScheduler;
         this.schedulingTime = schedulingTime;

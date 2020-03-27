@@ -7,6 +7,6 @@ package com.neo4j.bench.micro.benchmarks.cluster;
 
 public enum ProtocolVersion
 {
-    V1,
-    V2
+    V2,
+    V3;
 }

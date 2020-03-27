@@ -3,10 +3,11 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.messaging.marshalling.v2.decoding;
+package com.neo4j.causalclustering.messaging.marshalling.v3.decoding;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
+import com.neo4j.causalclustering.messaging.marshalling.v2.decoding.RaftLogEntryTerms;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
 

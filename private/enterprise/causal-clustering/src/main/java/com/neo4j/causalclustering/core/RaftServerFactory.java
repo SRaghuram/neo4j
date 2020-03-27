@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessageNettyHandler;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
+import com.neo4j.causalclustering.core.consensus.protocol.v3.RaftProtocolServerInstallerV3;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.logging.RaftMessageLogger;
 import com.neo4j.causalclustering.messaging.LoggingInbound;
@@ -14,7 +15,6 @@ import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
-import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 import com.neo4j.causalclustering.protocol.ProtocolInstallerRepository;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationProtocolRepository;
@@ -26,13 +26,9 @@ import com.neo4j.causalclustering.protocol.init.ServerChannelInitializer;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 import io.netty.channel.ChannelInboundHandler;
 
-import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.Executor;
 
-import org.neo4j.configuration.Config;
-import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
@@ -68,35 +64,36 @@ public class RaftServerFactory
 
     Server createRaftServer( RaftMessageDispatcher raftMessageDispatcher, ChannelInboundHandler installedProtocolsHandler )
     {
-        Config config = globalModule.getGlobalConfig();
+        var config = globalModule.getGlobalConfig();
 
-        ApplicationProtocolRepository applicationProtocolRepository =
+        var applicationProtocolRepository =
                 new ApplicationProtocolRepository( ApplicationProtocols.values(), supportedApplicationProtocol );
-        ModifierProtocolRepository modifierProtocolRepository =
+        var modifierProtocolRepository =
                 new ModifierProtocolRepository( ModifierProtocols.values(), supportedModifierProtocols );
 
-        RaftMessageNettyHandler nettyHandler = new RaftMessageNettyHandler( logProvider );
-        RaftProtocolServerInstallerV2.Factory raftProtocolServerInstallerV2 =
+        var nettyHandler = new RaftMessageNettyHandler( logProvider );
+        var raftProtocolServerInstallerV2 =
                 new RaftProtocolServerInstallerV2.Factory( nettyHandler, pipelineBuilderFactory, logProvider );
-        ProtocolInstallerRepository<ProtocolInstaller.Orientation.Server> protocolInstallerRepository =
-                new ProtocolInstallerRepository<>( List.of( raftProtocolServerInstallerV2 ),
-                        ModifierProtocolInstaller.allServerInstallers );
+        var raftProtocolServerInstallerV3 =
+                new RaftProtocolServerInstallerV3.Factory( nettyHandler, pipelineBuilderFactory, logProvider );
+        var protocolInstallerRepository = new ProtocolInstallerRepository<>( List.of( raftProtocolServerInstallerV2, raftProtocolServerInstallerV3 ),
+                ModifierProtocolInstaller.allServerInstallers );
 
-        HandshakeServerInitializer handshakeInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
+        var handshakeInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
                 protocolInstallerRepository, pipelineBuilderFactory, logProvider, config );
 
-        Duration handshakeTimeout = config.get( CausalClusteringSettings.handshake_timeout );
-        ServerChannelInitializer channelInitializer = new ServerChannelInitializer( handshakeInitializer, pipelineBuilderFactory,
+        var handshakeTimeout = config.get( CausalClusteringSettings.handshake_timeout );
+        var channelInitializer = new ServerChannelInitializer( handshakeInitializer, pipelineBuilderFactory,
                 handshakeTimeout, logProvider, config );
 
-        SocketAddress raftListenAddress = config.get( CausalClusteringSettings.raft_listen_address );
+        var raftListenAddress = config.get( CausalClusteringSettings.raft_listen_address );
 
-        Executor raftServerExecutor = globalModule.getJobScheduler().executor( Group.RAFT_SERVER );
-        Server raftServer = new Server( channelInitializer, installedProtocolsHandler, logProvider,
+        var raftServerExecutor = globalModule.getJobScheduler().executor( Group.RAFT_SERVER );
+        var raftServer = new Server( channelInitializer, installedProtocolsHandler, logProvider,
                 globalModule.getLogService().getUserLogProvider(), raftListenAddress, RAFT_SERVER_NAME, raftServerExecutor,
                 globalModule.getConnectorPortRegister(), BootstrapConfiguration.serverConfig( config ) );
 
-        LoggingInbound loggingRaftInbound = new LoggingInbound( nettyHandler, raftMessageLogger, identityModule.myself() );
+        var loggingRaftInbound = new LoggingInbound( nettyHandler, raftMessageLogger, identityModule.myself() );
         loggingRaftInbound.registerHandler( raftMessageDispatcher );
 
         return raftServer;

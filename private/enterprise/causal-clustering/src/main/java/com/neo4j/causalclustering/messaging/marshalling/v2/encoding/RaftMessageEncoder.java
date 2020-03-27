@@ -21,7 +21,7 @@ import java.util.Set;
 public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.OutboundRaftMessageContainer>
 {
     @Override
-    protected void encode( ChannelHandlerContext ctx, RaftMessages.OutboundRaftMessageContainer decoratedMessage, ByteBuf out ) throws Exception
+    public void encode( ChannelHandlerContext ctx, RaftMessages.OutboundRaftMessageContainer decoratedMessage, ByteBuf out ) throws Exception
     {
         RaftMessages.RaftMessage message = decoratedMessage.message();
         RaftId raftId = decoratedMessage.raftId();
@@ -168,7 +168,6 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
         @Override
         public Void handle( RaftMessages.LeadershipTransfer.Request leadershipTransferRequest ) throws Exception
         {
-            encodeLeadershipTransferMessage( leadershipTransferRequest.previousIndex(), leadershipTransferRequest.term(), leadershipTransferRequest.groups() );
             return null;
         }
 
@@ -181,20 +180,7 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
         @Override
         public Void handle( RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection ) throws Exception
         {
-            encodeLeadershipTransferMessage( leadershipTransferRejection.previousIndex(), leadershipTransferRejection.term(),
-                                             leadershipTransferRejection.groups() );
             return null;
-        }
-
-        private void encodeLeadershipTransferMessage( long previousIndex, long term, Set<String> groups ) throws IOException
-        {
-            channel.putLong( previousIndex );
-            channel.putLong( term );
-            channel.putInt( groups.size() );
-            for ( var group : groups )
-            {
-                StringMarshal.marshal( channel, group );
-            }
         }
     }
 }

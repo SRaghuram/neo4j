@@ -39,8 +39,6 @@ class LeaderTransferIT
 
         additionalCore.start();
 
-        System.out.println(additionalCore.id());
-
         assertEventually( cluster::awaitLeader, coreClusterMember -> coreClusterMember.id().equals( additionalCore.id() ), 3, TimeUnit.MINUTES );
     }
 }

@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.consensus.RaftGroupFactory;
 import com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferService;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
+import com.neo4j.causalclustering.core.consensus.protocol.v3.RaftProtocolClientInstallerV3;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.ClusterStateMigrator;
 import com.neo4j.causalclustering.core.state.DiscoveryModule;
@@ -461,7 +462,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var modifierProtocolRepository = new ModifierProtocolRepository( ModifierProtocols.values(), supportedModifierProtocols );
 
         var protocolInstallerRepository = new ProtocolInstallerRepository<>(
-                List.of( new RaftProtocolClientInstallerV2.Factory( pipelineBuilders.client(), logProvider ) ),
+                List.of( new RaftProtocolClientInstallerV2.Factory( pipelineBuilders.client(), logProvider ),
+                        new RaftProtocolClientInstallerV3.Factory( pipelineBuilders.client(), logProvider ) ),
                 ModifierProtocolInstaller.allClientInstallers );
 
         var handshakeTimeout = globalConfig.get( CausalClusteringSettings.handshake_timeout );

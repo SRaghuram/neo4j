@@ -85,8 +85,8 @@ public class OutboundRaftMessageContainerComposerTest
         return new RaftMessages.PruneRequest( 1 );
     }
 
-    private RaftMessageDecoder.RaftIdAwareMessageComposer messageCreator( RaftMessageDecoder.LazyComposer composer )
+    private RaftMessageDecoder.InboundRaftMessageContainerComposer messageCreator( RaftMessageDecoder.LazyComposer composer )
     {
-        return new RaftMessageDecoder.RaftIdAwareMessageComposer( composer, RaftIdFactory.random() );
+        return new RaftMessageDecoder.InboundRaftMessageContainerComposer( composer, RaftIdFactory.random() );
     }
 }

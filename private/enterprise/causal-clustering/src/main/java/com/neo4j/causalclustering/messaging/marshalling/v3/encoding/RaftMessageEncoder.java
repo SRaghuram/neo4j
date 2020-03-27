@@ -3,57 +3,46 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.messaging.marshalling.v1;
+package com.neo4j.causalclustering.messaging.marshalling.v3.encoding;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
-import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
-import com.neo4j.causalclustering.messaging.BoundedNetworkWritableChannel;
 import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
+import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
+import com.neo4j.causalclustering.messaging.marshalling.v2.ContentType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
-import org.neo4j.io.ByteUnit;
+import java.io.IOException;
+import java.util.Set;
 
 public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.OutboundRaftMessageContainer>
 {
-    private final ChannelMarshal<ReplicatedContent> marshal;
-
-    public RaftMessageEncoder( ChannelMarshal<ReplicatedContent> marshal )
-    {
-        this.marshal = marshal;
-    }
-
     @Override
-    public synchronized void encode( ChannelHandlerContext ctx,
-            RaftMessages.OutboundRaftMessageContainer decoratedMessage,
-            ByteBuf out ) throws Exception
+    public void encode( ChannelHandlerContext ctx, RaftMessages.OutboundRaftMessageContainer decoratedMessage, ByteBuf out ) throws Exception
     {
         RaftMessages.RaftMessage message = decoratedMessage.message();
         RaftId raftId = decoratedMessage.raftId();
         MemberId.Marshal memberMarshal = new MemberId.Marshal();
 
         NetworkWritableChannel channel = new NetworkWritableChannel( out );
+        channel.put( ContentType.Message.get() );
         RaftId.Marshal.INSTANCE.marshal( raftId, channel );
         channel.putInt( message.type().ordinal() );
         memberMarshal.marshal( message.from(), channel );
 
-        message.dispatch( new Handler( marshal, memberMarshal, channel ) );
+        message.dispatch( new Handler( memberMarshal, channel ) );
     }
 
-    private static class Handler implements RaftMessages.Handler<Void, Exception>
+    private static class Handler implements RaftMessages.Handler<Void,Exception>
     {
-        private final ChannelMarshal<ReplicatedContent> marshal;
         private final MemberId.Marshal memberMarshal;
         private final NetworkWritableChannel channel;
 
-        Handler( ChannelMarshal<ReplicatedContent> marshal, MemberId.Marshal memberMarshal, NetworkWritableChannel channel )
+        Handler( MemberId.Marshal memberMarshal, NetworkWritableChannel channel )
         {
-            this.marshal = marshal;
             this.memberMarshal = memberMarshal;
             this.channel = channel;
         }
@@ -105,14 +94,7 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
             channel.putLong( appendRequest.prevLogIndex() );
             channel.putLong( appendRequest.prevLogTerm() );
             channel.putLong( appendRequest.leaderCommit() );
-
-            channel.putLong( appendRequest.entries().length );
-
-            for ( RaftLogEntry raftLogEntry : appendRequest.entries() )
-            {
-                channel.putLong( raftLogEntry.term() );
-                marshal.marshal( raftLogEntry.content(), channel );
-            }
+            channel.putInt( appendRequest.entries().length );
 
             return null;
         }
@@ -131,8 +113,6 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
         @Override
         public Void handle( RaftMessages.NewEntry.Request newEntryRequest ) throws Exception
         {
-            BoundedNetworkWritableChannel sizeBoundChannel = new BoundedNetworkWritableChannel( channel.byteBuf(), ByteUnit.gibiBytes( 1 ) );
-            marshal.marshal( newEntryRequest.content(), sizeBoundChannel );
             return null;
         }
 
@@ -162,12 +142,6 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
         }
 
         @Override
-        public Void handle( RaftMessages.LeadershipTransfer.Request leadershipTransferRequest ) throws Exception
-        {
-            throw new UnsupportedOperationException( "Raft v1 does not support leadership transfer" );
-        }
-
-        @Override
         public Void handle( RaftMessages.Timeout.Election election )
         {
             return null; // Not network
@@ -192,15 +166,35 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
         }
 
         @Override
+        public Void handle( RaftMessages.LeadershipTransfer.Request leadershipTransferRequest ) throws Exception
+        {
+            encodeLeadershipTransferMessage( leadershipTransferRequest.previousIndex(), leadershipTransferRequest.term(), leadershipTransferRequest.groups() );
+            return null;
+        }
+
+        @Override
         public Void handle( RaftMessages.LeadershipTransfer.Proposal leadershipTransferProposal ) throws Exception
         {
-            throw new UnsupportedOperationException( "Raft v1 does not support leadership transfer" );
+            return null; // Not network
         }
 
         @Override
         public Void handle( RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection ) throws Exception
         {
-            throw new UnsupportedOperationException( "Raft v1 does not support leadership transfer" );
+            encodeLeadershipTransferMessage( leadershipTransferRejection.previousIndex(), leadershipTransferRejection.term(),
+                                             leadershipTransferRejection.groups() );
+            return null;
+        }
+
+        private void encodeLeadershipTransferMessage( long previousIndex, long term, Set<String> groups ) throws IOException
+        {
+            channel.putLong( previousIndex );
+            channel.putLong( term );
+            channel.putInt( groups.size() );
+            for ( var group : groups )
+            {
+                StringMarshal.marshal( channel, group );
+            }
         }
     }
 }

@@ -8,80 +8,29 @@ package com.neo4j.causalclustering.messaging;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.ReplicatedInteger;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
-import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
-import com.neo4j.causalclustering.messaging.marshalling.v1.RaftMessageDecoder;
-import com.neo4j.causalclustering.messaging.marshalling.v1.RaftMessageEncoder;
+import com.neo4j.causalclustering.messaging.marshalling.v2.ContentTypeProtocol;
+import com.neo4j.causalclustering.messaging.marshalling.v2.decoding.RaftMessageDecoder;
+import com.neo4j.causalclustering.messaging.marshalling.v2.encoding.RaftMessageEncoder;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import java.io.IOException;
-import java.time.Clock;
 import java.util.UUID;
-
-import org.neo4j.io.fs.ReadPastEndException;
-import org.neo4j.io.fs.ReadableChannel;
-import org.neo4j.io.fs.WritableChannel;
 
 import static org.junit.Assert.assertEquals;
 
 @RunWith( MockitoJUnitRunner.class )
 public class RaftMessageProcessingTest
 {
-    private static final ChannelMarshal<ReplicatedContent> SERIALIZER = new SafeChannelMarshal<>()
-    {
-        @Override
-        public void marshal( ReplicatedContent content, WritableChannel channel ) throws IOException
-        {
-            if ( content instanceof ReplicatedInteger )
-            {
-                channel.put( (byte) 1 );
-                channel.putInt( ((ReplicatedInteger) content).get() );
-            }
-            else
-            {
-                throw new IllegalArgumentException( "Unknown content type " + content.getClass() );
-            }
-        }
-
-        @Override
-        public ReplicatedContent unmarshal0( ReadableChannel channel ) throws IOException
-        {
-            byte type = channel.get();
-            final ReplicatedContent content;
-            if ( type == 1 )
-            {
-                content = ReplicatedInteger.valueOf( channel.getInt() );
-            }
-            else
-            {
-                throw new IllegalArgumentException( String.format( "Unknown content type 0x%x", type ) );
-            }
-
-            try
-            {
-                channel.get();
-                throw new IllegalArgumentException( "Bytes remain in buffer after deserialization" );
-            }
-            catch ( ReadPastEndException e )
-            {
-                // expected
-            }
-            return content;
-        }
-    };
-
     private EmbeddedChannel channel;
 
     @Before
     public void setup()
     {
-        channel = new EmbeddedChannel( new RaftMessageEncoder( SERIALIZER ), new RaftMessageDecoder( SERIALIZER, Clock.systemUTC() ) );
+        channel = new EmbeddedChannel( new RaftMessageEncoder(), new RaftMessageDecoder( new ContentTypeProtocol() ) );
     }
 
     @Test

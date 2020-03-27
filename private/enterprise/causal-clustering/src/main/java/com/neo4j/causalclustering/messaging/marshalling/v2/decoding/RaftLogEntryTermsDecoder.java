@@ -13,11 +13,11 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.util.List;
 
-class RaftLogEntryTermsDecoder extends ByteToMessageDecoder
+public class RaftLogEntryTermsDecoder extends ByteToMessageDecoder
 {
     private final Protocol<ContentType> protocol;
 
-    RaftLogEntryTermsDecoder( Protocol<ContentType> protocol )
+    public RaftLogEntryTermsDecoder( Protocol<ContentType> protocol )
     {
         this.protocol = protocol;
     }
@@ -33,20 +33,5 @@ class RaftLogEntryTermsDecoder extends ByteToMessageDecoder
         }
         out.add( new RaftLogEntryTerms( terms ) );
         protocol.expect( ContentType.ContentType );
-    }
-
-    class RaftLogEntryTerms
-    {
-        private final long[] term;
-
-        RaftLogEntryTerms( long[] term )
-        {
-            this.term = term;
-        }
-
-        public long[] terms()
-        {
-            return term;
-        }
     }
 }
