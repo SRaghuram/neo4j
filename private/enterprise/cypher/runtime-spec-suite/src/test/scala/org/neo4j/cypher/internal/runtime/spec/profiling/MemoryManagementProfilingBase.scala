@@ -42,8 +42,8 @@ import org.neo4j.values.virtual.VirtualValues
 import scala.util.Random
 
 object MemoryManagementProfilingBase {
-  // The configured max memory per transaction in Bytes
-  val maxMemory: Long = Long.MaxValue
+  // The configured max memory per transaction in Bytes (zero means unlimited)
+  val maxMemory: Long = 0L
 
   val DEFAULT_MORSEL_SIZE_BIG: Int = GraphDatabaseSettings.cypher_pipelined_batch_size_big.defaultValue()
   val DEFAULT_MORSEL_SIZE_SMALL: Int = GraphDatabaseSettings.cypher_pipelined_batch_size_small.defaultValue()
@@ -171,7 +171,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: EnterpriseRuntimeContext
                                                                                  )
   extends RuntimeTestSuite[CONTEXT](edition.copyWith(
     GraphDatabaseSettings.track_query_allocation -> TRUE,
-    GraphDatabaseSettings.query_max_memory -> Long.box(MemoryManagementProfilingBase.maxMemory),
+    GraphDatabaseSettings.memory_transaction_max_size -> Long.box(MemoryManagementProfilingBase.maxMemory),
     GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(morselSize),
     GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(morselSize)), runtime
   ) with ProfilingInputStreams[CONTEXT] with TimeLimitedCypherTest {

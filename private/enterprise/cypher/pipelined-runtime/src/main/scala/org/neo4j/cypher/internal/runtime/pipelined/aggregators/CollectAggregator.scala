@@ -51,7 +51,7 @@ class CollectStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id) 
       case u: CollectUpdater =>
         collection.combine(u.collection)
         // Note: this allocation is currently never de-allocated
-        memoryTracker.allocated(value, operatorId.x)
+        memoryTracker.allocated(u.collection, operatorId.x)
     }
   }
 
