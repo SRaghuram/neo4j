@@ -110,8 +110,8 @@ class MutableNodeRecordData
     @Override
     public String toString()
     {
-        return String.format( "ID:%s, labels:%s, properties:%s, relationships:%s, degrees:%s, pointer:%s, nextRelId:%d", nodeId, labels, properties,
-                relationships, degrees, recordPointerToString( recordPointer ), nextInternalRelationshipId );
+        return String.format( "ID:%s, labels:%s, properties:%s, relationships:%s, degrees:%s, pointer:%s, dense:%b, nextRelId:%d", nodeId, labels, properties,
+                relationships, degrees, recordPointerToString( recordPointer ), isDense, nextInternalRelationshipId );
     }
 
     void copyDataFrom( int flags, MutableNodeRecordData from )
@@ -513,10 +513,27 @@ class MutableNodeRecordData
     private void writeDegrees( ByteBuffer buffer )
     {
         int[] types = degrees.types();
+        int typesLength = types.length;
+        for ( int i = 0; i < typesLength; i++ )
+        {
+            int type = types[i];
+            if ( degrees.findDegree( type ).isEmpty() )
+            {
+                if ( i + 1 < typesLength )
+                {
+                    types[i] = types[typesLength - 1];
+                    i--;
+                }
+                typesLength--;
+            }
+        }
+        if ( typesLength < types.length )
+        {
+            types = Arrays.copyOf( types, typesLength );
+        }
         Arrays.sort( types );
-        writeIntDeltas( types, buffer );
-        int[] degreesArray = new int[types.length * 3];
-        for ( int t = 0, i = 0; t < types.length; t++ )
+        int[] degreesArray = new int[typesLength * 3];
+        for ( int t = 0, i = 0; t < typesLength; t++ )
         {
             EagerDegrees.Degree typeDegrees = degrees.findDegree( types[t] );
             // TODO Potentially optimize away loop somehow since it's 99,99% zero anyways
@@ -524,6 +541,7 @@ class MutableNodeRecordData
             degreesArray[i++] = typeDegrees.incoming();
             degreesArray[i++] = typeDegrees.loop();
         }
+        writeIntDeltas( types, buffer );
         writeInts( degreesArray, buffer );
     }
 
