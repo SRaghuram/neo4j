@@ -131,7 +131,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public void stateChange( DatabaseState newState )
+    public void stateChange( DatabaseState previousState, DatabaseState newState )
     {
         var clientTopologyActor = clientTopologyActorRef;
         if ( clientTopologyActor != null )

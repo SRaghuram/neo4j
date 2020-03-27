@@ -74,6 +74,7 @@ class DbmsReconcilerModuleTest
     {
         lifeSupport.add( jobScheduler );
         databaseManager = lifeSupport.add( new StubMultiDatabaseManager( jobScheduler ) );
+        when( databaseManager.globalModule().getGlobalLife() ).thenReturn( lifeSupport );
     }
 
     @Test

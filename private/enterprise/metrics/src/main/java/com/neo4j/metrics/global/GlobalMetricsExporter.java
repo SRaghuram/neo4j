@@ -16,6 +16,7 @@ import com.neo4j.metrics.source.jvm.HeapMetrics;
 import com.neo4j.metrics.source.jvm.MemoryBuffersMetrics;
 import com.neo4j.metrics.source.jvm.MemoryPoolMetrics;
 import com.neo4j.metrics.source.jvm.ThreadMetrics;
+import com.neo4j.metrics.source.db.DatabaseOperationCountMetrics;
 import com.neo4j.metrics.source.server.ServerMetrics;
 
 import org.neo4j.configuration.Config;
@@ -83,6 +84,11 @@ public class GlobalMetricsExporter
         if ( config.get( MetricsSettings.boltMessagesEnabled ) )
         {
             life.add( new BoltMetrics( globalMetricsPrefix, registry, dependencies.monitors() ) );
+        }
+
+        if ( config.get( MetricsSettings.databaseOperationCountEnabled ) )
+        {
+            life.add( new DatabaseOperationCountMetrics( globalMetricsPrefix, registry, dependencies.monitors() ) );
         }
 
         boolean httpOrHttpsEnabled = config.get( HttpConnector.enabled ) || config.get( HttpsConnector.enabled );

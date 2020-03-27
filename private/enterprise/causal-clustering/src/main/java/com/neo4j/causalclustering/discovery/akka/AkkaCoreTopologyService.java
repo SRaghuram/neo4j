@@ -318,7 +318,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public void stateChange( DatabaseState newState )
+    public void stateChange( DatabaseState previousState, DatabaseState newState )
     {
         var stateActor = databaseStateActorRef;
         if ( stateActor != null )

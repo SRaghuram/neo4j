@@ -7,6 +7,8 @@ package com.neo4j.dbms;
 
 import com.neo4j.dbms.database.MultiDatabaseManager;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -403,14 +405,19 @@ public class DbmsReconciler implements DatabaseStateService
 
     private void stateChanged( EnterpriseDatabaseState previousState, EnterpriseDatabaseState newState )
     {
-        //If the previous state has a different id then a drop-recreate must have occurred
+        var initialState = new EnterpriseDatabaseState( newState.databaseId(), EnterpriseOperatorState.INITIAL );
+        // If the previous state has a different id then a drop-recreate must have occurred
         // In this case we should fire the listener twice, once for each databaseId.
         if ( previousState != null && !Objects.equals( previousState.databaseId(), newState.databaseId() ) )
         {
             var droppedPrevious = new EnterpriseDatabaseState( previousState.databaseId(), DROPPED );
-            listeners.forEach( listener -> listener.stateChange( droppedPrevious ) );
+            listeners.forEach( listener -> listener.stateChange( previousState, droppedPrevious ) );
+            listeners.forEach( listener -> listener.stateChange( initialState, newState ) );
         }
-        listeners.forEach( listener -> listener.stateChange( newState ) );
+        else
+        {
+            listeners.forEach( listener -> listener.stateChange( ( previousState == null ) ? initialState : previousState, newState ) );
+        }
     }
 
     private Optional<EnterpriseDatabaseState> handleReconciliationErrors( Throwable throwable, ReconcilerRequest request, ReconcilerStepResult result,

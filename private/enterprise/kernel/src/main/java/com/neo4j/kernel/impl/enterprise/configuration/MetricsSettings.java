@@ -60,6 +60,11 @@ public class MetricsSettings implements SettingsDeclaration
     public static final Setting<Boolean> causalClusteringEnabled =
             newBuilder( "metrics.neo4j.causal_clustering.enabled", BOOL, true ).build();
 
+    @Description( "Enable reporting metrics for Neo4j dbms operations; " +
+            "e.g. how many databases have been created or dropped, and how many attempted operations have failed." )
+    public static final Setting<Boolean> databaseOperationCountEnabled =
+            newBuilder( "metrics.neo4j.database_operation_count.enabled", BOOL, true ).build();
+
     @Description( "Enable reporting metrics about Neo4j check pointing; when it occurs and how much time it takes to " +
             "complete." )
     public static final Setting<Boolean> neoCheckPointingEnabled =

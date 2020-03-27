@@ -56,7 +56,7 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public void stateChange( DatabaseState newState )
+    public void stateChange( DatabaseState previousState, DatabaseState newState )
     {
     }
 

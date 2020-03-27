@@ -5,6 +5,8 @@
  */
 package com.neo4j.dbms;
 
+import com.neo4j.dbms.database.DatabaseOperationCountMonitorListener;
+import com.neo4j.dbms.database.DatabaseOperationCountMonitor;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 
 import java.util.stream.Stream;
@@ -16,8 +18,11 @@ import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.database.DatabaseIdRepository;
+import org.neo4j.kernel.extension.GlobalExtensions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.kernel.lifecycle.LifecycleListener;
+import org.neo4j.kernel.lifecycle.LifecycleStatus;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
@@ -57,6 +62,10 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
         this.systemOperator = new SystemGraphDbmsOperator( dbmsModel, reconciledTxTracker, internalLogProvider );
         this.shutdownOperator = new ShutdownOperator( databaseManager, globalModule.getGlobalConfig() );
         this.reconciler = reconciler;
+        var databaseCountMonitor = new DatabaseOperationCountMonitorListener(
+                globalModule.getGlobalMonitors().newMonitor( DatabaseOperationCountMonitor.class, getClass().getName() ) );
+        reconciler.registerListener( databaseCountMonitor );
+        globalModule.getGlobalLife().addLifecycleListener( createReconcilerMonitorResetListener( databaseCountMonitor ) );
         globalModule.getGlobalDependencies().satisfyDependency( reconciler );
         globalModule.getGlobalDependencies().satisfyDependencies( localOperator, systemOperator );
     }
@@ -164,4 +173,16 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
         var txIdStore = resolver.resolveDependency( TransactionIdStore.class );
         return txIdStore.getLastClosedTransactionId();
     }
+
+    private LifecycleListener createReconcilerMonitorResetListener( DatabaseOperationCountMonitorListener databaseOperationCountMonitorListener )
+    {
+        return ( instance, from, to ) ->
+        {
+            if ( instance instanceof GlobalExtensions && to.equals( LifecycleStatus.STARTED ) )
+            {
+                databaseOperationCountMonitorListener.reset( reconciler.statesSnapshot() );
+            }
+        };
+    }
+
 }
