@@ -628,7 +628,6 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
 
     private static Value readArray( byte externalType, int length, ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore )
     {
-        //do nothing
         if ( externalType == EXTERNAL_TYPE_BYTE )
         {
             byte[] data = new byte[length];
@@ -710,12 +709,13 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
 
     private static int calculatePropertyValueSizeIncludingTypeHeaderInternal( ByteBuffer buffer )
     {
+        int position = buffer.position();
         byte typeByte = buffer.get();
         boolean isSimpleInlinedValue = (typeByte & SPECIAL_TYPE_MASK) == 0;
         int size = 1;
         if ( isSimpleInlinedValue )
         {
-            size += advanceBuffer( sizeOfSimpleProperty( typeByte, buffer ), buffer );
+            size += sizeOfSimpleProperty( typeByte, buffer );
         }
         else
         {
@@ -723,16 +723,13 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
             boolean isArray = (typeByte & SPECIAL_TYPE_ARRAY) != 0;
             if ( isPointer )
             {
-                size += 1 + advanceBuffer( sizeOfSimpleProperty( buffer.get(), buffer ), buffer );
+                size += 1 + sizeOfSimpleProperty( buffer.get(), buffer );
             }
             else if ( isArray )
             {
                 size += calculatePropertyValueSizeIncludingTypeHeader( buffer );
                 int length = (int) read( buffer ).asObject();
-                for ( int i = 0; i < length; i++ )
-                {
-                    size += calculatePropertyValueSizeIncludingTypeHeaderInternal( buffer );
-                }
+                size += calculateSizeOfArray( buffer, typeByte, length );
             }
 
             if ( !isPointer && !isArray )
@@ -740,12 +737,25 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
                 throw new IllegalArgumentException( "Unknown special type" );
             }
         }
+        buffer.position( position + size );
         return size;
     }
 
-    private static int advanceBuffer( int size, ByteBuffer buffer )
+    private static int calculateSizeOfArray( ByteBuffer buffer, byte typeByte, int length )
     {
-        buffer.position( buffer.position() + size );
+        if ( externalType( typeByte ) == EXTERNAL_TYPE_BYTE )
+        {
+            return length;
+        }
+        else if ( externalType( typeByte ) == EXTERNAL_TYPE_CHAR )
+        {
+            return length * Character.BYTES;
+        }
+        int size = 0;
+        for ( int i = 0; i < length; i++ )
+        {
+            size += calculatePropertyValueSizeIncludingTypeHeaderInternal( buffer );
+        }
         return size;
     }
 
@@ -768,8 +778,9 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         case EXTERNAL_TYPE_BOOL:
             return 0; // (value is embedded)
         case EXTERNAL_TYPE_BYTE:
+            return Byte.BYTES;
         case EXTERNAL_TYPE_CHAR:
-            return 1;
+            return Character.BYTES;
         case EXTERNAL_TYPE_DURATION:
             return sizeOfDuration( typeByte, buffer );
         case EXTERNAL_TYPE_POINT:
