@@ -91,7 +91,9 @@ public class StoreClient implements AutoCloseable
 
     private static Config configWithEncryption()
     {
-        return Config.builder().build();
+        return Config.builder()
+                     .withEncryption()
+                     .build();
     }
 
     private void connect()
