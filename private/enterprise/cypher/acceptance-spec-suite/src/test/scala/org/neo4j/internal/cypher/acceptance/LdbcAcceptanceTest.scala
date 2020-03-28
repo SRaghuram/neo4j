@@ -27,10 +27,9 @@ class LdbcAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
       // when
       val result =
         executeWith(ldbcQuery.expectedToSucceedIn, ldbcQuery.query, params = ldbcQuery.params)
-          .toComparableResult
 
       //then
-      result should equal(ldbcQuery.expectedResult)
+      result.toComparableResult should equal(ldbcQuery.expectedResult)
     }
   }
 

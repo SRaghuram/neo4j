@@ -24,6 +24,7 @@ import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.plandescription.Arguments.PipelineInfo
 import org.neo4j.cypher.internal.rewriting.RewriterStepSequencer
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ExecutionMode
 import org.neo4j.cypher.internal.runtime.InputDataStream
 import org.neo4j.cypher.internal.runtime.MemoryTracking
@@ -40,7 +41,12 @@ import org.neo4j.cypher.internal.runtime.createParameterArray
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpressions
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeTreeBuilder
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutablePipeline
 import org.neo4j.cypher.internal.runtime.pipelined.InterpretedPipesFallbackPolicy
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorFactory
@@ -153,7 +159,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
     val interpretedPipesFallbackPolicy = InterpretedPipesFallbackPolicy(context.interpretedPipesFallback, parallelExecution)
     val breakingPolicy = PipelinedPipelineBreakingPolicy(operatorFusionPolicy, interpretedPipesFallbackPolicy)
 
-    val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
+    var physicalPlan = PhysicalPlanner.plan(context.tokenContext,
                                             optimizedLogicalPlan,
                                             query.semanticTable,
                                             breakingPolicy,
@@ -165,28 +171,30 @@ class PipelinedRuntime private(parallelExecution: Boolean,
 
     val codeGenerationMode = CodeGeneration.CodeGenerationMode.fromDebugOptions(context.debugOptions)
 
-    val converters: ExpressionConverters = if (context.compileExpressions) {
-      new ExpressionConverters(
-        new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly, codeGenerationMode),
-        SlottedExpressionConverters(physicalPlan),
-        CommunityExpressionConverter(context.tokenContext))
-    } else {
-      new ExpressionConverters(
-        SlottedExpressionConverters(physicalPlan),
-        CommunityExpressionConverter(context.tokenContext))
+    val converters: ExpressionConverters = {
+      val builder = Seq.newBuilder[ExpressionConverter]
+      if (context.compileExpressions)
+        builder += new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly, codeGenerationMode)
+      builder += SlottedExpressionConverters(physicalPlan, Some(NoPipe))
+      builder += CommunityExpressionConverter(context.tokenContext)
+      new ExpressionConverters(builder.result():_*)
     }
 
     //=======================================================
-    val slottedPipeBuilder =
-      if (context.interpretedPipesFallback != CypherInterpretedPipesFallbackOption.disabled) {
-        val slottedPipeBuilderFallback = InterpretedPipeMapper(query.readOnly, converters, context.tokenContext, queryIndexRegistrator)(query.semanticTable)
-        Some(new SlottedPipeMapper(slottedPipeBuilderFallback, converters, physicalPlan, query.readOnly, queryIndexRegistrator)(query.semanticTable))
+    val pipeMapper =
+      {
+        val interpretedPipeMapper = InterpretedPipeMapper(query.readOnly, converters, context.tokenContext, queryIndexRegistrator)(query.semanticTable)
+        new SlottedPipeMapper(interpretedPipeMapper, converters, physicalPlan, query.readOnly, queryIndexRegistrator)(query.semanticTable)
       }
-      else
-        None
-    //=======================================================
+
+    val pipeTreeBuilder = PipeTreeBuilder(pipeMapper)
+    physicalPlan = physicalPlan.copy(logicalPlan = NestedPipeExpressions.build(pipeTreeBuilder,
+                                                                               physicalPlan.logicalPlan,
+                                                                               physicalPlan.availableExpressionVariables))
 
     DebugLog.logDiff("PhysicalPlanner.plan")
+    //=======================================================
+
     val executionGraphDefinition =
       ExecutionGraphDefiner.defineFrom(
         breakingPolicy,
@@ -205,15 +213,16 @@ class PipelinedRuntime private(parallelExecution: Boolean,
     // Currently only interpreted pipes can do writes. Ask the policy if it is allowed.
     val readOnly = interpretedPipesFallbackPolicy.readOnly
 
+    val maybePipeMapper = if (context.interpretedPipesFallback != CypherInterpretedPipesFallbackOption.disabled) Some(pipeMapper) else None
     val operatorFactory = new OperatorFactory(executionGraphDefinition,
       converters,
       readOnly = readOnly,
       queryIndexRegistrator,
       query.semanticTable,
       interpretedPipesFallbackPolicy,
-      slottedPipeBuilder)
+      maybePipeMapper)
 
-    DebugLog.logDiff("PipelineBuilder")
+    DebugLog.logDiff("ExecutionGraphDefiner")
     //=======================================================
 
     // Let scheduling policy compute static information
@@ -461,4 +470,12 @@ class PipelinedRuntime private(parallelExecution: Boolean,
     }
   }
 
+  /**
+   * Fake pipe used for now to allow using NestedPipeSlottedExpression from Pipelined.
+   */
+  object NoPipe extends Pipe {
+    override protected def internalCreateResults(state: QueryState): Iterator[CypherRow] =
+      throw new IllegalStateException("Cannot use NoPipe to create results")
+    override def id: Id = Id.INVALID_ID
+  }
 }

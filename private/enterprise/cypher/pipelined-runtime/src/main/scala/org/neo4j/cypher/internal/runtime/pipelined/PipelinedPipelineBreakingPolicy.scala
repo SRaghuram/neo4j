@@ -123,7 +123,7 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, i
     }
   }
 
-  override def onNestedPlanBreak(): Unit = throw unsupported("NestedPlanExpression")
+  override def onNestedPlanBreak(): Unit = {}
 
   private def unsupported(thing: String): CantCompileQueryException =
     new CantCompileQueryException(s"Pipelined does not yet support the plans including `$thing`, use another runtime.")

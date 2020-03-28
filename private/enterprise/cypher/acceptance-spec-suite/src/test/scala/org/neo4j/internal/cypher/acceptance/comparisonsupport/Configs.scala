@@ -81,7 +81,7 @@ object Configs {
   val FromCountStore        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled + Pipelined
   val UDF                   : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedSingleThreaded
   val CachedProperty        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
-  val NestedPlan            : TestConfiguration = InterpretedRuntime + SlottedRuntime
+  val NestedPlan            : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedSingleThreaded
   val Create                : TestConfiguration = InterpretedRuntime + SlottedRuntime
   val ProcedureCall         : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedSingleThreaded
 }

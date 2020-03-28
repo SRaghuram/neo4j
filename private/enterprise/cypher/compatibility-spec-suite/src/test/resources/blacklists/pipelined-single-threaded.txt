@@ -170,7 +170,6 @@ Feature "PatternComprehension": Scenario "Get node degree via size of pattern co
 Feature "PatternComprehension": Scenario "Introducing new node variable in pattern comprehension"
 Feature "PatternComprehension": Scenario "Introducing new relationship variable in pattern comprehension"
 Feature "PatternComprehension": Scenario "Pattern comprehension and ORDER BY"
-Feature "PatternComprehension": Scenario "Pattern comprehension inside list comprehension"
 Feature "PatternComprehension": Scenario "Returning a pattern comprehension with bound nodes"
 Feature "PatternComprehension": Scenario "Returning a pattern comprehension with label predicate"
 Feature "PatternComprehension": Scenario "Returning a pattern comprehension"

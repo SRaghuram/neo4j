@@ -70,7 +70,7 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
         | ][0..5] AS related
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     result.toList should equal(
       List(Map("related" -> List(Map("tagged" -> Vector(Map("owner" -> Map("name" -> "Michael Hunger"))))))))
   }
@@ -117,7 +117,7 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
                   |WITH collect(t) AS tweets
                   |RETURN test.toSet([ tweet IN tweets | [ (tweet)<-[:POSTED]-(user) | user] ]) AS users""".stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     result.toList should equal(List(Map("users" -> List(List(n2)))))
   }
 
@@ -133,7 +133,7 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
                   |WITH [ tweet IN tweets | [ (tweet)<-[:POSTED]-(user) | user] ] AS pattern
                   |RETURN test.toSet(pattern) AS users""".stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     result.toList should equal(List(Map("users" -> List(List(n2)))))
   }
 

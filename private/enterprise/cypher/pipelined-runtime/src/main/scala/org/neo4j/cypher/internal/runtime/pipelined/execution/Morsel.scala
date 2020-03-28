@@ -230,6 +230,11 @@ class Morsel(private[execution] final val longs: Array[Long],
           System.arraycopy(refs, refOffset(sourceRefOffset), other.refs, targetRefOffset, refsPerRow - sourceRefOffset)
       }
 
+    override def copyToSlottedExecutionContext(target: SlottedRow, nLongs: Int, nRefs: Int): Unit = {
+      System.arraycopy(longs, longOffset(0), target.longs, 0, nLongs)
+      System.arraycopy(refs, refOffset(0), target.refs, 0, nRefs)
+    }
+
     override def longOffset(offsetInRow: Int): Int = currentRow * longsPerRow + offsetInRow
 
     override def refOffset(offsetInRow: Int): Int = currentRow * refsPerRow + offsetInRow

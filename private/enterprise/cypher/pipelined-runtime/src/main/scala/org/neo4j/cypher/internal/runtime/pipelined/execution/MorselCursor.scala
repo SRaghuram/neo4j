@@ -9,11 +9,12 @@ import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.WritableRow
+import org.neo4j.cypher.internal.runtime.slotted.SlottedCompatible
 
 /**
   * Row in a morsel.
   */
-trait MorselDerivedRow {
+trait MorselDerivedRow extends SlottedCompatible {
   /**
     * Offset of this row in the morsel.
     */

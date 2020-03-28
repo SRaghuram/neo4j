@@ -430,7 +430,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         |RETURN path
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
       planComparisonStrategy =
         ComparePlansWithAssertion( plan => {
           plan shouldNot includeSomewhere.aPlan("RollUpApply")

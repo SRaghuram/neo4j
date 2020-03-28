@@ -24,7 +24,7 @@ object PipelinedBlacklist {
     val unsupport =
       logicalPlan.fold(Set[String]()) {
         //Queries containing these expression cant be handled by morsel runtime yet
-        case _: NestedPlanExpression =>
+        case _: NestedPlanExpression if parallelExecution =>
           _ + "Nested plan expressions"
 
         case _: ResolvedFunctionInvocation if parallelExecution =>

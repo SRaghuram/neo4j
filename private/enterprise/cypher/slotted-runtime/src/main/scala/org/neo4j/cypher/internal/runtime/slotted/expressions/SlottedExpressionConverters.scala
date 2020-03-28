@@ -26,6 +26,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.slotted
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedProjectedPath.Projector
@@ -61,7 +62,7 @@ object SlottedExpressionConverters {
   }
 }
 
-case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends ExpressionConverter {
+case class SlottedExpressionConverters(physicalPlan: PhysicalPlan, maybeOwningPipe: Option[Pipe] = None) extends ExpressionConverter {
 
   override def toCommandProjection(id: Id, projections: Map[String, Expression],
                                    self: ExpressionConverters): Option[CommandProjection] = {
@@ -152,10 +153,14 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
       case e: ExpressionVariable =>
         Some(commands.expressions.ExpressionVariable(e.offset, e.name))
       case e: NestedPipeExpression =>
-        Some(slotted.expressions.NestedPipeSlottedExpression(e.pipe,
-          self.toCommandExpression(id, e.projection),
-          physicalPlan.nestedPlanArgumentConfigurations(e.pipe.id),
-          e.availableExpressionVariables.map(commands.expressions.ExpressionVariable.of).toArray))
+        val command =
+          slotted.expressions.NestedPipeSlottedExpression(
+            e.pipe,
+            self.toCommandExpression(id, e.projection),
+            physicalPlan.nestedPlanArgumentConfigurations(e.pipe.id),
+            e.availableExpressionVariables.map(commands.expressions.ExpressionVariable.of).toArray)
+        maybeOwningPipe.foreach(p => command.registerOwningPipe(p))
+        Some(command)
       case _ =>
         None
     }
