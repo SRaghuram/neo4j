@@ -10,6 +10,7 @@ import org.HdrHistogram.Histogram;
 import java.io.PrintStream;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
 import org.neo4j.kernel.impl.transaction.tracing.DatabaseTracer;
@@ -205,7 +206,7 @@ public class TimerTransactionTracer implements DatabaseTracer
     };
 
     @Override
-    public TransactionEvent beginTransaction()
+    public TransactionEvent beginTransaction( PageCursorTracer cursorTracer )
     {
         return TRANSACTION_EVENT;
     }

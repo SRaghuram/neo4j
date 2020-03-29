@@ -37,6 +37,7 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.apache.commons.lang3.RandomStringUtils.randomAlphabetic;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.preallocate_logical_logs;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.equalityCondition;
@@ -110,7 +111,7 @@ class TransactionLogsMetricsIT
         LogRotation logRotation = dependencyResolver.resolveDependency( LogRotation.class );
         DatabaseTracer databaseTracer = dependencyResolver.resolveDependency( DatabaseTracer.class );
 
-        try ( TransactionEvent transactionEvent = databaseTracer.beginTransaction();
+        try ( TransactionEvent transactionEvent = databaseTracer.beginTransaction( NULL );
                 CommitEvent commitEvent = transactionEvent.beginCommitEvent();
                 LogAppendEvent logAppendEvent = commitEvent.beginLogAppend() )
         {
