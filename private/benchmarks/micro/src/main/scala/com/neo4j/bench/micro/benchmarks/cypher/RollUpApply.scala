@@ -33,16 +33,13 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class RollUpApply extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME),
+    allowed = Array(Interpreted.NAME, Slotted.NAME, Morsel.NAME),
     base = Array(Slotted.NAME, Morsel.NAME))
   @Param(Array[String]())
   var runtime: String = _
 
-  @ParamValues(
-    allowed = Array("1000"),
-    base = Array("1000"))
-  @Param(Array[String]())
-  var lhsRows: Int = _
+  // No point in parametrizing lhsRows.
+  val lhsRows: Int = 1000
 
   @ParamValues(
     allowed = Array("0", "1", "1000"),
@@ -51,15 +48,6 @@ class RollUpApply extends AbstractCypherBenchmark {
   var rhsRows: Int = _
 
   override def description = "Roll Up Apply"
-
-  private var expectedRowCount: Int = _
-
-  override protected def afterDatabaseStart(config: DataGeneratorConfig): Unit = {
-    if (rhsRows > lhsRows) {
-      throw new IllegalStateException("In this benchmark RHS row count may not exceed LHS row count")
-    }
-    expectedRowCount = lhsRows
-  }
 
   override protected def getConfig: DataGeneratorConfig =
     new DataGeneratorConfigBuilder()
@@ -92,7 +80,7 @@ class RollUpApply extends AbstractCypherBenchmark {
     val subscriber = new CountSubscriber(bh)
     val result = threadState.executablePlan.execute(tx = threadState.tx, subscriber = subscriber)
     result.consumeAll()
-    assertExpectedRowCount(expectedRowCount, subscriber)
+    assertExpectedRowCount(lhsRows, subscriber)
   }
 }
 
