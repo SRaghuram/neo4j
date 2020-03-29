@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
+import org.neo4j.cypher.internal.runtime.interpreted.profiler.InterpretedProfileInformation
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.io.IOUtils
@@ -21,6 +22,9 @@ class QueryResources(cursorFactory: CursorFactory, cursorTracer: PageCursorTrace
   val expressionCursors: ExpressionCursors = new ExpressionCursors(cursorFactory, cursorTracer)
   val cursorPools: CursorPools = new CursorPools(cursorFactory, cursorTracer)
   private var _expressionVariables = new Array[AnyValue](8)
+
+  // For correct profiling of dbHits in NestedPipeExpressions, when supported by a fallback to slotted pipes.
+  var profileInformation: InterpretedProfileInformation = null
 
   def expressionVariables(nExpressionSlots: Int): Array[AnyValue] = {
     if (_expressionVariables.length < nExpressionSlots)

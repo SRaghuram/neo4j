@@ -586,8 +586,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     result.executionPlanDescription() should includeSomewhere.aPlan("Distinct").withDBHits(2)
   }
 
-  //TODO: reenable once Pipelined Profile of NestedPlanExpression works
-  ignore("profile with filter using nested expressions pipe should report dbhits correctly") {
+  test("profile with filter using nested expressions pipe should report dbhits correctly") {
     // GIVEN
     createLabeledNode(Map("category_type" -> "cat"), "Category")
     createLabeledNode(Map("category_type" -> "cat"), "Category")
@@ -602,7 +601,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     relate(anotherNode, createNode(), "HAS_CATEGORY")
 
     // THEN
-    profile(Configs.InterpretedAndSlotted,
+    profile(Configs.InterpretedAndSlottedAndPipelined,
       """MATCH (cat:Category)
         |WITH collect(cat) as categories
         |MATCH (m:Entity)

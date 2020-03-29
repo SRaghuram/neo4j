@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NullPipeDecorator
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
+import org.neo4j.cypher.internal.runtime.interpreted.profiler.Profiler
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
@@ -46,6 +47,15 @@ case class PipelinedQueryState(queryContext: QueryContext,
    * @param resources the resources of the current worker
    */
   def queryStateForExpressionEvaluation(resources: QueryResources): QueryState = {
+
+    val pipeDecorator =
+      if (doProfile) {
+        val profileInformation = resources.profileInformation
+        new Profiler(queryContext.transactionalContext.databaseInfo, profileInformation)
+      } else {
+        NullPipeDecorator
+      }
+
     new QueryState(queryContext,
       null,
       params,
@@ -53,6 +63,7 @@ case class PipelinedQueryState(queryContext: QueryContext,
       Array.empty[IndexReadSession],
       resources.expressionVariables(nExpressionSlots),
       subscriber,
-      NoMemoryTracker)
+      NoMemoryTracker,
+      pipeDecorator)
   }
 }

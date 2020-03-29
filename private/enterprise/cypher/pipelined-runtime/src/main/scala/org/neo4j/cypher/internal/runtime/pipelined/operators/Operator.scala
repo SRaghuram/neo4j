@@ -8,11 +8,13 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import org.neo4j.cypher.internal.NonFatalCypherError
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.profiling.QueryProfiler
+import org.neo4j.cypher.internal.runtime.interpreted.profiler.InterpretedProfileInformation
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.SchedulingInputException
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeOperator.updateProfileEvent
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
@@ -247,11 +249,15 @@ trait OperatorTask extends HasWorkIdentity {
 
     val operatorExecutionEvent = queryProfiler.executeOperator(workIdentity.workId)
     resources.setKernelTracer(operatorExecutionEvent)
+    if (state.doProfile) {
+      resources.profileInformation = new InterpretedProfileInformation
+    }
     setExecutionEvent(operatorExecutionEvent)
     try {
       operate(output, state, resources)
       if (operatorExecutionEvent != null) {
         operatorExecutionEvent.rows(output.numberOfRows)
+        updateProfileEvent(operatorExecutionEvent, resources.profileInformation)
       }
     } finally {
       setExecutionEvent(null)

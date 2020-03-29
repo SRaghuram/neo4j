@@ -8,11 +8,13 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.profiling.QueryProfiler
+import org.neo4j.cypher.internal.runtime.interpreted.profiler.InterpretedProfileInformation
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.Task
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeOperator.updateProfileEvent
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
@@ -46,8 +48,15 @@ trait OutputOperatorState extends HasWorkIdentity {
 
     val operatorExecutionEvent = queryProfiler.executeOperator(workIdentity.workId.x, trackTime)
     resources.setKernelTracer(operatorExecutionEvent)
+    if (state.doProfile) {
+      resources.profileInformation = new InterpretedProfileInformation
+    }
     try {
-      prepareOutput(output, state, resources, operatorExecutionEvent)
+      val preparedOutput = prepareOutput(output, state, resources, operatorExecutionEvent)
+      if (state.doProfile) {
+        updateProfileEvent(operatorExecutionEvent, resources.profileInformation)
+      }
+      preparedOutput
     } finally {
       resources.setKernelTracer(null)
       if (operatorExecutionEvent != null) {
