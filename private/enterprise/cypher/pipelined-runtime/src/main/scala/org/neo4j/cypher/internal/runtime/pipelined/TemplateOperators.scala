@@ -693,7 +693,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                         order: IndexOrder,
                         unique: Boolean,
                         plan: LogicalPlan): Option[NewTemplate] = {
-    val needsLockingUnique = readOnly && unique
+    val needsLockingUnique = !readOnly && unique
     valueExpr match {
       case SingleQueryExpression(expr) if !needsLockingUnique =>
         require(properties.length == 1)
