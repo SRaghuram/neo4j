@@ -45,8 +45,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.exceptions.KernelException;
@@ -103,6 +105,7 @@ import org.neo4j.storageengine.api.txstate.NodeState;
 import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 import org.neo4j.storageengine.util.EagerDegrees;
+import org.neo4j.test.Race;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
@@ -132,6 +135,7 @@ import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.lock.LockService.NO_LOCK_SERVICE;
 import static org.neo4j.storageengine.api.RelationshipSelection.ALL_RELATIONSHIPS;
 import static org.neo4j.storageengine.api.txstate.TxStateVisitor.NO_DECORATION;
+import static org.neo4j.test.Race.throwing;
 import static org.neo4j.values.storable.Values.doubleValue;
 import static org.neo4j.values.storable.Values.intValue;
 import static org.neo4j.values.storable.Values.longValue;
@@ -996,6 +1000,60 @@ class FrekiStorageEngineGraphWritesIT
         }
     }
 
+    @Test
+    void shouldConcurrentlyCreateRelationshipsOnDenseNodes() throws Exception
+    {
+        long[] nodeIds = new long[4];
+        for ( int i = 0; i < nodeIds.length; i++ )
+        {
+            nodeIds[i] = commandCreationContext.reserveNode();
+        }
+        // first make them dense
+        Set<RelationshipSpec> relationships = new HashSet<>();
+        createAndApplyTransaction( target ->
+        {
+            for ( long nodeId : nodeIds )
+            {
+                target.visitCreatedNode( nodeId );
+            }
+            CommandCreationContext context = storageEngine.newCommandCreationContext( NULL );
+            for ( int i = 0; i < 100 * nodeIds.length; i++ )
+            {
+                long startNode = nodeIds[random.nextInt( nodeIds.length )];
+                long endNode = nodeIds[random.nextInt( nodeIds.length )];
+                RelationshipSpec relationship = new RelationshipSpec( startNode, 0, endNode, emptySet(), context );
+                relationship.create( target );
+                relationships.add( relationship );
+            }
+        } );
+
+        // when letting a couple of threads try to create or delete relationships for them
+        ConcurrentLinkedQueue<RelationshipSpec> createdRelationships = new ConcurrentLinkedQueue<>();
+        Race race = new Race().withEndCondition( () -> false );
+        race.addContestants( nodeIds.length, id -> throwing( () ->
+        {
+            long nodeId = nodeIds[id];
+            createAndApplyTransaction( target ->
+            {
+                CommandCreationContext context = storageEngine.newCommandCreationContext( NULL );
+                long otherNodeId = context.reserveNode();
+                target.visitCreatedNode( otherNodeId );
+                RelationshipSpec relationship = new RelationshipSpec( nodeId, 1, otherNodeId, emptySet(), context );
+                relationship.create( target );
+                createdRelationships.add( relationship );
+            } );
+        } ), 1_000 );
+        race.goUnchecked();
+
+        // then
+        relationships.addAll( createdRelationships );
+        for ( long nodeId : nodeIds )
+        {
+            assertContentsOfNode( nodeId, LongSets.immutable.empty(), emptySet(),
+                    relationships.stream().filter( r -> r.startNodeId == nodeId || r.endNodeId == nodeId ).collect( Collectors.toSet() ) );
+        }
+    }
+
     private Set<StorageProperty> randomRelationshipProperties()
     {
         Set<StorageProperty> properties = new HashSet<>();
@@ -1142,11 +1200,6 @@ class FrekiStorageEngineGraphWritesIT
     private void applyCommands( Collection<StorageCommand> commands ) throws Exception
     {
         storageEngine.apply( new SingleTxToApply( commands ), TransactionApplicationMode.EXTERNAL );
-    }
-
-    private void assertNodeIsDense( long nodeId )
-    {
-        assertThat( storageEngine.analysis().nodeIsDense( nodeId ) ).isTrue();
     }
 
     private RelationshipSpec createRelationship( TxStateVisitor target, CommandCreationContext commandCreationContext, long startNodeId, int type,
