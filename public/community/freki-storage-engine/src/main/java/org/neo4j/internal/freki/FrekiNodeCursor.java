@@ -175,6 +175,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public boolean hasProperties()
     {
+        ensurePropertiesLoaded();
         ByteBuffer buffer = data.propertyBuffer();
         return buffer != null && nonEmptyIntDeltas( buffer.array(), buffer.position() );
     }

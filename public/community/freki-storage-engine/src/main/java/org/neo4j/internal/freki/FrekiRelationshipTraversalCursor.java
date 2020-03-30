@@ -133,7 +133,12 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     {
         if ( !loadedCorrectNode )
         {
-            if ( !load( nodeId ) || (!data.isDense && data.relationshipOffset == 0) )
+            if ( !load( nodeId ) )
+            {
+                return false;
+            }
+            ensureRelationshipsLoaded();
+            if ( !data.isDense && data.relationshipOffset == 0 )
             {
                 return false;
             }
