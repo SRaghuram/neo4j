@@ -39,7 +39,11 @@ public class StoreClient implements AutoCloseable
     public static StoreClient connect( URI boltUri, String username, String password, int retries )
     {
         AuthToken basicAuth = AuthTokens.basic( username, password );
-        Config config = configWithEncryption();
+        Config config = Config.builder()
+                              // the following line is required for running tests against Neo4j Server (via Neo4jRule)
+                              .withTrustStrategy( Config.TrustStrategy.trustAllCertificates().withoutHostnameVerification() )
+                              .withEncryption()
+                              .build();
         Supplier<Driver> driverSupplier = () -> GraphDatabase.driver( boltUri, basicAuth, config );
         return QUERY_RETRIER.retry( () ->
         {
@@ -87,13 +91,6 @@ public class StoreClient implements AutoCloseable
             closeConnection();
             connect();
         }
-    }
-
-    private static Config configWithEncryption()
-    {
-        return Config.builder()
-                     .withEncryption()
-                     .build();
     }
 
     private void connect()
