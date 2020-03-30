@@ -27,12 +27,15 @@ import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.test.BaseEndToEndIT;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashMap;
@@ -43,33 +46,49 @@ import static com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveW
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.joining;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.io.FileMatchers.anExistingFile;
 import static org.hamcrest.number.OrderingComparison.greaterThanOrEqualTo;
-import static org.junit.Assert.assertThat;
 
-@Disabled
 public class EndToEndIT extends BaseEndToEndIT
 {
-    @Override
+
+    @Test
+    @Tag( "endtoend" )
+    @Disabled( "https://trello.com/c/gwwr7U1l/1657-enable-ldbc-endtoendit-in-40" )
+    public void runReportBenchmark() throws Exception
+    {
+        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC, ProfilerType.GC );
+
+        try ( Resources resources = new Resources( temporaryFolder.directory( "resources" ).toPath() ) )
+        {
+            runReportBenchmarks( resources,
+                                 scriptName(),
+                                 getJar(),
+                                 profilers,
+                                 processArgs( resources,
+                                              profilers ),
+                                 this::assertOnRecordings,
+                                 1 );
+        }
+    }
+
     protected String scriptName()
     {
         return "run-report-benchmark.sh";
     }
 
-    @Override
-    protected Path getJar( Path baseDir )
+    protected Path getJar()
     {
-        return baseDir.resolve( "neo4j-connectors/target/ldbc.jar" );
+        return Paths.get( "neo4j-connectors/target/ldbc.jar" );
     }
 
-    @Override
     protected List<String> processArgs( Resources resources,
-                                        List<ProfilerType> profilers,
-                                        String endpointUrl,
-                                        Path baseDir,
-                                        Jvm jvm,
-                                        ResultStoreCredentials resultStoreCredentials ) throws IOException, DriverConfigurationException
+                                        List<ProfilerType> profilers ) throws IOException, DriverConfigurationException
     {
+        ResultStoreCredentials resultStoreCredentials = getResultStoreCredentials();
+        Jvm jvm = Jvm.defaultJvmOrFail();
+        String endpointUrl = getAWSEndpointURL();
         // prepare neo4j config file
         Path baseNeo4jConfig = resources.getResourceFile( "/neo4j/neo4j_sf001.conf" );
         Path benchmarkNeo4jConfig = temporaryFolder.createFile( "neo4j_benchmark.config" ).toPath();
@@ -146,7 +165,6 @@ public class EndToEndIT extends BaseEndToEndIT
                        endpointUrl );
     }
 
-    @Override
     protected void assertOnRecordings( Path recordingDir, List<ProfilerType> profilers, Resources resources ) throws Exception
     {
         // should find at least one recording per profiler per benchmark (LDBC is 1 benchmark) -- there may be more, due to secondary recordings

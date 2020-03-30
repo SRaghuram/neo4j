@@ -19,7 +19,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 public class QueryRetrier
 {
     static final int DEFAULT_RETRY_COUNT = 10;
-    static final Duration DEFAULT_TIMEOUT = Duration.ofMinutes( 5 );
+    public static final Duration DEFAULT_TIMEOUT = Duration.ofMinutes( 5 );
 
     private final boolean verbose;
     private final Duration timeout;

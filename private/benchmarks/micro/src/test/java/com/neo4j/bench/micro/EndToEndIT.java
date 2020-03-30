@@ -15,41 +15,57 @@ import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import com.neo4j.bench.jmh.api.config.Validation;
 import com.neo4j.bench.micro.benchmarks.test.NoOpBenchmark;
 import com.neo4j.bench.test.BaseEndToEndIT;
+import org.junit.Test;
 
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@TestDirectoryExtension
 class EndToEndIT extends BaseEndToEndIT
 {
     private AnnotationsFixture annotationsFixture = new AnnotationsFixture();
 
-    @Override
+    @Test
+    public void runReportBenchmark() throws Exception
+    {
+
+        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC, ProfilerType.GC );
+
+        try ( Resources resources = new Resources( temporaryFolder.directory( "resources" ).toPath() ) )
+        {
+            runReportBenchmarks( resources,
+                                 scriptName(),
+                                 getJar(),
+                                 profilers,
+                                 processArgs( profilers,
+                                              getAWSEndpointURL(),
+                                              Jvm.defaultJvmOrFail(),
+                                              getResultStoreCredentials() ),
+                                 this::assertOnRecordings,
+                                 1 );
+        }
+    }
+
     protected String scriptName()
     {
         return "run-report-benchmarks.sh";
     }
 
-    @Override
-    protected Path getJar( Path baseDir )
+    protected Path getJar()
     {
-        return baseDir.resolve( "target/micro-benchmarks.jar" );
+        return Paths.get( "target/micro-benchmarks.jar" );
     }
 
-    @Override
-    protected List<String> processArgs( Resources resources,
-                                        List<ProfilerType> profilers,
+    protected List<String> processArgs( List<ProfilerType> profilers,
                                         String endpointUrl,
-                                        Path baseDir,
                                         Jvm jvm,
                                         ResultStoreCredentials resultStoreCredentials )
     {
@@ -102,7 +118,6 @@ class EndToEndIT extends BaseEndToEndIT
                        endpointUrl );
     }
 
-    @Override
     protected void assertOnRecordings( Path recordingDir, List<ProfilerType> profilers, Resources resources ) throws Exception
     {
         // all recordings

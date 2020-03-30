@@ -26,42 +26,43 @@ import java.util.Set;
 @Command( name = "add-profiles" )
 public class AddProfilesCommand implements Runnable
 {
+
     public static final String CMD_DIR = "--dir";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_DIR},
-            description = "Directory that contains profile data",
-            title = "Profiles data directory" )
+             name = {CMD_DIR},
+             description = "Directory that contains profile data",
+             title = "Profiles data directory" )
     @Required
     private File profilesDir;
 
     public static final String CMD_TEST_RUN_RESULTS = "--test_run_report";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_TEST_RUN_RESULTS},
-            description = "JSON file containing Test Run Report",
-            title = "Test Run Report file" )
+             name = {CMD_TEST_RUN_RESULTS},
+             description = "JSON file containing Test Run Report",
+             title = "Test Run Report file" )
     @Required
     private File testRunReportFile;
 
     public static final String CMD_S3_BUCKET = "--s3-bucket";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_S3_BUCKET},
-            description = "S3 bucket profiles were uploaded to",
-            title = "S3 bucket" )
+             name = {CMD_S3_BUCKET},
+             description = "S3 bucket profiles were uploaded to",
+             title = "S3 bucket" )
     @Required
     private String s3Bucket;
 
     public static final String CMD_ARCHIVE = "--archive";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_ARCHIVE},
-            description = "S3 path to archive file, uploading archive containing artifacts for entire test run",
-            title = "S3 path to test run archive" )
+             name = {CMD_ARCHIVE},
+             description = "S3 path to archive file, uploading archive containing artifacts for entire test run",
+             title = "S3 path to test run archive" )
     private String s3ArchivePath;
 
     public static final String CMD_IGNORE_UNRECOGNIZED_FILES = "--ignore_unrecognized_files";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_IGNORE_UNRECOGNIZED_FILES},
-            description = "If true will print warning on unrecognized profile recording, otherwise will fail",
-            title = "Warn of unrecognized profile recordings" )
+             name = {CMD_IGNORE_UNRECOGNIZED_FILES},
+             description = "If true will print warning on unrecognized profile recording, otherwise will fail",
+             title = "Warn of unrecognized profile recordings" )
     private boolean ignoreUnrecognizedFiles;
 
     @Override

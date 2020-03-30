@@ -10,6 +10,7 @@ import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
+import com.neo4j.bench.reporter.ResultsReporter;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
@@ -45,6 +46,7 @@ import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 
 import java.io.File;
+import java.net.URI;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -117,6 +119,52 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
              description = "Job ID of the batch infra runner",
              title = "Batch Job Id" )
     private String batchJobId;
+
+    @Option(
+            type = OptionType.COMMAND,
+            name = {"--aws-endpoint-url"},
+            description = "AWS endpoint URL, used during testing",
+            title = "AWS endpoint URL" )
+    private String awsEndpointURL;
+
+    @Option(
+            type = OptionType.COMMAND,
+            name = "--aws-region",
+            description = "AWS region",
+            title = "AWS region" )
+    private String awsRegion = "eu-north-1";
+
+    private static final String CMD_RESULTS_STORE_USER = "--results-store-user";
+    @Option( type = OptionType.COMMAND,
+             name = {CMD_RESULTS_STORE_USER},
+             description = "Username for Neo4j database server that stores benchmarking results",
+             title = "Results Store Username" )
+    @Required
+    private String resultsStoreUsername;
+
+    private static final String CMD_RESULTS_STORE_PASSWORD = "--results-store-pass";
+    @Option( type = OptionType.COMMAND,
+             name = {CMD_RESULTS_STORE_PASSWORD},
+             description = "Password for Neo4j database server that stores benchmarking results",
+             title = "Results Store Password" )
+    @Required
+    private String resultsStorePassword;
+
+    private static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
+    @Option( type = OptionType.COMMAND,
+             name = {CMD_RESULTS_STORE_URI},
+             description = "URI to Neo4j database server for storing benchmarking results",
+             title = "Results Store" )
+    @Required
+    private URI resultsStoreUri;
+
+    public static final String CMD_S3_BUCKET = "--s3-bucket";
+    @Option( type = OptionType.COMMAND,
+             name = {CMD_S3_BUCKET},
+             description = "S3 bucket profiles were uploaded to",
+             title = "S3 bucket" )
+    @Required
+    private String s3Bucket;
 
     @Override
     protected void doRun( RunMacroWorkloadParams params )
@@ -274,12 +322,22 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
 
             BenchmarkGroupBenchmarkMetricsPrinter verboseMetricsPrinter = new BenchmarkGroupBenchmarkMetricsPrinter( true );
             System.out.println( verboseMetricsPrinter.toPrettyString( allResults, errorReporter.errors() ) );
-            System.out.println( "Exporting results as JSON to: " + resultsJson.toPath().toAbsolutePath() );
-            JsonUtil.serializeJson( resultsJson.toPath(), testRunReport );
 
             Path profilerRecordingsOutputFile = workDir.toPath().resolve( profilerRecordingsOutputDir.toPath() );
             System.out.println( "Copying profiler recordings to: " + profilerRecordingsOutputFile.toAbsolutePath() );
             groupDir.copyProfilerRecordings( profilerRecordingsOutputFile );
+
+            ResultsReporter resultsReporter = new ResultsReporter( profilerRecordingsOutputDir,
+                                                                   testRunReport,
+                                                                   s3Bucket,
+                                                                   true,
+                                                                   resultsStoreUsername,
+                                                                   resultsStorePassword,
+                                                                   resultsStoreUri,
+                                                                   workDir,
+                                                                   awsEndpointURL );
+
+            resultsReporter.report();
         }
     }
 

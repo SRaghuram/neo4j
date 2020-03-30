@@ -25,42 +25,43 @@ import static java.util.stream.Collectors.joining;
 @Command( name = "report" )
 public class ReportCommand implements Runnable
 {
+
     public static final String CMD_RESULTS_STORE_USER = "--results-store-user";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_RESULTS_STORE_USER},
-            description = "Username for Neo4j database server that stores benchmarking results",
-            title = "Results Store Username" )
+             name = {CMD_RESULTS_STORE_USER},
+             description = "Username for Neo4j database server that stores benchmarking results",
+             title = "Results Store Username" )
     @Required
     private String resultsStoreUsername;
 
     public static final String CMD_RESULTS_STORE_PASSWORD = "--results-store-pass";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_RESULTS_STORE_PASSWORD},
-            description = "Password for Neo4j database server that stores benchmarking results",
-            title = "Results Store Password" )
+             name = {CMD_RESULTS_STORE_PASSWORD},
+             description = "Password for Neo4j database server that stores benchmarking results",
+             title = "Results Store Password" )
     @Required
     private String resultsStorePassword;
 
     public static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_RESULTS_STORE_URI},
-            description = "URI to Neo4j database server for storing benchmarking results",
-            title = "Results Store" )
+             name = {CMD_RESULTS_STORE_URI},
+             description = "URI to Neo4j database server for storing benchmarking results",
+             title = "Results Store" )
     @Required
     private URI resultsStoreUri;
 
     public static final String CMD_TEST_RUN_RESULTS = "--test_run_results";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_TEST_RUN_RESULTS},
-            description = "JSON file containing Test Run results",
-            title = "JSON file containing Test Run results" )
+             name = {CMD_TEST_RUN_RESULTS},
+             description = "JSON file containing Test Run results",
+             title = "JSON file containing Test Run results" )
     private File testRunResultsJson;
 
     static final String CMD_ERROR_POLICY = "--error-policy";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_ERROR_POLICY},
-            description = "Error policy",
-            title = "Error policy" )
+             name = {CMD_ERROR_POLICY},
+             description = "Error policy",
+             title = "Error policy" )
     @AllowedEnumValues( ErrorReportingPolicy.class )
     private ErrorReportingPolicy errorReportingPolicy = ErrorReportingPolicy.REPORT_THEN_FAIL;
 
