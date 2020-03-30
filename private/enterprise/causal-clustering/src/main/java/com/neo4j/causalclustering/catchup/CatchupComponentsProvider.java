@@ -107,8 +107,6 @@ public final class CatchupComponentsProvider
 
     /**
      * Global Server instance for the Neo4j Catchup Protocol. Responds to store copy and catchup requests from other Neo4j instances
-     * @param installedProtocolsHandler
-     * @param catchupServerHandler
      * @return a catchup server
      */
     public Server createCatchupServer( InstalledProtocolHandler installedProtocolsHandler, CatchupServerHandler catchupServerHandler )
@@ -133,8 +131,6 @@ public final class CatchupComponentsProvider
 
     /**
      * Optional global server instance for the Neo4j Backup protocol. Basically works the same way as the catchup protocol.
-     * @param installedProtocolsHandler
-     * @param catchupServerHandler
      * @return an optional backup server
      */
     public Optional<Server> createBackupServer( InstalledProtocolHandler installedProtocolsHandler, CatchupServerHandler catchupServerHandler )

@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.catchup.storecopy;
 import com.neo4j.causalclustering.catchup.CatchUpClientException;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
-import com.neo4j.causalclustering.catchup.CatchupResult;
 import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpFactory;
 import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpWriter;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
@@ -88,8 +87,7 @@ class RemoteStoreTest
 
         TxPullClient txPullClient = mock( TxPullClient.class );
         AtomicLong lastTxSupplier = new AtomicLong();
-        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then(
-                incrementTxIdResponse( SUCCESS_END_OF_STREAM, lastTxSupplier, 0 ) );
+        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then( incrementTxIdResponse( lastTxSupplier, 0 ) );
 
         when( writer.lastTx() ).then( m -> lastTxSupplier.get() );
 
@@ -110,8 +108,7 @@ class RemoteStoreTest
 
         TxPullClient txPullClient = mock( TxPullClient.class );
         AtomicLong lastTxSupplier = new AtomicLong();
-        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then(
-                incrementTxIdResponse( SUCCESS_END_OF_STREAM, lastTxSupplier, 1 ) );
+        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then( incrementTxIdResponse( lastTxSupplier, 1 ) );
 
         when( writer.lastTx() ).then( m -> lastTxSupplier.get() );
 
@@ -131,8 +128,7 @@ class RemoteStoreTest
 
         TxPullClient txPullClient = mock( TxPullClient.class );
         AtomicLong lastTxSupplier = new AtomicLong();
-        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then(
-                incrementTxIdResponse( SUCCESS_END_OF_STREAM, lastTxSupplier, 0 ) );
+        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then( incrementTxIdResponse( lastTxSupplier, 0 ) );
 
         when( writer.lastTx() ).then( m -> lastTxSupplier.get() );
 
@@ -194,8 +190,7 @@ class RemoteStoreTest
         TxPullClient txPullClient = mock( TxPullClient.class );
         AtomicLong lastTxSupplier = new AtomicLong();
         // fail with progress still increments txId
-        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then(
-                incrementTxIdResponse( SUCCESS_END_OF_STREAM, lastTxSupplier, 1 ) );
+        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then( incrementTxIdResponse( lastTxSupplier, 1 ) );
 
         when( writer.lastTx() ).then( m -> lastTxSupplier.get() );
 
@@ -221,8 +216,7 @@ class RemoteStoreTest
         TxPullClient txPullClient = mock( TxPullClient.class );
         AtomicLong lastTxSupplier = new AtomicLong();
         // fail with progress still increments txId
-        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then(
-                incrementTxIdResponse( SUCCESS_END_OF_STREAM, lastTxSupplier, 1 ) );
+        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then( incrementTxIdResponse( lastTxSupplier, 1 ) );
 
         when( writer.lastTx() ).then( m -> lastTxSupplier.get() );
 
@@ -241,14 +235,14 @@ class RemoteStoreTest
         remoteStore.copy( catchupAddressProvider, storeId, databaseLayout, true );
     }
 
-    private Answer<TxStreamFinishedResponse> incrementTxIdResponse( CatchupResult status, AtomicLong lastTxSupplier, long incrementAmount )
+    private Answer<TxStreamFinishedResponse> incrementTxIdResponse( AtomicLong lastTxSupplier, long incrementAmount )
     {
         return invocationOnMock ->
         {
             long txId = invocationOnMock.getArgument( 2 );
             long incrementedTxId = txId + incrementAmount;
             lastTxSupplier.set( incrementedTxId );
-            return new TxStreamFinishedResponse( status, status == SUCCESS_END_OF_STREAM ? incrementedTxId : -1 );
+            return new TxStreamFinishedResponse( SUCCESS_END_OF_STREAM, incrementedTxId );
         };
     }
 

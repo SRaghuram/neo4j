@@ -178,11 +178,9 @@ public class TransactionLogCatchUpWriterTest
         assumeTrue( !SystemUtils.IS_OS_LINUX );
         Config config = defaults();
         simulateStoreCopy();
-        try ( TransactionLogCatchUpWriter writer = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
-                storageEngineFactory, LongRange.range( BASE_TX_ID, BASE_TX_ID ), partOfStoreCopy, true, true, NULL ) )
-        {
-            // empty
-        }
+        TransactionLogCatchUpWriter writer = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
+                storageEngineFactory, LongRange.range( BASE_TX_ID, BASE_TX_ID ), partOfStoreCopy, true, true, NULL );
+        writer.close();
         assertThat(sizeOf( databaseLayout.getTransactionLogsDirectory() ), lessThanOrEqualTo( 100L ) );
     }
 

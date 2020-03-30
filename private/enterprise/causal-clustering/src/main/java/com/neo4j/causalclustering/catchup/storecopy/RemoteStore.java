@@ -72,14 +72,13 @@ public class RemoteStore
         this.commitStateHelper = new CommitStateHelper( pageCache, fs, config, storageEngineFactory );
     }
 
-    public void tryCatchingUp( CatchupAddressProvider catchupAddressProvider, StoreId expectedStoreId, DatabaseLayout databaseLayout, boolean keepTxLogsInDir,
-            boolean forceTransactionLogRotation )
-            throws StoreCopyFailedException, IOException
+    public void tryCatchingUp( CatchupAddressProvider catchupAddressProvider, StoreId expectedStoreId, DatabaseLayout databaseLayout,
+            boolean keepTxLogsInStoreDir, boolean rotateTxLogWhilePulling ) throws StoreCopyFailedException, IOException
     {
         CommitState commitState = getCommitState( databaseLayout );
         log.info( "Store commit state: " + commitState );
         TxPullRequestContext txPullRequestContext = createContextFromCatchingUp( expectedStoreId, commitState );
-        pullTransactions( catchupAddressProvider, databaseLayout, txPullRequestContext, false, keepTxLogsInDir, forceTransactionLogRotation );
+        pullTransactions( catchupAddressProvider, databaseLayout, txPullRequestContext, false, keepTxLogsInStoreDir, rotateTxLogWhilePulling );
     }
 
     private CommitState getCommitState( DatabaseLayout databaseLayout ) throws IOException
@@ -90,7 +89,7 @@ public class RemoteStore
         }
     }
 
-    public void copy( CatchupAddressProvider addressProvider, StoreId expectedStoreId, DatabaseLayout destinationLayout, boolean rotateTransactionsManually )
+    public void copy( CatchupAddressProvider addressProvider, StoreId expectedStoreId, DatabaseLayout destinationLayout, boolean rotateTxLogWhilePulling )
             throws StoreCopyFailedException
     {
         StreamToDiskProvider streamToDiskProvider = new StreamToDiskProvider( destinationLayout.databaseDirectory(), fs, monitors );
@@ -101,7 +100,7 @@ public class RemoteStore
         log.info( "Store files need to be recovered starting from: %s", requiredTransactions );
 
         TxPullRequestContext context = createContextFromStoreCopy( requiredTransactions, expectedStoreId );
-        pullTransactions( addressProvider, destinationLayout, context, true, true, rotateTransactionsManually );
+        pullTransactions( addressProvider, destinationLayout, context, true, true, rotateTxLogWhilePulling );
     }
 
     private MaximumTotalTime getTerminationCondition()
@@ -110,12 +109,12 @@ public class RemoteStore
     }
 
     private void pullTransactions( CatchupAddressProvider catchupAddressProvider, DatabaseLayout databaseLayout, TxPullRequestContext context,
-            boolean asPartOfStoreCopy, boolean keepTxLogsInStoreDir, boolean rotateTransactionsManually )
+            boolean asPartOfStoreCopy, boolean keepTxLogsInStoreDir, boolean rotateTxLogWhilePulling )
             throws StoreCopyFailedException
     {
         storeCopyClientMonitor.startReceivingTransactions( context.startTxIdExclusive() );
         try ( TransactionLogCatchUpWriter writer = transactionLogFactory.create( databaseLayout, fs, pageCache, config, logProvider, storageEngineFactory,
-                validInitialTxRange( context ), asPartOfStoreCopy, keepTxLogsInStoreDir, rotateTransactionsManually, pageCacheTracer ) )
+                validInitialTxRange( context ), asPartOfStoreCopy, keepTxLogsInStoreDir, rotateTxLogWhilePulling, pageCacheTracer ) )
         {
             TxPuller txPuller = createTxPuller( catchupAddressProvider, logProvider, config, namedDatabaseId );
 
