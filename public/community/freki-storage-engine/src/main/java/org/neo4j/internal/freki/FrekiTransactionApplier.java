@@ -66,6 +66,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     private final FrekiStorageReader reader;
     private final SchemaState schemaState;
     private final IndexUpdateListener indexUpdateListener;
+    private final DenseRelationshipsWorkSync denseRelationshipsWorkSync;
     private final PageCacheTracer pageCacheTracer;
     private final PageCursorTracer cursorTracer;
     private List<IndexDescriptor> createdIndexes;
@@ -76,6 +77,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     private final FrekiPropertyCursor propertyCursorBefore;
     private final FrekiPropertyCursor propertyCursorAfter;
     private CountsAccessor.Updater countsApplier;
+    private DenseRelationshipsWorkSync.Batch denseRelationshipUpdates;
 
     // State used for generating index updates
     private long currentNodeId = NULL;
@@ -83,12 +85,14 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
 
     FrekiTransactionApplier( Stores stores, FrekiStorageReader reader, SchemaState schemaState, IndexUpdateListener indexUpdateListener,
             TransactionApplicationMode mode, IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync, LabelIndexUpdatesWorkSync labelIndexUpdatesWorkSync,
-            IndexUpdatesWorkSync indexUpdatesWorkSync, PageCacheTracer pageCacheTracer, PageCursorTracer cursorTracer )
+            IndexUpdatesWorkSync indexUpdatesWorkSync, DenseRelationshipsWorkSync denseRelationshipsWorkSync,
+            PageCacheTracer pageCacheTracer, PageCursorTracer cursorTracer )
     {
         this.stores = stores;
         this.reader = reader;
         this.schemaState = schemaState;
         this.indexUpdateListener = indexUpdateListener;
+        this.denseRelationshipsWorkSync = denseRelationshipsWorkSync;
         this.pageCacheTracer = pageCacheTracer;
         this.cursorTracer = cursorTracer;
         this.labelIndexUpdates = mode == REVERSE_RECOVERY || labelIndexUpdatesWorkSync == null ? null : labelIndexUpdatesWorkSync.newBatch();
@@ -305,21 +309,11 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     @Override
     public void handle( FrekiCommand.DenseNode node ) throws IOException
     {
-        checkExtractIndexUpdates( node.nodeId ); //apply for prev
-        checkExtractIndexUpdates( NULL ); // apply for this
-
-        // Thoughts: we should perhaps to the usual combine-and-apply thing for the dense node updates?
-        try ( DenseRelationshipStore.Updater updater = stores.denseStore.newUpdater( cursorTracer ) )
+        if ( denseRelationshipUpdates == null )
         {
-            // relationships
-            node.relationshipUpdates.forEachKeyValue( ( type, typedRelationships ) ->
-            {
-                typedRelationships.deleted.forEach( relationship ->
-                        updater.deleteRelationship( relationship.internalId, node.nodeId, type, relationship.otherNodeId, relationship.outgoing ) );
-                typedRelationships.created.forEach( relationship -> updater.createRelationship( relationship.internalId, node.nodeId, type,
-                        relationship.otherNodeId, relationship.outgoing, relationship.propertyUpdates, u -> u.after ) );
-            } );
+            denseRelationshipUpdates = denseRelationshipsWorkSync.newBatch();
         }
+        denseRelationshipUpdates.add( node );
     }
 
     @Override
@@ -419,12 +413,14 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
             }
             AsyncApply labelUpdatesAsyncApply = labelIndexUpdates != null ? labelIndexUpdates.applyAsync() : AsyncApply.EMPTY;
             AsyncApply indexUpdatesAsyncApply = indexUpdates != null ? indexUpdates.applyAsync( cursorTracer ) : AsyncApply.EMPTY;
+            AsyncApply denseAsyncApply = denseRelationshipUpdates != null ? denseRelationshipUpdates.applyAsync( pageCacheTracer ) : AsyncApply.EMPTY;
             if ( idUpdates != null )
             {
                 idUpdates.apply( pageCacheTracer );
             }
             labelUpdatesAsyncApply.await();
             indexUpdatesAsyncApply.await();
+            denseAsyncApply.await();
         };
         closeAll( () -> checkExtractIndexUpdates( NULL ), nodeCursor, propertyCursorBefore, propertyCursorAfter, indexesCloser );
     }
