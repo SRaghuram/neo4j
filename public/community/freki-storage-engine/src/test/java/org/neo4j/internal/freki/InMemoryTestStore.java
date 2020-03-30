@@ -32,6 +32,7 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.storageengine.util.IdUpdateListener;
 
 import static java.lang.String.format;
+import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.internal.freki.Record.recordXFactor;
 
 class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
@@ -72,9 +73,16 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
     @Override
     public void write( PageCursor cursor, Record record, IdUpdateListener idUpdateListener, PageCursorTracer cursorTracer )
     {
-        Record copy = new Record( record.sizeExp(), record.id );
-        copy.copyContentsFrom( record );
-        data.put( record.id, copy );
+        if ( record.hasFlag( FLAG_IN_USE ) )
+        {
+            Record copy = new Record( record.sizeExp(), record.id );
+            copy.copyContentsFrom( record );
+            data.put( record.id, copy );
+        }
+        else
+        {
+            data.remove( record.id );
+        }
     }
 
     @Override
@@ -115,7 +123,7 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
     @Override
     public boolean exists( PageCursor cursor, long id )
     {
-        return data.contains( id );
+        return data.containsKey( id );
     }
 
     @Override
