@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
+import java.util.function.Consumer
+
 import org.eclipse.collections.impl.factory.Sets
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.CypherRow
@@ -37,10 +39,12 @@ case class OrderedDistinctSlottedPipe(source: Pipe,
 
           if (currentOrderedGroupingValue == null || currentOrderedGroupingValue != orderedGroupingValue) {
             currentOrderedGroupingValue = orderedGroupingValue
+            seen.forEach((x => state.memoryTracker.deallocated(x, id.x)): Consumer[AnyValue])
             seen = Sets.mutable.empty[AnyValue]()
           }
 
           if (seen.add(groupingValue)) {
+            state.memoryTracker.allocated(groupingValue, id.x)
             // Found unseen key! Set it as the next element to yield, and exit
             groupingExpression.project(next, groupingValue)
             return Some(next)

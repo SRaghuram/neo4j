@@ -10,6 +10,8 @@ import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementTestBase
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.memory.HeapMemoryLimitExceeded
+import org.neo4j.values.storable.Values
+import org.neo4j.values.virtual.VirtualValues
 
 trait WithSlotsMemoryManagementTestBase {
   self: MemoryManagementTestBase[EnterpriseRuntimeContext] =>
@@ -17,9 +19,11 @@ trait WithSlotsMemoryManagementTestBase {
   override protected def estimateSize(data: ValueToEstimate): Long = {
     data match {
       case E_INT => ValueUtils.of(0).estimatedHeapUsage()
-      case E_INT_IN_DISTINCT => ValueUtils.of(0).estimatedHeapUsage() // Slotted does not wrap columns in lists for distinct
-      case E_NODE_PRIMITIVE => 8 // Just a long in slotted
-      case E_NODE_VALUE => 64 // Size of a NodeValue
+      case E_INT_IN_DISTINCT => ValueUtils.of(0).estimatedHeapUsage() // Slotted does not wrap single columns in lists for distinct
+      case E_INT_INT_IN_DISTINCT => ValueUtils.of(java.util.Arrays.asList(0, 0)).estimatedHeapUsage() // We wrap the columns in a list
+      case E_NODE_NODE_IN_DISTINCT => Values.longArray(Array(0L, 0L)).estimatedHeapUsage()
+      case E_NODE_PRIMITIVE => java.lang.Long.BYTES // Just a long in slotted
+      case E_NODE_VALUE => VirtualValues.node(0).estimatedHeapUsage()
     }
   }
 
@@ -71,6 +75,24 @@ trait SlottedMemoryManagementTestBase extends WithSlotsMemoryManagementTestBase 
       .produceResults("x")
       .distinct("x AS x")
       .input(nodes = Seq("x"), nullable = false)
+      .build()
+
+    // then
+    a[HeapMemoryLimitExceeded] should be thrownBy {
+      consume(execute(logicalQuery, runtime, input))
+    }
+  }
+
+  test("should kill primitive ordered distinct query before it runs out of memory") {
+    // given
+    val sameNode = runtimeTestSupport.tx.createNode()
+    val input = infiniteNodeInput(estimateSize(E_NODE_NODE_IN_DISTINCT), Some(_ => Array(sameNode, runtimeTestSupport.tx.createNode())))
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .orderedDistinct(Seq("x"),"x AS x", "y AS y")
+      .input(nodes = Seq("x", "y"), nullable = false)
       .build()
 
     // then
