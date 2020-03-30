@@ -67,7 +67,7 @@ abstract class FrekiCommand implements StorageCommand
         channel.put( commandType );
     }
 
-    abstract boolean accept( FrekiTransactionApplier applier ) throws IOException;
+    abstract boolean accept( Dispatcher applier ) throws IOException;
 
     static class SparseNode extends FrekiCommand
     {
@@ -86,7 +86,7 @@ abstract class FrekiCommand implements StorageCommand
         }
 
         @Override
-        boolean accept( FrekiTransactionApplier applier ) throws IOException
+        boolean accept( Dispatcher applier ) throws IOException
         {
             applier.handle( this );
             return false;
@@ -146,7 +146,7 @@ abstract class FrekiCommand implements StorageCommand
         }
 
         @Override
-        boolean accept( FrekiTransactionApplier applier ) throws IOException
+        boolean accept( Dispatcher applier ) throws IOException
         {
             applier.handle( this );
             return false;
@@ -332,7 +332,7 @@ abstract class FrekiCommand implements StorageCommand
         }
 
         @Override
-        boolean accept( FrekiTransactionApplier applier ) throws IOException
+        boolean accept( Dispatcher applier ) throws IOException
         {
             applier.handle( this );
             return false;
@@ -403,7 +403,7 @@ abstract class FrekiCommand implements StorageCommand
         }
 
         @Override
-        boolean accept( FrekiTransactionApplier applier ) throws IOException
+        boolean accept( Dispatcher applier ) throws IOException
         {
             applier.handle( this );
             return false;
@@ -425,7 +425,7 @@ abstract class FrekiCommand implements StorageCommand
         }
 
         @Override
-        boolean accept( FrekiTransactionApplier applier ) throws IOException
+        boolean accept( Dispatcher applier ) throws IOException
         {
             applier.handle( this );
             return false;
@@ -447,7 +447,7 @@ abstract class FrekiCommand implements StorageCommand
         }
 
         @Override
-        boolean accept( FrekiTransactionApplier applier ) throws IOException
+        boolean accept( Dispatcher applier ) throws IOException
         {
             applier.handle( this );
             return false;
@@ -489,7 +489,7 @@ abstract class FrekiCommand implements StorageCommand
         }
 
         @Override
-        boolean accept( FrekiTransactionApplier applier ) throws IOException
+        boolean accept( Dispatcher applier ) throws IOException
         {
             applier.handle( this );
             return false;
@@ -662,7 +662,7 @@ abstract class FrekiCommand implements StorageCommand
         }
 
         @Override
-        boolean accept( FrekiTransactionApplier applier ) throws IOException
+        boolean accept( Dispatcher applier ) throws IOException
         {
             applier.handle( this );
             return false;
@@ -700,7 +700,7 @@ abstract class FrekiCommand implements StorageCommand
         }
 
         @Override
-        boolean accept( FrekiTransactionApplier applier ) throws IOException
+        boolean accept( Dispatcher applier ) throws IOException
         {
             applier.handle( this );
             return false;
