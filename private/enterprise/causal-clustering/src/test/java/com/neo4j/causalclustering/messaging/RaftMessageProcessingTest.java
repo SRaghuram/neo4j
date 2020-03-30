@@ -13,28 +13,24 @@ import com.neo4j.causalclustering.messaging.marshalling.v2.ContentTypeProtocol;
 import com.neo4j.causalclustering.messaging.marshalling.v2.decoding.RaftMessageDecoder;
 import com.neo4j.causalclustering.messaging.marshalling.v2.encoding.RaftMessageEncoder;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
-import static org.junit.Assert.assertEquals;
-
-@RunWith( MockitoJUnitRunner.class )
-public class RaftMessageProcessingTest
+class RaftMessageProcessingTest
 {
     private EmbeddedChannel channel;
 
-    @Before
-    public void setup()
+    @BeforeEach
+    void setup()
     {
         channel = new EmbeddedChannel( new RaftMessageEncoder(), new RaftMessageDecoder( new ContentTypeProtocol() ) );
     }
 
     @Test
-    public void shouldEncodeAndDecodeVoteRequest()
+    void shouldEncodeAndDecodeVoteRequest()
     {
         // given
         MemberId member = new MemberId( UUID.randomUUID() );
@@ -46,11 +42,11 @@ public class RaftMessageProcessingTest
         channel.writeInbound( message );
 
         // then
-        assertEquals( request, channel.readInbound() );
+        Assertions.assertEquals( request, channel.readInbound() );
     }
 
     @Test
-    public void shouldEncodeAndDecodeVoteResponse()
+    void shouldEncodeAndDecodeVoteResponse()
     {
         // given
         MemberId member = new MemberId( UUID.randomUUID() );
@@ -62,18 +58,18 @@ public class RaftMessageProcessingTest
         channel.writeInbound( message );
 
         // then
-        assertEquals( response, channel.readInbound() );
+        Assertions.assertEquals( response, channel.readInbound() );
     }
 
     @Test
-    public void shouldEncodeAndDecodeAppendEntriesRequest()
+    void shouldEncodeAndDecodeAppendEntriesRequest()
     {
         // given
         MemberId member = new MemberId( UUID.randomUUID() );
         RaftLogEntry logEntry = new RaftLogEntry( 1, ReplicatedInteger.valueOf( 1 ) );
         RaftMessages.AppendEntries.Request request =
                 new RaftMessages.AppendEntries.Request(
-                        member, 1, 1, 99, new RaftLogEntry[] { logEntry }, 1 );
+                        member, 1, 1, 99, new RaftLogEntry[]{logEntry}, 1 );
 
         // when
         channel.writeOutbound( request );
@@ -81,11 +77,11 @@ public class RaftMessageProcessingTest
         channel.writeInbound( message );
 
         // then
-        assertEquals( request, channel.readInbound() );
+        Assertions.assertEquals( request, channel.readInbound() );
     }
 
     @Test
-    public void shouldEncodeAndDecodeAppendEntriesResponse()
+    void shouldEncodeAndDecodeAppendEntriesResponse()
     {
         // given
         MemberId member = new MemberId( UUID.randomUUID() );
@@ -98,11 +94,11 @@ public class RaftMessageProcessingTest
         channel.writeInbound( message );
 
         // then
-        assertEquals( response, channel.readInbound() );
+        Assertions.assertEquals( response, channel.readInbound() );
     }
 
     @Test
-    public void shouldEncodeAndDecodeNewEntryRequest()
+    void shouldEncodeAndDecodeNewEntryRequest()
     {
         // given
         MemberId member = new MemberId( UUID.randomUUID() );
@@ -115,6 +111,6 @@ public class RaftMessageProcessingTest
         channel.writeInbound( message );
 
         // then
-        assertEquals( request, channel.readInbound() );
+        Assertions.assertEquals( request, channel.readInbound() );
     }
 }

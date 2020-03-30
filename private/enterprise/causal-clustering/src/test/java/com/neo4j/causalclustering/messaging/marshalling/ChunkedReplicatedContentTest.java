@@ -10,7 +10,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.stream.ChunkedInput;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static java.lang.Integer.min;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -18,10 +18,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class ChunkedReplicatedContentTest
+class ChunkedReplicatedContentTest
 {
     @Test
-    public void shouldProvideExpectedMetaData() throws Exception
+    void shouldProvideExpectedMetaData() throws Exception
     {
         ChunkedInput<ByteBuf> replicatedContent = ChunkedReplicatedContent.chunked( (byte) 1, new ThreeChunks( -1, 8 ) );
 
@@ -48,7 +48,7 @@ public class ChunkedReplicatedContentTest
         assertNull( replicatedContent.readChunk( allocator ) );
     }
 
-    private class ThreeChunks implements ChunkedInput<ByteBuf>
+    private static class ThreeChunks implements ChunkedInput<ByteBuf>
     {
         private final int length;
         private int leftTowWrite;

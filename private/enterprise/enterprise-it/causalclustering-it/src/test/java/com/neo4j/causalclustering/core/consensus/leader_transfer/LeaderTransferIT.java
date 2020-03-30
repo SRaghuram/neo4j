@@ -27,7 +27,7 @@ class LeaderTransferIT
     ClusterFactory clusterFactory;
 
     @Test
-    void name() throws ExecutionException, InterruptedException, TimeoutException
+    void shouldTransferLeadershipToPriorityMember() throws ExecutionException, InterruptedException, TimeoutException
     {
         var cluster = clusterFactory.createCluster(
                 clusterConfig().withSharedCoreParam( CausalClusteringSettings.leadership_priority_groups, "prio" ).withNumberOfCoreMembers( 3 ) );
@@ -39,6 +39,6 @@ class LeaderTransferIT
 
         additionalCore.start();
 
-        assertEventually( cluster::awaitLeader, coreClusterMember -> coreClusterMember.id().equals( additionalCore.id() ), 3, TimeUnit.MINUTES );
+        assertEventually( cluster::awaitLeader, coreClusterMember -> coreClusterMember.id().equals( additionalCore.id() ), 1, TimeUnit.MINUTES );
     }
 }
