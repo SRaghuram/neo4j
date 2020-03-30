@@ -148,7 +148,6 @@ import org.neo4j.cypher.internal.physicalplanning.ast.NodePropertyExistsLate
 import org.neo4j.cypher.internal.physicalplanning.ast.NodePropertyLate
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheck
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckProperty
-import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckReference
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckVariable
 import org.neo4j.cypher.internal.physicalplanning.ast.PrimitiveEquals
 import org.neo4j.cypher.internal.physicalplanning.ast.ReferenceFromSlot
@@ -1819,15 +1818,15 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
     case NullCheckVariable(offset, inner) =>
       intermediateCompileExpression(inner).map(i => i.copy(nullChecks = i.nullChecks + equal(getLongAt(offset), constant(-1L)), requireNullCheck = true))
 
-    case NullCheckProperty(offset, inner) =>
+    case NullCheckProperty(offset, inner, isLongSlot) if isLongSlot =>
       intermediateCompileExpression(inner).map(i => i.copy(nullChecks = i.nullChecks + equal(getLongAt(offset), constant(-1L)), requireNullCheck = true))
+
+    case NullCheckProperty(offset, inner, _) =>
+      intermediateCompileExpression(inner).map(i => i.copy(nullChecks = i.nullChecks + equal(getRefAt(offset), noValue), requireNullCheck = true))
 
     case IsPrimitiveNull(offset) =>
       Some(IntermediateExpression(ternary(equal(getLongAt(offset), constant(-1L)), trueValue, falseValue),
                                   Seq.empty, Seq.empty, Set.empty))
-
-    case NullCheckReference(offset, inner) =>
-      intermediateCompileExpression(inner).map(i => i.copy(nullChecks = i.nullChecks + equal(getRefAt(offset), noValue), requireNullCheck = true))
 
     case _ => None
   }

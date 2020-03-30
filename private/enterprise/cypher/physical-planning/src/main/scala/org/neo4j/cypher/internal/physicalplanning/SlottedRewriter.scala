@@ -183,7 +183,7 @@ class SlottedRewriter(tokenContext: TokenContext) {
               case _ => throw new InternalException(s"Expressions on object other then nodes and relationships are not yet supported")
             }
             if (nullable)
-              NullCheckProperty(offset, propExpression)
+              NullCheckProperty(offset, propExpression, isLongSlot = true)
             else
               propExpression
 
@@ -249,7 +249,7 @@ class SlottedRewriter(tokenContext: TokenContext) {
                                                               nullable)
             }
             if (nullable)
-              NullCheckReference(offset, propExpression)
+              NullCheckProperty(offset, propExpression, isLongSlot = false)
             else
               propExpression
         }
@@ -310,7 +310,7 @@ class SlottedRewriter(tokenContext: TokenContext) {
             val slot = slotConfiguration(key)
             val maybeSpecializedExpression = specializeCheckIfPropertyExists(slotConfiguration, key, propKey, prop, slot)
             if (slot.nullable && maybeSpecializedExpression.isDefined && maybeSpecializedExpression.get.isInstanceOf[LogicalProperty]) {
-              NullCheckProperty(slot.offset, maybeSpecializedExpression.get.asInstanceOf[LogicalProperty])
+              NullCheckProperty(slot.offset, maybeSpecializedExpression.get.asInstanceOf[LogicalProperty], isLongSlot = true)
             }
             else
               maybeSpecializedExpression.getOrElse(existsFunction)

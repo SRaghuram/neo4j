@@ -12,26 +12,24 @@ import org.neo4j.cypher.internal.runtime.ast.RuntimeExpression
 import org.neo4j.cypher.internal.runtime.ast.RuntimeProperty
 import org.neo4j.cypher.internal.runtime.ast.RuntimeVariable
 
-// These first three case classes are used to null check primitive entities stored in long slots
+// These first two case classes are used to null check primitive entities stored in long slots
 case class NullCheck(offset: Int, inner: Expression) extends RuntimeExpression
 
 // This needs to be used to be able to rewrite an expression declared as a LogicalVariable
 case class NullCheckVariable(offset: Int, inner: LogicalVariable) extends RuntimeVariable(inner.name)
 
 // This needs to be used to be able to rewrite an expression declared as a LogicalProperty
-case class NullCheckProperty(offset: Int, inner: LogicalProperty) extends RuntimeProperty(inner) {
+case class NullCheckProperty(offset: Int, inner: LogicalProperty, isLongSlot: Boolean) extends RuntimeProperty(inner) {
 
   // We have to override the implementation in RuntimeProperty for correctness. This smells a bit...
   override def dup(children: Seq[AnyRef]): this.type = {
     val newOffset = children.head.asInstanceOf[Int]
     val newInner = children(1).asInstanceOf[LogicalProperty]
+    val newIsLongSlot = children(2).asInstanceOf[Boolean]
     // We only ever rewrite this with inner already rewritten, so we should not need to copy
-    if (offset == newOffset && inner == newInner)
+    if (offset == newOffset && inner == newInner && isLongSlot == newIsLongSlot)
       this
     else
-      copy(offset = newOffset, inner = newInner).asInstanceOf[this.type]
+      copy(offset = newOffset, inner = newInner, isLongSlot = newIsLongSlot).asInstanceOf[this.type]
   }
 }
-
-// This is used to null check an AnyValue variable stored in a ref slot
-case class NullCheckReference(offset: Int, inner: Expression) extends RuntimeExpression

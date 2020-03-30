@@ -8,15 +8,20 @@ package org.neo4j.cypher.internal.physicalplanning
 import org.mockito.Mockito.when
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.expressions.AndedPropertyInequalities
+import org.neo4j.cypher.internal.expressions.CachedProperty
+import org.neo4j.cypher.internal.expressions.NODE_TYPE
+import org.neo4j.cypher.internal.expressions.PropertyKeyName
+import org.neo4j.cypher.internal.expressions.Variable
+import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.AllNodesScan
 import org.neo4j.cypher.internal.logical.plans.Apply
 import org.neo4j.cypher.internal.logical.plans.Argument
+import org.neo4j.cypher.internal.logical.plans.CacheProperties
 import org.neo4j.cypher.internal.logical.plans.NodeByLabelScan
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.logical.plans.Projection
 import org.neo4j.cypher.internal.logical.plans.Selection
 import org.neo4j.cypher.internal.logical.plans.ValueHashJoin
-import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
 import org.neo4j.cypher.internal.physicalplanning.ast.IdFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.IsPrimitiveNull
@@ -30,7 +35,9 @@ import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckVariable
 import org.neo4j.cypher.internal.physicalplanning.ast.PrimitiveEquals
 import org.neo4j.cypher.internal.physicalplanning.ast.ReferenceFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipPropertyLate
+import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedPropertyWithPropertyToken
 import org.neo4j.cypher.internal.planner.spi.TokenContext
+import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.util.NonEmptyList
 import org.neo4j.cypher.internal.util.attribution.SequentialIdGen
 import org.neo4j.cypher.internal.util.symbols.CTAny
@@ -319,7 +326,7 @@ class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport
     val result = rewriter(selection, lookup)
 
     // then
-    val expectedPredicate = equals(NullCheckProperty(0, NodeProperty(0, 666, "a.prop")(aProp)), literalInt(42))
+    val expectedPredicate = equals(NullCheckProperty(0, NodeProperty(0, 666, "a.prop")(aProp), isLongSlot = true), literalInt(42))
     result should equal(Selection(Seq(expectedPredicate), argument))
     lookup(result.id) should equal(slots)
   }
@@ -453,7 +460,7 @@ class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport
     resultPlan should equal(
       Projection(leaf, Map(
         "x" -> NullCheckVariable(0, NodeFromSlot(0, "x")),
-        "x.propertyKey" -> NullCheckProperty(nodeOffset, NodeProperty(nodeOffset, tokenId, "x.propertyKey")(xPropKey))
+        "x.propertyKey" -> NullCheckProperty(nodeOffset, NodeProperty(nodeOffset, tokenId, "x.propertyKey")(xPropKey), isLongSlot = true)
       ))
     )
   }
@@ -623,8 +630,50 @@ class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport
 
     // then
     val newPred = AndedPropertyInequalities(NullCheckVariable(0, NodeFromSlot(offsetN, "n")),
-      NullCheckProperty(offsetN, NodeProperty(offsetN, 666, "n.prop")(xProp)),
+      NullCheckProperty(offsetN, NodeProperty(offsetN, 666, "n.prop")(xProp), isLongSlot = true),
       NonEmptyList(lessThan(literalInt(42), ReferenceFromSlot(offsetZ, "z"))))
     result should equal(Selection(Seq(newPred), arg))
+  }
+
+  test("should rewrite cached property of a nullable entity in ref slot using NullCheckProperty") {
+    // given
+    val arg = Argument()
+    val property = CachedProperty("n.prop", Variable("n")(InputPosition.NONE), PropertyKeyName("prop")(InputPosition.NONE), NODE_TYPE)(InputPosition.NONE)
+    val properties = CacheProperties(arg, Set(property))
+
+    val slots = SlotConfiguration.empty
+      .newReference("n", nullable = true, CTAny)
+      .newCachedProperty(property)
+    val tokenContext = mock[TokenContext]
+    val tokenId = 666
+    when(tokenContext.getOptPropertyKeyId("prop")).thenReturn(Some(tokenId))
+
+    val rewriter = new SlottedRewriter(tokenContext)
+
+    val lookup = new SlotConfigurations
+    lookup.set(arg.id, SlotConfiguration.empty)
+    lookup.set(properties.id, slots)
+
+    // when
+    val result = rewriter(properties, lookup)
+
+    // then
+    result should equal {
+      CacheProperties(
+        arg,
+        Set(NullCheckProperty(
+          offset = 0,
+          isLongSlot = false,
+          inner = SlottedCachedPropertyWithPropertyToken(
+            entityName = "n.prop",
+            propertyKey = PropertyKeyName("prop")(InputPosition.NONE),
+            offset = 0,
+            offsetIsForLongSlot = false,
+            propToken = 666,
+            cachedPropertyOffset = 1,
+            entityType = NODE_TYPE,
+            nullable = true
+          ))))
+    }
   }
 }

@@ -257,4 +257,22 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
                                                    "y" -> null,
                                                    "z" -> null))))
   }
+
+  test("should handle cached property after unwind") {
+    createNode("prop" -> 123)
+
+    val query =
+      """MATCH (n)
+        |WITH collect(n) AS ns
+        |UNWIND ns AS x
+        |UNWIND range(1, 10) AS y
+        |RETURN x.prop, y
+        |""".stripMargin
+
+    val result = executeWith(Configs.CachedProperty, query)
+    val expectedResult = Range.inclusive(1, 10).map(y => Map("x.prop" -> 123, "y" -> y)).toSet
+
+    result.executionPlanDescription() should includeSomewhere.aPlan("CacheProperties")
+    result.toSet should equal(expectedResult)
+  }
 }
