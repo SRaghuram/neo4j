@@ -96,6 +96,7 @@
         <include>com.neo4j:*</include>
         <include>org.apache.lucene:lucene-core</include>
         <include>org.apache.lucene:lucene-analyzers-common</include>
+        <include>org.apache.lucene:lucene-backward-codecs</include>
         <include>org.apache.lucene:lucene-queryparser</include>
         <include>io.netty:netty</include>
         <include>org.scala-lang:*</include>

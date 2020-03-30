@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -72,10 +73,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeFalse;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.allow_upgrade;
 import static org.neo4j.configuration.GraphDatabaseSettings.data_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
+import static org.neo4j.configuration.GraphDatabaseSettings.fail_on_missing_files;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
@@ -133,6 +136,21 @@ public class StoreUpgradeIT
                     indexCounts( counts( 0, 38, 38, 38 ), counts( 0, 1, 1, 1 ), counts( 0, 133, 133, 133 ) ),
                     HighLimit.NAME
             )} );
+    private static final List<Store[]> STORES40 = Arrays.asList(
+            new Store[]{new Store( "0.0.4FS-empty.zip",
+                    0 /* node count */,
+                    1 /* last txId */,
+                    selectivities(),
+                    indexCounts()
+            )},
+            new Store[]{new Store( "0.0.4FS-data.zip",
+                    174 /* node count */,
+                    34 /* last txId */,
+                    selectivities( 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 ),
+                    indexCounts( counts( 0, 38, 38, 38 ), counts( 0, 1, 1, 1 ),
+                            counts( 0, 0, 0, 0 ), counts( 0, 0, 0, 0 ),
+                            counts( 0, 0, 0, 0 ), counts( 0, 133, 133, 133 ) )
+            )} );
 
     @RunWith( Parameterized.class )
     public static class StoreUpgradeTest
@@ -143,7 +161,7 @@ public class StoreUpgradeIT
         @Parameterized.Parameters( name = "{0}" )
         public static Collection<Store[]> stores()
         {
-            return Iterables.asCollection( Iterables.concat( STORES34, HIGH_LIMIT_STORES300, HIGH_LIMIT_STORES34 ) );
+            return Iterables.asCollection( Iterables.concat( STORES34, HIGH_LIMIT_STORES300, HIGH_LIMIT_STORES34, STORES40 ) );
         }
 
         @Rule
@@ -159,6 +177,7 @@ public class StoreUpgradeIT
 
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
             builder.setConfig( allow_upgrade, true );
+            builder.setConfig( fail_on_missing_files, false );
             builder.setConfig( logs_directory, testDir.directory( "logs" ).toPath().toAbsolutePath());
             DatabaseManagementService managementService = builder.build();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
@@ -185,6 +204,7 @@ public class StoreUpgradeIT
 
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
             builder.setConfig( allow_upgrade, true );
+            builder.setConfig( fail_on_missing_files, false );
             builder.setConfig( logs_directory, testDir.directory( "logs" ).toPath().toAbsolutePath());
             DatabaseManagementService managementService = builder.build();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
@@ -232,6 +252,7 @@ public class StoreUpgradeIT
 
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
             builder.setConfig( allow_upgrade, true );
+            builder.setConfig( fail_on_missing_files, false );
             builder.setConfig( logs_directory, testDir.directory( "logs" ).toPath().toAbsolutePath());
             DatabaseManagementService managementService = builder.build();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
@@ -283,6 +304,7 @@ public class StoreUpgradeIT
             props.setProperty( databases_root_path.name(), rootDir.getAbsolutePath() );
             props.setProperty( transaction_logs_root_path.name(), rootDir.getAbsolutePath() );
             props.setProperty( allow_upgrade.name(), TRUE );
+            props.setProperty( fail_on_missing_files.name(), FALSE );
             props.setProperty( pagecache_memory.name(), "8m" );
             props.setProperty( HttpConnector.enabled.name(), TRUE );
             props.setProperty( HttpConnector.listen_address.name(), "localhost:0" );
@@ -312,6 +334,7 @@ public class StoreUpgradeIT
         @Test
         public void transactionLogsMovedToConfiguredLocationAfterUpgrade() throws IOException
         {
+            assumeFalse( STORES40.stream().flatMap( Stream::of ).anyMatch( s -> s == store ) );
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
             DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
             File databaseDir = databaseLayout.databaseDirectory();
@@ -337,6 +360,7 @@ public class StoreUpgradeIT
         @Test
         public void transactionLogsMovedToConfiguredLocationAfterUpgradeFromCustomLocation() throws IOException
         {
+            assumeFalse( STORES40.stream().flatMap( Stream::of ).anyMatch( s -> s == store ) );
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
             DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
             File databaseDir = databaseLayout.databaseDirectory();
@@ -384,6 +408,51 @@ public class StoreUpgradeIT
         {
             LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseDirectory, fileSystem ).build();
             return logFiles.logFiles();
+        }
+    }
+
+    @RunWith( Parameterized.class )
+    public static class StoreUpgradeNotRequiredTest
+    {
+        @Rule
+        public SuppressOutput suppressOutput = SuppressOutput.suppressAll();
+        @Rule
+        public TestDirectory testDir = TestDirectory.testDirectory();
+
+        @Parameterized.Parameter( 0 )
+        public Store store;
+
+        @Parameterized.Parameters( name = "{0}" )
+        public static Collection<Store[]> stores()
+        {
+            return Iterables.asCollection( Iterables.concat( STORES40 ) );
+        }
+
+        @Test
+        public void embeddedDatabaseShouldStartOnOlderStoreWhenUpgradeIsEnabled() throws Throwable
+        {
+            var layout = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            store.prepareDirectory( layout.databaseDirectory() );
+
+            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( layout );
+            builder.setConfig( allow_upgrade, false );
+            builder.setConfig( fail_on_missing_files, false );
+            builder.setConfig( logs_directory, testDir.directory( "logs" ).toPath().toAbsolutePath());
+            DatabaseManagementService managementService = builder.build();
+            GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
+            DatabaseLayout databaseLayout = ((GraphDatabaseAPI) db).databaseLayout();
+            try
+            {
+                checkInstance( store, (GraphDatabaseAPI) db );
+            }
+            finally
+            {
+                managementService.shutdown();
+            }
+
+            assertConsistentStore( databaseLayout );
+            assertFalse( new File( layout.countStore().getAbsolutePath() + ".a" ).exists() );
+            assertFalse( new File( layout.countStore().getAbsolutePath() + ".b" ).exists() );
         }
     }
 
