@@ -28,18 +28,10 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_INT_ARRAY;
-import static org.neo4j.internal.freki.Header.FLAG_IS_DENSE;
-import static org.neo4j.internal.freki.Header.FLAG_LABELS;
-import static org.neo4j.internal.freki.Header.OFFSET_DEGREES;
-import static org.neo4j.internal.freki.Header.OFFSET_PROPERTIES;
-import static org.neo4j.internal.freki.Header.OFFSET_RECORD_POINTER;
-import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIPS;
-import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIP_TYPE_OFFSETS;
 import static org.neo4j.internal.freki.MutableNodeRecordData.idFromRecordPointer;
 import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromRecordPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
-import static org.neo4j.internal.freki.StreamVByte.readLongs;
 import static org.neo4j.util.Preconditions.checkState;
 
 abstract class FrekiMainStoreCursor implements AutoCloseable
@@ -134,28 +126,58 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     {
         boolean reused = ensureFreshDataInstanceForLoadingNewNode();
         cursorAccessTracer.registerNode( nodeId, reused );
-        Record x1Record = xRecord( 0 );
-        if ( !stores.mainStore.read( xCursor( 0 ), x1Record, nodeId ) || !x1Record.hasFlag( FLAG_IN_USE ) )
+        Record x1Record = loadRecord( 0, nodeId );
+        if ( x1Record == null )
         {
             return false;
         }
 
-        // From x1 read forward pointer, labels offset and potentially other offsets too
         data.nodeId = nodeId;
-        gatherDataFromX1( x1Record );
-        if ( data.forwardPointer != NULL )
+        data.gatherDataFromX1( x1Record );
+        if ( data.forwardPointer == NULL )
+        {
+            data.xLLoaded = true;
+        }
+        // else xL can be loaded lazily when/if needed
+        return true;
+    }
+
+    private void ensureXLLoaded()
+    {
+        if ( !data.xLLoaded && data.forwardPointer != NULL )
         {
             int sizeExp = sizeExponentialFromRecordPointer( data.forwardPointer );
-            SimpleStore xLStore = stores.mainStore( sizeExp );
-            Record xLRecord = xRecord( sizeExp );
-            if ( !xLStore.read( xCursor( sizeExp ), xLRecord, idFromRecordPointer( data.forwardPointer ) ) || !xLRecord.hasFlag( FLAG_IN_USE ) )
+            Record xLRecord = loadRecord( sizeExp, idFromRecordPointer( data.forwardPointer ) );
+            if ( xLRecord != null )
             {
-                // TODO depending on whether we're strict about it we should throw here perhaps?
-                return false;
+                data.gatherDataFromXL( xLRecord );
             }
-            gatherDataFromXL( xLRecord );
+            data.xLLoaded = true;
         }
-        return true;
+    }
+
+    void ensureRelationshipsLoaded()
+    {
+        if ( data.relationshipOffset == 0 )
+        {
+            ensureXLLoaded();
+        }
+    }
+
+    void ensurePropertiesLoaded()
+    {
+        if ( data.propertyOffset == 0 )
+        {
+            ensureXLLoaded();
+        }
+    }
+
+    private Record loadRecord( int sizeExp, long id )
+    {
+        SimpleStore store = stores.mainStore( sizeExp );
+        Record record = xRecord( sizeExp );
+        // TODO depending on whether we're strict about it we should throw instead of returning false perhaps?
+        return store.read( xCursor( sizeExp ), record, id ) && record.hasFlag( FLAG_IN_USE ) ? record : null;
     }
 
     private boolean ensureFreshDataInstanceForLoadingNewNode()
@@ -175,57 +197,6 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
             data = new FrekiCursorData( stores.getNumMainStores() );
         }
         return reused;
-    }
-
-    private void gatherDataFromX1( Record x1Record )
-    {
-        data.x1Loaded = true;
-        ByteBuffer x1Buffer = x1Record.data( 0 );
-        header.deserialize( x1Buffer );
-        assignDataOffsets( x1Buffer );
-        if ( header.hasOffset( OFFSET_RECORD_POINTER ) )
-        {
-            data.forwardPointer = readRecordPointer( x1Buffer );
-        }
-    }
-
-    private void gatherDataFromXL( Record xLRecord )
-    {
-        data.xLLoaded = true;
-        ByteBuffer xLBuffer = xLRecord.data( 0 );
-        header.deserialize( xLBuffer );
-        assignDataOffsets( xLBuffer );
-        assert header.hasOffset( OFFSET_RECORD_POINTER );
-        data.backwardPointer = readRecordPointer( xLBuffer );
-    }
-
-    private long readRecordPointer( ByteBuffer xLBuffer )
-    {
-        return readLongs( xLBuffer.position( header.getOffset( OFFSET_RECORD_POINTER ) ) )[0];
-    }
-
-    private void assignDataOffsets( ByteBuffer x1Buffer )
-    {
-        if ( header.hasFlag( FLAG_IS_DENSE ) )
-        {
-            data.isDense = true;
-        }
-        if ( header.hasFlag( FLAG_LABELS ) )
-        {
-            data.assignLabelOffset( x1Buffer.position(), x1Buffer );
-        }
-        if ( header.hasOffset( OFFSET_PROPERTIES ) )
-        {
-            data.assignPropertyOffset( header.getOffset( OFFSET_PROPERTIES ), x1Buffer );
-        }
-        if ( header.hasOffset( OFFSET_RELATIONSHIPS ) )
-        {
-            data.assignRelationshipOffset( header.getOffset( OFFSET_RELATIONSHIPS ), x1Buffer, header.getOffset( OFFSET_RELATIONSHIP_TYPE_OFFSETS ) );
-        }
-        if ( header.hasOffset( OFFSET_DEGREES ) )
-        {
-            data.assignDegreesOffset( header.getOffset( OFFSET_DEGREES ), x1Buffer );
-        }
     }
 
     boolean initializeOtherCursorFromStateOfThisCursor( FrekiMainStoreCursor otherCursor )
@@ -249,12 +220,12 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         ensureFreshDataInstanceForLoadingNewNode();
         if ( record.sizeExp() == 0 )
         {
-            gatherDataFromX1( record );
+            data.gatherDataFromX1( record );
             data.nodeId = record.id;
         }
         else
         {
-            gatherDataFromXL( record );
+            data.gatherDataFromXL( record );
             data.nodeId = data.backwardPointer;
         }
         return true;
@@ -262,6 +233,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
 
     ByteBuffer readRelationshipTypes()
     {
+        ensureRelationshipsLoaded();
         if ( data.relationshipOffset == 0 )
         {
             relationshipTypesInNode = EMPTY_INT_ARRAY;
