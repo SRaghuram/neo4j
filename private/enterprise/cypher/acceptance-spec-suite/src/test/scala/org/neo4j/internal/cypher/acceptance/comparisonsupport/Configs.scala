@@ -74,7 +74,7 @@ object Configs {
   val OptionalExpand        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
   val Optional              : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
   val CountDistinct         : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
-  val RollUpApply           : TestConfiguration = InterpretedRuntime + SlottedRuntime
+  val RollUpApply           : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
   val VarExpand             : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
   val ExpandInto            : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled + Pipelined
   val DropResult            : TestConfiguration = InterpretedRuntime + SlottedRuntime

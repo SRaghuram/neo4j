@@ -252,7 +252,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (n) return [x IN (n)-->() | head(nodes(x))]  as p")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (n) return [x IN (n)-->() | head(nodes(x))]  as p")
 
     result.toList.head("p").asInstanceOf[Seq[_]] should equal(List(start, start))
   }
@@ -262,7 +262,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (n:A) with [x IN (n)-->() | head(nodes(x))] as p, count(n) as c return p, c")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (n:A) with [x IN (n)-->() | head(nodes(x))] as p, count(n) as c return p, c")
       .toList.head("p").asInstanceOf[Seq[_]]
 
     result should equal(List(start, start))
@@ -273,7 +273,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (n) where n IN [x IN (n)-->() | head(nodes(x))] return n")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (n) where n IN [x IN (n)-->() | head(nodes(x))] return n")
       .toList
 
     result should equal(List(
@@ -288,7 +288,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    executeWith(Configs.InterpretedAndSlotted, "match (n)-->(b) with (n)-->() as p, count(b) as c return p, c",
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (n)-->(b) with (n)-->() as p, count(b) as c return p, c",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Expand(All)")))
   }
 
@@ -297,7 +297,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     val b = createLabeledNode("End")
     relate(a, b)
 
-    executeWith(Configs.InterpretedAndSlotted, "match (a:Start), (b:End) with (a)-[*]->(b) as path, count(a) as c return path, c",
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (a:Start), (b:End) with (a)-[*]->(b) as path, count(a) as c return path, c",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("VarLengthExpand(Into)")))
   }
 
@@ -333,10 +333,10 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     val endNode = createNode()
     relate(node, endNode, "HAS")
 
-    executeWith(Configs.InterpretedAndSlotted, "MATCH (n:A) RETURN (n)-[:HAS]->() as p",
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:A) RETURN (n)-[:HAS]->() as p",
       planComparisonStrategy = ComparePlansWithAssertion( planDescription => {
         planDescription.find("Argument") shouldNot be(empty)
-        planDescription.cd("Argument").arguments should equal(List(EstimatedRows(1)))
+        planDescription.cd("Argument").arguments should contain(EstimatedRows(1))
         planDescription.find("Expand(All)") shouldNot be(empty)
         val expandArgs = planDescription.cd("Expand(All)").arguments.toSet
         expandArgs should contain(EstimatedRows(0.05))
@@ -353,7 +353,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     createLabeledNode("A")
     relate(node, createNode(), "HAS")
 
-    executeWith(Configs.InterpretedAndSlotted, "MATCH (n:A) RETURN count((n)-[:HAS]->()) as c",
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:A) RETURN count((n)-[:HAS]->()) as c",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Expand(All)")))
   }
 
