@@ -751,8 +751,10 @@ public class EnterpriseBuiltInDbmsProcedures
         private static final String UNBOUNDED = "Unbounded";
         public final String poolName;
         public final String group;
-        public final String memoryUsed;
-        public final String memoryUsedBytes;
+        public final String heapMemoryUsed;
+        public final String heapMemoryUsedBytes;
+        public final String nativeMemoryUsed;
+        public final String nativeMemoryUsedBytes;
         public final String freeMemory;
         public final String freeMemoryBytes;
         public final String totalPoolMemory;
@@ -762,8 +764,10 @@ public class EnterpriseBuiltInDbmsProcedures
         {
             this.poolName = memoryPool.name();
             this.group = memoryPool.group().getName();
-            this.memoryUsed = bytesToString( memoryPool.used() );
-            this.memoryUsedBytes = valueOf( memoryPool.used() );
+            this.heapMemoryUsed = bytesToString( memoryPool.usedHeap() );
+            this.heapMemoryUsedBytes = valueOf( memoryPool.usedHeap() );
+            this.nativeMemoryUsed = bytesToString( memoryPool.usedNative() );
+            this.nativeMemoryUsedBytes = valueOf( memoryPool.usedNative() );
             if ( memoryPool.totalSize() != Long.MAX_VALUE )
             {
                 this.freeMemory = bytesToString( memoryPool.free() );

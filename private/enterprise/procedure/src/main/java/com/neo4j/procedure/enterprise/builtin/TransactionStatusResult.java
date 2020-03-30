@@ -73,7 +73,7 @@ public class TransactionStatusResult
         elapsedTimeMillis = statistic.getElapsedTimeMillis();
         cpuTimeMillis = statistic.getCpuTimeMillis();
         allocatedBytes = statistic.getHeapAllocatedBytes();
-        allocatedDirectBytes = statistic.getDirectAllocatedBytes();
+        allocatedDirectBytes = statistic.getNativeAllocatedBytes();
         estimatedUsedHeapMemory = statistic.getEstimatedUsedHeapMemory();
         waitTimeMillis = statistic.getWaitTimeMillis();
         idleTimeMillis = statistic.getIdleTimeMillis();

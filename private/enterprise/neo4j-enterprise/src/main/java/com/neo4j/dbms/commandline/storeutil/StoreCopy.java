@@ -40,6 +40,7 @@ import org.neo4j.internal.kernel.api.TokenRead;
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.IndexDescriptor;
+import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -188,7 +189,7 @@ public class StoreCopy
     {
         VersionContextSupplier versionContextSupplier = EmptyVersionContextSupplier.EMPTY;
         SingleFilePageSwapperFactory factory = new SingleFilePageSwapperFactory( fileSystem );
-        MemoryAllocator memoryAllocator = MemoryAllocator.createAllocator( memory, EmptyMemoryTracker.INSTANCE );
+        MemoryAllocator memoryAllocator = MemoryAllocator.createAllocator( ByteUnit.parse( memory ), EmptyMemoryTracker.INSTANCE );
         return new MuninnPageCache( factory, memoryAllocator, PageCacheTracer.NULL, versionContextSupplier, jobScheduler, Clocks.nanoClock() );
     }
 

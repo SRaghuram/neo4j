@@ -38,6 +38,7 @@ import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
+import org.neo4j.memory.MemoryPools;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
@@ -139,7 +140,8 @@ public abstract class AbstractPageCacheBenchmarkV2 extends BaseDatabaseBenchmark
                 tracer, log,
                 EmptyVersionContextSupplier.EMPTY,
                 JobSchedulerFactory.createInitialisedScheduler(),
-                Clocks.nanoClock() );
+                Clocks.nanoClock(),
+                new MemoryPools() );
         pageCache = factory.getOrCreatePageCache();
         pagedFile = pageCache.map( STORE_FILE, (int) ByteUnit.kibiBytes( 8 ) );
         if ( getPercentageCached() > 0.49 )
