@@ -41,6 +41,8 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.rule.RandomRule;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 @ExtendWith( RandomExtension.class )
 class GraphUpdatesTest
 {
@@ -130,6 +132,8 @@ class GraphUpdatesTest
                     @Override
                     public void handle( FrekiCommand.BigPropertyValue value ) throws IOException
                     {
+                        System.out.println( value.pointer );
+                        assertThat( value.pointer ).isNotNegative();
                         try ( PageCursor cursor = bigValueStore.openWriteCursor( PageCursorTracer.NULL ) )
                         {
                             bigValueStore.write( cursor, ByteBuffer.wrap( value.bytes ), value.pointer );

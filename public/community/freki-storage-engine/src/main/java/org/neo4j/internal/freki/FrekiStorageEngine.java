@@ -85,6 +85,7 @@ public class FrekiStorageEngine extends Life implements StorageEngine
     private final Stores stores;
     private final IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync;
     private final FrekiStorageReader singleReader;
+    private final DenseRelationshipsWorkSync denseRelationshipsWorkSync;
     private LabelIndexUpdatesWorkSync labelIndexUpdatesWorkSync;
     private IndexUpdatesWorkSync indexUpdatesWorkSync;
     private IndexUpdateListener indexUpdateListener;
@@ -108,6 +109,7 @@ public class FrekiStorageEngine extends Life implements StorageEngine
         this.stores = new Stores( fs, databaseLayout, pageCache, idGeneratorFactory, pageCacheTracer, recoveryCleanupWorkCollector,
                 createStoreIfNotExists, constraintSemantics, indexConfigCompleter, tokenHolders );
         this.singleReader = new FrekiStorageReader( stores, cursorAccessPatternTracer, tokenHolders );
+        this.denseRelationshipsWorkSync = new DenseRelationshipsWorkSync( stores.denseStore );
         life.add( stores );
     }
 
@@ -178,7 +180,8 @@ public class FrekiStorageEngine extends Life implements StorageEngine
         CommandsToApply initialBatch = batch;
         try ( LockGroup locks = new LockGroup();
                 FrekiTransactionApplier txApplier = new FrekiTransactionApplier( stores, singleReader, schemaState, indexUpdateListener, mode,
-                        idGeneratorUpdatesWorkSync, labelIndexUpdatesWorkSync, indexUpdatesWorkSync, pageCacheTracer, batch.cursorTracer() ) )
+                        idGeneratorUpdatesWorkSync, labelIndexUpdatesWorkSync, indexUpdatesWorkSync, denseRelationshipsWorkSync,
+                        pageCacheTracer, batch.cursorTracer() ) )
         {
             while ( batch != null )
             {
