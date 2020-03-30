@@ -9,16 +9,19 @@ import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
+import com.neo4j.bench.micro.data.Augmenterizer
 import com.neo4j.bench.micro.data.DataGeneratorConfig
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
+import com.neo4j.bench.micro.data.ManagedStore
 import com.neo4j.bench.micro.data.Plans.IdGen
-import com.neo4j.bench.micro.data.Plans.astLiteralFor
 import com.neo4j.bench.micro.data.Plans.astVariable
-import com.neo4j.bench.micro.data.TypeParamValues.LNG
+import com.neo4j.bench.micro.data.Stores
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.expressions.LabelName
 import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
 import org.neo4j.cypher.internal.planner.spi.PlanContext
+import org.neo4j.cypher.internal.util.InputPosition
+import org.neo4j.graphdb.Label
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
@@ -51,18 +54,40 @@ class RollUpApply extends AbstractCypherBenchmark {
 
   override protected def getConfig: DataGeneratorConfig =
     new DataGeneratorConfigBuilder()
-      .withNodeCount(lhsRows)
+      .withNodeCount(lhsRows + rhsRows)
       .isReusableStore(true)
       .build()
+
+  override protected def augmentDataGeneration(): Augmenterizer =
+    (threads: Int, storeAndConfig: Stores.StoreAndConfig) => {
+      val db = ManagedStore.newDb(storeAndConfig.store, storeAndConfig.config)
+      val tx = db.beginTx
+      try {
+        val lhsLabel = Label.label("LHS")
+        val rhsLabel = Label.label("RHS")
+        val nodes = tx.getAllNodes.iterator()
+        var i = 0
+        while (nodes.hasNext) {
+          val node = nodes.next()
+          val label = if (i < lhsRows) lhsLabel else rhsLabel
+          node.addLabel(label)
+          i += 1
+        }
+        require(i == (lhsRows + rhsRows))
+        tx.commit()
+      } finally {
+        if (tx != null) tx.close()
+      }
+      ManagedStore.getManagementService.shutdown()
+    }
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
     val lhs = "lhs"
     val rhs = "rhs"
     val list = "list"
-    val lhsAllNodesScan = plans.AllNodesScan(lhs, Set.empty)(IdGen)
-    val rhsAllNodesScan = plans.AllNodesScan(rhs, Set(lhs))(IdGen)
-    val limit = plans.Limit(rhsAllNodesScan, astLiteralFor(rhsRows, LNG), DoNotIncludeTies)(IdGen)
-    val rollUpApply = plans.RollUpApply(lhsAllNodesScan, limit, list, rhs, Set.empty)(IdGen)
+    val lhsNodesScan = plans.NodeByLabelScan(lhs, LabelName("LHS")(InputPosition.NONE), Set.empty)(IdGen)
+    val rhsNodesScan = plans.NodeByLabelScan(rhs, LabelName("RHS")(InputPosition.NONE), Set(lhs))(IdGen)
+    val rollUpApply = plans.RollUpApply(lhsNodesScan, rhsNodesScan, list, rhs, Set.empty)(IdGen)
     val resultColumns = List(lhs, list)
     val produceResults = plans.ProduceResult(rollUpApply, columns = resultColumns)(IdGen)
 
