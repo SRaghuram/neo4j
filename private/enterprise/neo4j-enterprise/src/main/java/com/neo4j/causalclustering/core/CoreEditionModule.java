@@ -75,7 +75,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -323,8 +322,11 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         RaftMessageDispatcher raftMessageDispatcher = new RaftMessageDispatcher( logProvider, globalModule.getGlobalClock() );
 
         var globalOtherTracker = globalModule.getOtherMemoryPool().getPoolMemoryTracker();
-        var leaderTransferService = new LeaderTransferService( globalModule.getJobScheduler(), 10, TimeUnit.SECONDS, topologyService, globalConfig,
-                databaseManager, raftMessageDispatcher, myIdentity );
+        var leaderTransferInterval = globalConfig.get( CausalClusteringSettings.leader_transfer_interval );
+        var leaderTransferBackoff = globalConfig.get( CausalClusteringSettings.leader_transfer_member_backoff );
+
+        var leaderTransferService = new LeaderTransferService( globalModule.getJobScheduler(), leaderTransferInterval, topologyService,
+                globalConfig, databaseManager, raftMessageDispatcher, myIdentity, leaderTransferBackoff, globalModule.getGlobalClock() );
 
         globalLife.add( leaderTransferService );
 

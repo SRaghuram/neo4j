@@ -11,6 +11,8 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
@@ -26,19 +28,18 @@ import static java.time.Clock.systemUTC;
 public class LeaderTransferService extends LifecycleAdapter implements RejectedLeaderTransferHandler
 {
     private final TransferLeader transferLeader;
-    private JobScheduler jobScheduler;
-    private final long schedulingTime;
-    private final TimeUnit timeUnit;
-    private final DatabasePenalties databasePenalties = new DatabasePenalties( 1, TimeUnit.MINUTES, systemUTC() );
+    private final JobScheduler jobScheduler;
+    private final Duration leaderTransferInterval;
+    private final DatabasePenalties databasePenalties;
     private JobHandle<?> jobHandle;
 
-    public LeaderTransferService( JobScheduler jobScheduler, long schedulingTime, TimeUnit timeUnit, TopologyService topologyService, Config config,
-            DatabaseManager<ClusteredDatabaseContext> databaseManager,
-            Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler, MemberId myself )
+    public LeaderTransferService( JobScheduler jobScheduler, Duration leaderTransferInterval, TopologyService topologyService, Config config,
+            DatabaseManager<ClusteredDatabaseContext> databaseManager, Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler,
+            MemberId myself, Duration leaderMemberBackoff, Clock clock )
     {
+        this.databasePenalties = new DatabasePenalties( leaderMemberBackoff.toMillis(), TimeUnit.MILLISECONDS, clock );
         this.jobScheduler = jobScheduler;
-        this.schedulingTime = schedulingTime;
-        this.timeUnit = timeUnit;
+        this.leaderTransferInterval = leaderTransferInterval;
         this.transferLeader = new TransferLeader( topologyService, config, databaseManager, messageHandler, myself,
                                                   databasePenalties, SelectionStrategy.NO_OP );
     }
@@ -46,7 +47,8 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
     @Override
     public void start() throws Exception
     {
-        jobHandle = jobScheduler.scheduleRecurring( Group.LEADER_TRANSFER_SERICE, transferLeader, schedulingTime, timeUnit );
+        var schedulingTime = leaderTransferInterval.toMillis();
+        jobHandle = jobScheduler.scheduleRecurring( Group.LEADER_TRANSFER_SERICE, transferLeader, schedulingTime, TimeUnit.MILLISECONDS );
     }
 
     @Override

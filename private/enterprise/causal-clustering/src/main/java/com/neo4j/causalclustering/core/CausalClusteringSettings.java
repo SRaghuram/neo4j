@@ -82,6 +82,17 @@ public class CausalClusteringSettings implements SettingsDeclaration
             newBuilder( "causal_clustering.leader_transfer_timeout", DURATION, ofSeconds( 3 ) ).build();
 
     @Internal
+    @Description( "The frequency with which a leader will try and transfer leadership to another member" )
+    public static final Setting<Duration> leader_transfer_interval =
+            newBuilder( "causal_clustering.leader_transfer_interval", DURATION, ofSeconds( 15 ) ).build();
+
+    @Internal
+    @Description( "The amount of time we should wait before transferring the leadership of a given database to a member after that member rejects a " +
+                  "previous transfer." )
+    public static final Setting<Duration> leader_transfer_member_backoff =
+            newBuilder( "causal_clustering.leader_transfer_member_backoff", DURATION, ofSeconds( 30 ) ).build();
+
+    @Internal
     @Description( "Configures the time after which we give up trying to bind to a cluster formed of the other initial discovery members." )
     public static final Setting<Duration> cluster_binding_timeout =
             newBuilder( "causal_clustering.cluster_binding_timeout", DURATION, ofMinutes( 5 ) ).build();
