@@ -232,7 +232,7 @@ class RemoteStoreTest
         RemoteStore remoteStore = new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ), null,
                 storeCopyClient, txPullClient, factory( writer ), config, new Monitors(), selectStorageEngine(), DATABASE_ID, PageCacheTracer.NULL );
 
-        remoteStore.copy( catchupAddressProvider, storeId, databaseLayout, true );
+        remoteStore.copy( catchupAddressProvider, storeId, databaseLayout );
     }
 
     private Answer<TxStreamFinishedResponse> incrementTxIdResponse( AtomicLong lastTxSupplier, long incrementAmount )
@@ -250,7 +250,7 @@ class RemoteStoreTest
     {
         TransactionLogCatchUpFactory factory = mock( TransactionLogCatchUpFactory.class );
         when( factory.create( any(), any( FileSystemAbstraction.class ), isNull(), any( Config.class ), any( LogProvider.class ), any(),
-                any(), anyBoolean(), anyBoolean(), anyBoolean(), any() ) ).thenReturn( writer );
+                any(), anyBoolean(), anyBoolean(), any() ) ).thenReturn( writer );
         return factory;
     }
 }

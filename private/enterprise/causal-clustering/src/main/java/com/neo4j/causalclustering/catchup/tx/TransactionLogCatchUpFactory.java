@@ -20,9 +20,9 @@ public class TransactionLogCatchUpFactory
 {
     public TransactionLogCatchUpWriter create( DatabaseLayout databaseLayout, FileSystemAbstraction fs, PageCache pageCache, Config config,
             LogProvider logProvider, StorageEngineFactory storageEngineFactory, LongRange validInitialTx, boolean asPartOfStoreCopy,
-            boolean keepTxLogsInStoreDir, boolean rotateTxLogWhilePulling, PageCacheTracer pageCacheTracer ) throws IOException
+            boolean keepTxLogsInStoreDir, PageCacheTracer pageCacheTracer ) throws IOException
     {
         return new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, logProvider, storageEngineFactory, validInitialTx,
-                asPartOfStoreCopy, keepTxLogsInStoreDir, rotateTxLogWhilePulling, pageCacheTracer );
+                asPartOfStoreCopy, keepTxLogsInStoreDir, pageCacheTracer );
     }
 }

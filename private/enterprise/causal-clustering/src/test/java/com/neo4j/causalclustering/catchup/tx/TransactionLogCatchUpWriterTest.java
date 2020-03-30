@@ -134,7 +134,7 @@ public class TransactionLogCatchUpWriterTest
         LongRange validRange = LongRange.range( fromTxId, fromTxId );
         TransactionLogCatchUpWriter subject =
                 new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
-                        storageEngineFactory, validRange, partOfStoreCopy, false, true, NULL );
+                        storageEngineFactory, validRange, partOfStoreCopy, false, NULL );
 
         // when a bunch of transactions received
         LongStream.range( fromTxId, MANY_TRANSACTIONS )
@@ -157,11 +157,9 @@ public class TransactionLogCatchUpWriterTest
         assumeTrue( SystemUtils.IS_OS_LINUX );
         Config config = defaults();
         simulateStoreCopy();
-        try ( TransactionLogCatchUpWriter writer = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
-                storageEngineFactory, LongRange.range( BASE_TX_ID, BASE_TX_ID ), partOfStoreCopy, true, true, NULL ) )
-        {
-            // empty
-        }
+        TransactionLogCatchUpWriter writer = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
+                storageEngineFactory, LongRange.range( BASE_TX_ID, BASE_TX_ID ), partOfStoreCopy, true, NULL );
+        writer.close();
         if ( partOfStoreCopy )
         {
             assertThat( sizeOf( databaseLayout.getTransactionLogsDirectory() ), lessThanOrEqualTo( 100L ) );
@@ -179,7 +177,7 @@ public class TransactionLogCatchUpWriterTest
         Config config = defaults();
         simulateStoreCopy();
         TransactionLogCatchUpWriter writer = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
-                storageEngineFactory, LongRange.range( BASE_TX_ID, BASE_TX_ID ), partOfStoreCopy, true, true, NULL );
+                storageEngineFactory, LongRange.range( BASE_TX_ID, BASE_TX_ID ), partOfStoreCopy, true, NULL );
         writer.close();
         assertThat(sizeOf( databaseLayout.getTransactionLogsDirectory() ), lessThanOrEqualTo( 100L ) );
     }
@@ -194,7 +192,7 @@ public class TransactionLogCatchUpWriterTest
         LongRange validRange = LongRange.range( fromTxId, fromTxId );
         var pageCacheTracer = new DefaultPageCacheTracer();
         try ( TransactionLogCatchUpWriter subject = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
-                storageEngineFactory, validRange, partOfStoreCopy, false, false, pageCacheTracer ) )
+                storageEngineFactory, validRange, partOfStoreCopy, false, pageCacheTracer ) )
         {
             LongStream.range( fromTxId, MANY_TRANSACTIONS )
                     .mapToObj( TransactionLogCatchUpWriterTest::tx )
@@ -218,35 +216,6 @@ public class TransactionLogCatchUpWriterTest
         }
     }
 
-    @Test
-    public void pullDoesNotRotateWhenThresholdCrossedAndExplicitlyOff() throws IOException
-    {
-        // given
-        Config config = defaults( GraphDatabaseSettings.logical_log_rotation_threshold, ByteUnit.mebiBytes( 1 ) );
-
-        // and
-        StoreId storeId = simulateStoreCopy();
-
-        // and
-        long fromTxId = BASE_TX_ID;
-        LongRange validRange = LongRange.range( fromTxId, fromTxId );
-        TransactionLogCatchUpWriter subject =
-                new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(), storageEngineFactory,
-                        validRange, partOfStoreCopy, false, false, NULL );
-
-        // when 1M tx received
-        LongStream.range( fromTxId, MANY_TRANSACTIONS )
-                .mapToObj( TransactionLogCatchUpWriterTest::tx )
-                .map( tx -> new TxPullResponse( storeId, tx ) )
-                .forEach( subject::onTxReceived );
-        subject.close();
-
-        // then there was a rotation
-        LogFilesBuilder logFilesBuilder = LogFilesBuilder.activeFilesBuilder( databaseLayout, fs, pageCache );
-        LogFiles logFiles = logFilesBuilder.build();
-        assertEquals( logFiles.getLowestLogVersion(), logFiles.getHighestLogVersion() );
-    }
-
     private void createTransactionLogWithCheckpoint( Config config, boolean logsInStoreDir ) throws IOException
     {
         StoreId storeId = simulateStoreCopy();
@@ -257,7 +226,7 @@ public class TransactionLogCatchUpWriterTest
         LongRange validRange = LongRange.range( fromTxId, fromTxId );
 
         TransactionLogCatchUpWriter catchUpWriter = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
-                storageEngineFactory, validRange, partOfStoreCopy, logsInStoreDir, true, NULL );
+                storageEngineFactory, validRange, partOfStoreCopy, logsInStoreDir, NULL );
 
         // when
         for ( int i = fromTxId; i <= endTxId; i++ )

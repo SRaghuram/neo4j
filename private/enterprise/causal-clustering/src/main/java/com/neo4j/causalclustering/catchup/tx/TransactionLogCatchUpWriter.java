@@ -52,7 +52,6 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
     private final LogFiles logFiles;
     private final TransactionMetaDataStore metaDataStore;
     private final DatabasePageCache databasePageCache;
-    private final boolean rotateTxLogWhilePulling;
     private final PageCacheTracer pageCacheTracer;
     private final LongRange validInitialTxId;
     private final FlushablePositionAwareChecksumChannel logChannel;
@@ -63,11 +62,10 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
 
     TransactionLogCatchUpWriter( DatabaseLayout databaseLayout, FileSystemAbstraction fs, PageCache pageCache, Config config, LogProvider logProvider,
             StorageEngineFactory storageEngineFactory, LongRange validInitialTxId, boolean asPartOfStoreCopy, boolean keepTxLogsInStoreDir,
-            boolean rotateTxLogWhilePulling, PageCacheTracer pageCacheTracer ) throws IOException
+            PageCacheTracer pageCacheTracer ) throws IOException
     {
         this.log = logProvider.getLog( getClass() );
         this.asPartOfStoreCopy = asPartOfStoreCopy;
-        this.rotateTxLogWhilePulling = rotateTxLogWhilePulling;
         this.pageCacheTracer = pageCacheTracer;
         final Config configWithoutSpecificStoreFormat = configWithoutSpecificStoreFormat( config );
         databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY );
@@ -80,7 +78,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
                 .builder( databaseLayout, fs )
                 .withDependencies( dependencies )
                 .withLastCommittedTransactionIdSupplier( () -> validInitialTxId.from() - 1 )
-                .withConfig( customisedConfig( config, keepTxLogsInStoreDir, rotateTxLogWhilePulling, asPartOfStoreCopy ) )
+                .withConfig( customisedConfig( config, keepTxLogsInStoreDir, asPartOfStoreCopy ) )
                 .withLogVersionRepository( metaDataStore )
                 .withTransactionIdStore( metaDataStore )
                 .withStoreId( metaDataStore.getStoreId() )
@@ -106,14 +104,14 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         return Config.newBuilder().fromConfig( config ).set( GraphDatabaseSettings.record_format, null ).build();
     }
 
-    private static Config customisedConfig( Config original, boolean keepTxLogsInStoreDir, boolean rotateTxLogWhilePulling, boolean asPartOfStoreCopy )
+    private static Config customisedConfig( Config original, boolean keepTxLogsInStoreDir, boolean asPartOfStoreCopy )
     {
         Config.Builder builder = Config.newBuilder();
         if ( !keepTxLogsInStoreDir && original.isExplicitlySet( transaction_logs_root_path ) )
         {
             builder.set( transaction_logs_root_path, original.get( transaction_logs_root_path ) );
         }
-        if ( rotateTxLogWhilePulling && original.isExplicitlySet( logical_log_rotation_threshold ) )
+        if ( original.isExplicitlySet( logical_log_rotation_threshold ) )
         {
             builder.set( logical_log_rotation_threshold, original.get( logical_log_rotation_threshold ) );
         }
@@ -133,7 +131,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         // neo4j admin backup clients pull transactions indefinitely and have no monitoring mechanism for tx log rotation
         // Other cases, ex. Read Replicas have an external mechanism that rotates independently of this process and don't need to
         // manually rotate while pulling
-        if ( rotateTxLogWhilePulling && logFiles.getLogFile().rotationNeeded() )
+        if ( logFiles.getLogFile().rotationNeeded() )
         {
             rotateTransactionLogs( logFiles );
         }

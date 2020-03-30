@@ -50,7 +50,7 @@ class BackupDelegator extends LifecycleAdapter
     void copy( SocketAddress fromAddress, StoreId expectedStoreId, NamedDatabaseId namedDatabaseId, DatabaseLayout databaseLayout )
             throws StoreCopyFailedException
     {
-        remoteStore.apply( namedDatabaseId ).copy( new SingleAddressProvider( fromAddress ), expectedStoreId, databaseLayout, true );
+        remoteStore.apply( namedDatabaseId ).copy( new SingleAddressProvider( fromAddress ), expectedStoreId, databaseLayout );
     }
 
     void tryCatchingUp( SocketAddress fromAddress, StoreId expectedStoreId, NamedDatabaseId namedDatabaseId, DatabaseLayout databaseLayout )
@@ -58,7 +58,7 @@ class BackupDelegator extends LifecycleAdapter
     {
         try
         {
-            remoteStore.apply( namedDatabaseId ).tryCatchingUp( new SingleAddressProvider( fromAddress ), expectedStoreId, databaseLayout, true, true );
+            remoteStore.apply( namedDatabaseId ).tryCatchingUp( new SingleAddressProvider( fromAddress ), expectedStoreId, databaseLayout, true );
         }
         catch ( IOException e )
         {

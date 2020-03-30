@@ -68,8 +68,8 @@ class StoreDownloaderTest
         // when
         boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, new SingleAddressProvider( secondaryAddress ) );
 
-        verify( remoteStore, never() ).copy( any(), any(), any(), anyBoolean() );
-        verify( remoteStore, never() ).tryCatchingUp( any(), any(), any(), anyBoolean(), anyBoolean() );
+        verify( remoteStore, never() ).copy( any(), any(), any() );
+        verify( remoteStore, never() ).tryCatchingUp( any(), any(), any(), anyBoolean() );
 
         // then
         assertTrue( downloadOk );
@@ -88,8 +88,8 @@ class StoreDownloaderTest
         // when
         boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, new SingleAddressProvider( secondaryAddress ) );
 
-        verify( remoteStore, never() ).copy( any(), any(), any(), anyBoolean() );
-        verify( remoteStore, never() ).tryCatchingUp( any(), any(), any(), anyBoolean(), anyBoolean() );
+        verify( remoteStore, never() ).copy( any(), any(), any() );
+        verify( remoteStore, never() ).tryCatchingUp( any(), any(), any(), anyBoolean() );
 
         // then
         assertFalse( downloadOk );
@@ -106,8 +106,8 @@ class StoreDownloaderTest
         boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, new SingleAddressProvider( secondaryAddress ) );
 
         // then
-        verify( remoteStore ).tryCatchingUp( any(), any(), any(), anyBoolean(), anyBoolean() );
-        verify( remoteStore, never() ).copy( any(), any(), any(), anyBoolean() );
+        verify( remoteStore ).tryCatchingUp( any(), any(), any(), anyBoolean() );
+        verify( remoteStore, never() ).copy( any(), any(), any() );
 
         assertTrue( downloadOk );
     }
@@ -124,7 +124,7 @@ class StoreDownloaderTest
         boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, new SingleAddressProvider( secondaryAddress ) );
 
         // then
-        verify( remoteStore ).tryCatchingUp( any(), any(), any(), anyBoolean(), anyBoolean() );
+        verify( remoteStore ).tryCatchingUp( any(), any(), any(), anyBoolean() );
         verify( storeCopyProcess ).replaceWithStoreFrom( any(), any() );
 
         assertTrue( downloadOk );
@@ -178,7 +178,7 @@ class StoreDownloaderTest
     {
         RemoteStore remoteStore = getRemoteStore( namedDatabaseId );
         when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( storeId );
-        doThrow( StoreCopyFailedException.class ).when( remoteStore ).tryCatchingUp( any(), any(), any(), anyBoolean(), anyBoolean() );
+        doThrow( StoreCopyFailedException.class ).when( remoteStore ).tryCatchingUp( any(), any(), any(), anyBoolean() );
         return remoteStore;
     }
 
