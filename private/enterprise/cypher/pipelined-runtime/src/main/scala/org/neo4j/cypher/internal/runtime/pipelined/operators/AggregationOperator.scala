@@ -79,6 +79,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.SyntaxException
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 
 import scala.collection.mutable.ArrayBuffer
@@ -124,7 +125,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
     override def outputBuffer: Option[BufferId] = Some(outputBufferId)
 
-    override def createState(executionState: ExecutionState): OutputOperatorState =
+    override def createState(executionState: ExecutionState, stateFactory: StateFactory): OutputOperatorState =
       new State(executionState.getSink[IndexedSeq[PerArgument[AggPreMap]]](outputBufferId))
 
     class State(sink: Sink[IndexedSeq[PerArgument[AggPreMap]]]) extends OutputOperatorState {
@@ -190,8 +191,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
                                        aggregators: Array[Aggregator],
                                        override val argumentRowIdsForReducers: Array[Long],
                                        override val argumentRow: MorselRow,
-                                       memoryTracker: QueryMemoryTracker,
-                                       operatorId: Id) extends AggregatingAccumulator {
+                                       memoryTracker: MemoryTracker) extends AggregatingAccumulator {
 
     val reducerMap = new java.util.LinkedHashMap[groupings.KeyType, Array[Reducer]]
 
@@ -201,8 +201,8 @@ case class AggregationOperator(workIdentity: WorkIdentity,
         val entry = iterator.next()
         val reducers = reducerMap.computeIfAbsent(entry.getKey, _ => {
           // Note: this allocation is currently never de-allocated
-          memoryTracker.allocated(entry.getKey, operatorId.x)
-          aggregators.map(_.newStandardReducer(memoryTracker, operatorId))
+          memoryTracker.allocateHeap(entry.getKey.estimatedHeapUsage())
+          aggregators.map(_.newStandardReducer(memoryTracker))
         })
 
         var i = 0
@@ -241,9 +241,9 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
   object AggregatingAccumulator {
 
-    class Factory(aggregators: Array[Aggregator], memoryTracker: QueryMemoryTracker, operatorId: Id) extends ArgumentStateFactory[AggregatingAccumulator] {
+    class Factory(aggregators: Array[Aggregator], memoryTracker: MemoryTracker) extends ArgumentStateFactory[AggregatingAccumulator] {
       override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
-        new StandardAggregatingAccumulator(argumentRowId, aggregators, argumentRowIdsForReducers, argumentMorsel.snapshot(), memoryTracker, operatorId)
+        new StandardAggregatingAccumulator(argumentRowId, aggregators, argumentRowIdsForReducers, argumentMorsel.snapshot(), memoryTracker)
 
       override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
         new ConcurrentAggregatingAccumulator(argumentRowId, aggregators, argumentRowIdsForReducers, argumentMorsel.snapshot())
@@ -267,7 +267,8 @@ case class AggregationOperator(workIdentity: WorkIdentity,
                              stateFactory: StateFactory,
                              state: PipelinedQueryState,
                              resources: QueryResources): ReduceOperatorState[AggPreMap, AggregatingAccumulator] = {
-      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AggregatingAccumulator.Factory(aggregations, stateFactory.memoryTracker, id), ordered = false)
+      val memoryTracker = stateFactory.newMemoryTracker(id.x)
+      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AggregatingAccumulator.Factory(aggregations, memoryTracker))
       this
     }
 

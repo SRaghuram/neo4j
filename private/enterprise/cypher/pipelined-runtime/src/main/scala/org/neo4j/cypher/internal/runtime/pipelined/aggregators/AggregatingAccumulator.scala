@@ -5,12 +5,11 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
-import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
-import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 
 /**
@@ -37,9 +36,9 @@ class AggregatingAccumulator(override val argumentRowId: Long,
 
 object AggregatingAccumulator {
 
-  class Factory(aggregators: Array[Aggregator], memoryTracker: QueryMemoryTracker, operatorId: Id) extends ArgumentStateFactory[AggregatingAccumulator] {
+  class Factory(aggregators: Array[Aggregator], memoryTracker: MemoryTracker) extends ArgumentStateFactory[AggregatingAccumulator] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
-      new AggregatingAccumulator(argumentRowId, aggregators.map(_.newStandardReducer(memoryTracker, operatorId)), argumentRowIdsForReducers, argumentMorsel.snapshot())
+      new AggregatingAccumulator(argumentRowId, aggregators.map(_.newStandardReducer(memoryTracker)), argumentRowIdsForReducers, argumentMorsel.snapshot())
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
       new AggregatingAccumulator(argumentRowId, aggregators.map(_.newConcurrentReducer), argumentRowIdsForReducers, argumentMorsel.snapshot())
@@ -56,7 +55,7 @@ object AggregatingAccumulator {
  */
 trait Aggregator {
   def newUpdater: Updater
-  def newStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id): Reducer
+  def newStandardReducer(memoryTracker: MemoryTracker): Reducer
   def newConcurrentReducer: Reducer
 }
 

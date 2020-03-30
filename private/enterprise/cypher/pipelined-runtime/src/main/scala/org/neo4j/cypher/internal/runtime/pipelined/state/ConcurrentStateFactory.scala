@@ -19,7 +19,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.SingletonBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.query.QuerySubscriber
+import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.Measurable
+import org.neo4j.memory.MemoryTracker
 
 /**
  * Implementation of [[StateFactory]] which constructs concurrent state management classes.
@@ -53,4 +55,6 @@ class ConcurrentStateFactory extends StateFactory {
 
   // We currently don't track memory in parallel
   override val memoryTracker: QueryMemoryTracker = NoMemoryTracker
+
+  override def newMemoryTracker(operatorId: Int): MemoryTracker = EmptyMemoryTracker.INSTANCE
 }

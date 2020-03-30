@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeOperator.updateProfileEvent
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
+import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
 import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -35,7 +36,7 @@ import org.neo4j.cypher.internal.util.attribution.Id
  */
 trait OutputOperator extends HasWorkIdentity {
   def outputBuffer: Option[BufferId]
-  def createState(executionState: ExecutionState): OutputOperatorState
+  def createState(executionState: ExecutionState, stateFactory: StateFactory): OutputOperatorState
 }
 
 trait OutputOperatorState extends HasWorkIdentity {
@@ -81,7 +82,7 @@ trait PreparedOutput {
 
 case object NoOutputOperator extends OutputOperator with OutputOperatorState with PreparedOutput {
   override def outputBuffer: Option[BufferId] = None
-  override def createState(executionState: ExecutionState): OutputOperatorState = this
+  override def createState(executionState: ExecutionState, stateFactory: StateFactory): OutputOperatorState = this
   override def prepareOutput(outputMorsel: Morsel,
                              state: PipelinedQueryState,
                              resources: QueryResources,
@@ -99,7 +100,7 @@ case object NoOutputOperator extends OutputOperator with OutputOperatorState wit
 case class MorselBufferOutputOperator(bufferId: BufferId, nextPipelineHeadPlanId: Id, nextPipelineFused: Boolean) extends OutputOperator {
   override def outputBuffer: Option[BufferId] = Some(bufferId)
   override val workIdentity: WorkIdentity = WorkIdentityImpl(nextPipelineHeadPlanId, s"Output morsel to $bufferId")
-  override def createState(executionState: ExecutionState): OutputOperatorState =
+  override def createState(executionState: ExecutionState, stateFactory: StateFactory): OutputOperatorState =
     //if nextPipeLineFused is true we shouldn't attribute time to nextPipelineHeadPlanId
     MorselBufferOutputState(workIdentity, !nextPipelineFused, bufferId, executionState)
 }
@@ -127,7 +128,7 @@ case class MorselBufferPreparedOutput(bufferId: BufferId,
 case class MorselArgumentStateBufferOutputOperator(bufferId: BufferId, argumentSlotOffset: Int, nextPipelineHeadPlanId: Id, nextPipelineFused: Boolean) extends OutputOperator {
   override def outputBuffer: Option[BufferId] = Some(bufferId)
   override val workIdentity: WorkIdentity = WorkIdentityImpl(nextPipelineHeadPlanId, s"Output morsel grouped by argumentSlot $argumentSlotOffset to $bufferId")
-  override def createState(executionState: ExecutionState): OutputOperatorState =
+  override def createState(executionState: ExecutionState, stateFactory: StateFactory): OutputOperatorState =
   //if nextPipeLineFused is true we shouldn't attribute time to nextPipelineHeadPlanId
     MorselArgumentStateBufferOutputState(workIdentity,
       executionState.getSink[IndexedSeq[PerArgument[Morsel]]](bufferId),

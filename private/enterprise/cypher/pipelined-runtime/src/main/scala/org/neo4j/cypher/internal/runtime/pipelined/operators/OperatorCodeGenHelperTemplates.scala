@@ -49,7 +49,6 @@ import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.DbAccess
-import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
@@ -67,6 +66,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.cypher.operations.CursorUtils
@@ -89,6 +89,8 @@ import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.kernel.impl.query.QuerySubscriber
+import org.neo4j.memory.EmptyMemoryTracker
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.token.api.TokenConstants
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.TextValue
@@ -146,8 +148,7 @@ object OperatorCodeGenHelperTemplates {
     )
   val INPUT_CURSOR: IntermediateRepresentation = loadField(INPUT_CURSOR_FIELD)
   val SHOULD_BREAK: LocalVariable = variable[Boolean]("shouldBreak", constant(false))
-  val MEMORY_TRACKER: InstanceField  = field[QueryMemoryTracker]("memoryTracker",
-    invokeStatic(method[QueryMemoryTracker , QueryMemoryTracker]("NO_MEMORY_TRACKER")))
+  val NO_MEMORY_TRACKER: GetStatic = getStatic[EmptyMemoryTracker, MemoryTracker]("INSTANCE")
 
   // IntermediateRepresentation code
   val QUERY_PROFILER: IntermediateRepresentation = load("queryProfiler")
@@ -169,10 +170,6 @@ object OperatorCodeGenHelperTemplates {
 
   val EXECUTION_STATE: IntermediateRepresentation =
     load("executionState")
-
-  val SET_MEMORY_TRACKER: IntermediateRepresentation =
-    setField(MEMORY_TRACKER, invoke(EXECUTION_STATE,
-      method[ExecutionState, QueryMemoryTracker]("memoryTracker")))
 
   val SUBSCRIBER: LocalVariable = variable[QuerySubscriber]("subscriber",
     invoke(QUERY_STATE, method[PipelinedQueryState, QuerySubscriber]("subscriber")))
@@ -226,6 +223,11 @@ object OperatorCodeGenHelperTemplates {
   private val TRACE_DB_HIT: Method = method[OperatorProfileEvent, Unit]("dbHit")
   private val TRACE_DB_HITS: Method = method[OperatorProfileEvent, Unit, Int]("dbHits")
   val CALL_CAN_CONTINUE: IntermediateRepresentation = invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue"))
+
+  def setMemoryTracker(memoryTrackerField: InstanceField, operatorId: Int): IntermediateRepresentation =
+    setField(memoryTrackerField,
+             invoke(load("stateFactory"),
+                    method[StateFactory, MemoryTracker, Int]("newMemoryTracker"), constant(operatorId)))
 
   def peekState[STATE_TYPE](argumentStateMapId: ArgumentStateMapId)(implicit to: Manifest[STATE_TYPE]): IntermediateRepresentation =
     cast[STATE_TYPE](

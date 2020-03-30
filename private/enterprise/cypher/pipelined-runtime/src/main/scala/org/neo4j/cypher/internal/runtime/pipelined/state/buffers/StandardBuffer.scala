@@ -7,9 +7,8 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import java.util
 
-import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
-import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.memory.Measurable
+import org.neo4j.memory.MemoryTracker
 
 import scala.collection.JavaConverters.asJavaIteratorConverter
 import scala.collection.mutable.ArrayBuffer
@@ -51,19 +50,16 @@ class StandardBuffer[T <: AnyRef] extends Buffer[T] {
   override def iterator: util.Iterator[T] = data.iterator.asJava
 }
 
-/**
- * @param operatorId the ID of the operator that reads from this buffer
- */
-class MemoryTrackingStandardBuffer[T <: Measurable](memoryTracker: QueryMemoryTracker, operatorId: Id) extends StandardBuffer[T] {
+class MemoryTrackingStandardBuffer[T <: Measurable](memoryTracker: MemoryTracker) extends StandardBuffer[T] {
   override def put(t: T): Unit = {
-    memoryTracker.allocated(t, operatorId.x)
+    memoryTracker.allocateHeap(t.estimatedHeapUsage())
     super.put(t)
   }
 
   override def take(): T = {
     val t = super.take()
     if (t != null) {
-      memoryTracker.deallocated(t.estimatedHeapUsage, operatorId.x)
+      memoryTracker.releaseHeap(t.estimatedHeapUsage)
     }
     t
   }

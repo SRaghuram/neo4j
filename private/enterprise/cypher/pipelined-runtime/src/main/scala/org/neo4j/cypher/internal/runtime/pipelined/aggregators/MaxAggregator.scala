@@ -7,8 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
 import java.util.concurrent.atomic.AtomicReference
 
-import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
-import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.AnyValues
 import org.neo4j.values.storable.Values
@@ -19,7 +18,7 @@ import org.neo4j.values.storable.Values
 case object MaxAggregator extends Aggregator {
 
   override def newUpdater: Updater = new MaxUpdater
-  override def newStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id): Reducer = new MaxStandardReducer
+  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new MaxStandardReducer
   override def newConcurrentReducer: Reducer = new MaxConcurrentReducer
 
   def shouldUpdate(max: AnyValue, value: AnyValue): Boolean =

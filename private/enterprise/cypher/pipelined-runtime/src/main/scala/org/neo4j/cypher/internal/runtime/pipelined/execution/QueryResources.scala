@@ -11,6 +11,8 @@ import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.io.IOUtils
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
+import org.neo4j.memory.EmptyMemoryTracker
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 
 /**
@@ -22,6 +24,7 @@ class QueryResources(cursorFactory: CursorFactory, cursorTracer: PageCursorTrace
   val expressionCursors: ExpressionCursors = new ExpressionCursors(cursorFactory, cursorTracer)
   val cursorPools: CursorPools = new CursorPools(cursorFactory, cursorTracer)
   private var _expressionVariables = new Array[AnyValue](8)
+  private var _memoryTracker: MemoryTracker = EmptyMemoryTracker.INSTANCE
 
   // For correct profiling of dbHits in NestedPipeExpressions, when supported by a fallback to slotted pipes.
   var profileInformation: InterpretedProfileInformation = null
@@ -37,6 +40,16 @@ class QueryResources(cursorFactory: CursorFactory, cursorTracer: PageCursorTrace
     expressionCursors.relationshipScanCursor.setTracer(tracer)
     expressionCursors.propertyCursor.setTracer(tracer)
     cursorPools.setKernelTracer(tracer)
+  }
+
+  def memoryTracker: MemoryTracker = _memoryTracker
+
+  def setMemoryTracker(memoryTracker: MemoryTracker): Unit = {
+    _memoryTracker = memoryTracker
+  }
+
+  def resetMemoryTracker(): Unit = {
+    _memoryTracker = EmptyMemoryTracker.INSTANCE
   }
 
   override def close(): Unit = {

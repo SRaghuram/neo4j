@@ -92,7 +92,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
 
     override def outputBuffer: Option[BufferId] = Some(outputBufferId)
 
-    override def createState(executionState: ExecutionState): OutputOperatorState =
+    override def createState(executionState: ExecutionState, stateFactory: StateFactory): OutputOperatorState =
       new State(executionState.getSink[IndexedSeq[PerArgument[Array[Updater]]]](outputBufferId))
 
     class State(sink: Sink[IndexedSeq[PerArgument[Array[Updater]]]]) extends OutputOperatorState {
@@ -156,7 +156,8 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
                              stateFactory: StateFactory,
                              state: PipelinedQueryState,
                              resources: QueryResources): ReduceOperatorState[Array[Updater], AggregatingAccumulator] = {
-      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AggregatingAccumulator.Factory(aggregations, stateFactory.memoryTracker, id), ordered = false)
+      val memoryTracker = stateFactory.newMemoryTracker(id.x)
+      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AggregatingAccumulator.Factory(aggregations, memoryTracker))
       this
     }
 

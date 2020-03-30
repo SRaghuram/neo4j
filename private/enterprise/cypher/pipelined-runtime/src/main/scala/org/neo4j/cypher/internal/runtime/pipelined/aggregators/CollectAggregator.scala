@@ -7,8 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
 import java.util.concurrent.ConcurrentLinkedQueue
 
-import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
-import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.ListValue
@@ -20,13 +19,13 @@ import org.neo4j.values.virtual.VirtualValues
  */
 case object CollectAggregator extends Aggregator {
   override def newUpdater: Updater = new CollectUpdater(preserveNulls = false)
-  override def newStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id): Reducer = new CollectStandardReducer(memoryTracker, operatorId)
+  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new CollectStandardReducer(memoryTracker)
   override def newConcurrentReducer: Reducer = new CollectConcurrentReducer()
 }
 
 case object CollectAllAggregator extends Aggregator {
   override def newUpdater: Updater = new CollectUpdater(preserveNulls = true)
-  override def newStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id): Reducer = new CollectStandardReducer(memoryTracker, operatorId)
+  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new CollectStandardReducer(memoryTracker)
   override def newConcurrentReducer: Reducer = new CollectConcurrentReducer()
 }
 
@@ -44,14 +43,14 @@ class CollectUpdater(preserveNulls: Boolean) extends Updater {
     }
 }
 
-class CollectStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id) extends Reducer {
+class CollectStandardReducer(memoryTracker: MemoryTracker) extends Reducer {
   private val collection = ListValueBuilder.newListBuilder()
   override def update(updater: Updater): Unit = {
     updater match {
       case u: CollectUpdater =>
         collection.combine(u.collection)
         // Note: this allocation is currently never de-allocated
-        memoryTracker.allocated(u.collection, operatorId.x)
+        memoryTracker.allocateHeap(u.collection.estimatedHeapUsage())
     }
   }
 

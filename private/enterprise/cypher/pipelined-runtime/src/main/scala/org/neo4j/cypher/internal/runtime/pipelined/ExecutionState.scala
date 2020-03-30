@@ -37,7 +37,7 @@ trait ArgumentStateMapCreator {
    */
   def createArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                                  factory: ArgumentStateFactory[S],
-                                                 ordered: Boolean): ArgumentStateMap[S]
+                                                 ordered: Boolean = false): ArgumentStateMap[S]
 
 }
 

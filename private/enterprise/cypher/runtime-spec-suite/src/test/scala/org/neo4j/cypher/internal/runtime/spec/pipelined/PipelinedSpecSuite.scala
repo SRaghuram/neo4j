@@ -21,10 +21,6 @@ import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedDynamicLimitPro
 import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedSpecSuite.FUSING
 import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedSpecSuite.NO_FUSING
 import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedSpecSuite.SIZE_HINT
-import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase
-import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase.DEFAULT_MORSEL_SIZE_BIG
-import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase.DEFAULT_MORSEL_SIZE_SMALL
-import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase.ENTERPRISE_PROFILING
 import org.neo4j.cypher.internal.runtime.spec.slotted.WithSlotsMemoryManagementTestBase
 import org.neo4j.cypher.internal.runtime.spec.stress.WorkloadTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AggregationTestBase
@@ -488,9 +484,10 @@ object PipelinedDynamicLimitPropagationTest {
 
 // EXPERIMENTAL PROFILING
 
-class PipelinedMemoryManagementBigMorselProfiling extends MemoryManagementProfilingBase(ENTERPRISE_PROFILING, PIPELINED, DEFAULT_MORSEL_SIZE_BIG)
-  with PipelinedSpecSuite
-class PipelinedMemoryManagementSmallMorselProfiling extends MemoryManagementProfilingBase(ENTERPRISE_PROFILING, PIPELINED, DEFAULT_MORSEL_SIZE_SMALL)
-  with PipelinedSpecSuite
-class PipelinedMemoryManagementCustomProfiling extends MemoryManagementProfilingBase(ENTERPRISE_PROFILING, PIPELINED, DEFAULT_MORSEL_SIZE_BIG,
-                                                                                     runtimeSuffix="after") with PipelinedSpecSuite
+// Enable these to get heap dumps and memory usage estimates
+//class PipelinedMemoryManagementBigMorselProfiling extends MemoryManagementProfilingBase(ENTERPRISE_PROFILING, PIPELINED, DEFAULT_MORSEL_SIZE_BIG)
+//  with PipelinedSpecSuite
+//class PipelinedMemoryManagementSmallMorselProfiling extends MemoryManagementProfilingBase(ENTERPRISE_PROFILING, PIPELINED, DEFAULT_MORSEL_SIZE_SMALL)
+//  with PipelinedSpecSuite
+//class PipelinedMemoryManagementCustomProfiling extends MemoryManagementProfilingBase(ENTERPRISE_PROFILING, PIPELINED, DEFAULT_MORSEL_SIZE_BIG,
+//                                                                                     runtimeSuffix="after") with PipelinedSpecSuite

@@ -60,8 +60,7 @@ class SkipOperator(argumentStateMapId: ArgumentStateMapId,
                           resources: QueryResources): OperatorTask = {
     val skip = evaluateCountValue(state, resources, countExpression)
     new SkipOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId,
-                                                                     new SkipStateFactory(skip),
-                                                                     ordered = false))
+                                                                     new SkipStateFactory(skip)))
   }
 
   class SkipOperatorTask(asm: ArgumentStateMap[CountingState]) extends OperatorTask {

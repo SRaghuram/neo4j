@@ -7,8 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
 import java.util.concurrent.atomic.AtomicLong
 
-import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
-import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 
@@ -17,7 +16,7 @@ import org.neo4j.values.storable.Values
  */
 case object CountAggregator extends Aggregator {
   override def newUpdater: Updater = new CountUpdater
-  override def newStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id): Reducer = new CountStandardReducer
+  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new CountStandardReducer
   override def newConcurrentReducer: Reducer = new CountConcurrentReducer
 }
 
@@ -26,7 +25,7 @@ case object CountAggregator extends Aggregator {
  */
 case object CountDistinctAggregator extends Aggregator {
   override def newUpdater: Updater = new DistinctUpdater
-  override def newStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id): Reducer = new DistinctStandardReducer(new CountDistinctStandardReducer())
+  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new DistinctStandardReducer(new CountDistinctStandardReducer())
   override def newConcurrentReducer: Reducer = new DistinctConcurrentReducer(new CountDistinctConcurrentReducer())
 }
 
@@ -35,7 +34,7 @@ case object CountDistinctAggregator extends Aggregator {
  */
 case object CountStarAggregator extends Aggregator {
   override def newUpdater: Updater = new CountStarUpdater
-  override def newStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id): Reducer = new CountStandardReducer
+  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new CountStandardReducer
   override def newConcurrentReducer: Reducer = new CountConcurrentReducer
 }
 

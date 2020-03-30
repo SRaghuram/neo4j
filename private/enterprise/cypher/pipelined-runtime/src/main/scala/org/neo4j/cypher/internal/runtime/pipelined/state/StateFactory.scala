@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.memory.Measurable
+import org.neo4j.memory.MemoryTracker
 
 /**
  * Factory for all the basic state management components of the [[ExecutionState]].
@@ -39,5 +40,7 @@ trait StateFactory {
   /**
    * Obtain the memory tracker (this call does not create a new object).
    */
-  def memoryTracker: QueryMemoryTracker
+  def memoryTracker: QueryMemoryTracker // TODO: Looks like slotted pipes may still need this?
+
+  def newMemoryTracker(operatorId: Int): MemoryTracker
 }

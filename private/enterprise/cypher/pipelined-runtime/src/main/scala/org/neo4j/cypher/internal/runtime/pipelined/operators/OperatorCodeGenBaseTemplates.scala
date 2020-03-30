@@ -246,8 +246,8 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
   /**
    * Method of [[OutputOperator]] trait. Implementing this allows the same [[CompiledTask]] instance to also act as an [[OutputOperatorState]].
    */
-  override final def createState(executionState: ExecutionState): OutputOperatorState = {
-    compiledCreateState(executionState)
+  override final def createState(executionState: ExecutionState, stateFactory: StateFactory): OutputOperatorState = {
+    compiledCreateState(executionState, stateFactory)
     this
   }
 
@@ -307,7 +307,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
     * E.g., retrieving [[org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink]] from [[ExecutionState]].
     */
   @throws[Exception]
-  def compiledCreateState(executionState: ExecutionState): Unit
+  def compiledCreateState(executionState: ExecutionState, stateFactory: StateFactory): Unit
 
   /**
    * Generated code for [[OutputOperator.outputBuffer]]. Return [[BufferId]] or null.
@@ -623,7 +623,8 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
           throws = Some(typeRefOf[Exception])),
         MethodDeclaration("compiledCreateState",
           returnType = typeRefOf[Unit],
-          Seq(param[ExecutionState]("executionState")),
+          Seq(param[ExecutionState]("executionState"),
+              param[StateFactory]("stateFactory")),
                           body = genCreateState,
                           genLocalVariables = () => Seq.empty,
                           throws = Some(typeRefOf[Exception])),

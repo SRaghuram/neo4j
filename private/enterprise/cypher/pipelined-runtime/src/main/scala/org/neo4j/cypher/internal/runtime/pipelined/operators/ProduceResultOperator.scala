@@ -47,6 +47,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols
@@ -148,7 +149,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
     override def trackTime: Boolean = true
   }
 
-  override def createState(executionState: ExecutionState): OutputOperatorState = new OutputOOperatorState
+  override def createState(executionState: ExecutionState, stateFactory: StateFactory): OutputOperatorState = new OutputOOperatorState
 
   //==========================================================================
 

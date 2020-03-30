@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import java.util.function.ToLongFunction
 
 import org.neo4j.codegen.api.Field
-import org.neo4j.codegen.api.InstanceField
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.and
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayOf
@@ -36,9 +35,7 @@ import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -54,20 +51,17 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.getNodeIdFromSlot
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.loadTypes
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandIntoOperatorTaskTemplate.CONNECTING_RELATIONSHIPS
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_GROUP_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_NODE_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_TRAVERSAL_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.GroupCursorPool
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.MEMORY_TRACKER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NodeCursorPool
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.SET_MEMORY_TRACKER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.TraversalCursorPool
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.allocateAndTraceCursor
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.directionRepresentation
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.freeCursor
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.setMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
@@ -80,6 +74,7 @@ import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.helpers.CachingExpandInto
+import org.neo4j.memory.MemoryTracker
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -90,16 +85,13 @@ class ExpandIntoOperator(val workIdentity: WorkIdentity,
                          dir: SemanticDirection,
                          types: RelationshipTypes)(val id: Id = Id.INVALID_ID) extends StreamingOperator {
 
-  private var memoryTracker: QueryMemoryTracker = NoMemoryTracker
-
   override def toString: String = "ExpandInto"
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
                            state: PipelinedQueryState,
                            resources: QueryResources): OperatorState =  {
-    this.memoryTracker = stateFactory.memoryTracker
-    this
+    new MemoryTrackingOperatorState(this, id.x, stateFactory)
   }
 
   override protected def nextTasks(state: PipelinedQueryState,
@@ -115,8 +107,7 @@ class ExpandIntoOperator(val workIdentity: WorkIdentity,
                                   toSlot,
                                   dir,
                                   types,
-                                  memoryTracker))
-
+                                  resources.memoryTracker))
 }
 
 class ExpandIntoTask(inputMorsel: Morsel,
@@ -127,7 +118,7 @@ class ExpandIntoTask(inputMorsel: Morsel,
                      toSlot: Slot,
                      dir: SemanticDirection,
                      types: RelationshipTypes,
-                     memoryTracker: QueryMemoryTracker) extends InputLoopTask(inputMorsel) {
+                     memoryTracker: MemoryTracker) extends InputLoopTask(inputMorsel) {
 
   //===========================================================================
   // Compile-time initializations
@@ -144,7 +135,7 @@ class ExpandIntoTask(inputMorsel: Morsel,
 
   protected override def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
     if (expandInto == null) {
-      expandInto = new CachingExpandInto(state.queryContext.transactionalContext.dataRead, kernelDirection(dir), memoryTracker, id.x)
+      expandInto = new CachingExpandInto(state.queryContext.transactionalContext.dataRead, kernelDirection(dir), memoryTracker)
     }
     val fromNode = getFromNodeFunction.applyAsLong(inputCursor)
     val toNode = getToNodeFunction.applyAsLong(inputCursor)
@@ -229,7 +220,8 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
   )
   private val missingTypeField = field[Array[String]](codeGen.namer.nextVariableName("missingType"),
     arrayOf[String](missingTypes.map(constant):_*))
-  private val expandInto = field[CachingExpandInto](codeGen.namer.nextVariableName("expandInto"))
+  private val expandIntoField = field[CachingExpandInto](codeGen.namer.nextVariableName("expandInto"))
+  private val memoryTrackerField = field[MemoryTracker](codeGen.namer.nextVariableName("memoryTracker"))
 
   codeGen.registerCursor(relName, RelationshipCursorRepresentation(loadField(relationshipsField)))
 
@@ -237,7 +229,7 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genMoreFields: Seq[Field] = {
     val localFields =
-      ArrayBuffer(nodeCursorField, traversalCursorField, relationshipsField, typeField, expandInto, MEMORY_TRACKER)
+      ArrayBuffer(nodeCursorField, traversalCursorField, relationshipsField, typeField, expandIntoField, memoryTrackerField)
     if (missingTypes.nonEmpty) {
       localFields += missingTypeField
     }
@@ -245,7 +237,7 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
     localFields
   }
 
-  override def genCreateState: IntermediateRepresentation = block(SET_MEMORY_TRACKER, inner.genCreateState)
+  override def genCreateState: IntermediateRepresentation = block(setMemoryTracker(memoryTrackerField, id.x), inner.genCreateState)
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
 
@@ -342,7 +334,7 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
       setField(nodeCursorField, constant(null)),
       setField(traversalCursorField, constant(null)),
       setField(relationshipsField, constant(null)),
-      setField(expandInto, constant(null))
+      setField(expandIntoField, constant(null))
     )
   }
 
@@ -366,12 +358,12 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
   protected def setUpCursors(fromNode: String, toNode: String): IntermediateRepresentation = {
     block(
       loadTypes(types, missingTypes, typeField, missingTypeField),
-      condition(isNull(loadField(expandInto)))(
-        setField(expandInto, newInstance(constructor[CachingExpandInto, Read, Direction, QueryMemoryTracker, Int],
-          loadField(DATA_READ), directionRepresentation(dir), loadField(MEMORY_TRACKER), constant(id.x)))),
+      condition(isNull(loadField(expandIntoField)))(
+        setField(expandIntoField, newInstance(constructor[CachingExpandInto, Read, Direction, MemoryTracker],
+          loadField(DATA_READ), directionRepresentation(dir), loadField(memoryTrackerField)))),
       allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR),
       allocateAndTraceCursor(traversalCursorField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
-      setField(relationshipsField, invoke(loadField(expandInto),
+      setField(relationshipsField, invoke(loadField(expandIntoField),
         CONNECTING_RELATIONSHIPS,
         loadField(nodeCursorField),
         loadField(traversalCursorField),
@@ -392,7 +384,3 @@ object ExpandIntoOperatorTaskTemplate {
     Array[Int],
     Long]("connectingRelationships")
 }
-
-
-
-

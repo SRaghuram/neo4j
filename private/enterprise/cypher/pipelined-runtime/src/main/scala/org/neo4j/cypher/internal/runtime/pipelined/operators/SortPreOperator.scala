@@ -15,6 +15,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
+import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
@@ -27,7 +28,7 @@ class SortPreOperator(val workIdentity: WorkIdentity,
   override def toString: String = "SortPre"
   override def outputBuffer: Option[BufferId] = Some(outputBufferId)
 
-  override def createState(executionState: ExecutionState): OutputOperatorState =
+  override def createState(executionState: ExecutionState, stateFactory: StateFactory): OutputOperatorState =
     new State(executionState.getSink[IndexedSeq[PerArgument[Morsel]]](outputBufferId))
 
   class State(sink: Sink[IndexedSeq[PerArgument[Morsel]]]) extends OutputOperatorState {

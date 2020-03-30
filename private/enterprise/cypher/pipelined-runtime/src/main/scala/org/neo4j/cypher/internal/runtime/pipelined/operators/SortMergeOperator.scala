@@ -42,7 +42,7 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
                            stateFactory: StateFactory,
                            state: PipelinedQueryState,
                            resources: QueryResources): ReduceOperatorState[Morsel, ArgumentStateBuffer] = {
-    argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStateBuffer.Factory(stateFactory, id), ordered = false)
+    argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStateBuffer.Factory(stateFactory, id))
     this
   }
 

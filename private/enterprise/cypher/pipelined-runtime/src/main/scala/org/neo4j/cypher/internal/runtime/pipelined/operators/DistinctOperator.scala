@@ -25,8 +25,6 @@ import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.NoMemoryTracker
-import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -39,10 +37,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.MEMORY_TRACKER
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.SET_MEMORY_TRACKER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.peekState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.setMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDistinctOperatorTaskTemplate.SerialTopLevelDistinctState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
@@ -51,6 +48,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 
 /**
@@ -89,17 +87,17 @@ class DistinctOperatorTask[S <: DistinctOperatorState](argumentStateMap: Argumen
 class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
                        val workIdentity: WorkIdentity,
                        groupings: GroupingExpression)
-                      (val id: Id = Id.INVALID_ID) extends MiddleOperator {
+                      (val id: Id = Id.INVALID_ID) extends MemoryTrackingMiddleOperator(id.x) {
 
   override def createTask(argumentStateCreator: ArgumentStateMapCreator,
                           stateFactory: StateFactory,
                           state: PipelinedQueryState,
-                          resources: QueryResources): OperatorTask =
-    new DistinctOperatorTask(
-      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new DistinctStateFactory(stateFactory.memoryTracker), ordered = false),
-      workIdentity)
+                          resources: QueryResources,
+                          memoryTracker: MemoryTracker): OperatorTask = {
+    new DistinctOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId, new DistinctStateFactory(memoryTracker)), workIdentity)
+  }
 
-  class DistinctStateFactory(memoryTracker: QueryMemoryTracker) extends ArgumentStateFactory[DistinctState] {
+  class DistinctStateFactory(memoryTracker: MemoryTracker) extends ArgumentStateFactory[DistinctState] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): DistinctState = {
       // TODO: Use HeapTrackingCollections.newSet()
       val seenSet = Sets.mutable.empty[groupings.KeyType]()
@@ -119,13 +117,13 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
   class DistinctState(override val argumentRowId: Long,
                       seen: groupings.KeyType => Boolean,
                       override val argumentRowIdsForReducers: Array[Long],
-                      memoryTracker: QueryMemoryTracker) extends DistinctOperatorState {
+                      memoryTracker: MemoryTracker) extends DistinctOperatorState {
 
     override def filterOrProject(row: ReadWriteRow, queryState: QueryState): Boolean = {
       val groupingKey = groupings.computeGroupingKey(row, queryState)
       if (seen(groupingKey)) {
         // Note: this allocation is currently never de-allocated
-        memoryTracker.allocated(groupingKey, id.x)
+        memoryTracker.allocateHeap(groupingKey.estimatedHeapUsage())
         groupings.project(row, groupingKey)
         true
       } else {
@@ -147,6 +145,7 @@ class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate
 
   private val distinctStateField = field[SerialTopLevelDistinctState](codeGen.namer.nextVariableName("distinctState"),
                                                                       peekState[SerialTopLevelDistinctState](argumentStateMapId))
+  private val memoryTrackerField = field[MemoryTracker](codeGen.namer.nextVariableName("memoryTracker"))
 
   override def genInit: IntermediateRepresentation = inner.genInit
 
@@ -172,8 +171,8 @@ class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate
       declareAndAssign(typeRefOf[AnyValue], keyVar, nullCheckIfRequired(groupingExpression.computeKey)),
       condition(or(innerCanContinue,
                    invoke(loadField(distinctStateField),
-                          method[SerialTopLevelDistinctState, Boolean, AnyValue, QueryMemoryTracker]("distinct"),
-                          load(keyVar), loadField(MEMORY_TRACKER)))) {
+                          method[SerialTopLevelDistinctState, Boolean, AnyValue]("distinct"),
+                          load(keyVar)))) {
         block(
           profileRow(id),
           nullCheckIfRequired(groupingExpression.projectKey),
@@ -182,11 +181,16 @@ class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate
       })
   }
 
-  override def genCreateState: IntermediateRepresentation = block(SET_MEMORY_TRACKER, inner.genCreateState)
+  override def genCreateState: IntermediateRepresentation = block(
+    setMemoryTracker(memoryTrackerField, id.x),
+    invoke(loadField(distinctStateField),
+           method[SerialTopLevelDistinctState, Unit, MemoryTracker]("setMemoryTracker"),
+           loadField(memoryTrackerField)),
+    inner.genCreateState)
 
   override def genExpressions: Seq[IntermediateExpression] = Seq(groupingExpression.computeKey, groupingExpression.projectKey)
 
-  override def genFields: Seq[Field] = Seq(distinctStateField, MEMORY_TRACKER)
+  override def genFields: Seq[Field] = Seq(distinctStateField, memoryTrackerField)
 
   override def genLocalVariables: Seq[LocalVariable] = Seq.empty
 
@@ -196,8 +200,6 @@ class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate
 }
 
 object SerialTopLevelDistinctOperatorTaskTemplate {
-  val NO_MEMORY_TRACKING: QueryMemoryTracker = NoMemoryTracker
-
   class DistinctStateFactory(id: Id) extends ArgumentStateFactory[SerialTopLevelDistinctState] {
     override def newStandardArgumentState(argumentRowId: Long,
                                           argumentMorsel: MorselReadCursor,
@@ -223,9 +225,14 @@ object SerialTopLevelDistinctOperatorTaskTemplate {
                                     override val argumentRowIdsForReducers: Array[Long],
                                     seen: AnyValue => Boolean,
                                     id: Id) extends ArgumentState {
-    def distinct(groupingKey: AnyValue, memoryTracker: QueryMemoryTracker): Boolean = {
+    private var memoryTracker: MemoryTracker = _
+
+    def setMemoryTracker(memoryTracker: MemoryTracker): Unit =
+      this.memoryTracker = memoryTracker
+
+    def distinct(groupingKey: AnyValue): Boolean = {
       if (seen(groupingKey)) {
-        memoryTracker.allocated(groupingKey, id.x)
+        memoryTracker.allocateHeap(groupingKey.estimatedHeapUsage())
         true
       } else false
     }

@@ -10,8 +10,6 @@ import org.neo4j.cypher.internal.SlottedRuntime
 import org.neo4j.cypher.internal.runtime.spec.CompiledExpressionsTestBase
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
 import org.neo4j.cypher.internal.runtime.spec.interpreted.LegacyDbHitsTestBase
-import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase
-import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase.ENTERPRISE_PROFILING
 import org.neo4j.cypher.internal.runtime.spec.slotted.SlottedSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.tests.AggregationTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.AllNodeScanTestBase
@@ -182,4 +180,7 @@ class SlottedCompiledExpressionsTest extends CompiledExpressionsTestBase(ENTERPR
 class SlottedNestedPlanExpressionTest extends NestedPlanExpressionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedRollupApplyTest extends RollupApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 
-class SlottedMemoryManagementProfiling extends MemoryManagementProfilingBase(ENTERPRISE_PROFILING, SlottedRuntime)
+// EXPERIMENTAL PROFILING
+
+// Enable this to get heap dumps and memory usage estimates
+//class SlottedMemoryManagementProfiling extends MemoryManagementProfilingBase(ENTERPRISE_PROFILING, SlottedRuntime)
