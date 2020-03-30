@@ -40,15 +40,18 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
     private final Monitors monitors;
     private final StoreFiles storeFiles;
     private final LogFiles logFiles;
+    private LeaderLocator leaderLocator;
 
     StubClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles logFiles,
-            StoreFiles storeFiles, LogProvider logProvider, CatchupComponentsFactory catchupComponentsFactory )
+            StoreFiles storeFiles, LogProvider logProvider, CatchupComponentsFactory catchupComponentsFactory,
+            LeaderLocator leaderLocator )
     {
         this.database = database;
         this.facade = facade;
         this.logProvider = logProvider;
         this.storeFiles = storeFiles;
         this.logFiles = logFiles;
+        this.leaderLocator = leaderLocator;
         ThreadLocalRandom rng = ThreadLocalRandom.current();
         storeId = new StoreId( rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong() );
         this.monitors = new Monitors();
@@ -134,6 +137,6 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
     @Override
     public Optional<LeaderLocator> leaderLocator()
     {
-        return Optional.empty();
+        return Optional.ofNullable( leaderLocator );
     }
 }

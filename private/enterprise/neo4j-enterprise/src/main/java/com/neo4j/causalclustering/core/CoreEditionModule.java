@@ -325,7 +325,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var leaderTransferInterval = globalConfig.get( CausalClusteringSettings.leader_transfer_interval );
         var leaderTransferBackoff = globalConfig.get( CausalClusteringSettings.leader_transfer_member_backoff );
 
-        var leaderTransferService = new LeaderTransferService( globalModule.getJobScheduler(), leaderTransferInterval, topologyService,
+        var leaderTransferService = new LeaderTransferService( globalModule.getJobScheduler(), leaderTransferInterval,
                 globalConfig, databaseManager, raftMessageDispatcher, myIdentity, leaderTransferBackoff, globalModule.getGlobalClock() );
 
         globalLife.add( leaderTransferService );

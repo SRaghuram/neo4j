@@ -12,13 +12,13 @@ import java.util.Set;
 
 import org.neo4j.kernel.database.DatabaseId;
 
-class TopologyContext
+class TransferCandidates
 {
     private final DatabaseId databaseId;
     private RaftId raftId;
     private final Set<MemberId> members;
 
-    TopologyContext( DatabaseId databaseId, RaftId raftId, Set<MemberId> members )
+    TransferCandidates( DatabaseId databaseId, RaftId raftId, Set<MemberId> members )
     {
         this.databaseId = databaseId;
         this.raftId = raftId;

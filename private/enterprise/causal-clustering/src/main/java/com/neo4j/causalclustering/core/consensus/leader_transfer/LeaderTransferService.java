@@ -6,13 +6,15 @@
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.discovery.TopologyService;
+import com.neo4j.causalclustering.core.consensus.membership.RaftMembership;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
 import java.time.Clock;
 import java.time.Duration;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
@@ -23,7 +25,7 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobScheduler;
 
-import static java.time.Clock.systemUTC;
+import static java.util.stream.Collectors.toList;
 
 public class LeaderTransferService extends LifecycleAdapter implements RejectedLeaderTransferHandler
 {
@@ -33,15 +35,22 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
     private final DatabasePenalties databasePenalties;
     private JobHandle<?> jobHandle;
 
-    public LeaderTransferService( JobScheduler jobScheduler, Duration leaderTransferInterval, TopologyService topologyService, Config config,
+    public LeaderTransferService( JobScheduler jobScheduler, Duration leaderTransferInterval, Config config,
             DatabaseManager<ClusteredDatabaseContext> databaseManager, Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler,
             MemberId myself, Duration leaderMemberBackoff, Clock clock )
     {
         this.databasePenalties = new DatabasePenalties( leaderMemberBackoff.toMillis(), TimeUnit.MILLISECONDS, clock );
         this.jobScheduler = jobScheduler;
         this.leaderTransferInterval = leaderTransferInterval;
-        this.transferLeader = new TransferLeader( topologyService, config, databaseManager, messageHandler, myself,
-                                                  databasePenalties, SelectionStrategy.NO_OP );
+
+        RaftMembershipResolver membershipResolver = id ->
+                databaseManager.getDatabaseContext( id )
+                               .map( ctx -> ctx.dependencies().resolveDependency( RaftMembership.class ) )
+                               .orElse( RaftMembership.EMPTY );
+
+        var leadershipsResolver = new RaftLeadershipsResolver( databaseManager, myself );
+        this.transferLeader = new TransferLeader( config, messageHandler, myself,
+                                                  databasePenalties, SelectionStrategy.NO_OP, membershipResolver, leadershipsResolver );
     }
 
     @Override

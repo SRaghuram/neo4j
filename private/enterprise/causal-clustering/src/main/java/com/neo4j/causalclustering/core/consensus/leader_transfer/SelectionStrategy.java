@@ -11,5 +11,5 @@ public interface SelectionStrategy
 {
     SelectionStrategy NO_OP = validTopologies -> LeaderTransferContext.NO_TARGET;
 
-    LeaderTransferContext select( List<TopologyContext> validTopologies );
+    LeaderTransferContext select( List<TransferCandidates> validTopologies );
 }

@@ -13,11 +13,11 @@ import static java.util.Collections.shuffle;
 class RandomStrategy implements SelectionStrategy
 {
     @Override
-    public LeaderTransferContext select( List<TopologyContext> validTopologies )
+    public LeaderTransferContext select( List<TransferCandidates> validTopologies )
     {
         var databaseCoreTopologies = new ArrayList<>( validTopologies );
         shuffle( databaseCoreTopologies );
-        for ( TopologyContext validTopology : databaseCoreTopologies )
+        for ( TransferCandidates validTopology : databaseCoreTopologies )
         {
             var members = new ArrayList<>( validTopology.members() );
             shuffle( members );
