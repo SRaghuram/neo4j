@@ -118,7 +118,6 @@ object SerialTopLevelSkipOperatorTaskTemplate {
     override protected def getCount: Long = countLeft
     override protected def setCount(count: Long): Unit = countLeft = count
     override def toString: String = s"StandardSerialTopLevelSkipState($argumentRowId, countLeft=$countLeft)"
-    override def isCancelled: Boolean = false
   }
 
   /**
@@ -134,7 +133,5 @@ object SerialTopLevelSkipOperatorTaskTemplate {
     override protected def getCount: Long = countLeft
     override protected def setCount(count: Long): Unit = countLeft = count
     override def toString: String = s"VolatileSerialTopLevelSkipState($argumentRowId, countLeft=$countLeft)"
-    override def isCancelled: Boolean = false
-
   }
 }

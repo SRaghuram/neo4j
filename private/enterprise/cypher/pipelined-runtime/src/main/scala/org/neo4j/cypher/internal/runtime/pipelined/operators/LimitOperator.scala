@@ -42,6 +42,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.ConcurrentCountingState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.StandardCountingState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.evaluateCountValue
+import org.neo4j.cypher.internal.runtime.pipelined.operators.LimitOperator.LimitState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_COUNTER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_MORSEL
@@ -54,6 +55,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.UnorderedArgumentStateMapReader
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -62,17 +64,17 @@ import org.neo4j.values.AnyValue
 
 object LimitOperator {
 
-  trait CancellableState {
+  trait LimitState extends CountingState with WorkCanceller {
     self: CountingState =>
     def isCancelled: Boolean = getCount <= 0
   }
 
-  class LimitStateFactory(count: Long) extends ArgumentStateFactory[CountingState] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): CountingState =
-      new StandardCountingState(argumentRowId, count, argumentRowIdsForReducers) with CancellableState
+  class LimitStateFactory(count: Long) extends ArgumentStateFactory[LimitState] {
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): LimitState =
+      new StandardCountingState(argumentRowId, count, argumentRowIdsForReducers) with LimitState
 
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): CountingState =
-      new ConcurrentCountingState(argumentRowId, count, argumentRowIdsForReducers) with CancellableState
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): LimitState =
+      new ConcurrentCountingState(argumentRowId, count, argumentRowIdsForReducers) with LimitState
 
     override def completeOnConstruction: Boolean = true
   }
@@ -91,7 +93,7 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
       new LimitOperator.LimitStateFactory(limit)))
   }
 
-  class LimitOperatorTask(argumentStateMap: ArgumentStateMap[CountingState]) extends OperatorTask {
+  class LimitOperatorTask(argumentStateMap: ArgumentStateMap[LimitState]) extends OperatorTask {
 
     override def workIdentity: WorkIdentity = LimitOperator.this.workIdentity
 
@@ -318,7 +320,7 @@ object SerialTopLevelLimitOperatorTaskTemplate {
   }
 
   class StandardSerialLimitState(override val argumentRowId: Long,
-                                 override val argumentRowIdsForReducers: Array[Long]) extends SerialCountingState {
+                                 override val argumentRowIdsForReducers: Array[Long]) extends SerialCountingState with WorkCanceller {
 
     private var countLeft: Long = -1L
 
@@ -334,7 +336,7 @@ object SerialTopLevelLimitOperatorTaskTemplate {
    * to be accessed in serial.
    */
   class VolatileSerialLimitState(override val argumentRowId: Long,
-                                 override val argumentRowIdsForReducers: Array[Long]) extends SerialCountingState {
+                                 override val argumentRowIdsForReducers: Array[Long]) extends SerialCountingState with WorkCanceller{
 
     @volatile private var countLeft: Long = -1L
 

@@ -33,7 +33,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.peekState
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.util.Preconditions
@@ -154,7 +154,7 @@ abstract class SerialCountingState extends CountingState {
 /**
   * Query-wide row count for the rows from one argumentRowId.
   */
-abstract class CountingState extends WorkCanceller {
+abstract class CountingState extends ArgumentState {
   def reserve(wanted: Int): Int
 
   protected def getCount: Long

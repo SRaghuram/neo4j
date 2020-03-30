@@ -575,13 +575,13 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
           throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
         }
 
-      case _: Limit | _: Skip =>
+      case _: Limit =>
         val asm = stateDefiner.newArgumentStateMap(plan.id, argument.argumentSlotOffset)
         markCancellerInUpstreamBuffers(source.inputBuffer, argument, asm.id)
         source.fuseOrInterpret(plan, isBreaking = true)
         source
 
-      case _: Distinct =>
+      case _: Distinct | _: Skip =>
         val asm = stateDefiner.newArgumentStateMap(plan.id, argument.argumentSlotOffset)
         argument.downstreamStatesOnRHS += asm.id
         source.fuseOrInterpret(plan, breakingPolicy.breakOn(plan, applyPlans(plan.id)))
