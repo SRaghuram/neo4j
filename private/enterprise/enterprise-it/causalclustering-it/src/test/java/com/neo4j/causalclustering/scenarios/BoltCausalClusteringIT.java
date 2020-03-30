@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
-import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
+import com.neo4j.causalclustering.readreplica.CatchupProcessManager;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -337,8 +337,8 @@ class BoltCausalClusteringIT
             // given
             ReadReplica readReplica = cluster.getReadReplicaById( 0 );
 
-            CatchupPollingProcess catchupPollingProcess = readReplica.resolveDependency( DEFAULT_DATABASE_NAME, CatchupPollingProcess.class );
-            catchupPollingProcess.stop();
+            CatchupProcessManager catchupProcessManager = readReplica.resolveDependency( DEFAULT_DATABASE_NAME, CatchupProcessManager.class );
+            catchupProcessManager.stop();
 
             try ( Driver driver1 = makeDriver( cluster ) )
             {
@@ -357,7 +357,7 @@ class BoltCausalClusteringIT
                 } );
 
                 assertNotNull( bookmark );
-                catchupPollingProcess.start();
+                catchupProcessManager.start();
 
                 try ( Driver driver2 = makeDriver( readReplica.directURI() ) )
                 {
@@ -526,9 +526,10 @@ class BoltCausalClusteringIT
 
                 ReadReplica replica = cluster.findAnyReadReplica();
 
-                CatchupPollingProcess pollingClient = replica.defaultDatabase().getDependencyResolver().resolveDependency( CatchupPollingProcess.class );
+                CatchupProcessManager catchupProcessManager = replica.defaultDatabase().getDependencyResolver()
+                        .resolveDependency( CatchupProcessManager.class );
 
-                pollingClient.stop();
+                catchupProcessManager.stop();
 
                 Bookmark lastBookmark = null;
                 int iterations = 5;
@@ -554,9 +555,9 @@ class BoltCausalClusteringIT
                 }
 
                 // when the poller is resumed, it does make it to the read replica
-                pollingClient.start();
+                catchupProcessManager.start();
 
-                pollingClient.upToDateFuture().get();
+                catchupProcessManager.getCatchupProcess().upToDateFuture().get();
 
                 happyCount = 0;
                 numberOfRequests = 1_000;

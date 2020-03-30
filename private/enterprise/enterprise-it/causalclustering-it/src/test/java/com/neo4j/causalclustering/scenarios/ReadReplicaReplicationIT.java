@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
+import com.neo4j.causalclustering.readreplica.CatchupProcessManager;
 import com.neo4j.causalclustering.readreplica.ReadReplicaDatabaseManager;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.test.causalclustering.ClusterConfig;
@@ -362,8 +363,8 @@ class ReadReplicaReplicationIT
 
         var readReplica = cluster.findAnyReadReplica();
         var readReplicaGraphDatabase = readReplica.defaultDatabase();
-        var pollingClient = readReplicaGraphDatabase.getDependencyResolver().resolveDependency( CatchupPollingProcess.class );
-        pollingClient.stop();
+        var catchupProcessManager = readReplicaGraphDatabase.getDependencyResolver().resolveDependency( CatchupProcessManager.class );
+        catchupProcessManager.stop();
 
         cluster.coreTx( ( coreGraphDatabase, transaction ) ->
         {
@@ -380,7 +381,7 @@ class ReadReplicaReplicationIT
                 () -> transactionIdTracker( readReplica ).awaitUpToDate( databaseId, transactionVisibleOnLeader, ofSeconds( 15 ) ) );
 
         // when the poller is resumed, it does make it to the read replica
-        pollingClient.start();
+        catchupProcessManager.start();
         transactionIdTracker( readReplica ).awaitUpToDate( databaseId, transactionVisibleOnLeader, ofSeconds( 15 ) );
     }
 

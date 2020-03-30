@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
+import com.neo4j.causalclustering.readreplica.CatchupProcessManager;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,14 +64,14 @@ class ReadReplicaStoreCopyIT
     {
         ReadReplica readReplica = cluster.findAnyReadReplica();
 
-        CatchupPollingProcess catchupPollingProcess = readReplica.resolveDependency( DEFAULT_DATABASE_NAME, CatchupPollingProcess.class );
-        catchupPollingProcess.stop();
+        CatchupProcessManager catchupProcessManager = readReplica.resolveDependency( DEFAULT_DATABASE_NAME, CatchupProcessManager.class );
+        catchupProcessManager.stop();
 
         writeSomeDataAndForceLogRotations( cluster );
         Semaphore storeCopyBlockingSemaphore = addStoreCopyBlockingMonitor( readReplica );
         try
         {
-            catchupPollingProcess.start();
+            catchupProcessManager.start();
             waitForStoreCopyToStartAndBlock( storeCopyBlockingSemaphore );
 
             GraphDatabaseFacade replicaGraphDatabase = readReplica.defaultDatabase();

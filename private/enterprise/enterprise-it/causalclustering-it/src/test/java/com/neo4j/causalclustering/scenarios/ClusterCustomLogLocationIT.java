@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
+import com.neo4j.causalclustering.readreplica.CatchupProcessManager;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeAll;
@@ -72,8 +73,8 @@ class ClusterCustomLogLocationIT
         Collection<ReadReplica> readReplicas = cluster.readReplicas();
         for ( ReadReplica readReplica : readReplicas )
         {
-            CatchupPollingProcess catchupPollingProcess = readReplica.resolveDependency( DEFAULT_DATABASE_NAME, CatchupPollingProcess.class );
-            catchupPollingProcess.upToDateFuture().get();
+            CatchupProcessManager catchupProcessManager = readReplica.resolveDependency( DEFAULT_DATABASE_NAME, CatchupProcessManager.class );
+            catchupProcessManager.getCatchupProcess().upToDateFuture().get();
             DependencyResolver dependencyResolver = readReplica.defaultDatabase().getDependencyResolver();
             LogFiles logFiles = dependencyResolver.resolveDependency( LogFiles.class );
             assertEquals( logFiles.logFilesDirectory().getName(), readReplica.defaultDatabase().databaseName() );

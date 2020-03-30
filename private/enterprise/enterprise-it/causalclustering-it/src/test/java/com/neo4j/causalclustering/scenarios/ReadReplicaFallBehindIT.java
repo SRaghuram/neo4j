@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
+import com.neo4j.causalclustering.readreplica.CatchupProcessManager;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -63,8 +64,8 @@ class ReadReplicaFallBehindIT
         ReadReplica readReplica = cluster.getReadReplicaById( 0 );
         assertDatabaseEventuallyStarted( SYSTEM_DATABASE_NAME, Set.of( readReplica ) );
 
-        CatchupPollingProcess catchupProcess = readReplica.resolveDependency( SYSTEM_DATABASE_NAME, CatchupPollingProcess.class );
-        catchupProcess.stop();
+        CatchupProcessManager catchupProcessManager = readReplica.resolveDependency( SYSTEM_DATABASE_NAME, CatchupProcessManager.class );
+        catchupProcessManager.stop();
 
         // we need to create a few databases (causing a few transactions) so that the log pruning actually happens
         List<String> databaseNames = List.of( "foo", "bar", "baz" );
@@ -86,7 +87,8 @@ class ReadReplicaFallBehindIT
         }
 
         // this should make the read replica start pulling again and realise it needs a store copy of system database
-        catchupProcess.start();
+        catchupProcessManager.start();
+        CatchupPollingProcess catchupProcess = catchupProcessManager.getCatchupProcess();
 
         // this will be true after the store copy, when we are back to pulling transactions normally again
         assertTrue( catchupProcess.upToDateFuture().get( 1, MINUTES ) );

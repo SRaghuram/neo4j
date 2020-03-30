@@ -59,7 +59,6 @@ public class CatchupProcessManager extends SafeLifecycle
     private final UpstreamDatabaseStrategySelector selectionStrategyPipeline;
     private final TimerService timerService;
     private final long txPullIntervalMillis;
-    private final LifeSupport txPulling;
     private final CommandIndexTracker commandIndexTracker;
     private final Executor executor;
     private final ReadReplicaDatabaseContext databaseContext;
@@ -72,6 +71,7 @@ public class CatchupProcessManager extends SafeLifecycle
     private final PageCacheTracer pageCacheTracer;
 
     private CatchupPollingProcess catchupProcess;
+    private LifeSupport txPulling;
     private volatile boolean isPanicked;
     private Timer timer;
 
@@ -95,7 +95,6 @@ public class CatchupProcessManager extends SafeLifecycle
         this.txPullIntervalMillis = config.get( CausalClusteringSettings.pull_interval ).toMillis();
         this.databaseEventDispatch = databaseEventDispatch;
         this.pageCacheTracer = pageCacheTracer;
-        this.txPulling = new LifeSupport();
         this.isPanicked = false;
     }
 
@@ -103,6 +102,7 @@ public class CatchupProcessManager extends SafeLifecycle
     public void start0()
     {
         log.info( "Starting " + this.getClass().getSimpleName() );
+        txPulling = new LifeSupport();
         catchupProcess = createCatchupProcess( databaseContext );
         txPulling.start();
         initTimer();
@@ -143,7 +143,6 @@ public class CatchupProcessManager extends SafeLifecycle
                 batchingTxApplier, databaseEventDispatch, dbCatchupComponents.storeCopyProcess(), logProvider, this::panic,
                 new UpstreamStrategyBasedAddressProvider( topologyService, selectionStrategyPipeline ) );
 
-        databaseContext.dependencies().satisfyDependencies( catchupProcess );
         txPulling.add( batchingTxApplier );
         txPulling.add( catchupProcess );
         return catchupProcess;
@@ -168,12 +167,15 @@ public class CatchupProcessManager extends SafeLifecycle
         this.catchupProcess = catchupProcess;
     }
 
+    @VisibleForTesting
+    public CatchupPollingProcess getCatchupProcess()
+    {
+        return catchupProcess;
+    }
+
     void initTimer()
     {
-        if ( timer == null )
-        {
-            timer = timerService.create( TX_PULLER_TIMER, Group.PULL_UPDATES, timeout -> onTimeout() );
-            timer.set( fixedTimeout( txPullIntervalMillis, TimeUnit.MILLISECONDS ) );
-        }
+        timer = timerService.create( TX_PULLER_TIMER, Group.PULL_UPDATES, timeout -> onTimeout() );
+        timer.set( fixedTimeout( txPullIntervalMillis, TimeUnit.MILLISECONDS ) );
     }
 }

@@ -101,6 +101,7 @@ class ReadReplicaDatabaseFactory
         CatchupProcessManager catchupProcess = new CatchupProcessManager( catchupExecutor, catchupComponentsRepository, databaseContext, panicker,
                 topologyService, catchupClientFactory, upstreamDatabaseStrategySelector, timerService, commandIndexTracker, internalLogProvider,
                 config, databaseEventDispatch, pageCacheTracer );
+        databaseContext.dependencies().satisfyDependency( catchupProcess );
 
         var raftIdStorage = clusterStateFactory.createRaftIdStorage( databaseContext.databaseId().name(), internalLogProvider );
 
