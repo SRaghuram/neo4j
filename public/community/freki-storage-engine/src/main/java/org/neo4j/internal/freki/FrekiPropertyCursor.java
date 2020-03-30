@@ -75,6 +75,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
         cursorAccessTracer.registerNodeToPropertyDirect();
         if ( ((FrekiMainStoreCursor) nodeCursor).initializeOtherCursorFromStateOfThisCursor( this ) )
         {
+            ensurePropertiesLoaded();
             buffer = data.propertyBuffer();
             if ( readPropertyKeys( buffer ) )
             {
@@ -113,6 +114,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
                     int offset = relCursor.currentRelationshipPropertiesOffset();
                     if ( offset != NULL_OFFSET )
                     {
+                        ensurePropertiesLoaded();
                         readPropertyKeys( buffer.position( offset ) );
                         initializedFromEntity = true;
                     }
@@ -195,7 +197,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
         return false;
     }
 
-    public boolean loadReference()
+    private boolean loadReference()
     {
         FrekiReference reference = referenceToLoad;
         referenceToLoad = null;
@@ -225,6 +227,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
         else
         {
             // This is properties for a node
+            ensurePropertiesLoaded();
             buffer = data.propertyBuffer();
         }
         return readPropertyKeys( buffer );

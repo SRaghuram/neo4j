@@ -22,7 +22,15 @@ package org.neo4j.internal.freki;
 import java.nio.ByteBuffer;
 
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
+import static org.neo4j.internal.freki.Header.FLAG_IS_DENSE;
+import static org.neo4j.internal.freki.Header.FLAG_LABELS;
+import static org.neo4j.internal.freki.Header.OFFSET_DEGREES;
+import static org.neo4j.internal.freki.Header.OFFSET_PROPERTIES;
+import static org.neo4j.internal.freki.Header.OFFSET_RECORD_POINTER;
+import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIPS;
+import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIP_TYPE_OFFSETS;
 import static org.neo4j.internal.freki.MutableNodeRecordData.recordPointerToString;
+import static org.neo4j.internal.freki.StreamVByte.readLongs;
 
 /**
  * Data that cursors need to read data. This is a minimal parsed version of data loaded to a {@link Record} from a {@link Store}.
@@ -32,6 +40,7 @@ import static org.neo4j.internal.freki.MutableNodeRecordData.recordPointerToStri
 class FrekiCursorData
 {
     Record[] records;
+    private Header header = new Header();
 
     long nodeId = NULL;
     boolean x1Loaded;
@@ -55,29 +64,60 @@ class FrekiCursorData
         this.records = new Record[numMainStores];
     }
 
-    void assignLabelOffset( int offset, ByteBuffer buffer )
+    void gatherDataFromX1( Record record )
     {
-        labelOffset = offset;
-        labelBuffer = buffer;
+        x1Loaded = true;
+        ByteBuffer buffer = record.data( 0 );
+        header.deserialize( buffer );
+        assignDataOffsets( buffer );
+        if ( header.hasOffset( OFFSET_RECORD_POINTER ) )
+        {
+            forwardPointer = readRecordPointer( buffer );
+        }
     }
 
-    void assignPropertyOffset( int offset, ByteBuffer buffer )
+    void gatherDataFromXL( Record record )
     {
-        propertyOffset = offset;
-        propertyBuffer = buffer;
+        xLLoaded = true;
+        ByteBuffer buffer = record.data( 0 );
+        header.deserialize( buffer );
+        assignDataOffsets( buffer );
+        assert header.hasOffset( OFFSET_RECORD_POINTER );
+        backwardPointer = readRecordPointer( buffer );
     }
 
-    void assignRelationshipOffset( int offset, ByteBuffer buffer, int typeOffsetsOffset )
+    private void assignDataOffsets( ByteBuffer x1Buffer )
     {
-        relationshipOffset = offset;
-        relationshipBuffer = buffer;
-        relationshipTypeOffsetsOffset = typeOffsetsOffset;
+        if ( header.hasFlag( FLAG_IS_DENSE ) )
+        {
+            isDense = true;
+        }
+        if ( header.hasFlag( FLAG_LABELS ) )
+        {
+            labelOffset = x1Buffer.position();
+            labelBuffer = x1Buffer;
+        }
+        if ( header.hasOffset( OFFSET_PROPERTIES ) )
+        {
+            propertyOffset = header.getOffset( OFFSET_PROPERTIES );
+            propertyBuffer = x1Buffer;
+        }
+        if ( header.hasOffset( OFFSET_RELATIONSHIPS ) )
+        {
+            relationshipOffset = header.getOffset( OFFSET_RELATIONSHIPS );
+            relationshipBuffer = x1Buffer;
+            relationshipTypeOffsetsOffset = header.getOffset( OFFSET_RELATIONSHIP_TYPE_OFFSETS );
+        }
+        if ( header.hasOffset( OFFSET_DEGREES ) )
+        {
+            relationshipOffset = header.getOffset( OFFSET_DEGREES );
+            relationshipBuffer = x1Buffer;
+        }
     }
 
-    void assignDegreesOffset( int offset, ByteBuffer buffer )
+    private long readRecordPointer( ByteBuffer xLBuffer )
     {
-        relationshipOffset = offset;
-        relationshipBuffer = buffer;
+        return readLongs( xLBuffer.position( header.getOffset( OFFSET_RECORD_POINTER ) ) )[0];
     }
 
     ByteBuffer labelBuffer()
