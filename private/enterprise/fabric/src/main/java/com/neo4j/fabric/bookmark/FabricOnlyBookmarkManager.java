@@ -12,11 +12,7 @@ import com.neo4j.fabric.executor.FabricException;
 import com.neo4j.fabric.executor.Location;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import org.neo4j.bolt.runtime.Bookmark;
@@ -27,12 +23,11 @@ public class FabricOnlyBookmarkManager implements TransactionBookmarkManager
     private final FabricBookmarkParser fabricBookmarkParser = new FabricBookmarkParser();
     private final LocalGraphTransactionIdTracker transactionIdTracker;
 
-    private final Map<UUID, List<RemoteBookmark>> bookmarksFromExternalGraphs = new ConcurrentHashMap<>();
-    private final Map<UUID,Long> txIdsFromInternalGraphs = new ConcurrentHashMap<>();
+    // must be taken when updating the final bookmark
+    private final Object finalBookmarkLock = new Object();
 
-    private volatile Map<UUID,Long> requestedInternalGraphTxIds;
-    private volatile Map<UUID, List<RemoteBookmark>> requestedExternalGraphStates;
-    private volatile RemoteBookmark interClusterBookmark;
+    private volatile FabricBookmark submittedBookmark;
+    private volatile FabricBookmark finalBookmark;
 
     public FabricOnlyBookmarkManager( LocalGraphTransactionIdTracker transactionIdTracker )
     {
@@ -43,10 +38,13 @@ public class FabricOnlyBookmarkManager implements TransactionBookmarkManager
     public void processSubmittedByClient( List<Bookmark> bookmarks )
     {
         var fabricBookmarks = convert( bookmarks );
-        this.requestedInternalGraphTxIds = getInternalGraphTxIds( fabricBookmarks );
-        this.requestedExternalGraphStates = getExternalGraphStates( fabricBookmarks );
+        this.submittedBookmark = FabricBookmark.merge( fabricBookmarks );
+        this.finalBookmark = new FabricBookmark(
+                new ArrayList<>( submittedBookmark.getInternalGraphStates() ),
+                new ArrayList<>( submittedBookmark.getExternalGraphStates() )
+        );
         // regardless of what we do, System graph must be always up to date
-        awaitSystemGraphUpTpDate();
+        awaitSystemGraphUpToDate();
     }
 
     private List<FabricBookmark> convert( List<Bookmark> bookmarks )
@@ -62,34 +60,11 @@ public class FabricOnlyBookmarkManager implements TransactionBookmarkManager
         } ).collect( Collectors.toList() );
     }
 
-    private Map<UUID,Long> getInternalGraphTxIds( List<FabricBookmark> fabricBookmarks )
+    private void awaitSystemGraphUpToDate()
     {
-        Map<UUID,Long> internalGraphTxIds = new HashMap<>();
-
-        fabricBookmarks.stream()
-                .flatMap( fabricBookmark -> fabricBookmark.getInternalGraphStates().stream() )
-                .forEach( internalGraphState -> internalGraphTxIds.merge( internalGraphState.getGraphUuid(),
-                        internalGraphState.getTransactionId(),
-                        Math::max )
-                );
-
-        return internalGraphTxIds;
-    }
-
-    private Map<UUID,List<RemoteBookmark>> getExternalGraphStates( List<FabricBookmark> fabricBookmarks )
-    {
-        Map<UUID,List<RemoteBookmark>> externalGraphStates = new HashMap<>();
-        fabricBookmarks.stream()
-                .flatMap( fabricBookmark -> fabricBookmark.getExternalGraphStates().stream() )
-                .forEach( externalGraphState -> externalGraphStates.computeIfAbsent( externalGraphState.getGraphUuid(), key -> new ArrayList<>() )
-                        .addAll( externalGraphState.getBookmarks() )
-                );
-        return externalGraphStates;
-    }
-
-    private void awaitSystemGraphUpTpDate()
-    {
-        transactionIdTracker.awaitSystemGraphUpToDate( requestedInternalGraphTxIds );
+        var graphUuid2TxIdMapping = submittedBookmark.getInternalGraphStates().stream()
+                .collect( Collectors.toMap( FabricBookmark.InternalGraphState::getGraphUuid, FabricBookmark.InternalGraphState::getTransactionId) );
+        transactionIdTracker.awaitSystemGraphUpToDate( graphUuid2TxIdMapping );
     }
 
     @Override
@@ -97,32 +72,15 @@ public class FabricOnlyBookmarkManager implements TransactionBookmarkManager
     {
         if ( location instanceof Location.Remote.External )
         {
-            return requestedExternalGraphStates.getOrDefault( location.getUuid(), List.of() );
+            return submittedBookmark.getExternalGraphStates().stream()
+                    .filter( egs -> egs.getGraphUuid().equals( location.getUuid() ) )
+                    .map( FabricBookmark.ExternalGraphState::getBookmarks )
+                    .findAny()
+                    .orElse( List.of() );
         }
 
-        if ( interClusterBookmark == null )
-        {
-            constructInterClusterBookmark();
-        }
-
-        return List.of( interClusterBookmark );
-    }
-
-    private void constructInterClusterBookmark()
-    {
-        // The inter-cluster remote needs the same bookmark data that was submitted to the this DBMS,
-        // so whatever was received in 'processSubmittedByClient' can be simply passed on.
-        // However, since the raw bookmark data has already been processed and only the useful stuff kept,
-        // it is better to create a bookmark from that
-        var internalGraphStates = requestedInternalGraphTxIds.entrySet().stream()
-                .map( entry -> new FabricBookmark.InternalGraphState( entry.getKey(), entry.getValue() ) )
-                .collect( Collectors.toList());
-        var externalGraphStates = requestedExternalGraphStates.entrySet().stream()
-                .map( entry -> new FabricBookmark.ExternalGraphState( entry.getKey(), entry.getValue() ) )
-                .collect( Collectors.toList());
-
-        var fabricBookmark = new FabricBookmark( internalGraphStates, externalGraphStates );
-        interClusterBookmark = new RemoteBookmark( fabricBookmark.serialize() );
+        // The inter-cluster remote needs the same bookmark data that was submitted to the this DBMS
+        return List.of( new RemoteBookmark( submittedBookmark.serialize() ) );
     }
 
     @Override
@@ -133,65 +91,47 @@ public class FabricOnlyBookmarkManager implements TransactionBookmarkManager
             return;
         }
 
-        if ( location instanceof Location.Remote.External )
+        synchronized ( finalBookmarkLock )
         {
-            bookmarksFromExternalGraphs.computeIfAbsent( location.getUuid(), key -> new ArrayList<>() ).add( bookmark );
-        }
-        else
-        {
-            FabricBookmark fabricBookmark = fabricBookmarkParser.parse( bookmark.getSerialisedState() );
-            fabricBookmark.getExternalGraphStates().forEach( externalGraphState ->
-                    bookmarksFromExternalGraphs.computeIfAbsent( externalGraphState.getGraphUuid(), key -> new ArrayList<>() )
-                    .addAll( externalGraphState.getBookmarks() ) );
-
-            fabricBookmark.getInternalGraphStates()
-                    .forEach( internalGraphState ->
-                            txIdsFromInternalGraphs.merge( internalGraphState.getGraphUuid(), internalGraphState.getTransactionId(), Math::max ) );
+            if ( location instanceof Location.Remote.External )
+            {
+                var externalGraphState = new FabricBookmark.ExternalGraphState( location.getUuid(), List.of( bookmark ) );
+                var bookmarkUpdate = new FabricBookmark( List.of(), List.of( externalGraphState ) );
+                finalBookmark = FabricBookmark.merge( List.of( finalBookmark, bookmarkUpdate ) );
+            }
+            else
+            {
+                var fabricBookmark = fabricBookmarkParser.parse( bookmark.getSerialisedState() );
+                finalBookmark = FabricBookmark.merge( List.of( finalBookmark, fabricBookmark ) );
+            }
         }
     }
 
     @Override
     public void awaitUpToDate( Location.Local location )
     {
-        Long transactionId = requestedInternalGraphTxIds.get( location.getUuid() );
-        if ( transactionId != null )
-        {
-            transactionIdTracker.awaitGraphUpToDate( location, transactionId);
-        }
+        submittedBookmark.getInternalGraphStates().stream()
+                .filter( egs -> egs.getGraphUuid().equals( location.getUuid() ) )
+                .map( FabricBookmark.InternalGraphState::getTransactionId )
+                .findAny()
+                .ifPresent( transactionId -> transactionIdTracker.awaitGraphUpToDate( location, transactionId ) );
     }
 
     @Override
     public void localTransactionCommitted( Location.Local location )
     {
-        long transactionId = transactionIdTracker.getTransactionId( location );
-        txIdsFromInternalGraphs.put( location.getUuid(), transactionId );
+        synchronized ( finalBookmarkLock )
+        {
+            long transactionId = transactionIdTracker.getTransactionId( location );
+            var internalGraphState = new FabricBookmark.InternalGraphState( location.getUuid(), transactionId );
+            var bookmarkUpdate = new FabricBookmark( List.of( internalGraphState ), List.of() );
+            finalBookmark = FabricBookmark.merge( List.of( finalBookmark, bookmarkUpdate ) );
+        }
     }
 
     @Override
     public FabricBookmark constructFinalBookmark()
     {
-        var internalGraphStates = createInternalGraphStates();
-        var externalGraphStates = createExternalGraphStates();
-        return new FabricBookmark( internalGraphStates, externalGraphStates );
-    }
-
-    private List<FabricBookmark.InternalGraphState> createInternalGraphStates()
-    {
-        Map<UUID,Long> internalGraphTxIds = new HashMap<>( txIdsFromInternalGraphs );
-        requestedInternalGraphTxIds.forEach( internalGraphTxIds::putIfAbsent );
-
-        return internalGraphTxIds.entrySet().stream()
-                .map( entry -> new FabricBookmark.InternalGraphState( entry.getKey(), entry.getValue() ) )
-                .collect( Collectors.toList());
-    }
-
-    private List<FabricBookmark.ExternalGraphState> createExternalGraphStates()
-    {
-        Map<UUID,List<RemoteBookmark>> externalGraphTxIds = new HashMap<>( bookmarksFromExternalGraphs );
-        requestedExternalGraphStates.forEach( externalGraphTxIds::putIfAbsent );
-
-        return externalGraphTxIds.entrySet().stream()
-                .map( entry -> new  FabricBookmark.ExternalGraphState( entry.getKey(), entry.getValue() ) )
-                .collect( Collectors.toList());
+        return finalBookmark;
     }
 }

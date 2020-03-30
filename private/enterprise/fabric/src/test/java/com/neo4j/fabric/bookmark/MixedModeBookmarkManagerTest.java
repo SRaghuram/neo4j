@@ -39,6 +39,8 @@ class MixedModeBookmarkManagerTest
     @Test
     void testBasicRemoteBookmarkHandling()
     {
+        bookmarkManager.processSubmittedByClient( List.of() );
+
         bookmarkManager.remoteTransactionCommitted( location1, bookmark( "BB-1" ));
         bookmarkManager.remoteTransactionCommitted( location2, bookmark( "BB-2" ));
 

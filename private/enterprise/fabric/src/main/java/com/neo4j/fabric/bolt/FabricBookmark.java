@@ -8,10 +8,14 @@ package com.neo4j.fabric.bolt;
 import com.neo4j.fabric.bookmark.BookmarkStateSerializer;
 import com.neo4j.fabric.driver.RemoteBookmark;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 
 import org.neo4j.bolt.dbapi.BookmarkMetadata;
 import org.neo4j.bolt.runtime.BoltResponseHandler;
@@ -73,6 +77,45 @@ public class FabricBookmark extends BookmarkMetadata implements Bookmark
     {
         String serializedState = BookmarkStateSerializer.serialize( this );
         return PREFIX + serializedState;
+    }
+
+    public static FabricBookmark merge( List<FabricBookmark> fabricBookmarks )
+    {
+        List<InternalGraphState> mergedInternalGraphStates = mergeInternalGraphStates( fabricBookmarks );
+        List<ExternalGraphState> mergedExternalGraphStates = mergeExternalGraphStates( fabricBookmarks );
+
+        return new FabricBookmark( mergedInternalGraphStates, mergedExternalGraphStates );
+    }
+
+    private static List<InternalGraphState> mergeInternalGraphStates( List<FabricBookmark> fabricBookmarks  )
+    {
+        Map<UUID,Long> internalGraphTxIds = new HashMap<>();
+
+        fabricBookmarks.stream()
+                .flatMap( fabricBookmark -> fabricBookmark.getInternalGraphStates().stream() )
+                .forEach( internalGraphState -> internalGraphTxIds.merge( internalGraphState.getGraphUuid(),
+                        internalGraphState.getTransactionId(),
+                        Math::max )
+                );
+
+        return internalGraphTxIds.entrySet().stream()
+                .map( entry -> new InternalGraphState( entry.getKey(), entry.getValue() ) )
+                .collect( Collectors.toList());
+    }
+
+    private static List<ExternalGraphState> mergeExternalGraphStates( List<FabricBookmark> fabricBookmarks  )
+    {
+        Map<UUID,List<RemoteBookmark>> externalGraphStates = new HashMap<>();
+
+        fabricBookmarks.stream()
+                .flatMap( fabricBookmark -> fabricBookmark.getExternalGraphStates().stream() )
+                .forEach( externalGraphState -> externalGraphStates.computeIfAbsent( externalGraphState.getGraphUuid(), key -> new ArrayList<>() )
+                        .addAll( externalGraphState.getBookmarks() )
+                );
+
+        return externalGraphStates.entrySet().stream()
+                .map( entry -> new ExternalGraphState( entry.getKey(), entry.getValue() ) )
+                .collect( Collectors.toList());
     }
 
     @Override

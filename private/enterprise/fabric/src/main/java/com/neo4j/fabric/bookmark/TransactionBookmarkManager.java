@@ -23,7 +23,7 @@ public interface TransactionBookmarkManager
     void processSubmittedByClient( List<Bookmark> bookmarks );
 
     /**
-     * Returns bookmarks that should be sent to a remote when oping a transaction there.
+     * Returns bookmarks that should be sent to a remote when opening a transaction there.
      */
     List<RemoteBookmark> getBookmarksForRemote( Location.Remote location );
 
