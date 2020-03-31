@@ -2958,7 +2958,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("map projection on null from refslot") {
     //given
     val offset = 0
-    val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTMap)
+    val slots = SlotConfiguration.empty.newReference("n", nullable = true, symbols.CTMap)
 
     //needed for interpreted
     SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
@@ -2975,7 +2975,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("map projection on null when slot not known") {
     //given
     val offset = 0
-    val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTMap)
+    val slots = SlotConfiguration.empty.newReference("n", nullable = true, symbols.CTMap)
     //needed for interpreted
     SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
     val context = SlottedRow(slots)
