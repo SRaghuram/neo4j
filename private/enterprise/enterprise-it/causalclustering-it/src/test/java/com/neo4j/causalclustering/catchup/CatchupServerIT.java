@@ -98,10 +98,9 @@ class CatchupServerIT
     void startDb()
     {
         temporaryDirectory = testDirectory.directory( "temp" );
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
-                .setFileSystem( fs )
-                .setConfig( auth_enabled, true )
-                .build();
+        TestEnterpriseDatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() );
+        configure( builder );
+        managementService = builder.build();
         db = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         createPropertyIndex();
         addData( db );
@@ -116,6 +115,11 @@ class CatchupServerIT
         catchupClient = CausalClusteringTestHelpers.getCatchupClient( LOG_PROVIDER, new ThreadPoolJobScheduler( executor ) );
         catchupClient.start();
         pageCache = db.getDependencyResolver().resolveDependency( PageCache.class );
+    }
+
+    void configure( TestEnterpriseDatabaseManagementServiceBuilder builder )
+    {
+        builder.setFileSystem( fs ).setConfig( auth_enabled, true );
     }
 
     @AfterEach
@@ -335,7 +339,8 @@ class CatchupServerIT
     private List<String> getExpectedStoreFiles( Database database ) throws IOException
     {
         DatabaseFileListing.StoreFileListingBuilder builder = database.getDatabaseFileListing().builder();
-        builder.excludeLogFiles().excludeSchemaIndexStoreFiles().excludeLabelScanStoreFiles().excludeAdditionalProviders().excludeIdFiles();
+        builder.excludeLogFiles().excludeSchemaIndexStoreFiles().excludeLabelScanStoreFiles().excludeRelationshipTypeScanStoreFiles()
+                .excludeAdditionalProviders().excludeIdFiles();
         try ( Stream<StoreFileMetadata> stream = builder.build().stream() )
         {
             return stream.filter( isCountFile( database.getDatabaseLayout() ).negate() ).map( sfm -> sfm.file().getName() ).collect( toList() );

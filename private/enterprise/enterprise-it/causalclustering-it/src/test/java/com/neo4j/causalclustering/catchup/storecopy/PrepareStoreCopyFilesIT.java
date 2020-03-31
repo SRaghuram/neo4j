@@ -15,9 +15,11 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.index.internal.gbptree.GBPTree;
+import org.neo4j.internal.index.label.RelationshipTypeScanStoreSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -25,20 +27,21 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.internal.NativeIndexFileFilter;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.extension.ExtensionCallback;
 import org.neo4j.test.extension.Inject;
 
 import static java.util.Collections.disjoint;
 import static java.util.stream.Collectors.toList;
+import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import static org.eclipse.collections.impl.factory.Sets.intersect;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex.NATIVE30;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
-@EnterpriseDbmsExtension
+@EnterpriseDbmsExtension( configurationCallback = "configure" )
 class PrepareStoreCopyFilesIT
 {
     @Inject
@@ -49,6 +52,18 @@ class PrepareStoreCopyFilesIT
     private Database database;
     @Inject
     private FileSystemAbstraction fileSystem;
+    @Inject
+    private Config config;
+
+    @ExtensionCallback
+    void configure( TestDatabaseManagementServiceBuilder builder )
+    {
+        doConfigure( builder );
+    }
+
+    void doConfigure( TestDatabaseManagementServiceBuilder builder )
+    {   // no-op
+    }
 
     @Test
     void shouldReturnDifferentAtomicAndReplayableFiles() throws Exception
@@ -71,11 +86,6 @@ class PrepareStoreCopyFilesIT
     @Test
     void shouldReturnAllGBPTreeFilesInAtomicSectionNotReplayableSection() throws IOException
     {
-        // GBPTree files include:
-        // - Label index
-        // - Native indexes
-        // - .id files (as of 4.0, the IndexedIdGenerator)
-
         try ( var prepareStoreCopyFiles = newPrepareStoreCopyFiles() )
         {
             // given
@@ -86,23 +96,37 @@ class PrepareStoreCopyFilesIT
             var replayableFiles = replayableFiles( prepareStoreCopyFiles );
 
             // then
-            assertContainsSomeGBPTreeFiles( atomicFiles );
+            assertContainsAllExpectedGBPTreeFiles( atomicFiles );
             assertContainsNoGBPTreeFiles( replayableFiles );
         }
     }
 
-    private void assertContainsSomeGBPTreeFiles( Set<File> files )
+    private void assertContainsAllExpectedGBPTreeFiles( Set<File> atomicFiles )
     {
-        NativeIndexFileFilter nativeIndexFileFilter = new NativeIndexFileFilter( db.databaseLayout().databaseDirectory() );
-        long count = files.stream().filter( file ->
-                isKnownGBPTreeFile( nativeIndexFileFilter, db.databaseLayout(), file ) ||
-                fileContentsLooksLikeAGBPTree( file, pageCache ) ).count();
-        assertThat( count, greaterThan( 0L ) );
+        DatabaseLayout layout = db.databaseLayout();
+        NativeIndexFileFilter nativeIndexFileFilter = getNativeIndexFileFilter();
+
+        // - Label index
+        // - Index statistics store
+        // - Counts store
+        assertThat( atomicFiles ).contains( layout.labelScanStore(), layout.indexStatisticsStore(), layout.countStore() );
+
+        // - RelationshipType index
+        if ( config.get( RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store ) )
+        {
+            assertThat( atomicFiles ).contains( layout.relationshipTypeScanStore() );
+        }
+
+        // - .id files
+        assertThat( atomicFiles ).contains( layout.idFiles().toArray( File[]::new ) );
+
+        // - Native indexes
+        assertThat( atomicFiles ).filteredOn( nativeIndexFileFilter::accept ).isNotEmpty();
     }
 
     private void assertContainsNoGBPTreeFiles( Set<File> files )
     {
-        NativeIndexFileFilter nativeIndexFileFilter = new NativeIndexFileFilter( db.databaseLayout().databaseDirectory() );
+        NativeIndexFileFilter nativeIndexFileFilter = getNativeIndexFileFilter();
         for ( File file : files )
         {
             // What we know today
@@ -110,6 +134,11 @@ class PrepareStoreCopyFilesIT
             // Future-proofness, sort of
             assertFalse( fileContentsLooksLikeAGBPTree( file, pageCache ) );
         }
+    }
+
+    private NativeIndexFileFilter getNativeIndexFileFilter()
+    {
+        return new NativeIndexFileFilter( db.databaseLayout().databaseDirectory() );
     }
 
     private static boolean fileContentsLooksLikeAGBPTree( File file, PageCache pageCache )
@@ -133,6 +162,9 @@ class PrepareStoreCopyFilesIT
     {
         String name = file.getName();
         return name.equals( DatabaseFile.LABEL_SCAN_STORE.getName() ) ||
+                name.equals( DatabaseFile.RELATIONSHIP_TYPE_SCAN_STORE.getName() ) ||
+                name.equals( DatabaseFile.COUNTS_STORE.getName() ) ||
+                name.equals( DatabaseFile.INDEX_STATISTICS_STORE.getName() ) ||
                 nativeIndexFileFilter.accept( file ) ||
                 databaseLayout.idFiles().contains( file );
     }
