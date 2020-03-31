@@ -201,6 +201,12 @@ class DefaultNodeCursor extends TraceableCursor implements NodeCursor
     }
 
     @Override
+    public boolean relationshipsTo( RelationshipTraversalCursor relationships, RelationshipSelection selection, long neighbourNodeReference )
+    {
+        return ((DefaultRelationshipTraversalCursor) relationships).init( this, selection, neighbourNodeReference, read );
+    }
+
+    @Override
     public void properties( PropertyCursor cursor )
     {
         ((DefaultPropertyCursor) cursor).initNode( this, read, read );
