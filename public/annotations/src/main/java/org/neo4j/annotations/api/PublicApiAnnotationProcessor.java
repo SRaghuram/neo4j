@@ -63,6 +63,7 @@ import static javax.tools.Diagnostic.Kind.ERROR;
 import static javax.tools.Diagnostic.Kind.NOTE;
 import static javax.tools.Diagnostic.Kind.WARNING;
 import static javax.tools.StandardLocation.CLASS_OUTPUT;
+import static org.apache.commons.lang3.exception.ExceptionUtils.getStackTrace;
 
 /**
  * Generates public API signatures from all the classes marked with {@link PublicApi}. It performs some sanity checking so that all exposed types are visible.
@@ -124,24 +125,24 @@ public class PublicApiAnnotationProcessor extends AbstractProcessor
     @Override
     public boolean process( Set<? extends TypeElement> annotations, RoundEnvironment roundEnv )
     {
-//        try
-//        {
-//            if ( roundEnv.processingOver() )
-//            {
-//                if ( !roundEnv.errorRaised() )
-//                {
-//                    generateSignature();
-//                }
-//            }
-//            else
-//            {
-//                process( roundEnv );
-//            }
-//        }
-//        catch ( Exception e )
-//        {
-//            error( "Public API annotation processor failed: " + getStackTrace( e ) );
-//        }
+        try
+        {
+            if ( roundEnv.processingOver() )
+            {
+                if ( !roundEnv.errorRaised() )
+                {
+                    generateSignature();
+                }
+            }
+            else
+            {
+                process( roundEnv );
+            }
+        }
+        catch ( Exception e )
+        {
+            error( "Public API annotation processor failed: " + getStackTrace( e ) );
+        }
         return false;
     }
 
