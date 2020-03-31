@@ -53,6 +53,7 @@ import java.util.stream.Collectors;
 import org.neo4j.configuration.Config;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.function.ThrowingConsumer;
+import org.neo4j.graphdb.Direction;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.helpers.collection.Visitor;
@@ -91,6 +92,7 @@ import org.neo4j.storageengine.api.IndexEntryUpdate;
 import org.neo4j.storageengine.api.IndexUpdateListener;
 import org.neo4j.storageengine.api.PropertyKeyValue;
 import org.neo4j.storageengine.api.RelationshipDirection;
+import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StandardConstraintRuleAccessor;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageNodeCursor;
@@ -134,6 +136,7 @@ import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.lock.LockService.NO_LOCK_SERVICE;
 import static org.neo4j.storageengine.api.RelationshipSelection.ALL_RELATIONSHIPS;
+import static org.neo4j.storageengine.api.RelationshipSelection.selection;
 import static org.neo4j.storageengine.api.txstate.TxStateVisitor.NO_DECORATION;
 import static org.neo4j.test.Race.throwing;
 import static org.neo4j.values.storable.Values.doubleValue;
@@ -1054,6 +1057,78 @@ class FrekiStorageEngineGraphWritesIT
         }
     }
 
+    @Test
+    void shouldSelectRelationshipsToSpecificNeighbourNode() throws Exception
+    {
+        // given
+        long nodeId = commandCreationContext.reserveNode();
+        createAndApplyTransaction( target -> target.visitCreatedNode( nodeId ) );
+        int numTypes = 4;
+
+        // when
+        Set<RelationshipSpec> relationships = new HashSet<>();
+        List<Long> otherNodeIds = new ArrayList<>();
+        for ( int r = 0; r < 50; r++ )
+        {
+            createAndApplyTransaction( target ->
+            {
+                CommandCreationContext context = storageEngine.newCommandCreationContext( NULL );
+                for ( int i = 0; i < 10; i++ )
+                {
+                    int type = random.nextInt( numTypes );
+                    long otherNodeId;
+                    if ( otherNodeIds.isEmpty() || random.nextFloat() < 0.2 )
+                    {
+                        // Create a new other node
+                        otherNodeId = this.commandCreationContext.reserveNode();
+                        target.visitCreatedNode( otherNodeId );
+                        otherNodeIds.add( otherNodeId );
+                    }
+                    else
+                    {
+                        // Reuse an existing other node
+                        otherNodeId = random.among( otherNodeIds );
+                    }
+                    boolean outgoing = random.nextBoolean();
+                    long startNode = outgoing ? nodeId : otherNodeId;
+                    long endNode = outgoing ? otherNodeId : nodeId;
+                    RelationshipSpec relationship = new RelationshipSpec( startNode, type, endNode, emptySet(), context );
+                    relationships.add( relationship );
+                    relationship.create( target );
+                }
+            } );
+
+            // then assert relationshipsTo here for all neighbour nodes
+            for ( Long otherNodeId : otherNodeIds )
+            {
+                for ( int type = 0; type < numTypes; type++ )
+                {
+                    assertRelationshipsTo( nodeId, relationships, selection( type, Direction.BOTH ), otherNodeId );
+                    assertRelationshipsTo( nodeId, relationships, selection( type, Direction.OUTGOING ), otherNodeId );
+                    assertRelationshipsTo( nodeId, relationships, selection( type, Direction.INCOMING ), otherNodeId );
+                }
+            }
+        }
+    }
+
+    private void assertRelationshipsTo( long nodeId, Set<RelationshipSpec> relationships, RelationshipSelection selection, long otherNodeId )
+    {
+        try ( var storageReader = storageEngine.newReader();
+                var nodeCursor = storageReader.allocateNodeCursor( NULL );
+                var propertyCursor = storageReader.allocatePropertyCursor( NULL );
+                var relationshipsCursor = storageReader.allocateRelationshipTraversalCursor( NULL ) )
+        {
+            nodeCursor.single( nodeId );
+            assertThat( nodeCursor.next() ).isTrue();
+            nodeCursor.relationshipsTo( relationshipsCursor, selection, otherNodeId );
+            Set<RelationshipSpec> readRelationships = readRelationships( propertyCursor, relationshipsCursor );
+            Set<RelationshipSpec> expectedRelationships =
+                    relationships.stream().filter( r -> selection.test( r.type, r.direction( nodeId ) ) && r.neighbourNode( nodeId ) == otherNodeId ).collect(
+                            Collectors.toSet() );
+            assertThat( readRelationships ).isEqualTo( expectedRelationships );
+        }
+    }
+
     private Set<StorageProperty> randomRelationshipProperties()
     {
         Set<StorageProperty> properties = new HashSet<>();
@@ -1122,15 +1197,7 @@ class FrekiStorageEngineGraphWritesIT
 
             // relationships
             nodeCursor.relationships( relationshipCursor, ALL_RELATIONSHIPS );
-            Set<RelationshipSpec> readRelationships = new HashSet<>();
-            while ( relationshipCursor.next() )
-            {
-                relationshipCursor.properties( propertyCursor );
-                RelationshipSpec relationship =
-                        new RelationshipSpec( relationshipCursor.sourceNodeReference(), relationshipCursor.type(), relationshipCursor.targetNodeReference(),
-                                readProperties( propertyCursor ), relationshipCursor.entityReference() );
-                readRelationships.add( relationship );
-            }
+            Set<RelationshipSpec> readRelationships = readRelationships( propertyCursor, relationshipCursor );
             assertThat( readRelationships ).isEqualTo( relationships );
 
             // degrees
@@ -1144,6 +1211,20 @@ class FrekiStorageEngineGraphWritesIT
                 assertThat( degrees.totalDegree( type ) ).isEqualTo( expectedDegrees.totalDegree( type ) );
             }
         }
+    }
+
+    private Set<RelationshipSpec> readRelationships( StoragePropertyCursor propertyCursor, StorageRelationshipTraversalCursor relationshipCursor )
+    {
+        Set<RelationshipSpec> readRelationships = new HashSet<>();
+        while ( relationshipCursor.next() )
+        {
+            relationshipCursor.properties( propertyCursor );
+            RelationshipSpec relationship =
+                    new RelationshipSpec( relationshipCursor.sourceNodeReference(), relationshipCursor.type(), relationshipCursor.targetNodeReference(),
+                            readProperties( propertyCursor ), relationshipCursor.entityReference() );
+            readRelationships.add( relationship );
+        }
+        return readRelationships;
     }
 
     private static Degrees buildExpectedDegrees( long nodeId, Set<RelationshipSpec> relationships )
@@ -1341,6 +1422,11 @@ class FrekiStorageEngineGraphWritesIT
             {
                 throw new RuntimeException( e );
             }
+        }
+
+        long neighbourNode( long fromNodeIdPov )
+        {
+            return startNodeId == fromNodeIdPov ? endNodeId : startNodeId;
         }
     }
 

@@ -59,6 +59,8 @@ import static org.neo4j.storageengine.api.RelationshipSelection.selection;
 @SuppressWarnings( "unused" )
 public class CachingExpandInto
 {
+    private static final boolean FAST = true;
+
     private static final long RELATIONSHIP_SIZE = shallowSizeOfInstance( Relationship.class );
 
     private static final int EXPENSIVE_DEGREE = -1;
@@ -110,6 +112,20 @@ public class CachingExpandInto
     {
         Preconditions.requireNegative( this.fromNode );
         Preconditions.requireNegative( this.toNode );
+        Direction reverseDirection = direction.reverse();
+
+        if ( FAST )
+        {
+            // First of all check if the cursor can do this efficiently itself
+            RelationshipTraversalCursor fastPathCursor = tryFastPath( nodeCursor, traversalCursor, fromNode, types, reverseDirection, toNode );
+            if ( fastPathCursor != null )
+            {
+                return traversalCursor;
+            }
+            // ^^^ node cursor should be left at toNode, because that's what the code below expects
+        }
+
+        // Otherwise do it the slow way and add caching to try and speed things up
         List<Relationship> connections = relationshipCache.get( fromNode, toNode, direction );
 
         this.fromNode = fromNode;
@@ -119,8 +135,7 @@ public class CachingExpandInto
         {
             return new FromCachedSelectionCursor( connections.iterator(), read );
         }
-        Direction reverseDirection = direction.reverse();
-        //Check toNode, will position nodeCursor at toNode
+        //Check toNode, note that nodeCursor is already positioned at toNode
         int toDegree = degreeCache.getIfAbsentPut( toNode,
                 () -> calculateTotalDegreeIfCheap( read, toNode, nodeCursor, reverseDirection, types ));
 
@@ -179,6 +194,16 @@ public class CachingExpandInto
         }
     }
 
+    private RelationshipTraversalCursor tryFastPath( NodeCursor nodeCursor, RelationshipTraversalCursor traversalCursor, long fromNode, int[] types,
+            Direction direction, long toNode )
+    {
+        if ( !singleNode( read, nodeCursor, toNode ) )
+        {
+            return RelationshipTraversalCursor.EMPTY;
+        }
+        return nodeCursor.relationshipsTo( traversalCursor, selection( types, direction ), fromNode ) ? traversalCursor : null;
+    }
+
     private void done()
     {
         this.toNode = this.fromNode = -1L;
@@ -195,12 +220,14 @@ public class CachingExpandInto
         return connectingRelationships( nodeCursor, cursors.allocateRelationshipTraversalCursor( cursorTracer ), fromNode, types, toNode );
     }
 
-    private int calculateTotalDegreeIfCheap( Read read, long node, NodeCursor nodeCursor, Direction direction,
-            int[] types )
+    private int calculateTotalDegreeIfCheap( Read read, long node, NodeCursor nodeCursor, Direction direction, int[] types )
     {
-        if ( !singleNode( read, nodeCursor, node ) )
+        if ( !FAST )
         {
-            return 0;
+            if ( !singleNode( read, nodeCursor, node ) )
+            {
+                return 0;
+            }
         }
         if ( !nodeCursor.supportsFastDegreeLookup() )
         {

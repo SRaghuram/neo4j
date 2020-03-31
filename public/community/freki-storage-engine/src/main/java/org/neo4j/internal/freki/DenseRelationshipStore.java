@@ -35,11 +35,13 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.Layout;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.index.internal.gbptree.Seeker;
 import org.neo4j.index.internal.gbptree.Writer;
+import org.neo4j.internal.helpers.collection.NestingResourceIterator;
 import org.neo4j.internal.helpers.collection.PrefetchingIterator;
 import org.neo4j.internal.helpers.collection.PrefetchingResourceIterator;
 import org.neo4j.io.pagecache.IOLimiter;
@@ -51,6 +53,7 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.storageengine.api.RelationshipDirection;
 import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StorageProperty;
+import org.neo4j.util.Preconditions;
 import org.neo4j.values.storable.Value;
 
 import static java.lang.String.format;
@@ -61,6 +64,7 @@ import static org.neo4j.internal.freki.StreamVByte.readLongValue;
 import static org.neo4j.internal.freki.StreamVByte.sizeOfLongSizeIndex;
 import static org.neo4j.internal.freki.StreamVByte.writeIntDeltas;
 import static org.neo4j.internal.freki.StreamVByte.writeLongValue;
+import static org.neo4j.internal.helpers.collection.Iterators.iterator;
 import static org.neo4j.storageengine.api.RelationshipDirection.LOOP;
 import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 
@@ -119,7 +123,7 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         }
     }
 
-    PrefetchingResourceIterator<RelationshipData> getRelationships( long nodeId, int type, Direction direction, PageCursorTracer cursorTracer )
+    ResourceIterator<RelationshipData> getRelationships( long nodeId, int type, Direction direction, PageCursorTracer cursorTracer )
     {
         // If type is defined (i.e. NOT -1) then we can seek by direction too, otherwise we'll have to filter on direction
         DenseKey from = layout.newKey().initialize( nodeId,
@@ -136,6 +140,40 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         try
         {
             return new RelationshipIterator( tree.seek( from, to, cursorTracer ), filter, bigPropertyValueStore );
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
+    }
+
+    ResourceIterator<RelationshipData> getRelationships( long nodeId, int type, Direction direction, long neighbourNodeId,
+            PageCursorTracer cursorTracer )
+    {
+        if ( direction == Direction.BOTH )
+        {
+            return new NestingResourceIterator<>( iterator( Direction.OUTGOING, Direction.INCOMING ) )
+            {
+                @Override
+                protected ResourceIterator<RelationshipData> createNestedIterator( Direction specificDirection )
+                {
+                    return getRelationshipsInternal( nodeId, type, specificDirection, neighbourNodeId, cursorTracer );
+                }
+            };
+        }
+        return getRelationshipsInternal( nodeId, type, direction, neighbourNodeId, cursorTracer );
+    }
+
+    private ResourceIterator<RelationshipData> getRelationshipsInternal( long nodeId, int type, Direction direction, long neighbourNodeId,
+            PageCursorTracer cursorTracer )
+    {
+        Preconditions.checkArgument( type != ANY_RELATIONSHIP_TYPE && direction != Direction.BOTH,
+                "This internal method expects specific type/direction" );
+        DenseKey from = layout.newKey().initialize( nodeId, type, direction, neighbourNodeId, Long.MIN_VALUE );
+        DenseKey to = layout.newKey().initialize( nodeId, type, direction, neighbourNodeId, Long.MAX_VALUE );
+        try
+        {
+            return new RelationshipIterator( tree.seek( from, to, cursorTracer ), r -> true, bigPropertyValueStore );
         }
         catch ( IOException e )
         {

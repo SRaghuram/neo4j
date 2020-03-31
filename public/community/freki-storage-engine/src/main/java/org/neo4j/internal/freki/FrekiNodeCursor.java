@@ -83,6 +83,13 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     }
 
     @Override
+    public boolean relationshipsTo( StorageRelationshipTraversalCursor traversalCursor, RelationshipSelection selection, long neighbourNodeReference )
+    {
+        ((FrekiRelationshipTraversalCursor) traversalCursor).init( this, selection, neighbourNodeReference );
+        return true;
+    }
+
+    @Override
     public int[] relationshipTypes()
     {
         readRelationshipTypes();
