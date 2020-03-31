@@ -31,6 +31,7 @@ import org.neo4j.cypher.internal.physicalplanning.ast.NodePropertyExistsLate
 import org.neo4j.cypher.internal.physicalplanning.ast.NodePropertyLate
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheck
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckProperty
+import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckReferenceProperty
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckVariable
 import org.neo4j.cypher.internal.physicalplanning.ast.PrimitiveEquals
 import org.neo4j.cypher.internal.physicalplanning.ast.ReferenceFromSlot
@@ -326,7 +327,7 @@ class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport
     val result = rewriter(selection, lookup)
 
     // then
-    val expectedPredicate = equals(NullCheckProperty(0, NodeProperty(0, 666, "a.prop")(aProp), isLongSlot = true), literalInt(42))
+    val expectedPredicate = equals(NullCheckProperty(0, NodeProperty(0, 666, "a.prop")(aProp)), literalInt(42))
     result should equal(Selection(Seq(expectedPredicate), argument))
     lookup(result.id) should equal(slots)
   }
@@ -460,7 +461,7 @@ class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport
     resultPlan should equal(
       Projection(leaf, Map(
         "x" -> NullCheckVariable(0, NodeFromSlot(0, "x")),
-        "x.propertyKey" -> NullCheckProperty(nodeOffset, NodeProperty(nodeOffset, tokenId, "x.propertyKey")(xPropKey), isLongSlot = true)
+        "x.propertyKey" -> NullCheckProperty(nodeOffset, NodeProperty(nodeOffset, tokenId, "x.propertyKey")(xPropKey))
       ))
     )
   }
@@ -630,12 +631,12 @@ class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport
 
     // then
     val newPred = AndedPropertyInequalities(NullCheckVariable(0, NodeFromSlot(offsetN, "n")),
-      NullCheckProperty(offsetN, NodeProperty(offsetN, 666, "n.prop")(xProp), isLongSlot = true),
+      NullCheckProperty(offsetN, NodeProperty(offsetN, 666, "n.prop")(xProp)),
       NonEmptyList(lessThan(literalInt(42), ReferenceFromSlot(offsetZ, "z"))))
     result should equal(Selection(Seq(newPred), arg))
   }
 
-  test("should rewrite cached property of a nullable entity in ref slot using NullCheckProperty") {
+  test("should rewrite cached property of a nullable entity in ref slot using NullCheckReferenceProperty") {
     // given
     val arg = Argument()
     val property = CachedProperty("n.prop", Variable("n")(InputPosition.NONE), PropertyKeyName("prop")(InputPosition.NONE), NODE_TYPE)(InputPosition.NONE)
@@ -661,9 +662,8 @@ class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport
     result should equal {
       CacheProperties(
         arg,
-        Set(NullCheckProperty(
+        Set(NullCheckReferenceProperty(
           offset = 0,
-          isLongSlot = false,
           inner = SlottedCachedPropertyWithPropertyToken(
             entityName = "n.prop",
             propertyKey = PropertyKeyName("prop")(InputPosition.NONE),

@@ -48,7 +48,7 @@ import org.neo4j.cypher.internal.physicalplanning.ast.NodePropertyExistsLate
 import org.neo4j.cypher.internal.physicalplanning.ast.NodePropertyLate
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheck
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckProperty
-import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckReference
+import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckReferenceProperty
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckVariable
 import org.neo4j.cypher.internal.physicalplanning.ast.PrimitiveEquals
 import org.neo4j.cypher.internal.physicalplanning.ast.ReferenceFromSlot
@@ -183,7 +183,7 @@ class SlottedRewriter(tokenContext: TokenContext) {
               case _ => throw new InternalException(s"Expressions on object other then nodes and relationships are not yet supported")
             }
             if (nullable)
-              NullCheckProperty(offset, propExpression, isLongSlot = true)
+              NullCheckProperty(offset, propExpression)
             else
               propExpression
 
@@ -249,7 +249,7 @@ class SlottedRewriter(tokenContext: TokenContext) {
                                                               nullable)
             }
             if (nullable)
-              NullCheckProperty(offset, propExpression, isLongSlot = false)
+              NullCheckReferenceProperty(offset, propExpression)
             else
               propExpression
         }
@@ -310,7 +310,7 @@ class SlottedRewriter(tokenContext: TokenContext) {
             val slot = slotConfiguration(key)
             val maybeSpecializedExpression = specializeCheckIfPropertyExists(slotConfiguration, key, propKey, prop, slot)
             if (slot.nullable && maybeSpecializedExpression.isDefined && maybeSpecializedExpression.get.isInstanceOf[LogicalProperty]) {
-              NullCheckProperty(slot.offset, maybeSpecializedExpression.get.asInstanceOf[LogicalProperty], isLongSlot = true)
+              NullCheckProperty(slot.offset, maybeSpecializedExpression.get.asInstanceOf[LogicalProperty])
             }
             else
               maybeSpecializedExpression.getOrElse(existsFunction)
