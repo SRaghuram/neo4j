@@ -1349,7 +1349,7 @@ class FrekiStorageEngineGraphWritesIT
         private final MutableLongObjectMap<long[]> nodeLabels = LongObjectMaps.mutable.empty();
 
         @Override
-        public void applyUpdates( Iterable<EntityTokenUpdate> labelUpdates )
+        public void applyUpdates( Iterable<EntityTokenUpdate> labelUpdates, PageCursorTracer cursorTracer )
         {
             for ( EntityTokenUpdate labelUpdate : labelUpdates )
             {

@@ -96,7 +96,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         this.pageCacheTracer = pageCacheTracer;
         this.cursorTracer = cursorTracer;
         this.labelIndexUpdates = mode == REVERSE_RECOVERY || labelIndexUpdatesWorkSync == null ? null : labelIndexUpdatesWorkSync.newBatch();
-        this.idUpdates = mode == REVERSE_RECOVERY ? null : idGeneratorUpdatesWorkSync.newBatch();
+        this.idUpdates = mode == REVERSE_RECOVERY ? null : idGeneratorUpdatesWorkSync.newBatch( pageCacheTracer );
         this.indexUpdates = mode == REVERSE_RECOVERY || indexUpdatesWorkSync == null ? null : indexUpdatesWorkSync.newBatch();
         this.nodeCursor = reader.allocateNodeCursor( cursorTracer );
         this.propertyCursorBefore = reader.allocatePropertyCursor( cursorTracer );
@@ -411,7 +411,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
             {
                 indexUpdateListener.createIndexes( createdIndexes.toArray( new IndexDescriptor[createdIndexes.size()] ) );
             }
-            AsyncApply labelUpdatesAsyncApply = labelIndexUpdates != null ? labelIndexUpdates.applyAsync() : AsyncApply.EMPTY;
+            AsyncApply labelUpdatesAsyncApply = labelIndexUpdates != null ? labelIndexUpdates.applyAsync( cursorTracer ) : AsyncApply.EMPTY;
             AsyncApply indexUpdatesAsyncApply = indexUpdates != null ? indexUpdates.applyAsync( cursorTracer ) : AsyncApply.EMPTY;
             AsyncApply denseAsyncApply = denseRelationshipUpdates != null ? denseRelationshipUpdates.applyAsync( pageCacheTracer ) : AsyncApply.EMPTY;
             if ( idUpdates != null )

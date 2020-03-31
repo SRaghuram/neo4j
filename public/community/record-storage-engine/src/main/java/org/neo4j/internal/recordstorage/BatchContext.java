@@ -43,9 +43,9 @@ import org.neo4j.util.concurrent.WorkSync;
 
 public class BatchContext implements AutoCloseable
 {
-    private final LabelIndexUpdatesWorkSync.Batch labelScanStoreSync;
+    private final LabelIndexUpdatesWorkSync labelScanStoreSync;
     private final WorkSync<EntityTokenUpdateListener,TokenUpdateWork> relationshipTypeScanStoreSync;
-    private final IndexUpdatesWorkSync.Batch indexUpdatesSync;
+    private final IndexUpdatesWorkSync indexUpdatesSync;
     private final NodeStore nodeStore;
     private final PropertyStore propertyStore;
     private final StorageEngine storageEngine;
@@ -55,7 +55,7 @@ public class BatchContext implements AutoCloseable
 
     private final IndexActivator indexActivator;
     private final LockGroup lockGroup;
-    private List<EntityTokenUpdate> labelUpdates;
+    private LabelIndexUpdatesWorkSync.Batch labelUpdates;
     private List<EntityTokenUpdate> relationshipTypeUpdates;
     private IndexUpdates indexUpdates;
 
@@ -67,9 +67,9 @@ public class BatchContext implements AutoCloseable
             IdUpdateListener idUpdateListener )
     {
         this.indexActivator = new IndexActivator( indexUpdateListener );
-        this.labelScanStoreSync = labelScanStoreSync.newBatch();
+        this.labelScanStoreSync = labelScanStoreSync;
         this.relationshipTypeScanStoreSync = relationshipTypeScanStoreSync;
-        this.indexUpdatesSync = indexUpdatesSync.newBatch();
+        this.indexUpdatesSync = indexUpdatesSync;
         this.nodeStore = nodeStore;
         this.propertyStore = propertyStore;
         this.storageEngine = recordStorageEngine;
@@ -105,7 +105,7 @@ public class BatchContext implements AutoCloseable
         {
             // Updates are sorted according to node id here, an artifact of node commands being sorted
             // by node id when extracting from TransactionRecordState.
-            labelUpdatesApply = labelScanStoreSync.applyAsync( cursorTracer );
+            labelUpdatesApply = labelUpdates.applyAsync( cursorTracer );
             labelUpdates = null;
         }
         if ( relationshipTypeUpdates != null )
@@ -115,10 +115,11 @@ public class BatchContext implements AutoCloseable
         }
         if ( indexUpdates != null && indexUpdates.hasUpdates() )
         {
-            indexUpdatesSync.add( indexUpdates );
+            IndexUpdatesWorkSync.Batch indexUpdatesBatch = indexUpdatesSync.newBatch();
+            indexUpdatesBatch.add( indexUpdates );
             try
             {
-                indexUpdatesSync.apply( cursorTracer );
+                indexUpdatesBatch.apply( cursorTracer );
             }
             catch ( ExecutionException e )
             {
@@ -166,11 +167,11 @@ public class BatchContext implements AutoCloseable
         return idUpdateListener;
     }
 
-    public List<EntityTokenUpdate> labelUpdates()
+    public LabelIndexUpdatesWorkSync.Batch labelUpdates()
     {
         if ( labelUpdates == null )
         {
-            labelUpdates = new ArrayList<>();
+            labelUpdates = labelScanStoreSync.newBatch();
         }
         return labelUpdates;
     }
