@@ -34,8 +34,12 @@ class SlottedGroupingAggTable(slots: SlotConfiguration,
   }
 
   override def clear(): Unit = {
-    if (resultMap != null)
-      resultMap.keySet().forEach(x => state.memoryTracker.deallocated(x, operatorId.x))
+    if (resultMap != null) {
+      resultMap.forEach { (key, functions) =>
+        state.memoryTracker.deallocated(key, operatorId.x)
+        functions.foreach(_.recordMemoryDeallocation(state))
+      }
+    }
     resultMap = new java.util.LinkedHashMap[groupingColumns.KeyType, Array[AggregationFunction]]()
   }
 
