@@ -9,6 +9,7 @@ import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.neo4j.internal.kernel.api.security.AuthSubject;
@@ -28,33 +29,44 @@ public class FabricAuthManagerWrapper extends EnterpriseAuthManager
     @Override
     public EnterpriseLoginContext login( Map<String,Object> authToken ) throws InvalidAuthTokenException
     {
-        boolean authProvided = !authToken.get( AuthToken.SCHEME_KEY ).equals( "none" );
-        String username = null;
-        byte[] password = null;
-
-        if ( authToken.containsKey( AuthToken.PRINCIPAL ) && authToken.containsKey( AuthToken.CREDENTIALS ) )
-        {
-            username = AuthToken.safeCast( AuthToken.PRINCIPAL, authToken );
-            byte[] originalPassword = AuthToken.safeCastCredentials( AuthToken.CREDENTIALS, authToken );
-            // the original password is erased after the authentication
-            password = Arrays.copyOf( originalPassword, originalPassword.length );
-        }
+        var copiedAuthToken = copyAuthToken( authToken );
 
         EnterpriseLoginContext wrappedLoginContext = wrappedAuthManager.login( authToken );
 
-        Credentials credentials = new Credentials( username, password, authProvided );
-        FabricAuthSubject fabricAuthSubject = new FabricAuthSubject( wrappedLoginContext.subject(), credentials );
+        FabricAuthSubject fabricAuthSubject = new FabricAuthSubject( wrappedLoginContext.subject(), copiedAuthToken );
         return new FabricLoginContext( wrappedLoginContext, fabricAuthSubject );
     }
 
-    public static Credentials getCredentials( AuthSubject authSubject )
+    private Map<String,Object> copyAuthToken( Map<String,Object> authToken ) throws InvalidAuthTokenException
+    {
+        Map<String,Object> copiedToken = new HashMap<>();
+
+        for ( var entry : authToken.entrySet() )
+        {
+            if ( AuthToken.CREDENTIALS.equals( entry.getKey() ) )
+            {
+                byte[] originalCredentials = AuthToken.safeCastCredentials( AuthToken.CREDENTIALS, authToken );
+                // the original credentials are erased after the authentication
+                byte[] copiedCredentials = Arrays.copyOf( originalCredentials, originalCredentials.length );
+                copiedToken.put( entry.getKey(), copiedCredentials );
+            }
+            else
+            {
+                copiedToken.put( entry.getKey(), entry.getValue() );
+            }
+        }
+
+        return copiedToken;
+    }
+
+    public static Map<String,Object> getInterceptedAuthToken( AuthSubject authSubject )
     {
         if ( !(authSubject instanceof FabricAuthSubject) )
         {
             throw new IllegalArgumentException( "The submitted subject was not created by Fabric Authentication manager: " + authSubject );
         }
 
-        return ((FabricAuthSubject) authSubject).getCredentials();
+        return ((FabricAuthSubject) authSubject).getInterceptedAuthToken();
     }
 
     @Override

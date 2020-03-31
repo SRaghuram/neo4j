@@ -5,18 +5,20 @@
  */
 package com.neo4j.fabric.auth;
 
+import java.util.Map;
+
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 
 public class FabricAuthSubject implements AuthSubject
 {
     private final AuthSubject wrappedAuthSubject;
-    private final Credentials credentials;
+    private final Map<String,Object> interceptedAuthToken;
 
-    public FabricAuthSubject( AuthSubject wrappedAuthSubject, Credentials credentials )
+    public FabricAuthSubject( AuthSubject wrappedAuthSubject, Map<String,Object> interceptedAuthToken )
     {
         this.wrappedAuthSubject = wrappedAuthSubject;
-        this.credentials = credentials;
+        this.interceptedAuthToken = interceptedAuthToken;
     }
 
     @Override
@@ -49,8 +51,8 @@ public class FabricAuthSubject implements AuthSubject
         return wrappedAuthSubject.username();
     }
 
-    public Credentials getCredentials()
+    public Map<String,Object> getInterceptedAuthToken()
     {
-        return credentials;
+        return interceptedAuthToken;
     }
 }
