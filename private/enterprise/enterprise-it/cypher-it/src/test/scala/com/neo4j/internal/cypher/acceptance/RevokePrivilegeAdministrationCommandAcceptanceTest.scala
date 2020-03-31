@@ -5,8 +5,6 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
-
 // Tests for REVOKE TRAVERSE, REVOKE READ and REVOKE MATCH
 class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 

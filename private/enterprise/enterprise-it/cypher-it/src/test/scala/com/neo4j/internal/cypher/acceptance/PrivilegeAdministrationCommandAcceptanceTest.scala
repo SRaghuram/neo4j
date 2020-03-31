@@ -903,9 +903,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     // WHEN using a parameter name that used to be internal, but is not any more, it should work
     executeOnSystem("joe", "soap", "SHOW USER PRIVILEGES", resultHandler = (row, _) => {
       // THEN
-      val res = asPrivilegesResult(row)
-      println(res)
-      res should be(granted(access).database(DEFAULT).role("PUBLIC").user("joe").map)
+      asPrivilegesResult(row) should be(granted(access).database(DEFAULT).role("PUBLIC").user("joe").map)
     }, params = Map[String, Object]("currentUser" -> "neo4j").asJava) should be(1)
 
     // WHEN using a parameter name that is the new internal name, an error should occur

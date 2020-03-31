@@ -111,8 +111,6 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     granted(adminPrivilege).role("admin").map,
   )
 
-  def defaultRolePrivilegesFor(role: String): Set[Map[String, AnyRef]] = defaultRolePrivileges.filter(m => m("role") == role)
-
   def defaultRolePrivilegesFor(role: String, replace: String): Set[Map[String, AnyRef]] = {
     defaultRolePrivileges.foldLeft(Set.empty[Map[String, AnyRef]]) {
       case (acc, row) if row("role") == role =>
@@ -473,7 +471,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   // Setup methods/variables for starting with different settings
   val defaultConfig: Config = Config.defaults( GraphDatabaseSettings.auth_enabled, TRUE )
 
-  var databaseDirectory: File = _
+  private var databaseDirectory: File = _
 
   def setup(config: Config = defaultConfig, impermanent: Boolean = true): Unit = {
     databaseDirectory = Files.createTempDirectory("test").toFile
