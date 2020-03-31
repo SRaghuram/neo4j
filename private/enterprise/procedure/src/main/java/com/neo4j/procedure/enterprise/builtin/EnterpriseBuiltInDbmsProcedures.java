@@ -69,6 +69,7 @@ import org.neo4j.scheduler.ActiveGroup;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
+import static java.lang.String.valueOf;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
@@ -751,23 +752,31 @@ public class EnterpriseBuiltInDbmsProcedures
         public final String poolName;
         public final String group;
         public final String memoryUsed;
+        public final String memoryUsedBytes;
         public final String freeMemory;
+        public final String freeMemoryBytes;
         public final String totalPoolMemory;
+        public final String totalPoolMemoryBytes;
 
         public MemoryPoolResult( NamedMemoryPool memoryPool )
         {
             this.poolName = memoryPool.name();
             this.group = memoryPool.group().getName();
             this.memoryUsed = bytesToString( memoryPool.used() );
+            this.memoryUsedBytes = valueOf( memoryPool.used() );
             if ( memoryPool.totalSize() != Long.MAX_VALUE )
             {
                 this.freeMemory = bytesToString( memoryPool.free() );
+                this.freeMemoryBytes = valueOf( memoryPool.free() );
                 this.totalPoolMemory = bytesToString( memoryPool.totalSize() );
+                this.totalPoolMemoryBytes = valueOf( memoryPool.totalSize() );
             }
             else
             {
                 this.freeMemory = UNBOUNDED;
+                this.freeMemoryBytes = UNBOUNDED;
                 this.totalPoolMemory = UNBOUNDED;
+                this.totalPoolMemoryBytes = UNBOUNDED;
             }
         }
     }
