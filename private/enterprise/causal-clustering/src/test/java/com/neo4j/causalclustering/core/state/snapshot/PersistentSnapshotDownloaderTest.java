@@ -301,7 +301,7 @@ class PersistentSnapshotDownloaderTest
 
     private void awaitOneIteration( NoPauseTimeoutStrategy backoffStrategy ) throws TimeoutException
     {
-        Predicates.await( () -> backoffStrategy.invocationCount() > 0, 2, TimeUnit.SECONDS );
+        Predicates.await( () -> backoffStrategy.invocationCount() > 0, 30, TimeUnit.SECONDS );
     }
 
     private class EventuallySuccessfulDownloader extends CoreDownloader
