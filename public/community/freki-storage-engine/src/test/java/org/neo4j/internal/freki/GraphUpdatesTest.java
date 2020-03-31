@@ -132,7 +132,6 @@ class GraphUpdatesTest
                     @Override
                     public void handle( FrekiCommand.BigPropertyValue value ) throws IOException
                     {
-                        System.out.println( value.pointer );
                         assertThat( value.pointer ).isNotNegative();
                         try ( PageCursor cursor = bigValueStore.openWriteCursor( PageCursorTracer.NULL ) )
                         {
