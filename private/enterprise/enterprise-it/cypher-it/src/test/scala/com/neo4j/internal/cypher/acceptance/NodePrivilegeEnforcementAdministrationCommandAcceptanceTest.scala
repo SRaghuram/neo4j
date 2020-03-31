@@ -10,6 +10,7 @@ import java.util
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.graphdb.Label
+import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.security.AuthorizationViolationException
 
 // Tests for actual behaviour of authorization rules for restricted users based on node privileges
@@ -1809,6 +1810,25 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
           (row.getNumber("n.foo"), row.getNumber("n.prop")) should be(expected(index))
         }) should be(nbrRows)
     }
+  }
+
+  test("unique index locking test") {
+    setupMultiLabelData
+    graph.createUniqueIndex("A", "foo")
+    setupUserWithCustomRole("user", "secret", "role")
+    // role whitelist A and blacklist B
+    execute("GRANT READ {foo,bar} ON GRAPH * NODES * TO role")
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO role")
+    execute("DENY TRAVERSE ON GRAPH * NODES B TO role")
+    execute("GRANT WRITE ON GRAPH * TO role")
+
+    executeOnDefault("user", "secret", "MERGE (n:A {foo: 1})")
+
+    val exception = the[QueryExecutionException] thrownBy {
+      executeOnDefault("user", "secret", "MERGE (n:A {foo: 5})")
+    }
+
+    exception.getMessage should include("already exists with label `A` and property `foo` = 5")
   }
 
   test("should support whitelist and blacklist traversal in index seeks") {
