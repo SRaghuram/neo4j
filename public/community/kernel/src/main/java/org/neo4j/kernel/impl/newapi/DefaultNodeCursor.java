@@ -29,10 +29,10 @@ import org.eclipse.collections.impl.iterator.ImmutableEmptyLongIterator;
 import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
 
 import org.neo4j.graphdb.Direction;
-import org.neo4j.internal.kernel.api.TokenSet;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
+import org.neo4j.internal.kernel.api.TokenSet;
 import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.storageengine.api.AllNodeScan;
@@ -191,6 +191,12 @@ class DefaultNodeCursor extends TraceableCursor implements NodeCursor
     public void relationships( RelationshipTraversalCursor cursor, RelationshipSelection selection )
     {
         ((DefaultRelationshipTraversalCursor) cursor).init( this, selection, read );
+    }
+
+    @Override
+    public boolean relationshipsTo( RelationshipTraversalCursor relationships, RelationshipSelection selection, long neighbourNodeReference )
+    {
+        return ((DefaultRelationshipTraversalCursor) relationships).init( this, selection, neighbourNodeReference, read );
     }
 
     @Override

@@ -35,10 +35,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.internal.helpers.collection.PrefetchingResourceIterator;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -52,6 +52,7 @@ import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.values.storable.Value;
 
+import static java.util.Collections.emptySet;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.graphdb.Direction.BOTH;
 import static org.neo4j.graphdb.Direction.INCOMING;
@@ -170,7 +171,7 @@ class DenseRelationshipStoreTest
         }
 
         // then
-        try ( PrefetchingResourceIterator<DenseRelationshipStore.RelationshipData> emptyRelationships = store.getRelationships( nodeId, ANY_RELATIONSHIP_TYPE,
+        try ( ResourceIterator<DenseRelationshipStore.RelationshipData> emptyRelationships = store.getRelationships( nodeId, ANY_RELATIONSHIP_TYPE,
                 BOTH, NULL ) )
         {
             assertThat( emptyRelationships.hasNext() ).isFalse();
@@ -219,10 +220,59 @@ class DenseRelationshipStoreTest
         }
     }
 
+    @Test
+    void shouldGetRelationshipsToSpecificNeighbourNode() throws IOException
+    {
+        // given
+        long nodeId = random.nextLong( 0xFFFFFF_FFFFFFFFL );
+        List<Rel> relationships = new ArrayList<>();
+        int numOtherNodes = 100;
+        int numTypes = 4;
+        try ( DenseRelationshipStore.Updater updater = store.newUpdater( NULL ) )
+        {
+            for ( int i = 0; i < numOtherNodes * 10; i++ )
+            {
+                long otherNodeId = i % numOtherNodes;
+                boolean outgoing = otherNodeId == nodeId || random.nextBoolean();
+                int type = random.nextInt( numTypes );
+                long originNodeId = outgoing ? nodeId : otherNodeId;
+                long neighbourNodeId = outgoing ? otherNodeId : nodeId;
+                updater.createRelationship( i, originNodeId, type, neighbourNodeId, outgoing, IntObjectMaps.immutable.empty(), p -> p.after );
+                relationships.add( new Rel( i, originNodeId, type, neighbourNodeId, outgoing ? RelationshipDirection.OUTGOING : RelationshipDirection.INCOMING,
+                        emptySet() ) );
+            }
+        }
+
+        // when/then
+        for ( Direction direction : Direction.values() )
+        {
+            for ( int type = 0; type < numTypes; type++ )
+            {
+                for ( long otherNodeId = 0; otherNodeId < numOtherNodes; otherNodeId++ )
+                {
+                    assertRelationships( store.getRelationships( nodeId, type, direction, otherNodeId, NULL ),
+                            subset( relationships, type, direction, otherNodeId ) );
+                }
+            }
+        }
+    }
+
+    private Set<Rel> subset( List<Rel> relationships, int type, Direction direction, long otherNodeId )
+    {
+        return relationships.stream()
+                .filter( r -> r.type == type && (direction == BOTH || r.isOutgoing() == (direction == OUTGOING)) && r.neighbourNodeId == otherNodeId )
+                .collect( Collectors.toSet() );
+    }
+
     private void assertRelationships( long sourceNodeId, int type, Direction direction, Set<Rel> expectedRelationships )
     {
+        assertRelationships( store.getRelationships( sourceNodeId, type, direction, NULL ), expectedRelationships );
+    }
+
+    private void assertRelationships( ResourceIterator<DenseRelationshipStore.RelationshipData> relationships, Set<Rel> expectedRelationships )
+    {
         Set<Rel> readRelationships = new HashSet<>();
-        try ( ResourceIterator<DenseRelationshipStore.RelationshipData> relationships = store.getRelationships( sourceNodeId, type, direction, NULL ) )
+        try
         {
             while ( relationships.hasNext() )
             {
@@ -231,6 +281,10 @@ class DenseRelationshipStoreTest
                         relationship.direction(), readProperties( relationship ) ) );
             }
             assertThat( readRelationships ).isEqualTo( expectedRelationships );
+        }
+        finally
+        {
+            relationships.close();
         }
     }
 

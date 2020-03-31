@@ -280,7 +280,7 @@ public class FrekiStorageEngine extends Life implements StorageEngine
     }
 
     @Override
-    public StorageReader newReader()
+    public FrekiStorageReader newReader()
     {
         return singleReader;
     }

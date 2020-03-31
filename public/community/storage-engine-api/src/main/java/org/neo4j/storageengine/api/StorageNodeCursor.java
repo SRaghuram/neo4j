@@ -39,10 +39,41 @@ public interface StorageNodeCursor extends StorageEntityScanCursor<AllNodeScan>
      */
     long relationshipsReference();
 
+    /**
+     * Initializes the provided {@code traversalCursor} with selected relationships connected to the node this cursor is currently at.
+     * After this call the relationships can be accessed using {@link StorageRelationshipTraversalCursor#next()}.
+     *
+     * @param traversalCursor the {@link StorageRelationshipTraversalCursor} to initialize with relationships for this current node.
+     * @param selection {@link RelationshipSelection} of relationships to select.
+     */
     void relationships( StorageRelationshipTraversalCursor traversalCursor, RelationshipSelection selection );
 
+    /**
+     * Initializes the provided {@code traversalCursor} with selected relationships connecting the node this cursor is currently at
+     * with the provided {@code neighbourNodeReference}.
+     * After this call the relationships can be accessed using {@link StorageRelationshipTraversalCursor#next()}.
+     *
+     * @param traversalCursor the {@link StorageRelationshipTraversalCursor} to initialize with relationships for this current node.
+     * @param selection {@link RelationshipSelection} of relationships to select.
+     * @param neighbourNodeReference the neighbour {@link StorageNodeCursor#entityReference() node reference} to look for.
+     * @return {@code true} if this implementation supports this type of lookup, otherwise {@code false}.
+     */
+    default boolean relationshipsTo( StorageRelationshipTraversalCursor traversalCursor, RelationshipSelection selection, long neighbourNodeReference )
+    {
+        return false;
+    }
+
+    /**
+     * @return all relationship types that this node has, i.e. all relationship types in the returned array there are at one such
+     * relationship of on this node.
+     */
     int[] relationshipTypes();
 
+    /**
+     * Returns degrees, i.e. number of relationships, for relationships of the given {@code selection}.
+     * @param selection {@link RelationshipSelection} to get degrees for.
+     * @return Degrees which can return degrees for individual type/direction and total degrees.
+     */
     Degrees degrees( RelationshipSelection selection );
 
     /**

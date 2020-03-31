@@ -38,6 +38,11 @@ public interface NodeCursor extends Cursor
 
     void relationships( RelationshipTraversalCursor relationships, RelationshipSelection selection );
 
+    default boolean relationshipsTo( RelationshipTraversalCursor relationships, RelationshipSelection selection, long neighbourNodeReference )
+    {
+        return false;
+    }
+
     void properties( PropertyCursor cursor );
 
     long relationshipsReference();

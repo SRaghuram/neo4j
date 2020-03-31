@@ -64,6 +64,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     private ResourceIterator<DenseRelationshipStore.RelationshipData> denseRelationships;
     private DenseRelationshipStore.RelationshipData currentDenseRelationship;
     private int selectionCriterionIndex;
+    private long neighbourNodeReferenceSelection;
 
     public FrekiRelationshipTraversalCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer )
     {
@@ -156,7 +157,10 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
                 if ( denseRelationships == null )
                 {
                     RelationshipSelection.Criterion criterion = selection.criterion( selectionCriterionIndex );
-                    denseRelationships = stores.denseStore.getRelationships( data.nodeId, criterion.type(), criterion.direction(), cursorTracer );
+                    denseRelationships = neighbourNodeReferenceSelection == NULL
+                            ? stores.denseStore.getRelationships( data.nodeId, criterion.type(), criterion.direction(), cursorTracer )
+                            : stores.denseStore.getRelationships( data.nodeId, criterion.type(), criterion.direction(), neighbourNodeReferenceSelection,
+                                    cursorTracer );
                 }
 
                 if ( denseRelationships.hasNext() )
@@ -243,7 +247,8 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
             //      so that filtering OUTGOING/INCOMING would basically then be to find the point where to stop, instead of going
             //      through all relationships of that type. This may also require an addition to RelationshipSelection so that
             //      it can be asked about requested direction.
-            if ( selection.test( relationshipTypesInNode[currentTypeIndex], currentRelationshipDirection ) )
+            if ( selection.test( relationshipTypesInNode[currentTypeIndex], currentRelationshipDirection ) &&
+                    (neighbourNodeReferenceSelection == NULL || neighbourNodeReferenceSelection == currentRelationshipOtherNode) )
             {
                 return true;
             }
@@ -281,6 +286,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
         }
         currentDenseRelationship = null;
         densePropertiesItr = null;
+        neighbourNodeReferenceSelection = NULL;
     }
 
     @Override
@@ -359,5 +365,11 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
         ((FrekiMainStoreCursor) nodeCursor).initializeOtherCursorFromStateOfThisCursor( this );
         startIterationAfterLoad();
         readRelationshipTypesAndOffsets();
+    }
+
+    void init( StorageNodeCursor nodeCursor, RelationshipSelection selection, long neighbourNodeReference )
+    {
+        init( nodeCursor, selection );
+        this.neighbourNodeReferenceSelection = neighbourNodeReference;
     }
 }
