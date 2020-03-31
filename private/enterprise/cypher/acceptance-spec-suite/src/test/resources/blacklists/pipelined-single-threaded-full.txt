@@ -56,7 +56,6 @@ Feature "PatternPredicates": Scenario "Filter using a pattern predicate that is 
 Feature "PatternPredicates": Scenario "Filter using a pattern predicate that is a logical OR between two subqueries"
 Feature "PatternPredicates": Scenario "Matching with complex composite pattern predicate"
 Feature "ReturnAcceptance": Scenario "LIMIT 0 should stop side effects"
-Feature "ShortestPathAcceptance": Scenario "Find a combination of a shortest path and a pattern expression"
 Feature "ShortestPathAcceptance": Scenario "Find a shortest path among paths that fulfill a predicate on all relationships"
 Feature "ShortestPathAcceptance": Scenario "Find a shortest path among paths that fulfill a predicate"
 Feature "ShortestPathAcceptance": Scenario "Find a shortest path without loosing context information at runtime"
@@ -66,4 +65,3 @@ Feature "SubqueryAcceptance": Scenario "Aggregating top and bottom results withi
 Feature "SubqueryAcceptance": Scenario "Aggregation on imported variables"
 Feature "SubqueryAcceptance": Scenario "Grouping and aggregating within correlated subquery"
 Feature "SubqueryAcceptance": Scenario "Sorting in a subquery"
-Feature "UnwindAcceptance": Scenario "Pattern comprehension in unwind with hits"

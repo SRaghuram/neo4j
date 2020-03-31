@@ -404,7 +404,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     graph.createUniqueConstraint("Person", "name")
 
     //WHEN
-    profile(Configs.InterpretedAndSlotted,
+    profile(Configs.InterpretedAndSlottedAndPipelined,
       "MATCH (p:Person {name:'Seymour'}) RETURN (p)-[:RELATED_TO]->()",
       _ should (
         includeSomewhere.aPlan("Expand(All)").withDBHits(7) and
