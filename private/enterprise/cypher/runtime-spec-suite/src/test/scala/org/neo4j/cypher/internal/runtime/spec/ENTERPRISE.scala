@@ -59,6 +59,12 @@ object ENTERPRISE {
   def WITH_WORKERS(edition: Edition[EnterpriseRuntimeContext]): Edition[EnterpriseRuntimeContext] =
     edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(0))
 
+  def WITH_MORSEL_SIZE(size: Int) =
+    edition.copyWith(
+      GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(size),
+      GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(size)
+    )
+
   val DEFAULT = edition
 
   val HAS_EVIDENCE_OF_PARALLELISM: ContextCondition[EnterpriseRuntimeContext] =

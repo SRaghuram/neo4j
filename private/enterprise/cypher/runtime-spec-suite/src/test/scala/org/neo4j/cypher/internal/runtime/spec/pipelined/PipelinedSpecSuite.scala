@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.PipelinedRuntime.PIPELINED
 import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.MORSEL_SIZE
+import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.WITH_MORSEL_SIZE
 import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
@@ -394,3 +395,29 @@ class PipelinedProfileMemoryTrackingDisabledTest extends ProfileMemoryTrackingDi
 
 class PipelinedNestedPlanExpressionTest extends NestedPlanExpressionTestBase(FUSING, PIPELINED, SIZE_HINT)
 class PipelinedNestedPlanExpressionNoFusingTest extends NestedPlanExpressionTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+
+/**
+ * This test is pipelined only, there is no reason to run in other runtimes
+ */
+class PipelinedDynamicLimitPropagationTest extends RuntimeTestSuite[EnterpriseRuntimeContext](WITH_MORSEL_SIZE(PipelinedDynamicLimitPropagationTest.MORSEL_SIZE), PIPELINED) {
+  test("limit should propagate upstream") {
+    // given
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .limit(25)
+      .nonFuseable()
+      .input(variables = Seq("x"))
+      .build()
+    val input = inputColumns(2, 50, identity).stream()
+
+    // when
+    consume(execute(logicalQuery, runtime, input))
+
+    // then
+    input.hasMore shouldBe true
+  }
+}
+
+object PipelinedDynamicLimitPropagationTest {
+  val MORSEL_SIZE: Int = 100
+}
