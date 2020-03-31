@@ -362,6 +362,10 @@ class DenseRelationshipStoreTest
             }
             assertThat( readRelationships ).isEqualTo( expectedRelationships );
         }
+        finally
+        {
+            relationships.close();
+        }
     }
 
     private Map<Integer,Value> readProperties( DenseRelationshipStore.RelationshipData relationship )

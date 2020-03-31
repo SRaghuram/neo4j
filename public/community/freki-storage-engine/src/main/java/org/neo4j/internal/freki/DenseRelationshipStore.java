@@ -182,6 +182,40 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         }
     }
 
+    ResourceIterator<RelationshipData> getRelationships( long nodeId, int type, Direction direction, long neighbourNodeId,
+            PageCursorTracer cursorTracer )
+    {
+        if ( direction == Direction.BOTH )
+        {
+            return new NestingResourceIterator<>( iterator( Direction.OUTGOING, Direction.INCOMING ) )
+            {
+                @Override
+                protected ResourceIterator<RelationshipData> createNestedIterator( Direction specificDirection )
+                {
+                    return getRelationshipsInternal( nodeId, type, specificDirection, neighbourNodeId, cursorTracer );
+                }
+            };
+        }
+        return getRelationshipsInternal( nodeId, type, direction, neighbourNodeId, cursorTracer );
+    }
+
+    private ResourceIterator<RelationshipData> getRelationshipsInternal( long nodeId, int type, Direction direction, long neighbourNodeId,
+            PageCursorTracer cursorTracer )
+    {
+        Preconditions.checkArgument( type != ANY_RELATIONSHIP_TYPE && direction != Direction.BOTH,
+                "This internal method expects specific type/direction" );
+        DenseKey from = layout.newKey().initialize( nodeId, type, direction, neighbourNodeId, Long.MIN_VALUE );
+        DenseKey to = layout.newKey().initialize( nodeId, type, direction, neighbourNodeId, Long.MAX_VALUE );
+        try
+        {
+            return new RelationshipIterator( tree.seek( from, to, cursorTracer ), r -> true, bigPropertyValueStore );
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
+    }
+
     RelationshipData getRelationship( long nodeId, int type, Direction direction, long otherNodeId, long internalId, PageCursorTracer cursorTracer )
     {
         DenseKey key = layout.newKey().initialize( nodeId, type, direction, otherNodeId, internalId );
