@@ -94,6 +94,7 @@ import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckVariable
 import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipFromSlot
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
+import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
@@ -401,10 +402,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
             slots.getReferenceOffsetFor(key) -> convertExpressions(expression).asInstanceOf[AggregationExpression]
         }
 
-        val (orderedGroupingExpressions, unorderedGroupingExpressions) = groupingExpressions.partition { case (_,v) => orderToLeverage.contains(v) }
-        val orderedGroupingColumns = expressionConverters.toGroupingExpression(id, orderedGroupingExpressions, orderToLeverage)
-        val unorderedGroupingColumns = expressionConverters.toGroupingExpression(id, unorderedGroupingExpressions, orderToLeverage)
-
+        val (orderedGroupingColumns, unorderedGroupingColumns) = partitionGroupingExpressions(groupingExpressions, orderToLeverage, id)
         val tableFactory =
           if (unorderedGroupingColumns.isEmpty) {
             SlottedOrderedNonGroupingAggTable.Factory(slots, orderedGroupingColumns, aggregation)
@@ -681,8 +679,8 @@ class SlottedPipeMapper(fallback: PipeMapper,
           OrderedDistinctSlottedPrimitivePipe(
             source,
             slots,
-            offsets.sorted.toArray,
             orderedOffsets.sorted.toArray,
+            offsets.filterNot(orderedOffsets.contains(_)).sorted.toArray,
             expressionConverters.toGroupingExpression(id, groupingExpressions, orderToLeverage))(id)
         }
 
@@ -692,9 +690,19 @@ class SlottedPipeMapper(fallback: PipeMapper,
         } else if (groupingExpressions.values.forall(orderToLeverage.contains)) {
           AllOrderedDistinctSlottedPipe(source, slots, expressionConverters.toGroupingExpression(id, groupingExpressions, orderToLeverage))(id)
         } else {
-          OrderedDistinctSlottedPipe(source, slots, expressionConverters.toGroupingExpression(id, groupingExpressions, orderToLeverage))(id)
+          val (ordered, unordered) = partitionGroupingExpressions(groupingExpressions, orderToLeverage, id)
+          OrderedDistinctSlottedPipe(source, slots, ordered, unordered)(id)
         }
     }
+  }
+
+  private def partitionGroupingExpressions(groupingExpressions: Map[String, internal.expressions.Expression],
+                                           orderToLeverage: Seq[internal.expressions.Expression],
+                                           id: Id): (GroupingExpression, GroupingExpression) = {
+    val (orderedGroupingExpressions, unorderedGroupingExpressions) = groupingExpressions.partition { case (_, v) => orderToLeverage.contains(v) }
+    val orderedGroupingColumns = expressionConverters.toGroupingExpression(id, orderedGroupingExpressions, orderToLeverage)
+    val unorderedGroupingColumns = expressionConverters.toGroupingExpression(id, unorderedGroupingExpressions, orderToLeverage)
+    (orderedGroupingColumns, unorderedGroupingColumns)
   }
 
   // Verifies the assumption that all shared slots are arguments with slot offsets within the first argument size number of slots

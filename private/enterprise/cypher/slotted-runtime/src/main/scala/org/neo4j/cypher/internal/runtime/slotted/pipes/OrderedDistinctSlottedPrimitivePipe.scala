@@ -21,8 +21,8 @@ import org.neo4j.values.storable.LongArray
 
 case class OrderedDistinctSlottedPrimitivePipe(source: Pipe,
                                                slots: SlotConfiguration,
-                                               primitiveSlots: Array[Int],
                                                orderedPrimitiveSlots: Array[Int],
+                                               unorderedPrimitiveSlots: Array[Int],
                                                groupingExpression: GroupingExpression)
                                               (val id: Id = Id.INVALID_ID)
   extends PipeWithSource(source) {
@@ -40,7 +40,7 @@ case class OrderedDistinctSlottedPrimitivePipe(source: Pipe,
         while (input.hasNext) {
           val next: CypherRow = input.next()
 
-          val groupingValue = buildGroupingValue(next, primitiveSlots)
+          val unorderedGroupingValue = buildGroupingValue(next, unorderedPrimitiveSlots)
           val orderedGroupingValue = buildGroupingValue(next, orderedPrimitiveSlots)
 
           if (currentOrderedGroupingValue == null || currentOrderedGroupingValue != orderedGroupingValue) {
@@ -49,8 +49,8 @@ case class OrderedDistinctSlottedPrimitivePipe(source: Pipe,
             seen = Sets.mutable.empty[LongArray]()
           }
 
-          if (seen.add(groupingValue)) {
-            state.memoryTracker.allocated(groupingValue, id.x)
+          if (seen.add(unorderedGroupingValue)) {
+            state.memoryTracker.allocated(unorderedGroupingValue, id.x)
             // Found unseen key! Set it as the next element to yield, and exit
             groupingExpression.project(next, groupingExpression.computeGroupingKey(next, state))
             return Some(next)

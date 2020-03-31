@@ -10,7 +10,6 @@ import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementTestBase
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.memory.HeapMemoryLimitExceeded
-import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.VirtualValues
 
 trait WithSlotsMemoryManagementTestBase {
@@ -20,8 +19,6 @@ trait WithSlotsMemoryManagementTestBase {
     data match {
       case E_INT => ValueUtils.of(0).estimatedHeapUsage()
       case E_INT_IN_DISTINCT => ValueUtils.of(0).estimatedHeapUsage() // Slotted does not wrap single columns in lists for distinct
-      case E_INT_INT_IN_DISTINCT => ValueUtils.of(java.util.Arrays.asList(0, 0)).estimatedHeapUsage() // We wrap the columns in a list
-      case E_NODE_NODE_IN_DISTINCT => Values.longArray(Array(0L, 0L)).estimatedHeapUsage()
       case E_NODE_PRIMITIVE => java.lang.Long.BYTES // Just a long in slotted
       case E_NODE_VALUE => VirtualValues.node(0).estimatedHeapUsage()
     }
@@ -86,7 +83,7 @@ trait SlottedMemoryManagementTestBase extends WithSlotsMemoryManagementTestBase 
   test("should kill primitive ordered distinct query before it runs out of memory") {
     // given
     val sameNode = runtimeTestSupport.tx.createNode()
-    val input = infiniteNodeInput(estimateSize(E_NODE_NODE_IN_DISTINCT), Some(_ => Array(sameNode, runtimeTestSupport.tx.createNode())))
+    val input = infiniteNodeInput(estimateSize(E_NODE_PRIMITIVE), Some(_ => Array(sameNode, runtimeTestSupport.tx.createNode())))
 
     // when
     val logicalQuery = new LogicalQueryBuilder(this)
