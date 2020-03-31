@@ -472,6 +472,8 @@ class MorselBufferTest extends MorselUnitTest {
 
   class StaticCanceller(override val isCancelled: Boolean, val argumentRowId: Long) extends WorkCanceller {
     override def argumentRowIdsForReducers: Array[Long] = ???
+
+    override def remaining: Long = if (isCancelled) 0L else Long.MaxValue
   }
 
   case class CancellerFactory(predicate: Long => Boolean) extends ArgumentStateMap.ArgumentStateFactory[StaticCanceller] {

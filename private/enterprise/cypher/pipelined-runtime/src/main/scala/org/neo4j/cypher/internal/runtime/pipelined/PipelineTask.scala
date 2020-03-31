@@ -48,6 +48,7 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
                                workUnitEvent: WorkUnitEvent,
                                queryProfiler: QueryProfiler): PreparedOutput = {
     if (_output == null) {
+      //TODO here we need size from workCancellers
       _output = pipelineState.allocateMorsel(workUnitEvent, state)
       executeOperators(resources, queryProfiler)
     }

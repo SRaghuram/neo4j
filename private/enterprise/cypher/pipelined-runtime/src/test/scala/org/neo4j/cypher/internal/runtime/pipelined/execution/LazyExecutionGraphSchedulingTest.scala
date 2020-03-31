@@ -75,7 +75,7 @@ class LazyExecutionGraphSchedulingTest extends CypherFunSuite {
   def pipeline(id: PipelineId,
                lhs: PipelineId = NO_PIPELINE,
                rhs: PipelineId = NO_PIPELINE): PipelineDefinition =
-    PipelineDefinition(id, lhs, rhs, null, null, null, null, serial = false)
+    PipelineDefinition(id, lhs, rhs, null, null, null, null, serial = false, None)
 
   def executingGraphDefinition(pipelines: Array[PipelineDefinition]): ExecutionGraphDefinition =
     ExecutionGraphDefinition(null, null, null, pipelines, null)

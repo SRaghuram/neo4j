@@ -76,6 +76,7 @@ object PipelineTreeBuilder {
     }
     val middlePlans = new ArrayBuffer[LogicalPlan]
     var serial: Boolean = false
+    var workCanceller: Option[ArgumentStateMapId] = None
 
     def fuse(plan: LogicalPlan, isBreaking: Boolean): Boolean = {
       headPlan match {
@@ -114,7 +115,7 @@ object PipelineTreeBuilder {
             InterpretedHead(f.operatorFuser.fusedPlans.head)
         case i: InterpretedHead => i
       }
-    def result: PipelineDefinition = PipelineDefinition(id, lhs, rhs, headPlanResult, inputBuffer.result, outputDefinition, middlePlans, serial)
+    def result: PipelineDefinition = PipelineDefinition(id, lhs, rhs, headPlanResult, inputBuffer.result, outputDefinition, middlePlans, serial, workCanceller)
   }
 
   abstract class BufferDefiner(val id: BufferId, val memoryTrackingOperatorId: Id, val bufferConfiguration: SlotConfiguration) {
@@ -577,7 +578,17 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
 
       case _: Limit =>
         val asm = stateDefiner.newArgumentStateMap(plan.id, argument.argumentSlotOffset)
-        markCancellerInUpstreamBuffers(source.inputBuffer, argument, asm.id)
+        //if we are a toplevel limit we want to to propagate the limit upstream
+        val onPipeline: PipelineDefiner => Unit =
+          if(argument.argumentSlotOffset == TopLevelArgument.SLOT_OFFSET) p => {
+            if (p.workCanceller.isEmpty) {
+              p.workCanceller = Some(asm.id)
+            }
+          }
+          else _ => {}
+        //we want to propagate starting with source and then all upstream pipelines
+        onPipeline(source)
+        markCancellerInUpstreamBuffers(source.inputBuffer, argument, asm.id, onPipeline)
         source.fuseOrInterpret(plan, isBreaking = true)
         source
 
@@ -728,13 +739,15 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         val b = lastDelegateBuffer.applyBuffer
         b.registerReducerOnRHS(argumentStateDefinition)
         lastDelegateBuffer.downstreamReducers += downstreamReduceASMID
-      }
+      },
+      _ => {}
     )
   }
 
   private def markCancellerInUpstreamBuffers(buffer: BufferDefiner,
                                              applyBuffer: ApplyBufferDefiner,
-                                             workCancellerASMID: ArgumentStateMapId): Unit = {
+                                             workCancellerASMID: ArgumentStateMapId,
+                                             onPipeline: PipelineDefiner => Unit): Unit = {
     traverseBuffers(buffer,
       applyBuffer,
       inputBuffer => inputBuffer.registerDownstreamWorkCanceller(workCancellerASMID),
@@ -748,7 +761,8 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         val b = lastDelegateBuffer.applyBuffer
         b.registerDownstreamWorkCanceller(workCancellerASMID)
         lastDelegateBuffer.registerDownstreamWorkCanceller(workCancellerASMID)
-      }
+      },
+      onPipeline
     )
   }
 
@@ -761,16 +775,24 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
    * @param onDelegateBuffer                    called for every delegate buffer except the last one belonging to applyBuffer
    * @param onLHSAccumulatingRHSStreamingBuffer called for every LHSAccumulatingRHSStreamingBufferDefinition
    * @param onLastDelegate                      called for the last delegate belonging to applyBuffer
+   * @param onPipeline                          called for each pipeline
    */
   private def traverseBuffers(buffer: BufferDefiner,
                               applyBuffer: ApplyBufferDefiner,
                               onInputBuffer: BufferDefiner => Unit,
                               onLHSAccumulatingRHSStreamingBuffer: LHSAccumulatingRHSStreamingBufferDefiner => Unit,
                               onDelegateBuffer: DelegateBufferDefiner => Unit,
-                              onLastDelegate: DelegateBufferDefiner => Unit): Unit = {
+                              onLastDelegate: DelegateBufferDefiner => Unit,
+                              onPipeline: PipelineDefiner => Unit): Unit = {
     @tailrec
     def bfs(buffers: Seq[BufferDefiner]): Unit = {
       val upstreams = new ArrayBuffer[BufferDefiner]()
+
+      def getPipeline(id: Int): PipelineDefiner = {
+        val p = pipelines(id)
+        onPipeline(p)
+        p
+      }
 
       buffers.foreach {
         case d: DelegateBufferDefiner if d.applyBuffer == applyBuffer =>
@@ -783,20 +805,20 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
           onLHSAccumulatingRHSStreamingBuffer(b)
           // We only add the RHS since the LHS is not streaming through the join
           // Therefore it needs to finish before the join can even start
-          upstreams += pipelines(b.rhsSink.producingPipelineId.x).inputBuffer
+          upstreams += getPipeline(b.rhsSink.producingPipelineId.x).inputBuffer
         case d: DelegateBufferDefiner =>
           onDelegateBuffer(d)
-          upstreams += pipelines(d.applyBuffer.producingPipelineId.x).inputBuffer
+          upstreams += getPipeline(d.applyBuffer.producingPipelineId.x).inputBuffer
         case b: MorselBufferDefiner =>
           onInputBuffer(b)
-          upstreams += pipelines(b.producingPipelineId.x).inputBuffer
+          upstreams += getPipeline(b.producingPipelineId.x).inputBuffer
         case b: UnionBufferDefiner =>
           onInputBuffer(b)
-          upstreams += pipelines(b.lhsProducingPipelineId.x).inputBuffer
-          upstreams += pipelines(b.rhsProducingPipelineId.x).inputBuffer
+          upstreams += getPipeline(b.lhsProducingPipelineId.x).inputBuffer
+          upstreams += getPipeline(b.rhsProducingPipelineId.x).inputBuffer
         case b: OptionalMorselBufferDefiner =>
           onInputBuffer(b)
-          upstreams += pipelines(b.producingPipelineId.x).inputBuffer
+          upstreams += getPipeline(b.producingPipelineId.x).inputBuffer
       }
 
       if (upstreams.nonEmpty) {

@@ -192,7 +192,15 @@ object ArgumentStateMap {
    * A state that keeps track whether work related to the argument id is cancelled.
    */
   trait WorkCanceller extends ArgumentState {
+    /**
+     * @return `true` if cancelled otherwise `false`
+     */
     def isCancelled: Boolean
+
+    /**
+     * @return the number of remaining rows before work is done (cancelled)
+     */
+    def remaining: Long
   }
 
   /**

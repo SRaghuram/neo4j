@@ -58,7 +58,8 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
                                        fusedPlans: Seq[Class[_ <: LogicalPlan]],
                                        inputBuffer: BufferId,
                                        outputDefinition: MatchableOutputDefinition,
-                                       serial: Boolean)
+                                       serial: Boolean,
+                                       workLimiter: Option[ArgumentStateMapId])
 
   private sealed trait MatchableOutputDefinition
 
@@ -228,8 +229,9 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
     def pipeline(id: Int,
                  plans: Seq[Class[_ <: LogicalPlan]] = Seq.empty,
                  fusedPlans: Seq[Class[_ <: LogicalPlan]] = Seq.empty,
-                 serial: Boolean = false): PipelineSequence = {
-      val mp = pipelines.getOrElseUpdate(id, MatchablePipeline(PipelineId(id), plans, fusedPlans, bufferDefinition.id, null, serial))
+                 serial: Boolean = false,
+                 workLimiter: Option[ArgumentStateMapId] = None): PipelineSequence = {
+      val mp = pipelines.getOrElseUpdate(id, MatchablePipeline(PipelineId(id), plans, fusedPlans, bufferDefinition.id, null, serial, workLimiter))
       new PipelineSequence(mp)
     }
 
@@ -407,7 +409,8 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
         fusedHead.map(_.getClass),
         got.inputBuffer.id,
         out(got.outputDefinition),
-        got.serial)
+        got.serial,
+        got.workLimiter)
 
     }
     if (gotPipelines != expectedPipelines) {

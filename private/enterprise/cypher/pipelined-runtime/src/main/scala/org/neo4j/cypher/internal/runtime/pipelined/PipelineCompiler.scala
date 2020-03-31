@@ -97,6 +97,7 @@ class PipelineCompiler(operatorFactory: OperatorFactory,
                         physicalPlan.slotConfigurations(p.headPlan.id),
                         p.inputBuffer,
                         operatorFactory.createOutput(p.outputDefinition, nextPipelineFused),
+                        p.workLimiter,
                         needsMorsel,
                         thisNeedsFilteringMorsel),
      upstreamsNeedsFilteringMorsel)

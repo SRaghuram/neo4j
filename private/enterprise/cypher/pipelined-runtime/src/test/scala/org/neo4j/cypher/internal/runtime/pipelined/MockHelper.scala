@@ -40,7 +40,8 @@ object MockHelper extends MockitoSugar {
       serial = false,
       null,
       null,
-      mock[OutputOperator](RETURNS_DEEP_STUBS)
+      mock[OutputOperator](RETURNS_DEEP_STUBS),
+      None,
     )
     when(result.pipeline).thenReturn(pipeline)
     if(schedulingResults.nonEmpty) {

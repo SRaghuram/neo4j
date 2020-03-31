@@ -31,14 +31,15 @@ object PipelineId {
 /**
  * Maps to one ExecutablePipeline
  *
- * @param id               the id of the pipeline
+ * @param id               The ID of the pipeline
  * @param lhs              The ID of the LHS pipeline of this pipeline, or NO_PIPELINE
  * @param rhs              The ID of the RHS pipeline of this pipeline, or NO_PIPELINE
- * @param headPlan         the first plan of the pipeline
+ * @param headPlan         The first plan of the pipeline
  * @param inputBuffer      The input buffer to the pipeline
  * @param outputDefinition The output of the pipeline
  * @param middlePlans      Contains all non-fused middle plans of the pipeline
  * @param serial           `true` if the pipeline should be executed serially otherwise `false`
+ * @param workLimiter      Optional reference to a workCanceller via an ArgumentStateMapId
  */
 case class PipelineDefinition(id: PipelineId,
                               lhs: PipelineId,
@@ -47,7 +48,8 @@ case class PipelineDefinition(id: PipelineId,
                               inputBuffer: BufferDefinition,
                               outputDefinition: OutputDefinition,
                               middlePlans: IndexedSeq[LogicalPlan],
-                              serial: Boolean)
+                              serial: Boolean,
+                              workLimiter: Option[ArgumentStateMapId])
 
 /**
  * Maps to one ArgumentStateMap.

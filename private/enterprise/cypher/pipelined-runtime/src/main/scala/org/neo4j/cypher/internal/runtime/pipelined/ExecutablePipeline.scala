@@ -6,10 +6,13 @@
 package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.cypher.internal.NonFatalCypherError
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
 import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
+import org.neo4j.cypher.internal.runtime.pipelined.PipelineState.MIN_MORSEL_SIZE
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFactory
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
@@ -27,8 +30,10 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorTask
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperatorState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.UnorderedArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
@@ -45,6 +50,7 @@ case class ExecutablePipeline(id: PipelineId,
                               slots: SlotConfiguration,
                               inputBuffer: BufferDefinition,
                               outputOperator: OutputOperator,
+                              workLimiter: Option[ArgumentStateMapId],
                               needsMorsel: Boolean = true,
                               needsFilteringMorsel: Boolean = false) extends WorkIdentity {
 
@@ -140,10 +146,11 @@ class PipelineState(val pipeline: ExecutablePipeline,
       } while (task != null && taskCancelled(task))
     } catch {
       case NonFatalCypherError(t) =>
-        if (DebugSupport.SCHEDULING.enabled)
+        if (DebugSupport.SCHEDULING.enabled) {
           DebugSupport.SCHEDULING.log(s"[nextTask] failed with $t")
-        else if (DebugSupport.WORKERS.enabled)
+        } else if (DebugSupport.WORKERS.enabled) {
           DebugSupport.WORKERS.log(s"[nextTask] failed with $t")
+        }
         throw NextTaskException(pipeline, t)
     }
     SchedulingResult(task, someTaskWasFilteredOut)
@@ -154,12 +161,26 @@ class PipelineState(val pipeline: ExecutablePipeline,
     //       The MorselFactory should probably originate from the MorselBuffer to play well with reuse/pooling
     if (pipeline.needsMorsel) {
       val slots = pipeline.slots
+      val morselSize = computeMorselSize(state)
       if (pipeline.needsFilteringMorsel) {
-        MorselFactory.allocateFiltering(slots, state.morselSize, producingWorkUnitEvent)
+        MorselFactory.allocateFiltering(slots, morselSize, producingWorkUnitEvent)
       } else {
-        MorselFactory.allocate(slots, state.morselSize, producingWorkUnitEvent)
+        MorselFactory.allocate(slots, morselSize, producingWorkUnitEvent)
       }
-    } else Morsel.empty
+    } else {
+      Morsel.empty
+    }
+  }
+
+  private def computeMorselSize(state: PipelinedQueryState)= {
+    val reducedSize = pipeline.workLimiter
+      .map(id => executionState.argumentStateMaps(id).asInstanceOf[UnorderedArgumentStateMap[WorkCanceller]].peek(TopLevelArgument.VALUE).remaining)
+      .getOrElse(Long.MaxValue)
+    //lowerBound is MIN_MORSEL_SIZE, if not explicitly configured to be lower
+    val lowerBound = math.min(MIN_MORSEL_SIZE, state.morselSize)
+    //upperBound is what remains from the limit as long as that is below the configured morselSize
+    val upperBound = math.min(reducedSize, state.morselSize).toInt
+    math.max(upperBound, lowerBound)
   }
 
   private def innerNextTask(state: PipelinedQueryState,
@@ -256,4 +277,8 @@ class PipelineState(val pipeline: ExecutablePipeline,
   override def filterCancelledArguments(morsel: Morsel, accumulator: MorselAccumulator[_]): Boolean = {
     executionState.filterCancelledArguments(pipeline, morsel, accumulator)
   }
+}
+
+object PipelineState {
+  val MIN_MORSEL_SIZE: Int = 10
 }

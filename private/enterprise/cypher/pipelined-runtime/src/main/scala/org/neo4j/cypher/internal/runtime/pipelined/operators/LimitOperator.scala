@@ -67,6 +67,7 @@ object LimitOperator {
   trait LimitState extends CountingState with WorkCanceller {
     self: CountingState =>
     def isCancelled: Boolean = getCount <= 0
+    def remaining: Long = getCount
   }
 
   class LimitStateFactory(count: Long) extends ArgumentStateFactory[LimitState] {
@@ -308,11 +309,11 @@ class SerialLimitOnRhsOfApplyOperatorTaskTemplate(override val inner: OperatorTa
 object SerialTopLevelLimitOperatorTaskTemplate {
 
   // This is used by fused limit in a serial pipeline, i.e. only safe to use in single-threaded execution or by a serial pipeline in parallel execution
-  object SerialLimitStateFactory extends ArgumentStateFactory[SerialCountingState] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): SerialCountingState =
+  object SerialLimitStateFactory extends ArgumentStateFactory[LimitState] {
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): LimitState =
       new StandardSerialLimitState(argumentRowId, argumentRowIdsForReducers)
 
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): SerialCountingState =
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): LimitState =
     // NOTE: This is actually _not_ threadsafe and only safe to use in a serial pipeline!
       new VolatileSerialLimitState(argumentRowId, argumentRowIdsForReducers)
 
@@ -320,7 +321,7 @@ object SerialTopLevelLimitOperatorTaskTemplate {
   }
 
   class StandardSerialLimitState(override val argumentRowId: Long,
-                                 override val argumentRowIdsForReducers: Array[Long]) extends SerialCountingState with WorkCanceller {
+                                 override val argumentRowIdsForReducers: Array[Long]) extends SerialCountingState with LimitState {
 
     private var countLeft: Long = -1L
 
@@ -336,7 +337,7 @@ object SerialTopLevelLimitOperatorTaskTemplate {
    * to be accessed in serial.
    */
   class VolatileSerialLimitState(override val argumentRowId: Long,
-                                 override val argumentRowIdsForReducers: Array[Long]) extends SerialCountingState with WorkCanceller{
+                                 override val argumentRowIdsForReducers: Array[Long]) extends SerialCountingState with LimitState {
 
     @volatile private var countLeft: Long = -1L
 

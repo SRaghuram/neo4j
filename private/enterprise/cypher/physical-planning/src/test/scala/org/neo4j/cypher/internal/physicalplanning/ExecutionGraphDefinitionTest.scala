@@ -93,7 +93,7 @@ class ExecutionGraphDefinitionTest extends CypherFunSuite {
       start(graph)
         .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 2)
         .delegateToMorselBuffer(1, 2)
-        .pipeline(0, Seq(classOf[AllNodesScan], classOf[Limit], classOf[ProduceResult]), serial = true)
+        .pipeline(0, Seq(classOf[AllNodesScan], classOf[Limit], classOf[ProduceResult]), serial = true, workLimiter = Some(ArgumentStateMapId(0)))
         .end
 
       start(graph).applyBuffer(0).canceller(0, 1, TopLevelArgument.SLOT_OFFSET)
@@ -412,6 +412,126 @@ class ExecutionGraphDefinitionTest extends CypherFunSuite {
         .delegateToMorselBuffer(1, 4)
         .pipeline(0, fusedPlans = Seq(classOf[AllNodesScan], classOf[Selection]), plans = Seq(classOf[Projection], classOf[Selection], classOf[ProduceResult]), serial = true)
         .end
+    }
+  }
+
+  test("should propagate work limiter upstream") {
+    new ExecutionGraphDefinitionBuilder()
+      .produceResults("p")
+      .expand("(o)-->(p)").withBreak()
+      .limit(1)
+      .expand("(m)-->(o)").withBreak()
+      .expand("(n)-->(m)").withBreak()
+      .allNodeScan("n").withBreak()
+      .build() should plan {
+      val graph = newGraph
+
+      start(graph)
+        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 5)
+        .delegateToMorselBuffer(1, 5)
+        .pipeline(0, Seq(classOf[AllNodesScan]), workLimiter = Some(ArgumentStateMapId(0)))
+        .morselBuffer(2, 4)
+        .pipeline(1, Seq(classOf[Expand]), workLimiter = Some(ArgumentStateMapId(0)))
+        .morselBuffer(3, 3)
+        .pipeline(2, Seq(classOf[Expand], classOf[Limit]), workLimiter = Some(ArgumentStateMapId(0)))
+        .morselBuffer(4, 1)
+        .pipeline(3, Seq(classOf[Expand], classOf[ProduceResult]), serial = true, workLimiter = None)
+        .end
+
+      start(graph).applyBuffer(0).canceller(0, 2, TopLevelArgument.SLOT_OFFSET)
+      start(graph).morselBuffer(1).canceller(0)
+      start(graph).morselBuffer(2).canceller(0)
+      start(graph).morselBuffer(3).canceller(0)
+    }
+  }
+
+  test("should handle multiple work limiters") {
+    new ExecutionGraphDefinitionBuilder()
+      .produceResults("p")
+      .limit(1)
+      .expand("(o)-->(p)").withBreak()
+      .limit(10)
+      .expand("(m)-->(o)").withBreak()
+      .expand("(n)-->(m)").withBreak()
+      .allNodeScan("n").withBreak()
+      .build() should plan {
+      val graph = newGraph
+
+      start(graph)
+        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 6)
+        .delegateToMorselBuffer(1, 6)
+        .pipeline(0, Seq(classOf[AllNodesScan]), workLimiter = Some(ArgumentStateMapId(0)))
+        .morselBuffer(2, 5)
+        .pipeline(1, Seq(classOf[Expand]), workLimiter = Some(ArgumentStateMapId(0)))
+        .morselBuffer(3, 4)
+        .pipeline(2, Seq(classOf[Expand], classOf[Limit]), workLimiter = Some(ArgumentStateMapId(0)))
+        .morselBuffer(4, 2)
+        .pipeline(3, Seq(classOf[Expand],  classOf[Limit], classOf[ProduceResult]), serial = true, workLimiter = Some(ArgumentStateMapId(1)))
+        .end
+
+      start(graph).applyBuffer(0).canceller(0, 3, TopLevelArgument.SLOT_OFFSET)
+      start(graph).applyBuffer(0).canceller(1, 1, TopLevelArgument.SLOT_OFFSET)
+      start(graph).morselBuffer(1).canceller(0)
+      start(graph).morselBuffer(1).canceller(1)
+      start(graph).morselBuffer(2).canceller(0)
+      start(graph).morselBuffer(2).canceller(1)
+      start(graph).morselBuffer(3).canceller(0)
+      start(graph).morselBuffer(3).canceller(1)
+      start(graph).morselBuffer(4).canceller(1)
+    }
+  }
+
+  test("should propagate top level limit only") {
+    new ExecutionGraphDefinitionBuilder()
+      .produceResults("m")
+      .limit(1)
+      .apply()
+      .|.limit(10)
+      .|.expand("(n)-->(m)")
+      .|.argument().withBreak()
+      .allNodeScan("n").withBreak()
+      .build() should plan {
+      val graph = newGraph
+
+      start(graph)
+        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 6)
+        .delegateToMorselBuffer(1, 6)
+        .pipeline(0, Seq(classOf[AllNodesScan]), workLimiter = Some(ArgumentStateMapId(1)))
+        .applyBuffer(2, 1, 2)
+        .delegateToMorselBuffer(3, 5)
+        .pipeline(1, Seq(classOf[Argument], classOf[Expand], classOf[Limit], classOf[Limit], classOf[ProduceResult]), serial = true, workLimiter = Some(ArgumentStateMapId(1)))
+        .end
+
+      start(graph).applyBuffer(0).canceller(1, 1, TopLevelArgument.SLOT_OFFSET)
+      start(graph).applyBuffer(2).canceller(0, 3, 1)
+      start(graph).morselBuffer(1).canceller(1)
+      start(graph).morselBuffer(3).canceller(0)
+      start(graph).morselBuffer(3).canceller(1)
+    }
+  }
+
+  test("should not propagate limit under RHS of apply") {
+    new ExecutionGraphDefinitionBuilder()
+      .produceResults("m")
+      .apply()
+      .|.limit(10)
+      .|.expand("(n)-->(m)")
+      .|.argument().withBreak()
+      .allNodeScan("n").withBreak()
+      .build() should plan {
+      val graph = newGraph
+
+      start(graph)
+        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 5)
+        .delegateToMorselBuffer(1, 5)
+        .pipeline(0, Seq(classOf[AllNodesScan]), workLimiter = None)
+        .applyBuffer(2, 1, 1)
+        .delegateToMorselBuffer(3, 4)
+        .pipeline(1, Seq(classOf[Argument], classOf[Expand], classOf[Limit], classOf[ProduceResult]), serial = true, workLimiter = None)
+        .end
+
+      start(graph).applyBuffer(2).canceller(0, 2, 1)
+      start(graph).morselBuffer(3).canceller(0)
     }
   }
 
