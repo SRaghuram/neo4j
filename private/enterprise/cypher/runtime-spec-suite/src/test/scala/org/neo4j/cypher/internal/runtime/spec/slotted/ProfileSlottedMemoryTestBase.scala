@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal.runtime.spec.slotted
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileMemoryTestBase
-import org.neo4j.cypher.result.OperatorProfile
 
 trait ProfileSlottedMemoryTestBase {
   self: ProfileMemoryTestBase[EnterpriseRuntimeContext] =>
@@ -26,7 +25,7 @@ trait ProfileSlottedMemoryTestBase {
       .build()
 
     // then
-    assertOnMemory(logicalQuery, 3, 1)
+    assertOnMemory(logicalQuery, NO_INPUT, 3, 1)
   }
 
   test("should profile memory of primitive distinct") {
@@ -42,7 +41,25 @@ trait ProfileSlottedMemoryTestBase {
       .build()
 
     // then
-    assertOnMemory(logicalQuery, 3, 1)
+    assertOnMemory(logicalQuery, NO_INPUT, 3, 1)
+  }
+
+  test("should profile memory of primitive ordered distinct") {
+    val nodes = given {
+      nodeGraph(SIZE)
+    }
+
+    val input = for (n <- nodes) yield Array[Any](nodes.head, n)
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .orderedDistinct(Seq("x"),"x AS x", "y AS y")
+      .input(nodes = Seq("x", "y"), nullable = false)
+      .build()
+
+    // then
+    assertOnMemory(logicalQuery, inputValues(input:_*), 3, 1)
   }
 
   test("should profile memory of single primitive distinct") {
@@ -58,6 +75,6 @@ trait ProfileSlottedMemoryTestBase {
       .build()
 
     // then
-    assertOnMemory(logicalQuery, 3, 1)
+    assertOnMemory(logicalQuery, NO_INPUT, 3, 1)
   }
 }

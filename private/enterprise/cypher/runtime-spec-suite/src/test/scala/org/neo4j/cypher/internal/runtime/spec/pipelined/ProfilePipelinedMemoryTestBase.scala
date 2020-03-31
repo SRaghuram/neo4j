@@ -7,13 +7,14 @@ package org.neo4j.cypher.internal.runtime.spec.pipelined
 
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.LogicalQuery
+import org.neo4j.cypher.internal.runtime.InputValues
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileMemoryTestBase
 
 trait ProfilePipelinedMemoryTestBase extends ProfileMemoryTestBase[EnterpriseRuntimeContext] {
 
-  override def assertOnMemory(logicalQuery: LogicalQuery, numOperators: Int, allocatingOperators: Int*): Unit = {
-    val runtimeResult = profile(logicalQuery, runtime)
+  override def assertOnMemory(logicalQuery: LogicalQuery, input: InputValues, numOperators: Int, allocatingOperators: Int*): Unit = {
+    val runtimeResult = profile(logicalQuery, runtime, input.stream())
     consume(runtimeResult)
 
     val queryProfile = runtimeResult.runtimeResult.queryProfile()
@@ -43,7 +44,7 @@ trait ProfilePipelinedMemoryTestBase extends ProfileMemoryTestBase[EnterpriseRun
       .build()
 
     // then
-    assertOnMemory(logicalQuery, 4, 1)
+    assertOnMemory(logicalQuery, NO_INPUT, 4, 1)
   }
 
   test("should profile memory in apply buffer") {
@@ -60,7 +61,7 @@ trait ProfilePipelinedMemoryTestBase extends ProfileMemoryTestBase[EnterpriseRun
       .build()
 
     // then
-    assertOnMemory(logicalQuery, 4, 2)
+    assertOnMemory(logicalQuery, NO_INPUT, 4, 2)
   }
 
   test("should profile memory in optional buffer") {
@@ -76,7 +77,7 @@ trait ProfilePipelinedMemoryTestBase extends ProfileMemoryTestBase[EnterpriseRun
       .build()
 
     // then
-    assertOnMemory(logicalQuery, 3, 1)
+    assertOnMemory(logicalQuery, NO_INPUT, 3, 1)
   }
 }
 
@@ -95,6 +96,6 @@ trait ProfilePipelinedNoFusingMemoryTestBase extends ProfilePipelinedMemoryTestB
       .build()
 
     // then
-    assertOnMemory(logicalQuery, 3, 1)
+    assertOnMemory(logicalQuery, NO_INPUT, 3, 1)
   }
 }
