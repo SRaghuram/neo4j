@@ -8,8 +8,10 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 
@@ -27,7 +29,28 @@ class OptionalMorselBuffer(id: BufferId,
                            argumentStateMaps: ArgumentStateMaps,
                            argumentStateMapId: ArgumentStateMapId
                           )
-  extends BaseArgExistsMorselBuffer[MorselData](id, tracker, downstreamArgumentReducers, argumentStateMaps, argumentStateMapId) {
+  extends BaseArgExistsMorselBuffer[MorselData, OptionalArgumentStateBuffer](id, tracker, downstreamArgumentReducers, argumentStateMaps, argumentStateMapId) {
+
+  override def canPut: Boolean = argumentStateMap.exists(_.canPut)
+
+  override def put(data: IndexedSeq[PerArgument[Morsel]]): Unit = {
+    if (DebugSupport.BUFFERS.enabled) {
+      DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
+    }
+
+    var i = 0
+    while (i < data.length) {
+      argumentStateMap.update(data(i).argumentRowId, {acc =>
+        // We increment for each morsel view, otherwise we can reach a count of zero too early, when all the data has arrived in this buffer, but has not been
+        // streamed out yet.
+        // We have to do the increments in this lambda function, because it can happen that we try to update argument row IDs that are concurrently cancelled and taken
+        tracker.increment()
+        acc.update(data(i).value)
+        forAllArgumentReducers(downstreamArgumentReducers, acc.argumentRowIdsForReducers, _.increment(_))
+      })
+      i += 1
+    }
+  }
 
   override def take(): MorselData = {
     // To achieve streaming behavior, we peek at the data, even if it is not completed yet.
@@ -73,8 +96,37 @@ class OptionalMorselBuffer(id: BufferId,
     argumentStateMap.someArgumentStateIsCompletedOr(state => state.hasData)
   }
 
+  override def clearArgumentState(buffer: OptionalArgumentStateBuffer): Unit = {
+    val morselsOrNull = buffer.takeAll()
+    val numberOfDecrements = if (morselsOrNull != null) morselsOrNull.size else 0
+    closeOne(EndOfNonEmptyStream, numberOfDecrements, buffer.argumentRowIdsForReducers)
+  }
+
   override def close(data: MorselData): Unit = {
     closeOne(data.argumentStream, data.morsels.size, data.argumentRowIdsForReducers)
+  }
+
+  private def closeOne(argumentStream: ArgumentStream, numberOfDecrements: Int, argumentRowIdsForReducers: Array[Long]): Unit = {
+    if (DebugSupport.BUFFERS.enabled) {
+      DebugSupport.BUFFERS.log(s"[closeOne] $this -X- $argumentStream , $numberOfDecrements , $argumentRowIdsForReducers")
+    }
+
+    argumentStream match {
+      case _: EndOfStream =>
+        // Decrement that corresponds to the increment in initiate
+        tracker.decrement()
+        forAllArgumentReducers(downstreamArgumentReducers, argumentRowIdsForReducers, _.decrement(_))
+      case _ =>
+      // Do nothing
+    }
+
+    tracker.decrementBy(numberOfDecrements)
+
+    var i = 0
+    while (i < numberOfDecrements) {
+      forAllArgumentReducers(downstreamArgumentReducers, argumentRowIdsForReducers, _.decrement(_))
+      i += 1
+    }
   }
 
   override def toString: String =

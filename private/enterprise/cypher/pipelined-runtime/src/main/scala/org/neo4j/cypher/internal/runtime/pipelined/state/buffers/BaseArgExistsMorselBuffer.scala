@@ -15,6 +15,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
@@ -33,7 +34,8 @@ import scala.collection.mutable.ArrayBuffer
  *
  * This buffer sits between two pipelines.
  */
-abstract class BaseArgExistsMorselBuffer[PRODUCES <: AnyRef](id: BufferId,
+abstract class BaseArgExistsMorselBuffer[PRODUCES <: AnyRef, S <: ArgumentState](
+                                                             id: BufferId,
                                                              tracker: QueryCompletionTracker,
                                                              downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
                                                              override val argumentStateMaps: ArgumentStateMaps,
@@ -45,33 +47,12 @@ abstract class BaseArgExistsMorselBuffer[PRODUCES <: AnyRef](id: BufferId,
   with ClosingSource[PRODUCES]
   with DataHolder {
 
-  protected val argumentStateMap: ArgumentStateMap[OptionalArgumentStateBuffer] =
-    argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMap[OptionalArgumentStateBuffer]]
+  protected val argumentStateMap: ArgumentStateMap[S] =
+    argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMap[S]]
 
   override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
 
-  override def canPut: Boolean = argumentStateMap.exists(_.canPut)
-
-  override def put(data: IndexedSeq[PerArgument[Morsel]]): Unit = {
-    if (DebugSupport.BUFFERS.enabled) {
-      DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
-    }
-
-    var i = 0
-    while (i < data.length) {
-      argumentStateMap.update(data(i).argumentRowId, {acc =>
-        // We increment for each morsel view, otherwise we can reach a count of zero too early, when all the data has arrived in this buffer, but has not been
-        // streamed out yet.
-        // We have to do the increments in this lambda function, because it can happen that we try to update argument row IDs that are concurrently cancelled and taken
-        tracker.increment()
-        acc.update(data(i).value)
-        forAllArgumentReducers(downstreamArgumentReducers, acc.argumentRowIdsForReducers, _.increment(_))
-      })
-      i += 1
-    }
-  }
-
-  override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor, initialCount: Int): Unit = {
+  override final def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor, initialCount: Int): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel with initial count $initialCount")
     }
@@ -80,44 +61,19 @@ abstract class BaseArgExistsMorselBuffer[PRODUCES <: AnyRef](id: BufferId,
     tracker.increment()
   }
 
-  override def increment(argumentRowId: Long): Unit = {
+  override final def increment(argumentRowId: Long): Unit = {
     argumentStateMap.increment(argumentRowId)
   }
 
-  override def decrement(argumentRowId: Long): Unit = {
+  override final def decrement(argumentRowId: Long): Unit = {
     argumentStateMap.decrement(argumentRowId)
   }
 
-  override def clearAll(): Unit = {
-    argumentStateMap.clearAll(buffer => {
-      val morselsOrNull = buffer.takeAll()
-      val numberOfDecrements = if (morselsOrNull != null) morselsOrNull.size else 0
-      closeOne(EndOfNonEmptyStream, numberOfDecrements, buffer.argumentRowIdsForReducers)
-    })
+  override final def clearAll(): Unit = {
+    argumentStateMap.clearAll(clearArgumentState)
   }
 
-  protected def closeOne(argumentStream: ArgumentStream, numberOfDecrements: Int, argumentRowIdsForReducers: Array[Long]): Unit = {
-    if (DebugSupport.BUFFERS.enabled) {
-      DebugSupport.BUFFERS.log(s"[closeOne] $this -X- $argumentStream , $numberOfDecrements , $argumentRowIdsForReducers")
-    }
-
-    argumentStream match {
-      case _: EndOfStream =>
-        // Decrement that corresponds to the increment in initiate
-        tracker.decrement()
-        forAllArgumentReducers(downstreamArgumentReducers, argumentRowIdsForReducers, _.decrement(_))
-      case _ =>
-      // Do nothing
-    }
-
-    tracker.decrementBy(numberOfDecrements)
-
-    var i = 0
-    while (i < numberOfDecrements) {
-      forAllArgumentReducers(downstreamArgumentReducers, argumentRowIdsForReducers, _.decrement(_))
-      i += 1
-    }
-  }
+  protected def clearArgumentState(s: S): Unit
 
   def filterCancelledArguments(accumulator: MorselAccumulator[_]): Boolean = {
     false

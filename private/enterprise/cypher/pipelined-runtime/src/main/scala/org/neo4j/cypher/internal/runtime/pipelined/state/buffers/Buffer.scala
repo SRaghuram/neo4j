@@ -48,12 +48,12 @@ trait Sink[-T <: AnyRef] {
     * Put an element in this sink
     */
   def put(t: T): Unit
+
   /**
    * Checks if there is room in the sink
    * @return `true` if there is room in the sink, otherwise `false`
    */
   def canPut: Boolean
-
 }
 
 /**
