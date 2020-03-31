@@ -441,6 +441,18 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     )
   }
 
+  test("Show roles with users") {
+    // When
+    val plan = execute("EXPLAIN SHOW ROLES WITH USERS").executionPlanString()
+
+    // Then
+    plan should include(
+      managementPlan("ShowRoles",
+        assertDbmsAdminPlan("SHOW ROLE", "SHOW USER")
+      ).toString
+    )
+  }
+
   test("Show populated roles with users") {
     // When
     val plan = execute("EXPLAIN SHOW POPULATED ROLES WITH USERS").executionPlanString()
@@ -448,7 +460,7 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     // Then
     plan should include(
       managementPlan("ShowRoles",
-        assertDbmsAdminPlan("SHOW ROLE")
+        assertDbmsAdminPlan("SHOW ROLE", "SHOW USER")
       ).toString
     )
   }

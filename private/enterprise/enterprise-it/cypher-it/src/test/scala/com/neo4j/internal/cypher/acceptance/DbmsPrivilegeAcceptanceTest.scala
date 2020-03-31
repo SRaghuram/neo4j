@@ -775,6 +775,104 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     } should have message "Permission denied."
   }
 
+  test("should show roles with users with correct privileges") {
+    // GIVEN
+    setupUserWithCustomRole("foo", "bar")
+
+    // WHEN
+    execute("GRANT SHOW ROLE ON DBMS TO custom")
+    execute("GRANT SHOW USER ON DBMS TO custom")
+
+    // THEN
+    val result = new mutable.HashSet[Map[String, AnyRef]]
+    executeOnSystem("foo", "bar", "SHOW ROLES WITH USERS", resultHandler = (row, _) => {
+      val role = Map(
+        "role" -> row.get("role"),
+        "member" -> row.get("member"),
+        "isBuiltIn" -> row.get("isBuiltIn")
+      )
+      result.add(role)
+    })
+    result should be(defaultRolesWithUsers ++ publicRole("foo") ++ Set(role("custom").member("foo").map))
+  }
+
+  test("should fail to show roles with users without show user privilege") {
+    // GIVEN
+    setupUserWithCustomRole("foo", "bar")
+
+    // WHEN
+    execute("GRANT SHOW ROLE ON DBMS TO custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "SHOW ROLES WITH USERS")
+    } should have message "Permission denied."
+  }
+
+  test("should fail to show roles with users without show role privilege") {
+    // GIVEN
+    setupUserWithCustomRole("foo", "bar")
+
+    // WHEN
+    execute("GRANT SHOW USER ON DBMS TO custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "SHOW ROLES WITH USERS")
+    } should have message "Permission denied."
+  }
+
+  test("should show populated roles with users with correct privileges") {
+    // GIVEN
+    setupUserWithCustomRole("foo", "bar")
+
+    // WHEN
+    execute("GRANT SHOW ROLE ON DBMS TO custom")
+    execute("GRANT SHOW USER ON DBMS TO custom")
+
+    // THEN
+    val result = new mutable.HashSet[Map[String, AnyRef]]
+    executeOnSystem("foo", "bar", "SHOW POPULATED ROLES WITH USERS", resultHandler = (row, _) => {
+      val role = Map(
+        "role" -> row.get("role"),
+        "member" -> row.get("member"),
+        "isBuiltIn" -> row.get("isBuiltIn")
+      )
+      result.add(role)
+    })
+
+    result should be(
+      publicRole("foo", "neo4j") ++
+      Set(role("custom").member("foo").map, role("admin").member("neo4j").builtIn().map)
+    )
+  }
+
+  test("should fail to show populated roles with users without show user privilege") {
+    // GIVEN
+    setupUserWithCustomRole("foo", "bar")
+
+    // WHEN
+    execute("GRANT SHOW ROLE ON DBMS TO custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "SHOW POPULATED ROLES WITH USERS")
+    } should have message "Permission denied."
+  }
+
+  test("should fail to show populated roles with users without show role privilege") {
+    // GIVEN
+    setupUserWithCustomRole("foo", "bar")
+
+    // WHEN
+    execute("GRANT SHOW USER ON DBMS TO custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "SHOW POPULATED ROLES WITH USERS")
+    } should have message "Permission denied."
+  }
+
   // ROLE MANAGEMENT
 
   test("should be able to create role with role management privilege") {
