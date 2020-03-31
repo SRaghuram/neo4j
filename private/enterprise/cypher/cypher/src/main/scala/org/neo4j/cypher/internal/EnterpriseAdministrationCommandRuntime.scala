@@ -208,13 +208,14 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           }
           .handleResult((_, value, p) => maybePw.flatMap { newPw =>
             val oldCredentials = SystemGraphCredential.deserialize(value.asInstanceOf[TextValue].stringValue(), secureHasher)
-            val newValue = p.get(newPw.bytesKey).asInstanceOf[ByteArray].asObjectCopy()
+            val newValue = p.get(newPw.bytesKey).asInstanceOf[ByteArray].asObject()
             if (oldCredentials.matchesPassword(newValue))
               Some(new InvalidArgumentsException(s"Failed to alter the specified user '${runtimeValue(userName, p)}': Old password and new password cannot be the same."))
             else
               None
           }),
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)),
+        finallyFunction = p => maybePw.foreach(newPw => p.get(newPw.bytesKey).asInstanceOf[ByteArray].zero()),
         parameterConverter = mapper
       )
 
