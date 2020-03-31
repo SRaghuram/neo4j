@@ -16,6 +16,7 @@ import com.neo4j.dbms.EnterpriseSystemGraphInitializer
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager
 import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
+import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphInitializer
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.GraphDatabaseSettings
@@ -116,6 +117,30 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
       case (acc, _) => acc
     }
   }
+
+  lazy val defaultUserPrivileges: Set[Map[String, AnyRef]] = Set(
+    granted(access).database(DEFAULT).role(PUBLIC).user("neo4j").map,
+    granted(access).role("admin").user("neo4j").map,
+    granted(matchPrivilege).role("admin").user("neo4j").node("*").map,
+    granted(matchPrivilege).role("admin").user("neo4j").relationship("*").map,
+    granted(write).role("admin").user("neo4j").node("*").map,
+    granted(write).role("admin").user("neo4j").relationship("*").map,
+    granted(nameManagement).role("admin").user("neo4j").map,
+    granted(indexManagement).role("admin").user("neo4j").map,
+    granted(constraintManagement).role("admin").user("neo4j").map,
+    granted(admin).role("admin").user("neo4j").map,
+  )
+
+  def asPrivilegesResult(row: Result.ResultRow): Map[String, AnyRef] =
+    Map(
+      "access" -> row.get("access"),
+      "action" -> row.get("action"),
+      "resource" -> row.get("resource"),
+      "graph" -> row.get("graph"),
+      "segment" -> row.get("segment"),
+      "role" -> row.get("role"),
+      "user" -> row.get("user")
+    )
 
   def authManager: EnterpriseAuthManager = graph.getDependencyResolver.resolveDependency(classOf[EnterpriseAuthManager])
 

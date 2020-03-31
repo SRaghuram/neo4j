@@ -783,7 +783,7 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     // Then
     plan should include(
       managementPlan("ShowPrivileges", Seq(scopeArg("USER", "neo4j")),
-        assertDbmsAdminOrSelfPlan(userPrivilegeArg("neo4j"), "SHOW PRIVILEGE")
+        assertDbmsAdminOrSelfPlan(userPrivilegeArg("neo4j"), "SHOW PRIVILEGE", "SHOW USER")
       ).toString
     )
   }
@@ -795,7 +795,7 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     // Then
     plan should include(
       managementPlan("ShowPrivileges", Seq(Scope("USER $user")),
-        assertDbmsAdminOrSelfPlan(User("USER $user"), "SHOW PRIVILEGE")
+        assertDbmsAdminOrSelfPlan(User("USER $user"), "SHOW PRIVILEGE", "SHOW USER")
       ).toString
     )
   }

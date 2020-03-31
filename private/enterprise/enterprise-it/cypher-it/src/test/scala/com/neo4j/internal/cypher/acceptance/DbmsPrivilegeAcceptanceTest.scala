@@ -7,6 +7,8 @@ package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.graphdb.security.AuthorizationViolationException
 
+import scala.collection.mutable
+
 class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
   // Privilege tests
@@ -1246,8 +1248,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
   val showPrivilegeCommands = Seq(
     "SHOW PRIVILEGES",
     "SHOW ALL PRIVILEGES",
-    "SHOW ROLE custom PRIVILEGES",
-    "SHOW USER neo4j PRIVILEGES"
+    "SHOW ROLE custom PRIVILEGES"
   )
 
   test("should enforce show privilege privilege") {
@@ -1294,12 +1295,55 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     )
   }
 
-  test("should be able to show your own privileges even if denied show privilege privilege") {
+  test("should show user privileges with correct privileges") {
+    // GIVEN
+    setupUserWithCustomRole("foo", "bar")
+
+    // WHEN
+    execute("GRANT SHOW PRIVILEGE ON DBMS TO custom")
+    execute("GRANT SHOW USER ON DBMS TO custom")
+
+    // THEN
+    val result = new mutable.HashSet[Map[String, AnyRef]]
+    executeOnSystem("foo", "bar", "SHOW USER neo4j privileges", resultHandler = (row, _) => {
+      result.add(asPrivilegesResult(row))
+    })
+    result should be(defaultUserPrivileges)
+  }
+
+  test("should fail to show user privileges without show user privilege") {
+    // GIVEN
+    setupUserWithCustomRole("foo", "bar")
+
+    // WHEN
+    execute("GRANT SHOW PRIVILEGE ON DBMS TO custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "SHOW USER neo4j privileges")
+    } should have message "Permission denied."
+  }
+
+  test("should fail to show user privileges without show privilege privilege") {
+    // GIVEN
+    setupUserWithCustomRole("foo", "bar")
+
+    // WHEN
+    execute("GRANT SHOW USER ON DBMS TO custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "SHOW USER neo4j privileges")
+    } should have message "Permission denied."
+  }
+
+  test("should always be able to show your own privileges") {
     // GIVEN
     setupUserWithCustomAdminRole("foo", "bar")
 
     // WHEN
     execute("DENY SHOW PRIVILEGE ON DBMS TO custom")
+    execute("DENY SHOW USER ON DBMS TO custom")
 
     // THEN
     executeOnSystem("foo", "bar", "SHOW USER foo PRIVILEGES")

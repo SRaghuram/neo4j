@@ -8,7 +8,6 @@ package com.neo4j.internal.cypher.acceptance
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.graphdb.QueryExecutionException
-import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
@@ -181,20 +180,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     val result = execute("SHOW USER neo4j PRIVILEGES")
 
     // THEN
-    val expected = Set(
-      granted(access).database(DEFAULT).role(PUBLIC).user("neo4j").map,
-      granted(access).role("admin").user("neo4j").map,
-      granted(matchPrivilege).role("admin").user("neo4j").node("*").map,
-      granted(matchPrivilege).role("admin").user("neo4j").relationship("*").map,
-      granted(write).role("admin").user("neo4j").node("*").map,
-      granted(write).role("admin").user("neo4j").relationship("*").map,
-      granted(nameManagement).role("admin").user("neo4j").map,
-      granted(indexManagement).role("admin").user("neo4j").map,
-      granted(constraintManagement).role("admin").user("neo4j").map,
-      granted(admin).role("admin").user("neo4j").map,
-    )
-
-    result.toSet should be(expected)
+    result.toSet should be(defaultUserPrivileges)
   }
 
   test("should show privileges for specific user as parameter") {
@@ -202,20 +188,7 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
     val result = execute("SHOW USER $user PRIVILEGES", Map("user" -> "neo4j"))
 
     // THEN
-    val expected = Set(
-      granted(access).database(DEFAULT).role(PUBLIC).user("neo4j").map,
-      granted(access).role("admin").user("neo4j").map,
-      granted(matchPrivilege).role("admin").user("neo4j").node("*").map,
-      granted(matchPrivilege).role("admin").user("neo4j").relationship("*").map,
-      granted(write).role("admin").user("neo4j").node("*").map,
-      granted(write).role("admin").user("neo4j").relationship("*").map,
-      granted(nameManagement).role("admin").user("neo4j").map,
-      granted(indexManagement).role("admin").user("neo4j").map,
-      granted(constraintManagement).role("admin").user("neo4j").map,
-      granted(admin).role("admin").user("neo4j").map,
-    )
-
-    result.toSet should be(expected)
+    result.toSet should be(defaultUserPrivileges)
   }
 
   test("should show user privileges for current user as non admin") {
@@ -941,15 +914,4 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
         params = Map[String, Object]("__internal_currentUser" -> "neo4j").asJava)
     } should have message ("The query contains a parameter with an illegal name: '__internal_currentUser'")
   }
-
-  private def asPrivilegesResult(row: Result.ResultRow): Map[String, AnyRef] =
-    Map(
-      "access" -> row.get("access"),
-      "action" -> row.get("action"),
-      "resource" -> row.get("resource"),
-      "graph" -> row.get("graph"),
-      "segment" -> row.get("segment"),
-      "role" -> row.get("role"),
-      "user" -> row.get("user")
-    )
 }
