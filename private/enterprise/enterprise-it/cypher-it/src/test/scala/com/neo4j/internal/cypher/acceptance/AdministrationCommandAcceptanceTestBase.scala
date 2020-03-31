@@ -517,9 +517,20 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     execute(s"REVOKE ACCESS ON DEFAULT DATABASE FROM ${PredefinedRoles.PUBLIC}")
   }
 
+  def createRoleWithOnlyAdminPrivilege(name: String = "adminOnly"): Unit = {
+    execute(s"CREATE ROLE $name AS COPY OF admin")
+    execute(s"REVOKE MATCH {*} ON GRAPH * FROM $name")
+    execute(s"REVOKE WRITE ON GRAPH * FROM $name")
+    execute(s"REVOKE ACCESS ON DATABASE * FROM $name")
+    execute(s"REVOKE ALL ON DATABASE * FROM $name")
+    execute(s"REVOKE NAME ON DATABASE * FROM $name")
+    execute(s"REVOKE INDEX ON DATABASE * FROM $name")
+    execute(s"REVOKE CONSTRAINT ON DATABASE * FROM $name")
+    execute(s"SHOW ROLE $name PRIVILEGES").toSet should be(Set(granted(adminPrivilege).role(name).map))
+  }
+
   override protected def initTest() {
     super.initTest()
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
   }
-
 }
