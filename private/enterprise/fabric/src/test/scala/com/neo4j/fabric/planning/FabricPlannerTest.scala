@@ -8,176 +8,116 @@ package com.neo4j.fabric.planning
 import java.time.Duration
 import java.util
 
+import com.neo4j.fabric.util.Folded.FoldableOps
 import com.neo4j.fabric.FabricTest
 import com.neo4j.fabric.ProcedureRegistryTestSupport
 import com.neo4j.fabric.config.FabricConfig
 import com.neo4j.fabric.config.FabricConfig.Database
 import com.neo4j.fabric.config.FabricConfig.GlobalDriverConfig
 import com.neo4j.fabric.config.FabricConfig.Graph
-import com.neo4j.fabric.pipeline.Pipeline
-import com.neo4j.fabric.pipeline.SignatureResolver
 import com.neo4j.fabric.planning.FabricPlan.DebugOptions
 import com.neo4j.fabric.planning.Use.Declared
-import org.neo4j.configuration.Config
+import com.neo4j.fabric.util.Folded.Descend
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.configuration.helpers.NormalizedGraphName
-import org.neo4j.cypher.internal.CypherConfiguration
 import org.neo4j.cypher.internal.FullyParsedQuery
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
-import org.neo4j.cypher.internal.ast.Clause
 import org.neo4j.cypher.internal.ast.Query
 import org.neo4j.cypher.internal.ast.SingleQuery
-import org.neo4j.cypher.internal.ast.prettifier.ExpressionStringifier
-import org.neo4j.cypher.internal.ast.prettifier.Prettifier
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.symbols.CypherType
 import org.neo4j.exceptions.InvalidSemanticsException
-import org.neo4j.monitoring.Monitors
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.MapValue
 import org.neo4j.values.virtual.VirtualValues
-import org.scalatest.Assertion
-import org.scalatest.exceptions.TestFailedException
+import org.scalatest.matchers.MatchResult
+import org.scalatest.matchers.Matcher
 import org.scalatest.prop.TableDrivenPropertyChecks
 
 import scala.collection.JavaConverters.setAsJavaSetConverter
 import scala.reflect.ClassTag
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
 
-//noinspection ZeroIndexToHead
-class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with ProcedureRegistryTestSupport with FragmentTestUtils with TableDrivenPropertyChecks {
+class FabricPlannerTest
+  extends FabricTest
+    with AstConstructionTestSupport
+    with ProcedureRegistryTestSupport
+    with FragmentTestUtils
+    with TableDrivenPropertyChecks {
 
-  private val shardFoo0 = new Graph(0, FabricConfig.RemoteUri.create("bolt://foo:1234"), "s0", new NormalizedGraphName("shard-name-0"), null)
-  private val shardFoo1 = new Graph(1, FabricConfig.RemoteUri.create("bolt://foo:1234"), "s1", new NormalizedGraphName("shard-name-1"), null)
-  private val shardBar0 = new Graph(2, FabricConfig.RemoteUri.create("bolt://bar:1234"), "neo4j", new NormalizedGraphName("shard-name-2"), null)
-  private val config = new FabricConfig(
+  private def makeConfig(fabricDbName: String) = new FabricConfig(
     true,
-    new Database(new NormalizedDatabaseName("mega"), util.Set.of(shardFoo0, shardFoo1, shardBar0)),
+    new Database(
+      new NormalizedDatabaseName(fabricDbName),
+      util.Set.of(
+        new Graph(0, FabricConfig.RemoteUri.create("bolt://foo:1234"), "s0", new NormalizedGraphName("shard-name-0"), null),
+        new Graph(1, FabricConfig.RemoteUri.create("bolt://foo:1234"), "s1", new NormalizedGraphName("shard-name-1"), null),
+        new Graph(2, FabricConfig.RemoteUri.create("bolt://bar:1234"), "neo4j", new NormalizedGraphName("shard-name-2"), null),
+      ),
+    ),
     util.List.of(), Duration.ZERO, Duration.ZERO, new GlobalDriverConfig(Duration.ZERO, Duration.ZERO, 1, null), new FabricConfig.DataStream(300, 1000, 50, 10)
   )
-  private val params = MapValue.EMPTY
-  private val monitors = new Monitors
-  private val cypherConfig = CypherConfiguration.fromConfig(Config.defaults())
-  private val signatures = new SignatureResolver(() => procedures)
+  private val config = makeConfig("mega")
   private val planner = FabricPlanner(config, cypherConfig, monitors, signatures)
 
-  def pipeline(query: String): Pipeline.Instance =
-    Pipeline.Instance(monitors, query, signatures)
+  private def instance(): planner.PlannerInstance =
+    instance("RETURN 1")
 
-  private def instance(query: String, params: MapValue = params) =
-    planner.instance(query, params, defaultGraphName)
+  private def instance(query: String, params: MapValue = params, fabricContext: Boolean = false): planner.PlannerInstance =
+    planner.instance(query, params, defaultGraphName).withForceFabricContext(fabricContext)
 
-  private def plan(query: String, params: MapValue) =
-    instance(query, params).plan
+  private def plan(query: String, params: MapValue = params, fabricContext: Boolean = false) =
+    instance(query, params, fabricContext).plan
 
-  private def parse(query: String) =
-    pipeline(query).parseAndPrepare.process(query).statement()
-
-  "asLocal: " - {
-
-    "single query" in {
-      instance("")
-        .asLocal(init(defaultUse)
-          .leaf(Seq(return_(literal(1).as("x"))), Seq("x")))
-        .check(_.query.asSingleQuery.clauses.shouldEqual(Seq(
-          return_(literal(1).as("x")),
-        )))
-    }
-
-    "single query with USE" in {
-      instance("")
-        .asLocal(init(defaultUse)
-          .leaf(Seq(use(varFor("foo")), return_(literal(1).as("x"))), Seq("x")))
-        .check(_.query.asSingleQuery.clauses.shouldEqual(Seq(
-          return_(literal(1).as("x")),
-        )))
-    }
-
-    "single query with imports" in {
-      instance("")
-        .asLocal(init(defaultUse, Seq(), Seq("p", "q"))
-          .leaf(Seq(return_(literal(1).as("x"))), Seq("x")))
-        .check(_.query.asSingleQuery.clauses.shouldEqual(Seq(
-          with_(parameter("@@p", any).as("p"), parameter("@@q", any).as("q")),
-          return_(literal(1).as("x")),
-        )))
-    }
-
-    "single query with input and imports" in {
-      instance("")
-        .asLocal(init(defaultUse, Seq(), Seq("p", "q"))
-          .leaf(Seq(), Seq("a", "b"))
-          .leaf(Seq(return_(literal(1).as("x"))), Seq("x")))
-        .check(_.query.asSingleQuery.clauses.shouldEqual(Seq(
-          input(varFor("a"), varFor("b")),
-          with_(parameter("@@p", any).as("p"), parameter("@@q", any).as("q")),
-          return_(literal(1).as("x")),
-        )))
-    }
+  private def asRemote(query: String, partSelector: Fragment => Fragment.Exec = _.as[Fragment.Exec]) = {
+    val inst = instance(query, fabricContext = true)
+    inst.asRemote(partSelector(inst.plan.query)).query
   }
 
   "asRemote: " - {
     "single query" in {
-      val inst = instance("")
-      val remote = inst.asRemote(
-        init(defaultUse)
-          .leaf(Seq(return_(literal(1).as("x"))), Seq("x")))
+      val remote = asRemote(
+        """RETURN 1 AS x
+          |""".stripMargin)
 
-      parse(remote.query).as[Query].part.as[SingleQuery].clauses
+      parse(remote).as[Query].part.as[SingleQuery].clauses
         .shouldEqual(Seq(
           return_(literal(1).as("x"))
         ))
     }
 
     "single query with USE" in {
-      val inst = instance("")
-      val remote = inst.asRemote(
-        init(defaultUse)
-          .leaf(Seq(use(varFor("foo")), return_(literal(1).as("x"))), Seq("x")))
+      val remote = asRemote(
+        """USE foo
+          |RETURN 1 AS x
+          |""".stripMargin)
 
-      parse(remote.query).as[Query].part.as[SingleQuery].clauses
+      parse(remote).as[Query].part.as[SingleQuery].clauses
         .shouldEqual(Seq(
           return_(literal(1).as("x"))
         ))
     }
 
-    "single query with subquery" in {
-      val inst = instance("")
-      val remote = inst.asRemote(
-        init(defaultUse)
-          .leaf(Seq(with_(literal(1).as("a"))), Seq("a"))
-          .apply(u =>
-            init(Use.Inherited(u))
-              .leaf(Seq(use(varFor("foo")), return_(literal(1).as("y"))), Seq("y")))
-          .leaf(Seq(return_(literal(1).as("x"))), Seq("x")))
+    "inner query with imports and USE" in {
+      val remote = asRemote(
+        """WITH 1 AS a
+          |CALL {
+          |  USE foo
+          |  WITH a AS a
+          |  RETURN 1 AS y
+          |}
+          |RETURN 1 AS x
+          |""".stripMargin,
+        query => query.as[Fragment.Exec].input.as[Fragment.Apply].inner.as[Fragment.Exec]
+      )
 
-      parse(remote.query).as[Query].part.as[SingleQuery].clauses
+      parse(remote).as[Query].part.as[SingleQuery].clauses
         .shouldEqual(Seq(
-          with_(literal(1).as("a")),
-          subQuery(
-            use(varFor("foo")),
-            return_(literal(1).as("y"))),
-          return_(literal(1).as("x")),
-        ))
-    }
-
-    "single query with subquery with imports and USE" in {
-      val inst = instance("")
-      val remote = inst.asRemote(
-        init(defaultUse, Seq(), Seq("p"))
-          .leaf(Seq(with_(literal(1).as("a"))), Seq("a"))
-          .apply(_ =>
-            init(Declared(use(varFor("foo"))), Seq("a", "b"), Seq("q"))
-              .leaf(Seq(use(varFor("foo")), return_(literal(1).as("y"))), Seq("y")))
-          .leaf(Seq(return_(literal(1).as("x"))), Seq("x")))
-
-      parse(remote.query).as[Query].part.as[SingleQuery].clauses
-        .shouldEqual(Seq(
-          with_(parameter("@@p", CTAny).as("p")),
-          with_(literal(1).as("a")),
-          subQuery(
-            use(varFor("foo")),
-            return_(literal(1).as("y"))),
-          return_(literal(1).as("x")),
+          with_(parameter("@@a", CTAny).as("a")),
+          with_(varFor("a").as("a")),
+          return_(literal(1).as("y")),
         ))
     }
 
@@ -190,6 +130,9 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |  WITH a
           |  RETURN a AS c
           |    UNION
+          |  WITH a, b
+          |  RETURN b AS c
+          |    UNION
           |  USE baz
           |  WITH b
           |  RETURN b AS c
@@ -197,29 +140,30 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN a, b, c
           |
           |""".stripMargin)
+        .withForceFabricContext(true)
 
       val inner = inst.plan
-        .query.as[Fragment.Leaf]
+        .query.as[Fragment.Exec]
         .input.as[Fragment.Apply]
         .inner.as[Fragment.Union]
 
-      val part1 = inner.lhs.as[Fragment.Union].lhs.as[Fragment.Leaf]
-      val part2 = inner.lhs.as[Fragment.Union].rhs.as[Fragment.Leaf]
-      val part3 = inner.rhs.as[Fragment.Leaf]
+      val part1 = inner.lhs.as[Fragment.Exec]
+      val part2 = inner.rhs.as[Fragment.Exec]
 
       parse(inst.asRemote(part1).query)
         .shouldEqual(parse(
           """RETURN 3 AS c
+            |  UNION
+            |WITH $`@@a` AS a
+            |WITH a
+            |RETURN a AS c
+            |  UNION
+            |WITH $`@@a` AS a, $`@@b` AS b
+            |WITH a, b
+            |RETURN b AS c
             |""".stripMargin))
 
       parse(inst.asRemote(part2).query)
-        .shouldEqual(parse(
-          """WITH $`@@a` AS a
-            |WITH a
-            |RETURN a AS c
-            |""".stripMargin))
-
-      parse(inst.asRemote(part3).query)
         .shouldEqual(parse(
           """WITH $`@@b` AS b
             |WITH b
@@ -227,11 +171,10 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
             |""".stripMargin))
     }
 
-    "complicated nested query" in {
+    "complicated nested query" ignore {
       val inst = instance(
         """WITH 1 AS a
           |CALL {
-          |  USE foo
           |  WITH a
           |  WITH 2 AS b
           |  CALL {
@@ -253,37 +196,40 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |}
           |RETURN a, b, c, d
           |""".stripMargin)
+        .withForceFabricContext(true)
 
-      val fooRemote = parse(
-        inst.asRemote(inst.plan
-          .query.as[Fragment.Leaf]
-          .input.as[Fragment.Apply]
-          .inner.as[Fragment.Leaf]
-        ).query)
+      val execs = inst.plan.folded(Seq.empty[Fragment.Exec])(_ ++ _) {
+        case exec: Fragment.Exec => Descend(Seq(exec))
+      }
 
-      val expected = parse(
+      val actual = execs.map(inst.asRemote).map(_.query)
+
+      val expected = Seq(
+        """WITH 1 AS a""",
         """WITH $`@@a` AS a
           |WITH a
           |WITH 2 AS b
-          |CALL {
-          |  USE bar
-          |  WITH b
-          |  RETURN b AS c
-          |}
-          |CALL {
-          | RETURN 3 AS d
-          |   UNION
-          | WITH b
-          | RETURN b AS d
-          |   UNION
-          | USE baz
-          | WITH b
-          | RETURN b AS d
-          |}
-          |RETURN b, c, d
-          |""".stripMargin)
+          |""".stripMargin,
+        """WITH $`@@b` AS b
+          |WITH b
+          |RETURN b AS c
+          |""".stripMargin,
+        """RETURN 3 AS d
+          |  UNION
+          |WITH $`@@b` AS b
+          |WITH b
+          |RETURN b AS d
+          |""".stripMargin,
+        """WITH $`@@b` AS b
+          |WITH b
+          |RETURN b AS d
+          |""".stripMargin,
+        """RETURN b, c, d
+          |""".stripMargin
+      )
 
-      fooRemote.shouldEqual(expected)
+      actual.shouldEqual(expected)
+
     }
 
   }
@@ -291,35 +237,35 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
   "Read/Write: " - {
 
     "read" in {
-      plan("MATCH (x) RETURN *", params).queryType
+      plan("MATCH (x) RETURN *").queryType
         .shouldEqual(QueryType.Read)
     }
     "read + known read proc" in {
-      plan("MATCH (x) CALL my.ns.read() YIELD a RETURN *", params).queryType
+      plan("MATCH (x) CALL my.ns.read() YIELD a RETURN *").queryType
         .shouldEqual(QueryType.Read)
     }
     "read + known write proc" in {
-      plan("MATCH (x) CALL my.ns.write() YIELD a RETURN *", params).queryType
+      plan("MATCH (x) CALL my.ns.write() YIELD a RETURN *").queryType
         .shouldEqual(QueryType.Write)
     }
     "read + unknown proc" in {
-      plan("MATCH (x) CALL my.ns.unknown() YIELD a RETURN *", params).queryType
+      plan("MATCH (x) CALL my.ns.unknown() YIELD a RETURN *").queryType
         .shouldEqual(QueryType.ReadPlusUnresolved)
     }
     "write" in {
-      plan("CREATE (x)", params).queryType
+      plan("CREATE (x)").queryType
         .shouldEqual(QueryType.Write)
     }
     "write + known read proc" in {
-      plan("CREATE (x) WITH * CALL my.ns.read() YIELD a RETURN *", params).queryType
+      plan("CREATE (x) WITH * CALL my.ns.read() YIELD a RETURN *").queryType
         .shouldEqual(QueryType.Write)
     }
     "write + known write proc" in {
-      plan("CREATE (x) WITH * CALL my.ns.write() YIELD a RETURN *", params).queryType
+      plan("CREATE (x) WITH * CALL my.ns.write() YIELD a RETURN *").queryType
         .shouldEqual(QueryType.Write)
     }
     "write + unknown proc" in {
-      plan("CREATE (x) WITH * CALL my.ns.unknown() YIELD a RETURN *", params).queryType
+      plan("CREATE (x) WITH * CALL my.ns.unknown() YIELD a RETURN *").queryType
         .shouldEqual(QueryType.Write)
     }
     "per part" in {
@@ -362,11 +308,12 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |  RETURN a AS a6
           |}
           |RETURN *
-          |""".stripMargin, params)
+          |""".stripMargin,
+        fabricContext = true)
 
-      val leafs = Stream
+      val partsAsList = Stream
         .iterate(Option(pln.query)) {
-          case Some(l: Fragment.Leaf)  => Some(l.input)
+          case Some(l: Fragment.Exec)  => Some(l.input)
           case Some(a: Fragment.Apply) => Some(a.input)
           case _                       => None
         }
@@ -375,7 +322,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
         .toList
         .reverse
 
-      leafs
+      partsAsList
         .map(QueryType.local)
         .shouldEqual(Seq(
           QueryType.Read,
@@ -531,10 +478,10 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN 1 AS x
           |""".stripMargin
 
-      plan(q, params)
+      plan(q)
         .check(_.executionType.shouldEqual(FabricPlan.EXPLAIN))
         .check(_.query.shouldEqual(
-          init(defaultUse).leaf(Seq(return_(literal(1).as("x"))), Seq("x"))
+          init(defaultUse).exec(query(return_(literal(1).as("x"))), Seq("x"))
         ))
     }
 
@@ -544,8 +491,8 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN 1 AS x
           |""".stripMargin
 
-      the[InvalidSemanticsException].thrownBy(plan(q, params))
-        .check(_.getMessage.should(include("Query option: 'PROFILE' not supported in Fabric database")))
+      the[InvalidSemanticsException].thrownBy(plan(q))
+        .check(_.getMessage.should(include("Query option: 'PROFILE' is not supported in Fabric")))
     }
 
     "allow fabric debug options" in {
@@ -554,70 +501,94 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN 1 AS x
           |""".stripMargin
 
-      plan(q, params)
-        .check(_.debugOptions.shouldEqual(DebugOptions(true, true)))
+      plan(q)
+        .check(_.debugOptions.shouldEqual(DebugOptions(logPlan = true, logRecords = true)))
         .check(_.query.shouldEqual(
-          init(defaultUse).leaf(Seq(return_(literal(1).as("x"))), Seq("x"))
+          init(defaultUse).exec(query(return_(literal(1).as("x"))), Seq("x"))
         ))
     }
 
     "disallow options" in {
       def shouldFail(qry: String, error: String) =
-        the[InvalidSemanticsException].thrownBy(plan(qry, params))
+        the[InvalidSemanticsException].thrownBy(plan(qry))
           .check(_.getMessage.should(include(error)))
 
-      shouldFail("CYPHER 3.5 RETURN 1", "Query option 'version' not supported in Fabric database")
-      shouldFail("CYPHER planner=cost RETURN 1", "Query option 'planner' not supported in Fabric database")
-      shouldFail("CYPHER runtime=parallel RETURN 1", "Query option 'runtime' not supported in Fabric database")
-      shouldFail("CYPHER updateStrategy=eager RETURN 1", "Query option 'updateStrategy' not supported in Fabric database")
-      shouldFail("CYPHER expressionEngine=compiled RETURN 1", "Query option 'expressionEngine' not supported in Fabric database")
-      shouldFail("CYPHER operatorEngine=interpreted RETURN 1", "Query option 'operatorEngine' not supported in Fabric database")
-      shouldFail("CYPHER interpretedPipesFallback=all RETURN 1", "Query option 'interpretedPipesFallback' not supported in Fabric database")
+      shouldFail("CYPHER 3.5 RETURN 1", "Query option 'version' is not supported in Fabric")
+      shouldFail("CYPHER planner=cost RETURN 1", "Query option 'planner' is not supported in Fabric")
+      shouldFail("CYPHER runtime=parallel RETURN 1", "Query option 'runtime' is not supported in Fabric")
+      shouldFail("CYPHER updateStrategy=eager RETURN 1", "Query option 'updateStrategy' is not supported in Fabric")
+      shouldFail("CYPHER expressionEngine=compiled RETURN 1", "Query option 'expressionEngine' is not supported in Fabric")
+      shouldFail("CYPHER operatorEngine=interpreted RETURN 1", "Query option 'operatorEngine' is not supported in Fabric")
+      shouldFail("CYPHER interpretedPipesFallback=all RETURN 1", "Query option 'interpretedPipesFallback' is not supported in Fabric")
     }
   }
 
-  "Descriptions:" in {
-    val desc = plan(
-      """UNWIND [1, 2] AS x
-        |CALL {
-        |  USE graph(x)
-        |  RETURN 3 AS y
-        |    UNION
-        |  WITH 4 AS z
-        |  RETURN z AS y
-        |}
-        |RETURN x, y
-        |""".stripMargin, params
-    ).query.description
+  "Descriptions:" - {
 
-    desc
-      .check(_.getName.shouldEqual("Leaf"))
-      .check(_.getIdentifiers.shouldEqual(Set("x", "y").asJava))
-      .check(_.getChildren.get(0)
-        .check(_.getName.shouldEqual("Apply"))
+    "of stitched query" in {
+      val desc = plan(
+        """UNWIND [1, 2] AS x
+          |CALL {
+          |  RETURN 3 AS y
+          |    UNION
+          |  WITH 4 AS z
+          |  RETURN z AS y
+          |}
+          |RETURN x, y
+          |""".stripMargin
+      ).query.description
+
+      desc
+        .check(_.getName.shouldEqual("Exec"))
         .check(_.getIdentifiers.shouldEqual(Set("x", "y").asJava))
-        .check(_.getChildren.get(1)
-          .check(_.getName.shouldEqual("Union"))
-          .check(_.getChildren.get(0)
-            .check(_.getName.shouldEqual("Leaf"))
-            .check(_.getIdentifiers.shouldEqual(Set("y").asJava))
-          )
-          .check(_.getChildren.get(1)
-            .check(_.getName.shouldEqual("Leaf"))
-            .check(_.getIdentifiers.shouldEqual(Set("y").asJava))
-          )
-        )
         .check(_.getChildren.get(0)
-          .check(_.getName.shouldEqual("Leaf"))
-          .check(_.getIdentifiers.shouldEqual(Set("x").asJava))
+          .check(_.getName.shouldEqual("Init")))
+    }
+
+    "of fabric query" in {
+      val desc = plan(
+        """UNWIND [1, 2] AS x
+          |CALL {
+          |  USE graph(x)
+          |  RETURN 3 AS y
+          |    UNION
+          |  WITH 4 AS z
+          |  RETURN z AS y
+          |}
+          |RETURN x, y
+          |""".stripMargin,
+        fabricContext = true
+      ).query.description
+
+      desc
+        .check(_.getName.shouldEqual("Exec"))
+        .check(_.getIdentifiers.shouldEqual(Set("x", "y").asJava))
+        .check(_.getChildren.get(0)
+          .check(_.getName.shouldEqual("Apply"))
+          .check(_.getIdentifiers.shouldEqual(Set("x", "y").asJava))
+          .check(_.getChildren.get(1)
+            .check(_.getName.shouldEqual("Union"))
+            .check(_.getChildren.get(0)
+              .check(_.getName.shouldEqual("Exec"))
+              .check(_.getIdentifiers.shouldEqual(Set("y").asJava))
+            )
+            .check(_.getChildren.get(1)
+              .check(_.getName.shouldEqual("Exec"))
+              .check(_.getIdentifiers.shouldEqual(Set("y").asJava))
+            )
+          )
           .check(_.getChildren.get(0)
-            .check(_.getName.shouldEqual("Init"))
+            .check(_.getName.shouldEqual("Exec"))
+            .check(_.getIdentifiers.shouldEqual(Set("x").asJava))
+            .check(_.getChildren.get(0)
+              .check(_.getName.shouldEqual("Init"))
+            )
           )
         )
-      )
+    }
   }
 
-  "Offending USE:" - {
+  "Fragment stitching:" - {
 
     def defaultGraphQueries = Table(
       "query",
@@ -625,73 +596,41 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
       s"""MATCH (n) RETURN n
          |""".stripMargin,
 
-      s"""USE $defaultGraphName
-         |MATCH (n) RETURN n
-         |""".stripMargin,
-
       s"""MATCH (n) RETURN n
          |  UNION
          |MATCH (n) RETURN n
          |""".stripMargin,
 
-      s"""USE $defaultGraphName
-         |MATCH (n) RETURN n
-         |  UNION
-         |MATCH (n) RETURN n
-         |""".stripMargin,
-
-      s"""MATCH (n) RETURN n
-         |  UNION
-         |USE $defaultGraphName
-         |MATCH (n) RETURN n
-         |""".stripMargin,
-
-      s"""USE $defaultGraphName
-         |MATCH (n) RETURN n
-         |  UNION
-         |USE $defaultGraphName
-         |MATCH (n) RETURN n
-         |""".stripMargin,
-
       s"""MATCH (n)
          |CALL {
-         |  RETURN 1 AS a
-         |}
-         |RETURN n, a
-         |""".stripMargin,
-
-      s"""USE $defaultGraphName
-         |MATCH (n)
-         |CALL {
-         |  RETURN 1 AS a
-         |}
-         |RETURN n, a
-         |""".stripMargin,
-
-      s"""MATCH (n)
-         |CALL {
-         |  USE $defaultGraphName
-         |  RETURN 1 AS a
-         |}
-         |RETURN n, a
-         |""".stripMargin,
-
-      s"""USE $defaultGraphName
-         |MATCH (n)
-         |CALL {
-         |  USE $defaultGraphName
          |  RETURN 1 AS a
          |}
          |RETURN n, a
          |""".stripMargin,
     )
 
-    def singleGraphQueries(graphName: String) = Table(
+    def singleGraphQueries(graphName: String) =
+      declared(graphName) ++
+        declaredSubqueryInherited(graphName) ++
+        declaredSubqueryInheritedSubqueryInherited(graphName)
+
+    def singlePlusDefaultGraphQueries(graphName: String) =
+      declaredUnionDefault(graphName)
+
+    def defaultPlusSingleGraphQueries(graphName: String) =
+      defaultUnionDeclared(graphName) ++
+        defaultSubqueryDeclared(graphName)
+
+    def declared(graphName: String) = Table(
       "query",
 
       s"""USE $graphName
          |MATCH (n) RETURN n
          |""".stripMargin,
+    )
+
+    def declaredSubqueryInherited(graphName: String) = Table(
+      "query",
 
       s"""USE $graphName
          |MATCH (n)
@@ -700,6 +639,10 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
          |}
          |RETURN n, a
          |""".stripMargin,
+    )
+
+    def declaredSubqueryInheritedSubqueryInherited(graphName: String) = Table(
+      "query",
 
       s"""USE $graphName
          |MATCH (n)
@@ -713,7 +656,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
          |""".stripMargin,
     )
 
-    def singlePlusDefaultGraphQueries(graphName: String) = Table(
+    def declaredUnionDefault(graphName: String) = Table(
       "query",
 
       s"""USE $graphName
@@ -723,7 +666,17 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
          |""".stripMargin,
     )
 
-    def defaultPlusSingleGraphQueries(graphName: String) = Table(
+    def defaultUnionDeclared(graphName: String) = Table(
+      "query",
+
+      s"""MATCH (n) RETURN n
+         |  UNION
+         |USE $graphName
+         |MATCH (n) RETURN n
+         |""".stripMargin,
+    )
+
+    def defaultSubqueryDeclared(graphName: String) = Table(
       "query",
 
       s"""MATCH (n)
@@ -735,7 +688,12 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
          |""".stripMargin,
     )
 
-    def doubleGraphQueries(graphName1: String, graphName2: String) = Table(
+    def doubleGraphQueries(graphName1: String, graphName2: String) =
+      declaredUnionDeclared(graphName1, graphName2) ++
+        declaredSubqueryDeclared(graphName1, graphName2) ++
+        declaredSubqueryDeclaredSubqueryInherited(graphName1, graphName2)
+
+    def declaredUnionDeclared(graphName1: String, graphName2: String) = Table(
       "query",
 
       s"""USE $graphName1
@@ -744,7 +702,10 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
          |USE $graphName2
          |MATCH (n) RETURN n
          |""".stripMargin,
+    )
 
+    def declaredSubqueryDeclared(graphName1: String, graphName2: String) = Table(
+      "query",
       s"""USE $graphName1
          |MATCH (n)
          |CALL {
@@ -753,7 +714,10 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
          |}
          |RETURN n, a
          |""".stripMargin,
+    )
 
+    def declaredSubqueryDeclaredSubqueryInherited(graphName1: String, graphName2: String) = Table(
+      "query",
       s"""USE $graphName1
          |MATCH (n)
          |CALL {
@@ -768,7 +732,42 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
          |""".stripMargin,
     )
 
-    def tripleGraphQueries(graphName1: String, graphName2: String, graphName3: String) = Table(
+    def defaultSubqueryDeclaredUnionDeclared(graphName1: String, graphName2: String) = Table(
+      "query",
+
+      s"""CALL {
+         |  USE $graphName1
+         |  MATCH (n) RETURN n
+         |    UNION
+         |  USE $graphName2
+         |  MATCH (n) RETURN n
+         |}
+         |RETURN n
+         |""".stripMargin,
+    )
+
+    def defaultSubqueryDeclaredUnionSubqueryDeclared(graphName1: String, graphName2: String) = Table(
+      "query",
+
+      s"""CALL {
+         |  USE $graphName1
+         |  MATCH (n) RETURN n
+         |}
+         |RETURN n
+         |  UNION
+         |CALL {
+         |  USE $graphName2
+         |  MATCH (n) RETURN n
+         |}
+         |RETURN n
+         |""".stripMargin,
+    )
+
+    def tripleGraphQueries(graphName1: String, graphName2: String, graphName3: String) =
+      declaredUnionDeclaredUnionDeclared(graphName1, graphName2, graphName3) ++
+        declaredSubqueryDeclaredSubqueryDeclared(graphName1, graphName2, graphName3)
+
+    def declaredUnionDeclaredUnionDeclared(graphName1: String, graphName2: String, graphName3: String) = Table(
       "query",
 
       s"""USE $graphName1
@@ -780,20 +779,10 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
          |USE $graphName3
          |MATCH (n) RETURN n
          |""".stripMargin,
+    )
 
-      s"""USE $graphName1
-         |MATCH (n)
-         |CALL {
-         |  USE $graphName2
-         |  WITH 1 AS a
-         |  CALL {
-         |    USE $graphName3
-         |    RETURN 1 AS b
-         |  }
-         |  RETURN a
-         |}
-         |RETURN n, a
-         |""".stripMargin,
+    def declaredSubqueryDeclaredSubqueryDeclared(graphName1: String, graphName2: String, graphName3: String) = Table(
+      "query",
 
       s"""USE $graphName1
          |MATCH (n)
@@ -810,268 +799,280 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
          |""".stripMargin,
     )
 
-    def offendingGraphSelections(query: String, singleGraph: Boolean, params: MapValue = params) = {
-      val inst = instance(query, params)
-      inst.offendingGraphSelections(inst.plan.query, singleGraph)
+    def planAndStitch(sessionGraphName: String, fabricName: String, query: String, params: MapValue = params) = {
+      val planner =
+        FabricPlanner(makeConfig(fabricName), cypherConfig, monitors, signatures)
+          .instance(query, params, sessionGraphName)
+      Try(planner.plan)
     }
 
-    "Single graph mode" - {
+    val fabricName = "fabric"
+    val sessionGraphName = "session"
 
-      val singleGraph = true
+    "stitches single-graph queries" in {
 
-      "allows single graph queries" in {
+      forAll(defaultGraphQueries) { query =>
+        planAndStitch(sessionGraphName, fabricName, query)
+          .should(beFullyStitched)
+      }
+
+      forAll(singleGraphQueries(graphName = "foo")) { query =>
+        planAndStitch(sessionGraphName, fabricName, query)
+          .should(beFullyStitched)
+      }
+
+      forAll(singleGraphQueries(graphName = "foo.bar")) { query =>
+        planAndStitch(sessionGraphName, fabricName, query)
+          .should(beFullyStitched)
+      }
+    }
+
+    "stitches multi-graph queries when graph is the same" in {
+
+      forAll(singlePlusDefaultGraphQueries(graphName = sessionGraphName)) { query =>
+        planAndStitch(sessionGraphName, fabricName, query)
+          .should(beFullyStitched)
+      }
+
+      forAll(defaultPlusSingleGraphQueries(graphName = sessionGraphName)) { query =>
+        planAndStitch(sessionGraphName, fabricName, query)
+          .should(beFullyStitched)
+      }
+
+      forAll(doubleGraphQueries(graphName1 = "foo", graphName2 = "foo")) { query =>
+        planAndStitch(sessionGraphName, fabricName, query)
+          .should(beFullyStitched)
+      }
+
+      forAll(doubleGraphQueries(graphName1 = "foo.bar", graphName2 = "foo.bar")) { query =>
+        planAndStitch(sessionGraphName, fabricName, query)
+          .should(beFullyStitched)
+      }
+
+      forAll(doubleGraphQueries(graphName1 = "foo", graphName2 = "foo")) { query =>
+        planAndStitch(sessionGraphName, fabricName, query)
+          .should(beFullyStitched)
+      }
+
+      forAll(tripleGraphQueries(graphName1 = "foo.bar", graphName2 = "foo.bar", graphName3 = "foo.bar")) { query =>
+        planAndStitch(sessionGraphName, fabricName, query)
+          .should(beFullyStitched)
+      }
+    }
+
+    "disallows dynamic USE outside fabric" in {
+
+      forAll(singleGraphQueries(graphName = "f(1)")) { query =>
+        planAndStitch(sessionGraphName, fabricName, query)
+          .should(matchPattern { case Failure(_) => })
+      }
+
+      forAll(singleGraphQueries(graphName = "$p")) { query =>
+        planAndStitch(sessionGraphName, fabricName, query)
+          .should(matchPattern { case Failure(_) => })
+      }
+
+      forAll(singlePlusDefaultGraphQueries(graphName = "f(1)")) { query =>
+        planAndStitch(sessionGraphName, fabricName, query)
+          .should(matchPattern { case Failure(_) => })
+      }
+
+      forAll(defaultPlusSingleGraphQueries(graphName = "f(1)")) { query =>
+        planAndStitch(sessionGraphName, fabricName, query)
+          .should(matchPattern { case Failure(_) => })
+      }
+
+      forAll(doubleGraphQueries(graphName1 = "foo", graphName2 = "f(1)")) { query =>
+        planAndStitch(sessionGraphName, fabricName, query)
+          .should(matchPattern { case Failure(_) => })
+      }
+
+      forAll(tripleGraphQueries(graphName1 = "foo.bar", graphName2 = "f(1)", graphName3 = "foo.bar")) { query =>
+        planAndStitch(sessionGraphName, fabricName, query)
+          .should(matchPattern { case Failure(_) => })
+      }
+    }
+
+    "disallows multi-graph outside fabric" in {
+
+      forAll(singlePlusDefaultGraphQueries(graphName = "foo")) { query =>
+        planAndStitch(sessionGraphName, fabricName, query)
+          .should(matchPattern { case Failure(_) => })
+      }
+
+      forAll(defaultPlusSingleGraphQueries(graphName = "foo")) { query =>
+        planAndStitch(sessionGraphName, fabricName, query)
+          .should(matchPattern { case Failure(_) => })
+      }
+
+      forAll(doubleGraphQueries(graphName1 = "foo", graphName2 = "bar")) { query =>
+        planAndStitch(sessionGraphName, fabricName, query)
+          .should(matchPattern { case Failure(_) => })
+      }
+
+      forAll(tripleGraphQueries(graphName1 = "foo.bar", graphName2 = "foo", graphName3 = "foo.bar")) { query =>
+        planAndStitch(sessionGraphName, fabricName, query)
+          .should(matchPattern { case Failure(_) => })
+      }
+    }
+
+    "in fabric context" - {
+
+      "stitches single-graph queries" in {
 
         forAll(defaultGraphQueries) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
+          planAndStitch(fabricName, fabricName, query)
+            .should(beFullyStitched)
         }
 
         forAll(singleGraphQueries(graphName = "foo")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
+          planAndStitch(fabricName, fabricName, query)
+            .should(beFullyStitched)
         }
 
-        forAll(singleGraphQueries(graphName = "foo.bar")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
+        forAll(declaredUnionDeclared(graphName1 = fabricName, graphName2 = fabricName)) { query =>
+          planAndStitch(sessionGraphName, fabricName, query)
+            .should(beFullyStitched)
         }
 
-        forAll(singlePlusDefaultGraphQueries(graphName = defaultGraphName)) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
+        forAll(declaredUnionDeclaredUnionDeclared(graphName1 = fabricName, graphName2 = fabricName, graphName3 = fabricName)) { query =>
+          planAndStitch(sessionGraphName, fabricName, query)
+            .should(beFullyStitched)
         }
 
-        forAll(defaultPlusSingleGraphQueries(graphName = defaultGraphName)) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
-        }
-
-        forAll(doubleGraphQueries(graphName1 = "foo", graphName2 = "foo")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
-        }
-
-        forAll(doubleGraphQueries(graphName1 = "foo.bar", graphName2 = "foo.bar")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
-        }
-
-        forAll(doubleGraphQueries(graphName1 = "foo", graphName2 = "foo")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
-        }
-
-        forAll(tripleGraphQueries(graphName1 = "foo.bar", graphName2 = "foo.bar", graphName3 = "foo.bar")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
-        }
       }
 
-      "foo" in {
-        offendingGraphSelections(
-          """USE f(1)
-            |MATCH (n)
-            |CALL {
-            |  CALL {
-            |    RETURN 1 AS a
-            |  }
-            |  RETURN a AS b
-            |}
-            |RETURN n, b
-            |""".stripMargin, true)
-          .shouldEqual(Seq(use(function("f", literal(1)))))
-      }
+      "leaves multi-graph queries un-stitched" - {
 
-      "disallows dynamic USE" in {
+        "implicit" in {
 
-        forAll(singleGraphQueries(graphName = "f(1)")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq(use(function("f", literal(1)))))
+          forAll(defaultSubqueryDeclared(graphName = "foo")) { query =>
+            planAndStitch(fabricName, fabricName, query)
+              .should(matchPattern { case Success(_) => })
+          }
+
+          forAll(defaultSubqueryDeclaredUnionDeclared(graphName1 = "foo", graphName2 = "bar")) { query =>
+            planAndStitch(fabricName, fabricName, query)
+              .should(matchPattern { case Success(_) => })
+          }
+
+          forAll(declaredUnionDeclared(graphName1 = "foo", graphName2 = "bar")) { query =>
+            planAndStitch(fabricName, fabricName, query)
+              .should(matchPattern { case Success(_) => })
+          }
+
+          forAll(declaredUnionDeclaredUnionDeclared(graphName1 = "foo", graphName2 = "bar", graphName3 = "baz")) { query =>
+            planAndStitch(fabricName, fabricName, query)
+              .should(matchPattern { case Success(_) => })
+          }
+
+          forAll(defaultSubqueryDeclaredUnionSubqueryDeclared(graphName1 = "foo", graphName2 = "bar")) { query =>
+            planAndStitch(fabricName, fabricName, query)
+              .should(matchPattern { case Success(_) => })
+          }
+
         }
 
-        forAll(singleGraphQueries(graphName = "$p")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq(use(parameter("p", any))))
+        "explicit" in {
+
+          forAll(declaredSubqueryDeclared(graphName1 = fabricName, graphName2 = "foo")) { query =>
+            planAndStitch(sessionGraphName, fabricName, query)
+              .should(matchPattern { case Success(_) => })
+          }
+
+          forAll(declaredSubqueryDeclaredSubqueryInherited(graphName1 = fabricName, graphName2 = "foo")) { query =>
+            planAndStitch(sessionGraphName, fabricName, query)
+              .should(matchPattern { case Success(_) => })
+          }
         }
 
-        forAll(singlePlusDefaultGraphQueries(graphName = "f(1)")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq(use(function("f", literal(1)))))
+        "implicit plus dynamic" in {
+
+          forAll(defaultSubqueryDeclared(graphName = "f(1)")) { query =>
+            planAndStitch(fabricName, fabricName, query)
+              .should(matchPattern { case Success(_) => })
+          }
+
+          forAll(defaultSubqueryDeclaredUnionDeclared(graphName1 = "f(1)", graphName2 = "bar.f(2)")) { query =>
+            planAndStitch(fabricName, fabricName, query)
+              .should(matchPattern { case Success(_) => })
+          }
+
+          forAll(singleGraphQueries(graphName = "f(1)")) { query =>
+            planAndStitch(fabricName, fabricName, query)
+              .should(matchPattern { case Success(_) => })
+          }
+
+          forAll(declaredUnionDeclared(graphName1 = "f(1)", graphName2 = "g(2)")) { query =>
+            planAndStitch(fabricName, fabricName, query)
+              .should(matchPattern { case Success(_) => })
+          }
+
+          forAll(declaredUnionDeclaredUnionDeclared(graphName1 = "f(1)", graphName2 = "g(2)", graphName3 = "h(3)")) { query =>
+            planAndStitch(fabricName, fabricName, query)
+              .should(matchPattern { case Success(_) => })
+          }
         }
 
-        forAll(defaultPlusSingleGraphQueries(graphName = "f(1)")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq(use(function("f", literal(1)))))
+        "explicit plus dynamic" in {
+
+          forAll(declaredSubqueryDeclared(graphName1 = fabricName, graphName2 = "f(1)")) { query =>
+            planAndStitch(sessionGraphName, fabricName, query)
+              .should(matchPattern { case Success(_) => })
+          }
+
+          forAll(declaredSubqueryDeclaredSubqueryInherited(graphName1 = fabricName, graphName2 = "f(1)")) { query =>
+            planAndStitch(sessionGraphName, fabricName, query)
+              .should(matchPattern { case Success(_) => })
+          }
+
         }
 
-        forAll(doubleGraphQueries(graphName1 = "foo", graphName2 = "f(1)")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq(use(function("f", literal(1)))))
-        }
+        "fails on nested USE" in {
 
-        forAll(tripleGraphQueries(graphName1 = "foo.bar", graphName2 = "f(1)", graphName3 = "foo.bar")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq(use(function("f", literal(1)))))
-        }
-      }
+          forAll(declaredSubqueryDeclared(graphName1 = "foo", graphName2 = "bar")) { query =>
+            planAndStitch(fabricName, fabricName, query)
+              .should(matchPattern { case Failure(_) => })
+          }
 
-      "disallows multi-graph" in {
+          forAll(declaredSubqueryDeclared(graphName1 = "f(1)", graphName2 = "g(2)")) { query =>
+            planAndStitch(fabricName, fabricName, query)
+              .should(matchPattern { case Failure(_) => })
+          }
 
-        forAll(singlePlusDefaultGraphQueries(graphName = "foo")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq(defaultGraph))
-        }
+          forAll(declaredSubqueryDeclaredSubqueryInherited(graphName1 = "foo", graphName2 = "bar")) { query =>
+            planAndStitch(fabricName, fabricName, query)
+              .should(matchPattern { case Failure(_) => })
+          }
 
-        forAll(defaultPlusSingleGraphQueries(graphName = "foo")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq(use(varFor("foo"))))
-        }
+          forAll(declaredSubqueryDeclaredSubqueryInherited(graphName1 = "f(1)", graphName2 = "g(2)")) { query =>
+            planAndStitch(fabricName, fabricName, query)
+              .should(matchPattern { case Failure(_) => })
+          }
 
-        forAll(doubleGraphQueries(graphName1 = "foo", graphName2 = "bar")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq(use(varFor("bar"))))
-        }
+          forAll(declaredSubqueryDeclaredSubqueryDeclared(graphName1 = fabricName, graphName2 = "foo.bar(1)", graphName3 = "foo.baz(2)")) { query =>
+            planAndStitch(sessionGraphName, fabricName, query)
+              .should(matchPattern { case Failure(_) => })
+          }
 
-        forAll(tripleGraphQueries(graphName1 = "foo.bar", graphName2 = "foo", graphName3 = "foo.bar")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq(use(varFor("foo"))))
-        }
-      }
-    }
+          forAll(declaredSubqueryDeclaredSubqueryDeclared(graphName1 = "foo", graphName2 = "bar", graphName3 = "baz")) { query =>
+            planAndStitch(fabricName, fabricName, query)
+              .should(matchPattern { case Failure(_) => })
+          }
 
+          forAll(declaredSubqueryDeclaredSubqueryDeclared(graphName1 = fabricName, graphName2 = "foo.bar", graphName3 = "foo.baz")) { query =>
+            planAndStitch(sessionGraphName, fabricName, query)
+              .should(matchPattern { case Failure(_) => })
+          }
 
-    "Multi graph mode" - {
+          forAll(declaredSubqueryDeclaredSubqueryDeclared(graphName1 = "f(1)", graphName2 = "g(2)", graphName3 = "h(3)")) { query =>
+            planAndStitch(fabricName, fabricName, query)
+              .should(matchPattern { case Failure(_) => })
+          }
 
-      val singleGraph = false
-
-      "allows single graph queries" in {
-
-        forAll(defaultGraphQueries) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
-        }
-
-        forAll(singleGraphQueries(graphName = "foo")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
-        }
-
-        forAll(singleGraphQueries(graphName = "foo.bar")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
-        }
-
-        forAll(singlePlusDefaultGraphQueries(graphName = defaultGraphName)) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
-        }
-
-        forAll(defaultPlusSingleGraphQueries(graphName = defaultGraphName)) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
-        }
-
-        forAll(doubleGraphQueries(graphName1 = "foo", graphName2 = "foo")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
-        }
-
-        forAll(doubleGraphQueries(graphName1 = "foo.bar", graphName2 = "foo.bar")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
-        }
-
-        forAll(doubleGraphQueries(graphName1 = "foo", graphName2 = "foo")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
-        }
-
-        forAll(tripleGraphQueries(graphName1 = "foo.bar", graphName2 = "foo.bar", graphName3 = "foo.bar")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
-        }
-      }
-
-      "allows dynamic USE" in {
-
-        forAll(singleGraphQueries(graphName = "f(1)")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
-        }
-
-        forAll(singleGraphQueries(graphName = "$p")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
-        }
-
-        forAll(singlePlusDefaultGraphQueries(graphName = "f(1)")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
-        }
-
-        forAll(defaultPlusSingleGraphQueries(graphName = "f(1)")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
-        }
-
-        forAll(doubleGraphQueries(graphName1 = "foo", graphName2 = "f(1)")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
-        }
-
-        forAll(tripleGraphQueries(graphName1 = "foo.bar", graphName2 = "f(1)", graphName3 = "foo.bar")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
-        }
-      }
-
-      "allows multi-graph" in {
-
-        forAll(singlePlusDefaultGraphQueries(graphName = "foo")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
-        }
-
-        forAll(defaultPlusSingleGraphQueries(graphName = "foo")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
-        }
-
-        forAll(doubleGraphQueries(graphName1 = "foo", graphName2 = "bar")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
-        }
-
-        forAll(tripleGraphQueries(graphName1 = "foo.bar", graphName2 = "foo", graphName3 = "foo.bar")) { query =>
-          offendingGraphSelections(query, singleGraph)
-            .shouldEqual(Seq())
         }
       }
     }
-
-  }
-
-  object ClauseOps {
-    def pretty = Prettifier(ExpressionStringifier())
-  }
-
-  implicit class ClauseOps(actual: Seq[Clause]) {
-    def shouldEqualAst(expected: Seq[Clause]): Assertion = {
-      try {
-        actual.shouldEqual(expected)
-      }
-      catch {
-        case e: TestFailedException =>
-          println("--- Expected: ")
-          expected.pprint()
-          println("--- Actual: ")
-          actual.pprint()
-          throw e
-      }
-    }
-
-    def pprint(): Unit =
-      println(ClauseOps.pretty.asString(query(actual: _*)))
   }
 
   implicit class Caster[A](a: A) {
@@ -1093,4 +1094,21 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
   }
 
   def any: CypherType = CTAny
+
+  val beFullyStitched: Matcher[Try[FabricPlan]] = Matcher[Try[FabricPlan]] {
+    case Success(value)     =>
+      value.query match {
+        case frag @ Fragment.Exec(_: Fragment.Init, _, _) => MatchResult(matches = true,
+          s"Expectation failed, got: $frag",
+          s"Expectation failed, got: $frag")
+
+        case frag => MatchResult(matches = false,
+          s"Expected fully stitched query, but got: $frag",
+          s"Expectation failed, got: $frag")
+      }
+    case Failure(exception) => MatchResult(
+      matches = false,
+      s"Expected fully stitched query, but got exception: ${exception.getMessage}",
+      s"Expectation failed, got exception: ${exception.getMessage}")
+  }
 }

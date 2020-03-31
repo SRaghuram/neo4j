@@ -26,9 +26,28 @@ public final class DriverUtils
         this.defaultDatabaseName = defaultDatabaseName;
     }
 
+    public SessionConfig sessionConfig()
+    {
+        return sessionConfig( null );
+    }
+
+    public SessionConfig sessionConfig( AccessMode accessMode )
+    {
+        SessionConfig.Builder builder = SessionConfig.builder();
+        if ( defaultDatabaseName != null )
+        {
+            builder.withDatabase( defaultDatabaseName );
+        }
+        if ( accessMode != null )
+        {
+            builder.withDefaultAccessMode( accessMode );
+        }
+        return builder.build();
+    }
+
     public <T> T inTx( Driver driver, Function<Transaction,T> workload )
     {
-        try ( var session = driver.session( SessionConfig.builder().withDatabase( defaultDatabaseName ).build() ) )
+        try ( var session = driver.session( sessionConfig() ) )
         {
             return session.writeTransaction( workload::apply );
         }
@@ -36,7 +55,7 @@ public final class DriverUtils
 
     public <T> T inTx( Driver driver, AccessMode accessMode, Function<Transaction,T> workload )
     {
-        try ( var session = driver.session( SessionConfig.builder().withDatabase( defaultDatabaseName ).withDefaultAccessMode( accessMode ).build() );
+        try ( var session = driver.session( sessionConfig( accessMode ) );
                 var tx = session.beginTransaction() )
         {
             T value = workload.apply( tx );
@@ -65,7 +84,7 @@ public final class DriverUtils
 
     public <T> T inSession( Driver driver, Function<Session,T> workload )
     {
-        try ( var session = driver.session( SessionConfig.builder().withDatabase( defaultDatabaseName ).build() ) )
+        try ( var session = driver.session( sessionConfig() ) )
         {
             return workload.apply( session );
         }
@@ -73,7 +92,7 @@ public final class DriverUtils
 
     public void doInSession( Driver driver, Consumer<Session> workload )
     {
-        try ( var session = driver.session( SessionConfig.builder().withDatabase( defaultDatabaseName ).build() ) )
+        try ( var session = driver.session( sessionConfig() ) )
         {
             workload.accept( session );
         }
@@ -81,7 +100,7 @@ public final class DriverUtils
 
     public void doInSession( Driver driver, AccessMode accessMode, Consumer<Session> workload )
     {
-        try ( var session = driver.session( SessionConfig.builder().withDatabase( defaultDatabaseName ).withDefaultAccessMode( accessMode ).build() ) )
+        try ( var session = driver.session( sessionConfig( accessMode ) ) )
         {
             workload.accept( session );
         }
@@ -89,7 +108,7 @@ public final class DriverUtils
 
     public <T> T inRxTx( Driver driver, Function<RxTransaction,T> workload )
     {
-        var session = driver.rxSession( SessionConfig.builder().withDatabase( defaultDatabaseName ).build() );
+        var session = driver.rxSession( sessionConfig() );
         try
         {
             var tx = Mono.from( session.beginTransaction() ).block();

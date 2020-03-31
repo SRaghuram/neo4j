@@ -8,50 +8,27 @@ package com.neo4j.fabric.planning
 import com.neo4j.fabric.cache.FabricQueryCache
 import com.neo4j.fabric.config.FabricConfig
 import com.neo4j.fabric.eval.UseEvaluation
-import com.neo4j.fabric.executor.FabricException
-import com.neo4j.fabric.pipeline.Pipeline
+import com.neo4j.fabric.pipeline.FabricFrontEnd
 import com.neo4j.fabric.planning.FabricPlan.DebugOptions
 import com.neo4j.fabric.planning.FabricQuery.LocalQuery
 import com.neo4j.fabric.planning.FabricQuery.RemoteQuery
-import com.neo4j.fabric.util.Errors
-import com.neo4j.fabric.util.Rewritten.RewritingOps
-import org.neo4j.cypher.CypherExecutionMode
 import org.neo4j.cypher.CypherExpressionEngineOption
 import org.neo4j.cypher.CypherRuntimeOption
-import org.neo4j.cypher.CypherUpdateStrategy
-import org.neo4j.cypher.internal
 import org.neo4j.cypher.internal.CypherConfiguration
 import org.neo4j.cypher.internal.FullyParsedQuery
 import org.neo4j.cypher.internal.PreParsedQuery
-import org.neo4j.cypher.internal.PreParser
 import org.neo4j.cypher.internal.QueryOptions
-import org.neo4j.cypher.internal.ast.AliasedReturnItem
 import org.neo4j.cypher.internal.ast.Clause
-import org.neo4j.cypher.internal.ast.GraphSelection
-import org.neo4j.cypher.internal.ast.InputDataStream
-import org.neo4j.cypher.internal.ast.ProcedureResult
 import org.neo4j.cypher.internal.ast.Query
 import org.neo4j.cypher.internal.ast.QueryPart
-import org.neo4j.cypher.internal.ast.Return
-import org.neo4j.cypher.internal.ast.ReturnItems
 import org.neo4j.cypher.internal.ast.SingleQuery
 import org.neo4j.cypher.internal.ast.SubQuery
 import org.neo4j.cypher.internal.ast.UnionAll
 import org.neo4j.cypher.internal.ast.UnionDistinct
-import org.neo4j.cypher.internal.ast.UnresolvedCall
-import org.neo4j.cypher.internal.ast.With
-import org.neo4j.cypher.internal.expressions.FunctionInvocation
-import org.neo4j.cypher.internal.expressions.FunctionName
-import org.neo4j.cypher.internal.expressions.Namespace
-import org.neo4j.cypher.internal.expressions.Parameter
-import org.neo4j.cypher.internal.expressions.ProcedureName
-import org.neo4j.cypher.internal.logical.plans.ResolvedCall
-import org.neo4j.cypher.internal.logical.plans.ResolvedFunctionInvocation
 import org.neo4j.cypher.internal.planner.spi.ProcedureSignatureResolver
+import org.neo4j.cypher.internal.util.ASTNode
 import org.neo4j.cypher.internal.util.InputPosition
-import org.neo4j.cypher.internal.util.NonEmptyList
-import org.neo4j.cypher.internal.util.symbols.CTAny
-import org.neo4j.kernel.api.exceptions.Status.Statement.SemanticError
+import org.neo4j.exceptions.SyntaxException
 import org.neo4j.monitoring.Monitors
 import org.neo4j.values.virtual.MapValue
 
@@ -62,112 +39,99 @@ case class FabricPlanner(
   signatures: ProcedureSignatureResolver
 ) {
 
-  private val preParser = new PreParser(
-    cypherConfig.version,
-    cypherConfig.planner,
-    cypherConfig.runtime,
-    cypherConfig.expressionEngineOption,
-    cypherConfig.operatorEngine,
-    cypherConfig.interpretedPipesFallback,
-    cypherConfig.queryCacheSize,
-  )
   private[planning] val queryCache = new FabricQueryCache(cypherConfig.queryCacheSize)
 
-  def instance(queryString: String, queryParams: MapValue, defaultGraphName: String): PlannerInstance =
-    PlannerInstance(queryString, queryParams, defaultGraphName)
+  private val frontend = FabricFrontEnd(cypherConfig, monitors, signatures)
+
+  private def fabricContextName: Option[String] = for {
+    database <- Option(config.getDatabase)
+    name <- Option(database.getName)
+  } yield name.name()
+
+  def instance(queryString: String, queryParams: MapValue, defaultGraphName: String): PlannerInstance = {
+    val query = frontend.preParsing.preParse(queryString)
+    PlannerInstance(query, queryParams, defaultGraphName, fabricContextName)
+  }
 
   case class PlannerInstance(
-    queryString: String,
+    query: PreParsedQuery,
     queryParams: MapValue,
-    defaultGraphName: String,
+    defaultContextName: String,
+    fabricContextName: Option[String],
+    forceFabricContext: Boolean = false,
   ) {
-    private val pipeline = Pipeline.Instance(monitors, queryString, signatures)
 
-    lazy val plan: FabricPlan =
-      queryCache.computeIfAbsent(queryString, queryParams, defaultGraphName, () => computePlan())
+    private val pipeline = frontend.Pipeline(query)
+
+    lazy val plan: FabricPlan = {
+      val plan = queryCache.computeIfAbsent(
+        query.cacheKey, queryParams, defaultContextName,
+        () => computePlan()
+      )
+      plan.copy(
+        executionType = frontend.preParsing.executionType(query.options))
+    }
 
     private def computePlan(): FabricPlan = {
 
-      val preParsed = preParse(queryString)
-      val prepared = pipeline.parseAndPrepare.process(preParsed.statement)
+      val prepared = pipeline.parseAndPrepare.process()
 
-      val fragmenter = new FabricFragmenter(defaultGraphName, queryString, prepared.statement(), prepared.semantics())
+      val fragmenter = new FabricFragmenter(defaultContextName, query.statement, prepared.statement(), prepared.semantics())
       val fragments = fragmenter.fragment
 
+      val fabricContext = inFabricContext(fragments)
+
+      val stitching = FabricStitcher(query.statement, fabricContext, fabricContextName)
+      val stitchedFragments = stitching.convert(fragments)
+
       FabricPlan(
-        query = fragments,
-        queryType = QueryType.global(fragments),
-        executionType = preParsed.options.executionMode match {
-          case CypherExecutionMode.normal  => FabricPlan.Execute
-          case CypherExecutionMode.explain => FabricPlan.Explain
-          case CypherExecutionMode.profile => Errors.notSupported("Query option: 'PROFILE'")
-        },
-        debugOptions = DebugOptions.from(preParsed.options.debugOptions),
-        obfuscationMetadata = prepared.obfuscationMetadata()
+        query = stitchedFragments,
+        queryType = QueryType.recursive(stitchedFragments),
+        executionType = FabricPlan.Execute,
+        queryString = query.statement,
+        debugOptions = DebugOptions.from(query.options.debugOptions),
+        obfuscationMetadata = prepared.obfuscationMetadata(),
+        inFabricContext = fabricContext,
       )
     }
 
-    def asLocal(leaf: Fragment.Leaf): LocalQuery = {
-      val pos = leaf.clauses.head.position
-      val clauses = Seq(
-        Ast.inputDataStream(leaf.input.outputColumns, pos).toSeq,
-        Ast.paramBindings(leaf.importColumns, pos).toSeq,
-        leaf.clauses,
-        Ast.aliasedReturn(leaf.clauses.last, leaf.outputColumns, pos).toSeq,
-      ).flatten
-      val rewrites: Query => Query = Ast.chain(
-        Ast.withoutGraphSelection,
-        Ast.unresolveCallables
-      )
-      val query = rewrites(Query(None, SingleQuery(clauses)(pos))(pos))
-      val state = pipeline.checkAndFinalize.process(query)
+    def asLocal(fragment: Fragment.Exec): LocalQuery = LocalQuery(
+      query = FullyParsedQuery(
+        state = pipeline.checkAndFinalize.process(fragment.query),
+        options = QueryOptions.default.copy(
+          runtime = CypherRuntimeOption.slotted,
+          expressionEngine = CypherExpressionEngineOption.interpreted,
+          materializedEntitiesMode = true,
+        )
+      ),
+      queryType = fragment.queryType
+    )
 
-      LocalQuery(
-        query = FullyParsedQuery(
-          state = state,
-          options = QueryOptions.default.copy(
-            runtime = CypherRuntimeOption.slotted,
-            expressionEngine = CypherExpressionEngineOption.interpreted,
-            materializedEntitiesMode = true,
-          )
-        ),
-        queryType = QueryType.local(leaf),
-      )
-    }
+    def asRemote(fragment: Fragment.Exec): RemoteQuery = RemoteQuery(
+      query = QueryRenderer.render(fragment.query),
+      queryType = fragment.queryType,
+    )
 
-    def asRemote(leaf: Fragment.Leaf): RemoteQuery = {
-      val pos = InputPosition.NONE
-      val part = stitch(leaf)
-      val rewrites: Query => Query = Ast.unresolveCallables
-      val query = rewrites(Query(None, part)(pos))
+    private def inFabricContext(fragment: Fragment): Boolean = {
+      def inFabricDefaultContext =
+        fabricContextName.contains(defaultContextName)
 
-      RemoteQuery(
-        query = QueryRenderer.render(query),
-        queryType = QueryType.local(leaf),
-      )
-    }
+      def isFabricFragment(fragment: Fragment): Boolean =
+        fragment match {
+          case chain: Fragment.Chain =>
+            UseEvaluation.evaluateStatic(chain.use.graphSelection)
+              .exists(cn => cn.parts == fabricContextName.toList)
 
-    def offendingGraphSelections(fragment: Fragment, singleGraphMode: Boolean): Seq[GraphSelection] = {
-      if (singleGraphMode) {
-        val all = allGraphSelections(fragment).distinct
-        val (static, nonStatic) = all.partition(UseEvaluation.isStatic)
-        if (nonStatic.nonEmpty) {
-          nonStatic
-        } else {
-          static.filterNot(_ == all.head)
+          case union: Fragment.Union =>
+            isFabricFragment(union.lhs) && isFabricFragment(union.rhs)
         }
-      } else {
-        Seq()
-      }
+
+      forceFabricContext || inFabricDefaultContext || isFabricFragment(fragment)
     }
 
-    private def allGraphSelections(fragment: Fragment): Seq[GraphSelection] =
-      fragment match {
-        case Fragment.Init(use, _, _)              => Seq(use.graphSelection)
-        case f: Fragment.Leaf                      => allGraphSelections(f.input)
-        case f: Fragment.Apply                     => allGraphSelections(f.input) ++ allGraphSelections(f.inner)
-        case f: Fragment.Union                     => allGraphSelections(f.lhs) ++ allGraphSelections(f.rhs)
-      }
+    private[planning] def withForceFabricContext(force: Boolean) =
+      if (force) this.copy(fabricContextName = Some(defaultContextName))
+      else this.copy(fabricContextName = None)
 
     private def stitch(leaf: Fragment.Leaf): QueryPart =
       stitch(leaf, nested = false)
@@ -211,124 +175,5 @@ case class FabricPlanner(
           before :+ SubQuery(inner)(pos)
       }
     }
-
-    private def preParse(query: String): PreParsedQuery = {
-      val preParsed = preParser.preParseQuery(query)
-      assertNotPeriodicCommit(preParsed)
-      assertOptionsNotSet(preParsed.options)
-      preParsed
-    }
-
-    private def assertNotPeriodicCommit(preParsedStatement: PreParsedQuery): Unit = {
-      if (preParsedStatement.options.isPeriodicCommit) {
-        throw new FabricException(SemanticError, "Periodic commit is not supported in Fabric")
-      }
-    }
-
-    private def assertOptionsNotSet(options: QueryOptions): Unit = {
-      def check[T](name: String, a: T, b: T): Unit =
-        if (a != b) Errors.notSupported(s"Query option '$name'")
-
-      check("version", options.version, cypherConfig.version)
-      check("planner", options.planner, cypherConfig.planner)
-      check("runtime", options.runtime, cypherConfig.runtime)
-      check("updateStrategy", options.updateStrategy, CypherUpdateStrategy.default)
-      check("expressionEngine", options.expressionEngine, cypherConfig.expressionEngineOption)
-      check("operatorEngine", options.operatorEngine, cypherConfig.operatorEngine)
-      check("interpretedPipesFallback", options.interpretedPipesFallback, cypherConfig.interpretedPipesFallback)
-    }
-  }
-
-  private object Ast {
-
-    private def conditionally[T](cond: Boolean, prod: => T) =
-      if (cond) Some(prod) else None
-
-    private def variable(name: String, pos: InputPosition) =
-      internal.expressions.Variable(name)(pos)
-
-    def paramBindings(columns: Seq[String], pos: InputPosition): Option[With] =
-      conditionally(
-        columns.nonEmpty,
-        With(ReturnItems(
-          includeExisting = false,
-          items = for {
-            varName <- columns
-            parName = Columns.paramName(varName)
-          } yield AliasedReturnItem(
-            expression = Parameter(parName, CTAny)(pos),
-            variable = variable(varName, pos),
-          )(pos)
-        )(pos))(pos)
-      )
-
-    def inputDataStream(names: Seq[String], pos: InputPosition): Option[InputDataStream] =
-      conditionally(
-        names.nonEmpty,
-        InputDataStream(
-          variables = for {
-            name <- names
-          } yield variable(name, pos)
-        )(pos)
-      )
-
-    def aliasedReturn(lastClause: Clause, names: Seq[String], pos: InputPosition): Option[Return] =
-      lastClause match {
-        case _: Return => None
-        case _         => Some(aliasedReturn(names, pos))
-      }
-
-    def aliasedReturn(names: Seq[String], pos: InputPosition): Return =
-      Return(ReturnItems(
-        includeExisting = false,
-        items = for {
-          name <- names
-        } yield AliasedReturnItem(
-          expression = variable(name, pos),
-          variable = variable(name, pos),
-        )(pos)
-      )(pos))(pos)
-
-    def unresolveCallables[T <: AnyRef](tree: T): T = {
-      tree.rewritten.bottomUp {
-        // Un-resolve procedures for rendering
-        case rc: ResolvedCall =>
-          val pos = rc.position
-          val name = rc.signature.name
-          UnresolvedCall(
-            procedureNamespace = Namespace(name.namespace.toList)(pos),
-            procedureName = ProcedureName(name.name)(pos),
-            declaredArguments = if (rc.declaredArguments) Some(rc.callArguments) else None,
-            declaredResult = if (rc.declaredResults) Some(ProcedureResult(rc.callResults)(pos)) else None,
-          )(pos)
-        // Un-resolve functions for rendering
-        case rf: ResolvedFunctionInvocation =>
-          val pos = rf.position
-          val name = rf.qualifiedName
-          FunctionInvocation(
-            namespace = Namespace(name.namespace.toList)(pos),
-            functionName = FunctionName(name.name)(pos),
-            distinct = false,
-            args = rf.arguments.toIndexedSeq,
-          )(pos)
-      }
-    }
-
-    def withoutGraphSelection(clauses: Seq[Clause]): Seq[Clause] =
-      clauses.filter {
-        case _: GraphSelection => false
-        case _                 => true
-      }
-
-    def withoutGraphSelection(query: Query): Query = {
-      query.rewritten.bottomUp {
-        case sq: SingleQuery =>
-          SingleQuery(clauses = withoutGraphSelection(sq.clauses))(sq.position)
-      }
-    }
-
-    def chain[T <: AnyRef](rewrites: (T => T)*): T => T =
-      rewrites.foldLeft(identity[T] _)(_ andThen _)
-
   }
 }

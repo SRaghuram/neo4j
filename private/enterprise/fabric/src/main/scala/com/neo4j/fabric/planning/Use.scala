@@ -5,17 +5,41 @@
  */
 package com.neo4j.fabric.planning
 
-import org.neo4j.cypher.internal.ast
+import org.neo4j.cypher.internal.ast.GraphSelection
+import org.neo4j.cypher.internal.util.InputPosition
 
 sealed trait Use {
-  def graphSelection: ast.GraphSelection
+  def graphSelection: GraphSelection
+  def position: InputPosition
 }
 
 object Use {
 
-  final case class Declared(graphSelection: ast.GraphSelection) extends Use
-  final case class Inherited(use: Use) extends Use {
-    def graphSelection: ast.GraphSelection = use.graphSelection
+  final case class Default(graphSelection: GraphSelection) extends Use {
+    def position: InputPosition = graphSelection.position
+  }
+  final case class Declared(graphSelection: GraphSelection) extends Use {
+    def position: InputPosition = graphSelection.position
+  }
+  final case class Inherited(use: Use)(pos: InputPosition) extends Use {
+    def graphSelection: GraphSelection = use.graphSelection
+    def position: InputPosition = pos
+  }
+
+  @scala.annotation.tailrec
+  def show(use: Use): Any = use match {
+    case s: Default  => show(s.graphSelection) + " (transaction default)"
+    case d: Declared => show(d.graphSelection)
+    case i: Inherited => show(root(i))
+  }
+
+  def show(graphSelection: GraphSelection): String =
+    QueryRenderer.pretty(graphSelection.expression)
+
+  @scala.annotation.tailrec
+  private def root(use: Use): Use = use match {
+    case i: Inherited => root(i.use)
+    case u            => u
   }
 }
 

@@ -496,7 +496,7 @@ class FabricExecutorTest
                     tx.run( joinAsLines(
                             "EXPLAIN",
                             "CALL { USE mega.graph(0) RETURN 1 AS x }",
-                            "CALL { USE mega.graph(1) CREATE () RETURN 1 AS y }",
+                            "CALL { USE mega.graph(1) CREATE (n) RETURN 1 AS y }",
                             "RETURN y, x"
                     ) ).consume();
 
@@ -504,7 +504,7 @@ class FabricExecutorTest
 
             assertThat( summary.hasPlan(), is( true ) );
             Plan plan = summary.plan();
-            assertThat( plan.operatorType(), is( "Leaf" ) );
+            assertThat( plan.operatorType(), is( "Exec" ) );
             assertThat( plan.identifiers(), contains( "y", "x" ) );
             assertThat( plan.children().size(), is( 1 ) );
 
@@ -512,19 +512,19 @@ class FabricExecutorTest
             assertThat( c0.operatorType(), is( "Apply" ) );
             assertThat( c0.identifiers(), contains( "x", "y" ) );
             Plan c0c1 = c0.children().get( 1 );
-            assertThat( c0c1.operatorType(), is( "Leaf" ) );
+            assertThat( c0c1.operatorType(), is( "Exec" ) );
             assertThat( c0c1.identifiers(), contains( "y" ) );
             assertThat( c0c1.arguments().get( "query" ),
-                        is( org.neo4j.driver.Values.value( joinAsLines( "USE `mega`.`graph`((1))", "CREATE ()", "RETURN 1 AS `y`" ) ) ) );
+                        is( org.neo4j.driver.Values.value( joinAsLines( "CREATE (`n`)", "RETURN 1 AS `y`" ) ) ) );
 
             Plan c0c0 = c0.children().get( 0 );
             assertThat( c0c0.operatorType(), is( "Apply" ) );
             assertThat( c0c0.identifiers(), contains( "x" ) );
             Plan c0c0c1 = c0c0.children().get( 1 );
-            assertThat( c0c0c1.operatorType(), is( "Leaf" ) );
+            assertThat( c0c0c1.operatorType(), is( "Exec" ) );
             assertThat( c0c0c1.identifiers(), contains( "x" ) );
             assertThat( c0c0c1.arguments().get( "query" ),
-                        is( org.neo4j.driver.Values.value( joinAsLines( "USE `mega`.`graph`((0))", "RETURN 1 AS `x`" ) ) ) );
+                        is( org.neo4j.driver.Values.value( joinAsLines( "RETURN 1 AS `x`" ) ) ) );
 
             Plan c0c0c0 = c0c0.children().get( 0 );
             assertThat( c0c0c0.operatorType(), is( "Init" ) );
@@ -564,11 +564,11 @@ class FabricExecutorTest
         ) ).consume() );
 
         assertThat( internalLogProvider ).forClass( FabricExecutor.class ).forLevel( DEBUG )
-                .containsMessages( "local 2: /* FullyParsedQuery */ UNWIND [0, 1] AS s RETURN s AS s",
+                .containsMessages( "local 2: UNWIND [0, 1] AS `s` RETURN `s` AS `s`",
                                    "remote 0: RETURN 2 AS `y`",
                                    "remote 1: RETURN 2 AS `y`",
-                                   "local 2: /* FullyParsedQuery */ InputDataStream(Vector(Variable(s), Variable(y))) " +
-                                           "RETURN s AS s, y AS y ORDER BY s ASCENDING, y ASCENDING" );
+                                   "local 2: InputDataStream(Vector(Variable(s), Variable(y))) " +
+                                           "RETURN `s` AS `s`, `y` AS `y` ORDER BY `s` ASCENDING, `y` ASCENDING" );
     }
 
     @Test

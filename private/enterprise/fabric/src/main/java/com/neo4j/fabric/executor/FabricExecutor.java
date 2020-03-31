@@ -87,6 +87,7 @@ public class FabricExecutor
         FabricPlanner.PlannerInstance plannerInstance = planner.instance( queryString, queryParams, defaultGraphName );
         UseEvaluation.Instance useEvaluator = useEvaluation.instance( queryString );
         FabricPlan plan = plannerInstance.plan();
+        Fragment query = plan.query();
 
         queryMonitor.getMonitoredQuery().onObfuscatorReady( CypherQueryObfuscator.apply( plan.obfuscationMetadata() ) );
 
@@ -94,7 +95,7 @@ public class FabricExecutor
 
         if ( plan.debugOptions().logPlan() )
         {
-            log.debug( String.format( "Fabric plan: %s", Fragment.pretty().asString( plan.query() ) ) );
+            log.debug( String.format( "Fabric plan: %s", Fragment.pretty().asString( query ) ) );
         }
         return fabricTransaction.execute(
                 ctx ->
@@ -102,14 +103,15 @@ public class FabricExecutor
                     FabricStatementExecution execution;
                     if ( plan.debugOptions().logRecords() )
                     {
-                        execution =
-                                new FabricLoggingStatementExecution( plan, plannerInstance, useEvaluator, queryParams, accessMode, ctx, log, queryMonitor,
-                                                                     dataStreamConfig );
+                        execution = new FabricLoggingStatementExecution(
+                                plan, plannerInstance, useEvaluator, queryParams, accessMode, ctx, log, queryMonitor, dataStreamConfig
+                        );
                     }
                     else
                     {
-                        execution = new FabricStatementExecution( plan, plannerInstance, useEvaluator, queryParams, accessMode, ctx, queryMonitor,
-                                                                  dataStreamConfig );
+                        execution = new FabricStatementExecution(
+                                plan, plannerInstance, useEvaluator, queryParams, accessMode, ctx, queryMonitor, dataStreamConfig
+                        );
                     }
                     return execution.run();
                 } );
@@ -174,6 +176,7 @@ public class FabricExecutor
 
         Flux<Record> run( Fragment fragment, Record argument )
         {
+
             if ( fragment instanceof Fragment.Init )
             {
                 return runInit( (Fragment.Init) fragment, argument );
@@ -186,9 +189,9 @@ public class FabricExecutor
             {
                 return runUnion( (Fragment.Union) fragment, argument );
             }
-            else if ( fragment instanceof Fragment.Leaf )
+            else if ( fragment instanceof Fragment.Exec )
             {
-                return runLeaf( (Fragment.Leaf) fragment, argument );
+                return runExec( (Fragment.Exec) fragment, argument );
             }
             else
             {
@@ -226,25 +229,32 @@ public class FabricExecutor
             }
         }
 
-        Flux<Record> runLeaf( Fragment.Leaf leaf, Record argument )
+        Flux<Record> runExec( Fragment.Exec fragment, Record argument )
         {
-            Map<String,AnyValue> argumentValues = argumentValues( leaf, argument );
-            MapValue parameters = addParamsFromRecord( queryParams, argumentValues, mapAsJavaMap( leaf.parameters() ) );
+            Map<String,AnyValue> argumentValues = argumentValues( fragment, argument );
+            MapValue parameters = addParamsFromRecord( queryParams, argumentValues, mapAsJavaMap( fragment.parameters() ) );
 
-            Catalog.Graph graph = evalUse( leaf.use().graphSelection(), argumentValues );
-            var transactionMode = getTransactionMode( leaf.queryType(), graph.toString() );
+            Catalog.Graph graph = evalUse( fragment.use().graphSelection(), argumentValues );
+            var transactionMode = getTransactionMode( fragment.queryType(), graph.toString() );
             Location location = catalogManager.locationOf( graph, transactionMode.requiresWrite() );
             if ( location instanceof Location.Local )
             {
                 Location.Local local = (Location.Local) location;
-                Flux<Record> input = run( leaf.input(), argument );
-                FabricQuery.LocalQuery localQuery = plannerInstance.asLocal( leaf );
-                return runLocalQueryAt( local, transactionMode, localQuery.query(), parameters, input );
+                Flux<Record> input = run( fragment.input(), argument );
+                if ( fragment.executable() )
+                {
+                    FabricQuery.LocalQuery localQuery = plannerInstance.asLocal( fragment );
+                    return runLocalQueryAt( local, transactionMode, localQuery.query(), parameters, input );
+                }
+                else
+                {
+                    return input;
+                }
             }
             else if ( location instanceof Location.Remote )
             {
                 Location.Remote remote = (Location.Remote) location;
-                FabricQuery.RemoteQuery remoteQuery = plannerInstance.asRemote( leaf );
+                FabricQuery.RemoteQuery remoteQuery = plannerInstance.asRemote( fragment );
                 return runRemoteQueryAt( remote, transactionMode, remoteQuery.query(), parameters );
             }
             else
@@ -279,7 +289,14 @@ public class FabricExecutor
 
         private Map<String,AnyValue> argumentValues( Fragment fragment, Record argument )
         {
-            return Records.asMap( argument, seqAsJavaList( fragment.argumentColumns() ) );
+            if ( argument == null )
+            {
+                return Map.of();
+            }
+            else
+            {
+                return Records.asMap( argument, seqAsJavaList( fragment.argumentColumns() ) );
+            }
         }
 
         private Catalog.Graph evalUse( GraphSelection selection, Map<String,AnyValue> record )

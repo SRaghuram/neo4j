@@ -137,7 +137,7 @@ class ErrorsEndToEndTest
     {
         var e = run( "CREATE INDEX ON :Person(firstname)" );
 
-        var expectedMessage = "Commands not supported in Fabric database";
+        var expectedMessage = "This command is not supported in Fabric";
         assertEquals( SemanticError.code().serialize(), e.code() );
         assertEquals( expectedMessage, e.getMessage() );
     }

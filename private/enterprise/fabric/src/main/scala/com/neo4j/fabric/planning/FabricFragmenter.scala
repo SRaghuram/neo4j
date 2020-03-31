@@ -6,9 +6,8 @@
 package com.neo4j.fabric.planning
 
 import com.neo4j.fabric.planning.Fragment.Apply
-import com.neo4j.fabric.planning.Fragment.Chain
-import com.neo4j.fabric.planning.Fragment.Leaf
 import com.neo4j.fabric.planning.Fragment.Init
+import com.neo4j.fabric.planning.Fragment.Leaf
 import com.neo4j.fabric.planning.Fragment.Union
 import com.neo4j.fabric.util.Errors
 import org.neo4j.cypher.internal.ast
@@ -26,20 +25,20 @@ class FabricFragmenter(
   private val start = Init(defaultUse(defaultGraphName, InputPosition.NONE))
 
   def fragment: Fragment = queryStatement match {
-    case ast.Query(_, part)  => fragment(start, part)
+    case ast.Query(_, part)  => fragmentPart(start, part)
     case ddl: ast.CatalogDDL => Errors.ddlNotSupported(ddl)
-    case _: ast.Command      => Errors.notSupported("Commands")
+    case _: ast.Command      => Errors.notSupported("This command")
   }
 
-  private def fragment(
-    input: Fragment.Chain,
+  private def fragmentPart(
+    input: Fragment.Init,
     part: ast.QueryPart,
   ): Fragment = part match {
-    case sq: ast.SingleQuery => fragment(input, sq)
-    case uq: ast.Union       => Union(isDistinct(uq), fragment(input, uq.part), fragment(input, uq.query))
+    case sq: ast.SingleQuery => fragmentSingle(input, sq)
+    case uq: ast.Union       => Union(input, isDistinct(uq), fragmentPart(input, uq.part), fragmentSingle(input, uq.query))
   }
 
-  private def fragment(
+  private def fragmentSingle(
     input: Fragment.Chain,
     sq: ast.SingleQuery,
   ): Fragment.Chain = {
@@ -50,7 +49,7 @@ class FabricFragmenter(
         case init: Init =>
           // Previous is Init which means that we are at the start of a chain
           // Inherit or declare new Use
-          val use = leadingUse(sq).map(Use.Declared).getOrElse(Use.Inherited(init.use))
+          val use = leadingUse(sq).map(Use.Declared).getOrElse(init.use)
           Init(use, previous.argumentColumns, sq.importColumns)
 
         case other => other
@@ -63,7 +62,8 @@ class FabricFragmenter(
 
         case Left(subquery) =>
           // Subquery: Recurse and start the child chain with Init
-          Apply(input, fragment(Init(input.use, input.outputColumns, Seq.empty), subquery.part))
+          val use = Use.Inherited(input.use)(subquery.part.position)
+          Apply(input, fragmentPart(Init(use, input.outputColumns, Seq.empty), subquery.part))
       }
     }
   }
@@ -88,7 +88,7 @@ class FabricFragmenter(
   }
 
   private def defaultUse(graphName: String, pos: InputPosition) =
-    Use.Declared(UseGraph(Variable(graphName)(pos))(pos))
+    Use.Inherited(Use.Default(UseGraph(Variable(graphName)(pos))(pos)))(pos)
 
   private def produced(clauses: Seq[ast.Clause]): Seq[String] =
     produced(clauses.last)

@@ -83,23 +83,6 @@ object UseEvaluation {
         return resolved
       }
     }
-
-    private def nameFromVar(variable: Variable): CatalogName =
-      CatalogName(variable.name)
-
-    private def nameFromProp(property: Property): CatalogName = {
-      def parts(expr: Expression): List[String] = expr match {
-        case p: Property    => parts(p.map) :+ p.propertyKey.name
-        case Variable(name) => List(name)
-        case x              => Errors.openCypherUnexpected("Graph name segment", x)
-      }
-
-      CatalogName(parts(property))
-    }
-
-    private def nameFromFunc(func: FunctionInvocation): CatalogName = {
-      CatalogName(func.namespace.parts :+ func.functionName.name)
-    }
   }
 
   def isStatic(graphSelection: GraphSelection): Boolean =
@@ -107,4 +90,29 @@ object UseEvaluation {
       case _: Variable | _: Property => true
       case _                         => false
     }
+
+  def evaluateStatic(graphSelection: GraphSelection): Option[CatalogName] =
+    graphSelection.expression match {
+      case v: Variable => Some(nameFromVar(v))
+      case p: Property => Some(nameFromProp(p))
+      case _           => None
+    }
+
+  private def nameFromVar(variable: Variable): CatalogName =
+    CatalogName(variable.name)
+
+  private def nameFromProp(property: Property): CatalogName = {
+    def parts(expr: Expression): List[String] = expr match {
+      case p: Property    => parts(p.map) :+ p.propertyKey.name
+      case Variable(name) => List(name)
+      case x              => Errors.openCypherUnexpected("Graph name segment", x)
+    }
+
+    CatalogName(parts(property))
+  }
+
+  private def nameFromFunc(func: FunctionInvocation): CatalogName = {
+    CatalogName(func.namespace.parts :+ func.functionName.name)
+  }
+
 }

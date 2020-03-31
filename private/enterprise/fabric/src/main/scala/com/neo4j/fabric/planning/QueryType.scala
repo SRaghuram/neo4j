@@ -25,8 +25,10 @@ object QueryType {
   val READ_PLUS_UNRESOLVED: QueryType = ReadPlusUnresolved
   val WRITE: QueryType = Write
 
+  val default: QueryType = Read
+
   def of(ast: ASTNode): QueryType =
-    ast.folded(Read: QueryType)(merge) {
+    ast.folded(default)(merge) {
       case _: UpdateClause   => Stop(Write)
       case _: UnresolvedCall => Stop(ReadPlusUnresolved)
       case c: CallClause     => Stop(if (c.containsNoUpdates) Read else Write)
@@ -35,20 +37,22 @@ object QueryType {
   def of(ast: Seq[ASTNode]): QueryType =
     ast.map(of).fold(Read)(merge)
 
-  def global(fragment: Fragment): QueryType =
+  def recursive(fragment: Fragment): QueryType =
     fragment match {
-      case _: Fragment.Init      => Read
-      case leaf: Fragment.Leaf   => merge(global(leaf.input), of(leaf.clauses))
-      case apply: Fragment.Apply => merge(global(apply.input), global(apply.inner))
-      case union: Fragment.Union => merge(global(union.lhs), global(union.rhs))
+      case _: Fragment.Init      => default
+      case apply: Fragment.Apply => merge(recursive(apply.input), recursive(apply.inner))
+      case union: Fragment.Union => merge(recursive(union.lhs), recursive(union.rhs))
+      case leaf: Fragment.Leaf   => merge(recursive(leaf.input), leaf.queryType)
+      case exec: Fragment.Exec   => merge(recursive(exec.input), exec.queryType)
     }
 
   def local(fragment: Fragment): QueryType =
     fragment match {
-      case _: Fragment.Init      => Read
-      case leaf: Fragment.Leaf   => of(leaf.clauses)
+      case _: Fragment.Init      => default
       case apply: Fragment.Apply => local(apply.inner)
       case union: Fragment.Union => merge(local(union.lhs), local(union.rhs))
+      case leaf: Fragment.Leaf   => leaf.queryType
+      case exec: Fragment.Exec   => exec.queryType
     }
 
   def merge(a: QueryType, b: QueryType): QueryType =

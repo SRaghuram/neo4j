@@ -12,4 +12,7 @@ object Columns {
 
   def paramName(varName: String): String =
     s"@@$varName"
+
+  def asParamMappings(varNames: Seq[String]): Map[String, String] =
+    varNames.map(varName => varName -> paramName(varName)).toMap
 }

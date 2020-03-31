@@ -7,14 +7,18 @@ package com.neo4j.fabric.planning
 
 import com.neo4j.fabric.planning.FabricPlan.DebugOptions
 import org.neo4j.cypher.internal.FullyParsedQuery
+import org.neo4j.cypher.internal.ast.GraphSelection
+import org.neo4j.cypher.internal.ast.Query
 import org.neo4j.cypher.internal.util.ObfuscationMetadata
 
 case class FabricPlan(
   query: Fragment,
   queryType: QueryType,
   executionType: FabricPlan.ExecutionType,
+  queryString: String,
   debugOptions: DebugOptions,
-  obfuscationMetadata: ObfuscationMetadata
+  obfuscationMetadata: ObfuscationMetadata,
+  inFabricContext: Boolean,
 )
 
 object FabricPlan {

@@ -7,34 +7,27 @@ package com.neo4j.fabric.planning
 
 import com.neo4j.fabric.FabricTest
 import com.neo4j.fabric.ProcedureRegistryTestSupport
-import com.neo4j.fabric.pipeline.Pipeline
-import com.neo4j.fabric.pipeline.SignatureResolver
 import com.neo4j.fabric.planning.Fragment.Apply
 import com.neo4j.fabric.planning.Fragment.Leaf
 import com.neo4j.fabric.planning.Use.Declared
 import com.neo4j.fabric.planning.Use.Inherited
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.ast.UnresolvedCall
-import org.neo4j.cypher.internal.ast.UseGraph
 import org.neo4j.cypher.internal.ast.With
 import org.neo4j.cypher.internal.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.logical.plans.ResolvedCall
 import org.neo4j.cypher.internal.logical.plans.ResolvedFunctionInvocation
 import org.neo4j.exceptions.SyntaxException
-import org.neo4j.monitoring.Monitors
 import org.scalatest.Inside
 
 import scala.reflect.ClassTag
 
-//noinspection ZeroIndexToHead
-class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport with ProcedureRegistryTestSupport with Inside with FragmentTestUtils {
-
-  private val monitors = new Monitors
-  private val signatures = new SignatureResolver(() => procedures)
-
-  def pipeline(query: String): Pipeline.Instance =
-    Pipeline.Instance(monitors, query, signatures)
-
+class FabricFragmenterTest
+  extends FabricTest
+    with AstConstructionTestSupport
+    with ProcedureRegistryTestSupport
+    with Inside
+    with FragmentTestUtils {
 
   "USE handling: " - {
 
@@ -74,7 +67,7 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
           |""".stripMargin)
 
       frag.as[Fragment.Leaf].use.shouldEqual(defaultUse)
-      frag.as[Fragment.Leaf].input.as[Fragment.Apply].inner.as[Fragment.Leaf].use.shouldEqual(Inherited(defaultUse))
+      frag.as[Fragment.Leaf].input.as[Fragment.Apply].inner.as[Fragment.Leaf].use.shouldEqual(Inherited(defaultUse)(pos))
       frag.as[Fragment.Leaf].input.as[Fragment.Apply].input.as[Fragment.Leaf].use.shouldEqual(defaultUse)
     }
 
@@ -89,7 +82,7 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
           |""".stripMargin)
 
       frag.as[Fragment.Leaf].use.shouldEqual(Declared(use("g")))
-      frag.as[Fragment.Leaf].input.as[Fragment.Apply].inner.as[Fragment.Leaf].use.shouldEqual(Inherited(Declared(use("g"))))
+      frag.as[Fragment.Leaf].input.as[Fragment.Apply].inner.as[Fragment.Leaf].use.shouldEqual(Inherited(Declared(use("g")))(pos))
       frag.as[Fragment.Leaf].input.as[Fragment.Apply].input.as[Fragment.Leaf].use.shouldEqual(Declared(use("g")))
     }
 
@@ -138,14 +131,6 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
     }
 
     "disallow USE to reference missing variable" in {
-      val q =
-        """WITH 1 AS x
-          |CALL {
-          |  USE g(z)
-          |  RETURN 2 AS y
-          |}
-          |RETURN x
-          |""".stripMargin
 
       the[SyntaxException].thrownBy(
         fragment(
@@ -231,7 +216,7 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
       ).shouldEqual(
         init(defaultUse)
           .leaf(Seq(withLit(1, "a")), Seq("a"))
-          .apply(use => init(Inherited(use), Seq("a"), Seq("a"))
+          .apply(use => init(Inherited(use)(pos), Seq("a"), Seq("a"))
             .leaf(Seq(withVar("a"), returnAliased("a" -> "b")), Seq("b"))
           )
           .leaf(Seq(returnVars("a", "b")), Seq("a", "b"))
@@ -258,17 +243,35 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
       ).shouldEqual(
         init(defaultUse)
           .leaf(Seq(withLit(1, "x")), Seq("x"))
-          .apply(u => init(Inherited(u), Seq("x"))
+          .apply(u => init(Inherited(u)(pos), Seq("x"))
             .leaf(Seq(withLit(2, "y")), Seq("y"))
             .apply(_ => init(Declared(use("foo")), Seq("y"))
               .leaf(Seq(use("foo"), returnLit(3 -> "z")), Seq("z"))
             )
-            .apply(u => init(Inherited(u), Seq("y", "z"), Seq("y"))
+            .apply(u => init(Inherited(u)(pos), Seq("y", "z"), Seq("y"))
               .leaf(Seq(withVar("y"), returnLit(4 -> "w")), Seq("w"))
             )
             .leaf(Seq(returnVars("w", "y", "z")), Seq("w", "y", "z"))
           )
           .leaf(Seq(returnVars("x", "w", "y", "z")), Seq("x", "w", "y", "z"))
+      )
+    }
+
+    "fragment with only USE clause" in {
+      fragment(
+        """USE foo
+          |CALL {
+          |  RETURN 1 AS a
+          |}
+          |RETURN a
+          |""".stripMargin
+      ).shouldEqual(
+        init(Declared(use("foo")))
+          .leaf(Seq(use("foo")), Seq())
+          .apply(use => init(Inherited(use)(pos))
+            .leaf(Seq(returnLit(1 -> "a")), Seq("a"))
+          )
+          .leaf(Seq(returnVars("a")), Seq("a"))
       )
     }
 
@@ -281,10 +284,10 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
           |RETURN 2 AS y
           |""".stripMargin
       ).shouldEqual(
-          union(
-            init(Declared(use("foo"))).leaf(Seq(use("foo"), returnLit(1 -> "y")), Seq("y")),
-            init(Declared(use("bar"))).leaf(Seq(use("bar"), returnLit(2 -> "y")), Seq("y")),
-          )
+        init(defaultUse).union(
+          init(Declared(use("foo"))).leaf(Seq(use("foo"), returnLit(1 -> "y")), Seq("y")),
+          init(Declared(use("bar"))).leaf(Seq(use("bar"), returnLit(2 -> "y")), Seq("y")),
+        )
       )
     }
 
@@ -304,10 +307,10 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
         init(defaultUse)
           .leaf(Seq(withLit(1, "x")), Seq("x"))
           .apply(u =>
-            union(
+            init(Inherited(defaultUse)(pos), Seq("x")).union(
               init(Declared(use("foo")), Seq("x"))
                 .leaf(Seq(use("foo"), returnLit(1 -> "y")), Seq("y")),
-              init(Inherited(u), Seq("x"), Seq("x"))
+              init(Inherited(u)(pos), Seq("x"), Seq("x"))
                 .leaf(Seq(withVar("x"), returnLit(2 -> "y")), Seq("y")),
             )
           )
@@ -379,7 +382,7 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
       ).shouldEqual(
         init(defaultUse)
           .leaf(Seq(
-            resolved(call(Seq("my", "ns"), "myProcedure2", Some(Seq(literal(1))), Some(Seq(varFor("a"), varFor("b"))))),
+            resolved(call(Seq("my", "ns"), "myProcedure2", Some(Seq(coerceTo(literal(1), ct.any))), Some(Seq(varFor("a"), varFor("b"))))),
             returnVars("a", "b"),
           ), Seq("a", "b"))
       )
@@ -411,7 +414,7 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
           |""".stripMargin
       ).shouldEqual(
         init(defaultUse)
-          .leaf(Seq(return_(resolved(function(Seq("my", "ns"), "const0", literal(1))).as("x"))), Seq("x"))
+          .leaf(Seq(return_(resolved(function(Seq("my", "ns"), "const0", coerceTo(literal(1), ct.any))).as("x"))), Seq("x"))
       )
     }
 
@@ -425,9 +428,6 @@ class FabricFragmenterTest extends FabricTest with AstConstructionTestSupport wi
       )
     }
   }
-
-  private def use(name: String): UseGraph =
-    use(varFor(name))
 
   private def withLit(num: Int, varName: String): With =
     with_(literal(num).as(varName))

@@ -7,8 +7,13 @@ package com.neo4j.fabric.planning
 
 import java.util
 
+import com.neo4j.fabric.util.Folded
 import com.neo4j.fabric.util.PrettyPrinting
+import com.neo4j.fabric.util.Folded.FoldableOps
 import org.neo4j.cypher.internal.ast
+import org.neo4j.cypher.internal.ast.Clause
+import org.neo4j.cypher.internal.ast.GraphSelection
+import org.neo4j.cypher.internal.ast.Query
 import org.neo4j.graphdb.ExecutionPlanDescription
 
 import scala.collection.JavaConverters.setAsJavaSet
@@ -56,26 +61,53 @@ object Fragment {
     val description: Fragment.Description = Description.ApplyDesc(this)
   }
 
-  final case class Leaf(
-    input: Fragment.Chain,
-    clauses: Seq[ast.Clause],
-    outputColumns: Seq[String],
-  ) extends Fragment.Segment {
-    val parameters: Map[String, String] = importColumns.map(varName => varName -> Columns.paramName(varName)).toMap
-    val description: Fragment.Description = Description.LeafDesc(this)
-    val queryType: QueryType = QueryType.of(clauses)
-  }
-
   final case class Union(
+    input: Fragment.Init,
     distinct: Boolean,
     lhs: Fragment,
     rhs: Fragment.Chain,
   ) extends Fragment {
     val outputColumns: Seq[String] = rhs.outputColumns
-    val argumentColumns: Seq[String] = Seq.empty
-    val importColumns: Seq[String] = Seq.empty
+    val argumentColumns: Seq[String] = input.argumentColumns
+    val importColumns: Seq[String] = Columns.combine(lhs.importColumns, rhs.importColumns)
     val description: Fragment.Description = Description.UnionDesc(this)
   }
+
+  final case class Leaf(
+    input: Fragment.Chain,
+    clauses: Seq[ast.Clause],
+    outputColumns: Seq[String],
+  ) extends Fragment.Segment {
+    val parameters: Map[String, String] = Columns.asParamMappings(importColumns)
+    val description: Fragment.Description = Description.LeafDesc(this)
+    val queryType: QueryType = QueryType.of(clauses)
+    val executable: Boolean = hasExecutableClauses(clauses)
+  }
+
+  final case class Exec(
+    input: Fragment.Chain,
+    query: Query,
+    outputColumns: Seq[String],
+  ) extends Fragment.Segment {
+    val parameters: Map[String, String] = Columns.asParamMappings(importColumns)
+    val executable: Boolean = hasExecutableClauses(query)
+    val description: Fragment.Description = Description.ExecDesc(this)
+    val queryType: QueryType = QueryType.of(query)
+  }
+
+  private def hasExecutableClauses(clauses: Seq[ast.Clause]) =
+    clauses.exists(isExecutable)
+
+  private def hasExecutableClauses(query: Query) =
+    query.folded(false)(_ || _) {
+      case clause: Clause => Folded.Stop(isExecutable(clause))
+    }
+
+  private def isExecutable(clause: ast.Clause) =
+    clause match {
+      case _: GraphSelection => false
+      case _                 => true
+    }
 
   sealed abstract class Description(name: String, fragment: Fragment) extends ExecutionPlanDescription {
     override def getName: String = name
@@ -102,6 +134,13 @@ object Fragment {
       override def getChildren: util.List[ExecutionPlanDescription] = list(fragment.input.description)
       override def getArguments: util.Map[String, AnyRef] = map(
         "query" -> QueryRenderer.render(fragment.clauses)
+      )
+    }
+
+    final case class ExecDesc(fragment: Fragment.Exec) extends Description("Exec", fragment) {
+      override def getChildren: util.List[ExecutionPlanDescription] = list(fragment.input.description)
+      override def getArguments: util.Map[String, AnyRef] = map(
+        "query" -> QueryRenderer.render(fragment.query)
       )
     }
 
@@ -156,11 +195,23 @@ object Fragment {
         ),
         children = Seq(f.input)
       )
+
+      case f: Fragment.Exec => node(
+        name = "exec",
+        fields = Seq(
+          "use" -> use(f.use),
+          "arg" -> list(f.argumentColumns),
+          "imp" -> list(f.importColumns),
+          "out" -> list(f.outputColumns),
+          "qry" -> query(f.query),
+        ),
+        children = Seq(f.input)
+      )
     }
 
     private def use(u: Use) = u match {
       case d: Use.Declared  => "declared " + expr(d.graphSelection.expression)
-      case i: Use.Inherited => "inherited" + expr(i.graphSelection.expression)
+      case i: Use.Inherited => "inherited " + expr(i.graphSelection.expression)
     }
   }
 }

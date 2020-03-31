@@ -11,11 +11,29 @@ import org.neo4j.cypher.internal.ast.SingleQuery
 import org.neo4j.cypher.internal.ast.Statement
 import org.neo4j.cypher.internal.ast.prettifier.ExpressionStringifier
 import org.neo4j.cypher.internal.ast.prettifier.Prettifier
+import org.neo4j.cypher.internal.expressions.Expression
+import org.neo4j.cypher.internal.logical.plans.ResolvedCall
+import org.neo4j.cypher.internal.logical.plans.ResolvedFunctionInvocation
 import org.neo4j.cypher.internal.util.InputPosition
 
 object QueryRenderer {
 
-  private val renderer = Prettifier(ExpressionStringifier(alwaysParens = true, alwaysBacktick = true))
+  private object clauseExtension extends Prettifier.ClausePrettifier {
+    override def asString(ctx: Prettifier.QueryPrettifier): PartialFunction[Clause, String] = {
+      case rc: ResolvedCall => ctx.asString(Ast.unresolvedCall(rc))
+    }
+  }
+
+  private object exprExtension extends ExpressionStringifier.Extension {
+    override def apply(ctx: ExpressionStringifier)(expression: Expression): String = expression match {
+      case rf: ResolvedFunctionInvocation => ctx.apply(Ast.unresolvedFunction(rf))
+    }
+  }
+
+  private val expressionsPretty = ExpressionStringifier(extension = exprExtension, alwaysParens = false, alwaysBacktick = false, preferSingleQuotes = false)
+  private val expressionsStrict = ExpressionStringifier(extension = exprExtension, alwaysParens = true, alwaysBacktick = true, preferSingleQuotes = false)
+  private val renderer = Prettifier(expressionsStrict, extension = clauseExtension)
+
   private val pos = InputPosition.NONE
 
   def render(clauses: Seq[Clause]): String =
@@ -23,4 +41,7 @@ object QueryRenderer {
 
   def render(statement: Statement): String =
     renderer.asString(statement)
+
+  def pretty(expression: Expression): String =
+    expressionsPretty.apply(expression)
 }

@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.ast.semantics.SemanticFeature.Cypher9Comparabil
 import org.neo4j.cypher.internal.ast.semantics.SemanticFeature.MultipleDatabases
 import org.neo4j.cypher.internal.ast.semantics.SemanticState
 import org.neo4j.cypher.internal.compiler.phases.CompilationPhases
+import org.neo4j.cypher.internal.compiler.phases.CompilationPhases.ParsingConfig
 import org.neo4j.cypher.internal.compiler.test_helpers.ContextHelper
 import org.neo4j.cypher.internal.frontend.phases.AstRewriting
 import org.neo4j.cypher.internal.frontend.phases.BaseContains
@@ -26,10 +27,10 @@ trait FullyParsedQueryTestSupport {
 
   def noParams: Map[String, Any] = Map.empty
 
-  private val parsing = CompilationPhases.parsing(
+  private val parsing = CompilationPhases.parsing(ParsingConfig(
     RewriterStepSequencer.newPlain,
     new GeneratingNamer()
-  )
+  ))
 
   def parse(qs: String, options: QueryOptions = QueryOptions.default) =
     FullyParsedQuery(
