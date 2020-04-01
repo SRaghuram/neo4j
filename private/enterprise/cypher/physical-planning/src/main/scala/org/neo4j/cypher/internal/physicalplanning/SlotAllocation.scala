@@ -550,8 +550,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         }
         slots.newReference(relationship, nullable, CTList(CTRelationship))
 
-      case PruningVarExpand(_, from, _, _, to, _, _, _, _) =>
-        slots.newLong(from, nullable, CTNode)
+      case PruningVarExpand(_, _, _, _, to, _, _, _, _) =>
         slots.newLong(to, nullable, CTNode)
 
       case Create(_, nodes, relationships) =>

@@ -33,6 +33,7 @@ import org.neo4j.cypher.internal.logical.plans.ExpandInto
 import org.neo4j.cypher.internal.logical.plans.ForeachApply
 import org.neo4j.cypher.internal.logical.plans.GetValue
 import org.neo4j.cypher.internal.logical.plans.IndexSeek
+import org.neo4j.cypher.internal.logical.plans.Input
 import org.neo4j.cypher.internal.logical.plans.LeftOuterHashJoin
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NestedPlanCollectExpression
@@ -41,6 +42,7 @@ import org.neo4j.cypher.internal.logical.plans.NodeHashJoin
 import org.neo4j.cypher.internal.logical.plans.Optional
 import org.neo4j.cypher.internal.logical.plans.OptionalExpand
 import org.neo4j.cypher.internal.logical.plans.Projection
+import org.neo4j.cypher.internal.logical.plans.PruningVarExpand
 import org.neo4j.cypher.internal.logical.plans.RightOuterHashJoin
 import org.neo4j.cypher.internal.logical.plans.RollUpApply
 import org.neo4j.cypher.internal.logical.plans.Selection
@@ -313,6 +315,29 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
         .newLong("r", nullable = false, CTRelationship)
         .newLong("y", nullable = false, CTNode)
         .newReference("r2", nullable = false, CTList(CTRelationship))
+    )
+  }
+
+  test("pruning var length expand with reference from-node") {
+    // given
+    val input = Input(Seq("x"))
+    val expand = PruningVarExpand(input, "x", SemanticDirection.INCOMING, Seq.empty, "z", 1, 15)
+
+    // when
+    val allocations = SlotAllocation.allocateSlots(expand, semanticTable, breakFor(expand), NO_EXPR_VARS).slotConfigurations
+
+    // then we'll end up with two pipelines
+    allocations should have size 2
+    val allNodeScanAllocations = allocations(input.id)
+    allNodeScanAllocations should equal(
+      SlotConfiguration.empty.newReference("x", nullable = true, CTAny)
+    )
+
+    val expandAllocations = allocations(expand.id)
+    expandAllocations should equal(
+      SlotConfiguration.empty
+        .newReference("x", nullable = true, CTAny)
+        .newLong("z", nullable = false, CTNode)
     )
   }
 
