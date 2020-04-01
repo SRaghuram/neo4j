@@ -76,11 +76,7 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
 
   override def allocateNodeValueIndexCursor(): NodeValueIndexCursor = nodeValueIndexCursorPool.allocate()
 
-  override def allocateFullAccessNodeValueIndexCursor(): NodeValueIndexCursor = fail("FullAccessNodeValueIndexCursor")
-
   override def allocateNodeLabelIndexCursor(): NodeLabelIndexCursor = nodeLabelIndexCursorPool.allocate()
-
-  override def allocateFullAccessNodeLabelIndexCursor(): NodeLabelIndexCursor = fail("FullAccessNodeLabelIndexCursor")
 
   override def allocateRelationshipIndexCursor(): RelationshipIndexCursor = fail("RelationshipIndexCursor")
 
