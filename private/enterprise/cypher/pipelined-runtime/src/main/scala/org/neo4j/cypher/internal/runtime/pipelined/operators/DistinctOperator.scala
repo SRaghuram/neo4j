@@ -65,6 +65,27 @@ import org.neo4j.values.AnyValue
  *   UNWIND someList AS x
  *   RETURN DISTINCT x
  */
+
+trait DistinctOperatorState extends ArgumentState {
+  def filterOrProject(row: ReadWriteRow, queryState: QueryState): Boolean
+}
+
+class DistinctOperatorTask[S <: DistinctOperatorState](argumentStateMap: ArgumentStateMap[S], val workIdentity: WorkIdentity) extends OperatorTask {
+
+  override def operate(outputMorsel: Morsel,
+                       state: PipelinedQueryState,
+                       resources: QueryResources): Unit = {
+
+    val queryState = state.queryStateForExpressionEvaluation(resources)
+
+    argumentStateMap.filterWithSideEffect[S](outputMorsel,
+      (distinctState, _) => distinctState,
+      (distinctState, row) => distinctState.filterOrProject(row, queryState))
+  }
+
+  override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
+}
+
 class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
                        val workIdentity: WorkIdentity,
                        groupings: GroupingExpression)
@@ -73,28 +94,10 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
   override def createTask(argumentStateCreator: ArgumentStateMapCreator,
                           stateFactory: StateFactory,
                           state: PipelinedQueryState,
-                          resources: QueryResources): OperatorTask = {
-
-    new DistinctOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId, new DistinctStateFactory(stateFactory.memoryTracker), ordered = false))
-  }
-
-  class DistinctOperatorTask(argumentStateMap: ArgumentStateMap[DistinctState]) extends OperatorTask {
-
-    override def workIdentity: WorkIdentity = DistinctOperator.this.workIdentity
-
-    override def operate(outputMorsel: Morsel,
-                         state: PipelinedQueryState,
-                         resources: QueryResources): Unit = {
-
-      val queryState = state.queryStateForExpressionEvaluation(resources)
-
-      argumentStateMap.filterWithSideEffect[DistinctState](outputMorsel,
-        (distinctState, _) => distinctState,
-        (distinctState, row) => distinctState.filterOrProject(row, queryState))
-    }
-
-    override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
-  }
+                          resources: QueryResources): OperatorTask =
+    new DistinctOperatorTask(
+      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new DistinctStateFactory(stateFactory.memoryTracker), ordered = false),
+      workIdentity)
 
   class DistinctStateFactory(memoryTracker: QueryMemoryTracker) extends ArgumentStateFactory[DistinctState] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): DistinctState =
@@ -109,9 +112,9 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
   class DistinctState(override val argumentRowId: Long,
                       seen: util.Set[groupings.KeyType],
                       override val argumentRowIdsForReducers: Array[Long],
-                      memoryTracker: QueryMemoryTracker) extends ArgumentState {
+                      memoryTracker: QueryMemoryTracker) extends DistinctOperatorState {
 
-    def filterOrProject(row: ReadWriteRow, queryState: QueryState): Boolean = {
+    override def filterOrProject(row: ReadWriteRow, queryState: QueryState): Boolean = {
       val groupingKey = groupings.computeGroupingKey(row, queryState)
       if (seen.add(groupingKey)) {
         // Note: this allocation is currently never de-allocated

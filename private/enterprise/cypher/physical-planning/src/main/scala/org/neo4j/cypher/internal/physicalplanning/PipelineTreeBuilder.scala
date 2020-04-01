@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.logical.plans.Limit
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.LogicalPlans
 import org.neo4j.cypher.internal.logical.plans.Optional
+import org.neo4j.cypher.internal.logical.plans.OrderedDistinct
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.logical.plans.Skip
 import org.neo4j.cypher.internal.logical.plans.Sort
@@ -592,7 +593,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         source.fuseOrInterpret(plan, isBreaking = true)
         source
 
-      case _: Distinct | _: Skip =>
+      case _: Distinct | _: OrderedDistinct | _: Skip =>
         val asm = stateDefiner.newArgumentStateMap(plan.id, argument.argumentSlotOffset)
         argument.downstreamStatesOnRHS += asm.id
         source.fuseOrInterpret(plan, breakingPolicy.breakOn(plan, applyPlans(plan.id)))

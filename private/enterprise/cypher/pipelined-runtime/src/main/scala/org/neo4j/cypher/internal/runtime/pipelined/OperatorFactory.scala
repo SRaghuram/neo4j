@@ -54,6 +54,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AggregatorFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationOperatorNoGrouping
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AllNodeScanOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.AllOrderedDistinctOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AntiOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ArgumentOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CachePropertiesOperator
@@ -85,6 +86,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.Operator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalExpandAllOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalExpandIntoOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OrderedDistinctOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProduceResultOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectOperator
@@ -590,6 +592,22 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
         val groupings = converters.toGroupingExpression(id, groupingExpressions, Seq.empty)
         Some(new DistinctOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), groupings)(id))
+
+        // TODO skip parallel
+      case plans.OrderedDistinct(_, groupingExpressions, orderToLeverage) =>
+        val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
+        val groupings = converters.toGroupingExpression(id, groupingExpressions, Seq.empty)
+
+        if (groupingExpressions.values.forall(orderToLeverage.contains))
+          Some(new AllOrderedDistinctOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), groupings)(id))
+        else {
+
+          val (orderedGroupingExpressions, unorderedGroupingExpressions) = groupingExpressions.partition { case (_,v) => orderToLeverage.contains(v) }
+          val orderedGroupingColumns = converters.toGroupingExpression(id, orderedGroupingExpressions, orderToLeverage)
+          val unorderedGroupingColumns = converters.toGroupingExpression(id, unorderedGroupingExpressions, orderToLeverage)
+
+          Some(new OrderedDistinctOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), orderedGroupingColumns, unorderedGroupingColumns)(id))
+        }
 
       case plans.Projection(_, expressions) =>
         val toProject = expressions collect {

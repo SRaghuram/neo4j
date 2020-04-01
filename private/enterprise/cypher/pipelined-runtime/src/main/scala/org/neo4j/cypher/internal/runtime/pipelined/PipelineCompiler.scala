@@ -9,6 +9,7 @@ import org.neo4j.codegen.api.CodeGeneration
 import org.neo4j.cypher.internal.logical.plans.Distinct
 import org.neo4j.cypher.internal.logical.plans.Limit
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.OrderedDistinct
 import org.neo4j.cypher.internal.logical.plans.Skip
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.physicalplanning.FusedHead
@@ -42,7 +43,7 @@ class PipelineCompiler(operatorFactory: OperatorFactory,
   }
 
   private def interpretedOperatorRequiresThisPipelineToUseFilteringMorsel(plan: LogicalPlan): Boolean = plan match {
-    case _: Distinct => true // Distinct calls ArgumentStateMap.filter
+    case _: Distinct | _: OrderedDistinct => true // Distinct calls ArgumentStateMap.filter
     case _: Limit => true // Limit (if not fused) calls ArgumentStateMap.filter
     case _: Skip => true // Skip (if not fused) calls ArgumentStateMap.filter
     case _ => false
