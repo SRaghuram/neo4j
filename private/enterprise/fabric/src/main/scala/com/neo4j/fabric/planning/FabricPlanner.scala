@@ -72,8 +72,7 @@ case class FabricPlanner(
         executionType = frontend.preParsing.executionType(query.options))
     }
 
-    private def computePlan(): FabricPlan = {
-
+    private def computePlan(): FabricPlan = trace {
       val prepared = pipeline.parseAndPrepare.process()
 
       val fragmenter = new FabricFragmenter(defaultContextName, query.statement, prepared.statement(), prepared.semantics())
@@ -93,6 +92,12 @@ case class FabricPlanner(
         obfuscationMetadata = prepared.obfuscationMetadata(),
         inFabricContext = fabricContext,
       )
+    }
+
+    private def trace(compute: => FabricPlan): FabricPlan = {
+      val event = pipeline.traceStart()
+      try compute
+      finally event.close()
     }
 
     def notifications: Seq[Notification] =

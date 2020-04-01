@@ -12,16 +12,19 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.cypher.internal.tracing.TimingCompilationTracer;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Transaction;
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,6 +35,31 @@ class FabricFrontEndTest
     private static Driver clientDriver;
     private static TestServer testServer;
     private static DriverUtils driverUtils;
+    private static DummyTimingCompilationTracerEventListener tracerListener;
+
+    static class DummyTimingCompilationTracerEventListener implements TimingCompilationTracer.EventListener
+    {
+        List<String> queries = new ArrayList<>();
+        List<TimingCompilationTracer.QueryEvent> events = new ArrayList<>();
+
+        @Override
+        public void startQueryCompilation( String query )
+        {
+            queries.add( query );
+        }
+
+        @Override
+        public void queryCompiled( TimingCompilationTracer.QueryEvent event )
+        {
+            events.add( event );
+        }
+
+        public void clear()
+        {
+            queries.clear();
+            events.clear();
+        }
+    }
 
     @BeforeAll
     static void beforeAll() throws KernelException
@@ -43,11 +71,14 @@ class FabricFrontEndTest
         );
 
         var config = Config.newBuilder()
-                .setRaw( configProperties )
-                .build();
+                           .setRaw( configProperties )
+                           .build();
         testServer = new TestServer( config );
-
         testServer.start();
+
+        tracerListener = new DummyTimingCompilationTracerEventListener();
+        testServer.getDependencies().resolveDependency( Monitors.class )
+                  .addMonitorListener( tracerListener );
 
         var globalProceduresRegistry = testServer.getDependencies().resolveDependency( GlobalProceduresRegistry.class );
         globalProceduresRegistry
@@ -59,9 +90,9 @@ class FabricFrontEndTest
                 testServer.getBoltRoutingUri(),
                 AuthTokens.none(),
                 org.neo4j.driver.Config.builder()
-                        .withoutEncryption()
-                        .withMaxConnectionPoolSize( 3 )
-                        .build() );
+                                       .withoutEncryption()
+                                       .withMaxConnectionPoolSize( 3 )
+                                       .build() );
 
         driverUtils = new DriverUtils( "mega" );
     }
@@ -69,6 +100,7 @@ class FabricFrontEndTest
     @BeforeEach
     void beforeEach()
     {
+        tracerListener.clear();
     }
 
     @AfterAll
@@ -83,16 +115,23 @@ class FabricFrontEndTest
     @Test
     void testDeprecationNotification()
     {
-        var result = inMegaTx( tx ->
-                tx.run( "explain MATCH ()-[rs*]-() RETURN rs" ).consume().notifications()
-        );
+        var notifications = inMegaTx( tx -> tx.run( "explain MATCH ()-[rs*]-() RETURN rs" ).consume().notifications() );
 
-        assertThat( result.size() ).isEqualTo( 1 );
-        assertThat( result.get( 0 ).code() ).isEqualTo( "Neo.ClientNotification.Statement.FeatureDeprecationWarning" );
-        assertThat( result.get( 0 ).description() ).startsWith( "Binding relationships" );
+        assertThat( notifications.size() ).isEqualTo( 1 );
+        assertThat( notifications.get( 0 ).code() ).isEqualTo( "Neo.ClientNotification.Statement.FeatureDeprecationWarning" );
+        assertThat( notifications.get( 0 ).description() ).startsWith( "Binding relationships" );
     }
 
-    private <T> T inMegaTx( Function<Transaction, T> workload )
+    @Test
+    void testCompilationTracing()
+    {
+        inMegaTx( tx -> tx.run( "RETURN 1" ).consume() );
+
+        assertThat( tracerListener.queries ).contains( "RETURN 1" );
+        assertThat( tracerListener.events ).extracting( TimingCompilationTracer.QueryEvent::query ).contains( "RETURN 1" );
+    }
+
+    private <T> T inMegaTx( Function<Transaction,T> workload )
     {
         return driverUtils.inTx( clientDriver, workload );
     }
