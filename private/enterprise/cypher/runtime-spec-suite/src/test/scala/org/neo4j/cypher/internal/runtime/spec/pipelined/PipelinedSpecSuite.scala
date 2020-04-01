@@ -59,15 +59,15 @@ import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexSeekRangeAndCompositeTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexStartsWithSeekTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NonParallelProfileRowsTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NonParallelProfileTimeTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalExpandAllTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalExpandIntoTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalFailureTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OrderedDistinctTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProcedureCallDbHitsTestBase
-import org.neo4j.cypher.internal.runtime.spec.tests.ProcedureCallRowsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProcedureCallTestBase
-import org.neo4j.cypher.internal.runtime.spec.tests.ProcedureCallTimeTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileMemoryTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileMemoryTrackingDisabledTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileRowsTestBase
@@ -349,11 +349,11 @@ class PipelinedWorkloadNoFusingTest extends WorkloadTestBase(NO_FUSING, PIPELINE
 
 // PROFILE
 class PipelinedProfileRowsNoFusingTest extends ProfileRowsTestBase(NO_FUSING, PIPELINED, SIZE_HINT, MORSEL_SIZE) with PipelinedSpecSuite
-                                       with ProcedureCallRowsTestBase[EnterpriseRuntimeContext]
+                                       with NonParallelProfileRowsTestBase[EnterpriseRuntimeContext]
 class PipelinedProfileRowsTest extends ProfileRowsTestBase(FUSING, PIPELINED, SIZE_HINT, MORSEL_SIZE) with PipelinedSpecSuite
-                               with ProcedureCallRowsTestBase[EnterpriseRuntimeContext]
+                               with NonParallelProfileRowsTestBase[EnterpriseRuntimeContext]
 class PipelinedProfileTimeNoFusingTest extends ProfileTimeTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
-                                       with ProcedureCallTimeTestBase[EnterpriseRuntimeContext]
+                                       with NonParallelProfileTimeTestBase[EnterpriseRuntimeContext]
 class PipelinedProfileNoTimeTest extends ProfileNoTimeTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite {
   //this test differs in Pipelined and Parallel since we fuse differently
   test("should partially profile time if fused pipelines and non-fused pipelines co-exist") {
