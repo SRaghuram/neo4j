@@ -52,10 +52,12 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
                            resources: QueryResources): OperatorState = {
     argumentStateCreator.createArgumentStateMap(
       lhsArgumentStateMapId,
-      new HashTableFactory(lhsOffsets, stateFactory.memoryTracker, id))
+      new HashTableFactory(lhsOffsets, stateFactory.memoryTracker, id),
+      ordered = false)
     argumentStateCreator.createArgumentStateMap(
       rhsArgumentStateMapId,
-      new ArgumentStateBuffer.Factory(stateFactory, id))
+      new ArgumentStateBuffer.Factory(stateFactory, id),
+      ordered = false)
     this
   }
 

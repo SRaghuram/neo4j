@@ -146,16 +146,19 @@ object CompiledStreamingOperator {
         case (argumentStateMapId, factory) =>
           /**
            * {{{
-           *   argumentStateCreator.createStateMap(mapId, FACTORY_i)
+           *   argumentStateCreator.createStateMap(mapId, FACTORY_i, ordered = false)
            * }}}
            */
           invokeSideEffect(load("argumentStateCreator"),
             method[ArgumentStateMapCreator,
               ArgumentStateMap[ArgumentState],
               Int,
-              ArgumentStateFactory[ArgumentState]]("createArgumentStateMap"),
+              ArgumentStateFactory[ArgumentState],
+              Boolean]("createArgumentStateMap"),
             constant(argumentStateMapId.x),
-            getStatic[ArgumentStateFactory[ArgumentState]](staticFieldName(factory)))
+            getStatic[ArgumentStateFactory[ArgumentState]](staticFieldName(factory)),
+            // We currently only fuse operators that do not need ordered ASMs. Pull this into the Tuple in `argumentStates` when that changes.
+            constant(false))
       }: _*)
 
     ClassDeclaration[CompiledStreamingOperator](

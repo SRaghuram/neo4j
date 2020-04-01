@@ -115,7 +115,7 @@ case class TopOperator(workIdentity: WorkIdentity,
                              resources: QueryResources): ReduceOperatorState[Morsel, TopTable] = {
       // NOTE: If the _input size_ is larger than Int.MaxValue this will still fail, since an array cannot hold that many elements
       val limit = Math.min(CountingState.evaluateCountValue(state, resources, countExpression), Int.MaxValue).toInt
-      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new TopOperator.Factory(stateFactory.memoryTracker, comparator, limit, id))
+      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new TopOperator.Factory(stateFactory.memoryTracker, comparator, limit, id), ordered = false)
       this
     }
 
