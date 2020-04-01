@@ -23,6 +23,8 @@ class StandardSingletonArgumentStateMap[STATE <: ArgumentState](val argumentStat
 
   override protected var hasController = true
 
+  override protected var lastCompletedArgumentId: Long = -1
+
   override protected def newStateController(argument: Long,
                                             argumentMorsel: MorselReadCursor,
                                             argumentRowIdsForReducers: Array[Long],
