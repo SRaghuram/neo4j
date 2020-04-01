@@ -82,7 +82,9 @@ object Catalog {
     val fabricGraphs = config.getDatabase.getGraphs.asScala.toSet
 
     val external = asExternal(fabricGraphs)
-    val maxId = external.collect { case g: Catalog.Graph => g.id }.max
+    val maxId = external
+      .collect { case g: Catalog.Graph => g.id }
+      .fold(0L)((a, b) => Math.max(a, b))
     val internal = asInternal(maxId + 1, internalDatabases)
 
     val allGraphs = external ++ internal
