@@ -147,17 +147,18 @@ case class FabricFrontEnd(
       semanticFeatures = semanticFeatures,
     )
 
-    object parseAndPrepare extends TransformerChain(
-      CompilationPhases.parsing(parsingConfig),
-      CompilationPhases.prepareForFabric(signatures, parsingConfig)
-    ) {
+    object parseAndPrepare {
+      private val transformer =
+        CompilationPhases.fabricParsing(parsingConfig, signatures)
+
       def process(): BaseState =
         transformer.transform(InitialState(queryString, None, null), context)
     }
 
-    object checkAndFinalize extends TransformerChain(
-      CompilationPhases.parsingFinal(parsingConfig)
-    ) {
+    object checkAndFinalize {
+      private val transformer =
+        CompilationPhases.fabricFinalize(parsingConfig)
+
       def process(query: Statement): BaseState = {
         val localQueryString = QueryRenderer.render(query)
         transformer.transform(InitialState(localQueryString, None, CostBasedPlannerName.default).withStatement(query), context)
@@ -174,25 +175,3 @@ abstract class TransformerChain(parts: Transformer[BaseContext, BaseState, BaseS
   val transformer: Transformer[BaseContext, BaseState, BaseState] = parts.reduce(_ andThen _)
 }
 
-
-case class FabricPreparatoryRewriting(
-  signatures: ProcedureSignatureResolver
-) extends Phase[BaseContext, BaseState, BaseState] {
-  override val phase =
-    CompilationPhaseTracer.CompilationPhase.AST_REWRITE
-
-  override val description =
-    "rewrite the AST into a shape that the fabric planner can act on"
-
-  override def process(from: BaseState, context: BaseContext): BaseState =
-    from.withStatement(from.statement().endoRewrite(chain(
-      // we need all return columns for data flow analysis between query segments
-      expandStar(from.semantics()),
-      TryResolveProcedures(signatures)
-    )))
-
-  private def chain[T](funcs: (T => T)*): T => T =
-    funcs.reduceLeft(_ andThen _)
-
-  override def postConditions: Set[Condition] = Set()
-}

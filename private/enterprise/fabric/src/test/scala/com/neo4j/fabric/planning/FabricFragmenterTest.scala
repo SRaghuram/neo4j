@@ -344,8 +344,21 @@ class FabricFragmenterTest
       )
     }
 
-  }
+    "no output columns for unnamed variables" in {
+      val frag = fragment(
+        """WITH 1 AS x
+          |MATCH ()
+          |CALL {
+          |  RETURN 1 AS y
+          |}
+          |RETURN x, y
+          |""".stripMargin
+      )
 
+      frag.as[Fragment.Segment].input.as[Fragment.Segment].input.outputColumns
+          .shouldEqual(Seq("x"))
+    }
+  }
 
   "Procedures:" - {
 
