@@ -479,28 +479,28 @@ class ResultSummaryEndToEndTest
         } );
     }
 
-    private ProfileStats stats( int records, boolean dbHits, ProfileStats... children )
+    private ProfileStats stats( int numRecords, boolean hasDbHits, ProfileStats... children )
     {
-        return new ProfileStats( records, dbHits, Arrays.asList( children ) );
+        return new ProfileStats( numRecords, hasDbHits, Arrays.asList( children ) );
     }
 
     private static class ProfileStats
     {
-        private final int records;
-        private final boolean dbHits;
+        private final int numRecords;
+        private final boolean hasDbHits;
         private final List<ProfileStats> children;
 
-        ProfileStats( int records, boolean dbHits, List<ProfileStats> children )
+        ProfileStats( int numRecords, boolean hasDbHits, List<ProfileStats> children )
         {
-            this.records = records;
-            this.dbHits = dbHits;
+            this.numRecords = numRecords;
+            this.hasDbHits = hasDbHits;
             this.children = children;
         }
 
         void assertStats( ProfiledPlan profiledPlan )
         {
-            assertEquals( records, profiledPlan.records() );
-            assertEquals( dbHits, profiledPlan.dbHits() > 0 );
+            assertEquals( numRecords, profiledPlan.records() );
+            assertEquals( hasDbHits, profiledPlan.dbHits() > 0 );
 
             assertEquals( children.size(), profiledPlan.children().size() );
 
