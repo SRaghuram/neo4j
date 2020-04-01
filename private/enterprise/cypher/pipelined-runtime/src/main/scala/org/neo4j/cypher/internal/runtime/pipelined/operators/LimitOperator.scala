@@ -57,7 +57,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
-import org.neo4j.cypher.internal.runtime.pipelined.state.UnorderedArgumentStateMapReader
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.AnyValue
@@ -288,11 +287,11 @@ class SerialLimitOnRhsOfApplyOperatorTaskTemplate(override val inner: OperatorTa
   private def fetchState : IntermediateRepresentation =
     cast[SerialCountingState](
       invoke(
-        cast[UnorderedArgumentStateMapReader[_ <: ArgumentState]](
+        cast[ArgumentStateMap[_ <: ArgumentState]](
           invoke(loadField(argumentMaps),
             method[ArgumentStateMaps, ArgumentStateMap[_ <: ArgumentState], Int]("applyByIntId"),
             constant(argumentStateMapId.x))),
-        method[UnorderedArgumentStateMapReader[_ <: ArgumentState], ArgumentState, Long]("peek"),
+        method[ArgumentStateMap[_ <: ArgumentState], ArgumentState, Long]("peek"),
         load(argumentVarName(argumentStateMapId))))
 
   private def newState: IntermediateRepresentation = block(

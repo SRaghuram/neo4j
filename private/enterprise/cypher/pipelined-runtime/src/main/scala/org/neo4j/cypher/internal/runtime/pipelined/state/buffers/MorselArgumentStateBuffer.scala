@@ -9,10 +9,10 @@ import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
-import org.neo4j.cypher.internal.runtime.pipelined.state.UnorderedArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.DataHolder
@@ -38,7 +38,7 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
    with Source[ACC]
    with DataHolder {
 
-  private val argumentStateMap: UnorderedArgumentStateMap[ACC] = argumentStateMaps(argumentStateMapId).asInstanceOf[UnorderedArgumentStateMap[ACC]]
+  private val argumentStateMap: ArgumentStateMap[ACC] = argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMap[ACC]]
 
   override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
 

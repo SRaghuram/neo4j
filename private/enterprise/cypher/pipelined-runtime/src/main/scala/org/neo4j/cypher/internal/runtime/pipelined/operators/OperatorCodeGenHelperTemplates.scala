@@ -66,7 +66,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
-import org.neo4j.cypher.internal.runtime.pipelined.state.UnorderedArgumentStateMapReader
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.cypher.operations.CursorUtils
@@ -242,12 +241,12 @@ object OperatorCodeGenHelperTemplates {
   def peekState[STATE_TYPE](argumentStateMapId: ArgumentStateMapId)(implicit to: Manifest[STATE_TYPE]): IntermediateRepresentation =
     cast[STATE_TYPE](
       invoke(
-        cast[UnorderedArgumentStateMapReader[_ <: ArgumentState]](
+        cast[ArgumentStateMap[_ <: ArgumentState]](
           invoke(load(
             ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name),
             method[ArgumentStateMaps, ArgumentStateMap[_ <: ArgumentState], Int]("applyByIntId"),
             constant(argumentStateMapId.x))),
-        method[UnorderedArgumentStateMapReader[_ <: ArgumentState], ArgumentState, Long]("peek"),
+        method[ArgumentStateMap[_ <: ArgumentState], ArgumentState, Long]("peek"),
         constant(TopLevelArgument.VALUE)
       )
     )

@@ -13,10 +13,15 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.state.AbstractArgumentStateMap.ImmutableStateController
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
 import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentStateMap.ConcurrentStateController
 
 /**
  * Concurrent and quite naive implementation of ArgumentStateMap. Also JustGetItWorking(tm)
+ *
+ * This is an ordered argument state map. Order is kept by `lastCompletedArgumentId` and overriding all relevant methods.
+ * The goal in the future is to have also an unordered concurrent argument state map and distinguish which one to use based on
+ * leveraged order.
  */
 class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: ArgumentStateMapId,
                                                          val argumentSlotOffset: Int,
@@ -26,7 +31,7 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
   override protected val controllers = new java.util.concurrent.ConcurrentHashMap[Long, AbstractArgumentStateMap.StateController[STATE]]()
 
   @volatile
-  override protected var lastCompletedArgumentId: Long = -1
+  protected var lastCompletedArgumentId: Long = -1
 
   override protected def newStateController(argument: Long,
                                             argumentMorsel: MorselReadCursor,
@@ -54,6 +59,35 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
       }
       controller.decrement()
     }
+  }
+
+  override def takeOneCompleted(): STATE = {
+    nextIfCompletedOrNull((state, isCompleted) => if (isCompleted) state else null.asInstanceOf[STATE])
+  }
+
+  override def takeOneIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {
+    nextIfCompletedOrNull((state, isCompleted) => ArgumentStateWithCompleted(state, isCompleted))
+  }
+
+  private def nextIfCompletedOrNull[T](stateMapper: (STATE, Boolean) => T): T = {
+    val controller = controllers.get(lastCompletedArgumentId + 1)
+    if (controller != null) {
+      if (controller.tryTake()) {
+        lastCompletedArgumentId += 1
+        controllers.remove(controller.state.argumentRowId)
+        DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, controller.state.argumentRowId)
+        stateMapper(controller.state, true)
+      } else {
+        stateMapper(controller.state, false)
+      }
+    } else {
+      null.asInstanceOf[T]
+    }
+  }
+
+  override def someArgumentStateIsCompletedOr(statePredicate: STATE => Boolean): Boolean = {
+    val controller = controllers.get(lastCompletedArgumentId + 1)
+    controller != null && (controller.isZero || statePredicate(controller.state))
   }
 }
 

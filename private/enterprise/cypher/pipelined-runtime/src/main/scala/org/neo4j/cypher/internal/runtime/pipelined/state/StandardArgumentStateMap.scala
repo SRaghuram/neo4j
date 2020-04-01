@@ -14,15 +14,20 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.StandardArgumentStateMa
 
 /**
  * Not thread-safe and quite naive implementation of ArgumentStateMap. JustGetItWorking(tm)
+ *
+ * This is an ordered argument state map. Order is kept by using a `LinkedHashMap`.
+ * No methods need to be overridden because scheduling guarantees that argument states
+ * will be completed in argument row id order.
+ *
+ * There is no unordered standard argument state map because the performance overhead of a `LinkedHashMap` is negligible.
  */
 class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: ArgumentStateMapId,
                                                        val argumentSlotOffset: Int,
                                                        factory: ArgumentStateFactory[STATE])
   extends AbstractArgumentStateMap[STATE, AbstractArgumentStateMap.StateController[STATE]] {
 
-  override protected val controllers = new java.util.HashMap[Long, AbstractArgumentStateMap.StateController[STATE]]()
-
-  override protected var lastCompletedArgumentId: Long = -1
+  // Using a LinkedHashMap to get insertion iteration order, which will be argument-row-id order.
+  override protected val controllers = new java.util.LinkedHashMap[Long, AbstractArgumentStateMap.StateController[STATE]]()
 
   override protected def newStateController(argument: Long,
                                             argumentMorsel: MorselReadCursor,

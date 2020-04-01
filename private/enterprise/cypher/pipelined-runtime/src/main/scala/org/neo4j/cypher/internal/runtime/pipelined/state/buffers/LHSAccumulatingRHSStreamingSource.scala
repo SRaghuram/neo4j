@@ -15,7 +15,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
-import org.neo4j.cypher.internal.runtime.pipelined.state.UnorderedArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
@@ -78,8 +77,8 @@ class LHSAccumulatingRHSStreamingSource[DATA <: AnyRef,
                                             with Source[AccumulatorAndMorsel[DATA, LHS_ACC]]
                                             with DataHolder {
 
-  private val lhsArgumentStateMap = argumentStateMaps(lhsArgumentStateMapId).asInstanceOf[UnorderedArgumentStateMap[LHS_ACC]]
-  private val rhsArgumentStateMap = argumentStateMaps(rhsArgumentStateMapId).asInstanceOf[UnorderedArgumentStateMap[ArgumentStateBuffer]]
+  private val lhsArgumentStateMap = argumentStateMaps(lhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[LHS_ACC]]
+  private val rhsArgumentStateMap = argumentStateMaps(rhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[ArgumentStateBuffer]]
 
   // TODO optimization: if RHS has completed with no rows, cancel building of the accumulator and vice versa
 

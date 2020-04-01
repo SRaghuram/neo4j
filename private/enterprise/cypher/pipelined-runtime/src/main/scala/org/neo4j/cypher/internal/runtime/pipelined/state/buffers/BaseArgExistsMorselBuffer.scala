@@ -14,11 +14,11 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
-import org.neo4j.cypher.internal.runtime.pipelined.state.OrderedArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
@@ -45,15 +45,12 @@ abstract class BaseArgExistsMorselBuffer[PRODUCES <: AnyRef](id: BufferId,
   with ClosingSource[PRODUCES]
   with DataHolder {
 
-  protected val argumentStateMap: OrderedArgumentStateMap[OptionalArgumentStateBuffer] =
-    argumentStateMaps(argumentStateMapId).asInstanceOf[OrderedArgumentStateMap[OptionalArgumentStateBuffer]]
+  protected val argumentStateMap: ArgumentStateMap[OptionalArgumentStateBuffer] =
+    argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMap[OptionalArgumentStateBuffer]]
 
   override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
 
-  override def canPut: Boolean = {
-    val buffer = argumentStateMap.peekNext()
-    buffer != null && buffer.canPut
-  }
+  override def canPut: Boolean = argumentStateMap.exists(_.canPut)
 
   override def put(data: IndexedSeq[PerArgument[Morsel]]): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
