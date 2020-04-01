@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.DurationRange;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.helpers.collection.MapUtil;
@@ -26,6 +27,8 @@ import org.neo4j.logging.Level;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.discovery_advertised_address;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.discovery_listen_address;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.failure_detection_window;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.failure_resolution_window;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.middleware_logging_level;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_advertised_address;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_listen_address;
@@ -37,6 +40,7 @@ import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 import static org.neo4j.configuration.GraphDatabaseSettings.routing_ttl;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
+import static org.neo4j.configuration.helpers.DurationRange.fromSeconds;
 import static org.neo4j.logging.AssertableLogProvider.Level.WARN;
 import static org.neo4j.logging.LogAssertions.assertThat;
 
@@ -115,6 +119,32 @@ class CausalClusteringSettingsMigratorTest
         tests.add( dynamicTest( "Test raft address migration", () -> testAddrMigration( raft_listen_address, raft_advertised_address ) ) );
         tests.add( dynamicTest( "Test discovery address migration", () -> testAddrMigration( discovery_listen_address, discovery_advertised_address ) ) );
         return tests;
+    }
+
+    @Test
+    void shouldMigrateElectionTimeout()
+    {
+        testFailureWindows( "10s", fromSeconds( 10, 10 + CausalClusteringSettingsMigrator.DEFAULT_FAILURE_DETECTION_MAX_WINDOW_IN_SECONDS ),
+                            failure_resolution_window.defaultValue() );
+        testFailureWindows( "4s", fromSeconds( 4, 8 ), failure_resolution_window.defaultValue() );
+        testFailureWindows( "1s", fromSeconds( 1, 2 ), fromSeconds( 1, 2 ) );
+    }
+
+    @Test
+    void shouldIgnoreElectionTimeout()
+    {
+        var setting = "causal_clustering.leader_election_timeout";
+        var value = fromSeconds( 10, 12 );
+        var config = Config.newBuilder().setRaw( Map.of( setting, "1s", failure_detection_window.name(), value.valueToString() ) ).build();
+
+        var logProvider = new AssertableLogProvider();
+        config.setLogger( logProvider.getLog( Config.class ) );
+
+        assertEquals( value, config.get( failure_detection_window ) );
+
+        assertThat(logProvider).forClass( Config.class ).forLevel( WARN )
+                               .containsMessageWithArguments( "Deprecated setting '%s' is ignored because replacement '%s' and '%s' is set",
+                                                              setting, failure_detection_window.name(), failure_resolution_window.name() );
     }
 
     private static void testAddrMigration( Setting<SocketAddress> listenAddr, Setting<SocketAddress> advertisedAddr )
@@ -227,4 +257,19 @@ class CausalClusteringSettingsMigratorTest
         }
     }
 
+    private void testFailureWindows( String electionTimeoutSetting, DurationRange failureDetectionWindow, DurationRange failureResolutionWindow )
+    {
+        var setting = "causal_clustering.leader_election_timeout";
+        var config = Config.newBuilder().setRaw( Map.of( setting, electionTimeoutSetting ) ).build();
+
+        var logProvider = new AssertableLogProvider();
+        config.setLogger( logProvider.getLog( Config.class ) );
+
+        assertEquals( failureDetectionWindow, config.get( failure_detection_window ) );
+        assertEquals( failureResolutionWindow, config.get( failure_resolution_window ) );
+
+        assertThat(logProvider).forClass( Config.class ).forLevel( WARN )
+                               .containsMessageWithArguments( "Use of deprecated setting '%s'. It is replaced by '%s' and '%s'",
+                                                              setting, failure_detection_window.name(), failure_resolution_window.name() );
+    }
 }

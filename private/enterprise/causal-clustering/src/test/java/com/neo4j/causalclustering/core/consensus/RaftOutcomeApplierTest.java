@@ -15,6 +15,9 @@ import com.neo4j.causalclustering.core.consensus.state.RaftState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.util.OptionalLong;
@@ -26,6 +29,8 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
 import static co.unruly.matchers.OptionalMatchers.contains;
+import static com.neo4j.causalclustering.core.consensus.ElectionTimerMode.ACTIVE_ELECTION;
+import static com.neo4j.causalclustering.core.consensus.ElectionTimerMode.FAILURE_DETECTION;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
@@ -80,7 +85,7 @@ class RaftOutcomeApplierTest
     @Test
     void shouldResetRaftMessageResetMonitorIfElectionRenewed() throws IOException
     {
-        var outcome = outcomeBuilder.setRenewElectionTimeout( true ).build();
+        var outcome = outcomeBuilder.setElectionTimerMode( ACTIVE_ELECTION ).build();
 
         raftOutcomeApplier.handle( outcome );
 
@@ -100,31 +105,33 @@ class RaftOutcomeApplierTest
     @Test
     void shouldNotResetRaftMessageResetMonitorIfElectionNotRenewedAndNotSteppingDown() throws IOException
     {
-        var outcome = outcomeBuilder.setRenewElectionTimeout( false ).build();
+        var outcome = outcomeBuilder.setElectionTimerMode( null ).build();
 
         raftOutcomeApplier.handle( outcome );
 
         verify( raftMessageTimerResetMonitor, never() ).timerReset();
     }
 
-    @Test
-    void shouldRenewLeaderAvailabilityTimerIfElectionRenewed() throws IOException
+    @ParameterizedTest
+    @EnumSource( ElectionTimerMode.class )
+    void shouldRenewLeaderAvailabilityTimerAndResetRaftMessageResetMonitorIfElectionTimerModeSet( ElectionTimerMode mode ) throws IOException
     {
-        var outcome = outcomeBuilder.setRenewElectionTimeout( true ).build();
+        var outcome = outcomeBuilder.setElectionTimerMode( mode ).build();
 
         raftOutcomeApplier.handle( outcome );
 
-        verify( leaderAvailabilityTimers ).renewElection();
+        verify( leaderAvailabilityTimers ).renewElectionTimer( mode );
+        verify( raftMessageTimerResetMonitor ).timerReset();
     }
 
     @Test
     void shouldNotRenewLeaderAvailabilityTimerIfElectionNotRenewed() throws IOException
     {
-        var outcome = outcomeBuilder.setRenewElectionTimeout( false ).build();
+        var outcome = outcomeBuilder.build();
 
         raftOutcomeApplier.handle( outcome );
 
-        verify( leaderAvailabilityTimers, never() ).renewElection();
+        verify( leaderAvailabilityTimers, never() ).renewElectionTimer( any() );
     }
 
     @Test

@@ -74,10 +74,10 @@ class PreElectionIT
         follower.resolveDependency( DEFAULT_DATABASE_NAME, RaftMachine.class ).triggerElection();
 
         // then
-        Duration electionTimeout = follower.config().get( CausalClusteringSettings.leader_election_timeout );
+        Duration maxFailureDetectionTimeout = follower.config().get( CausalClusteringSettings.failure_detection_window ).getMin();
         assertThrows(
                 TimeoutException.class,
-                () -> cluster.awaitCoreMemberWithRole( Role.CANDIDATE, electionTimeout.multipliedBy( 2 ).toSeconds(), TimeUnit.SECONDS ) );
+                () -> cluster.awaitCoreMemberWithRole( Role.CANDIDATE, maxFailureDetectionTimeout.multipliedBy( 2 ).toSeconds(), TimeUnit.SECONDS ) );
     }
 
     @Test

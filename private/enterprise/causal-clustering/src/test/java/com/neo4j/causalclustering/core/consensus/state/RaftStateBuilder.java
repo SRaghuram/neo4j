@@ -151,7 +151,7 @@ public class RaftStateBuilder
         List<RaftLogCommand> noLogCommands = Collections.emptyList();
 
         state.update( new Outcome( null, term, leader, leaderCommit, votedFor, votesForMe, preVotesForMe,
-                lastLogIndexBeforeWeBecameLeader, followerStates, false, noLogCommands,
+                lastLogIndexBeforeWeBecameLeader, followerStates, null, noLogCommands,
                 noMessages, emptySet(), commitIndex, emptySet(), isPreElection ) );
 
         return state;

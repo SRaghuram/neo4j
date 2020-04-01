@@ -94,15 +94,17 @@ class RaftOutcomeApplier
 
     private void handleTimers( Outcome outcome )
     {
-        if ( outcome.electionTimeoutRenewed() )
-        {
-            raftMessageTimerResetMonitor.timerReset();
-            leaderAvailabilityTimers.renewElection();
-        }
-        else if ( outcome.isSteppingDown() )
-        {
-            raftMessageTimerResetMonitor.timerReset();
-        }
+        outcome.electionTimerChanged().ifPresentOrElse( electionTimerMode ->
+                {
+                    raftMessageTimerResetMonitor.timerReset();
+                    leaderAvailabilityTimers.renewElectionTimer( electionTimerMode );
+                }, () ->
+                {
+                    if ( outcome.isSteppingDown() )
+                    {
+                        raftMessageTimerResetMonitor.timerReset();
+                    }
+                } );
     }
 
     private void handleLogShipping( Outcome outcome )

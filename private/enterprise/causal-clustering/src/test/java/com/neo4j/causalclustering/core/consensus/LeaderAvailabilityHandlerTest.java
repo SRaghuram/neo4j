@@ -19,6 +19,7 @@ import java.util.function.LongSupplier;
 
 import org.neo4j.time.Clocks;
 
+import static com.neo4j.causalclustering.core.consensus.ElectionTimerMode.FAILURE_DETECTION;
 import static org.mockito.Mockito.verify;
 
 public class LeaderAvailabilityHandlerTest
@@ -52,7 +53,7 @@ public class LeaderAvailabilityHandlerTest
         handler.handle( heartbeat );
 
         // then
-        verify( leaderAvailabilityTimers ).renewElection();
+        verify( leaderAvailabilityTimers ).renewElectionTimer( FAILURE_DETECTION );
     }
 
     @Test
@@ -65,7 +66,7 @@ public class LeaderAvailabilityHandlerTest
         handler.handle( appendEntries );
 
         // then
-        verify( leaderAvailabilityTimers ).renewElection();
+        verify( leaderAvailabilityTimers ).renewElectionTimer( FAILURE_DETECTION );
     }
 
     @Test
@@ -78,7 +79,7 @@ public class LeaderAvailabilityHandlerTest
         handler.handle( voteResponse );
 
         // then
-        verify( leaderAvailabilityTimers, Mockito.never() ).renewElection();
+        verify( leaderAvailabilityTimers, Mockito.never() ).renewElectionTimer( FAILURE_DETECTION );
     }
 
     @Test
@@ -94,7 +95,7 @@ public class LeaderAvailabilityHandlerTest
         handler.handle( heartbeat );
 
         // then
-        verify( leaderAvailabilityTimers, Mockito.never() ).renewElection();
+        verify( leaderAvailabilityTimers, Mockito.never() ).renewElectionTimer( FAILURE_DETECTION );
     }
 
     @Test
@@ -112,7 +113,7 @@ public class LeaderAvailabilityHandlerTest
         handler.handle( appendEntries );
 
         // then
-        verify( leaderAvailabilityTimers, Mockito.never() ).renewElection();
+        verify( leaderAvailabilityTimers, Mockito.never() ).renewElectionTimer( FAILURE_DETECTION );
     }
 
     @Test

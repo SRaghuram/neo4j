@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus;
 
+import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.cache.ConsecutiveInFlightCache;
@@ -27,8 +28,9 @@ import com.neo4j.causalclustering.messaging.Outbound;
 
 import java.io.IOException;
 import java.time.Clock;
-import java.time.Duration;
 
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.DurationRange;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -55,11 +57,12 @@ public class RaftMachineBuilder
 
     private long term = termState.currentTerm();
 
-    private long electionTimeout = 500;
-    private long heartbeatInterval = 150;
+    private DurationRange detectionWindow = DurationRange.parse( "480ms-540ms" );
+    private long detectionWindowMin = detectionWindow.getMin().toMillis();
+    private long heartbeatInterval = detectionWindowMin / RaftTimersConfig.HEARTBEAT_COUNT_IN_FAILURE_DETECTION;
 
     private long catchupTimeout = 30000;
-    private long retryTimeMillis = electionTimeout / 2;
+    private long retryTimeMillis = detectionWindowMin / 2;
     private int catchupBatchSize = 64;
     private int maxAllowedShippingLag = 256;
     private StateStorage<RaftMembershipState> raftMembership =
@@ -83,13 +86,14 @@ public class RaftMachineBuilder
     public RaftFixture buildFixture()
     {
         termState.update( term );
-        LeaderAvailabilityTimers
-                leaderAvailabilityTimers = new LeaderAvailabilityTimers( Duration.ofMillis( electionTimeout ), Duration.ofMillis( heartbeatInterval ), clock,
-                timerService, logProvider );
+        var config = Config.newBuilder()
+                .set( CausalClusteringSettings.failure_detection_window, detectionWindow )
+                .set( CausalClusteringSettings.failure_resolution_window, detectionWindow );
+        var raftTimersConfig = new RaftTimersConfig( config.build() );
+        LeaderAvailabilityTimers leaderAvailabilityTimers = new LeaderAvailabilityTimers( raftTimersConfig, clock, timerService, logProvider );
         SendToMyself leaderOnlyReplicator = new SendToMyself( member, outbound );
         RaftMembershipManager membershipManager = new RaftMembershipManager( leaderOnlyReplicator, member,
-                memberSetBuilder, raftLog, logProvider, expectedClusterSize, leaderAvailabilityTimers.getElectionTimeoutMillis(), clock, catchupTimeout,
-                raftMembership );
+                memberSetBuilder, raftLog, logProvider, expectedClusterSize, detectionWindowMin, clock, catchupTimeout, raftMembership );
         membershipManager.setRecoverFromIndexSupplier( () -> 0 );
         RaftLogShippingManager logShipping =
                 new RaftLogShippingManager( outbound, logProvider, raftLog, timerService, clock, member, membershipManager,
@@ -128,7 +132,7 @@ public class RaftMachineBuilder
 
     public RaftMachineBuilder electionTimeout( long electionTimeout )
     {
-        this.electionTimeout = electionTimeout;
+        this.detectionWindowMin = electionTimeout;
         return this;
     }
 

@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.roles;
 
+import com.neo4j.causalclustering.core.consensus.ElectionTimerMode;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.Timeout.Election;
@@ -20,6 +21,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Optional;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
@@ -318,7 +320,7 @@ public class FollowerTest
                 state, log() );
 
         // then
-        assertFalse( outcome.electionTimeoutRenewed() );
+        assertEquals( outcome.electionTimerChanged(), Optional.empty() );
     }
 
     @Test

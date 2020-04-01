@@ -15,6 +15,8 @@ import java.util.Set;
 
 import org.neo4j.logging.Log;
 
+import static com.neo4j.causalclustering.core.consensus.ElectionTimerMode.ACTIVE_ELECTION;
+
 public class Election
 {
     private Election()
@@ -42,6 +44,7 @@ public class Election
         );
 
         outcome.setVotedFor( ctx.myself() );
+        outcome.renewElectionTimer( ACTIVE_ELECTION );
         log.info( "Election started with vote request: %s and members: %s", voteForMe, currentMembers );
         return true;
     }
@@ -63,6 +66,7 @@ public class Election
         currentMembers.stream().filter( member -> !member.equals( ctx.myself() ) ).forEach( member ->
                 outcome.addOutgoingMessage( new RaftMessages.Directed( member, preVoteForMe ) )
         );
+        outcome.renewElectionTimer( ACTIVE_ELECTION );
 
         log.info( "Pre-election started with: %s and members: %s", preVoteForMe, currentMembers );
         return true;

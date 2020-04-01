@@ -13,24 +13,36 @@ import java.util.Objects;
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.SettingMigrator;
 import org.neo4j.configuration.SettingMigrators;
+import org.neo4j.configuration.helpers.DurationRange;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.Log;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.discovery_advertised_address;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.discovery_listen_address;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.failure_detection_window;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.failure_resolution_window;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.middleware_logging_level;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_advertised_address;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_listen_address;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.transaction_advertised_address;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.transaction_listen_address;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.neo4j.configuration.GraphDatabaseSettings.routing_ttl;
 import static org.neo4j.configuration.SettingMigrators.migrateAdvertisedAddressInheritanceChange;
+import static org.neo4j.configuration.SettingValueParsers.DURATION;
+import static org.neo4j.configuration.SettingValueParsers.DURATION_RANGE;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 @ServiceProvider
 public class CausalClusteringSettingsMigrator implements SettingMigrator
 {
+    /**
+     * This is the default window size for the failure detection window in case 'causal_clustering.leader_election_timeout' would be still defined.
+     * 5 seconds must be enough to cause enough variance in the failure detection timer through the members of a cluster.
+     */
+    static final int DEFAULT_FAILURE_DETECTION_MAX_WINDOW_IN_SECONDS = 5;
+
     @Override
     public void migrate( Map<String,String> values, Map<String,String> defaultValues, Log log )
     {
@@ -39,6 +51,7 @@ public class CausalClusteringSettingsMigrator implements SettingMigrator
         migrateMiddlewareLoggingLevelSetting( values, log );
         migrateMiddlewareLoggingLevelValue( values, log );
         migrateAdvertisedAddresses( values, defaultValues, log );
+        migrateElectionTimeout( values, defaultValues, log );
     }
 
     private void migrateRoutingTtl( Map<String,String> values, Log log )
@@ -112,5 +125,59 @@ public class CausalClusteringSettingsMigrator implements SettingMigrator
         migrateAdvertisedAddressInheritanceChange( values, defaultValues, log, transaction_listen_address.name(), transaction_advertised_address.name() );
         migrateAdvertisedAddressInheritanceChange( values, defaultValues, log, raft_listen_address.name(), raft_advertised_address.name() );
         migrateAdvertisedAddressInheritanceChange( values, defaultValues, log, discovery_listen_address.name(), discovery_advertised_address.name() );
+    }
+
+    private void migrateElectionTimeout( Map<String,String> values, Map<String,String> defaultValues, Log log )
+    {
+        var leaderElectionTimoutSetting = "causal_clustering.leader_election_timeout";
+        var failureDetectionWindowSetting = failure_detection_window.name();
+        var failureResolutionWindowSetting = failure_resolution_window.name();
+        var leaderElectionTimoutValue = values.get( leaderElectionTimoutSetting );
+        var failureDetectionWindowValue = values.get( failureDetectionWindowSetting );
+        var failureResolutionWindowValue = values.get( failureResolutionWindowSetting );
+        if ( isNotBlank( leaderElectionTimoutValue ) )
+        {
+            if ( isNotBlank( failureDetectionWindowValue ) )
+            {
+                log.warn( "Deprecated setting '%s' is ignored because replacement '%s' and '%s' is set",
+                          leaderElectionTimoutSetting, failureDetectionWindowSetting, failureResolutionWindowSetting );
+            }
+            else
+            {
+                convertElectionTimeout( values, defaultValues, leaderElectionTimoutValue, failureResolutionWindowValue, log );
+            }
+        }
+    }
+
+    private void convertElectionTimeout( Map<String,String> values, Map<String,String> defaultValues,
+                                         String leaderElectionTimoutValue, String failureResolutionWindowValue, Log log )
+    {
+        var leaderElectionTimoutSetting = "causal_clustering.leader_election_timeout";
+        var failureDetectionWindowSetting = failure_detection_window.name();
+        var failureResolutionWindowSetting = failure_resolution_window.name();
+
+        log.warn( "Use of deprecated setting '%s'. It is replaced by '%s' and '%s'",
+                  leaderElectionTimoutSetting, failureDetectionWindowSetting, failureResolutionWindowSetting );
+
+        var min = DURATION.parse( leaderElectionTimoutValue );
+        // the window is the smaller of this two: DEFAULT_FAILURE_DETECTION_MAX_WINDOW_IN_SECONDS or the original electionTimeout
+        var max = min.plusMillis( Math.min( min.toMillis(), DEFAULT_FAILURE_DETECTION_MAX_WINDOW_IN_SECONDS * 1000 ) );
+        var failureDetectionWindowValue = new DurationRange( min, max ).valueToString();
+        values.put( failureDetectionWindowSetting, failureDetectionWindowValue );
+
+        if ( isBlank( failureResolutionWindowValue ) )
+        {
+            var defaultFailureResolutionWindow = failure_resolution_window.defaultValue();
+            var overriddenFailureResolutionWindowValue = defaultValues.get( failureResolutionWindowSetting );
+            if ( isNotBlank( overriddenFailureResolutionWindowValue ) )
+            {
+                defaultFailureResolutionWindow = DURATION_RANGE.parse( overriddenFailureResolutionWindowValue );
+            }
+            // if old setting is shorter than default resolution window minimum then resolution window is set identical to detection window
+            if ( min.toMillis() < defaultFailureResolutionWindow.getMin().toMillis() )
+            {
+                values.put( failureResolutionWindowSetting,failureDetectionWindowValue );
+            }
+        }
     }
 }

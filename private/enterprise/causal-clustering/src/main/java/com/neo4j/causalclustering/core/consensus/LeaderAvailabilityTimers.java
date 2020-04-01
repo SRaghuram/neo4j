@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.core.consensus.schedule.Timer;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 
 import java.time.Clock;
-import java.time.Duration;
 
 import org.neo4j.function.ThrowingAction;
 import org.neo4j.logging.Log;
@@ -18,14 +17,15 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
 
 import static com.neo4j.causalclustering.core.consensus.schedule.TimeoutFactory.fixedTimeout;
+import static com.neo4j.causalclustering.core.consensus.schedule.TimeoutFactory.multiTimeout;
 import static com.neo4j.causalclustering.core.consensus.schedule.TimeoutFactory.uniformRandomTimeout;
 import static com.neo4j.causalclustering.core.consensus.schedule.Timer.CancelMode.SYNC_WAIT;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 class LeaderAvailabilityTimers
 {
-    private final long electionIntervalMillis;
-    private final long heartbeatIntervalMillis;
+
+    private final RaftTimersConfig raftTimersConfig;
     private final Clock clock;
     private final TimerService timerService;
     private final Log log;
@@ -35,32 +35,41 @@ class LeaderAvailabilityTimers
     private volatile Timer heartbeatTimer;
     private volatile Timer electionTimer;
 
-    LeaderAvailabilityTimers( Duration electionTimeout, Duration heartbeatInterval, Clock clock, TimerService timerService,
-            LogProvider logProvider )
+    public volatile ElectionTimerMode electionTimerMode;
+
+    LeaderAvailabilityTimers( RaftTimersConfig raftTimersConfig, Clock clock, TimerService timerService, LogProvider logProvider )
     {
-        this.electionIntervalMillis = electionTimeout.toMillis();
-        this.heartbeatIntervalMillis = heartbeatInterval.toMillis();
+        this.raftTimersConfig = raftTimersConfig;
         this.clock = clock;
         this.timerService = timerService;
         this.log = logProvider.getLog( getClass() );
-
-        if ( this.electionIntervalMillis < heartbeatIntervalMillis )
-        {
-            throw new IllegalArgumentException(
-                    String.format( "Election timeout %s should not be shorter than heartbeat interval %s", this.electionIntervalMillis, heartbeatIntervalMillis
-            ) );
-        }
+        this.electionTimerMode = ElectionTimerMode.IMMEDIATE;
     }
 
     void start( ThrowingAction<Exception> electionAction, ThrowingAction<Exception> heartbeatAction )
     {
+        var immediateTimeout = uniformRandomTimeout( 0, raftTimersConfig.detectionDeltaInMillis(), MILLISECONDS );
+        var resolutionTimeout = uniformRandomTimeout( raftTimersConfig.resolutionWindowMinInMillis(),
+                raftTimersConfig.resolutionWindowMaxInMillis(), MILLISECONDS );
+        var detectionTimeout = uniformRandomTimeout( raftTimersConfig.detectionWindowMinInMillis(),
+                raftTimersConfig.detectionWindowMaxInMillis(), MILLISECONDS );
+        var electionTimeout = multiTimeout( this::getElectionType )
+                .addTimeout( ElectionTimerMode.IMMEDIATE, immediateTimeout )
+                .addTimeout( ElectionTimerMode.ACTIVE_ELECTION, resolutionTimeout )
+                .addTimeout( ElectionTimerMode.FAILURE_DETECTION, detectionTimeout );
+
         this.electionTimer = timerService.create( RaftMachine.Timeouts.ELECTION, Group.RAFT_TIMER, renewing( electionAction ) );
-        this.electionTimer.set( uniformRandomTimeout( electionIntervalMillis, electionIntervalMillis * 2, MILLISECONDS ) );
+        this.electionTimer.set( electionTimeout );
 
         this.heartbeatTimer = timerService.create( RaftMachine.Timeouts.HEARTBEAT, Group.RAFT_TIMER, renewing( heartbeatAction ) );
-        this.heartbeatTimer.set( fixedTimeout( heartbeatIntervalMillis, MILLISECONDS ) );
+        this.heartbeatTimer.set( fixedTimeout( raftTimersConfig.heartbeatIntervalInMillis(), MILLISECONDS ) );
 
         lastElectionRenewalMillis = clock.millis();
+    }
+
+    private ElectionTimerMode getElectionType()
+    {
+        return electionTimerMode;
     }
 
     void stop()
@@ -75,9 +84,10 @@ class LeaderAvailabilityTimers
         }
     }
 
-    void renewElection()
+    void renewElectionTimer( ElectionTimerMode electionTimerMode )
     {
         lastElectionRenewalMillis = clock.millis();
+        this.electionTimerMode = electionTimerMode;
         if ( electionTimer != null )
         {
             electionTimer.reset();
@@ -86,13 +96,17 @@ class LeaderAvailabilityTimers
 
     boolean isElectionTimedOut()
     {
-        return clock.millis() - lastElectionRenewalMillis >= electionIntervalMillis;
-    }
-
-    // Getters for immutable values
-    long getElectionTimeoutMillis()
-    {
-        return electionIntervalMillis;
+        switch ( electionTimerMode )
+        {
+        case IMMEDIATE:
+            return true;
+        case ACTIVE_ELECTION:
+            return clock.millis() - lastElectionRenewalMillis >= raftTimersConfig.resolutionWindowMinInMillis();
+        case FAILURE_DETECTION:
+            return clock.millis() - lastElectionRenewalMillis >= raftTimersConfig.detectionWindowMinInMillis();
+        default:
+            throw new IllegalArgumentException( "Unknown timeout type: " + electionTimerMode );
+        }
     }
 
     private TimeoutHandler renewing( ThrowingAction<Exception> action )

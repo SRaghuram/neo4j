@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.outcome;
 
+import com.neo4j.causalclustering.core.consensus.ElectionTimerMode;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
@@ -44,7 +45,7 @@ public class Outcome implements ConsensusOutcome
 
     /* Follower */
     private MemberId votedFor;
-    private boolean renewElectionTimeout;
+    private ElectionTimerMode electionTimerMode;
     private SnapshotRequirement snapshotRequirement;
     private boolean isPreElection;
     private Set<MemberId> preVotesForMe;
@@ -67,7 +68,7 @@ public class Outcome implements ConsensusOutcome
 
     public Outcome( Role nextRole, long term, MemberId leader, long leaderCommit, MemberId votedFor,
                     Set<MemberId> votesForMe, Set<MemberId> preVotesForMe, long lastLogIndexBeforeWeBecameLeader,
-                    FollowerStates<MemberId> followerStates, boolean renewElectionTimeout,
+                    FollowerStates<MemberId> followerStates, ElectionTimerMode electionTimerMode,
                     Collection<RaftLogCommand> logCommands, Collection<RaftMessages.Directed> outgoingMessages,
                     Collection<ShipCommand> shipCommands, long commitIndex, Set<MemberId> heartbeatResponses, boolean isPreElection )
     {
@@ -80,7 +81,7 @@ public class Outcome implements ConsensusOutcome
         this.preVotesForMe = new HashSet<>( preVotesForMe );
         this.lastLogIndexBeforeWeBecameLeader = lastLogIndexBeforeWeBecameLeader;
         this.followerStates = followerStates;
-        this.renewElectionTimeout = renewElectionTimeout;
+        this.electionTimerMode = electionTimerMode;
         this.heartbeatResponses = new HashSet<>( heartbeatResponses );
 
         this.logCommands.addAll( logCommands );
@@ -101,7 +102,7 @@ public class Outcome implements ConsensusOutcome
         leaderCommit = ctx.leaderCommit();
 
         votedFor = ctx.votedFor();
-        renewElectionTimeout = false;
+        electionTimerMode = null;
 
         isPreElection = (currentRole == Role.FOLLOWER) && ctx.isPreElection();
         steppingDownInTerm = OptionalLong.empty();
@@ -150,9 +151,9 @@ public class Outcome implements ConsensusOutcome
         this.votedFor = votedFor;
     }
 
-    public void renewElectionTimeout()
+    public void renewElectionTimer( ElectionTimerMode electionTimerMode )
     {
-        this.renewElectionTimeout = true;
+        this.electionTimerMode = electionTimerMode;
     }
 
     public void markNeedForFreshSnapshot( long leaderPrevIndex, long localAppendIndex )
@@ -204,7 +205,7 @@ public class Outcome implements ConsensusOutcome
                ", outgoingMessages=" + outgoingMessages +
                ", commitIndex=" + commitIndex +
                ", votedFor=" + votedFor +
-               ", renewElectionTimeout=" + renewElectionTimeout +
+               ", electionTimerMode=" + electionTimerMode +
                ", snapshotRequirement=" + snapshotRequirement +
                ", votesForMe=" + votesForMe +
                ", preVotesForMe=" + preVotesForMe +
@@ -251,9 +252,9 @@ public class Outcome implements ConsensusOutcome
         return votedFor;
     }
 
-    public boolean electionTimeoutRenewed()
+    public Optional<ElectionTimerMode> electionTimerChanged()
     {
-        return renewElectionTimeout;
+        return Optional.ofNullable( electionTimerMode );
     }
 
     @Override
@@ -351,7 +352,7 @@ public class Outcome implements ConsensusOutcome
         }
         Outcome outcome = (Outcome) o;
         return term == outcome.term && leaderCommit == outcome.leaderCommit && commitIndex == outcome.commitIndex &&
-                renewElectionTimeout == outcome.renewElectionTimeout && Objects.equals( snapshotRequirement, outcome.snapshotRequirement ) &&
+                electionTimerMode == outcome.electionTimerMode && Objects.equals( snapshotRequirement, outcome.snapshotRequirement ) &&
                 isPreElection == outcome.isPreElection && lastLogIndexBeforeWeBecameLeader == outcome.lastLogIndexBeforeWeBecameLeader &&
                 electedLeader == outcome.electedLeader && nextRole == outcome.nextRole &&
                 Objects.equals( steppingDownInTerm, outcome.steppingDownInTerm ) && Objects.equals( leader, outcome.leader ) &&
@@ -364,7 +365,7 @@ public class Outcome implements ConsensusOutcome
     @Override
     public int hashCode()
     {
-        return Objects.hash( nextRole, term, leader, leaderCommit, logCommands, outgoingMessages, commitIndex, votedFor, renewElectionTimeout,
+        return Objects.hash( nextRole, term, leader, leaderCommit, logCommands, outgoingMessages, commitIndex, votedFor, electionTimerMode,
                 snapshotRequirement, isPreElection, preVotesForMe, votesForMe, lastLogIndexBeforeWeBecameLeader, followerStates, shipCommands, electedLeader,
                 steppingDownInTerm, heartbeatResponses );
     }

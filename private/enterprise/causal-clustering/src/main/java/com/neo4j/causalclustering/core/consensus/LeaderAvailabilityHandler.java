@@ -11,6 +11,8 @@ import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 
 import java.util.function.LongSupplier;
 
+import static com.neo4j.causalclustering.core.consensus.ElectionTimerMode.FAILURE_DETECTION;
+
 public class LeaderAvailabilityHandler implements LifecycleMessageHandler<RaftMessages.InboundRaftMessageContainer<?>>
 {
     private final LifecycleMessageHandler<RaftMessages.InboundRaftMessageContainer<?>> delegateHandler;
@@ -57,7 +59,7 @@ public class LeaderAvailabilityHandler implements LifecycleMessageHandler<RaftMe
         if ( message.message().dispatch( shouldRenewElectionTimeout ) )
         {
             raftMessageTimerResetMonitor.timerReset();
-            leaderAvailabilityTimers.renewElection();
+            leaderAvailabilityTimers.renewElectionTimer( FAILURE_DETECTION );
         }
     }
 

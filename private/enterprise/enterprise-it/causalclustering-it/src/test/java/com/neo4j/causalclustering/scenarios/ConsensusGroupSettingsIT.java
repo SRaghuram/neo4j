@@ -13,7 +13,8 @@ import org.junit.jupiter.api.TestInstance;
 
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.leader_election_timeout;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.failure_detection_window;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.failure_resolution_window;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.minimum_core_cluster_size_at_formation;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.minimum_core_cluster_size_at_runtime;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
@@ -37,7 +38,8 @@ class ConsensusGroupSettingsIT
                 .withNumberOfReadReplicas( 0 )
                 .withInstanceCoreParam( minimum_core_cluster_size_at_formation, value -> "5" )
                 .withInstanceCoreParam( minimum_core_cluster_size_at_runtime, value -> "3" )
-                .withInstanceCoreParam( leader_election_timeout, value -> "1s" );
+                .withInstanceCoreParam( failure_detection_window, value -> "1s-2s" )
+                .withInstanceCoreParam( failure_resolution_window, value -> "1s-2s" );
 
         var cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();

@@ -56,7 +56,8 @@ public class InstalledProtocolsProcedureIT
     private ClusterFactory clusterFactory;
 
     public final ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
-            .withSharedCoreParam( CausalClusteringSettings.leader_election_timeout, "2s" )
+            .withSharedCoreParam( CausalClusteringSettings.failure_detection_window, "2s-3s" )
+            .withSharedCoreParam( CausalClusteringSettings.failure_resolution_window, "2s-3s" )
             .withSharedCoreParam( CausalClusteringSettings.compression_implementations, "snappy" )
             .withNumberOfCoreMembers( 3 )
             .withNumberOfReadReplicas( 0 );

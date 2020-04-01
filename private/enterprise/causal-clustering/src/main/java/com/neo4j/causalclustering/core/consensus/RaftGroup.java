@@ -37,7 +37,6 @@ import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalV2;
 
 import java.io.File;
-import java.time.Duration;
 import java.util.Map;
 
 import org.neo4j.collection.Dependencies;
@@ -82,13 +81,14 @@ public class RaftGroup
         StateStorage<VoteState> voteState = storageFactory.createRaftVoteStorage( namedDatabaseId.name(), life, logProvider );
         StateStorage<RaftMembershipState> raftMembershipStorage = storageFactory.createRaftMembershipStorage( namedDatabaseId.name(), life, logProvider );
 
-        leaderAvailabilityTimers = createElectionTiming( config, timerService, logProvider );
+        var raftTimersConfig = new RaftTimersConfig( config );
+        leaderAvailabilityTimers = new LeaderAvailabilityTimers( raftTimersConfig, systemClock(), timerService, logProvider );
 
         SendToMyself leaderOnlyReplicator = new SendToMyself( myself, outbound );
         Integer minimumConsensusGroupSize = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_runtime );
         MemberIdSetBuilder memberSetBuilder = new MemberIdSetBuilder();
         raftMembershipManager = new RaftMembershipManager( leaderOnlyReplicator, myself, memberSetBuilder, raftLog, logProvider, minimumConsensusGroupSize,
-                leaderAvailabilityTimers.getElectionTimeoutMillis(), systemClock(), config.get( join_catch_up_timeout ).toMillis(), raftMembershipStorage );
+                raftTimersConfig.detectionWindowMinInMillis(), systemClock(), config.get( join_catch_up_timeout ).toMillis(), raftMembershipStorage );
 
         dependencies.satisfyDependency( raftMembershipManager );
         life.add( raftMembershipManager );
@@ -97,7 +97,7 @@ public class RaftGroup
         inFlightCache = InFlightCacheFactory.create( config, monitors );
         RaftLogShippingManager logShipping =
                 new RaftLogShippingManager( outbound, logProvider, raftLog, timerService, systemClock(), myself, raftMembershipManager,
-                        leaderAvailabilityTimers.getElectionTimeoutMillis(), config.get( catchup_batch_size ), config.get( log_shipping_max_lag ),
+                        raftTimersConfig.detectionWindowMinInMillis(), config.get( catchup_batch_size ), config.get( log_shipping_max_lag ),
                         inFlightCache );
 
         boolean supportsPreVoting = config.get( CausalClusteringSettings.enable_pre_voting );
@@ -117,12 +117,6 @@ public class RaftGroup
 
         life.add( new RaftCoreTopologyConnector( topologyService, raftMachine, namedDatabaseId ) );
         life.add( logShipping );
-    }
-
-    private static LeaderAvailabilityTimers createElectionTiming( Config config, TimerService timerService, LogProvider logProvider )
-    {
-        Duration electionTimeout = config.get( CausalClusteringSettings.leader_election_timeout );
-        return new LeaderAvailabilityTimers( electionTimeout, electionTimeout.dividedBy( 3 ), systemClock(), timerService, logProvider );
     }
 
     private static RaftLog createRaftLog( Config config, LifeSupport life, FileSystemAbstraction fileSystem, ClusterStateLayout layout,

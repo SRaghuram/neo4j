@@ -17,6 +17,7 @@ import java.util.Set;
 import org.neo4j.logging.Log;
 
 import static com.neo4j.causalclustering.core.consensus.MajorityIncludingSelfQuorum.isQuorum;
+import static com.neo4j.causalclustering.core.consensus.ElectionTimerMode.ACTIVE_ELECTION;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.CANDIDATE;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.FOLLOWER;
 import static java.lang.Long.min;
@@ -316,7 +317,7 @@ class Follower implements RaftMessageHandler
 
             if ( isQuorum( ctx.votingMembers(), outcome.getPreVotesForMe() ) )
             {
-                outcome.renewElectionTimeout();
+                outcome.renewElectionTimer( ACTIVE_ELECTION );
                 outcome.setPreElection( false );
                 if ( Election.startRealElection( ctx, outcome, log ) )
                 {

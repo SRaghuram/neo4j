@@ -16,6 +16,7 @@ import java.io.IOException;
 import org.neo4j.logging.Log;
 
 import static com.neo4j.causalclustering.core.consensus.MajorityIncludingSelfQuorum.isQuorum;
+import static com.neo4j.causalclustering.core.consensus.ElectionTimerMode.FAILURE_DETECTION;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.CANDIDATE;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.FOLLOWER;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
@@ -105,7 +106,7 @@ class Candidate implements RaftMessageHandler
 
                 outcome.setLastLogIndexBeforeWeBecameLeader( ctx.entryLog().appendIndex() );
                 outcome.electedLeader();
-                outcome.renewElectionTimeout();
+                outcome.renewElectionTimer( FAILURE_DETECTION );
                 outcome.setNextRole( LEADER );
                 log.info( "Moving to LEADER state at term %d (I am %s), voted for by %s",
                         ctx.term(), ctx.myself(), outcome.getVotesForMe() );

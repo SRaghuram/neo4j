@@ -40,7 +40,8 @@ import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.leader_election_timeout;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.failure_detection_window;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.failure_resolution_window;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -67,7 +68,8 @@ class TokenReplicationStressIT
         cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig()
                 .withNumberOfCoreMembers( 3 )
                 .withNumberOfReadReplicas( 0 )
-                .withSharedCoreParam( leader_election_timeout, "2s" ) );
+                .withSharedCoreParam( failure_detection_window, "2s-3s" )
+                .withSharedCoreParam( failure_resolution_window, "2s-3s" ) );
 
         cluster.start();
     }

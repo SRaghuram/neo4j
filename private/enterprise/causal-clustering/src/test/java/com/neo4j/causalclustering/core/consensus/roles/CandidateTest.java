@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.roles;
 
+import com.neo4j.causalclustering.core.consensus.ElectionTimerMode;
 import com.neo4j.causalclustering.core.consensus.NewLeaderBarrier;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
@@ -18,6 +19,7 @@ import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -68,7 +70,7 @@ public class CandidateTest
 
         // then
         assertEquals( LEADER, outcome.getRole() );
-        assertTrue( outcome.electionTimeoutRenewed() );
+        assertEquals( outcome.electionTimerChanged(), Optional.of( ElectionTimerMode.FAILURE_DETECTION ) );
         assertThat( outcome.getLogCommands(), hasItem( new AppendLogEntry( 0,
                 new RaftLogEntry( state.term(), new NewLeaderBarrier() ) ) ) );
         assertThat( outcome.getOutgoingMessages(), hasItems(

@@ -21,6 +21,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Internal;
 import org.neo4j.configuration.SettingValueParser;
 import org.neo4j.configuration.SettingsDeclaration;
+import org.neo4j.configuration.helpers.DurationRange;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.ByteUnit;
@@ -38,6 +39,7 @@ import static org.neo4j.configuration.SettingValueParsers.BOOL;
 import static org.neo4j.configuration.SettingValueParsers.BYTES;
 import static org.neo4j.configuration.SettingValueParsers.DOUBLE;
 import static org.neo4j.configuration.SettingValueParsers.DURATION;
+import static org.neo4j.configuration.SettingValueParsers.DURATION_RANGE;
 import static org.neo4j.configuration.SettingValueParsers.INT;
 import static org.neo4j.configuration.SettingValueParsers.PATH;
 import static org.neo4j.configuration.SettingValueParsers.SOCKET_ADDRESS;
@@ -59,9 +61,19 @@ public class CausalClusteringSettings implements SettingsDeclaration
     public static final Setting<Duration> join_catch_up_timeout =
             newBuilder( "causal_clustering.join_catch_up_timeout", DURATION, ofMinutes( 10 ) ).build();
 
-    @Description( "The time limit within which a new leader election will occur if no messages are received." )
+    @Deprecated
+    @Description( "This setting is moved and enhanced into causal_clustering.failure_detection_window and causal_clustering.failure_resolution_window." )
     public static final Setting<Duration> leader_election_timeout =
             newBuilder( "causal_clustering.leader_election_timeout", DURATION, ofSeconds( 7 ) ).build();
+
+    @Description( "The time window within which the loss of the leader is detected and the first re-election attempt is held." )
+    public static final Setting<DurationRange> failure_detection_window =
+            newBuilder( "causal_clustering.failure_detection_window", DURATION_RANGE, DurationRange.fromSeconds( 7, 10 ) ).build();
+
+    @Description( "The rate at which leader elections happen. Note that due to election conflicts it might take several attempts to find a leader. " +
+            "The window should be significantly larger than typical communication delays to make conflicts unlikely." )
+    public static final Setting<DurationRange> failure_resolution_window =
+            newBuilder( "causal_clustering.failure_resolution_window", DURATION_RANGE, DurationRange.fromSeconds( 3, 6 ) ).build();
 
     @Internal
     @Description( "Configures the time after which we give up trying to bind to a cluster formed of the other initial discovery members." )

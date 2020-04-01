@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.outcome;
 
+import com.neo4j.causalclustering.core.consensus.ElectionTimerMode;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
@@ -34,7 +35,7 @@ public class OutcomeBuilder
 
     /* Follower */
     private MemberId votedFor;
-    private boolean renewElectionTimeout;
+    private ElectionTimerMode electionTimerMode;
     private boolean isPreElection;
     private Set<MemberId> preVotesForMe = emptySet();
 
@@ -107,9 +108,9 @@ public class OutcomeBuilder
         return this;
     }
 
-    public OutcomeBuilder setRenewElectionTimeout( boolean renewElectionTimeout )
+    public OutcomeBuilder setElectionTimerMode( ElectionTimerMode electionTimerMode )
     {
-        this.renewElectionTimeout = renewElectionTimeout;
+        this.electionTimerMode = electionTimerMode;
         return this;
     }
 
@@ -170,7 +171,7 @@ public class OutcomeBuilder
     public Outcome build()
     {
         var outcome =  new Outcome( nextRole, term, leader, leaderCommit, votedFor, votesForMe, preVotesForMe, lastLogIndexBeforeWeBecameLeader, followerStates,
-                renewElectionTimeout, logCommands, outgoingMessages, shipCommands, commitIndex, heartbeatResponses, isPreElection );
+                electionTimerMode, logCommands, outgoingMessages, shipCommands, commitIndex, heartbeatResponses, isPreElection );
 
         if ( electedLeader )
         {

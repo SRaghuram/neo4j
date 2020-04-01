@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.state;
 
+import com.neo4j.causalclustering.core.consensus.ElectionTimerMode;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
@@ -32,6 +33,7 @@ import java.util.Set;
 
 import org.neo4j.logging.NullLogProvider;
 
+import static com.neo4j.causalclustering.core.consensus.ElectionTimerMode.ACTIVE_ELECTION;
 import static com.neo4j.causalclustering.core.consensus.ReplicatedInteger.valueOf;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.CANDIDATE;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
@@ -65,8 +67,8 @@ public class RaftStateTest
         }};
 
         Outcome raftTestMemberOutcome =
-                new Outcome( CANDIDATE, 0, null, -1, null, emptySet(), emptySet(), -1, initialFollowerStates(), true,
-                        logCommands, emptyOutgoingMessages(), emptySet(), -1, emptySet(), false );
+                new Outcome( CANDIDATE, 0, null, -1, null, emptySet(), emptySet(), -1, initialFollowerStates(), ACTIVE_ELECTION,
+                             logCommands, emptyOutgoingMessages(), emptySet(), -1, emptySet(), false );
 
         //when
         raftState.update(raftTestMemberOutcome);
@@ -90,11 +92,11 @@ public class RaftStateTest
                 new ConsecutiveInFlightCache(), NullLogProvider.getInstance(),
                 false, false );
 
-        raftState.update( new Outcome( CANDIDATE, 1, null, -1, null, emptySet(), emptySet(), -1, initialFollowerStates(), true, emptyLogCommands(),
+        raftState.update( new Outcome( CANDIDATE, 1, null, -1, null, emptySet(), emptySet(), -1, initialFollowerStates(), ACTIVE_ELECTION, emptyLogCommands(),
                 emptyOutgoingMessages(), emptySet(), -1, emptySet(), false ) );
 
         // when
-        raftState.update( new Outcome( CANDIDATE, 1, null, -1, null, emptySet(), emptySet(), -1, new FollowerStates<>(), true, emptyLogCommands(),
+        raftState.update( new Outcome( CANDIDATE, 1, null, -1, null, emptySet(), emptySet(), -1, new FollowerStates<>(), ACTIVE_ELECTION, emptyLogCommands(),
                 emptyOutgoingMessages(), emptySet(), -1, emptySet(), false ) );
 
         // then

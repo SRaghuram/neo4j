@@ -15,6 +15,8 @@ import java.io.IOException;
 import org.neo4j.function.ThrowingBooleanSupplier;
 import org.neo4j.logging.Log;
 
+import static com.neo4j.causalclustering.core.consensus.ElectionTimerMode.ACTIVE_ELECTION;
+
 public class Voting
 {
 
@@ -37,7 +39,7 @@ public class Voting
         if ( willVoteForCandidate )
         {
             outcome.setVotedFor( voteRequest.from() );
-            outcome.renewElectionTimeout();
+            outcome.renewElectionTimer( ACTIVE_ELECTION );
         }
 
         outcome.addOutgoingMessage( new RaftMessages.Directed( voteRequest.from(), new RaftMessages.Vote.Response(
