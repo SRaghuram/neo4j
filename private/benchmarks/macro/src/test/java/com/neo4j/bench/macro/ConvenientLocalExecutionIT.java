@@ -11,6 +11,7 @@ import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
@@ -33,6 +34,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -43,6 +45,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static java.util.Collections.emptyList;
 
 @TestDirectoryExtension
 class ConvenientLocalExecutionIT
@@ -75,58 +78,59 @@ class ConvenientLocalExecutionIT
     @Test
     void executeWorkload() throws Exception
     {
-            String neo4jVersion = "1.2.3";
-            String neo4jBranch = "1.2";
-            String neo4jBranchOwner = "neo-technology";
-            String neo4jCommit = "abcd123";
-            String toolBranch = "0.1";
-            String toolBranchOwner = "neo-technology";
-            String toolCommit = "1234abc";
-            long parentTeamcityBuild = 0;
-            long teamcityBuild = 1;
-            String triggeredBy = "xyz";
+        String neo4jVersion = "1.2.3";
+        String neo4jBranch = "1.2";
+        String neo4jBranchOwner = "neo-technology";
+        String neo4jCommit = "abcd123";
+        String toolBranch = "0.1";
+        String toolBranchOwner = "neo-technology";
+        String toolCommit = "1234abc";
+        long parentTeamcityBuild = 0;
+        long teamcityBuild = 1;
+        String triggeredBy = "xyz";
 
-            Path profilerRecordingsDir = RESULT_DIR.resolve( "profiler_recordings-" + WORKLOAD_NAME );
-            Files.createDirectories( profilerRecordingsDir );
-            Path resultsJson = RESULT_DIR.resolve( "results-summary.json" );
-            Path jvmPath = Paths.get( Jvm.defaultJvmOrFail().launchJava() );
+        Path profilerRecordingsDir = RESULT_DIR.resolve( "profiler_recordings-" + WORKLOAD_NAME );
+        Files.createDirectories( profilerRecordingsDir );
+        Path resultsJson = RESULT_DIR.resolve( "results-summary.json" );
+        Path jvmPath = Paths.get( Jvm.defaultJvmOrFail().launchJava() );
 
-            List<String> runWorkloadArgs = RunMacroWorkloadCommand.argsFor(
-                    STORE_DIR,
-                    neo4jConfigFile(),
-                    RESULT_DIR,
-                    resultsJson,
-                    profilerRecordingsDir,
-                    new RunMacroWorkloadParams(
-                            WORKLOAD_NAME,
-                            EDITION,
-                            jvmPath,
-                            PROFILERS,
-                            WARMUP_COUNT,
-                            MEASUREMENT_COUNT,
-                            Duration.ofSeconds( 0 ),
-                            Duration.ofMinutes( 10 ),
-                            FORK_COUNT,
-                            TimeUnit.MICROSECONDS,
-                            RUNTIME,
-                            PLANNER,
-                            EXECUTION_MODE,
-                            JVM_ARGS,
-                            RECREATE_SCHEMA,
-                            SKIP_FLAME_GRAPHS,
-                            DEPLOYMENT,
-                            neo4jCommit,
-                            neo4jVersion,
-                            neo4jBranch,
-                            neo4jBranchOwner,
-                            toolCommit,
-                            toolBranchOwner,
-                            toolBranch,
-                            teamcityBuild,
-                            parentTeamcityBuild,
-                            triggeredBy ) );
+        List<String> runWorkloadArgs = RunMacroWorkloadCommand.argsFor(
+                STORE_DIR,
+                neo4jConfigFile(),
+                RESULT_DIR,
+                resultsJson,
+                profilerRecordingsDir,
+                new RunMacroWorkloadParams(
+                        WORKLOAD_NAME,
+                        emptyList(),
+                        EDITION,
+                        jvmPath,
+                        PROFILERS,
+                        WARMUP_COUNT,
+                        MEASUREMENT_COUNT,
+                        Duration.ofSeconds( 0 ),
+                        Duration.ofMinutes( 10 ),
+                        FORK_COUNT,
+                        TimeUnit.MICROSECONDS,
+                        RUNTIME,
+                        PLANNER,
+                        EXECUTION_MODE,
+                        JVM_ARGS,
+                        RECREATE_SCHEMA,
+                        SKIP_FLAME_GRAPHS,
+                        DEPLOYMENT,
+                        neo4jCommit,
+                        new Version( neo4jVersion ),
+                        neo4jBranch,
+                        neo4jBranchOwner,
+                        toolCommit,
+                        toolBranchOwner,
+                        toolBranch,
+                        teamcityBuild,
+                        parentTeamcityBuild,
+                        triggeredBy ) );
 
-            Main.main( runWorkloadArgs.stream().toArray( String[]::new ) );
+        Main.main( runWorkloadArgs.stream().toArray( String[]::new ) );
     }
 
     // Required fields for running Single query

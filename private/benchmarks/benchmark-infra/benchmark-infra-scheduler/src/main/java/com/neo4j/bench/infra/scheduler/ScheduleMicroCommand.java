@@ -161,13 +161,13 @@ public class ScheduleMicroCommand extends BaseRunWorkloadCommand
 
             JsonUtil.serializeJson( jobParameterJson.toPath(), jobParams );
 
-            AWSS3ArtifactStorage artifactStorage = AWSS3ArtifactStorage.getAWSS3ArtifactStorage( infraParams );
+            AWSS3ArtifactStorage artifactStorage = AWSS3ArtifactStorage.getAWSS3ArtifactStorage( awsRegion, awsKey, awsSecret );
 
             URI artifactBaseURI = infraParams.artifactBaseUri();
             artifactStorage.uploadBuildArtifacts( artifactBaseURI, workspace );
             LOG.info( "upload build artifacts into {}", artifactBaseURI );
 
-            JobScheduler jobScheduler = AWSBatchJobScheduler.getJobScheduler( infraParams, jobQueue, jobDefinition, batchStack );
+            JobScheduler jobScheduler = AWSBatchJobScheduler.getJobScheduler( awsRegion, awsKey, awsSecret, jobQueue, jobDefinition, batchStack );
 
             String jobName = getJobName( "micro",
                                          runMicroWorkloadParams.neo4jVersion().toString(),

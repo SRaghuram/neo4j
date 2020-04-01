@@ -12,6 +12,7 @@ import com.neo4j.bench.common.model.TestRunReport;
 import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
@@ -38,6 +39,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 
@@ -268,6 +270,7 @@ class RunWorkloadCommandIT
                     profilerRecordingsDir,
                     new RunMacroWorkloadParams(
                             workload.name(),
+                            emptyList(),
                             Edition.ENTERPRISE,
                             jvmPath,
                             profilers,
@@ -285,7 +288,7 @@ class RunWorkloadCommandIT
                             skipFlameGraphs,
                             deployment,
                             neo4jCommit,
-                            neo4jVersion,
+                            new Version( neo4jVersion ),
                             neo4jBranch,
                             neo4jBranchOwner,
                             toolCommit,

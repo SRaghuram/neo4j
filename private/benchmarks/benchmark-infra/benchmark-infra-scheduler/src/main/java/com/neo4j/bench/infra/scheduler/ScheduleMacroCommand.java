@@ -16,6 +16,7 @@ import com.neo4j.bench.common.tool.macro.DeploymentModes;
 import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
 import com.neo4j.bench.common.tool.macro.RunToolMacroWorkloadParams;
 import com.neo4j.bench.common.util.JsonUtil;
+import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.BenchmarkingEnvironment;
 import com.neo4j.bench.infra.BenchmarkingTool;
@@ -28,6 +29,8 @@ import com.neo4j.bench.infra.Workspace;
 import com.neo4j.bench.infra.aws.AWSBatchJobScheduler;
 import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
 import com.neo4j.bench.infra.macro.MacroToolRunner;
+import com.neo4j.bench.macro.workload.Query;
+import com.neo4j.bench.macro.workload.Workload;
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;
 import org.apache.commons.lang3.StringUtils;
@@ -38,13 +41,15 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_ERROR_POLICY;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
+import static org.apache.commons.lang3.StringUtils.appendIfMissing;
 
 @Command( name = "schedule-macro" )
 public class ScheduleMacroCommand extends BaseRunWorkloadCommand
@@ -139,20 +144,20 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
     @Required
     private URI artifactBaseUri;
 
-    private static String getJobName( String tool, String benchmark, String version, String triggered )
+    private static String getJobName( String tool, String benchmark, String queryName, String version, String triggered )
     {
-        String jobName = format( "%s-%s-%s-%s", tool, benchmark, version, triggered );
+        String jobName = format( "%s-%s-%s-%s-%s", tool, benchmark, queryName, version, triggered );
         // job name should follow these restrictions, https://docs.aws.amazon.com/cli/latest/reference/batch/submit-job.html
         // The first character must be alphanumeric, and up to 128 letters (uppercase and lowercase), numbers, hyphens, and underscores are allowed.
         return StringUtils.substring( jobName.replaceAll( "[^\\p{Alnum}|^_|^-]", "_" ), 0, 127 );
     }
 
-    private static List<JobStatus> jobStatuses( JobScheduler jobScheduler, InfraParams infraParams, JobId jobId )
+    private static List<JobStatus> jobStatuses( JobScheduler jobScheduler, String awsRegion, List<JobId> jobId )
     {
-        List<JobStatus> jobStatuses = jobScheduler.jobsStatuses( Collections.singletonList( jobId ) );
+        List<JobStatus> jobStatuses = jobScheduler.jobsStatuses( jobId );
         LOG.info( "current jobs statuses:\n{}",
                   jobStatuses.stream()
-                             .map( status -> status.toStatusLine( infraParams.awsRegion() ) ).collect( joining( "\n" ) ) );
+                             .map( status -> status.toStatusLine( awsRegion ) ).collect( joining( "\n" ) ) );
         return jobStatuses;
     }
 
@@ -163,10 +168,14 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
         {
             // first start preparing the workspace
             Path workspacePath = workspaceDir.toPath();
-            Workspace workspace = null;
+
+            JobScheduler jobScheduler = AWSBatchJobScheduler.getJobScheduler( awsRegion, awsKey, awsSecret, jobQueue, jobDefinition, batchStack );
+            AWSS3ArtifactStorage artifactStorage = AWSS3ArtifactStorage.getAWSS3ArtifactStorage( awsRegion, awsKey, awsSecret );
+
             File jobParameterJson = workspacePath.resolve( Workspace.JOB_PARAMETERS_JSON ).toFile();
             jobParameterJson.createNewFile();
 
+            Workspace workspace = null;
             if ( runMacroWorkloadParams.deployment().deploymentModes().equals( DeploymentModes.SERVER ) )
             {
                 Deployment.Server server = (Deployment.Server) runMacroWorkloadParams.deployment();
@@ -176,58 +185,70 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
             {
                 workspace = Workspace.defaultMacroEmbeddedWorkspace( workspacePath );
             }
-            workspace.assertArtifactsExist();
 
-            // then store job params as JSON
-            InfraParams infraParams = new InfraParams( awsSecret,
-                                                       awsKey,
-                                                       awsRegion,
-                                                       resultsStoreUsername,
-                                                       resultsStorePasswordSecretName,
-                                                       resultsStoreUri,
-                                                       artifactBaseUri,
-                                                       errorReportingPolicy,
-                                                       workspace );
-
-            AWSS3ArtifactStorage artifactStorage = AWSS3ArtifactStorage.getAWSS3ArtifactStorage( infraParams );
-            JobParams jobParams = new JobParams( infraParams,
-                                                 new BenchmarkingEnvironment(
-                                                         new BenchmarkingTool( MacroToolRunner.class,
-                                                                               new RunToolMacroWorkloadParams(
-                                                                                       runMacroWorkloadParams,
-                                                                                       storeName ) ) ) );
-            JsonUtil.serializeJson( jobParameterJson.toPath(), jobParams );
-
-            URI artifactBaseURI = infraParams.artifactBaseUri();
-            artifactStorage.uploadBuildArtifacts( artifactBaseURI, workspace );
-            LOG.info( "upload build artifacts into {}", artifactBaseURI );
-
-            JobScheduler jobScheduler = AWSBatchJobScheduler.getJobScheduler( infraParams, jobQueue, jobDefinition, batchStack );
-
-            JobId jobId = jobScheduler.schedule( artifactWorkerUri, artifactBaseURI,
-                                                 getJobName( "macro",
-                                                             runMacroWorkloadParams.workloadName(),
-                                                             runMacroWorkloadParams.neo4jVersion().toString(),
-                                                             runMacroWorkloadParams.triggeredBy() ) );
-            LOG.info( "job scheduled, with id {}", jobId.id() );
-
-            // wait until they are done, or fail
-            RetryPolicy<List<JobStatus>> retries = new RetryPolicy<List<JobStatus>>()
-                    .handleResultIf( jobsStatuses -> jobsStatuses.stream().anyMatch( JobStatus::isWaiting ) )
-                    .withDelay( Duration.ofMinutes( 5 ) )
-                    .withMaxAttempts( -1 );
-
-            List<JobStatus> jobsStatuses = Failsafe.with( retries ).get( () -> ScheduleMacroCommand.jobStatuses( jobScheduler, infraParams, jobId ) );
-            LOG.info( "jobs are done with following statuses\n{}", jobsStatuses.stream().map( Object::toString ).collect( joining( "\n" ) ) );
-
-            // if any of the jobs failed, fail whole run
-            if ( jobsStatuses.stream().anyMatch( JobStatus::isFailed ) )
+            List<JobId> jobIds = new ArrayList<>();
+            try ( Resources resources = new Resources( Paths.get( "." ) ) )
             {
-                throw new RuntimeException( "there are failed jobs:\n" +
-                                            jobsStatuses.stream()
-                                                        .filter( JobStatus::isFailed )
-                                                        .map( Object::toString )
-                                                        .collect( joining( "\n" ) ) );
+                Workload workload = Workload.fromName( runMacroWorkloadParams.workloadName(), resources, runMacroWorkloadParams.deployment() );
+
+                for ( Query query : workload.queries() )
+                {
+
+                    URI artifactBaseQueryRunURI = artifactBaseUri.resolve( appendIfMissing( query.name(), "/" ) );
+                    URI artifactWorkerQueryRunURI = artifactBaseQueryRunURI.resolve( "benchmark-infra-worker.jar" );
+                    // then store job params as JSON
+                    InfraParams infraParams = new InfraParams( awsSecret,
+                                                               awsKey,
+                                                               awsRegion,
+                                                               resultsStoreUsername,
+                                                               resultsStorePasswordSecretName,
+                                                               resultsStoreUri,
+                                                               artifactBaseQueryRunURI,
+                                                               errorReportingPolicy,
+                                                               workspace );
+                    JobParams jobParams = new JobParams( infraParams,
+                                                         new BenchmarkingEnvironment(
+                                                                 new BenchmarkingTool( MacroToolRunner.class,
+                                                                                       new RunToolMacroWorkloadParams(
+                                                                                               runMacroWorkloadParams.setQuery( query.name() ),
+                                                                                               storeName ) ) ) );
+
+                    JsonUtil.serializeJson( jobParameterJson.toPath(), jobParams );
+
+                    workspace.assertArtifactsExist();
+
+                    artifactStorage.uploadBuildArtifacts( artifactBaseQueryRunURI, workspace );
+                    LOG.info( "upload build artifacts into {}", artifactBaseQueryRunURI );
+
+                    JobId jobId = jobScheduler.schedule( artifactWorkerQueryRunURI,
+                                                         artifactBaseQueryRunURI,
+                                                         getJobName( "macro",
+                                                                     runMacroWorkloadParams.workloadName(),
+                                                                     query.name(),
+                                                                     runMacroWorkloadParams.neo4jVersion().toString(),
+                                                                     runMacroWorkloadParams.triggeredBy() ) );
+                    jobIds.add( jobId );
+                    LOG.info( "job scheduled, with id {}", jobId.id() );
+                }
+
+                // wait until they are done, or fail
+                RetryPolicy<List<JobStatus>> retries = new RetryPolicy<List<JobStatus>>()
+                        .handleResultIf( jobsStatuses -> jobsStatuses.stream().anyMatch( JobStatus::isWaiting ) )
+                        .withDelay( Duration.ofMinutes( 5 ) )
+                        .withMaxAttempts( -1 );
+
+                List<JobStatus> jobsStatuses = Failsafe.with( retries ).get( () -> ScheduleMacroCommand.jobStatuses( jobScheduler, awsRegion, jobIds ) );
+                LOG.info( "jobs are done with following statuses\n{}", jobsStatuses.stream().map( Object::toString ).collect( joining( "\n" ) ) );
+
+                // if any of the jobs failed, fail whole run
+                if ( jobsStatuses.stream().anyMatch( JobStatus::isFailed ) )
+                {
+                    throw new RuntimeException( "there are failed jobs:\n" +
+                                                jobsStatuses.stream()
+                                                            .filter( JobStatus::isFailed )
+                                                            .map( Object::toString )
+                                                            .collect( joining( "\n" ) ) );
+                }
             }
         }
         catch ( ArtifactStoreException | IOException e )

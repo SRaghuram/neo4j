@@ -86,11 +86,6 @@ public class InfraParams
         return awsKey;
     }
 
-    public boolean hasAwsCredentials()
-    {
-        return awsSecret != null && awsKey != null;
-    }
-
     public String awsRegion()
     {
         return awsRegion;

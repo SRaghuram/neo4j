@@ -8,6 +8,7 @@ package com.neo4j.bench.infra;
 import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.tool.macro.Deployment;
@@ -24,9 +25,11 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 import static com.neo4j.bench.common.profiling.ParameterizedProfiler.defaultProfilers;
+import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class BenchmarkingToolTest
@@ -38,6 +41,7 @@ public class BenchmarkingToolTest
         BenchmarkingTool benchmarkingTool = new BenchmarkingTool( MacroToolRunner.class,
                                                                   new RunToolMacroWorkloadParams(
                                                                           new RunMacroWorkloadParams( "workloadName",
+                                                                                                      emptyList(),
                                                                                                       Edition.COMMUNITY,
                                                                                                       Paths.get( "java" )
                                                                                                            .toAbsolutePath(),
@@ -56,7 +60,7 @@ public class BenchmarkingToolTest
                                                                                                       false,
                                                                                                       Deployment.embedded(),
                                                                                                       "neo4jCommit",
-                                                                                                      "3.4.1",
+                                                                                                      new Version( "3.4.1" ),
                                                                                                       "neo4jBranch",
                                                                                                       "neo4jBranchOwner",
                                                                                                       "toolCommit",

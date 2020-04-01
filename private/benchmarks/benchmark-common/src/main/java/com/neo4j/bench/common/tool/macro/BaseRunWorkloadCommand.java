@@ -11,12 +11,16 @@ import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.LogManager;
@@ -231,6 +235,12 @@ public abstract class BaseRunWorkloadCommand implements Runnable
     @Required
     private String triggeredBy;
 
+    @Option( type = OptionType.COMMAND,
+             name = {RunMacroWorkloadParams.CMD_QUERIES},
+             description = "Comma separated list of queries to be run, if absent all queries will be run",
+             title = "Query name" )
+    private String queryNames = "";
+
     @Override
     public final void run()
     {
@@ -249,7 +259,13 @@ public abstract class BaseRunWorkloadCommand implements Runnable
         Duration minMeasurementDuration = Duration.ofSeconds( minMeasurementSeconds );
         Duration maxMeasurementDuration = Duration.ofSeconds( maxMeasurementSeconds );
         JvmArgs jvmArgs = JvmArgs.parse( this.jvmArgs );
+
+        List<String> queries = StringUtils.isBlank( queryNames )
+                               ? Collections.emptyList()
+                               : Arrays.asList( queryNames.split( "," ) );
+
         RunMacroWorkloadParams commandParams = new RunMacroWorkloadParams( workloadName,
+                                                                           queries,
                                                                            neo4jEdition,
                                                                            jvmFile.toPath(),
                                                                            profilers,
@@ -267,7 +283,7 @@ public abstract class BaseRunWorkloadCommand implements Runnable
                                                                            skipFlameGraphs,
                                                                            deployment,
                                                                            neo4jCommit,
-                                                                           neo4jVersion,
+                                                                           new Version( neo4jVersion ),
                                                                            neo4jBranch,
                                                                            neo4jBranchOwner,
                                                                            toolCommit,

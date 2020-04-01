@@ -10,7 +10,6 @@ import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
@@ -57,6 +56,7 @@ import java.util.Optional;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 
+import static com.google.common.collect.Sets.newHashSet;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_BATCH_JOB_ID;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_DB_PATH;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_ERROR_POLICY;
@@ -139,6 +139,8 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
 
             System.out.println( params );
 
+            assertQueryNames( params, workload );
+
             BenchmarkUtil.assertFileNotEmpty( neo4jConfigFile.toPath() );
             Neo4jConfigBuilder neo4jConfigBuilder = Neo4jConfigBuilder.withDefaults()
                                                                       .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigFile.toPath() ).build() )
@@ -170,9 +172,15 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
             List<BenchmarkPlan> resultPlans = new ArrayList<>();
             BenchmarkGroupBenchmarkMetricsPrinter conciseMetricsPrinter = new BenchmarkGroupBenchmarkMetricsPrinter( false );
             Instant start = Instant.now();
-            for ( Query query : workload.queries().stream().map( query -> query.copyWith( params.runtime() )
-                                                                               .copyWith( params.planner() )
-                                                                               .copyWith( params.executionMode() ) ).collect( toList() ) )
+
+            for ( Query query : workload.queries()
+                                        .stream()
+                                        .filter( query -> params.queryNames().isEmpty()
+                                                          || params.queryNames().contains( query.name() ) )
+                                        .map( query -> query.copyWith( params.runtime() )
+                                                            .copyWith( params.planner() )
+                                                            .copyWith( params.executionMode() ) )
+                                        .collect( toList() ) )
             {
                 try
                 {
@@ -252,11 +260,11 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
             TestRunReport testRunReport = new TestRunReport(
                     testRun,
                     benchmarkConfig,
-                    Sets.newHashSet( new Neo4j( params.neo4jCommit(),
-                                                params.neo4jVersion().patchVersion(),
-                                                params.neo4jEdition(),
-                                                params.neo4jBranch(),
-                                                params.neo4jBranchOwner() ) ),
+                    newHashSet( new Neo4j( params.neo4jCommit(),
+                                           params.neo4jVersion().patchVersion(),
+                                           params.neo4jEdition(),
+                                           params.neo4jBranch(),
+                                           params.neo4jBranchOwner() ) ),
                     neo4jConfig,
                     Environment.current(),
                     allResults,
@@ -310,5 +318,16 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                 profilerRecordingsDir.toAbsolutePath().toString() );
         args.addAll( params.asArgs() );
         return args;
+    }
+
+    private void assertQueryNames( RunMacroWorkloadParams params, Workload workload )
+    {
+        List<String> allQueryNames = workload.queries().stream().map( Query::name ).collect( toList() );
+        List<String> matchedQueries = new ArrayList<>( params.queryNames() );
+        matchedQueries.removeAll( allQueryNames );
+        if ( !matchedQueries.isEmpty() )
+        {
+            throw new IllegalArgumentException( format( "%s queries not found in workload %s", matchedQueries, workload.name() ) );
+        }
     }
 }

@@ -152,11 +152,11 @@ $java_cmd -jar $benchmark_infra_scheduler_jar \
     --db-name \
     "$db_name" \
     --results-store-user \
-    client \
+    neo4j \
     --results-store-pass-secret-name \
     "$results_store_pass_secret_name" \
     --results-store-uri \
-    bolt+routing://e605d648.databases.neo4j.io:7687 \
+    neo4j://1a20c636.databases.neo4j.io \
     --job-queue \
     "$job_queue" \
     --job-definition \
