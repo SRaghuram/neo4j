@@ -50,12 +50,10 @@ class NodeHashJoinSingleNodeOperator(val workIdentity: WorkIdentity,
                            resources: QueryResources): OperatorState = {
     argumentStateCreator.createArgumentStateMap(
       lhsArgumentStateMapId,
-      new HashTableFactory(lhsOffset, stateFactory.memoryTracker, id),
-      ordered = false)
+      new HashTableFactory(lhsOffset, stateFactory.memoryTracker, id))
     argumentStateCreator.createArgumentStateMap(
       rhsArgumentStateMapId,
-      new ArgumentStateBuffer.Factory(stateFactory, id),
-      ordered = false)
+      new ArgumentStateBuffer.Factory(stateFactory, id))
     this
   }
 

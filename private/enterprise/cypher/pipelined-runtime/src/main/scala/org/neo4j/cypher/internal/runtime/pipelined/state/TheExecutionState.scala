@@ -239,10 +239,9 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   }
 
   override final def createArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
-                                                                factory: ArgumentStateFactory[S],
-                                                                ordered: Boolean): ArgumentStateMap[S] = {
+                                                                factory: ArgumentStateFactory[S]): ArgumentStateMap[S] = {
     val argumentSlotOffset = executionGraphDefinition.argumentStateMaps(argumentStateMapId.x).argumentSlotOffset
-    val asm = stateFactory.newArgumentStateMap(argumentStateMapId, argumentSlotOffset, factory, ordered)
+    val asm = stateFactory.newArgumentStateMap(argumentStateMapId, argumentSlotOffset, factory)
     argumentStateMapHolder(argumentStateMapId.x) = asm
     asm
   }

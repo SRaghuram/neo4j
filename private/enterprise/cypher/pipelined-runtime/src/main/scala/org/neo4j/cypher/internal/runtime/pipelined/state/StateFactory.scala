@@ -33,8 +33,7 @@ trait StateFactory {
   def newLock(id: String): Lock
   def newArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                               argumentSlotOffset: Int,
-                                              factory: ArgumentStateFactory[S],
-                                              ordered: Boolean): ArgumentStateMap[S]
+                                              factory: ArgumentStateFactory[S]): ArgumentStateMap[S]
 
   /**
    * Obtain the memory tracker (this call does not create a new object).

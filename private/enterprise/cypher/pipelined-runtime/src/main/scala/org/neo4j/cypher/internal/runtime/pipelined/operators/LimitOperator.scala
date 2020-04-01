@@ -87,8 +87,7 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
   override def createTask(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory, state: PipelinedQueryState, resources: QueryResources): OperatorTask = {
     val limit = evaluateCountValue(state, resources, countExpression)
     new LimitOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId,
-      new LimitOperator.LimitStateFactory(limit),
-      ordered = false))
+      new LimitOperator.LimitStateFactory(limit)))
   }
 
   class LimitOperatorTask(argumentStateMap: ArgumentStateMap[CountingState]) extends OperatorTask {
