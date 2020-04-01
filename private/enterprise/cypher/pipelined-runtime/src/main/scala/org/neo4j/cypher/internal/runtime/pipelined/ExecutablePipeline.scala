@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.PipelineState.MIN_MORSEL_SIZE
+import org.neo4j.cypher.internal.runtime.pipelined.PipelineState.computeMorselSize
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFactory
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
@@ -161,7 +161,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
     //       The MorselFactory should probably originate from the MorselBuffer to play well with reuse/pooling
     if (pipeline.needsMorsel) {
       val slots = pipeline.slots
-      val morselSize = computeMorselSize(state)
+      val morselSize = computeMorselSize(remainingRows, state.morselSize)
       if (pipeline.needsFilteringMorsel) {
         MorselFactory.allocateFiltering(slots, morselSize, producingWorkUnitEvent)
       } else {
@@ -172,15 +172,10 @@ class PipelineState(val pipeline: ExecutablePipeline,
     }
   }
 
-  private def computeMorselSize(state: PipelinedQueryState)= {
-    val reducedSize = pipeline.workLimiter
+  private def remainingRows = {
+    pipeline.workLimiter
       .map(id => executionState.argumentStateMaps(id).asInstanceOf[UnorderedArgumentStateMap[WorkCanceller]].peek(TopLevelArgument.VALUE).remaining)
       .getOrElse(Long.MaxValue)
-    //lowerBound is MIN_MORSEL_SIZE, if not explicitly configured to be lower
-    val lowerBound = math.min(MIN_MORSEL_SIZE, state.morselSize)
-    //upperBound is what remains from the limit as long as that is below the configured morselSize
-    val upperBound = math.min(reducedSize, state.morselSize).toInt
-    math.max(upperBound, lowerBound)
   }
 
   private def innerNextTask(state: PipelinedQueryState,
@@ -281,4 +276,12 @@ class PipelineState(val pipeline: ExecutablePipeline,
 
 object PipelineState {
   val MIN_MORSEL_SIZE: Int = 10
+
+  def computeMorselSize(remainingRows: Long, configuredMorselSize: Int): Int = {
+    //lowerBound is MIN_MORSEL_SIZE, if not explicitly configured to be lower
+    val lowerBound = math.min(MIN_MORSEL_SIZE, configuredMorselSize)
+    //upperBound is what remains from the limit as long as that is below the configured morselSize
+    val upperBound = math.min(remainingRows, configuredMorselSize).toInt
+    math.max(upperBound, lowerBound)
+  }
 }
