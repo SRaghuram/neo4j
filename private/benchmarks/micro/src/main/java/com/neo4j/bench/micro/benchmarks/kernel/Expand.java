@@ -203,8 +203,6 @@ public class Expand extends AbstractKernelBenchmark
         long nodeId = rngState.rng.nextInt( NODE_COUNT );
         txState.kernelTx.read.singleNode( nodeId, txState.node );
 
-        int type = txState.randomRelationshipType( rngState.rng );
-
         txState.node.next();
         Degrees degrees = txState.node.degrees( ALL_RELATIONSHIPS );
 
