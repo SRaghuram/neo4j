@@ -58,7 +58,6 @@ case class FabricPlanner(
     queryParams: MapValue,
     defaultContextName: String,
     fabricContextName: Option[String],
-    forceFabricContext: Boolean = false,
   ) {
 
     private val pipeline = frontend.Pipeline(query)
@@ -126,54 +125,11 @@ case class FabricPlanner(
             isFabricFragment(union.lhs) && isFabricFragment(union.rhs)
         }
 
-      forceFabricContext || inFabricDefaultContext || isFabricFragment(fragment)
+      inFabricDefaultContext || isFabricFragment(fragment)
     }
 
     private[planning] def withForceFabricContext(force: Boolean) =
       if (force) this.copy(fabricContextName = Some(defaultContextName))
       else this.copy(fabricContextName = None)
-
-    private def stitch(leaf: Fragment.Leaf): QueryPart =
-      stitch(leaf, nested = false)
-
-    private def stitch(fragment: Fragment, nested: Boolean): QueryPart = {
-      val pos = InputPosition.NONE
-
-      fragment match {
-        case chain: Fragment.Chain =>
-          SingleQuery(stitchChain(chain, nested))(pos)
-
-        case union: Fragment.Union =>
-          val part = stitch(union.lhs, nested = true)
-          val single = SingleQuery(stitchChain(union.rhs, nested = true))(pos)
-          if (union.distinct) {
-            UnionDistinct(part, single)(pos)
-          } else {
-            UnionAll(part, single)(pos)
-          }
-      }
-    }
-
-    private def stitchChain(fragment: Fragment.Chain, nested: Boolean): Seq[Clause] = {
-      val pos = InputPosition.NONE
-
-      fragment match {
-        case _: Fragment.Init if nested =>
-          Seq()
-
-        case init: Fragment.Init =>
-          Seq(Ast.paramBindings(init.importColumns, pos)).flatten
-
-        case leaf: Fragment.Leaf =>
-          val before = stitchChain(leaf.input, nested)
-          val clauses = if (nested) leaf.clauses else Ast.withoutGraphSelection(leaf.clauses)
-          before ++ clauses
-
-        case apply: Fragment.Apply =>
-          val before = stitchChain(apply.input, nested)
-          val inner = stitch(apply.inner, nested = true)
-          before :+ SubQuery(inner)(pos)
-      }
-    }
   }
 }
