@@ -152,6 +152,8 @@ public class FabricExecutor
 
         StatementResult run()
         {
+            mergedSummary.add( seqAsJavaList( plannerInstance.notifications() ) );
+
             queryMonitor.startExecution();
             var query = plan.query();
             Flux<String> columns = Flux.fromIterable( asJavaIterable( query.outputColumns() ) );

@@ -29,6 +29,7 @@ import org.neo4j.cypher.internal.planner.spi.ProcedureSignatureResolver
 import org.neo4j.cypher.internal.util.ASTNode
 import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.exceptions.SyntaxException
+import org.neo4j.graphdb.Notification
 import org.neo4j.monitoring.Monitors
 import org.neo4j.values.virtual.MapValue
 
@@ -93,6 +94,9 @@ case class FabricPlanner(
         inFabricContext = fabricContext,
       )
     }
+
+    def notifications: Seq[Notification] =
+      pipeline.notifications
 
     def asLocal(fragment: Fragment.Exec): LocalQuery = LocalQuery(
       query = FullyParsedQuery(

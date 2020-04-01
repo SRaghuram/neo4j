@@ -12,6 +12,7 @@ import org.neo4j.cypher.CypherExecutionMode
 import org.neo4j.cypher.CypherUpdateStrategy
 import org.neo4j.cypher.CypherVersion
 import org.neo4j.cypher.internal.CypherConfiguration
+import org.neo4j.cypher.internal.NotificationWrapping
 import org.neo4j.cypher.internal.PreParsedQuery
 import org.neo4j.cypher.internal.PreParser
 import org.neo4j.cypher.internal.QueryOptions
@@ -33,6 +34,7 @@ import org.neo4j.cypher.internal.frontend.phases.InitialState
 import org.neo4j.cypher.internal.frontend.phases.InternalNotificationLogger
 import org.neo4j.cypher.internal.frontend.phases.Monitors
 import org.neo4j.cypher.internal.frontend.phases.Phase
+import org.neo4j.cypher.internal.frontend.phases.RecordingNotificationLogger
 import org.neo4j.cypher.internal.frontend.phases.Transformer
 import org.neo4j.cypher.internal.frontend.phases.devNullLogger
 import org.neo4j.cypher.internal.planner.spi.CostBasedPlannerName
@@ -42,7 +44,11 @@ import org.neo4j.cypher.internal.rewriting.RewriterStepSequencer
 import org.neo4j.cypher.internal.rewriting.rewriters.GeneratingNamer
 import org.neo4j.cypher.internal.rewriting.rewriters.Never
 import org.neo4j.cypher.internal.rewriting.rewriters.expandStar
+import org.neo4j.cypher.internal.tracing.CompilationTracer
+import org.neo4j.cypher.internal.tracing.TimingCompilationTracer
 import org.neo4j.cypher.internal.util.CypherExceptionFactory
+import org.neo4j.cypher.internal.util.InternalNotification
+import org.neo4j.graphdb.Notification
 import org.neo4j.monitoring
 
 
@@ -51,6 +57,9 @@ case class FabricFrontEnd(
   kernelMonitors: monitoring.Monitors,
   signatures: ProcedureSignatureResolver,
 ) {
+
+  val tracer = new TimingCompilationTracer(
+    kernelMonitors.newMonitor(classOf[TimingCompilationTracer.EventListener]))
 
   object preParsing {
 
@@ -104,12 +113,14 @@ case class FabricFrontEnd(
 
     private val queryString = query.statement
 
+    private val queryTracer = tracer.compileQuery(query.description)
+
     private val context: BaseContext = new BaseContext {
-      // TODO: We need real tracer and notificationLogger etc, here right?
-      val tracer: CompilationPhaseTracer = CompilationPhaseTracer.NO_TRACING
-      val notificationLogger: InternalNotificationLogger = devNullLogger
-      val cypherExceptionFactory: CypherExceptionFactory = Neo4jCypherExceptionFactory(queryString, None)
       val monitors: Monitors = WrappedMonitors(kernelMonitors)
+      val tracer: CompilationPhaseTracer = queryTracer
+      val notificationLogger: InternalNotificationLogger = new RecordingNotificationLogger(Some(query.options.offset))
+      val cypherExceptionFactory: CypherExceptionFactory = Neo4jCypherExceptionFactory(queryString, None)
+
       val errorHandler: Seq[SemanticErrorDef] => Unit = (errors: Seq[SemanticErrorDef]) =>
         errors.foreach(e => throw cypherExceptionFactory.syntaxException(e.msg, e.position))
     }
@@ -153,6 +164,10 @@ case class FabricFrontEnd(
         transformer.transform(InitialState(localQueryString, None, CostBasedPlannerName.default).withStatement(query), context)
       }
     }
+
+    def notifications: Seq[Notification] =
+      context.notificationLogger.notifications
+        .toSeq.map(NotificationWrapping.asKernelNotification(Some(query.options.offset)))
   }
 }
 
