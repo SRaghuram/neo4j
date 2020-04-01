@@ -45,9 +45,10 @@ import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FO
 public class TransactionLogCatchUpWriter implements TxPullResponseListener, AutoCloseable
 {
     private static final String TRANSACTION_LOG_CATCHUP_TAG = "transactionLogCatchup";
+
     private final Lifespan lifespan = new Lifespan();
     private final Log log;
-    private final boolean asPartOfStoreCopy;
+    private final boolean fullStoreCopy;
     private final TransactionLogWriter writer;
     private final LogFiles logFiles;
     private final TransactionMetaDataStore metaDataStore;
@@ -61,34 +62,48 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
     private long expectedTxId = -1;
 
     TransactionLogCatchUpWriter( DatabaseLayout databaseLayout, FileSystemAbstraction fs, PageCache pageCache, Config config, LogProvider logProvider,
-            StorageEngineFactory storageEngineFactory, LongRange validInitialTxId, boolean asPartOfStoreCopy, boolean keepTxLogsInStoreDir,
+            StorageEngineFactory storageEngineFactory, LongRange validInitialTxId, boolean fullStoreCopy, boolean keepTxLogsInStoreDir,
             PageCacheTracer pageCacheTracer ) throws IOException
     {
         this.log = logProvider.getLog( getClass() );
-        this.asPartOfStoreCopy = asPartOfStoreCopy;
+        this.fullStoreCopy = fullStoreCopy;
         this.pageCacheTracer = pageCacheTracer;
-        final Config configWithoutSpecificStoreFormat = configWithoutSpecificStoreFormat( config );
-        databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY );
+        this.databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY );
+
+        Config configWithoutSpecificStoreFormat = configWithoutSpecificStoreFormat( config );
+        this.metaDataStore = storageEngineFactory.transactionMetaDataStore( fs, databaseLayout,
+                configWithoutSpecificStoreFormat, databasePageCache, pageCacheTracer );
+
+        Config customConfig = customisedConfig( config, keepTxLogsInStoreDir, fullStoreCopy );
+        this.logFiles = getLogFiles( databaseLayout, fs, customConfig, storageEngineFactory, validInitialTxId,
+                configWithoutSpecificStoreFormat, metaDataStore, databasePageCache );
+        this.lifespan.add( logFiles );
+        this.logChannel = logFiles.getLogFile().getWriter();
+        this.writer = new TransactionLogWriter( new LogEntryWriter( logChannel ) );
+
+        this.validInitialTxId = validInitialTxId;
+    }
+
+    private static LogFiles getLogFiles( DatabaseLayout databaseLayout, FileSystemAbstraction fs, Config customConfig,
+            StorageEngineFactory storageEngineFactory, LongRange validInitialTxId, Config configWithoutSpecificStoreFormat,
+            TransactionMetaDataStore metaDataStore, DatabasePageCache databasePageCache ) throws IOException
+    {
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependencies( databaseLayout, fs, databasePageCache, configWithoutSpecificStoreFormat );
-        metaDataStore =
-                storageEngineFactory.transactionMetaDataStore( fs, databaseLayout, configWithoutSpecificStoreFormat, databasePageCache, pageCacheTracer );
+
         LogPosition startPosition = getLastClosedTransactionPosition( databaseLayout, metaDataStore, fs );
         LogFilesBuilder logFilesBuilder = LogFilesBuilder
                 .builder( databaseLayout, fs )
                 .withDependencies( dependencies )
                 .withLastCommittedTransactionIdSupplier( () -> validInitialTxId.from() - 1 )
-                .withConfig( customisedConfig( config, keepTxLogsInStoreDir, asPartOfStoreCopy ) )
+                .withConfig( customConfig )
                 .withLogVersionRepository( metaDataStore )
                 .withTransactionIdStore( metaDataStore )
                 .withStoreId( metaDataStore.getStoreId() )
                 .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
                 .withLastClosedTransactionPositionSupplier( () -> startPosition );
-        this.logFiles = logFilesBuilder.build();
-        this.lifespan.add( logFiles );
-        this.logChannel = logFiles.getLogFile().getWriter();
-        this.writer = new TransactionLogWriter( new LogEntryWriter( logChannel ) );
-        this.validInitialTxId = validInitialTxId;
+
+        return logFilesBuilder.build();
     }
 
     private static LogPosition getLastClosedTransactionPosition( DatabaseLayout databaseLayout, TransactionMetaDataStore metaDataStore,
@@ -104,7 +119,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         return Config.newBuilder().fromConfig( config ).set( GraphDatabaseSettings.record_format, null ).build();
     }
 
-    private static Config customisedConfig( Config original, boolean keepTxLogsInStoreDir, boolean asPartOfStoreCopy )
+    private static Config customisedConfig( Config original, boolean keepTxLogsInStoreDir, boolean fullStoreCopy )
     {
         Config.Builder builder = Config.newBuilder();
         if ( !keepTxLogsInStoreDir && original.isExplicitlySet( transaction_logs_root_path ) )
@@ -115,7 +130,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         {
             builder.set( logical_log_rotation_threshold, original.get( logical_log_rotation_threshold ) );
         }
-        if ( asPartOfStoreCopy )
+        if ( fullStoreCopy )
         {
             builder.set( preallocate_logical_logs, false );
         }
@@ -128,12 +143,16 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         CommittedTransactionRepresentation tx = txPullResponse.tx();
         long receivedTxId = tx.getCommitEntry().getTxId();
 
-        // neo4j admin backup clients pull transactions indefinitely and have no monitoring mechanism for tx log rotation
-        // Other cases, ex. Read Replicas have an external mechanism that rotates independently of this process and don't need to
-        // manually rotate while pulling
         if ( logFiles.getLogFile().rotationNeeded() )
         {
-            rotateTransactionLogs( logFiles );
+            try
+            {
+                logFiles.getLogFile().rotate();
+            }
+            catch ( IOException e )
+            {
+                throw new UncheckedIOException( e );
+            }
         }
 
         validateReceivedTxId( receivedTxId );
@@ -182,30 +201,18 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         return lastTxId;
     }
 
-    private static void rotateTransactionLogs( LogFiles logFiles )
-    {
-        try
-        {
-            logFiles.getLogFile().rotate();
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException( e );
-        }
-    }
-
     @Override
     public synchronized void close() throws IOException
     {
         var cursorTracer = pageCacheTracer.createPageCursorTracer( TRANSACTION_LOG_CATCHUP_TAG );
-        if ( asPartOfStoreCopy )
+        if ( fullStoreCopy )
         {
             /* A checkpoint which points to the beginning of all the log files, meaning that
             all the streamed transactions will be applied as part of recovery. */
             long logVersion = logFiles.getLowestLogVersion();
             LogPosition checkPointPosition = logFiles.extractHeader( logVersion ).getStartPosition();
 
-            log.info( "Writing checkpoint as part of store copy: " + checkPointPosition );
+            log.info( "Writing checkpoint as part of full store copy: " + checkPointPosition );
             writer.checkPoint( checkPointPosition );
 
             // * comment copied from old StoreCopyClient *

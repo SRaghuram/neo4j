@@ -108,11 +108,11 @@ public class RemoteStore
     }
 
     private void pullTransactions( CatchupAddressProvider catchupAddressProvider, DatabaseLayout databaseLayout, TxPullRequestContext context,
-            boolean asPartOfStoreCopy, boolean keepTxLogsInStoreDir ) throws StoreCopyFailedException
+            boolean fullStoreCopy, boolean keepTxLogsInStoreDir ) throws StoreCopyFailedException
     {
         storeCopyClientMonitor.startReceivingTransactions( context.startTxIdExclusive() );
         try ( TransactionLogCatchUpWriter writer = transactionLogFactory.create( databaseLayout, fs, pageCache, config, logProvider, storageEngineFactory,
-                validInitialTxRange( context ), asPartOfStoreCopy, keepTxLogsInStoreDir, pageCacheTracer ) )
+                validInitialTxRange( context ), fullStoreCopy, keepTxLogsInStoreDir, pageCacheTracer ) )
         {
             TxPuller txPuller = createTxPuller( catchupAddressProvider, logProvider, config, namedDatabaseId );
 

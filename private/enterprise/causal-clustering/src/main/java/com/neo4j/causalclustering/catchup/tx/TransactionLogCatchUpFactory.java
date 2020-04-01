@@ -19,10 +19,10 @@ import org.neo4j.storageengine.api.StorageEngineFactory;
 public class TransactionLogCatchUpFactory
 {
     public TransactionLogCatchUpWriter create( DatabaseLayout databaseLayout, FileSystemAbstraction fs, PageCache pageCache, Config config,
-            LogProvider logProvider, StorageEngineFactory storageEngineFactory, LongRange validInitialTx, boolean asPartOfStoreCopy,
+            LogProvider logProvider, StorageEngineFactory storageEngineFactory, LongRange validInitialTx, boolean fullStoreCopy,
             boolean keepTxLogsInStoreDir, PageCacheTracer pageCacheTracer ) throws IOException
     {
         return new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, logProvider, storageEngineFactory, validInitialTx,
-                asPartOfStoreCopy, keepTxLogsInStoreDir, pageCacheTracer );
+                fullStoreCopy, keepTxLogsInStoreDir, pageCacheTracer );
     }
 }
