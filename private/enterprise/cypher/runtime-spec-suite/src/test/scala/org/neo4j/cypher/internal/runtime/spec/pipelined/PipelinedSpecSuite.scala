@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.WITH_MORSEL_SIZE
 import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
+import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedDynamicLimitPropagationTest.CONFIGURED_MORSEL_SIZE
 import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedSpecSuite.FUSING
 import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedSpecSuite.NO_FUSING
 import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedSpecSuite.SIZE_HINT
@@ -399,7 +400,7 @@ class PipelinedNestedPlanExpressionNoFusingTest extends NestedPlanExpressionTest
 /**
  * This test is pipelined only, there is no reason to run in other runtimes
  */
-class PipelinedDynamicLimitPropagationTest extends RuntimeTestSuite[EnterpriseRuntimeContext](WITH_MORSEL_SIZE(PipelinedDynamicLimitPropagationTest.MORSEL_SIZE), PIPELINED) {
+class PipelinedDynamicLimitPropagationTest extends RuntimeTestSuite[EnterpriseRuntimeContext](WITH_MORSEL_SIZE(CONFIGURED_MORSEL_SIZE), PIPELINED) {
   test("limit should propagate upstream") {
     // given
     val logicalQuery = new LogicalQueryBuilder(this)
@@ -416,8 +417,46 @@ class PipelinedDynamicLimitPropagationTest extends RuntimeTestSuite[EnterpriseRu
     // then
     input.hasMore shouldBe true
   }
+
+  test("should propagate upstream with multiple limits, smaller first") {
+    // given
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("y")
+      .limit(25)
+      .unwind("[1, 2, 3] AS y")
+      .limit(CONFIGURED_MORSEL_SIZE)
+      .nonFuseable()
+      .input(variables = Seq("x"))
+      .build()
+    val input = inputColumns(2, 50, identity).stream()
+
+    // when
+    consume(execute(logicalQuery, runtime, input))
+
+    // then
+    input.hasMore shouldBe false
+  }
+
+  test("should propagate upstream with multiple limits, bigger first") {
+    // given
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("y")
+      .limit(CONFIGURED_MORSEL_SIZE)
+      .unwind("[1, 2, 3] AS y")
+      .limit(25)
+      .nonFuseable()
+      .input(variables = Seq("x"))
+      .build()
+    val input = inputColumns(2, 50, identity).stream()
+
+    // when
+    consume(execute(logicalQuery, runtime, input))
+
+    // then
+    input.hasMore shouldBe true
+  }
 }
 
 object PipelinedDynamicLimitPropagationTest {
-  val MORSEL_SIZE: Int = 100
+  val CONFIGURED_MORSEL_SIZE: Int = 100
 }
