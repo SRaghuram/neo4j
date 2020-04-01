@@ -593,7 +593,6 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val groupings = converters.toGroupingExpression(id, groupingExpressions, Seq.empty)
         Some(new DistinctOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), groupings)(id))
 
-        // TODO skip parallel
       case plans.OrderedDistinct(_, groupingExpressions, orderToLeverage) =>
         val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
         val groupings = converters.toGroupingExpression(id, groupingExpressions, Seq.empty)
@@ -601,7 +600,6 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         if (groupingExpressions.values.forall(orderToLeverage.contains))
           Some(new AllOrderedDistinctOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), groupings)(id))
         else {
-
           val (orderedGroupingExpressions, unorderedGroupingExpressions) = groupingExpressions.partition { case (_,v) => orderToLeverage.contains(v) }
           val orderedGroupingColumns = converters.toGroupingExpression(id, orderedGroupingExpressions, orderToLeverage)
           val unorderedGroupingColumns = converters.toGroupingExpression(id, unorderedGroupingExpressions, orderToLeverage)
