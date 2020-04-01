@@ -29,9 +29,9 @@ class ExplainAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
     result should be(empty)
   }
 
-  test("EXPLAIN for Cypher 3.1") {
+  test("EXPLAIN query plan description contains estimated rows") {
     inTx( tx => {
-      val result = executeOfficial(tx, "explain match (n) return n")
+      val result = executeOfficial(tx, "EXPLAIN MATCH (n) RETURN n")
       result.resultAsString()
       result.getExecutionPlanDescription.toString should include("Estimated Rows")
     })
@@ -61,6 +61,6 @@ class ExplainAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
     val result = executeWith(Configs.InterpretedAndSlotted, query)
     val plan = result.executionPlanDescription().toString
 
-    plan.toString should include("NestedPlanExpression(VarExpand-Argument)")
+    plan.toString should include("NestedPlanExistsExpression(VarExpand-Argument)")
   }
 }
