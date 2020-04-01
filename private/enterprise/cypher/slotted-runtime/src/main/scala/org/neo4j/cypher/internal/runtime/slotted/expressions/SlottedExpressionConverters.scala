@@ -154,7 +154,7 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan, maybeOwningPi
       case e: ExpressionVariable =>
         Some(commands.expressions.ExpressionVariable(e.offset, e.name))
       case e: NestedPipeCollectExpression =>
-        Some(slotted.expressions.NestedPipeSlottedExpression(
+        Some(slotted.expressions.NestedPipeCollectSlottedExpression(
           e.pipe,
           self.toCommandExpression(id, e.projection),
           physicalPlan.nestedPlanArgumentConfigurations(e.pipe.id),
