@@ -113,10 +113,11 @@ trait ArgumentStateMap[S <: ArgumentState] {
    * The semantics of this call differ depending on whether this ASM is ordered.
    *
    * Ordered:
-   * Returns the [[ArgumentState]] for the next argumentId, if is completed, otherwise `null`.
+   * Returns the [[ArgumentState]] for up to the next n argumentIds, as long as they are completed.
+   * If the next argument state is not completed, returns `null`.
    *
    * Unordered:
-   * Take the [[ArgumentState]] of one complete argument. The [[ArgumentState]] will
+   * Take the [[ArgumentState]] of n complete arguments. The [[ArgumentState]] will
    * be removed from the [[ArgumentStateMap]] and cannot be taken again or modified after this call.
     *
     * @param n the maximum number of arguments to take

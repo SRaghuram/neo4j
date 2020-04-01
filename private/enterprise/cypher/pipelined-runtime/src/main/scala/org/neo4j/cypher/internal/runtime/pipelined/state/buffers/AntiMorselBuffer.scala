@@ -56,14 +56,15 @@ class AntiMorselBuffer(id: BufferId,
   }
 
   private def getNextEmptyArgumentState(): MorselData = {
-    var argumentState = argumentStateMap.takeOneCompleted()
-    while (argumentState != null) {
+    var argumentStateList = argumentStateMap.takeCompleted(1)
+    while (argumentStateList != null) {
+      val argumentState = argumentStateList.head
       if (argumentState.didReceiveData) {
         val allMorsels = argumentState.takeAll()
         val morsels = if (null != allMorsels) allMorsels else IndexedSeq.empty
         // no need to return end of non-empty stream, but we need to close so counts are updated
         closeOne(EndOfNonEmptyStream, morsels.size, argumentState.argumentRowIdsForReducers)
-        argumentState = argumentStateMap.takeOneCompleted()
+        argumentStateList = argumentStateMap.takeCompleted(1)
       } else {
         return MorselData(IndexedSeq.empty, EndOfEmptyStream(argumentState.argumentRow), argumentState.argumentRowIdsForReducers)
       }

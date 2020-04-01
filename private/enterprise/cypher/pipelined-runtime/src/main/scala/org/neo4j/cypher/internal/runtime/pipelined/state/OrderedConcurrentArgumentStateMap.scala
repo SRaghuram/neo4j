@@ -11,6 +11,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
 
+import scala.collection.mutable.ArrayBuffer
+
 /**
  * This is an ordered argument state map. Order is kept by `lastCompletedArgumentId` and overriding all relevant methods.
  */
@@ -22,8 +24,22 @@ class OrderedConcurrentArgumentStateMap[STATE <: ArgumentState](argumentStateMap
   @volatile
   protected var lastCompletedArgumentId: Long = -1
 
-  override def takeOneCompleted(): STATE = {
-    nextIfCompletedOrNull((state, isCompleted) => if (isCompleted) state else null.asInstanceOf[STATE])
+  override def takeCompleted(n: Int): IndexedSeq[STATE] = {
+    var nextIsComplete = true
+    val builder = new ArrayBuffer[STATE]
+
+    while(nextIsComplete && builder.size < n) {
+      val state = nextIfCompletedOrNull((state, isCompleted) => if (isCompleted) state else null.asInstanceOf[STATE])
+      if (state == null) {
+        nextIsComplete = false
+      } else {
+        builder += state
+      }
+    }
+    if (builder.isEmpty)
+      null.asInstanceOf[IndexedSeq[STATE]]
+    else
+      builder
   }
 
   override def takeOneIfCompletedOrElsePeek(): ArgumentStateWithCompleted[STATE] = {
