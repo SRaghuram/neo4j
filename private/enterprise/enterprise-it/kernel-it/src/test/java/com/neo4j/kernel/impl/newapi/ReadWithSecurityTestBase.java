@@ -49,6 +49,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
+import static org.neo4j.kernel.impl.newapi.AllStoreHolder.NO_ID;
 import static org.neo4j.token.api.TokenConstants.ANY_LABEL;
 import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 
@@ -68,7 +69,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         {
             tx.schema().indexFor( label( "Bar" ) ).on( "prop1" ).withName( "barIndex" ).create();
             tx.schema().indexFor( label( "Baz" ) ).on( "prop1" ).withName( "bazIndex" ).create();
-            tx.schema().indexFor( label( "Bar" ) ).on( "prop2" ).withName( "distinctBarIndex" ).create();
+            tx.schema().constraintFor( label( "Bar" ) ).assertPropertyIsUnique( "prop2" ).withName( "distinctBarIndex" ).create();
             tx.commit();
         }
 
@@ -177,7 +178,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
     }
 
     @Test
-    void allNodesScan2() throws Throwable
+    void allNodesScanWrappedInScan() throws Throwable
     {
         // given
         changeUser( getLoginContext() );
@@ -220,7 +221,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
     }
 
     @Test
-    void nodeLabelScan2() throws Throwable
+    void nodeLabelScanWrappedInScan() throws Throwable
     {
         // given
         changeUser( getLoginContext() );
@@ -275,7 +276,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         changeUser( getLoginContext() );
 
         // when
-        long nodesCount = read.countsForNode( barLabel );
+        long nodesCount = read.countsForNodeWithoutTxState( barLabel );
 
         // then
         assertThat( nodesCount, equalTo( 1L ) );
@@ -295,7 +296,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
     }
 
     @Test
-    void singleNode() throws Throwable
+    void singleNodeAllowedLabel() throws Throwable
     {
         // given
         changeUser( getLoginContext() );
@@ -315,7 +316,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
     }
 
     @Test
-    void singleNode2() throws Throwable
+    void singleNodeDeniedLabel() throws Throwable
     {
         // given
         changeUser( getLoginContext() );
@@ -370,7 +371,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         }
 
         // then
-        assertThat( ids, containsInAnyOrder( -1L, bar ) );
+        assertThat( ids, containsInAnyOrder( NO_ID, bar ) );
     }
 
     @Test
@@ -417,7 +418,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
     }
 
     @Test
-    void allRelationshipsScan2() throws Throwable
+    void allRelationshipsScanWrappedInScan() throws Throwable
     {
         // given
         changeUser( getLoginContext() );
@@ -524,7 +525,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
     }
 
     @Test
-    void singleRelationship() throws Throwable
+    void singleRelationshipAllowed() throws Throwable
     {
         // given
         changeUser( getLoginContext() );
@@ -544,7 +545,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
     }
 
     @Test
-    void singleRelationship2() throws Throwable
+    void singleRelationshipDeniedEndNode() throws Throwable
     {
         // given
         changeUser( getLoginContext() );
@@ -564,7 +565,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
     }
 
     @Test
-    void singleRelationship3() throws Throwable
+    void singleRelationshipNotAllowedType() throws Throwable
     {
         // given
         changeUser( getLoginContext() );
