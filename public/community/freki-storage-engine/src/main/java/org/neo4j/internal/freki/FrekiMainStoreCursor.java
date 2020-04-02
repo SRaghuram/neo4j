@@ -43,6 +43,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     final CursorAccessPatternTracer cursorAccessPatternTracer;
     final CursorAccessPatternTracer.ThreadAccess cursorAccessTracer;
     final PageCursorTracer cursorTracer;
+    boolean forceLoad;
 
     private Header header;
     FrekiCursorData data;
@@ -281,6 +282,11 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     int relationshipTypeOffset( int typeIndex )
     {
         return typeIndex == 0 ? firstRelationshipTypeOffset : firstRelationshipTypeOffset + relationshipTypeOffsets[typeIndex - 1];
+    }
+
+    public void setForceLoad()
+    {
+        this.forceLoad = true;
     }
 
     @Override
