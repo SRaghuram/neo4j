@@ -66,6 +66,8 @@ class FabricByDefaultTest
         FeatureToggles.set( FabricDatabaseManager.class, FabricDatabaseManager.FABRIC_BY_DEFAULT_FLAG_NAME, true );
 
         var configProperties = Map.of(
+                "fabric.database.name", "fabric",
+                "fabric.graph.0.uri", "neo4j://dummy:1234",
                 "fabric.driver.connection.encrypted", "false",
                 "dbms.connector.bolt.listen_address", "0.0.0.0:0",
                 "dbms.connector.bolt.enabled", "true"
@@ -245,7 +247,7 @@ class FabricByDefaultTest
     @Test
     void testSubqueryWithSet()
     {
-        List<Record> r = inTx( driver, neo4j, tx ->
+        List<Record> r = inTx( driver, intA, tx ->
         {
             var query = joinAsLines(
                     "WITH 1 AS x",
@@ -295,8 +297,8 @@ class FabricByDefaultTest
             return tx.run( query ).stream().map( r -> r.get( "foo" ).asString() ).collect( Collectors.toList() );
         } );
 
-        assertThat( result.size() ).isEqualTo( 2 );
-        assertThat( result ).contains( "read", "read" );
+        assertThat( result.size() ).isEqualTo( 1 );
+        assertThat( result ).contains( "read" );
     }
 
     @Test

@@ -100,6 +100,10 @@ public class FabricDatabaseManager extends LifecycleAdapter
         return !isSystemDatabase && (fabricByDefault || isConfiguredFabricDatabase( databaseNameRaw ));
     }
 
+    public boolean hasFabricRoutingTable( String databaseNameRaw ) {
+        return isConfiguredFabricDatabase( databaseNameRaw );
+    }
+
     public boolean fabricEnabledForAllDatabases()
     {
         return FeatureToggles.flag( FabricDatabaseManager.class, FABRIC_BY_DEFAULT_FLAG_NAME, false );
