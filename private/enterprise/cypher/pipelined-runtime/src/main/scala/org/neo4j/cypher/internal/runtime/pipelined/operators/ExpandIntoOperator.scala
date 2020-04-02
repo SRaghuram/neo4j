@@ -258,10 +258,9 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
    *    var innerLoop = false
    *    if (fromNode != -1L && toNode != -1L) ) {
    *      nodeCursor = resources.cursorPools.nodeCursorPool.allocate()
-   *      groupCursor = resources.cursorPools.relationshipGroupCursorPool.allocate()
    *      traversalCursor = resources.cursorPools.relationshipTraversalCursorPool.allocate()
    *      read.singleNode(node, nodeCursor)
-   *      relationships = ExpandIntoCursors(read, nodeCursor, groupCursor, traversalCursor, fromNode, toNode, types)
+   *      relationships = expandInto.connectingRelationships(nodeCursor, traversalCursor, fromNode, types, toNode)
    *      this.canContinue = relationships.next()
    *      true
    *    }
@@ -297,7 +296,7 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
    *       outputRow.copyFrom(inputMorsel)
    *       outputRow.setLongAt(relOffset, relId)
    *       <<< inner.genOperate() >>>
-   *       val tmp = relationship.next()
+   *       val tmp = relationships.next()
    *       profileRow(tmp)
    *       this.canContinue = tmp
    *       }
@@ -330,10 +329,8 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
    * {{{
    *     val pools = resources.cursorPools
    *     pools.nodeCursorPool.free(nodeCursor)
-   *     pools.relationshipGroupCursorPool.free(groupCursor)
    *     pools.relationshipTraversalCursorPool.free(traversalCursor)
    *     nodeCursor = null
-   *     groupCursor = null
    *     traversalCursor = null
    *     relationships = null
    * }}}

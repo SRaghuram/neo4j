@@ -1497,7 +1497,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
       else {
         val variableName = namer.nextVariableName()
         val entityId = getEntityId(offsetIsForLongSlot, offset, entityType, nullable)
-        val (propertyGet, txStatePropertyGet, cursor, cursorVar) = callPropertyGet(entityType)
+        val (getFromStore, txStatePropertyGet, cursorVar) = callPropertyGet(entityType, constant(token), offset)
         def checkPropertyTxState(continuation: IntermediateRepresentation): IntermediateRepresentation = {
           if (readOnly) continuation
           else {
@@ -1529,7 +1529,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
                   block(
                     assign(variableName,
                            getCachedPropertyAt(property,
-                                               invoke(DB_ACCESS, propertyGet, entityId, constant(token), cursor, PROPERTY_CURSOR, constant(true)))))
+                                               getFromStore)))
                     )
                   )
                 )
@@ -1556,7 +1556,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
       val f = field[Int](namer.nextVariableName(), constant(-1))
       val variableName = namer.nextVariableName()
       val entityId = getEntityId(offsetIsForLongSlot, offset, entityType, nullable)
-      val (propertyGet, txStatePropertyGet, cursor, cursorVar) = callPropertyGet(entityType)
+      val (getFromStore, txStatePropertyGet, cursorVar) = callPropertyGet(entityType, loadField(f), offset)
       def checkPropertyTxState(continuation: IntermediateRepresentation): IntermediateRepresentation = {
         if (readOnly) continuation
         else {
@@ -1589,7 +1589,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
                 block(
                   assign(variableName,
                          getCachedPropertyAt(property,
-                                             invoke(DB_ACCESS, propertyGet, entityId, loadField(f), cursor, PROPERTY_CURSOR, constant(true))))
+                                             getFromStore))
                   )
                 )
               )
@@ -3188,11 +3188,11 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
     }
   }
 
-  private def callPropertyGet(entityType: EntityType) = entityType match {
+  private def callPropertyGet(entityType: EntityType, token: IntermediateRepresentation, offset: Int): (IntermediateRepresentation, Method, LocalVariable) = entityType match {
     case NODE_TYPE =>
-      (NODE_PROPERTY, GET_TX_STATE_NODE_PROP, NODE_CURSOR, vNODE_CURSOR)
+      (getNodeProperty(token, offset), GET_TX_STATE_NODE_PROP, vNODE_CURSOR)
     case RELATIONSHIP_TYPE =>
-      (RELATIONSHIP_PROPERTY, GET_TX_STATE_RELATIONSHIP_PROP, RELATIONSHIP_CURSOR, vRELATIONSHIP_CURSOR)
+      (getRelationshipProperty(token, offset), GET_TX_STATE_RELATIONSHIP_PROP, vRELATIONSHIP_CURSOR)
   }
 
   private def callPropertyExists(entityType: EntityType) = entityType match {
