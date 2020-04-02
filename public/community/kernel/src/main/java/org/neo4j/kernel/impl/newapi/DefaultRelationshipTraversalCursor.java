@@ -81,6 +81,10 @@ class DefaultRelationshipTraversalCursor extends DefaultRelationshipCursor<Stora
         {
             nodeCursor.storeCursor.relationships( storeCursor, selection );
         }
+        else
+        {
+            storeCursor.reset();
+        }
         init( read );
         this.addedRelationships = ImmutableEmptyLongIterator.INSTANCE;
     }
