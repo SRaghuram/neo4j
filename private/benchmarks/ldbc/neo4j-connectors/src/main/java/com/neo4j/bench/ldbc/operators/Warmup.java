@@ -7,7 +7,6 @@ package com.neo4j.bench.ldbc.operators;
 
 import com.ldbc.driver.DbException;
 import com.ldbc.driver.control.LoggingService;
-import com.ldbc.driver.temporal.TemporalUtil;
 
 import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.NodeCursor;
@@ -16,49 +15,46 @@ import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
-import org.neo4j.io.ByteUnit;
 import org.neo4j.kernel.api.Kernel;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.StoreAccess;
-import org.neo4j.kernel.impl.store.format.standard.NodeRecordFormat;
-import org.neo4j.kernel.impl.store.format.standard.RelationshipRecordFormat;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
-import static java.lang.String.format;
-import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.api.KernelTransaction.Type.IMPLICIT;
 
 public class Warmup
 {
     public static void warmup( GraphDatabaseAPI db, LoggingService loggingService ) throws DbException
     {
-        TemporalUtil temporal = new TemporalUtil();
+        // Disable all this, we are not record format..
 
-        int dbPageSizeBytes = (int) ByteUnit.kibiBytes( 8 );
-        int nodesPerPage = dbPageSizeBytes / NodeRecordFormat.RECORD_SIZE;
-        int relationshipsPerPage = dbPageSizeBytes / RelationshipRecordFormat.RECORD_SIZE;
-
-        NeoStores neoStore = getNeoStores( db );
-
-        long nodeStoreWarmupStart = System.currentTimeMillis();
-
-        warmNodeStore(
-                db,
-                neoStore.getNodeStore().getHighestPossibleIdInUse( NULL ),
-                nodesPerPage );
-
-        long relationshipStoreWarmupStart = System.currentTimeMillis();
-        loggingService.info( format( "Node store warmed in: %s",
-                temporal.milliDurationToString( relationshipStoreWarmupStart - nodeStoreWarmupStart ) ) );
-
-        warmRelationshipStore(
-                db,
-                neoStore.getRelationshipStore().getHighestPossibleIdInUse( NULL ),
-                relationshipsPerPage );
-
-        loggingService.info( format( "Relationship store warmed in: %s",
-                temporal.milliDurationToString( System.currentTimeMillis() - relationshipStoreWarmupStart ) ) );
+//        TemporalUtil temporal = new TemporalUtil();
+//
+//        int dbPageSizeBytes = (int) ByteUnit.kibiBytes( 8 );
+//        int nodesPerPage = dbPageSizeBytes / NodeRecordFormat.RECORD_SIZE;
+//        int relationshipsPerPage = dbPageSizeBytes / RelationshipRecordFormat.RECORD_SIZE;
+//
+//        NeoStores neoStore = getNeoStores( db );
+//
+//        long nodeStoreWarmupStart = System.currentTimeMillis();
+//
+//        warmNodeStore(
+//                db,
+//                neoStore.getNodeStore().getHighestPossibleIdInUse( NULL ),
+//                nodesPerPage );
+//
+//        long relationshipStoreWarmupStart = System.currentTimeMillis();
+//        loggingService.info( format( "Node store warmed in: %s",
+//                temporal.milliDurationToString( relationshipStoreWarmupStart - nodeStoreWarmupStart ) ) );
+//
+//        warmRelationshipStore(
+//                db,
+//                neoStore.getRelationshipStore().getHighestPossibleIdInUse( NULL ),
+//                relationshipsPerPage );
+//
+//        loggingService.info( format( "Relationship store warmed in: %s",
+//                temporal.milliDurationToString( System.currentTimeMillis() - relationshipStoreWarmupStart ) ) );
     }
 
     private static void warmNodeStore(
