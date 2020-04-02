@@ -18,16 +18,21 @@ import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration;
 import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.options.Planner;
+import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.connection.GraphMetadataProxy;
 import com.neo4j.bench.ldbc.connection.Neo4jApi;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
 import com.neo4j.bench.ldbc.profiling.ProfilerRunner;
-import com.neo4j.bench.common.options.Planner;
-import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.ldbc.utils.Utils;
+import com.neo4j.tools.migration.MigrateDataIntoOtherDatabase;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -42,6 +47,8 @@ import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.hasWrites;
 import static java.lang.String.format;
 import static java.time.Duration.between;
 import static java.time.Instant.now;
+import static org.neo4j.test.proc.ProcessUtil.getClassPath;
+import static org.neo4j.test.proc.ProcessUtil.getJavaExecutable;
 
 @Command(
         name = "run",
@@ -254,6 +261,8 @@ public class RunCommand implements Runnable
             {
                 ldbcConfig = ldbcConfig.applyArg( Neo4jDb.CYPHER_RUNTIME_KEY, runtime.name() );
             }
+
+            upgradeToFrekiIfRecord();
             Client.main( ((ConsoleAndFileDriverConfiguration) ldbcConfig).toArgs() );
 
             if ( null != waitForFile )
@@ -274,6 +283,59 @@ public class RunCommand implements Runnable
         {
             e.printStackTrace();
             System.exit( 1 );
+        }
+    }
+
+    private void upgradeToFrekiIfRecord()
+    {
+        try ( Store store = Neo4jStore.createFrom( storeDir.toPath() ) )
+        {
+            if ( !store.isFreki() )
+            {
+                System.out.println( "Record store detected, migrating to freki." );
+                Path tmpFrekiStoreDir = null;
+                try
+                {
+                    tmpFrekiStoreDir = Files.createTempDirectory( "freki" );
+                    String[] args = {
+                            getJavaExecutable().toString(),
+                            "-cp", getClassPath(),
+                            MigrateDataIntoOtherDatabase.class.getName(),
+                            storeDir.toPath().toAbsolutePath().toString(),
+                            tmpFrekiStoreDir.toAbsolutePath().toString()
+                    };
+                    int exitCode = new ProcessBuilder( args )
+                            .inheritIO()
+                            .start()
+                            .waitFor();
+                    if ( exitCode != 0 )
+                    {
+                        throw new RuntimeException( "Migration failed with code: " + exitCode );
+                    }
+                    org.neo4j.io.fs.FileUtils.deleteRecursively( storeDir );
+                    org.neo4j.io.fs.FileUtils.moveFile( tmpFrekiStoreDir.toFile(), storeDir );
+                    System.out.println( "Successful migration to Freki." );
+                }
+                catch ( InterruptedException e )
+                {
+                    throw new RuntimeException( "Unexpected interruption during migration", e );
+                }
+                finally
+                {
+                    if ( tmpFrekiStoreDir != null )
+                    {
+                        org.neo4j.io.fs.FileUtils.deleteRecursively( tmpFrekiStoreDir.toFile() );
+                    }
+                }
+            }
+            else
+            {
+                System.out.println( "Already freki format, no migration needed." );
+            }
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
         }
     }
 
