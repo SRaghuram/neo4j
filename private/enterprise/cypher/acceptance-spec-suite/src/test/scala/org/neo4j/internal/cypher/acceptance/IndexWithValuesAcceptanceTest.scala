@@ -258,7 +258,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should plan index seek with GetValue when the property is part of a distinct column") {
-    val result = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH (n:Awesome) WHERE n.prop1 > 41 AND n.prop1 < 44 RETURN DISTINCT n.prop1", executeBefore = createSomeNodes,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "PROFILE MATCH (n:Awesome) WHERE n.prop1 > 41 AND n.prop1 < 44 RETURN DISTINCT n.prop1", executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("OrderedDistinct")
         .withDBHits(0)
         .onTopOf(aPlan("NodeIndexSeekByRange")
@@ -273,7 +273,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     for (i <- 41 to 100) createLabeledNode(Map("prop1" -> i), "Super")
     graph.createIndex("Super", "prop1")
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 WITH DISTINCT n.prop1 as y MATCH (n:Super) WHERE n.prop1 < y RETURN n.prop1", executeBefore = createSomeNodes,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 WITH DISTINCT n.prop1 as y MATCH (n:Super) WHERE n.prop1 < y RETURN n.prop1", executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(_ should {
         not(includeSomewhere.aPlan("Projection").withDBHits()) and
           includeSomewhere.aPlan("NodeIndexSeekByRange") and

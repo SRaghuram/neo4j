@@ -186,7 +186,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken: Order by index backed property in a plan with a distinct") {
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (a:Awesome)-[r]->(b) WHERE a.prop2 > 1 RETURN DISTINCT a.prop2 ORDER BY a.prop2 $cypherToken", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should (
