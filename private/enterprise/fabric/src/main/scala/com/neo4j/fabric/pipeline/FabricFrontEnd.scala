@@ -73,19 +73,6 @@ case class FabricFrontEnd(
     private def assertNotPeriodicCommit(options: QueryOptions): Unit =
       if (options.isPeriodicCommit) Errors.notSupported("Periodic commit")
 
-    private def assertOptionsNotSet(options: QueryOptions): Unit = {
-      def check[T](name: String, a: T, b: T): Unit =
-        if (a != b) Errors.notSupported(s"Query option '$name'")
-
-      check("version", options.version, cypherConfig.version)
-      check("planner", options.planner, cypherConfig.planner)
-      check("runtime", options.runtime, cypherConfig.runtime)
-      check("updateStrategy", options.updateStrategy, CypherUpdateStrategy.default)
-      check("expressionEngine", options.expressionEngine, cypherConfig.expressionEngineOption)
-      check("operatorEngine", options.operatorEngine, cypherConfig.operatorEngine)
-      check("interpretedPipesFallback", options.interpretedPipesFallback, cypherConfig.interpretedPipesFallback)
-    }
-
     private def assertValidExecutionType(options: QueryOptions): Unit =
       executionType(options)
 
@@ -99,7 +86,6 @@ case class FabricFrontEnd(
       val query = preParser.preParseQuery(queryString)
       assertValidExecutionType(query.options)
       assertNotPeriodicCommit(query.options)
-      assertOptionsNotSet(query.options)
       query
     }
   }

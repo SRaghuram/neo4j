@@ -5,6 +5,7 @@
  */
 package com.neo4j.fabric.planning
 
+import org.neo4j.cypher.internal.QueryOptions
 import org.neo4j.cypher.internal.ast.Clause
 import org.neo4j.cypher.internal.ast.Query
 import org.neo4j.cypher.internal.ast.SingleQuery
@@ -36,11 +37,19 @@ object QueryRenderer {
 
   private val pos = InputPosition.NONE
 
+  private val NL = System.lineSeparator()
+
   def render(clauses: Seq[Clause]): String =
     render(Query(None, SingleQuery(clauses)(pos))(pos))
 
   def render(statement: Statement): String =
     renderer.asString(statement)
+
+  def render(statement: Statement, options: QueryOptions): String = {
+    val cypher = options.render.map(_ + NL).getOrElse("")
+    val query = renderer.asString(statement)
+    cypher + query
+  }
 
   def pretty(expression: Expression): String =
     expressionsPretty.apply(expression)

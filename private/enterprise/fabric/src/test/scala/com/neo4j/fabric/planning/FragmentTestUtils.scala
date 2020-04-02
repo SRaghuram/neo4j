@@ -15,6 +15,7 @@ import com.neo4j.fabric.planning.Fragment.Exec
 import com.neo4j.fabric.planning.Fragment.Union
 import org.neo4j.configuration.Config
 import org.neo4j.cypher.internal.CypherConfiguration
+import org.neo4j.cypher.internal.PreParsedQuery
 import org.neo4j.cypher.internal.ast
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.ast.Query
@@ -75,4 +76,7 @@ trait FragmentTestUtils {
 
   def parse(query: String): Statement =
     pipeline(query).parseAndPrepare.process().statement()
+
+  def preParse(query: String): PreParsedQuery =
+    frontend.preParsing.preParse(query)
 }

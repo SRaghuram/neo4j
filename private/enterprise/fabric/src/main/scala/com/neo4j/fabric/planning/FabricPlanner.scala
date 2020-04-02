@@ -106,17 +106,23 @@ case class FabricPlanner(
     def asLocal(fragment: Fragment.Exec): LocalQuery = LocalQuery(
       query = FullyParsedQuery(
         state = pipeline.checkAndFinalize.process(fragment.query),
-        options = QueryOptions.default.copy(
-          runtime = CypherRuntimeOption.slotted,
-          expressionEngine = CypherExpressionEngineOption.interpreted,
-          materializedEntitiesMode = true,
-        )
+        options = optionsFor(fragment)
       ),
       queryType = fragment.queryType
     )
 
+    private def optionsFor(fragment: Fragment.Exec) =
+      if (isFabricFragment(fragment))
+        QueryOptions.default.copy(
+          runtime = CypherRuntimeOption.slotted,
+          expressionEngine = CypherExpressionEngineOption.interpreted,
+          materializedEntitiesMode = true,
+        )
+      else
+        query.options
+
     def asRemote(fragment: Fragment.Exec): RemoteQuery = RemoteQuery(
-      query = QueryRenderer.render(fragment.query),
+      query = QueryRenderer.render(fragment.query, optionsFor(fragment)),
       queryType = fragment.queryType,
     )
 
@@ -124,18 +130,18 @@ case class FabricPlanner(
       def inFabricDefaultContext =
         fabricContextName.contains(defaultContextName)
 
-      def isFabricFragment(fragment: Fragment): Boolean =
-        fragment match {
-          case chain: Fragment.Chain =>
-            UseEvaluation.evaluateStatic(chain.use.graphSelection)
-              .exists(cn => cn.parts == fabricContextName.toList)
-
-          case union: Fragment.Union =>
-            isFabricFragment(union.lhs) && isFabricFragment(union.rhs)
-        }
-
       inFabricDefaultContext || isFabricFragment(fragment)
     }
+
+    private def isFabricFragment(fragment: Fragment): Boolean =
+      fragment match {
+        case chain: Fragment.Chain =>
+          UseEvaluation.evaluateStatic(chain.use.graphSelection)
+            .exists(cn => cn.parts == fabricContextName.toList)
+
+        case union: Fragment.Union =>
+          isFabricFragment(union.lhs) && isFabricFragment(union.rhs)
+      }
 
     private[planning] def withForceFabricContext(force: Boolean) =
       if (force) this.copy(fabricContextName = Some(defaultContextName))

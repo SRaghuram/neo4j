@@ -19,10 +19,20 @@ import com.neo4j.fabric.util.Folded.Descend
 import com.neo4j.fabric.util.Folded.FoldableOps
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.configuration.helpers.NormalizedGraphName
+import org.neo4j.cypher.CypherExecutionMode
+import org.neo4j.cypher.CypherExpressionEngineOption
+import org.neo4j.cypher.CypherInterpretedPipesFallbackOption
+import org.neo4j.cypher.CypherOperatorEngineOption
+import org.neo4j.cypher.CypherPlannerOption
+import org.neo4j.cypher.CypherRuntimeOption
+import org.neo4j.cypher.CypherUpdateStrategy
+import org.neo4j.cypher.CypherVersion
 import org.neo4j.cypher.internal.FullyParsedQuery
+import org.neo4j.cypher.internal.QueryOptions
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.ast.Query
 import org.neo4j.cypher.internal.ast.SingleQuery
+import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.tracing.TimingCompilationTracer
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.symbols.CypherType
@@ -68,12 +78,17 @@ class FabricPlannerTest
   private def plan(query: String, params: MapValue = params, fabricContext: Boolean = false) =
     instance(query, params, fabricContext).plan
 
-  private def asRemote(query: String, partSelector: Fragment => Fragment.Exec = _.as[Fragment.Exec]) = {
-    val inst = instance(query, fabricContext = true)
+  private def asRemote(
+    query: String,
+    partSelector: Fragment => Fragment.Exec = _.as[Fragment.Exec],
+    fabricContext: Boolean = false,
+  ) = {
+    val inst = instance(query, fabricContext = fabricContext)
     inst.asRemote(partSelector(inst.plan.query)).query
   }
 
   "asRemote: " - {
+
     "single query" in {
       val remote = asRemote(
         """RETURN 1 AS x
@@ -107,7 +122,8 @@ class FabricPlannerTest
           |}
           |RETURN 1 AS x
           |""".stripMargin,
-        query => query.as[Fragment.Exec].input.as[Fragment.Apply].inner.as[Fragment.Exec]
+        query => query.as[Fragment.Exec].input.as[Fragment.Apply].inner.as[Fragment.Exec],
+        fabricContext = true,
       )
 
       parse(remote).as[Query].part.as[SingleQuery].clauses
@@ -122,15 +138,18 @@ class FabricPlannerTest
       val inst = instance(
         """WITH 1 AS a, 2 AS b
           |CALL {
+          |  USE foo
           |  RETURN 3 AS c
           |    UNION
+          |  USE foo
           |  WITH a
           |  RETURN a AS c
           |    UNION
+          |  USE foo
           |  WITH a, b
           |  RETURN b AS c
           |    UNION
-          |  USE baz
+          |  USE bar
           |  WITH b
           |  RETURN b AS c
           |}
@@ -505,18 +524,110 @@ class FabricPlannerTest
         ))
     }
 
-    "disallow options" in {
-      def shouldFail(qry: String, error: String) =
-        the[InvalidSemanticsException].thrownBy(plan(qry))
-          .check(_.getMessage.should(include(error)))
+    "passes options on in remote and local parts" in {
 
-      shouldFail("CYPHER 3.5 RETURN 1", "Query option 'version' is not supported in Fabric")
-      shouldFail("CYPHER planner=cost RETURN 1", "Query option 'planner' is not supported in Fabric")
-      shouldFail("CYPHER runtime=parallel RETURN 1", "Query option 'runtime' is not supported in Fabric")
-      shouldFail("CYPHER updateStrategy=eager RETURN 1", "Query option 'updateStrategy' is not supported in Fabric")
-      shouldFail("CYPHER expressionEngine=compiled RETURN 1", "Query option 'expressionEngine' is not supported in Fabric")
-      shouldFail("CYPHER operatorEngine=interpreted RETURN 1", "Query option 'operatorEngine' is not supported in Fabric")
-      shouldFail("CYPHER interpretedPipesFallback=all RETURN 1", "Query option 'interpretedPipesFallback' is not supported in Fabric")
+      val inst = instance(
+        """CYPHER 4.0
+          |  planner=cost
+          |  runtime=parallel
+          |  updateStrategy=eager
+          |  expressionEngine=compiled
+          |  operatorEngine=interpreted
+          |  interpretedPipesFallback=disabled
+          |  debug=foo
+          |  debug=bar
+          |WITH 1 AS a
+          |CALL {
+          |  USE foo
+          |  WITH a AS a
+          |  RETURN 1 AS y
+          |}
+          |RETURN 1 AS x
+          |""".stripMargin,
+        fabricContext = true)
+
+      val inner = inst.plan.query.as[Fragment.Exec].input.as[Fragment.Apply].inner.as[Fragment.Exec]
+      val last = inst.plan.query.as[Fragment.Exec]
+
+      val expectedInner = QueryOptions(
+        offset = InputPosition.NONE,
+        isPeriodicCommit = false,
+        executionMode = CypherExecutionMode.normal,
+        version = CypherVersion.v4_0,
+        planner = CypherPlannerOption.cost,
+        runtime = CypherRuntimeOption.parallel,
+        updateStrategy = CypherUpdateStrategy.eager,
+        expressionEngine = CypherExpressionEngineOption.compiled,
+        operatorEngine = CypherOperatorEngineOption.interpreted,
+        interpretedPipesFallback = CypherInterpretedPipesFallbackOption.disabled,
+        debugOptions = Set("foo", "bar"),
+      )
+
+      val expectedLast = QueryOptions.default.copy(
+        runtime = CypherRuntimeOption.slotted,
+        expressionEngine = CypherExpressionEngineOption.interpreted,
+        materializedEntitiesMode = true,
+      )
+
+      preParse(inst.asRemote(inner).query).options.copy(offset = InputPosition.NONE)
+        .shouldEqual(expectedInner)
+
+      inst.asLocal(inner).query.options.copy(offset = InputPosition.NONE)
+        .shouldEqual(expectedInner)
+
+      inst.asLocal(last).query.options.copy(offset = InputPosition.NONE)
+        .shouldEqual(expectedLast)
+    }
+
+    "default query options are not rendered" in {
+
+      val inst = instance(
+        """CYPHER 4.1
+          |  interpretedPipesFallback=default
+          |WITH 1 AS a
+          |CALL {
+          |  USE foo
+          |  WITH a AS a
+          |  RETURN 1 AS y
+          |}
+          |RETURN 1 AS x
+          |""".stripMargin,
+        fabricContext = true)
+
+      val inner = inst.plan.query.as[Fragment.Exec].input.as[Fragment.Apply].inner.as[Fragment.Exec]
+      val last = inst.plan.query.as[Fragment.Exec]
+
+      val expectedInner = QueryOptions(
+        offset = InputPosition.NONE,
+        isPeriodicCommit = false,
+        executionMode = CypherExecutionMode.default,
+        version = CypherVersion.v4_1,
+        planner = CypherPlannerOption.default,
+        runtime = CypherRuntimeOption.default,
+        updateStrategy = CypherUpdateStrategy.default,
+        expressionEngine = CypherExpressionEngineOption.default,
+        operatorEngine = CypherOperatorEngineOption.default,
+        interpretedPipesFallback = CypherInterpretedPipesFallbackOption.default,
+        debugOptions = Set(),
+      )
+
+      val expectedLast = QueryOptions.default.copy(
+        runtime = CypherRuntimeOption.slotted,
+        expressionEngine = CypherExpressionEngineOption.interpreted,
+        materializedEntitiesMode = true,
+      )
+
+      val remote = inst.asRemote(inner).query
+      remote.should(not(include("CYPHER")))
+
+      preParse(remote).options.copy(offset = InputPosition.NONE)
+        .shouldEqual(expectedInner)
+
+      inst.asLocal(inner).query.options.copy(offset = InputPosition.NONE)
+        .shouldEqual(expectedInner)
+
+      inst.asLocal(last).query.options.copy(offset = InputPosition.NONE)
+        .shouldEqual(expectedLast)
     }
   }
 
