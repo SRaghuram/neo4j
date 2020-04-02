@@ -8,7 +8,6 @@ package com.neo4j.fabric.planning
 import java.time.Duration
 import java.util
 
-import com.neo4j.fabric.util.Folded.FoldableOps
 import com.neo4j.fabric.FabricTest
 import com.neo4j.fabric.ProcedureRegistryTestSupport
 import com.neo4j.fabric.config.FabricConfig
@@ -16,14 +15,15 @@ import com.neo4j.fabric.config.FabricConfig.Database
 import com.neo4j.fabric.config.FabricConfig.GlobalDriverConfig
 import com.neo4j.fabric.config.FabricConfig.Graph
 import com.neo4j.fabric.planning.FabricPlan.DebugOptions
-import com.neo4j.fabric.planning.Use.Declared
 import com.neo4j.fabric.util.Folded.Descend
+import com.neo4j.fabric.util.Folded.FoldableOps
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.configuration.helpers.NormalizedGraphName
 import org.neo4j.cypher.internal.FullyParsedQuery
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.ast.Query
 import org.neo4j.cypher.internal.ast.SingleQuery
+import org.neo4j.cypher.internal.tracing.TimingCompilationTracer
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.symbols.CypherType
 import org.neo4j.exceptions.InvalidSemanticsException
@@ -61,9 +61,6 @@ class FabricPlannerTest
   )
   private val config = makeConfig("mega")
   private val planner = FabricPlanner(config, cypherConfig, monitors, signatures)
-
-  private def instance(): planner.PlannerInstance =
-    instance("RETURN 1")
 
   private def instance(query: String, params: MapValue = params, fabricContext: Boolean = false): planner.PlannerInstance =
     planner.instance(query, params, defaultGraphName).withForceFabricContext(fabricContext)
@@ -1075,6 +1072,55 @@ class FabricPlannerTest
     }
   }
 
+  "FrontEnd setup:" - {
+
+    "compilation tracing" in {
+      object eventListener extends TimingCompilationTracer.EventListener {
+        var queries: Seq[String] = Seq()
+        var events: Seq[TimingCompilationTracer.QueryEvent] = Seq()
+        override def startQueryCompilation(query: String): Unit = queries = queries :+ query
+        override def queryCompiled(event: TimingCompilationTracer.QueryEvent): Unit = events = events :+ event
+        def use(func: => Unit): Unit = {
+          try {
+            monitors.addMonitorListener(this)
+            func
+          } finally {
+            monitors.removeMonitorListener(this)
+            queries = Seq()
+            events = Seq()
+          }
+        }
+      }
+
+      eventListener.use {
+
+        plan("RETURN 1")
+
+        eventListener.queries
+          .should(contain("RETURN 1"))
+
+        eventListener.events.map(_.query())
+          .should(contain("RETURN 1"))
+      }
+
+    }
+
+    "parameter types" in {
+
+      val inst = instance(
+        "RETURN $p AS p",
+        VirtualValues.map(Array("p"), Array(Values.of(1.1))))
+
+      val local = inst.asLocal(inst.plan.query.as[Fragment.Exec])
+
+      local.query.state.statement()
+        .shouldEqual(
+          query(return_(parameter("p", ct.float).as("p")))
+        )
+
+    }
+  }
+
   implicit class Caster[A](a: A) {
     def as[T](implicit ct: ClassTag[T]): T = {
       assert(ct.runtimeClass.isInstance(a), s"expected: ${ct.runtimeClass.getName}, was: ${a.getClass.getName}")
@@ -1092,8 +1138,6 @@ class FabricPlannerTest
     def asSingleQuery: SingleQuery =
       q.state.statement().as[Query].part.as[SingleQuery]
   }
-
-  def any: CypherType = CTAny
 
   val beFullyStitched: Matcher[Try[FabricPlan]] = Matcher[Try[FabricPlan]] {
     case Success(value)     =>

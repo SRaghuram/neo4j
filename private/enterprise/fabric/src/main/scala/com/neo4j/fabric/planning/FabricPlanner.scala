@@ -61,7 +61,7 @@ case class FabricPlanner(
     fabricContextName: Option[String],
   ) {
 
-    private val pipeline = frontend.Pipeline(query)
+    private val pipeline = frontend.Pipeline(query, queryParams)
 
     lazy val plan: FabricPlan = {
       val plan = queryCache.computeIfAbsent(

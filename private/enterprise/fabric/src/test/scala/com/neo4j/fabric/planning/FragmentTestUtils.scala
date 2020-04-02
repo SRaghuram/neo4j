@@ -22,6 +22,7 @@ import org.neo4j.cypher.internal.ast.Statement
 import org.neo4j.cypher.internal.ast.UseGraph
 import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.util.symbols.AnyType
+import org.neo4j.cypher.internal.util.symbols.FloatType
 import org.neo4j.monitoring.Monitors
 import org.neo4j.procedure.impl.GlobalProceduresRegistry
 import org.neo4j.values.virtual.MapValue
@@ -44,6 +45,7 @@ trait FragmentTestUtils {
 
   object ct {
     val any: AnyType = org.neo4j.cypher.internal.util.symbols.CTAny
+    val float: FloatType = org.neo4j.cypher.internal.util.symbols.CTFloat
   }
 
   private object AstUtils extends AstConstructionTestSupport
@@ -63,7 +65,7 @@ trait FragmentTestUtils {
   val frontend: FabricFrontEnd = FabricFrontEnd(cypherConfig, monitors, signatures)
 
   def pipeline(query: String): frontend.Pipeline =
-    frontend.Pipeline(frontend.preParsing.preParse(query))
+    frontend.Pipeline(frontend.preParsing.preParse(query), params)
 
   def fragment(query: String): Fragment = {
     val state = pipeline(query).parseAndPrepare.process()

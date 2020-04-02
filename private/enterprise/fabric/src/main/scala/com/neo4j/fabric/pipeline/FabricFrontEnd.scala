@@ -22,6 +22,7 @@ import org.neo4j.cypher.internal.ast.semantics.SemanticFeature.ExpressionsInView
 import org.neo4j.cypher.internal.ast.semantics.SemanticFeature.MultipleGraphs
 import org.neo4j.cypher.internal.ast.semantics.SemanticFeature.UseGraphSelector
 import org.neo4j.cypher.internal.compiler.Neo4jCypherExceptionFactory
+import org.neo4j.cypher.internal.compiler.helpers.ParameterValueTypeHelper
 import org.neo4j.cypher.internal.compiler.phases.Compatibility3_5
 import org.neo4j.cypher.internal.compiler.phases.Compatibility4_0
 import org.neo4j.cypher.internal.compiler.phases.Compatibility4_1
@@ -29,11 +30,9 @@ import org.neo4j.cypher.internal.compiler.phases.CompilationPhases
 import org.neo4j.cypher.internal.frontend.phases.BaseContext
 import org.neo4j.cypher.internal.frontend.phases.BaseState
 import org.neo4j.cypher.internal.frontend.phases.CompilationPhaseTracer
-import org.neo4j.cypher.internal.frontend.phases.Condition
 import org.neo4j.cypher.internal.frontend.phases.InitialState
 import org.neo4j.cypher.internal.frontend.phases.InternalNotificationLogger
 import org.neo4j.cypher.internal.frontend.phases.Monitors
-import org.neo4j.cypher.internal.frontend.phases.Phase
 import org.neo4j.cypher.internal.frontend.phases.RecordingNotificationLogger
 import org.neo4j.cypher.internal.frontend.phases.Transformer
 import org.neo4j.cypher.internal.planner.spi.CostBasedPlannerName
@@ -42,12 +41,12 @@ import org.neo4j.cypher.internal.planning.WrappedMonitors
 import org.neo4j.cypher.internal.rewriting.RewriterStepSequencer
 import org.neo4j.cypher.internal.rewriting.rewriters.GeneratingNamer
 import org.neo4j.cypher.internal.rewriting.rewriters.Never
-import org.neo4j.cypher.internal.rewriting.rewriters.expandStar
 import org.neo4j.cypher.internal.tracing.CompilationTracer
 import org.neo4j.cypher.internal.tracing.TimingCompilationTracer
 import org.neo4j.cypher.internal.util.CypherExceptionFactory
 import org.neo4j.graphdb.Notification
 import org.neo4j.monitoring
+import org.neo4j.values.virtual.MapValue
 
 
 case class FabricFrontEnd(
@@ -107,6 +106,7 @@ case class FabricFrontEnd(
 
   case class Pipeline(
     query: PreParsedQuery,
+    params: MapValue,
   ) {
 
     private val queryString = query.statement
@@ -143,7 +143,7 @@ case class FabricFrontEnd(
       innerVariableNamer = new GeneratingNamer,
       compatibilityMode = compatibilityMode,
       literalExtraction = Never,
-      parameterTypeMapping = Map.empty,
+      parameterTypeMapping = ParameterValueTypeHelper.asCypherTypeMap(params),
       semanticFeatures = semanticFeatures,
     )
 
