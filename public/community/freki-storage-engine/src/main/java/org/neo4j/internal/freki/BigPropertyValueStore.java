@@ -61,12 +61,17 @@ class BigPropertyValueStore extends BareBoneSingleFileStore implements SimpleBig
     {
         if ( !readOnly ) // header only contains information usable for write
         {
-            if ( mappedFile.getLastPageId() >= 0 )
+            try ( PageCursor cursor = openReadCursor( PageCursorTracer.NULL ) )
             {
-                try ( PageCursor cursor = openReadCursor( PageCursorTracer.NULL ) )
+                if ( cursor.next( 0 ) )
                 {
-                    nextPosition.set( cursor.getLong( 0 ) );
+                    do
+                    {
+                        nextPosition.set( cursor.getLong( 0 ) );
+                    }
+                    while ( cursor.shouldRetry() );
                 }
+                cursor.checkAndClearBoundsFlag();
             }
         }
     }
@@ -77,7 +82,9 @@ class BigPropertyValueStore extends BareBoneSingleFileStore implements SimpleBig
         {
             try ( PageCursor cursor = openWriteCursor( cursorTracer ) )
             {
+                cursor.next( 0 );
                 cursor.putLong( 0, nextPosition.get() );
+                cursor.checkAndClearBoundsFlag();
             }
         }
     }
