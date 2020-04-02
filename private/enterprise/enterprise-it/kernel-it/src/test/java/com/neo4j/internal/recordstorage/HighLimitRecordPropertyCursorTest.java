@@ -13,7 +13,6 @@ import java.util.stream.LongStream;
 
 import org.neo4j.internal.recordstorage.RecordPropertyCursor;
 import org.neo4j.internal.recordstorage.RecordPropertyCursorTest;
-import org.neo4j.io.pagecache.PageCacheOpenOptions;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.kernel.impl.store.DynamicArrayStore;
@@ -32,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.io.pagecache.PageCacheOpenOptions.ANY_PAGE_SIZE;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
+import static org.neo4j.storageengine.api.LongReference.longReference;
 
 class HighLimitRecordPropertyCursorTest extends RecordPropertyCursorTest
 {
@@ -67,7 +67,7 @@ class HighLimitRecordPropertyCursorTest extends RecordPropertyCursorTest
         }
 
         RecordPropertyCursor cursor = createCursor();
-        cursor.initNodeProperties( firstPropertyId );
+        cursor.initNodeProperties( longReference( firstPropertyId ) );
         assertTrue( cursor.next() );
         InvalidRecordException e = assertThrows( InvalidRecordException.class, cursor::next );
         assertThat( e ).hasMessageContaining( "claims to contain more blocks than can fit" );
@@ -98,7 +98,7 @@ class HighLimitRecordPropertyCursorTest extends RecordPropertyCursorTest
         }
 
         RecordPropertyCursor cursor = createCursor();
-        cursor.initNodeProperties( firstPropertyId );
+        cursor.initNodeProperties( longReference( firstPropertyId ) );
         assertTrue( cursor.next() );
         var e = assertThrows( InvalidRecordException.class, cursor::propertyValue );
         assertThat( e ).hasMessageContaining( "larger than the record size" );
@@ -129,7 +129,7 @@ class HighLimitRecordPropertyCursorTest extends RecordPropertyCursorTest
         }
 
         RecordPropertyCursor cursor = createCursor();
-        cursor.initNodeProperties( firstPropertyId );
+        cursor.initNodeProperties( longReference( firstPropertyId ) );
         assertTrue( cursor.next() );
         var e = assertThrows( InvalidRecordException.class, cursor::propertyValue );
         assertThat( e ).hasMessageContaining( "larger than the record size" );
