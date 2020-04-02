@@ -10,11 +10,10 @@ import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
-import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
@@ -22,7 +21,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfEmptyStream
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.OptionalArgumentStateBuffer
-import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.storable.Values
@@ -73,76 +71,32 @@ class OptionalOperator(val workIdentity: WorkIdentity,
     }
   }
 
-  class OTask(val morselData: MorselData) extends OptionalOperatorTask {
-
-    private val morselIterator = morselData.morsels.iterator
-    // To remember whether we already processed the ArgumentStream, which can lead to a null row.
-    private var consumedArgumentStream = false
-    private var currentMorsel: MorselReadCursor = _
+  class OTask(morselData: MorselData) extends InputLoopWithMorselDataTask(morselData) {
 
     override def workIdentity: WorkIdentity = OptionalOperator.this.workIdentity
 
-    override def operate(outputMorsel: Morsel, state: PipelinedQueryState, resources: QueryResources): Unit = {
-      val outputCursor = outputMorsel.writeCursor(onFirstRow = true)
-      while (outputCursor.onValidRow && canContinue) {
-        if (currentMorsel == null || !currentMorsel.onValidRow) {
-          if (morselIterator.hasNext) {
-            // Take the next morsel to process
-            currentMorsel = morselIterator.next().readCursor(onFirstRow = true)
-          } else {
-            // No more morsels to process
-            currentMorsel = null
-          }
-        }
+    override def initialize(state: PipelinedQueryState,
+                            resources: QueryResources): Unit = ()
 
-        if (currentMorsel != null) {
-          while (outputCursor.onValidRow && currentMorsel.onValidRow) {
-            outputCursor.copyFrom(currentMorsel)
-            outputCursor.next()
-            currentMorsel.next()
-          }
-        } else if (!consumedArgumentStream) {
-          morselData.argumentStream match {
-            case EndOfEmptyStream(viewOfArgumentRow) =>
-              // An argument id did not produce any rows. We need to manufacture a row with arguments + nulls
-              // 1) Copy arguments from state
-              outputCursor.copyFrom(viewOfArgumentRow, argumentSize.nLongs, argumentSize.nReferences)
-              // 2) Set nullable slots
-              setNullableSlotToNullFunctions.foreach(f => f(outputCursor))
-              outputCursor.next()
+    override def processRow(outputCursor: MorselWriteCursor,
+                            inputCursor: MorselReadCursor): Unit = {
+      outputCursor.copyFrom(inputCursor)
+      outputCursor.next()
+    }
 
-            case _ =>
-            // Do nothing
-          }
-          consumedArgumentStream = true
-        }
+    override def processEndOfStream(outputCursor: MorselWriteCursor): Unit = {
+      morselData.argumentStream match {
+        case EndOfEmptyStream =>
+          // An argument id did not produce any rows. We need to manufacture a row with arguments + nulls
+          // 1) Copy arguments from state
+          outputCursor.copyFrom(morselData.viewOfArgumentRow, argumentSize.nLongs, argumentSize.nReferences)
+          // 2) Set nullable slots
+          setNullableSlotToNullFunctions.foreach(f => f(outputCursor))
+          outputCursor.next()
+
+        case _ =>
+        // Do nothing
       }
-      outputCursor.truncate()
     }
-
-    override protected def closeCursors(resources: QueryResources): Unit = {}
-
-    override def canContinue: Boolean =
-      (currentMorsel != null && currentMorsel.onValidRow) ||
-        morselIterator.hasNext ||
-        !consumedArgumentStream
-
-    override protected def closeInput(operatorCloser: OperatorCloser): Unit = {
-      operatorCloser.closeData(morselData)
-    }
-
-    override def filterCancelledArguments(operatorCloser: OperatorCloser): Boolean = {
-      false
-    }
-
-    override def producingWorkUnitEvent: WorkUnitEvent = null
-
-    override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
   }
-}
-
-trait OptionalOperatorTask extends ContinuableOperatorTask {
-  def morselData: MorselData
-
-  override def estimatedHeapUsage: Long = morselData.morsels.map(_.estimatedHeapUsage).sum
 }

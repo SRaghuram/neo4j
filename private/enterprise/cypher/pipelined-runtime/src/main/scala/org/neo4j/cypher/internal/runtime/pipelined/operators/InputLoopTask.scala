@@ -34,7 +34,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
- * Operator task which takes an input morsel and produces one or many output rows
+ * Operator task which takes an input morsel and produces zero or more output rows
  * for each input row, and might require several operate calls to be fully executed.
  */
 abstract class InputLoopTask(final val inputMorsel: Morsel) extends ContinuableOperatorTaskWithMorsel {

@@ -66,7 +66,8 @@ class AntiOperator(val workIdentity: WorkIdentity,
       while (outputCursor.onValidRow() && canContinue) {
         val morselData = morselDataIterator.next()
         morselData.argumentStream match {
-          case EndOfEmptyStream(row) =>
+          case EndOfEmptyStream =>
+            val row = morselData.viewOfArgumentRow
             outputCursor.copyFrom(row, argumentSize.nLongs, argumentSize.nReferences)
             outputCursor.next()
           case EndOfNonEmptyStream =>

@@ -495,6 +495,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
           case (key, _) =>
             slots.newReference(key, nullable = true, CTAny)
         }
+        recordArgument(lp)
 
       case Expand(_, _, _, _, to, relName, ExpandAll) =>
         slots.newLong(relName, nullable, CTRelationship)

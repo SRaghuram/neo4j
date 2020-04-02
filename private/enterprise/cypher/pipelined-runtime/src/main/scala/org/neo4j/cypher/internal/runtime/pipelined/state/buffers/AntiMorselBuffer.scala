@@ -68,7 +68,7 @@ class AntiMorselBuffer(id: BufferId,
 
         def addData(data: MorselData): Unit = {
           datas += data
-          if (data.argumentStream.isInstanceOf[EndOfEmptyStream]) {
+          if (data.argumentStream == EndOfEmptyStream) {
             i -= 1
           }
         }
@@ -91,15 +91,12 @@ class AntiMorselBuffer(id: BufferId,
 
   private def getNextArgumentState(): MorselData = {
     val argumentStateList = argumentStateMap.takeCompleted(1)
-    if (argumentStateList != null) {
+    if (argumentStateList == null) null
+    else {
       val argumentState = argumentStateList.head
-      if (argumentState.didReceiveData) {
-        return MorselData(IndexedSeq.empty, EndOfNonEmptyStream, argumentState.argumentRowIdsForReducers)
-      } else {
-        return MorselData(IndexedSeq.empty, EndOfEmptyStream(argumentState.argumentRow), argumentState.argumentRowIdsForReducers)
-      }
+      val endOfStream = if (argumentState.didReceiveData) EndOfNonEmptyStream else EndOfEmptyStream
+      MorselData(IndexedSeq.empty, endOfStream, argumentState.argumentRowIdsForReducers, argumentState.argumentRow)
     }
-    null
   }
 
   override def hasData: Boolean = {

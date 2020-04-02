@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.logical.plans.Limit
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.LogicalPlans
 import org.neo4j.cypher.internal.logical.plans.Optional
+import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
 import org.neo4j.cypher.internal.logical.plans.OrderedDistinct
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.logical.plans.Skip
@@ -598,6 +599,16 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         argument.downstreamStatesOnRHS += asm.id
         source.fuseOrInterpret(plan, breakingPolicy.breakOn(plan, applyPlans(plan.id)))
         source
+
+      case _: OrderedAggregation =>
+        if (breakingPolicy.breakOn(plan, applyPlans(plan.id))) {
+          val buffer = outputToOptionalPipelinedBuffer(source, plan, argument, argument.argumentSlotOffset)
+          val pipeline = newPipeline(plan, buffer)
+          pipeline.lhs = source.id
+          pipeline
+        } else {
+          throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
+        }
 
       case _ =>
         val isBreaking = breakingPolicy.breakOn(plan, applyPlans(plan.id))

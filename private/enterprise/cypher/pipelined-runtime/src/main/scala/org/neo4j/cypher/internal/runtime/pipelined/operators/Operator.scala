@@ -20,6 +20,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndMorsel
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
 import org.neo4j.memory.Measurable
@@ -296,6 +297,18 @@ trait ContinuableOperatorTask extends OperatorTask with Measurable {
    * @return `true` if the task has become obsolete.
    */
   def filterCancelledArguments(operatorCloser: OperatorCloser): Boolean
+}
+
+trait ContinuableOperatorTaskWithMorselData extends ContinuableOperatorTask {
+  val morselData: MorselData
+
+  override protected def closeInput(operatorCloser: OperatorCloser): Unit = operatorCloser.closeData(morselData)
+
+  override final def filterCancelledArguments(operatorCloser: OperatorCloser): Boolean = false
+
+  override final def producingWorkUnitEvent: WorkUnitEvent = null
+
+  override def estimatedHeapUsage: Long = morselData.morsels.map(_.estimatedHeapUsage).sum
 }
 
 trait ContinuableOperatorTaskWithMorsel extends ContinuableOperatorTask {

@@ -71,22 +71,22 @@ class OptionalMorselBuffer(id: BufferId,
         argumentState match {
           case ArgumentStateWithCompleted(completedArgument, true) =>
             if (!completedArgument.didReceiveData) {
-              MorselData(IndexedSeq.empty, EndOfEmptyStream(completedArgument.argumentRow), completedArgument.argumentRowIdsForReducers)
+              MorselData(IndexedSeq.empty, EndOfEmptyStream, completedArgument.argumentRowIdsForReducers, completedArgument.argumentRow)
             } else {
               val morsels = completedArgument.takeAll()
               if (morsels != null) {
-                MorselData(morsels, EndOfNonEmptyStream, completedArgument.argumentRowIdsForReducers)
+                MorselData(morsels, EndOfNonEmptyStream, completedArgument.argumentRowIdsForReducers, completedArgument.argumentRow)
               } else {
                 // We need to return this message to signal that the end of the stream was reached (even if some other Thread got the morsels
                 // before us), to close and decrement correctly.
-                MorselData(IndexedSeq.empty, EndOfNonEmptyStream, completedArgument.argumentRowIdsForReducers)
+                MorselData(IndexedSeq.empty, EndOfNonEmptyStream, completedArgument.argumentRowIdsForReducers, completedArgument.argumentRow)
               }
             }
 
           case ArgumentStateWithCompleted(incompleteArgument, false) =>
             val morsels = incompleteArgument.takeAll()
             if (morsels != null) {
-              MorselData(morsels, NotTheEnd, incompleteArgument.argumentRowIdsForReducers)
+              MorselData(morsels, NotTheEnd, incompleteArgument.argumentRowIdsForReducers, incompleteArgument.argumentRow)
             } else {
               // In this case we can simply not return anything, there will arrive more data for this argument row id.
               null.asInstanceOf[MorselData]

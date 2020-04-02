@@ -80,19 +80,20 @@ abstract class BaseArgExistsMorselBuffer[PRODUCES <: AnyRef, S <: ArgumentState]
 
 /**
  * Some Morsels for one argument row id. Depending on the [[ArgumentStream]] there might be more data for this argument row id.
+ * @param viewOfArgumentRow the argument row for the id, as obtained from the [[MorselApplyBuffer]]
  */
 case class MorselData(morsels: IndexedSeq[Morsel],
                       argumentStream: ArgumentStream,
-                      argumentRowIdsForReducers: Array[Long])
+                      argumentRowIdsForReducers: Array[Long],
+                      viewOfArgumentRow: MorselRow)
 
 trait ArgumentStream
 trait EndOfStream extends ArgumentStream
 
 /**
  * The end of data for one argument row id, when there was actually no data (i.e. everything was filtered out).
- * @param viewOfArgumentRow the argument row for the id, as obtained from the [[MorselApplyBuffer]]
  */
-case class EndOfEmptyStream(viewOfArgumentRow: MorselRow) extends EndOfStream
+case object EndOfEmptyStream extends EndOfStream
 
 /**
  * The end of data for one argument row id, when there was data.
