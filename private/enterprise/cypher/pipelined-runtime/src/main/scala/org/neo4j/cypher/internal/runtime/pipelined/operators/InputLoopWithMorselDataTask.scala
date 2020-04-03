@@ -37,10 +37,14 @@ abstract class InputLoopWithMorselDataTask(override final val morselData: Morsel
   def processRow(outputCursor: MorselWriteCursor, inputCursor: MorselReadCursor): Unit
 
   /**
-   * Called once (per argument row id) at the end of the stream.
+   * Called once (per argument row id) at the end of current [[morselData]]
    */
-  def processEndOfStream(outputCursor: MorselWriteCursor): Unit
+  def processEndOfMorselData(outputCursor: MorselWriteCursor): Unit
 
+  /**
+   * Called after all morsels from [[morselData]] have been processed, but task [[canContinue]]
+   */
+  def processRemainingOutput(outputCursor: MorselWriteCursor): Unit
 
   override final def operate(outputMorsel: Morsel,
                        state: PipelinedQueryState,
@@ -65,14 +69,17 @@ abstract class InputLoopWithMorselDataTask(override final val morselData: Morsel
           currentMorsel.next()
         }
       } else {
-        processEndOfStream(outputCursor)
-        consumedArgumentStream = true
+        if (!consumedArgumentStream) {
+          processEndOfMorselData(outputCursor)
+          consumedArgumentStream = true
+        }
+        processRemainingOutput(outputCursor)
       }
     }
     outputCursor.truncate()
   }
 
-  override final def canContinue: Boolean =
+  override def canContinue: Boolean =
     (currentMorsel != null && currentMorsel.onValidRow) ||
       morselIterator.hasNext ||
       !consumedArgumentStream

@@ -84,7 +84,7 @@ class OptionalOperator(val workIdentity: WorkIdentity,
       outputCursor.next()
     }
 
-    override def processEndOfStream(outputCursor: MorselWriteCursor): Unit = {
+    override def processEndOfMorselData(outputCursor: MorselWriteCursor): Unit = {
       morselData.argumentStream match {
         case EndOfEmptyStream =>
           // An argument id did not produce any rows. We need to manufacture a row with arguments + nulls
@@ -98,5 +98,7 @@ class OptionalOperator(val workIdentity: WorkIdentity,
         // Do nothing
       }
     }
+
+    override def processRemainingOutput(outputCursor: MorselWriteCursor): Unit = ()
   }
 }

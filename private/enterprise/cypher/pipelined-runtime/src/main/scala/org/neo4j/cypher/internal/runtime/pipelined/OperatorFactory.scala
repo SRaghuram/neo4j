@@ -87,6 +87,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.Operator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalExpandAllOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalExpandIntoOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OrderedAggregationOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OrderedDistinctOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProduceResultOperator
@@ -518,7 +519,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         }
 
         val (orderedGroupingColumns, unorderedGroupingColumns) = partitionGroupingExpressions(converters, groupingExpressions, orderToLeverage, id)
-        if (unorderedGroupingColumns.isEmpty) {
+        if (unorderedGroupingColumns.isEmpty)
           new AllOrderedAggregationOperator(
             argumentStateMapId,
             argumentSlotOffset,
@@ -529,7 +530,18 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             outputSlots.result(),
             physicalPlan.argumentSizes(id)
           )(id)
-        } else ???
+        else
+          new OrderedAggregationOperator(
+            argumentStateMapId,
+            argumentSlotOffset,
+            WorkIdentity.fromPlan(plan),
+            aggregators.result(),
+            orderedGroupingColumns,
+            unorderedGroupingColumns,
+            expressions.result(),
+            outputSlots.result(),
+            physicalPlan.argumentSizes(id)
+          )(id)
 
       case plan: plans.ProduceResult => createProduceResults(plan)
 
