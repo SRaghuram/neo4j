@@ -56,7 +56,10 @@ public class AutoDetectStore extends Store
         this.graphDbDir = discoverGraphDbOrFail( topLevelDir );
         try
         {
-            this.isFreki = Files.list( graphDbDir ).anyMatch( path -> path.getFileName().toString().startsWith( "main-store" ) );
+            try ( Stream<Path> list = Files.list( graphDbDir ) )
+            {
+                this.isFreki = list.anyMatch( path -> path.getFileName().toString().startsWith( "main-store" ) );
+            }
         }
         catch ( IOException e )
         {
@@ -96,10 +99,9 @@ public class AutoDetectStore extends Store
 
     private static boolean isGraphDb( Path maybeGraphDb )
     {
-        try
+        try ( Stream<Path> list = Files.list( maybeGraphDb ) )
         {
-            return Files.list( maybeGraphDb )
-                    .anyMatch( file ->
+            return list.anyMatch( file ->
                     {
                         String fileName = file.getFileName().toString();
                         boolean storefile = fileName.startsWith( "neostore" ) || fileName.startsWith( "main-store" );
