@@ -367,13 +367,13 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     execute("CREATE USER foo SET PASSWORD 'secret'")
 
     // When
-    val plan = execute("EXPLAIN ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED").executionPlanString()
+    val plan = execute("EXPLAIN ALTER USER foo SET PASSWORD 'password'").executionPlanString()
 
     // Then
     plan should include(
       logPlan(
         managementPlan("AlterUser", Seq(userArg("foo")),
-          assertDbmsAdminPlan("ALTER USER")
+          assertDbmsAdminPlan("SET PASSWORDS")
         )
       ).toString
     )
@@ -390,7 +390,7 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     plan should include(
       logPlan(
         managementPlan("AlterUser", Seq(User("$foo")),
-          assertDbmsAdminPlan("ALTER USER")
+          assertDbmsAdminPlan("SET PASSWORDS")
         )
       ).toString
     )
@@ -408,7 +408,26 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
       logPlan(
         managementPlan("AlterUser", Seq(userArg("foo")),
           helperPlan("AssertNotCurrentUser", Seq(userArg("foo")),
-            assertDbmsAdminPlan("ALTER USER")
+            assertDbmsAdminPlan("SET USER STATUS")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Alter user password and status to active") {
+    // Given
+    execute("CREATE USER foo SET PASSWORD 'secret'")
+
+    // When
+    val plan = execute("EXPLAIN ALTER USER foo SET PASSWORD CHANGE REQUIRED SET STATUS ACTIVE").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        managementPlan("AlterUser", Seq(userArg("foo")),
+          helperPlan("AssertNotCurrentUser", Seq(userArg("foo")),
+            assertDbmsAdminPlan("SET PASSWORDS", "SET USER STATUS")
           )
         )
       ).toString

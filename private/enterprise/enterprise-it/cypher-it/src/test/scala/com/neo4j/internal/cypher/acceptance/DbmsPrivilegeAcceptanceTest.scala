@@ -6,6 +6,7 @@
 package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.graphdb.security.AuthorizationViolationException
+import org.neo4j.internal.kernel.api.security.AuthenticationResult
 
 import scala.collection.mutable
 
@@ -129,6 +130,32 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           grantedOrDenied(adminAction("show_user")).role("custom").map
+        ))
+      }
+
+      test(s"should $grantOrDeny set user status privilege") {
+        // GIVEN
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"$grantOrDeny SET USER STATUS ON DBMS TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          grantedOrDenied(adminAction("set_user_status")).role("custom").map
+        ))
+      }
+
+      test(s"should $grantOrDeny set passwords privilege") {
+        // GIVEN
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"$grantOrDeny SET PASSWORDS ON DBMS TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          grantedOrDenied(adminAction("set_passwords")).role("custom").map
         ))
       }
 
@@ -295,6 +322,8 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     execute("GRANT CREATE USER ON DBMS TO custom")
     execute("GRANT DROP USER ON DBMS TO custom")
     execute("GRANT SHOW USER ON DBMS TO custom")
+    execute("GRANT SET USER STATUS ON DBMS TO custom")
+    execute("GRANT SET PASSWORDS ON DBMS TO custom")
     execute("GRANT ALTER USER ON DBMS TO custom")
     execute("GRANT USER MANAGEMENT ON DBMS TO custom")
 
@@ -307,7 +336,28 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
       granted(adminAction("create_user")).role("custom").map,
       granted(adminAction("drop_user")).role("custom").map,
       granted(adminAction("alter_user")).role("custom").map,
+      granted(adminAction("set_user_status")).role("custom").map,
+      granted(adminAction("set_passwords")).role("custom").map,
       granted(adminAction("show_user")).role("custom").map
+    ))
+  }
+
+  test("should not revoke sub parts when revoking alter user") {
+    // GIVEN
+    createRoleWithOnlyAdminPrivilege()
+    execute("CREATE ROLE custom AS COPY OF adminOnly")
+    execute("GRANT SET USER STATUS ON DBMS TO custom")
+    execute("GRANT SET PASSWORDS ON DBMS TO custom")
+    execute("GRANT ALTER USER ON DBMS TO custom")
+
+    // WHEN
+    execute("REVOKE ALTER USER ON DBMS FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      granted(admin).role("custom").map,
+      granted(adminAction("set_user_status")).role("custom").map,
+      granted(adminAction("set_passwords")).role("custom").map,
     ))
   }
 
@@ -371,6 +421,8 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
       granted(adminAction("role_management")).role("custom").map,
       granted(adminAction("create_user")).role("custom").map,
       granted(adminAction("drop_user")).role("custom").map,
+      granted(adminAction("set_user_status")).role("custom").map,
+      granted(adminAction("set_passwords")).role("custom").map,
       granted(adminAction("alter_user")).role("custom").map,
       granted(adminAction("show_user")).role("custom").map,
       granted(adminAction("user_management")).role("custom").map,
@@ -1062,43 +1114,159 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
   }
 
   // ALTER USER
+  //// SET PASSWORDS
 
-  test("should enforce alter user privilege") {
+  Seq( "alter user", "set passwords" ).foreach {
+    privilege =>
+      test(s"should enforce privilege for set password change required with $privilege") {
+        // GIVEN
+        setupUserWithCustomRole("foo", "bar")
+
+        // WHEN
+        execute("CREATE USER user SET PASSWORD 'abc' CHANGE REQUIRED")
+        execute(s"GRANT $privilege ON DBMS TO custom")
+
+        // THEN
+        executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD CHANGE NOT REQUIRED")
+        execute("SHOW USERS").toSet should be(Set(
+          neo4jUser,
+          user("foo", passwordChangeRequired = false, roles = Seq("custom")),
+          user("user", passwordChangeRequired = false)
+        ))
+
+        // WHEN
+        execute(s"REVOKE $privilege ON DBMS FROM custom")
+
+        // THEN
+        the[AuthorizationViolationException] thrownBy {
+          executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD CHANGE REQUIRED")
+        } should have message "Permission denied."
+      }
+
+      test(s"should fail when set password change required when denied $privilege") {
+        // GIVEN
+        setupUserWithCustomAdminRole("foo", "bar")
+
+        // WHEN
+        execute("CREATE USER user SET PASSWORD 'abc'")
+        execute(s"DENY $privilege ON DBMS TO custom")
+
+        // THEN
+        the[AuthorizationViolationException] thrownBy {
+          executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD CHANGE NOT REQUIRED")
+        } should have message "Permission denied."
+      }
+
+      test(s"should enforce privilege for set password with $privilege") {
+        // GIVEN
+        setupUserWithCustomRole("foo", "bar")
+
+        // WHEN
+        execute("CREATE USER user SET PASSWORD 'abc' CHANGE REQUIRED")
+        execute(s"GRANT $privilege ON DBMS TO custom")
+
+        // THEN
+        executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD 'cba'")
+        testUserLogin("user", "cba", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+
+        // WHEN
+        execute(s"REVOKE $privilege ON DBMS FROM custom")
+
+        // THEN
+        the[AuthorizationViolationException] thrownBy {
+          executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD '123'")
+        } should have message "Permission denied."
+      }
+
+      test(s"should fail when setting password when denied $privilege") {
+        // GIVEN
+        setupUserWithCustomAdminRole("foo", "bar")
+
+        // WHEN
+        execute("CREATE USER user SET PASSWORD 'abc'")
+        execute(s"DENY $privilege ON DBMS TO custom")
+
+        // THEN
+        the[AuthorizationViolationException] thrownBy {
+          executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD 'cba'")
+        } should have message "Permission denied."
+      }
+  }
+
+  //// SET USER STATUS
+
+  Seq("alter user", "set user status").foreach {
+    privilege =>
+      test(s"should enforce privilege for setting user status with $privilege") {
+        // GIVEN
+        setupUserWithCustomRole("foo", "bar")
+
+        // WHEN
+        execute("CREATE USER user SET PASSWORD 'abc' CHANGE REQUIRED")
+        execute(s"GRANT $privilege ON DBMS TO custom")
+
+        // THEN
+        executeOnSystem("foo", "bar", "ALTER USER user SET STATUS SUSPENDED")
+        execute("SHOW USERS").toSet should be(Set(
+          neo4jUser,
+          user("foo", passwordChangeRequired = false, roles = Seq("custom")),
+          user("user", suspended = true)
+        ))
+
+        // WHEN
+        execute(s"REVOKE $privilege ON DBMS FROM custom")
+
+        // THEN
+        the[AuthorizationViolationException] thrownBy {
+          executeOnSystem("foo", "bar", "ALTER USER user SET STATUS ACTIVE")
+        } should have message "Permission denied."
+      }
+
+      test(s"should fail setting user status when denied $privilege") {
+        // GIVEN
+        setupUserWithCustomAdminRole("foo", "bar")
+
+        // WHEN
+        execute("CREATE USER user SET PASSWORD 'abc'")
+        execute(s"DENY $privilege ON DBMS TO custom")
+
+        // THEN
+        the[AuthorizationViolationException] thrownBy {
+          executeOnSystem("foo", "bar", "ALTER USER user SET STATUS SUSPENDED")
+        } should have message "Permission denied."
+      }
+  }
+
+  test("should enforce correct privileges when changing both password and status") {
     // GIVEN
     setupUserWithCustomRole("foo", "bar")
 
     // WHEN
     execute("CREATE USER user SET PASSWORD 'abc' CHANGE REQUIRED")
-    execute("GRANT ALTER USER ON DBMS TO custom")
+    execute(s"GRANT SET PASSWORDS ON DBMS TO custom")
 
     // THEN
-    executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD CHANGE NOT REQUIRED")
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD CHANGE NOT REQUIRED SET STATUS SUSPENDED")
+    } should have message "Permission denied."
+
+    // WHEN
+    execute(s"GRANT SET USER STATUS ON DBMS TO custom")
+
+    // THEN
+    executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD CHANGE NOT REQUIRED SET STATUS SUSPENDED")
     execute("SHOW USERS").toSet should be(Set(
       neo4jUser,
       user("foo", passwordChangeRequired = false, roles = Seq("custom")),
-      user("user", passwordChangeRequired = false)
+      user("user", passwordChangeRequired = false, suspended = true)
     ))
 
     // WHEN
-    execute("REVOKE ALTER USER ON DBMS FROM custom")
+    execute(s"REVOKE SET PASSWORDS ON DBMS FROM custom")
 
     // THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD CHANGE REQUIRED")
-    } should have message "Permission denied."
-  }
-
-  test("should fail when altering user when denied alter user privilege") {
-    // GIVEN
-    setupUserWithCustomAdminRole("foo", "bar")
-
-    // WHEN
-    execute("CREATE USER user SET PASSWORD 'abc'")
-    execute("DENY ALTER USER ON DBMS TO custom")
-
-    // THEN
-    the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD CHANGE NOT REQUIRED")
+      executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD CHANGE REQUIRED SET STATUS ACTIVE")
     } should have message "Permission denied."
   }
 
@@ -1519,6 +1687,8 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     ("ROLE MANAGEMENT", "ROLE MANAGEMENT ON DBMS", Set(adminAction("role_management"))),
     ("CREATE USER", "CREATE USER ON DBMS", Set(adminAction("create_user"))),
     ("DROP USER", "DROP USER ON DBMS", Set(adminAction("drop_user"))),
+    ("SET USER STATUS", "SET USER STATUS ON DBMS", Set(adminAction("set_user_status"))),
+    ("SET PASSWORDS", "SET PASSWORDS ON DBMS", Set(adminAction("set_passwords"))),
     ("ALTER USER", "ALTER USER ON DBMS", Set(adminAction("alter_user"))),
     ("SHOW USER", "SHOW USER ON DBMS", Set(adminAction("show_user"))),
     ("USER MANAGEMENT", "USER MANAGEMENT ON DBMS", Set(adminAction("user_management"))),
@@ -1861,6 +2031,8 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     execute(s"$privType CREATE USER ON DBMS $preposition custom")
     execute(s"$privType DROP USER ON DBMS $preposition custom")
     execute(s"$privType SHOW USER ON DBMS $preposition custom")
+    execute(s"$privType SET USER STATUS ON DBMS $preposition custom")
+    execute(s"$privType SET PASSWORDS ON DBMS $preposition custom")
     execute(s"$privType ALTER USER ON DBMS $preposition custom")
     execute(s"$privType USER MANAGEMENT ON DBMS $preposition custom")
     execute(s"$privType CREATE DATABASE ON DBMS $preposition custom")
