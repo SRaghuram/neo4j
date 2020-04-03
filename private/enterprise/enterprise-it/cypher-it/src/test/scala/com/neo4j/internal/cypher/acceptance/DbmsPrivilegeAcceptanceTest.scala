@@ -822,6 +822,41 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     } should have message "Permission denied."
   }
 
+  test("should show populated roles with only show role privilege") {
+    // GIVEN
+    setupUserWithCustomRole("foo", "bar")
+
+    // WHEN
+    execute("GRANT SHOW ROLE ON DBMS TO custom")
+
+    // THEN
+    val result = new mutable.HashSet[Map[String, AnyRef]]
+    executeOnSystem("foo", "bar", "SHOW POPULATED ROLES", resultHandler = (row, _) => {
+      val role = Map(
+        "role" -> row.get("role"),
+        "isBuiltIn" -> row.get("isBuiltIn")
+      )
+      result.add(role)
+    })
+
+    result should be(
+      Set(role("custom").map, role("PUBLIC").builtIn().map, role("admin").builtIn().map)
+    )
+  }
+
+  test("should fail showing populated roles when denied show role privilege") {
+    // GIVEN
+    setupUserWithCustomAdminRole("foo", "bar")
+
+    // WHEN
+    execute("DENY SHOW ROLE ON DBMS TO custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "SHOW POPULATED ROLES")
+    } should have message "Permission denied."
+  }
+
   test("should show populated roles with users with correct privileges") {
     // GIVEN
     setupUserWithCustomRole("foo", "bar")
