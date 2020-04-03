@@ -14,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
@@ -35,8 +36,10 @@ public class Neo4jStore extends Store
         this.layout = Neo4jLayout.of( homeDir.toFile() );
         try
         {
-            this.isFreki = Files.list( layout.databaseLayout( databaseName.name() ).databaseDirectory().toPath() )
-                    .anyMatch( path -> path.getFileName().toString().startsWith( "main-store" ) );
+            try ( Stream<Path> list = Files.list( layout.databaseLayout( databaseName.name() ).databaseDirectory().toPath() ) )
+            {
+                this.isFreki = list.anyMatch( path -> path.getFileName().toString().startsWith( "main-store" ) );
+            }
         }
         catch ( IOException e )
         {
