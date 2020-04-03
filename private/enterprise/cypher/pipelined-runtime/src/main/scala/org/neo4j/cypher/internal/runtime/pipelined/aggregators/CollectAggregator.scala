@@ -21,17 +21,21 @@ import scala.collection.mutable.ArrayBuffer
  * Aggregator for collect(...).
  */
 case object CollectAggregator extends Aggregator {
-
   override def newUpdater: Updater = new CollectUpdater(preserveNulls = false)
   override def newStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id): Reducer = new CollectStandardReducer(memoryTracker, operatorId)
   override def newConcurrentReducer: Reducer = new CollectConcurrentReducer()
 }
 
 case object CollectAllAggregator extends Aggregator {
-
   override def newUpdater: Updater = new CollectUpdater(preserveNulls = true)
   override def newStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id): Reducer = new CollectStandardReducer(memoryTracker, operatorId)
   override def newConcurrentReducer: Reducer = new CollectConcurrentReducer()
+}
+
+case object CollectDistinctAggregator extends Aggregator {
+  override def newUpdater: Updater = new DistinctInOrderUpdater
+  override def newStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id): Reducer = new DistinctInOrderStandardReducer(new MemoryTrackingReducer(memoryTracker, operatorId)) with CollectDistinctReducer
+  override def newConcurrentReducer: Reducer = new DistinctConcurrentReducer(new DummyReducer) with CollectDistinctReducer
 }
 
 class CollectUpdater(preserveNulls: Boolean) extends Updater {
@@ -67,4 +71,32 @@ class CollectConcurrentReducer() extends Reducer {
     }
 
   override def result: AnyValue = VirtualValues.concat(collections.toArray(new Array[ListValue](0)):_*)
+}
+
+class MemoryTrackingReducer(memoryTracker: QueryMemoryTracker, operatorId: Id) extends DistinctInnerReducer {
+  override def update(value: AnyValue): Unit = memoryTracker.allocated(value, operatorId.x)
+  override def result: AnyValue = throw new IllegalStateException("Must be used inside of CollectDistinctReducer")
+}
+
+class DummyReducer extends DistinctInnerReducer {
+  override def update(value: AnyValue): Unit = ()
+  override def result: AnyValue = throw new IllegalStateException("Must be used inside of CollectDistinctReducer")
+}
+
+trait CollectDistinctReducer {
+  self: DistinctReducer =>
+
+  override def result: AnyValue = {
+    val collection = ListValueBuilder.newListBuilder()
+    seen.forEach(value => collection.add(value))
+    collection.build()
+  }
+}
+
+class DistinctInOrderStandardReducer(inner: DistinctInnerReducer) extends DistinctReducer(inner) {
+  override protected val seen: java.util.Set[AnyValue] = new java.util.LinkedHashSet[AnyValue]()
+}
+
+class DistinctInOrderUpdater() extends DistinctUpdater {
+  override val seen: java.util.Set[AnyValue] = new java.util.LinkedHashSet[AnyValue]()
 }

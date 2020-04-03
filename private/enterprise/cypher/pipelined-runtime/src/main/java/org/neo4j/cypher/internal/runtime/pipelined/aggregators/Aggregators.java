@@ -15,9 +15,12 @@ public class Aggregators
     public static final Aggregator COUNT = CountAggregator$.MODULE$;
     public static final Aggregator COUNT_DISTINCT = CountDistinctAggregator$.MODULE$;
     public static final Aggregator SUM = SumAggregator$.MODULE$;
+    public static final Aggregator SUM_DISTINCT = SumDistinctAggregator$.MODULE$;
     public static final Aggregator AVG = AvgAggregator$.MODULE$;
+    public static final Aggregator AVG_DISTINCT = AvgDistinctAggregator$.MODULE$;
     public static final Aggregator MAX = MaxAggregator$.MODULE$;
     public static final Aggregator MIN = MinAggregator$.MODULE$;
     public static final Aggregator COLLECT = CollectAggregator$.MODULE$;
     public static final Aggregator COLLECT_ALL = CollectAllAggregator$.MODULE$;
+    public static final Aggregator COLLECT_DISTINCT = CollectDistinctAggregator$.MODULE$;
 }

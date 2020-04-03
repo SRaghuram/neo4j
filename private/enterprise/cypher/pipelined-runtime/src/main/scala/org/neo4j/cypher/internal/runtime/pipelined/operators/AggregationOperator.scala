@@ -49,8 +49,10 @@ import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregators
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AvgAggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AvgDistinctAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.CollectAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.CollectAllAggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.CollectDistinctAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.CountAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.CountDistinctAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.CountStarAggregator
@@ -58,11 +60,12 @@ import org.neo4j.cypher.internal.runtime.pipelined.aggregators.MaxAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.MinAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Reducer
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.SumAggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.SumDistinctAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Updater
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
-import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate.createAggregators
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate.createUpdaters
@@ -316,11 +319,14 @@ object AggregationMapperOperatorTaskTemplate {
       case CountAggregator => getStatic[Aggregators,Aggregator]("COUNT")
       case CountDistinctAggregator => getStatic[Aggregators,Aggregator]("COUNT_DISTINCT")
       case SumAggregator => getStatic[Aggregators,Aggregator]("SUM")
+      case SumDistinctAggregator => getStatic[Aggregators,Aggregator]("SUM_DISTINCT")
       case AvgAggregator => getStatic[Aggregators,Aggregator]("AVG")
+      case AvgDistinctAggregator => getStatic[Aggregators,Aggregator]("AVG_DISTINCT")
       case MaxAggregator => getStatic[Aggregators,Aggregator]("MAX")
       case MinAggregator => getStatic[Aggregators,Aggregator]("MIN")
       case CollectAggregator => getStatic[Aggregators,Aggregator]("COLLECT")
       case CollectAllAggregator => getStatic[Aggregators,Aggregator]("COLLECT_ALL")
+      case CollectDistinctAggregator => getStatic[Aggregators,Aggregator]("COLLECT_DISTINCT")
       case aggregator =>
         throw new SyntaxException(s"Unexpected Aggregator: ${aggregator.getClass.getName}")
     }

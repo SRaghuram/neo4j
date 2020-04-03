@@ -26,8 +26,7 @@ case object MinAggregator extends Aggregator {
     ((min eq Values.NO_VALUE) || AnyValues.COMPARATOR.compare(min, value) > 0) && !(value eq Values.NO_VALUE)
 }
 
-class MinUpdater() extends MinUpdaterBase
-abstract class MinUpdaterBase extends Updater {
+class MinUpdater extends Updater {
   private[aggregators] var min: AnyValue = Values.NO_VALUE
   override def update(value: AnyValue): Unit =
     if (!(value eq Values.NO_VALUE)) {
@@ -36,7 +35,7 @@ abstract class MinUpdaterBase extends Updater {
     }
 }
 
-class MinStandardReducer() extends MinUpdaterBase with Reducer {
+class MinStandardReducer() extends MinUpdater with Reducer {
   override def update(updater: Updater): Unit =
     updater match {
       case u: MinUpdater => update(u.min)
