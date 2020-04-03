@@ -298,5 +298,6 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
         denseProperties = null;
         readValue = null;
         buffer = null;
+        currentDenseProperty = null;
     }
 }
