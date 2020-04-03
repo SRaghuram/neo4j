@@ -9,8 +9,6 @@ import java.util
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
-import org.eclipse.collections.impl.factory.primitive.LongObjectMaps
-import org.eclipse.collections.impl.list.mutable.FastList
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
@@ -32,6 +30,8 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.kernel.impl.util.collection.LongProbeTable
+import org.neo4j.memory.LocalMemoryTracker
 
 class NodeHashJoinSingleNodeOperator(val workIdentity: WorkIdentity,
                                      lhsArgumentStateMapId: ArgumentStateMapId,
@@ -126,7 +126,7 @@ object NodeHashJoinSingleNodeOperator {
                           override val argumentRowIdsForReducers: Array[Long],
                           memoryTracker: QueryMemoryTracker,
                           operatorId: Id) extends HashTable {
-    private val table = LongObjectMaps.mutable.empty[FastList[Morsel]]()
+    private val table = LongProbeTable.createLongProbeTable[Morsel](new LocalMemoryTracker()) // TODO: use real tracker and close it when done
 
     // This is update from LHS, i.e. we need to put stuff into a hash table
     override def update(morsel: Morsel): Unit = {
@@ -142,8 +142,7 @@ object NodeHashJoinSingleNodeOperator {
           //        lastMorsel.moveToNextRow()
           //        lastMorsel.copyFrom(morsel)
           val view = morsel.view(cursor.row, cursor.row + 1)
-          val list = table.getIfAbsentPut(key, new FastList[Morsel](1))
-          list.add(view)
+          table.put(key, view)
           // Note: this allocation is currently never de-allocated
           memoryTracker.allocated(view, operatorId.x)
         }
@@ -151,11 +150,7 @@ object NodeHashJoinSingleNodeOperator {
     }
 
     override def lhsRows(nodeId: Long): util.Iterator[Morsel] = {
-      val lhsRows = table.get(nodeId)
-      if (lhsRows == null)
-        util.Collections.emptyIterator()
-      else
-        lhsRows.iterator()
+      table.get(nodeId)
     }
   }
 

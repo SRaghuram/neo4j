@@ -10,11 +10,12 @@ import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.slotted.SlottedCompatible
+import org.neo4j.memory.Measurable
 
 /**
   * Row in a morsel.
   */
-trait MorselDerivedRow extends SlottedCompatible {
+trait MorselDerivedRow extends SlottedCompatible with Measurable {
   /**
     * Offset of this row in the morsel.
     */
@@ -34,6 +35,8 @@ trait MorselDerivedRow extends SlottedCompatible {
     * Computes for a specific slot in this row, the offset in the morsel ref array.
     */
   def refOffset(offsetInRow: Int): Int
+
+  override def estimatedHeapUsage(): Long = 0 // TODO: Implement or make morsels ref counted
 }
 
 /**

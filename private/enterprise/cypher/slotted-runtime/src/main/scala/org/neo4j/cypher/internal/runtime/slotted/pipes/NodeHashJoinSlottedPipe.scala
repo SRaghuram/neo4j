@@ -7,9 +7,11 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import java.util
 
-import org.eclipse.collections.api.multimap.list.MutableListMultimap
-import org.eclipse.collections.impl.factory.Multimaps
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.PrefetchingIterator
+import org.neo4j.cypher.internal.runtime.ReadableRow
+import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
@@ -17,11 +19,9 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.copyDataFromRhs
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.fillKeyArray
-import org.neo4j.cypher.internal.runtime.CypherRow
-import org.neo4j.cypher.internal.runtime.PrefetchingIterator
-import org.neo4j.cypher.internal.runtime.ReadableRow
-import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.kernel.impl.util.collection.ProbeTable
+import org.neo4j.memory.LocalMemoryTracker
 import org.neo4j.values.storable.LongArray
 import org.neo4j.values.storable.Values
 
@@ -56,8 +56,8 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
     probeInput(rhsIterator, state, table)
   }
 
-  private def buildProbeTable(lhsInput: Iterator[CypherRow], queryState: QueryState): MutableListMultimap[LongArray, CypherRow] = {
-    val table = Multimaps.mutable.list.empty[LongArray, CypherRow]()
+  private def buildProbeTable(lhsInput: Iterator[CypherRow], queryState: QueryState): ProbeTable[LongArray, CypherRow] = {
+    val table = ProbeTable.createProbeTable[LongArray, CypherRow](new LocalMemoryTracker()) // TODO: use real tracker and close it when done
 
     for (current <- lhsInput) {
       val key = new Array[Long](width)
@@ -72,7 +72,7 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
 
   private def probeInput(rhsInput: Iterator[CypherRow],
                          queryState: QueryState,
-                         probeTable: MutableListMultimap[LongArray, CypherRow]): Iterator[CypherRow] =
+                         probeTable: ProbeTable[LongArray, CypherRow]): Iterator[CypherRow] =
     new PrefetchingIterator[CypherRow] {
       private val key = new Array[Long](width)
       private var matches: util.Iterator[CypherRow] = util.Collections.emptyIterator()
@@ -92,7 +92,7 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
           currentRhsRow = rhsInput.next()
           fillKeyArray(currentRhsRow, key, rhsOffsets)
           if (key(0) != -1 /*If we have nulls in the key, no match will be found*/ ) {
-            matches = probeTable.get(Values.longArray(key)).iterator()
+            matches = probeTable.get(Values.longArray(key))
             if (matches.hasNext) {
               // If we did not recurse back in like this, we would have to double up on the logic for creating output rows from matches
               return produceNext()
