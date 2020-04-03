@@ -159,54 +159,58 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
 
             System.out.println( "Running with Neo4j configuration:\n" + neo4jConfig.toString() );
 
-            System.out.println( "Checking store format..." );
-            try ( Store store = Neo4jStore.createFrom( storeDir.toPath() ) )
+            String configuredStorageEngine = neo4jConfig.toMap().get( GraphDatabaseSettings.storage_engine.name() );
+            System.out.println( "Checking store format (configured storage engine: '" + configuredStorageEngine + "')..." );
+            if ( "Freki".equals( configuredStorageEngine ) )
             {
-                if ( !store.isFreki() )
+                try ( Store store = Neo4jStore.createFrom( storeDir.toPath() ) )
                 {
-                    System.out.println( "Record store detected, migrating to freki." );
-                    Path tmpFrekiStoreDir = null;
-                    try
+                    if ( !store.isFreki() )
                     {
-                        tmpFrekiStoreDir = Files.createTempDirectory( "freki" );
-                        String[] args = {
-                                getJavaExecutable().toString(),
-                                "-cp", getClassPath(),
-                                MigrateDataIntoOtherDatabase.class.getName(),
-                                storeDir.toPath().toAbsolutePath().toString(), tmpFrekiStoreDir.toAbsolutePath().toString()
-                        };
-                        int exitCode = new ProcessBuilder( args )
-                                .inheritIO()
-                                .start()
-                                .waitFor();
-                        if ( exitCode != 0 )
+                        System.out.println( "Record store detected, migrating to freki." );
+                        Path tmpFrekiStoreDir = null;
+                        try
                         {
-                            throw new RuntimeException( "Migration failed with code: " + exitCode );
+                            tmpFrekiStoreDir = Files.createTempDirectory( "freki" );
+                            String[] args = {
+                                    getJavaExecutable().toString(),
+                                    "-cp", getClassPath(),
+                                    MigrateDataIntoOtherDatabase.class.getName(),
+                                    storeDir.toPath().toAbsolutePath().toString(), tmpFrekiStoreDir.toAbsolutePath().toString()
+                            };
+                            int exitCode = new ProcessBuilder( args )
+                                    .inheritIO()
+                                    .start()
+                                    .waitFor();
+                            if ( exitCode != 0 )
+                            {
+                                throw new RuntimeException( "Migration failed with code: " + exitCode );
+                            }
+                            FileUtils.deleteRecursively( storeDir );
+                            FileUtils.moveFile( tmpFrekiStoreDir.toFile(), storeDir );
+                            System.out.println( "Successful migration to Freki.");
                         }
-                        FileUtils.deleteRecursively( storeDir );
-                        FileUtils.moveFile( tmpFrekiStoreDir.toFile(), storeDir );
-                        System.out.println( "Successful migration to Freki.");
-                    }
-                    catch ( InterruptedException e )
-                    {
-                        throw new RuntimeException( "Unexpected interruption during migration", e );
-                    }
-                    finally
-                    {
-                        if ( tmpFrekiStoreDir != null )
+                        catch ( InterruptedException e )
                         {
-                            FileUtils.deleteRecursively( tmpFrekiStoreDir.toFile() );
+                            throw new RuntimeException( "Unexpected interruption during migration", e );
                         }
+                        finally
+                        {
+                            if ( tmpFrekiStoreDir != null )
+                            {
+                                FileUtils.deleteRecursively( tmpFrekiStoreDir.toFile() );
+                            }
+                        }
+                    }
+                    else
+                    {
+                        System.out.println( "Already freki format, no migration needed." );
                     }
                 }
-                else
+                catch ( IOException e )
                 {
-                    System.out.println( "Already freki format, no migration needed." );
+                    throw new UncheckedIOException( e );
                 }
-            }
-            catch ( IOException e )
-            {
-                throw new UncheckedIOException( e );
             }
 
             System.out.println( "Verifying store..." );
