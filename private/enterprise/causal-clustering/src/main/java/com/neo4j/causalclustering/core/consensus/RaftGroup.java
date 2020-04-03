@@ -67,7 +67,8 @@ public class RaftGroup
 
     RaftGroup( Config config, DatabaseLogService logService, FileSystemAbstraction fileSystem, JobScheduler jobScheduler, SystemNanoClock clock,
             MemberId myself, LifeSupport life, Monitors monitors, Dependencies dependencies, Outbound<MemberId,RaftMessages.RaftMessage> outbound,
-            ClusterStateLayout clusterState, CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, NamedDatabaseId namedDatabaseId )
+            ClusterStateLayout clusterState, CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, NamedDatabaseId namedDatabaseId,
+            LeaderListener leaderListener )
     {
         DatabaseLogProvider logProvider = logService.getInternalLogProvider();
         TimerService timerService = new TimerService( jobScheduler, logProvider );
@@ -110,6 +111,8 @@ public class RaftGroup
                 raftMembershipManager, logProvider );
 
         raftMachine = new RaftMachine( myself, leaderAvailabilityTimers, logProvider, raftMembershipManager, inFlightCache, raftOutcomeApplier, state );
+
+        raftMachine.registerListener( leaderListener );
 
         DurationSinceLastMessageMonitor durationSinceLastMessageMonitor = new DurationSinceLastMessageMonitor( clock );
         monitors.addMonitorListener( durationSinceLastMessageMonitor );

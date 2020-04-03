@@ -12,7 +12,6 @@ import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
-import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.RaftGroupFactory;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
@@ -50,7 +49,6 @@ import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import com.neo4j.causalclustering.protocol.init.ClientChannelInitializer;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 import com.neo4j.causalclustering.routing.load_balancing.DefaultLeaderService;
-import com.neo4j.causalclustering.routing.load_balancing.LeaderLocatorForDatabase;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.ClusterSystemGraphInitializer;
@@ -86,7 +84,6 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.cypher.internal.javacompat.EnterpriseCypherEngineProvider;
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
@@ -151,9 +148,9 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
     private CoreDatabaseFactory coreDatabaseFactory;
     private CoreTopologyService topologyService;
-    private LeaderService leaderService;
     private DatabaseStartAborter databaseStartAborter;
     private ClusteredDbmsReconcilerModule reconcilerModule;
+    private LeaderService leaderService;
 
     public CoreEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory )
     {
@@ -314,18 +311,15 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         dependencies.satisfyDependency( new GlobalTopologyStateDiagnosticProvider( topologyService ) );
         reconcilerModule.reconciler().registerListener( topologyService );
 
-        LeaderLocatorForDatabase leaderLocatorForDatabase = databaseId -> databaseManager
-                .getDatabaseContext( databaseId )
-                .map( DatabaseContext::dependencies )
-                .map( dep -> dep.resolveDependency( LeaderLocator.class ) );
-        leaderService = new DefaultLeaderService( leaderLocatorForDatabase, topologyService, logProvider );
-        dependencies.satisfyDependency( leaderService );
+        leaderService = new DefaultLeaderService( topologyService, logProvider );
+        dependencies.satisfyDependencies( leaderService );
 
         RaftMessageLogger<MemberId> raftLogger = createRaftLogger( globalModule, myIdentity );
 
         RaftMessageDispatcher raftMessageDispatcher = new RaftMessageDispatcher( logProvider, globalModule.getGlobalClock() );
 
-        RaftGroupFactory raftGroupFactory = new RaftGroupFactory( myIdentity, globalModule, clusterStateLayout, topologyService, storageFactory );
+        RaftGroupFactory raftGroupFactory = new RaftGroupFactory( myIdentity, globalModule, clusterStateLayout, topologyService, storageFactory,
+                namedDatabaseId -> ((DefaultLeaderService) leaderService).createListener( namedDatabaseId ) );
 
         RecoveryFacade recoveryFacade = recoveryFacade( globalModule.getFileSystem(), globalModule.getPageCache(), globalModule.getTracers(), globalConfig,
                 globalModule.getStorageEngineFactory() );

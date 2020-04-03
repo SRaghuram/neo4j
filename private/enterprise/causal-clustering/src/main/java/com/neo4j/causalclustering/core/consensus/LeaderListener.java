@@ -34,4 +34,12 @@ public interface LeaderListener
         outcome.stepDownTerm().ifPresent( this::onLeaderStepDown );
         onLeaderSwitch( new LeaderInfo( outcome.getLeader(), outcome.getTerm() ) );
     }
+
+    /**
+     * Trigger an event when this listener is being unregistered.
+     */
+    default void onUnregister()
+    {
+        // do nothing
+    }
 }

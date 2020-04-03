@@ -160,5 +160,6 @@ class RaftOutcomeApplier
     synchronized void unregisterListener( LeaderListener listener )
     {
         leaderListeners.remove( listener );
+        listener.onUnregister();
     }
 }
