@@ -955,6 +955,30 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   }
 
+  test("reuse of variable after exists should not affect result") {
+    val query =
+      """
+        |MATCH (dog:Dog {name:'Bosse'})
+        |
+        |// Since Bosse's owner doesn't have other dogs, person should not be null
+        |OPTIONAL MATCH (person:Person)-[:HAS_DOG]->(dog)
+        |WHERE NOT EXISTS {
+        |   MATCH (person)-[:HAS_DOG]->(d:Dog)
+        |    WHERE NOT d = dog
+        |}
+        |
+        |// since person isn't NULL the result should be 2
+        |WITH CASE WHEN person IS NULL THEN 1 ELSE 2 END AS person
+        |RETURN person
+        |""".stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("AntiSemiApply")
+    result.toList should be(List(Map("person" -> 2)))
+  }
+
   // EXISTS with simple node pattern in the MATCH
 
   test("simple node match in exists 1") {
@@ -1158,7 +1182,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   }
 
-  // Multiple patterns in the inner MATCH not yet supported
+  // Multiple patterns in the inner MATCH
 
   test("multiple patterns in outer MATCH should be supported") {
     val query =
@@ -1241,7 +1265,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
     result.toList should equal(List(Map("dog.name" -> "Fido"), Map("dog.name" -> "Ozzy")))
   }
 
-  // More unsupported EXISTS subqueries
+  // Unsupported EXISTS subqueries
 
   test("RETURN in inner MATCH should fail with syntax error at parsing") {
     val query =
