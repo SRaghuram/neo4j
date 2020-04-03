@@ -26,6 +26,7 @@ import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.csv
 import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.graphiteEnabled;
 import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.graphiteInterval;
 import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.graphiteServer;
+import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.metricsEnabled;
 import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.metricsPrefix;
 import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.prometheusEnabled;
 import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.prometheusEndpoint;
@@ -60,6 +61,11 @@ public class EventReporterBuilder
     public CompositeEventReporter build()
     {
         CompositeEventReporter reporter = new CompositeEventReporter();
+        if ( !config.get( metricsEnabled ) )
+        {
+            return reporter;
+        }
+
         if ( config.get( csvEnabled ) )
         {
             CsvOutput csvOutput = new CsvOutput( config, registry, logger, extensionContext, fileSystem, scheduler );
