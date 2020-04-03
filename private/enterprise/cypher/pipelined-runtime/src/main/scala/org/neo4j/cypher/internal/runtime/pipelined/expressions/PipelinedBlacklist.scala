@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.expressions.functions
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NestedPlanExpression
+import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
 import org.neo4j.cypher.internal.logical.plans.OrderedDistinct
 import org.neo4j.cypher.internal.logical.plans.ResolvedFunctionInvocation
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
@@ -36,6 +37,9 @@ object PipelinedBlacklist {
 
         case c: CartesianProduct if leveragedOrders.get(c.id) =>
           _ + "CartesianProduct if it needs to maintain order"
+
+        case _: OrderedAggregation if parallelExecution =>
+          _ + "OrderedAggregation"
 
         case _: OrderedDistinct if parallelExecution =>
           _ + "OrderedDistinct"
