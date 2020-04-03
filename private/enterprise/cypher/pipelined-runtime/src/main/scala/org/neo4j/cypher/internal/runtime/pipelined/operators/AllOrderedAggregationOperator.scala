@@ -8,11 +8,10 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
-import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregator
-import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Updater
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
@@ -28,16 +27,15 @@ import org.neo4j.cypher.internal.util.attribution.Id
 class AllOrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
                                     argumentSlotOffset: Int,
                                     val workIdentity: WorkIdentity,
-                                    aggregations: Array[Aggregator],
+                                    aggregations: Array[AggregationExpression],
                                     orderedGroupings: GroupingExpression,
-                                    expressionValues: Array[Expression],
                                     outputSlots: Array[Int],
                                     argumentSize: SlotConfiguration.Size)
                                    (val id: Id = Id.INVALID_ID) extends Operator with OperatorState {
 
   private class AllOrderedAggregationState(var lastSeenGrouping: orderedGroupings.KeyType,
-                                           val updaters: Array[Updater]) {
-    def this() = this(null.asInstanceOf[orderedGroupings.KeyType], aggregations.map(_.newUpdater))
+                                           val aggregationFunctions: Array[AggregationFunction]) {
+    def this() = this(null.asInstanceOf[orderedGroupings.KeyType], aggregations.map(_.createAggregationFunction(id)))
   }
 
   private var taskState: AllOrderedAggregationState = _
@@ -47,7 +45,7 @@ class AllOrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
                            state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = {
     taskState = new AllOrderedAggregationState()
-    argumentStateCreator.createArgumentStateMap(argumentStateMapId, new OptionalArgumentStateBuffer.Factory(stateFactory, id))
+    argumentStateCreator.createArgumentStateMap(argumentStateMapId, new OptionalArgumentStateBuffer.Factory(stateFactory, id), ordered = true)
     this
   }
 
@@ -89,8 +87,7 @@ class AllOrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
       oangState.lastSeenGrouping = grouping
       var i = 0
       while (i < aggregations.length) {
-        val value = expressionValues(i)(inputCursor, queryState)
-        oangState.updaters(i).update(value)
+        oangState.aggregationFunctions(i).apply(inputCursor, queryState)
         i += 1
       }
     }
@@ -113,11 +110,8 @@ class AllOrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
 
       var i = 0
       while (i < aggregations.length) {
-        // TODO use slotted aggregation functions?
-        val reducer = aggregations(i).newStandardReducer(queryState.memoryTracker, id)
-        reducer.update(oangState.updaters(i))
-        outputCursor.setRefAt(outputSlots(i), reducer.result)
-        oangState.updaters(i) = aggregations(i).newUpdater
+        outputCursor.setRefAt(outputSlots(i), oangState.aggregationFunctions(i).result(queryState))
+        oangState.aggregationFunctions(i) = aggregations(i).createAggregationFunction(id)
         i += 1
       }
       outputCursor.next()

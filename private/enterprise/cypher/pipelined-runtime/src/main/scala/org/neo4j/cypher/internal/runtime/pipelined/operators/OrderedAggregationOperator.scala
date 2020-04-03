@@ -10,11 +10,10 @@ import java.util
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
-import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregator
-import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Updater
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
@@ -30,22 +29,21 @@ import org.neo4j.cypher.internal.util.attribution.Id
 class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
                                  argumentSlotOffset: Int,
                                  val workIdentity: WorkIdentity,
-                                 aggregations: Array[Aggregator],
+                                 aggregations: Array[AggregationExpression],
                                  orderedGroupings: GroupingExpression,
                                  unorderedGroupings: GroupingExpression,
-                                 expressionValues: Array[Expression],
                                  outputSlots: Array[Int],
                                  argumentSize: SlotConfiguration.Size)
                                 (val id: Id = Id.INVALID_ID) extends Operator with OperatorState {
 
-  private type UpdatersMap = util.LinkedHashMap[unorderedGroupings.KeyType, Array[Updater]]
-  private case class Chunk(orderedGroupingKey: orderedGroupings.KeyType, updatersMap: UpdatersMap)
+  private type ResultsMap = util.LinkedHashMap[unorderedGroupings.KeyType, Array[AggregationFunction]]
+  private case class Chunk(orderedGroupingKey: orderedGroupings.KeyType, resultsMap: ResultsMap)
   private type ChunkList = util.LinkedList[Chunk]
 
   private class OrderedAggregationState(var lastSeenGroupingKey: orderedGroupings.KeyType,
-                                        var updatersMap: UpdatersMap,
+                                        var resultsMap: ResultsMap,
                                         var chunks: ChunkList) {
-    def this() = this(null.asInstanceOf[orderedGroupings.KeyType], new UpdatersMap, new ChunkList)
+    def this() = this(null.asInstanceOf[orderedGroupings.KeyType], new ResultsMap, new ChunkList)
   }
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
@@ -53,7 +51,7 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
                            state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = {
     taskState = new OrderedAggregationState()
-    argumentStateCreator.createArgumentStateMap(argumentStateMapId, new OptionalArgumentStateBuffer.Factory(stateFactory, id))
+    argumentStateCreator.createArgumentStateMap(argumentStateMapId, new OptionalArgumentStateBuffer.Factory(stateFactory, id), ordered = true)
     this
   }
 
@@ -74,8 +72,8 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
 
   private var taskState: OrderedAggregationState = _
 
-  private val newUpdaters: util.function.Function[unorderedGroupings.KeyType, Array[Updater]] =
-    (_: unorderedGroupings.KeyType) => aggregations.map(_.newUpdater)
+  private val newAggregationFunctions: util.function.Function[unorderedGroupings.KeyType, Array[AggregationFunction]] =
+    (_: unorderedGroupings.KeyType) => aggregations.map(_.createAggregationFunction(id))
 
   class OrderedAggregationTask(morselData: MorselData,
                                taskState: OrderedAggregationState) extends InputLoopWithMorselDataTask(morselData) {
@@ -101,12 +99,11 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
       taskState.lastSeenGroupingKey = orderedGroupingKey
 
       val unorderedGroupingKey = unorderedGroupings.computeGroupingKey(inputCursor, queryState)
-      val updaters = taskState.updatersMap.computeIfAbsent(unorderedGroupingKey, newUpdaters)
+      val aggFunctions = taskState.resultsMap.computeIfAbsent(unorderedGroupingKey, newAggregationFunctions)
 
       var i = 0
       while (i < aggregations.length) {
-        val value = expressionValues(i)(inputCursor, queryState)
-        updaters(i).update(value)
+        aggFunctions(i).apply(inputCursor, queryState)
         i += 1
       }
     }
@@ -128,23 +125,20 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
     private def tryWriteOutstandingResults(outputCursor: MorselWriteCursor, queryState: QueryState): Unit = {
       while (!taskState.chunks.isEmpty && outputCursor.onValidRow()) {
         val chunk = taskState.chunks.getFirst
-        val it = chunk.updatersMap.entrySet().iterator()
+        val it = chunk.resultsMap.entrySet().iterator()
         if (!it.hasNext) {
           taskState.chunks.removeFirst()
         } else {
           val entry = it.next()
-          val unorderedColumns = entry.getKey
-          val updaters = entry.getValue
+          val unorderedGroupingKey = entry.getKey
+          val aggResults = entry.getValue
           outputCursor.copyFrom(morselData.viewOfArgumentRow, argumentSize.nLongs, argumentSize.nReferences)
           orderedGroupings.project(outputCursor, chunk.orderedGroupingKey)
-          unorderedGroupings.project(outputCursor, unorderedColumns)
+          unorderedGroupings.project(outputCursor, unorderedGroupingKey)
 
           var i = 0
           while (i < aggregations.length) {
-            // TODO use slotted aggregation functions?
-            val reducer = aggregations(i).newStandardReducer(queryState.memoryTracker, id)
-            reducer.update(updaters(i))
-            outputCursor.setRefAt(outputSlots(i), reducer.result)
+            outputCursor.setRefAt(outputSlots(i), aggResults(i).result(queryState))
             i += 1
           }
           it.remove()
@@ -154,9 +148,9 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
     }
 
     private def completeCurrentChunk(): Unit = {
-      taskState.chunks.add(Chunk(taskState.lastSeenGroupingKey, taskState.updatersMap))
+      taskState.chunks.add(Chunk(taskState.lastSeenGroupingKey, taskState.resultsMap))
       taskState.lastSeenGroupingKey = null.asInstanceOf[orderedGroupings.KeyType]
-      taskState.updatersMap = new UpdatersMap
+      taskState.resultsMap = new ResultsMap
     }
   }
 }

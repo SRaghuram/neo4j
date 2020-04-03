@@ -38,6 +38,7 @@ import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.True
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.DropResultPipe
@@ -505,17 +506,13 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val argumentDepth = physicalPlan.applyPlans(id)
         val argumentSlotOffset = slots.getArgumentLongOffsetFor(argumentDepth)
 
-        // TODO duplicate code
-        val aggregators = Array.newBuilder[Aggregator]
-        val expressions = Array.newBuilder[Expression]
+        val aggExpressions = Array.newBuilder[AggregationExpression]
         val outputSlots = Array.newBuilder[Int]
         aggregationExpression.foreach {
           case (key, astExpression) =>
             val outputSlot = slots(key)
-            val (aggregator, expression) = aggregatorFactory.newAggregator(astExpression)
-            aggregators += aggregator
-            expressions += converters.toCommandExpression(id, expression)
             outputSlots += outputSlot.offset
+            aggExpressions += converters.toCommandExpression(id, astExpression).asInstanceOf[AggregationExpression]
         }
 
         val (orderedGroupingColumns, unorderedGroupingColumns) = partitionGroupingExpressions(converters, groupingExpressions, orderToLeverage, id)
@@ -524,9 +521,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             argumentStateMapId,
             argumentSlotOffset,
             WorkIdentity.fromPlan(plan),
-            aggregators.result(),
+            aggExpressions.result(),
             orderedGroupingColumns,
-            expressions.result(),
             outputSlots.result(),
             physicalPlan.argumentSizes(id)
           )(id)
@@ -535,10 +531,9 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             argumentStateMapId,
             argumentSlotOffset,
             WorkIdentity.fromPlan(plan),
-            aggregators.result(),
+            aggExpressions.result(),
             orderedGroupingColumns,
             unorderedGroupingColumns,
-            expressions.result(),
             outputSlots.result(),
             physicalPlan.argumentSizes(id)
           )(id)
