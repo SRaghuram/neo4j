@@ -33,6 +33,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -229,7 +230,7 @@ class RaftOutcomeApplierTest
 
         raftOutcomeApplier.handle( outcome );
 
-        verify( listener ).onLeaderEvent( outcome );
+        verifyListener( outcome, listener );
     }
 
     @Test
@@ -243,7 +244,8 @@ class RaftOutcomeApplierTest
 
         raftOutcomeApplier.handle( outcome );
 
-        verify( listener, never() ).onLeaderEvent( any( Outcome.class ) );
+        verify( listener, never() ).onLeaderSwitch( any( LeaderInfo.class ) );
+        verify( listener, never() ).onLeaderStepDown( anyLong() );
     }
 
     @Test
@@ -257,7 +259,16 @@ class RaftOutcomeApplierTest
 
         raftOutcomeApplier.handle( outcome );
 
-        verify( listener ).onLeaderEvent( outcome );
+        verifyListener( outcome, listener );
+    }
+
+    private void verifyListener( Outcome outcome, LeaderListener listener )
+    {
+        if ( outcome.stepDownTerm().isPresent() )
+        {
+            verify( listener ).onLeaderStepDown( outcome.stepDownTerm().getAsLong() );
+        }
+        verify( listener ).onLeaderSwitch( any( LeaderInfo.class ) );
     }
 
     @Test
@@ -271,7 +282,7 @@ class RaftOutcomeApplierTest
 
         raftOutcomeApplier.handle( outcome );
 
-        verify( listener ).onLeaderEvent( outcome );
+        verifyListener( outcome, listener );
     }
 
     @Test

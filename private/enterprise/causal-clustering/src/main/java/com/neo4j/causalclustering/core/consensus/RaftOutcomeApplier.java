@@ -129,7 +129,8 @@ class RaftOutcomeApplier
     {
         for ( var listener : leaderListeners )
         {
-            listener.onLeaderEvent( outcome );
+            outcome.stepDownTerm().ifPresent( listener::onLeaderStepDown );
+            listener.onLeaderSwitch( new LeaderInfo( outcome.getLeader(), outcome.getTerm() ) );
         }
     }
 
