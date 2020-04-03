@@ -140,11 +140,15 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     testUserLogin("foo", "bar", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
-  test("should use query cache when creating multiple users with parameterized passwords") {
+  test("should not use query cache when creating multiple users with parameterized passwords") {
     // GIVEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
     val passwords = Seq("bar", "abc", "password")
-    val commandCount = 5  // CREATE is two and DROP is three (one outer and two inner Cypher commands)
+    val createCount = Map("cachable" -> 1, "total" ->  2)   // create has one outer and one inner command
+    val dropCount = Map("cachable" -> 3, "total" ->  3)     // drop has one outer and two inner commands
+    val hits = (createCount("cachable") + dropCount("cachable")) * (passwords.size - 1)
+    val total = (createCount("total") + dropCount("total")) * passwords.size
+    val misses = total - hits
 
     // WHEN
     val counter = new CacheCounter()
@@ -159,8 +163,26 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     }
 
     // THEN
-    counter.counts should equal(CacheCounts(misses = commandCount, hits = commandCount * (passwords.size - 1)))
+    counter.counts should equal(CacheCounts(misses = misses, hits = hits))
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+  }
+
+  test("should use query cache when creating multiple roles with parameterized names") {
+    // GIVEN
+    execute("SHOW ROLES").toList.size shouldBe defaultRoles.size
+    val commandCount = 5
+
+    // WHEN
+    val counter = new CacheCounter()
+    kernelMonitors.addMonitorListener(counter)
+    counter.counts should equal(CacheCounts())
+    Range(0, commandCount).foreach { index =>
+      execute("CREATE ROLE $role", Map("role" -> s"Role$index"))
+    }
+
+    // THEN
+    counter.counts should equal(CacheCounts(misses = 2, hits = (commandCount - 1) * 2))
+    execute("SHOW ROLES").toList.size should be(defaultRoles.size + commandCount)
   }
 
   test("should fail when creating user with numeric password as parameter") {
@@ -1018,7 +1040,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("GRANT ROLE editor TO foo")
     execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
 
-    the[InvalidArgumentsException] thrownBy {
+    the[QueryExecutionException] thrownBy {
       // WHEN
       executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM 'bar' TO ''")
       // THEN
@@ -1027,7 +1049,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // THEN
     testUserLogin("foo", "bar", AuthenticationResult.SUCCESS)
 
-    the[QueryExecutionException] thrownBy {// the InvalidArgumentsException gets wrapped in this code path
+    the[QueryExecutionException] thrownBy {
       // WHEN
       executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM 'bar' TO 'bar'")
       // THEN
