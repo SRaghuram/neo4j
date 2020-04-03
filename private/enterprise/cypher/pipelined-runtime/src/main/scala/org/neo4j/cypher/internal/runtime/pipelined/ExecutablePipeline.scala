@@ -29,11 +29,11 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorTask
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperatorState
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
-import org.neo4j.cypher.internal.runtime.pipelined.state.UnorderedArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
@@ -174,7 +174,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
 
   private def remainingRows = {
     pipeline.workLimiter
-      .map(id => executionState.argumentStateMaps(id).asInstanceOf[UnorderedArgumentStateMap[WorkCanceller]].peek(TopLevelArgument.VALUE).remaining)
+      .map(id => executionState.argumentStateMaps(id).asInstanceOf[ArgumentStateMap[WorkCanceller]].peek(TopLevelArgument.VALUE).remaining)
       .getOrElse(Long.MaxValue)
   }
 
