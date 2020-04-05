@@ -221,7 +221,7 @@ object TopOperator {
                          comparator: Comparator[MorselRow],
                          limit: Long) extends TopTable {
 
-    private val topTable = new DefaultComparatorTopTable(comparator, limit)
+    private val topTable = new DefaultComparatorTopTable(comparator, limit, memoryTracker)
     private var totalTopHeapUsage = 0L
     private var morselCount = 0L
     private var maxMorselHeapUsage = 0L
@@ -245,6 +245,7 @@ object TopOperator {
 
     override def deallocateMemory(): Unit = {
       memoryTracker.releaseHeap(totalTopHeapUsage)
+      topTable.close()
     }
 
     override protected def getTopRows: util.Iterator[MorselRow] = {
