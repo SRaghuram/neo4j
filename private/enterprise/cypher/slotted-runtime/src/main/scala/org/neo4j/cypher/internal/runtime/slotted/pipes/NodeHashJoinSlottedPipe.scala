@@ -21,7 +21,6 @@ import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.c
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.fillKeyArray
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.util.collection.ProbeTable
-import org.neo4j.memory.LocalMemoryTracker
 import org.neo4j.values.storable.LongArray
 import org.neo4j.values.storable.Values
 
@@ -46,7 +45,7 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
     if (rhsIterator.isEmpty)
       return Iterator.empty
 
-    val table = buildProbeTable(state.memoryTracker.memoryTrackingIterator(input, id.x), state)
+    val table = buildProbeTable(input, state)
 
     // This will only happen if all the lhs-values evaluate to null, which is probably rare.
     // But, it's cheap to check and will save us from exhausting the rhs, so it's probably worth it
@@ -57,7 +56,7 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
   }
 
   private def buildProbeTable(lhsInput: Iterator[CypherRow], queryState: QueryState): ProbeTable[LongArray, CypherRow] = {
-    val table = ProbeTable.createProbeTable[LongArray, CypherRow](new LocalMemoryTracker()) // TODO: use real tracker and close it when done
+    val table = ProbeTable.createProbeTable[LongArray, CypherRow](queryState.memoryTracker.memoryTrackerForOperator(id.x))
 
     for (current <- lhsInput) {
       val key = new Array[Long](width)
@@ -99,6 +98,9 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
             }
           }
         }
+
+        // We have produced the last row, close the probe table to release estimated heap usage
+        probeTable.close()
 
         None
       }

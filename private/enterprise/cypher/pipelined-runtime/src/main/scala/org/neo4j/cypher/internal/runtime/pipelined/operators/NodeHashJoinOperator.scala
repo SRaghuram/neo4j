@@ -9,7 +9,6 @@ import java.util
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
-import org.eclipse.collections.impl.factory.Multimaps
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
@@ -31,6 +30,7 @@ import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.fillKeyArray
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.kernel.impl.util.collection.ProbeTable
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.storable.LongArray
 import org.neo4j.values.storable.Values
@@ -127,7 +127,7 @@ object NodeHashJoinOperator {
                           lhsOffsets: Array[Int],
                           override val argumentRowIdsForReducers: Array[Long],
                           memoryTracker: MemoryTracker) extends HashTable {
-    private val table = Multimaps.mutable.list.empty[LongArray, Morsel]()
+    private val table = ProbeTable.createProbeTable[LongArray, Morsel]( memoryTracker )
 
     // This is update from LHS, i.e. we need to put stuff into a hash table
     override def update(morsel: Morsel): Unit = {
@@ -144,15 +144,19 @@ object NodeHashJoinOperator {
           //        lastMorsel.moveToNextRow()
           //        lastMorsel.copyFrom(morsel)
           val view = morsel.view(cursor.row, cursor.row + 1)
-          table.put(Values.longArray(key), view)
-          // Note: this allocation is currently never de-allocated
-          memoryTracker.allocateHeap(view.estimatedHeapUsage)
+          table.put(Values.longArray(key), view) // NOTE: ProbeTable will also track estimated heap usage of the view until the table is closed
         }
       }
     }
 
-    override def lhsRows(nodeIds: LongArray): util.Iterator[Morsel] =
-      table.get(nodeIds).iterator()
+    override def lhsRows(nodeIds: LongArray): util.Iterator[Morsel] = {
+      table.get(nodeIds)
+    }
+
+    override def close(): Unit = {
+      table.close()
+      super.close()
+    }
   }
 
   class ConcurrentHashTable(override val argumentRowId: Long,

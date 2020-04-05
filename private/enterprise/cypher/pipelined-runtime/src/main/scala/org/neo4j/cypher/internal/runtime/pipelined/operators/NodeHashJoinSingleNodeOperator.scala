@@ -30,7 +30,6 @@ import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.util.collection.LongProbeTable
-import org.neo4j.memory.LocalMemoryTracker
 import org.neo4j.memory.MemoryTracker
 
 
@@ -141,15 +140,18 @@ object NodeHashJoinSingleNodeOperator {
           //        lastMorsel.moveToNextRow()
           //        lastMorsel.copyFrom(morsel)
           val view = morsel.view(cursor.row, cursor.row + 1)
-          table.put(key, view)
-          // Note: this allocation is currently never de-allocated
-          memoryTracker.allocateHeap(view.estimatedHeapUsage)
+          table.put(key, view) // NOTE: LongProbeTable will also track estimated heap usage of the view until the table is closed
         }
       }
     }
 
     override def lhsRows(nodeId: Long): util.Iterator[Morsel] = {
       table.get(nodeId)
+    }
+
+    override def close(): Unit = {
+      table.close()
+      super.close()
     }
   }
 

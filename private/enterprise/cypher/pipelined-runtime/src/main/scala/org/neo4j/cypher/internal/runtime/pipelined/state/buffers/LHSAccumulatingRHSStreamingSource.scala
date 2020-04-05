@@ -138,6 +138,8 @@ class LHSAccumulatingRHSStreamingSource[DATA <: AnyRef,
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[close] $this -X- $accumulator & ${PipelinedDebugSupport.prettyMorselWithHeader("", rhsMorsel).reduce(_ + _)}")
     }
+    val argumentRowIdsForReducers = accumulator.argumentRowIdsForReducers
+
     // Check if the argument count is zero -- in the case of the RHS, that means that no more data will ever arrive
     if (rhsArgumentStateMap.hasCompleted(accumulator.argumentRowId)) {
       val rhsAcc = rhsArgumentStateMap.peek(accumulator.argumentRowId)
@@ -146,10 +148,11 @@ class LHSAccumulatingRHSStreamingSource[DATA <: AnyRef,
       if (rhsAcc != null && !rhsAcc.hasData && rhsArgumentStateMap.remove(accumulator.argumentRowId)) {
         // Clean up the LHS as well
         lhsArgumentStateMap.remove(accumulator.argumentRowId)
+        accumulator.close()
       }
     }
     // Decrement for a morsel in the RHS buffer
-    forAllArgumentReducers(downstreamArgumentReducers, accumulator.argumentRowIdsForReducers, _.decrement(_))
+    forAllArgumentReducers(downstreamArgumentReducers, argumentRowIdsForReducers, _.decrement(_))
     tracker.decrement()
   }
 

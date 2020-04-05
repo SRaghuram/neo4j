@@ -226,12 +226,14 @@ object ArgumentStateMap {
   /**
    * Accumulator of data. Has internal state which it updates using provided data.
    */
-  trait MorselAccumulator[DATA <: AnyRef] extends ArgumentState {
+  trait MorselAccumulator[DATA <: AnyRef] extends ArgumentState with AutoCloseable {
 
     /**
      * Update internal state using the provided data.
      */
     def update(data: DATA): Unit
+
+    override def close(): Unit = {}
   }
 
   /**
