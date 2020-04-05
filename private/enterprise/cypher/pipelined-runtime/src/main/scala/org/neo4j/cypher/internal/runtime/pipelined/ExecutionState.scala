@@ -17,9 +17,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.AntiMorselBuffer
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStreamMorselBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.LHSAccumulatingRHSStreamingSource
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.OptionalMorselBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
 import org.neo4j.util.CalledFromGeneratedCode
 
@@ -86,7 +86,7 @@ trait ExecutionState extends ArgumentStateMapCreator {
   def takeAccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](bufferId: BufferId): AccumulatorAndMorsel[DATA, ACC]
 
   /**
-   * Take data from a [[OptionalMorselBuffer]] or [[AntiMorselBuffer]] buffer with id `bufferId`.
+   * Take data from a [[ArgumentStreamMorselBuffer]] or [[AntiMorselBuffer]] buffer with id `bufferId`.
    *
    * @return the data to take, or `null` if no data was available
    */
@@ -101,7 +101,8 @@ trait ExecutionState extends ArgumentStateMapCreator {
   def closeMorselTask(pipeline: ExecutablePipeline, inputMorsel: Morsel): Unit
 
   /**
-   * Close a pipeline task which was executing over some data from an [[OptionalMorselBuffer]].
+   * Close a pipeline task which was executing over some data from an [[ArgumentStreamMorselBuffer]].
+   *
    * @param pipeline the executing pipeline
    * @param data the input data
    */

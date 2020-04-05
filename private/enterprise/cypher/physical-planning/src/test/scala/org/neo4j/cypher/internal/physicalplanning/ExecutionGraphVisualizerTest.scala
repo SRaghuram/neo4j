@@ -125,7 +125,7 @@ class ExecutionGraphVisualizerTest extends CypherFunSuite {
     val bufs = Seq(
       TNode(Map("name" -> "ApplyBuffer[0]", "id" -> (0: Integer), "argumentSlotOffset" -> (-1: Integer)), "Start", "Buffer"),
       TNode(Map("name" -> "Buffer[1]", "id" -> (1: Integer)), "Buffer"),
-      TNode(Map("name" -> "OptionalBuffer[2]", "id" -> (2: Integer)), "Buffer"),
+      TNode(Map("name" -> "ArgumentStreamBuffer[2]", "id" -> (2: Integer)), "Buffer"),
     )
     val pipes = Seq(
       TNode(Map("name" -> "Pipeline[0]", "id" -> (0: Integer), "serial" -> (false: lang.Boolean)), "Pipeline"),

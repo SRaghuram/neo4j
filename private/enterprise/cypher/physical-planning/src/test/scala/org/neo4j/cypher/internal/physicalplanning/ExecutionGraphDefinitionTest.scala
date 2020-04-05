@@ -183,7 +183,7 @@ class ExecutionGraphDefinitionTest extends CypherFunSuite {
         .applyBuffer(2, argumentSlotOffset, 1)
         .delegateToMorselBuffer(3, 3)
         .pipeline(1, Seq(classOf[Argument]))
-        .optionalBuffer(4, argumentSlotOffset, 0, 2)
+        .argumentStreamBuffer(4, argumentSlotOffset, 0, 2)
         .pipeline(2, Seq(classOf[Optional], classOf[ProduceResult]), serial = true)
         .end
 

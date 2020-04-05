@@ -28,17 +28,15 @@ import scala.collection.mutable.ArrayBuffer
  * Extension of Morsel buffer that also holds an argument state map in order to track
  * argument rows that do not result in any output rows, i.e. gets filtered out.
  *
- * This is used in front of a pipeline with an OptionalOperator.
- *
  * This buffer sits between two pipelines.
  */
-class OptionalMorselBuffer(id: BufferId,
-                           tracker: QueryCompletionTracker,
-                           downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
-                           argumentStateMaps: ArgumentStateMaps,
-                           argumentStateMapId: ArgumentStateMapId
+class ArgumentStreamMorselBuffer(id: BufferId,
+                                 tracker: QueryCompletionTracker,
+                                 downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
+                                 argumentStateMaps: ArgumentStateMaps,
+                                 argumentStateMapId: ArgumentStateMapId
                           )
-  extends BaseArgExistsMorselBuffer[MorselData, OptionalArgumentStateBuffer](id, tracker, downstreamArgumentReducers, argumentStateMaps, argumentStateMapId) {
+  extends BaseArgExistsMorselBuffer[MorselData, ArgumentStreamArgumentStateBuffer](id, tracker, downstreamArgumentReducers, argumentStateMaps, argumentStateMapId) {
 
   override def canPut: Boolean = argumentStateMap.exists(_.canPut)
 
@@ -105,7 +103,7 @@ class OptionalMorselBuffer(id: BufferId,
     argumentStateMap.someArgumentStateIsCompletedOr(state => state.hasData)
   }
 
-  override def clearArgumentState(buffer: OptionalArgumentStateBuffer): Unit = {
+  override def clearArgumentState(buffer: ArgumentStreamArgumentStateBuffer): Unit = {
     val morselsOrNull = buffer.takeAll()
     val numberOfDecrements = if (morselsOrNull != null) morselsOrNull.size else 0
     closeOne(EndOfNonEmptyStream, numberOfDecrements, buffer.argumentRowIdsForReducers)
@@ -139,7 +137,7 @@ class OptionalMorselBuffer(id: BufferId,
   }
 
   override def toString: String =
-    s"OptionalMorselBuffer(planId: $argumentStateMapId)$argumentStateMap"
+    s"ArgumentStreamMorselBuffer(planId: $argumentStateMapId)$argumentStateMap"
 }
 
 // --- Inner Buffer ---
@@ -147,7 +145,7 @@ class OptionalMorselBuffer(id: BufferId,
 /**
  * For Optional, we need to keep track whether the Buffer held data at any point in time.
  */
-trait OptionalBuffer {
+trait BufferUsageHistory {
   self: Buffer[_] =>
   /**
    * @return `true` if this buffer held data at any point in time, `false` if it was always empty.
@@ -157,12 +155,12 @@ trait OptionalBuffer {
 
 /**
  * Delegating [[Buffer]] used in argument state maps.
- * Holds data for one argument row id in an [[OptionalBuffer]].
+ * Holds data for one argument row id.
  */
-class OptionalArgumentStateBuffer(argumentRowId: Long,
-                                  val argumentRow: MorselRow,
-                                  inner: Buffer[Morsel] with OptionalBuffer,
-                                  argumentRowIdsForReducers: Array[Long]) extends ArgumentStateBuffer(argumentRowId, inner, argumentRowIdsForReducers) {
+class ArgumentStreamArgumentStateBuffer(argumentRowId: Long,
+                                        val argumentRow: MorselRow,
+                                        inner: Buffer[Morsel] with BufferUsageHistory,
+                                        argumentRowIdsForReducers: Array[Long]) extends ArgumentStateBuffer(argumentRowId, inner, argumentRowIdsForReducers) {
   /**
    * @return `true` if this buffer held data at any point in time, `false` if it was always empty.
    */
@@ -186,21 +184,21 @@ class OptionalArgumentStateBuffer(argumentRowId: Long,
   }
 
   override def toString: String = {
-    s"OptionalArgumentStateBuffer(argumentRowId=$argumentRowId, argumentRowIdsForReducers=[${argumentRowIdsForReducers.mkString(",")}], argumentMorsel=$argumentRow, inner=$inner)"
+    s"ArgumentStreamArgumentStateBuffer(argumentRowId=$argumentRowId, argumentRowIdsForReducers=[${argumentRowIdsForReducers.mkString(",")}], argumentMorsel=$argumentRow, inner=$inner)"
   }
 }
 
-object OptionalArgumentStateBuffer {
+object ArgumentStreamArgumentStateBuffer {
   class Factory(stateFactory: StateFactory, operatorId: Id) extends ArgumentStateFactory[ArgumentStateBuffer] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
-      new OptionalArgumentStateBuffer(argumentRowId, argumentMorsel.snapshot(), new StandardOptionalBuffer[Morsel](stateFactory.newBuffer[Morsel](operatorId)), argumentRowIdsForReducers)
+      new ArgumentStreamArgumentStateBuffer(argumentRowId, argumentMorsel.snapshot(), new StandardArgumentStreamBuffer[Morsel](stateFactory.newBuffer[Morsel](operatorId)), argumentRowIdsForReducers)
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
-      new OptionalArgumentStateBuffer(argumentRowId, argumentMorsel.snapshot(), new ConcurrentOptionalBuffer[Morsel](stateFactory.newBuffer[Morsel](operatorId)), argumentRowIdsForReducers)
+      new ArgumentStreamArgumentStateBuffer(argumentRowId, argumentMorsel.snapshot(), new ConcurrentArgumentStreamBuffer[Morsel](stateFactory.newBuffer[Morsel](operatorId)), argumentRowIdsForReducers)
   }
 }
 
-class StandardOptionalBuffer[T <: AnyRef](inner: Buffer[T]) extends Buffer[T] with OptionalBuffer {
+class StandardArgumentStreamBuffer[T <: AnyRef](inner: Buffer[T]) extends Buffer[T] with BufferUsageHistory {
   private var _didReceiveData : Boolean = false
 
   override def put(t: T): Unit = {
@@ -221,7 +219,7 @@ class StandardOptionalBuffer[T <: AnyRef](inner: Buffer[T]) extends Buffer[T] wi
   override def iterator: util.Iterator[T] = inner.iterator
 }
 
-class ConcurrentOptionalBuffer[T <: AnyRef](inner: Buffer[T]) extends Buffer[T] with OptionalBuffer {
+class ConcurrentArgumentStreamBuffer[T <: AnyRef](inner: Buffer[T]) extends Buffer[T] with BufferUsageHistory {
   @volatile
   private var _didReceiveData : Boolean = false
 

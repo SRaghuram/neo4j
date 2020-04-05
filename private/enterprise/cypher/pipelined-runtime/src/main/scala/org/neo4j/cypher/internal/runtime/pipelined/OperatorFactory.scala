@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NodeUniqueIndexSeek
 import org.neo4j.cypher.internal.logical.plans.QueryExpression
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateBufferVariant
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStreamBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.physicalplanning.LHSAccumulatingRHSStreamingBufferVariant
@@ -20,7 +21,6 @@ import org.neo4j.cypher.internal.physicalplanning.MorselArgumentStateBufferOutpu
 import org.neo4j.cypher.internal.physicalplanning.MorselBufferOutput
 import org.neo4j.cypher.internal.physicalplanning.NoOutput
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy.OPERATOR_FUSION_DISABLED
-import org.neo4j.cypher.internal.physicalplanning.OptionalBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.OutputDefinition
 import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
 import org.neo4j.cypher.internal.physicalplanning.ReduceOutput
@@ -354,7 +354,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           maybePredicate.map(converters.toCommandExpression(id, _)))(id)
 
       case plans.Optional(source, protectedSymbols) =>
-        val argumentStateMapId = inputBuffer.variant.asInstanceOf[OptionalBufferVariant].argumentStateMapId
+        val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStreamBufferVariant].argumentStateMapId
         val nullableKeys = source.availableSymbols -- protectedSymbols
         val nullableSlots: Array[Slot] = nullableKeys.map(k => slots.get(k).get).toArray
         val argumentSize = physicalPlan.argumentSizes(id)
@@ -365,7 +365,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         new OptionalOperator(WorkIdentity.fromPlan(plan), argumentStateMapId, argumentSlotOffset, nullableSlots, slots, argumentSize)(id)
 
       case _: plans.Anti =>
-        val argumentStateMapId = inputBuffer.variant.asInstanceOf[OptionalBufferVariant].argumentStateMapId
+        val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStreamBufferVariant].argumentStateMapId
         val argumentSize = physicalPlan.argumentSizes(id)
 
         val argumentDepth = physicalPlan.applyPlans(id)
