@@ -306,7 +306,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(admin).role("custom").map,
+      granted(adminPrivilege).role("custom").map,
       granted(adminAction("create_role")).role("custom").map,
       granted(adminAction("drop_role")).role("custom").map,
       granted(adminAction("assign_role")).role("custom").map,
@@ -332,7 +332,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(admin).role("custom").map,
+      granted(adminPrivilege).role("custom").map,
       granted(adminAction("create_user")).role("custom").map,
       granted(adminAction("drop_user")).role("custom").map,
       granted(adminAction("alter_user")).role("custom").map,
@@ -355,7 +355,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(admin).role("custom").map,
+      granted(adminPrivilege).role("custom").map,
       granted(adminAction("set_user_status")).role("custom").map,
       granted(adminAction("set_passwords")).role("custom").map,
     ))
@@ -374,7 +374,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(admin).role("custom").map,
+      granted(adminPrivilege).role("custom").map,
       granted(adminAction("create_database")).role("custom").map,
       granted(adminAction("drop_database")).role("custom").map
     ))
@@ -394,7 +394,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(admin).role("custom").map,
+      granted(adminPrivilege).role("custom").map,
       granted(adminAction("show_privilege")).role("custom").map,
       granted(adminAction("assign_privilege")).role("custom").map,
       granted(adminAction("remove_privilege")).role("custom").map
@@ -412,7 +412,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(admin).role("custom").map,
+      granted(adminPrivilege).role("custom").map,
       granted(adminAction("create_role")).role("custom").map,
       granted(adminAction("drop_role")).role("custom").map,
       granted(adminAction("assign_role")).role("custom").map,
@@ -459,7 +459,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // Then
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(admin).role("custom").map,
+      granted(adminPrivilege).role("custom").map,
       granted(adminAction("role_management")).role("custom").map
     ))
   }
@@ -485,7 +485,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // Then
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(admin).role("custom").map,
+      granted(adminPrivilege).role("custom").map,
       granted(adminAction("user_management")).role("custom").map
     ))
   }
@@ -544,7 +544,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // Then
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      granted(admin).role("custom").map,
+      granted(adminPrivilege).role("custom").map,
       granted(adminAction("dbms_actions")).role("custom").map
     ))
   }
@@ -585,7 +585,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     ).foreach(queryPart => execute(s"REVOKE $queryPart FROM custom"))
 
     // Then
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(granted(admin).role("custom").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(granted(adminPrivilege).role("custom").map))
   }
 
   // Enforcement tests
@@ -840,8 +840,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     executeOnSystem("foo", "bar", "SHOW ROLES WITH USERS", resultHandler = (row, _) => {
       val role = Map(
         "role" -> row.get("role"),
-        "member" -> row.get("member"),
-        "isBuiltIn" -> row.get("isBuiltIn")
+        "member" -> row.get("member")
       )
       result.add(role)
     })
@@ -884,16 +883,11 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     // THEN
     val result = new mutable.HashSet[Map[String, AnyRef]]
     executeOnSystem("foo", "bar", "SHOW POPULATED ROLES", resultHandler = (row, _) => {
-      val role = Map(
-        "role" -> row.get("role"),
-        "isBuiltIn" -> row.get("isBuiltIn")
-      )
+      val role = Map("role" -> row.get("role"))
       result.add(role)
     })
 
-    result should be(
-      Set(role("custom").map, role("PUBLIC").builtIn().map, role("admin").builtIn().map)
-    )
+    result should be(Set(role("custom").map, public, admin))
   }
 
   test("should fail showing populated roles when denied show role privilege") {
@@ -922,15 +916,13 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     executeOnSystem("foo", "bar", "SHOW POPULATED ROLES WITH USERS", resultHandler = (row, _) => {
       val role = Map(
         "role" -> row.get("role"),
-        "member" -> row.get("member"),
-        "isBuiltIn" -> row.get("isBuiltIn")
+        "member" -> row.get("member")
       )
       result.add(role)
     })
 
     result should be(
-      publicRole("foo", "neo4j") ++
-      Set(role("custom").member("foo").map, role("admin").member("neo4j").builtIn().map)
+      publicRole("foo", "neo4j") ++ Set(role("custom").member("foo").map, adminWithDefaultUser)
     )
   }
 
@@ -2015,7 +2007,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     execute(s"REVOKE NAME ON DATABASE * FROM $name")
     execute(s"REVOKE INDEX ON DATABASE * FROM $name")
     execute(s"REVOKE CONSTRAINT ON DATABASE * FROM $name")
-    execute(s"SHOW ROLE $name PRIVILEGES").toSet should be(Set(granted(admin).role(name).map))
+    execute(s"SHOW ROLE $name PRIVILEGES").toSet should be(Set(granted(adminPrivilege).role(name).map))
   }
 
   private def allDbmsPrivileges(privType: String, includingCompound: Boolean): Unit = {

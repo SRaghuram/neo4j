@@ -15,7 +15,6 @@ import com.neo4j.server.security.enterprise.auth.Resource
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.DENY
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT
-import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.common.DependencyResolver
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.GraphDatabaseSettings
@@ -113,7 +112,6 @@ import org.neo4j.values.storable.LongValue
 import org.neo4j.values.storable.TextValue
 import org.neo4j.values.storable.Value
 import org.neo4j.values.storable.Values
-import org.neo4j.values.virtual.ListValue
 import org.neo4j.values.virtual.MapValue
 import org.neo4j.values.virtual.VirtualValues
 
@@ -222,9 +220,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
     case ShowRoles(source, withUsers, showAll) => (context, parameterMapping) =>
-      val predefinedKey = internalKey("predefined")
-      val predefinedRoles = Values.stringArray(PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
-        PredefinedRoles.EDITOR, PredefinedRoles.READER)
       val userColumns = if (withUsers) ", u.name as member" else ""
       val maybeMatchUsers = if (withUsers) "OPTIONAL MATCH (u:User)" else ""
       val roleMatch = (showAll, withUsers) match {
@@ -239,19 +234,15 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         s"""
            |$roleMatch
            |
-           |RETURN DISTINCT r.name as role,
-           |CASE
-           | WHEN r.name IN $$$predefinedKey THEN true
-           | ELSE false
-           |END as isBuiltIn
+           |RETURN DISTINCT r.name as role
            |$userColumns
            |UNION
            |MATCH (r:Role) WHERE r.name = 'PUBLIC'
            |$maybeMatchUsers
-           |RETURN DISTINCT r.name as role, true as isBuiltIn
+           |RETURN DISTINCT r.name as role
            |$userColumns
         """.stripMargin,
-        VirtualValues.map(Array(predefinedKey), Array(predefinedRoles)),
+        VirtualValues.EMPTY_MAP,
         source = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
       )
 

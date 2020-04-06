@@ -47,22 +47,28 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val onlineStatus: String = DatabaseStatus.Online.stringValue()
   val offlineStatus: String = DatabaseStatus.Offline.stringValue()
 
+  val public: Map[String, Any] = role(PredefinedRoles.PUBLIC).map
+  val admin: Map[String, Any] = role(PredefinedRoles.ADMIN).map
+  val reader: Map[String, Any] = role(PredefinedRoles.READER).map
+
   val defaultRoles: Set[Map[String, Any]] = Set(
-    role(PredefinedRoles.PUBLIC).builtIn().map,
-    role(PredefinedRoles.ADMIN).builtIn().map,
-    role(PredefinedRoles.ARCHITECT).builtIn().map,
-    role(PredefinedRoles.PUBLISHER).builtIn().map,
-    role(PredefinedRoles.EDITOR).builtIn().map,
-    role(PredefinedRoles.READER).builtIn().map
+    public,
+    admin,
+    role(PredefinedRoles.ARCHITECT).map,
+    role(PredefinedRoles.PUBLISHER).map,
+    role(PredefinedRoles.EDITOR).map,
+    reader
   )
 
+  val adminWithDefaultUser: Map[String, Any] = role(PredefinedRoles.ADMIN).member("neo4j").map
+
   val defaultRolesWithUsers: Set[Map[String, Any]] = Set(
-    role(PredefinedRoles.PUBLIC).builtIn().member("neo4j").map,
-    role(PredefinedRoles.ADMIN).builtIn().member("neo4j").map,
-    role(PredefinedRoles.ARCHITECT).builtIn().noMember().map,
-    role(PredefinedRoles.PUBLISHER).builtIn().noMember().map,
-    role(PredefinedRoles.EDITOR).builtIn().noMember().map,
-    role(PredefinedRoles.READER).builtIn().noMember().map
+    role(PredefinedRoles.PUBLIC).member("neo4j").map,
+    adminWithDefaultUser,
+    role(PredefinedRoles.ARCHITECT).noMember().map,
+    role(PredefinedRoles.PUBLISHER).noMember().map,
+    role(PredefinedRoles.EDITOR).noMember().map,
+    role(PredefinedRoles.READER).noMember().map
   )
 
   lazy val defaultRolePrivileges: Set[Map[String, AnyRef]] = Set(
@@ -102,7 +108,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     granted(nameManagement).role("admin").map,
     granted(indexManagement).role("admin").map,
     granted(constraintManagement).role("admin").map,
-    granted(admin).role("admin").map,
+    granted(adminPrivilege).role("admin").map,
   )
 
   def defaultRolePrivilegesFor(role: String): Set[Map[String, AnyRef]] = defaultRolePrivileges.filter(m => m("role") == role)
@@ -128,7 +134,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     granted(nameManagement).role("admin").user("neo4j").map,
     granted(indexManagement).role("admin").user("neo4j").map,
     granted(constraintManagement).role("admin").user("neo4j").map,
-    granted(admin).role("admin").user("neo4j").map,
+    granted(adminPrivilege).role("admin").user("neo4j").map,
   )
 
   def asPrivilegesResult(row: Result.ResultRow): Map[String, AnyRef] =
@@ -188,14 +194,12 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     def member(user: String) = RoleMapBuilder(map + ("member" -> user))
 
     def noMember() = RoleMapBuilder(map + ("member" -> null))
-
-    def builtIn() = RoleMapBuilder(map + ("isBuiltIn" -> true))
   }
 
-  def role(roleName: String): RoleMapBuilder = RoleMapBuilder(Map("role" -> roleName, "isBuiltIn" -> false))
+  def role(roleName: String): RoleMapBuilder = RoleMapBuilder(Map("role" -> roleName))
 
   def publicRole(users: String*): Set[Map[String, Any]] =
-    users.map(u => role(PredefinedRoles.PUBLIC).builtIn().member(u).map).toSet
+    users.map(u => role(PredefinedRoles.PUBLIC).member(u).map).toSet
 
   case class PrivilegeMapBuilder(map: Map[String, AnyRef]) {
     def action(action: String) = PrivilegeMapBuilder(map + ("action" -> action))
@@ -245,7 +249,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val write: Map[String, String] = baseMap + ("resource" -> "graph", "action" -> "write")
 
   val allDatabasePrivilege: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "database_actions")
-  val admin:  Map[String, String] = baseMap + ("resource" -> "database", "action" -> "admin")
+  val adminPrivilege:  Map[String, String] = baseMap + ("resource" -> "database", "action" -> "admin")
 
   def showTransaction(username: String): Map[String, String] =
     baseMap + ("resource" -> "database", "segment" -> s"USER($username)", "action" -> "show_transaction")
