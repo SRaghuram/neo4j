@@ -107,6 +107,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
                 {
                     denseProperties = relCursor.denseProperties();
                     dereferenceData(); // dereference right away, because we won't be needing that data anymore
+                    return;
                 }
                 else
                 {
@@ -117,14 +118,12 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
                         ensurePropertiesLoaded();
                         readPropertyKeys( buffer.position( offset ) );
                         initializedFromEntity = true;
+                        return;
                     }
                 }
             }
         }
-        else
-        {
-            reset();
-        }
+        reset();
     }
 
     @Override
@@ -145,7 +144,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     @Override
     public Value propertyValue()
     {
-        if ( currentDenseProperty != null )
+        if ( denseProperties != null )
         {
             return currentDenseProperty.value();
         }
@@ -277,6 +276,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
 
     private boolean readPropertyKeys( ByteBuffer buffer )
     {
+        denseProperties = null;
         if ( buffer == null )
         {
             return false;

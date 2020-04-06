@@ -906,6 +906,7 @@ class FrekiStorageEngineGraphWritesIT
         {
             nodeIds.add( commandCreationContext.reserveNode() );
         }
+        MutableLongObjectMap<Set<StorageProperty>> expectedOtherNodesProperties = LongObjectMaps.mutable.empty();
         MutableLongSet existenceOfNodeIds = LongSets.mutable.empty();
         existenceOfNodeIds.add( nodeId );
 
@@ -939,7 +940,7 @@ class FrekiStorageEngineGraphWritesIT
                 Set<StorageProperty> addedProperties = new HashSet<>();
                 Set<StorageProperty> changedProperties = new HashSet<>();
                 MutableIntSet removedProperties = IntSets.mutable.empty();
-                 for ( int i = 0; i < numPropertyChanges; i++ )
+                for ( int i = 0; i < numPropertyChanges; i++ )
                 {
                     int propertyKeyId = random.nextInt( 10 );
                     if ( expectedNodeProperties.containsKey( propertyKeyId ) )
@@ -972,6 +973,9 @@ class FrekiStorageEngineGraphWritesIT
                     if ( existenceOfNodeIds.add( otherNodeId ) )
                     {
                         target.visitCreatedNode( otherNodeId );
+                        Set<StorageProperty> otherNodeProperties = randomProperties();
+                        target.visitNodePropertyChanges( otherNodeId, otherNodeProperties, emptyList(), IntSets.immutable.empty() );
+                        expectedOtherNodesProperties.put( otherNodeId, otherNodeProperties );
                     }
                     long startNode;
                     long endNode;
@@ -986,7 +990,7 @@ class FrekiStorageEngineGraphWritesIT
                         endNode = nodeId;
                     }
                     RelationshipSpec relationship =
-                            createRelationship( target, txCommandCreationContext, startNode, random.nextInt( 4 ), endNode, randomRelationshipProperties() );
+                            createRelationship( target, txCommandCreationContext, startNode, random.nextInt( 4 ), endNode, randomProperties() );
                     createdRelationships.add( relationship );
                 }
                 for ( int i = 0; i < round && !expectedRelationships.isEmpty(); i++ )
@@ -999,7 +1003,28 @@ class FrekiStorageEngineGraphWritesIT
             } );
 
             // then
-            assertContentsOfNode( nodeId, expectedLabels, new HashSet<>( expectedNodeProperties.values() ), expectedRelationships );
+            try ( StorageReader storageReader = storageEngine.newReader();
+                    StorageNodeCursor nodeCursor = storageReader.allocateNodeCursor( NULL );
+                    StoragePropertyCursor propertyCursor = storageReader.allocatePropertyCursor( NULL );
+                    StorageRelationshipTraversalCursor relationshipCursor = storageReader.allocateRelationshipTraversalCursor( NULL ) )
+            {
+                List<Runnable> checks = new ArrayList<>();
+                checks.add( () -> assertContentsOfNode( nodeId, expectedLabels, new HashSet<>( expectedNodeProperties.values() ),
+                        expectedRelationships, nodeCursor, propertyCursor, relationshipCursor ) );
+                checks.add( () -> expectedOtherNodesProperties.forEachKeyValue( ( otherNodeId, otherNodeProperties ) ->
+                {
+                    Set<RelationshipSpec> otherNodeRelationships =
+                            expectedRelationships.stream().filter( rel -> rel.startNodeId == otherNodeId || rel.endNodeId == otherNodeId ).collect(
+                                    Collectors.toSet() );
+                    assertContentsOfNode( otherNodeId, LongSets.immutable.empty(), otherNodeProperties, otherNodeRelationships,
+                            nodeCursor, propertyCursor, relationshipCursor );
+                } ) );
+                if ( random.nextBoolean() )
+                {
+                    Collections.reverse( checks );
+                }
+                checks.forEach( Runnable::run );
+            }
         }
     }
 
@@ -1111,6 +1136,45 @@ class FrekiStorageEngineGraphWritesIT
         }
     }
 
+    @Test
+    void shouldReusePropertyCursorBetweenDenseRelationshipsAndNodes() throws Exception
+    {
+        // given
+        long nodeId = commandCreationContext.reserveNode();
+        Set<StorageProperty> relationshipProperties = asSet( new PropertyKeyValue( 1, stringValue( "abc" ) ), new PropertyKeyValue( 2, longValue( 123 ) ) );
+        Set<StorageProperty> nodeProperties = asSet( new PropertyKeyValue( 1, stringValue( "rts" ) ) );
+        createAndApplyTransaction( target ->
+        {
+            target.visitCreatedNode( nodeId );
+            for ( int i = 0; i < 200; i++ )
+            {
+                long otherNodeId = commandCreationContext.reserveNode();
+                target.visitCreatedNode( otherNodeId );
+                target.visitCreatedRelationship( commandCreationContext.reserveRelationship( nodeId ), 0, nodeId, otherNodeId,
+                        relationshipProperties );
+            }
+            target.visitNodePropertyChanges( nodeId, nodeProperties, emptyList(), IntSets.immutable.empty() );
+        } );
+
+        // when
+        try ( var reader = storageEngine.newReader();
+                var nodeCursor = reader.allocateNodeCursor( NULL );
+                var relationshipCursor = reader.allocateRelationshipTraversalCursor( NULL );
+                var propertyCursor = reader.allocatePropertyCursor( NULL ) )
+        {
+            nodeCursor.single( nodeId );
+            nodeCursor.next();
+            nodeCursor.relationships( relationshipCursor, ALL_RELATIONSHIPS );
+            assertThat( relationshipCursor.next() ).isTrue();
+
+            // then
+            relationshipCursor.properties( propertyCursor );
+            assertProperties( relationshipProperties, propertyCursor );
+            nodeCursor.properties( propertyCursor );
+            assertProperties( nodeProperties, propertyCursor );
+        }
+    }
+
     private void assertRelationshipsTo( long nodeId, Set<RelationshipSpec> relationships, RelationshipSelection selection, long otherNodeId )
     {
         try ( var storageReader = storageEngine.newReader();
@@ -1129,7 +1193,7 @@ class FrekiStorageEngineGraphWritesIT
         }
     }
 
-    private Set<StorageProperty> randomRelationshipProperties()
+    private Set<StorageProperty> randomProperties()
     {
         Set<StorageProperty> properties = new HashSet<>();
         int numProperties = random.nextInt( 3 );
@@ -1185,31 +1249,37 @@ class FrekiStorageEngineGraphWritesIT
                 StoragePropertyCursor propertyCursor = storageReader.allocatePropertyCursor( NULL );
                 StorageRelationshipTraversalCursor relationshipCursor = storageReader.allocateRelationshipTraversalCursor( NULL ) )
         {
-            // labels
-            nodeCursor.single( nodeId );
-            assertThat( nodeCursor.next() ).isTrue();
-            assertArrayEquals( labelIds.toSortedArray(), nodeCursor.labels() );
-            nodeLabelUpdateListener.assertNodeHasLabels( nodeId, labelIds );
+            assertContentsOfNode( nodeId, labelIds, nodeProperties, relationships, nodeCursor, propertyCursor, relationshipCursor );
+        }
+    }
 
-            // properties
-            nodeCursor.properties( propertyCursor );
-            assertProperties( nodeProperties, propertyCursor );
+    private void assertContentsOfNode( long nodeId, LongSet labelIds, Set<StorageProperty> nodeProperties, Set<RelationshipSpec> relationships,
+            StorageNodeCursor nodeCursor, StoragePropertyCursor propertyCursor, StorageRelationshipTraversalCursor relationshipCursor )
+    {
+        // labels
+        nodeCursor.single( nodeId );
+        assertThat( nodeCursor.next() ).isTrue();
+        assertArrayEquals( labelIds.toSortedArray(), nodeCursor.labels() );
+        nodeLabelUpdateListener.assertNodeHasLabels( nodeId, labelIds );
 
-            // relationships
-            nodeCursor.relationships( relationshipCursor, ALL_RELATIONSHIPS );
-            Set<RelationshipSpec> readRelationships = readRelationships( propertyCursor, relationshipCursor );
-            assertThat( readRelationships ).isEqualTo( relationships );
+        // properties
+        nodeCursor.properties( propertyCursor );
+        assertProperties( nodeProperties, propertyCursor );
 
-            // degrees
-            Degrees degrees = nodeCursor.degrees( ALL_RELATIONSHIPS );
-            Degrees expectedDegrees = buildExpectedDegrees( nodeId, relationships );
-            assertThat( IntSets.immutable.of( degrees.types() ) ).isEqualTo( IntSets.immutable.of( expectedDegrees.types() ) );
-            for ( int type : degrees.types() )
-            {
-                assertThat( degrees.outgoingDegree( type ) ).isEqualTo( expectedDegrees.outgoingDegree( type ) );
-                assertThat( degrees.incomingDegree( type ) ).isEqualTo( expectedDegrees.incomingDegree( type ) );
-                assertThat( degrees.totalDegree( type ) ).isEqualTo( expectedDegrees.totalDegree( type ) );
-            }
+        // relationships
+        nodeCursor.relationships( relationshipCursor, ALL_RELATIONSHIPS );
+        Set<RelationshipSpec> readRelationships = readRelationships( propertyCursor, relationshipCursor );
+        assertThat( readRelationships ).isEqualTo( relationships );
+
+        // degrees
+        Degrees degrees = nodeCursor.degrees( ALL_RELATIONSHIPS );
+        Degrees expectedDegrees = buildExpectedDegrees( nodeId, relationships );
+        assertThat( IntSets.immutable.of( degrees.types() ) ).isEqualTo( IntSets.immutable.of( expectedDegrees.types() ) );
+        for ( int type : degrees.types() )
+        {
+            assertThat( degrees.outgoingDegree( type ) ).isEqualTo( expectedDegrees.outgoingDegree( type ) );
+            assertThat( degrees.incomingDegree( type ) ).isEqualTo( expectedDegrees.incomingDegree( type ) );
+            assertThat( degrees.totalDegree( type ) ).isEqualTo( expectedDegrees.totalDegree( type ) );
         }
     }
 
@@ -1242,12 +1312,12 @@ class FrekiStorageEngineGraphWritesIT
 
     private Set<StorageProperty> readProperties( StoragePropertyCursor propertyCursor )
     {
-        Set<StorageProperty> readNodeProperties = new HashSet<>();
+        Set<StorageProperty> readProperties = new HashSet<>();
         while ( propertyCursor.next() )
         {
-            assertThat( readNodeProperties.add( new PropertyKeyValue( propertyCursor.propertyKey(), propertyCursor.propertyValue() ) ) ).isTrue();
+            assertThat( readProperties.add( new PropertyKeyValue( propertyCursor.propertyKey(), propertyCursor.propertyValue() ) ) ).isTrue();
         }
-        return readNodeProperties;
+        return readProperties;
     }
 
     private void createAndApplyTransaction( ThrowingConsumer<TxStateVisitor,Exception> data ) throws Exception
