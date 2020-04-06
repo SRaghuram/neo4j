@@ -7,8 +7,8 @@ package com.neo4j.tools.migration;
 
 import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import org.eclipse.collections.api.map.primitive.MutableIntIntMap;
-import org.eclipse.collections.impl.factory.primitive.IntIntMaps;
+import org.eclipse.collections.api.map.primitive.MutableLongLongMap;
+import org.eclipse.collections.impl.factory.primitive.LongLongMaps;
 
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
@@ -26,6 +26,7 @@ import org.neo4j.graphdb.schema.ConstraintCreator;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.IndexCreator;
 import org.neo4j.graphdb.schema.IndexDefinition;
+import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
 
 import static java.lang.Math.toIntExact;
@@ -85,7 +86,16 @@ public class MigrateDataIntoOtherDatabase
 
     private static void copyData( GraphDatabaseService to, Transaction fromTx )
     {
-        MutableIntIntMap fromToNodeIdTable = IntIntMaps.mutable.empty();
+        InternalTransaction tx = (InternalTransaction) fromTx;
+        long numNodes = tx.kernelTransaction().dataRead().nodesGetCount();
+        long nodesPerMap = 10_000_000;
+        int numMaps = toIntExact( numNodes / nodesPerMap ) + 1;
+        MutableLongLongMap[] fromToNodeIdTable = new MutableLongLongMap[numMaps];
+        for ( int i = 0; i < fromToNodeIdTable.length; i++ )
+        {
+            fromToNodeIdTable[i] = LongLongMaps.mutable.empty();
+        }
+
         try ( ResourceIterator<Node> nodes = fromTx.getAllNodes().iterator() )
         {
             for ( int batch = 0; nodes.hasNext(); batch++ )
@@ -96,7 +106,7 @@ public class MigrateDataIntoOtherDatabase
                     {
                         Node fromNode = nodes.next();
                         Node toNode = copyNodeData( fromNode, toTx );
-                        fromToNodeIdTable.put( toIntExact( fromNode.getId() ), toIntExact( toNode.getId() ) );
+                        fromToNodeIdTable[ toIntExact( fromNode.getId() % numMaps ) ].put( fromNode.getId(), toNode.getId() );
                     }
                     toTx.commit();
                     System.out.println( "node batch " + batch + " completed" );
@@ -112,8 +122,11 @@ public class MigrateDataIntoOtherDatabase
                     for ( int i = 0; i < 100_000 && relationships.hasNext(); i++ )
                     {
                         Relationship fromRelationship = relationships.next();
-                        Node toStartNode = toTx.getNodeById( fromToNodeIdTable.get( toIntExact( fromRelationship.getStartNodeId() ) ) );
-                        Node toEndNode = toTx.getNodeById( fromToNodeIdTable.get( toIntExact( fromRelationship.getEndNodeId() ) ) );
+                        long startId = fromToNodeIdTable[toIntExact( fromRelationship.getStartNodeId() % numMaps )].get( fromRelationship.getStartNodeId() );
+                        long endId = fromToNodeIdTable[toIntExact( fromRelationship.getEndNodeId() % numMaps )].get( fromRelationship.getEndNodeId() );
+
+                        Node toStartNode = toTx.getNodeById( startId );
+                        Node toEndNode = toTx.getNodeById( endId );
                         Relationship toRelationship = toStartNode.createRelationshipTo( toEndNode, fromRelationship.getType() );
                         fromRelationship.getAllProperties().forEach( toRelationship::setProperty );
                     }
