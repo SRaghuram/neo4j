@@ -30,9 +30,12 @@ import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipScanCursor;
 
+import static org.neo4j.internal.freki.MutableNodeRecordData.nodeIdFromRelationshipId;
+
 class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements StorageRelationshipScanCursor
 {
     private long singleId;
+    private long singleTargetNodeReference;
     private boolean needsLoading;
     private boolean inScan;
     private long scanNodeId;
@@ -56,7 +59,7 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
                 if ( needsLoading )
                 {
                     needsLoading = false;
-                    traversalCursor.init( scanNodeId++, selection ); //load next node
+                    traversalCursor.init( scanNodeId++, NULL, selection ); //load next node
                 }
 
                 if ( traversalCursor.next() )
@@ -74,7 +77,7 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
             {
                 needsLoading = false;
                 cursorAccessTracer.registerRelationshipByReference( singleId );
-                traversalCursor.init( MutableNodeRecordData.nodeIdFromRelationshipId( singleId ), selection );
+                traversalCursor.initInternal( nodeIdFromRelationshipId( singleId ), singleTargetNodeReference, selection );
             }
             while ( traversalCursor.next() )
             {
@@ -105,6 +108,7 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     {
         super.reset();
         singleId = NULL;
+        singleTargetNodeReference = NULL;
         needsLoading = false;
         inScan = false;
         scanNodeId = NULL;
@@ -143,6 +147,16 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
         singleId = reference;
         needsLoading = true;
         selection = RelationshipSelection.ALL_RELATIONSHIPS;
+    }
+
+    @Override
+    public void single( long reference, long sourceNodeReference, int type, long targetNodeReference )
+    {
+        traversalCursor.reset();
+        singleId = reference;
+        singleTargetNodeReference = targetNodeReference;
+        needsLoading = true;
+        selection = RelationshipSelection.selection( type, Direction.OUTGOING );
     }
 
     @Override

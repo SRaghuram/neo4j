@@ -543,7 +543,8 @@ public class RelationshipEntity implements Relationship, RelationshipVisitor<Run
 
     private void singleRelationship( KernelTransaction transaction, RelationshipScanCursor relationships )
     {
-        transaction.dataRead().singleRelationship( id, relationships );
+        initializeData();
+        transaction.dataRead().singleRelationship( id, startNode, type, endNode, relationships );
         if ( !relationships.next() )
         {
             throw new NotFoundException( new EntityNotFoundException( EntityType.RELATIONSHIP, id ) );
