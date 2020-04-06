@@ -20,442 +20,464 @@
 package org.neo4j.internal.freki;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 import org.neo4j.io.pagecache.PageCursor;
 
-import static java.lang.Integer.min;
+import static org.apache.commons.lang3.ArrayUtils.EMPTY_INT_ARRAY;
+import static org.apache.commons.lang3.ArrayUtils.EMPTY_LONG_ARRAY;
 
-/**
- * Writes arrays of ints or longs. Terminology:
- * <ul>
- *     <li>chunk: count header (0-127) + 0-127 array items. A chunk contains 0 or more blocks</li>
- *     <li>block: count header (for 0-4 array items) + 0-4 array items</li>
- * </ul>
- */
 class StreamVByte
 {
-    private static final int MASK_SQUASHED_BLOCK = 0b1000_0000;
-    private static final int SHIFT_SQUASHED_BLOCK_LENGTH = 5;
-    private static final int[] LONG_SIZES = {1, 3, 5, 7};
-    private static final long[] LONG_MASKS = {
-            0,
-            0x00000000_00FFFF00L,
-            0x000000FF_FF000000L,
-            0xFFFFFF00_00000000L};
+    private static final int[] INT_CODE_SIZES = {1, 2, 3, 4};
+    private static final int[] INT_RELATIVE_OFFSETS = new int[256];
+    private static final int[] LONG_CODE_SIZES = {1, 3, 5, 7};
+    private static final int[] LONG_RELATIVE_OFFSETS = new int[256];
+    private static final long LONG_BYTE_SIZE_0 = 1L << (LONG_CODE_SIZES[0] * Byte.SIZE);
+    private static final long LONG_BYTE_SIZE_1 = 1L << (LONG_CODE_SIZES[1] * Byte.SIZE);
+    private static final long LONG_BYTE_SIZE_2 = 1L << (LONG_CODE_SIZES[2] * Byte.SIZE);
+    private static final long LONG_BYTE_SIZE_3 = 1L << (LONG_CODE_SIZES[3] * Byte.SIZE);
 
-    static void writeInts( int[] source, ByteBuffer buffer )
+    static
     {
-        writeInts( new IntArraySource( source ), buffer );
+        calculateRelativeOffsets( INT_RELATIVE_OFFSETS, INT_CODE_SIZES );
+        calculateRelativeOffsets( LONG_RELATIVE_OFFSETS, LONG_CODE_SIZES );
     }
 
-    static void writeIntDeltas( int[] source, ByteBuffer buffer )
+    private static void calculateRelativeOffsets( int[] target, int[] codeSizes )
     {
-        writeIntDeltas( new IntArraySource( source ), buffer );
-    }
-
-    static void writeInts( Source source, ByteBuffer buffer )
-    {
-        writeInts( source, buffer, false );
-    }
-
-    static void writeIntDeltas( Source source, ByteBuffer buffer )
-    {
-        writeInts( source, buffer, true );
-    }
-
-    private static void writeInts( Source source, ByteBuffer buffer, boolean deltas )
-    {
-        byte[] serialized = buffer.array();
-        int offset = buffer.position();
-        int count = source.length();
-        for ( int i = 0, prev = 0; i < count; )
+        for ( int i = 0; i < 256; i++ )
         {
-            int currentChunkCount = min( Byte.MAX_VALUE, count - i );
-            int headerOffset = writeChunkHeader( serialized, offset, currentChunkCount );
-            offset = headerOffset + 1;
-            for ( int c = 0; c < currentChunkCount; )
+            int d = i & 0x3;
+            int c = (i >>> 2) & 0x3;
+            int b = (i >>> 4) & 0x3;
+            int a = (i >>> 6) & 0x3;
+            target[i] =
+                    (codeSizes[a] + codeSizes[b] + codeSizes[c] + codeSizes[d]) << 24 |
+                            (codeSizes[b] + codeSizes[c] + codeSizes[d]) << 16 |
+                            (codeSizes[c] + codeSizes[d]) << 8 |
+                            codeSizes[d];
+        }
+    }
+
+    // === INTS ===
+
+    private static int writeInts( int[] values, byte[] bytes, int offset, boolean deltas )
+    {
+        int count = values.length;
+        if ( count == 0 )
+        {
+            bytes[offset] = 0;
+            return offset + 1;
+        }
+
+        int numberOfHeaderBytes = numHeaderBytes( count );
+        byte shift = 0;
+        int countHeader = writeCountHeader( count, bytes, offset );
+        int headerOffset = countHeader & 0xFFFFFF;
+        byte key = (byte) (countHeader >>> 24);
+        int dataOffset = headerOffset + numberOfHeaderBytes;
+        int prev = 0;
+        for ( int c = 0; c < count; c++ )
+        {
+            if ( shift == 8 )
             {
-                int currentBlockCount = min( 4, currentChunkCount - c );
-                for ( int j = 0; j < currentBlockCount; j++, i++, c++ )
-                {
-                    int value = source.valueAt( i );
-                    offset = writeIntValue( serialized, offset, headerOffset, j, deltas ? value - prev : value );
-                    prev = value;
-                }
-                if ( currentBlockCount == 4 )
-                {
-                    headerOffset = offset++;
-                    serialized[headerOffset] = 0; // clear the header byte since we could be overwriting previous data
-                }
+                shift = 0;
+                bytes[headerOffset++] = key;
+                key = 0;
+            }
+            int value = values[c];
+            byte code = encodeIntValue( deltas ? value - prev : value, bytes, dataOffset );
+            dataOffset += INT_CODE_SIZES[code];
+            key |= code << shift;
+            shift += 2;
+            prev = value;
+        }
+
+        bytes[headerOffset] = key;
+        return dataOffset;
+    }
+
+    static void writeInts( int[] values, ByteBuffer buffer )
+    {
+        buffer.position( writeInts( values, buffer.array(), buffer.position(), false ) );
+    }
+
+    static void writeIntDeltas( int[] values, ByteBuffer buffer )
+    {
+        buffer.position( writeInts( values, buffer.array(), buffer.position(), true ) );
+    }
+
+    static int[] readInts( byte[] bytes, int offset, ByteBuffer buffer )
+    {
+        if ( bytes[offset] == 0 )
+        {
+            buffer.position( offset + 1 );
+            return EMPTY_INT_ARRAY;
+        }
+        int countAndHeaderOffset = readCountHeader( bytes, offset );
+        int count = countAndHeaderOffset & 0xFFFF;
+        int headerOffset = countAndHeaderOffset >>> 16;
+        int[] values = new int[count];
+        int numberOfHeaderBytes = numHeaderBytes( count );
+        int dataOffset = headerOffset + numberOfHeaderBytes;
+        int valueIndex = 0;
+        for ( ; count >= 4; count -= 4 )
+        {
+            int keyBytes = bytes[headerOffset++] & 0xFF;
+            int relativeOffsets = INT_RELATIVE_OFFSETS[keyBytes & 0xFF];
+            values[valueIndex] = decodeIntValue( keyBytes & 0x3, bytes, dataOffset );
+            values[valueIndex + 1] = decodeIntValue( (keyBytes >>> 2) & 0x3, bytes, dataOffset + (relativeOffsets & 0xFF) );
+            values[valueIndex + 2] = decodeIntValue( (keyBytes >>> 4) & 0x3, bytes, dataOffset + ((relativeOffsets >>> 8) & 0xFF) );
+            values[valueIndex + 3] = decodeIntValue( (keyBytes >>> 6) & 0x3, bytes, dataOffset + ((relativeOffsets >>> 16) & 0xFF) );
+            dataOffset += relativeOffsets >>> 24;
+            valueIndex += 4;
+        }
+        if ( count > 0 )
+        {
+            int keyBytes = bytes[headerOffset] & 0xFF;
+            for ( int i = 0; i < count; i++ )
+            {
+                int code = (keyBytes >>> (i * 2)) & 0x3;
+                values[valueIndex + i] = decodeIntValue( code, bytes, dataOffset );
+                dataOffset += INT_CODE_SIZES[code];
             }
         }
-        if ( count % 127 == 0 )
-        {
-            serialized[offset++] = (byte) MASK_SQUASHED_BLOCK;
-        }
-        buffer.position( offset );
+        buffer.position( dataOffset );
+        return values;
     }
 
-    private static int writeChunkHeader( byte[] serialized, int offset, int currentBlockValueLength )
+    static int[] readInts( ByteBuffer buffer )
     {
-        if ( currentBlockValueLength <= 2 )
-        {
-            // If block size is 0..2 then count and header bytes can be squashed into a single byte
-            serialized[offset] = (byte) (MASK_SQUASHED_BLOCK | (currentBlockValueLength << SHIFT_SQUASHED_BLOCK_LENGTH));
-        }
-        else
-        {
-            serialized[offset++] = (byte) currentBlockValueLength;
-            serialized[offset] = 0; // clear the header byte since we could be overwriting previous data
-        }
-        return offset;
+        return readInts( buffer.array(), buffer.position(), buffer );
     }
 
-    private static int writeIntValue( byte[] serialized, int offset, int headerOffset, int j, int value )
+    static Object readIntDeltas( byte[] bytes, int offset, ByteBuffer buffer, StreamVByte.TargetCreator creator, StreamVByte.TargetConsumer consumer )
     {
-        if ( (value & 0xFF000000) != 0 )
+        if ( bytes[offset] == 0 )
         {
-            serialized[headerOffset] |= 0b11 << (j * 2);
-            serialized[offset++] = (byte) value;
-            serialized[offset++] = (byte) (value >>> 8);
-            serialized[offset++] = (byte) (value >>> 16);
-            serialized[offset++] = (byte) (value >>> 24);
+            buffer.position( offset + 1 );
+            return EMPTY_INT_ARRAY;
         }
-        else if ( (value & 0xFF0000) != 0 )
+        int countAndHeaderOffset = readCountHeader( bytes, offset );
+        int count = countAndHeaderOffset & 0xFFFF;
+        int headerOffset = countAndHeaderOffset >>> 16;
+        Object values = creator.create( count );
+        int numberOfHeaderBytes = numHeaderBytes( count );
+        int dataOffset = headerOffset + numberOfHeaderBytes;
+        int valueIndex = 0;
+        int prev = 0;
+        for ( ; count >= 4; count -= 4 )
         {
-            serialized[headerOffset] |= 0b10 << (j * 2);
-            serialized[offset++] = (byte) value;
-            serialized[offset++] = (byte) (value >>> 8);
-            serialized[offset++] = (byte) (value >>> 16);
+            int keyBytes = bytes[headerOffset++] & 0xFF;
+            int relativeOffsets = INT_RELATIVE_OFFSETS[keyBytes & 0xFF];
+            int value1 = prev + decodeIntValue( keyBytes & 0x3, bytes, dataOffset );
+            int value2 = decodeIntValue( (keyBytes >>> 2) & 0x3, bytes, dataOffset + (relativeOffsets & 0xFF) ) + value1;
+            int value3 = decodeIntValue( (keyBytes >>> 4) & 0x3, bytes, dataOffset + ((relativeOffsets >>> 8) & 0xFF) ) + value2;
+            int value4 = decodeIntValue( (keyBytes >>> 6) & 0x3, bytes, dataOffset + ((relativeOffsets >>> 16) & 0xFF) ) + value3;
+            consumer.accept( values, value1, valueIndex );
+            consumer.accept( values, value2, valueIndex + 1 );
+            consumer.accept( values, value3, valueIndex + 2 );
+            consumer.accept( values, value4, valueIndex + 3 );
+            dataOffset += relativeOffsets >>> 24;
+            prev = value4;
+            valueIndex += 4;
         }
-        else if ( (value & 0xFF00) != 0 )
+        if ( count > 0 )
         {
-            serialized[headerOffset] |= 0b01 << (j * 2);
-            serialized[offset++] = (byte) value;
-            serialized[offset++] = (byte) (value >>> 8);
-        }
-        else
-        {
-            // header 2b not set, leaving it as 0b00
-            serialized[offset++] = (byte) value;
-        }
-        return offset;
-    }
-
-    static <TARGET extends Target> TARGET readInts( TARGET target, ByteBuffer buffer )
-    {
-        byte[] serialized = buffer.array();
-        int offset = buffer.position();
-        buffer.position( readInts( target, serialized, offset ) );
-        return target;
-    }
-
-    static <TARGET extends Target> TARGET readIntDeltas( TARGET target, ByteBuffer buffer )
-    {
-        byte[] serialized = buffer.array();
-        int offset = buffer.position();
-        buffer.position( readIntDeltas( target, serialized, offset ) );
-        return target;
-    }
-
-    static int readInts( Target target, byte[] serialized, int offset )
-    {
-        return readInts( target, serialized, offset, false );
-    }
-
-    static int readIntDeltas( Target target, byte[] serialized, int offset )
-    {
-        return readInts( target, serialized, offset, true );
-    }
-
-    private static int readInts( Target target, byte[] serialized, int offset, boolean deltas )
-    {
-        int currentChunkCount = Byte.MAX_VALUE;
-        for ( int i = 0, prev = 0; currentChunkCount == Byte.MAX_VALUE; )
-        {
-            int headerByte = unsigned( serialized[offset++] );
-            if ( (headerByte & MASK_SQUASHED_BLOCK) != 0 )
+            int keyBytes = bytes[headerOffset] & 0xFF;
+            for ( int i = 0; i < count; i++ )
             {
-                // The special 0-2 header and count squashed byte
-                currentChunkCount = ((headerByte & 0b0110_0000) >>> SHIFT_SQUASHED_BLOCK_LENGTH) & 0b11;
-                headerByte &= 0b1111;
-            }
-            else
-            {
-                currentChunkCount = headerByte;
-                headerByte = unsigned( serialized[offset++] );
-            }
-
-            target.beginBlock( currentChunkCount, i + currentChunkCount );
-            for ( int c = 0; c < currentChunkCount; )
-            {
-                int currentBlockCount = min( 4, currentChunkCount - c );
-                for ( int j = 0; j < currentBlockCount; j++, i++, c++ )
-                {
-                    int size = (headerByte >>> (j * 2)) & 0b11;
-                    int readValue = readIntValue( serialized, offset, size );
-                    int value = prev + readValue;
-                    target.accept( i, deltas ? prev + readValue : readValue );
-                    offset += size + 1; // because e.g. size==0 uses 1B, size==1 uses 2B a.s.o.
-                    prev = value;
-                }
-                if ( currentBlockCount == 4 )
-                {
-                    headerByte = unsigned( serialized[offset++] );
-                }
+                int code = (keyBytes >>> (i * 2)) & 0x3;
+                int value = decodeIntValue( code, bytes, dataOffset ) + prev;
+                consumer.accept( values, value, valueIndex + i );
+                dataOffset += INT_CODE_SIZES[code];
+                prev = value;
             }
         }
-        return offset;
+        buffer.position( dataOffset );
+        return values;
+    }
+
+    static int[] readIntDeltas( byte[] bytes, int offset, ByteBuffer buffer )
+    {
+        return (int[]) readIntDeltas( bytes, offset, buffer, INT_CREATOR, INT_CONSUMER );
+    }
+
+    static int[] readIntDeltas( ByteBuffer buffer )
+    {
+        return (int[]) readIntDeltas( buffer.array(), buffer.position(), buffer, INT_CREATOR, INT_CONSUMER );
+    }
+
+    static Object readIntDeltas( ByteBuffer buffer, TargetCreator creator, TargetConsumer consumer )
+    {
+        return readIntDeltas( buffer.array(), buffer.position(), buffer, creator, consumer );
     }
 
     static boolean hasNonEmptyIntArray( ByteBuffer data )
     {
         byte header = data.get( data.position() );
-        if ( (header & MASK_SQUASHED_BLOCK) != 0 )
+        if ( (header & 0x80) != 0 )
         {
-            return (((header & 0b0110_0000) >>> SHIFT_SQUASHED_BLOCK_LENGTH) & 0b11) > 0;
+            return (header & 0b0011_0000) != 0;
         }
         return header > 0;
     }
 
-    private static int readIntValue( byte[] serialized, int offset, int size )
+    private static byte encodeIntValue( int value, byte[] bytes, int offset )
     {
-        if ( size == 3 )
-        {
-            return unsigned( serialized[offset] ) |
-                    (unsigned( serialized[offset + 1] ) << 8) |
-                    (unsigned( serialized[offset + 2] ) << 16) |
-                    (unsigned( serialized[offset + 3] ) << 24);
+        byte code;
+        if ( value < (1 << 8) )
+        {   // 1 byte
+            bytes[offset] = (byte) value;
+            code = 0;
         }
-        else if ( size == 2 )
-        {
-            return unsigned( serialized[offset] ) |
-                    (unsigned( serialized[offset + 1] ) << 8) |
-                    (unsigned( serialized[offset + 2] ) << 16);
+        else if ( value < (1 << 16) )
+        {   // 2 bytes
+            bytes[offset] = (byte) value;
+            bytes[offset + 1] = (byte) (value >> 8);
+            code = 1;
         }
-        else if ( size == 1 )
-        {
-            return unsigned( serialized[offset] ) |
-                    (unsigned( serialized[offset + 1] ) << 8);
+        else if ( value < (1 << 24) )
+        {   // 3 bytes
+            bytes[offset] = (byte) value;
+            bytes[offset + 1] = (byte) (value >> 8);
+            bytes[offset + 2] = (byte) (value >> 16);
+            code = 2;
         }
-        return unsigned( serialized[offset] );
+        else
+        {   // 4 bytes
+            bytes[offset] = (byte) value;
+            bytes[offset + 1] = (byte) (value >> 8);
+            bytes[offset + 2] = (byte) (value >> 16);
+            bytes[offset + 3] = (byte) (value >> 24);
+            code = 3;
+        }
+        return code;
     }
 
-    /**
-     * @return the size of the int-deltas block found at {@code offset} in {@code serialized} such that {@code offset} + the returned value
-     * will given the offset right after this block. So this method is good for skipping a int-deltas block.
-     */
-    static int sizeOfIntDeltas( byte[] serialized, int offset )
+    private static int decodeIntValue( int code, byte[] bytes, int dataOffset )
     {
-        int startOffset = offset;
-        int currentChunkCount = Byte.MAX_VALUE;
-        while ( currentChunkCount == Byte.MAX_VALUE )
+        int value;
+        if ( code == 0 )
         {
-            int headerByte = unsigned( serialized[offset++] );
-            if ( (headerByte & MASK_SQUASHED_BLOCK) != 0 )
+            value = bytes[dataOffset] & 0xFF;
+        }
+        else if ( code == 1 )
+        {
+            value = bytes[dataOffset] & 0xFF | (bytes[dataOffset + 1] & 0xFF) << 8;
+        }
+        else if ( code == 2 )
+        {
+            value = bytes[dataOffset] & 0xFF | (bytes[dataOffset + 1] & 0xFF) << 8 | (bytes[dataOffset + 2] & 0xFF) << 16;
+        }
+        else
+        {
+            value = bytes[dataOffset] & 0xFF | (bytes[dataOffset + 1] & 0xFF) << 8 | (bytes[dataOffset + 2] & 0xFF) << 16 |
+                    (bytes[dataOffset + 3] & 0xFF) << 24;
+        }
+        return value;
+    }
+
+    // === LONGS ===
+
+    static int writeLongs( long[] values, byte[] bytes, int offset )
+    {
+        int count = values.length;
+        if ( count == 0 )
+        {
+            bytes[offset] = 0;
+            return offset + 1;
+        }
+
+        int numberOfHeaderBytes = numHeaderBytes( count );
+        byte shift = 0;
+        int countHeader = writeCountHeader( count, bytes, offset );
+        int headerOffset = countHeader & 0xFFFFFF;
+        byte key = (byte) (countHeader >>> 24);
+        int dataOffset = headerOffset + numberOfHeaderBytes;
+        for ( int c = 0; c < count; c++ )
+        {
+            if ( shift == 8 )
             {
-                // The special 0-2 header and count squashed byte
-                currentChunkCount = ((headerByte & 0b0110_0000) >>> SHIFT_SQUASHED_BLOCK_LENGTH) & 0b11;
-                headerByte &= 0b1111;
+                shift = 0;
+                bytes[headerOffset++] = key;
+                key = 0;
             }
-            else
+            long value = values[c];
+            byte code = encodeLongValue( value, bytes, dataOffset );
+            dataOffset += LONG_CODE_SIZES[code];
+            key |= code << shift;
+            shift += 2;
+        }
+
+        bytes[headerOffset] = key;
+        return dataOffset;
+    }
+
+    static void writeLongs( long[] values, ByteBuffer buffer )
+    {
+        buffer.position( writeLongs( values, buffer.array(), buffer.position() ) );
+    }
+
+    static long[] readLongs( byte[] bytes, int offset, ByteBuffer buffer )
+    {
+        if ( bytes[offset] == 0 )
+        {
+            buffer.position( offset + 1 );
+            return EMPTY_LONG_ARRAY;
+        }
+        int countAndHeaderOffset = readCountHeader( bytes, offset );
+        int count = countAndHeaderOffset & 0xFFFF;
+        int headerOffset = countAndHeaderOffset >>> 16;
+        long[] values = new long[count];
+        int numberOfHeaderBytes = numHeaderBytes( count );
+        int dataOffset = headerOffset + numberOfHeaderBytes;
+        int valueIndex = 0;
+        for ( ; count >= 4; count -= 4 )
+        {
+            int keyBytes = bytes[headerOffset++] & 0xFF;
+            int relativeOffsets = LONG_RELATIVE_OFFSETS[keyBytes & 0xFF];
+            values[valueIndex] = decodeLongValue( keyBytes & 0x3, bytes, dataOffset );
+            values[valueIndex + 1] = decodeLongValue( (keyBytes >>> 2) & 0x3, bytes, dataOffset + (relativeOffsets & 0xFF) );
+            values[valueIndex + 2] = decodeLongValue( (keyBytes >>> 4) & 0x3, bytes, dataOffset + ((relativeOffsets >>> 8) & 0xFF) );
+            values[valueIndex + 3] = decodeLongValue( (keyBytes >>> 6) & 0x3, bytes, dataOffset + ((relativeOffsets >>> 16) & 0xFF) );
+            dataOffset += relativeOffsets >>> 24;
+            valueIndex += 4;
+        }
+        if ( count > 0 )
+        {
+            int keyBytes = bytes[headerOffset] & 0xFF;
+            for ( int i = 0; i < count; i++ )
             {
-                currentChunkCount = headerByte;
-                headerByte = unsigned( serialized[offset++] );
-            }
-
-            for ( int c = 0; c < currentChunkCount; )
-            {
-                int currentBlockCount = min( 4, currentChunkCount - c );
-                for ( int j = 0; j < currentBlockCount; j++, c++ )
-                {
-                    int size = (headerByte >>> (j * 2)) & 0b11;
-                    offset += size + 1; // because e.g. size==0 uses 1B, size==1 uses 2B a.s.o.
-                }
-                if ( currentBlockCount == 4 )
-                {
-                    headerByte = unsigned( serialized[offset++] );
-                }
+                int code = (keyBytes >>> (i * 2)) & 0x3;
+                values[valueIndex + i] = decodeLongValue( code, bytes, dataOffset );
+                dataOffset += LONG_CODE_SIZES[code];
             }
         }
-        return offset - startOffset;
-    }
-
-    static boolean nonEmptyIntDeltas( byte[] serialized, int offset )
-    {
-        int headerByte = serialized[offset] & 0xFF;
-        return (headerByte & MASK_SQUASHED_BLOCK) != 0
-               ? (((headerByte & 0b0110_0000) >>> SHIFT_SQUASHED_BLOCK_LENGTH) & 0b11) > 0
-               : headerByte > 0;
-    }
-
-    // =========== LONGS =============
-
-    static void writeLongs( long[] source, ByteBuffer buffer )
-    {
-        byte[] serialized = buffer.array();
-        int offset = buffer.position();
-        int count = source.length;
-        for ( int i = 0; i < count; )
-        {
-            int currentChunkCount = min( Byte.MAX_VALUE, count - i );
-            int headerOffset = writeChunkHeader( serialized, offset, currentChunkCount );
-            offset = headerOffset + 1;
-            for ( int c = 0; c < currentChunkCount; )
-            {
-                int currentBlockCount = min( 4, currentChunkCount - c );
-                for ( int j = 0; j < currentBlockCount; j++, i++, c++ )
-                {
-                    offset = writeLongValue( serialized, offset, headerOffset, j, source[i] );
-                }
-                if ( currentBlockCount == 4 )
-                {
-                    headerOffset = offset++;
-                    serialized[headerOffset] = 0; // clear the header byte since we could be overwriting previous data
-                }
-            }
-        }
-        if ( count % 127 == 0 )
-        {
-            serialized[offset++] = (byte) MASK_SQUASHED_BLOCK;
-        }
-        buffer.position( offset );
-    }
-
-    static int calculateLongsSize( long[] source )
-    {
-        int size = 0;
-        int count = source.length;
-        for ( int i = 0; i < count; )
-        {
-            int currentChunkCount = min( Byte.MAX_VALUE, count - i );
-            size += currentChunkCount <= 2 ? 1 : 2;
-            for ( int c = 0; c < currentChunkCount; )
-            {
-                int currentBlockCount = min( 4, currentChunkCount - c );
-                for ( int j = 0; j < currentBlockCount; j++, i++, c++ )
-                {
-                    size += calculateLongSize( source[i] );
-                }
-                if ( currentBlockCount == 4 )
-                {
-                    size++;
-                }
-            }
-        }
-        return count == 0 ? size + 1 : size;
-    }
-
-    static int calculateLongSize( long value )
-    {
-        return LONG_SIZES[calculateLongSizeIndex( value )];
-    }
-
-    static int sizeOfLongSizeIndex( int longSizeIndex )
-    {
-        return LONG_SIZES[longSizeIndex];
-    }
-
-    static int calculateLongSizeIndex( long value )
-    {
-        if ( (value & LONG_MASKS[3]) != 0 )
-        {
-            return 3;
-        }
-        else if ( (value & LONG_MASKS[2]) != 0 )
-        {
-            return 2;
-        }
-        else if ( (value & LONG_MASKS[1]) != 0 )
-        {
-            return 1;
-        }
-        return 0;
+        buffer.position( dataOffset );
+        return values;
     }
 
     static long[] readLongs( ByteBuffer buffer )
     {
-        byte[] serialized = buffer.array();
-        int offset = buffer.position();
-        int currentChunkCount = Byte.MAX_VALUE;
-        long[] target = null;
-        for ( int i = 0; currentChunkCount == Byte.MAX_VALUE; )
-        {
-            int headerByte = unsigned( serialized[offset++] );
-            if ( (headerByte & MASK_SQUASHED_BLOCK) != 0 )
-            {
-                // The special 0-2 header and count squashed byte
-                currentChunkCount = ((headerByte & 0b0110_0000) >>> SHIFT_SQUASHED_BLOCK_LENGTH) & 0b11;
-                headerByte &= 0b1111;
-            }
-            else
-            {
-                currentChunkCount = headerByte;
-                headerByte = unsigned( serialized[offset++] );
-            }
-
-            target = target == null ? new long[currentChunkCount] : Arrays.copyOf( target, i + currentChunkCount );
-            for ( int c = 0; c < currentChunkCount; )
-            {
-                int currentBlockCount = min( 4, currentChunkCount - c );
-                for ( int j = 0; j < currentBlockCount; j++, i++, c++ )
-                {
-                    int size = (headerByte >>> (j * 2)) & 0b11;
-                    long readValue = readLongValue( serialized, offset, size );
-                    target[i] = readValue;
-                    offset += LONG_SIZES[size];
-                }
-                if ( currentBlockCount == 4 )
-                {
-                    headerByte = unsigned( serialized[offset++] );
-                }
-            }
-        }
-        buffer.position( offset );
-        return target;
+        return readLongs( buffer.array(), buffer.position(), buffer );
     }
 
-    private static int writeLongValue( byte[] serialized, int offset, int headerOffset, int j, long value )
+    static int calculateLongSizeIndex( long value )
     {
-        if ( (value & LONG_MASKS[3]) != 0 )
+        if ( value < LONG_BYTE_SIZE_0 )
         {
-            serialized[headerOffset] |= 0b11 << (j * 2);
-            serialized[offset++] = (byte) value;
-            serialized[offset++] = (byte) (value >>> 8);
-            serialized[offset++] = (byte) (value >>> 16);
-            serialized[offset++] = (byte) (value >>> 24);
-            serialized[offset++] = (byte) (value >>> 32);
-            serialized[offset++] = (byte) (value >>> 40);
-            serialized[offset++] = (byte) (value >>> 48);
+            return 0;
         }
-        else if ( (value & LONG_MASKS[2]) != 0 )
+        else if ( value < LONG_BYTE_SIZE_1 )
         {
-            serialized[headerOffset] |= 0b10 << (j * 2);
-            serialized[offset++] = (byte) value;
-            serialized[offset++] = (byte) (value >>> 8);
-            serialized[offset++] = (byte) (value >>> 16);
-            serialized[offset++] = (byte) (value >>> 24);
-            serialized[offset++] = (byte) (value >>> 32);
+            return 1;
         }
-        else if ( (value & LONG_MASKS[1]) != 0 )
+        else if ( value < LONG_BYTE_SIZE_2 )
         {
-            serialized[headerOffset] |= 0b01 << (j * 2);
-            serialized[offset++] = (byte) value;
-            serialized[offset++] = (byte) (value >>> 8);
-            serialized[offset++] = (byte) (value >>> 16);
+            return 2;
+        }
+        return 3;
+    }
+
+    static int sizeOfLongSizeIndex( int code )
+    {
+        return LONG_CODE_SIZES[code];
+    }
+
+    private static byte encodeLongValue( long value, byte[] bytes, int offset )
+    {
+        byte code;
+        if ( value < LONG_BYTE_SIZE_0 )
+        {   // 1 byte
+            bytes[offset] = (byte) value;
+            code = 0;
+        }
+        else if ( value < LONG_BYTE_SIZE_1 )
+        {   // 3 bytes
+            bytes[offset] = (byte) value;
+            bytes[offset + 1] = (byte) (value >> 8);
+            bytes[offset + 2] = (byte) (value >> 16);
+            code = 1;
+        }
+        else if ( value < LONG_BYTE_SIZE_2 )
+        {   // 5 bytes
+            bytes[offset] = (byte) value;
+            bytes[offset + 1] = (byte) (value >> 8);
+            bytes[offset + 2] = (byte) (value >> 16);
+            bytes[offset + 3] = (byte) (value >> 24);
+            bytes[offset + 4] = (byte) (value >> 32);
+            code = 2;
+        }
+        else
+        {   // 7 bytes
+            bytes[offset] = (byte) value;
+            bytes[offset + 1] = (byte) (value >> 8);
+            bytes[offset + 2] = (byte) (value >> 16);
+            bytes[offset + 3] = (byte) (value >> 24);
+            bytes[offset + 4] = (byte) (value >> 32);
+            bytes[offset + 5] = (byte) (value >> 40);
+            bytes[offset + 6] = (byte) (value >> 48);
+            code = 3;
+        }
+        return code;
+    }
+
+    private static long decodeLongValue( int code, byte[] bytes, int dataOffset )
+    {
+        long value;
+        if ( code == 0 )
+        {
+            value = ulong( bytes[dataOffset] );
+        }
+        else if ( code == 1 )
+        {
+            value = ulong( bytes[dataOffset] ) |
+                    ulong( bytes[dataOffset + 1] ) << 8 |
+                    ulong( bytes[dataOffset + 2] ) << 16;
+        }
+        else if ( code == 2 )
+        {
+            value = ulong( bytes[dataOffset] ) |
+                    ulong( bytes[dataOffset + 1] ) << 8 |
+                    ulong( bytes[dataOffset + 2] ) << 16 |
+                    ulong( bytes[dataOffset + 3] ) << 24 |
+                    ulong( bytes[dataOffset + 4] ) << 32;
         }
         else
         {
-            // header 2b not set, leaving it as 0b00
-            serialized[offset++] = (byte) value;
+            value = ulong( bytes[dataOffset] ) |
+                    ulong( bytes[dataOffset + 1] ) << 8 |
+                    ulong( bytes[dataOffset + 2] ) << 16 |
+                    ulong( bytes[dataOffset + 3] ) << 24 |
+                    ulong( bytes[dataOffset + 4] ) << 32 |
+                    ulong( bytes[dataOffset + 5] ) << 40 |
+                    ulong( bytes[dataOffset + 6] ) << 48;
         }
-        return offset;
+        return value;
     }
 
-    static void writeLongValue( PageCursor cursor, long value )
+    static void encodeLongValue( PageCursor cursor, long value )
     {
-        if ( (value & LONG_MASKS[3]) != 0 )
+        if ( value < LONG_BYTE_SIZE_0 )
+        {
+            cursor.putByte( (byte) value );
+        }
+        else if ( value < LONG_BYTE_SIZE_1 )
+        {
+            cursor.putByte( (byte) value );
+            cursor.putByte( (byte) (value >>> 8) );
+            cursor.putByte( (byte) (value >>> 16) );
+        }
+        else if ( value < LONG_BYTE_SIZE_2 )
+        {
+            cursor.putByte( (byte) value );
+            cursor.putByte( (byte) (value >>> 8) );
+            cursor.putByte( (byte) (value >>> 16) );
+            cursor.putByte( (byte) (value >>> 24) );
+            cursor.putByte( (byte) (value >>> 32) );
+        }
+        else
         {
             cursor.putByte( (byte) value );
             cursor.putByte( (byte) (value >>> 8) );
@@ -465,189 +487,134 @@ class StreamVByte
             cursor.putByte( (byte) (value >>> 40) );
             cursor.putByte( (byte) (value >>> 48) );
         }
-        else if ( (value & LONG_MASKS[2]) != 0 )
+    }
+
+    static long decodeLongValue( PageCursor cursor, int size )
+    {
+        if ( size == 0 )
         {
-            cursor.putByte( (byte) value );
-            cursor.putByte( (byte) (value >>> 8) );
-            cursor.putByte( (byte) (value >>> 16) );
-            cursor.putByte( (byte) (value >>> 24) );
-            cursor.putByte( (byte) (value >>> 32) );
+            return ulong( cursor.getByte() );
         }
-        else if ( (value & LONG_MASKS[1]) != 0 )
+        if ( size == 1 )
         {
-            cursor.putByte( (byte) value );
-            cursor.putByte( (byte) (value >>> 8) );
-            cursor.putByte( (byte) (value >>> 16) );
+            return ulong( cursor.getByte() ) |
+                    (ulong( cursor.getByte() ) << 8) |
+                    (ulong( cursor.getByte() ) << 16);
+        }
+        if ( size == 2 )
+        {
+            return ulong( cursor.getByte() ) |
+                    (ulong( cursor.getByte() ) << 8) |
+                    (ulong( cursor.getByte() ) << 16) |
+                    (ulong( cursor.getByte() ) << 24) |
+                    (ulong( cursor.getByte() ) << 32);
+        }
+        return ulong( cursor.getByte() ) |
+                (ulong( cursor.getByte() ) << 8) |
+                (ulong( cursor.getByte() ) << 16) |
+                (ulong( cursor.getByte() ) << 24) |
+                (ulong( cursor.getByte() ) << 32) |
+                (ulong( cursor.getByte() ) << 40) |
+                (ulong( cursor.getByte() ) << 48);
+    }
+
+    private static long ulong( byte value )
+    {
+        return value & 0xFF;
+    }
+
+    private static int numHeaderBytes( int count )
+    {
+        return (count + 3) / 4;
+    }
+
+    private static int writeCountHeader( int count, byte[] bytes, int offset )
+    {
+        assert count <= 0x3FFF;
+        if ( count <= 2 )
+        {
+            // [1_cc,bbaa]
+            bytes[offset] = (byte) ((count << 4) | 0x80);
+            return offset | (bytes[offset] << 24);
         }
         else
         {
-            cursor.putByte( (byte) value );
+            bytes[offset++] = (byte) (count & 0x3F);
+            if ( count > 63 )
+            {
+                // [_Mcc,cccc][cccc,cccc]
+                bytes[offset - 1] |= 0x40;
+                bytes[offset++] = (byte) (count >>> 6);
+            }
+            // else [__cc,cccc]
+            return offset;
         }
     }
 
-    private static long readLongValue( byte[] serialized, int offset, int size )
+    private static int readCountHeader( byte[] bytes, int offset )
     {
-        if ( size == 3 )
+        byte headerByte = bytes[offset];
+        if ( (headerByte & 0x80) != 0 ) // Count is 0-2
         {
-            return unsigned( serialized[offset] ) |
-                    (unsignedLong( serialized[offset + 1] ) << 8) |
-                    (unsignedLong( serialized[offset + 2] ) << 16) |
-                    (unsignedLong( serialized[offset + 3] ) << 24) |
-                    (unsignedLong( serialized[offset + 4] ) << 32) |
-                    (unsignedLong( serialized[offset + 5] ) << 40) |
-                    (unsignedLong( serialized[offset + 6] ) << 48);
+            return ((headerByte >>> 4) & 0x3) | (offset << 16);
         }
-        else if ( size == 2 )
+        else if ( (headerByte & 0x40) == 0 ) // Count is 3-63
         {
-            return unsignedLong( serialized[offset] ) |
-                    (unsignedLong( serialized[offset + 1] ) << 8) |
-                    (unsignedLong( serialized[offset + 2] ) << 16) |
-                    (unsignedLong( serialized[offset + 3] ) << 24) |
-                    (unsignedLong( serialized[offset + 4] ) << 32);
+            return headerByte | ((offset + 1) << 16);
         }
-        else if ( size == 1 )
+        else // Count is 64-16383, so one more byte is required to hold the count
         {
-            return unsignedLong( serialized[offset] ) |
-                    (unsignedLong( serialized[offset + 1] ) << 8) |
-                    (unsignedLong( serialized[offset + 2] ) << 16);
+            int count = (headerByte & 0x3F) | (bytes[offset + 1] & 0xFF) << 6;
+            return count | ((offset + 2) << 16);
         }
-        return unsignedLong( serialized[offset] );
     }
 
-    static long readLongValue( PageCursor cursor, int size )
+    /**
+     * This creator/consumer thing exists only because labels are stored as ints but transferred as longs in the cursor APIs.
+     */
+    abstract static class TargetCreator
     {
-        if ( size == 3 )
-        {
-            return unsigned( cursor.getByte() ) |
-                    (unsignedLong( cursor.getByte() ) << 8) |
-                    (unsignedLong( cursor.getByte() ) << 16) |
-                    (unsignedLong( cursor.getByte() ) << 24) |
-                    (unsignedLong( cursor.getByte() ) << 32) |
-                    (unsignedLong( cursor.getByte() ) << 40) |
-                    (unsignedLong( cursor.getByte() ) << 48);
-        }
-        else if ( size == 2 )
-        {
-            return unsigned( cursor.getByte() ) |
-                    (unsignedLong( cursor.getByte() ) << 8) |
-                    (unsignedLong( cursor.getByte() ) << 16) |
-                    (unsignedLong( cursor.getByte() ) << 24) |
-                    (unsignedLong( cursor.getByte() ) << 32);
-        }
-        else if ( size == 1 )
-        {
-            return unsigned( cursor.getByte() ) |
-                    (unsignedLong( cursor.getByte() ) << 8) |
-                    (unsignedLong( cursor.getByte() ) << 16);
-        }
-        return unsigned( cursor.getByte() );
+        abstract Object create( int size );
     }
 
-    private static int unsigned( byte value )
-    {
-        return value & 0xFF;
-    }
-
-    private static long unsignedLong( byte value )
-    {
-        return value & 0xFF;
-    }
-
-    static IntArrayTarget intArrayTarget()
-    {
-        return new IntArrayTarget();
-    }
-
-    interface Source
-    {
-        int length();
-
-        int valueAt( int i );
-    }
-
-    static class IntArraySource implements Source
-    {
-        private final int[] array;
-
-        IntArraySource( int[] array )
-        {
-            this.array = array;
-        }
-
-        @Override
-        public int length()
-        {
-            return array.length;
-        }
-
-        @Override
-        public int valueAt( int i )
-        {
-            return array[i];
-        }
-    }
-
-    interface Target
-    {
-        void beginBlock( int size, int accumulatedSize );
-
-        void accept( int i, int value );
-    }
-
-    static class IntArrayTarget implements Target
-    {
-        private int[] array;
-
-        @Override
-        public void beginBlock( int size, int accumulatedSize )
-        {
-            array = size == accumulatedSize ? new int[size] : Arrays.copyOf( array, accumulatedSize );
-        }
-
-        @Override
-        public void accept( int i, int value )
-        {
-            array[i] = value;
-        }
-
-        int[] array()
-        {
-            return array;
-        }
-    }
-
-    static class LongArrayTarget implements Target
-    {
-        private long[] array;
-
-        @Override
-        public void beginBlock( int size, int accumulatedSize )
-        {
-            array = size == accumulatedSize ? new long[size] : Arrays.copyOf( array, accumulatedSize );
-        }
-
-        @Override
-        public void accept( int i, int value )
-        {
-            array[i] = value;
-        }
-
-        long[] array()
-        {
-            return array;
-        }
-    }
-
-    static Target SKIP = new Target()
+    static final TargetCreator INT_CREATOR = new TargetCreator()
     {
         @Override
-        public void beginBlock( int size, int accumulatedSize )
+        Object create( int size )
         {
+            return new int[size];
         }
+    };
 
+    static final TargetCreator LONG_CREATOR = new TargetCreator()
+    {
         @Override
-        public void accept( int i, int value )
+        Object create( int size )
         {
+            return new long[size];
+        }
+    };
+
+    abstract static class TargetConsumer
+    {
+        abstract void accept( Object target, int value, int index );
+    }
+
+    static final TargetConsumer INT_CONSUMER = new TargetConsumer()
+    {
+        @Override
+        void accept( Object target, int value, int index )
+        {
+            ((int[]) target)[index] = value;
+        }
+    };
+
+    static final TargetConsumer LONG_CONSUMER = new TargetConsumer()
+    {
+        @Override
+        void accept( Object target, int value, int index )
+        {
+            ((long[]) target)[index] = value;
         }
     };
 }

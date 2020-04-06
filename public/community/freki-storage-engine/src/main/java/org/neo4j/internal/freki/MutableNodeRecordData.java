@@ -42,7 +42,6 @@ import org.neo4j.values.storable.Value;
 import static java.lang.Long.max;
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
 import static org.neo4j.internal.freki.Record.recordXFactor;
-import static org.neo4j.internal.freki.StreamVByte.intArrayTarget;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
 import static org.neo4j.internal.freki.StreamVByte.readInts;
 import static org.neo4j.internal.freki.StreamVByte.readLongs;
@@ -560,7 +559,7 @@ class MutableNodeRecordData
 
     private void readProperties( MutableIntObjectMap<Value> into, ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore, PageCursorTracer tracer )
     {
-        for ( int propertyKey : readIntDeltas( intArrayTarget(), buffer ).array() )
+        for ( int propertyKey : readIntDeltas( buffer.array(), buffer.position(), buffer ) )
         {
             into.put( propertyKey, PropertyValueFormat.read( buffer, bigPropertyValueStore, tracer ) );
         }
@@ -637,7 +636,7 @@ class MutableNodeRecordData
 
     private void readRelationships( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore, PageCursorTracer tracer )
     {
-        int[] relationshipTypes = readIntDeltas( intArrayTarget(), buffer ).array();
+        int[] relationshipTypes = readIntDeltas( buffer.array(), buffer.position(), buffer );
         for ( int relationshipType : relationshipTypes )
         {
             Relationships relationships = new Relationships( relationshipType );
@@ -667,8 +666,8 @@ class MutableNodeRecordData
 
     private void readDegrees( ByteBuffer buffer )
     {
-        int[] relationshipTypes = readIntDeltas( intArrayTarget(), buffer ).array();
-        int[] degreesArray = readInts( new StreamVByte.IntArrayTarget(), buffer ).array();
+        int[] relationshipTypes = readIntDeltas( buffer );
+        int[] degreesArray = readInts( buffer );
         for ( int t = 0, i = 0; t < relationshipTypes.length; t++ )
         {
             degrees.add( relationshipTypes[t], degreesArray[i++], degreesArray[i++], degreesArray[i++] );
@@ -677,7 +676,7 @@ class MutableNodeRecordData
 
     private void readLabels( ByteBuffer buffer )
     {
-        labels.addAll( readIntDeltas( intArrayTarget(), buffer ).array() );
+        labels.addAll( readIntDeltas( buffer ) );
     }
 
     private int[] typesOf( Relationships[] relationshipsArray )

@@ -25,14 +25,12 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.ByteBuffer;
 
-import org.neo4j.internal.freki.StreamVByte.IntArrayTarget;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.rule.RandomRule;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.neo4j.internal.freki.StreamVByte.intArrayTarget;
 
 @ExtendWith( RandomExtension.class )
 class StreamVByteTest
@@ -61,10 +59,9 @@ class StreamVByteTest
 
         // then
         data.position( 0 );
-        IntArrayTarget target = intArrayTarget();
-        StreamVByte.readIntDeltas( target, data );
+        int[] read = StreamVByte.readIntDeltas( data );
         int readOffset = data.position();
-        assertArrayEquals( values, target.array() );
+        assertArrayEquals( values, read );
         assertEquals( writeOffset, readOffset );
     }
 
@@ -88,10 +85,9 @@ class StreamVByteTest
 
         // then
         data.position( 0 );
-        IntArrayTarget target = intArrayTarget();
-        StreamVByte.readIntDeltas( target, data );
+        int[] read = StreamVByte.readIntDeltas( data );
         int readOffset = data.position();
-        assertArrayEquals( values, target.array() );
+        assertArrayEquals( values, read );
         assertEquals( writeOffset, readOffset );
         assertEquals( values.length + 1, writeOffset );
     }

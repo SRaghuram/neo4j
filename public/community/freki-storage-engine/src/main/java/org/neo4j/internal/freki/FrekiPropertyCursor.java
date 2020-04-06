@@ -282,7 +282,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
             return false;
         }
 
-        propertyKeyArray = readIntDeltas( new StreamVByte.IntArrayTarget(), buffer ).array();
+        propertyKeyArray = readIntDeltas( buffer.array(), buffer.position(), buffer );
         nextValuePosition = buffer.position();
         propertyKeyIndex = -1;
         return true;
