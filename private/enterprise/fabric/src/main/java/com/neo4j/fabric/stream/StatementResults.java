@@ -253,7 +253,14 @@ public final class StatementResults
                 @Override
                 public void cancel()
                 {
-                    queryExecution.cancel();
+                    try
+                    {
+                        queryExecution.cancel();
+                    }
+                    catch ( Throwable e )
+                    {
+                        // ignore
+                    }
                 }
             };
             subscriber.onSubscribe( subscription );

@@ -70,6 +70,7 @@ import static com.neo4j.AssertableQueryExecutionMonitor.start;
 import static com.neo4j.AssertableQueryExecutionMonitor.throwable;
 import static java.nio.file.Files.readAllLines;
 import static java.util.concurrent.TimeUnit.MINUTES;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -650,7 +651,9 @@ class FabricExecutorTest
                 "CALL { USE mega.graph(s) RETURN 2 AS y }",
                 "RETURN s, y ORDER BY s, y"
         );
-        assertThrows( Throwable.class, () -> doInMegaTx( AccessMode.READ, tx -> tx.run( query ).consume() ) );
+
+        assertThat( catchThrowable( () -> doInMegaTx( AccessMode.READ, tx -> tx.run( query ).consume() ) ))
+                .hasMessageContaining( "my failure!" );
 
         assertThat( queryExecutionMonitor.events, containsInRelativeOrder(
                 start()
