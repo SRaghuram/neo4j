@@ -22,7 +22,6 @@ package org.neo4j.internal.freki;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-import org.neo4j.internal.freki.StreamVByte.IntArrayTarget;
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
@@ -243,7 +242,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         else
         {
             ByteBuffer buffer = data.relationshipBuffer();
-            relationshipTypesInNode = readIntDeltas( new IntArrayTarget(), buffer ).array();
+            relationshipTypesInNode = readIntDeltas( buffer );
             // Right after the types array the relationship group data starts, so this is the offset for the first type
             firstRelationshipTypeOffset = buffer.position();
             return buffer;
@@ -256,9 +255,9 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         {
             relationshipTypeOffsets = EMPTY_INT_ARRAY;
         }
-        else
+        else if ( !data.isDense )
         {
-            relationshipTypeOffsets = readIntDeltas( new IntArrayTarget(), data.relationshipBuffer( data.relationshipTypeOffsetsOffset ) ).array();
+            relationshipTypeOffsets = readIntDeltas( data.relationshipBuffer( data.relationshipTypeOffsetsOffset ) );
         }
     }
 

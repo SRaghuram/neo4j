@@ -33,7 +33,9 @@ import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_LONG_ARRAY;
-import static org.neo4j.internal.freki.StreamVByte.nonEmptyIntDeltas;
+import static org.neo4j.internal.freki.StreamVByte.LONG_CONSUMER;
+import static org.neo4j.internal.freki.StreamVByte.LONG_CREATOR;
+import static org.neo4j.internal.freki.StreamVByte.hasNonEmptyIntArray;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
 import static org.neo4j.internal.freki.StreamVByte.readInts;
 import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
@@ -54,7 +56,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     {
         cursorAccessTracer.registerNodeLabelsAccess();
         ByteBuffer buffer = data.labelBuffer();
-        return buffer != null ? readIntDeltas( new StreamVByte.LongArrayTarget(), buffer ).array() : EMPTY_LONG_ARRAY;
+        return buffer != null ? (long[]) readIntDeltas( buffer, LONG_CREATOR, LONG_CONSUMER ) : EMPTY_LONG_ARRAY;
     }
 
     @Override
@@ -106,7 +108,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
             if ( relationshipTypesInNode.length > 0 )
             {
                 // Read degrees where relationship data would be if this would have been a sparse node
-                int[] degreesArray = readInts( new StreamVByte.IntArrayTarget(), buffer ).array();
+                int[] degreesArray = readInts( buffer );
                 for ( int i = 0; i < selection.numberOfCriteria(); i++ )
                 {
                     RelationshipSelection.Criterion criterion = selection.criterion( i );
@@ -196,7 +198,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     {
         ensurePropertiesLoaded();
         ByteBuffer buffer = data.propertyBuffer();
-        return buffer != null && nonEmptyIntDeltas( buffer.array(), buffer.position() );
+        return buffer != null && hasNonEmptyIntArray( buffer );
     }
 
     @Override

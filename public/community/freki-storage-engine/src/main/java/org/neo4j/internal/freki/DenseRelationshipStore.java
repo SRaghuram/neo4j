@@ -60,10 +60,10 @@ import static java.lang.String.format;
 import static org.neo4j.internal.freki.MutableNodeRecordData.externalRelationshipId;
 import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValueSizeIncludingTypeHeader;
 import static org.neo4j.internal.freki.StreamVByte.calculateLongSizeIndex;
-import static org.neo4j.internal.freki.StreamVByte.readLongValue;
+import static org.neo4j.internal.freki.StreamVByte.decodeLongValue;
+import static org.neo4j.internal.freki.StreamVByte.encodeLongValue;
 import static org.neo4j.internal.freki.StreamVByte.sizeOfLongSizeIndex;
 import static org.neo4j.internal.freki.StreamVByte.writeIntDeltas;
-import static org.neo4j.internal.freki.StreamVByte.writeLongValue;
 import static org.neo4j.internal.helpers.collection.Iterators.iterator;
 import static org.neo4j.storageengine.api.RelationshipDirection.LOOP;
 import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
@@ -206,7 +206,7 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         {
             return NO_PROPERTIES;
         }
-        int[] propertyKeys = StreamVByte.readIntDeltas( new StreamVByte.IntArrayTarget(), relationshipData ).array();
+        int[] propertyKeys = StreamVByte.readIntDeltas( relationshipData );
         return new RelationshipPropertyIterator()
         {
             private int current = -1;
@@ -409,20 +409,20 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         {
             key.getOrCalculateSize();
             cursor.putByte( key.cachedSizesByte );
-            writeLongValue( cursor, key.nodeId );
-            writeLongValue( cursor, key.tokenAndDirectionInt() );
-            writeLongValue( cursor, key.neighbourNodeId );
-            writeLongValue( cursor, key.internalRelationshipId );
+            encodeLongValue( cursor, key.nodeId );
+            encodeLongValue( cursor, key.tokenAndDirectionInt() );
+            encodeLongValue( cursor, key.neighbourNodeId );
+            encodeLongValue( cursor, key.internalRelationshipId );
         }
 
         @Override
         public void readKey( PageCursor cursor, DenseKey into, int keySize )
         {
             into.cachedSizesByte = cursor.getByte();
-            into.nodeId = readLongValue( cursor, into.cachedSizesByte & 0x3 );
-            into.fromTokenAndDirection( (int) readLongValue( cursor, (into.cachedSizesByte >>> 2) & 0x3 ) );
-            into.neighbourNodeId = readLongValue( cursor, (into.cachedSizesByte >>> 4) & 0x3 );
-            into.internalRelationshipId = readLongValue( cursor, (into.cachedSizesByte >>> 6) & 0x3 );
+            into.nodeId = decodeLongValue( cursor, into.cachedSizesByte & 0x3 );
+            into.fromTokenAndDirection( (int) decodeLongValue( cursor, (into.cachedSizesByte >>> 2) & 0x3 ) );
+            into.neighbourNodeId = decodeLongValue( cursor, (into.cachedSizesByte >>> 4) & 0x3 );
+            into.internalRelationshipId = decodeLongValue( cursor, (into.cachedSizesByte >>> 6) & 0x3 );
             into.cachedKeySize = keySize;
         }
 
