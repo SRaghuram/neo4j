@@ -76,6 +76,15 @@ class DefaultRelationshipScanCursor extends DefaultRelationshipCursor<StorageRel
         this.addedRelationships = ImmutableEmptyLongIterator.INSTANCE;
     }
 
+    void single( long reference, long sourceNodeReference, int type, long targetNodeReference, Read read )
+    {
+        storeCursor.single( reference, sourceNodeReference, type, targetNodeReference );
+        this.type = type;
+        this.single = reference;
+        init( read );
+        this.addedRelationships = ImmutableEmptyLongIterator.INSTANCE;
+    }
+
     @Override
     public boolean next()
     {

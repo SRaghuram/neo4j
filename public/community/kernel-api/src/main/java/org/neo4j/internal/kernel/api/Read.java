@@ -277,6 +277,8 @@ public interface Read
      */
     void singleRelationship( long reference, RelationshipScanCursor cursor );
 
+    void singleRelationship( long reference, long sourceNodeReference, int type, long targetNodeReference, RelationshipScanCursor cursor );
+
     /**
      * Checks if a relationship exists in the database
      *
