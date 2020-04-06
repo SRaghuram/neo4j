@@ -36,7 +36,22 @@ trait MorselDerivedRow extends SlottedCompatible with Measurable {
     */
   def refOffset(offsetInRow: Int): Int
 
-  override def estimatedHeapUsage(): Long = 0 // TODO: Implement or make morsels ref counted
+  /**
+   * Total heap usage of current row.
+   */
+  override def estimatedHeapUsage: Long = {
+    var usage = morsel.longsPerRow * java.lang.Long.BYTES.toLong
+    var i = 0
+    while (i < morsel.refsPerRow) {
+      val ref = morsel.refs(refOffset(i))
+      if (ref != null) {
+        usage += morsel.refs(i).estimatedHeapUsage()
+      }
+      i += 1
+    }
+    usage
+  }
+
 }
 
 /**

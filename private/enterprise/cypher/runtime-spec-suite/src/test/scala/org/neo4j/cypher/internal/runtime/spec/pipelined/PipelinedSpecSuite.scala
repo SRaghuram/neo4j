@@ -68,6 +68,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.OptionalFailureTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OptionalTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OrderedAggregationTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.OrderedDistinctTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.PartialSortTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProcedureCallDbHitsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProcedureCallTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileMemoryTestBase
@@ -254,6 +255,10 @@ class PipelinedUnwindNoFusingTest extends UnwindTestBase(NO_FUSING, PIPELINED, S
 // SORT
 class PipelinedSortTest extends SortTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedSortNoFusingTest extends SortTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
+// PARTIAL SORT
+class PipelinedPartialSortTest extends PartialSortTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedPartialSortNoFusingTest extends PartialSortTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // TOP
 class PipelinedTopTest extends TopTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite

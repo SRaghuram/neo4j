@@ -73,6 +73,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.MiddleOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselArgumentStateBufferOutputOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselBufferOutputOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselFeedPipe
+import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselSorting
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MultiNodeIndexSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NoOutputOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeByIdSeekOperator
@@ -91,6 +92,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OrderedAggregationOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OrderedDistinctOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.PartialSortOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProduceResultOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipCountFromCountStoreOperator
@@ -451,14 +453,22 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         new UnwindOperator(WorkIdentity.fromPlan(plan), runtimeExpression, offset)
 
       case plans.Sort(_, sortItems) =>
-        val ordering = sortItems.map(translateColumnOrder(slots, _))
-        val argumentDepth = physicalPlan.applyPlans(id)
-        val argumentSlotOffset = slots.getArgumentLongOffsetFor(argumentDepth)
+        val comparator = MorselSorting.createComparator(sortItems.map(translateColumnOrder(slots, _)))
         val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStateBufferVariant].argumentStateMapId
-        new SortMergeOperator(argumentStateMapId,
+        new SortMergeOperator(
+          argumentStateMapId,
           WorkIdentity.fromPlan(plan),
-          ordering,
-          argumentSlotOffset)(id)
+          comparator)(id)
+
+      case plans.PartialSort(_, alreadySortedPrefix, stillToSortSuffix) =>
+        val prefixComparator = MorselSorting.createComparator(alreadySortedPrefix.map(translateColumnOrder(slots, _)))
+        val suffixComparator = MorselSorting.createComparator(stillToSortSuffix.map(translateColumnOrder(slots, _)))
+        val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
+        new PartialSortOperator(
+          argumentStateMapId,
+          WorkIdentity.fromPlan(plan),
+          prefixComparator,
+          suffixComparator)(id)
 
       case plans.Top(_, sortItems, limit) =>
         val ordering = sortItems.map(translateColumnOrder(slots, _))

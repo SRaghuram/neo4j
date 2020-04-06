@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.logical.plans.LogicalPlans
 import org.neo4j.cypher.internal.logical.plans.Optional
 import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
 import org.neo4j.cypher.internal.logical.plans.OrderedDistinct
+import org.neo4j.cypher.internal.logical.plans.PartialSort
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.logical.plans.Skip
 import org.neo4j.cypher.internal.logical.plans.Sort
@@ -558,10 +559,12 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
           throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
         }
 
-      case _: Optional =>
+      case _: Optional |
+           _: OrderedAggregation  |
+           _: PartialSort =>
         if (breakingPolicy.breakOn(plan, applyPlans(plan.id))) {
-          val optionalPipelinedBuffer = outputToArgumentStreamBuffer(source, plan, argument, argument.argumentSlotOffset)
-          val pipeline = newPipeline(plan, optionalPipelinedBuffer)
+          val buffer = outputToArgumentStreamBuffer(source, plan, argument, argument.argumentSlotOffset)
+          val pipeline = newPipeline(plan, buffer)
           pipeline.lhs = source.id
           pipeline
         } else {
@@ -599,16 +602,6 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         argument.downstreamStatesOnRHS += asm.id
         source.fuseOrInterpret(plan, breakingPolicy.breakOn(plan, applyPlans(plan.id)))
         source
-
-      case _: OrderedAggregation =>
-        if (breakingPolicy.breakOn(plan, applyPlans(plan.id))) {
-          val buffer = outputToArgumentStreamBuffer(source, plan, argument, argument.argumentSlotOffset)
-          val pipeline = newPipeline(plan, buffer)
-          pipeline.lhs = source.id
-          pipeline
-        } else {
-          throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
-        }
 
       case _ =>
         val isBreaking = breakingPolicy.breakOn(plan, applyPlans(plan.id))
