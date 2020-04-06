@@ -74,6 +74,7 @@ public class ConsistencyCheckTool implements Callable<Object>
                 !skipIndexes,
                 true, // feature unimplemented
                 true, // feature-toggle unimplemented
+                true,
                 false ); // feature unimplemented
         Stopwatch stopwatch = Stopwatch.start();
         ConsistencyCheckService.Result result =

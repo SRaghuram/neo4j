@@ -1000,7 +1000,7 @@ class BackupIT
 
         ProgressMonitorFactory progressMonitorFactory = ProgressMonitorFactory.textual( System.out );
         FormattedLogProvider logProvider = FormattedLogProvider.toOutputStream( System.out );
-        ConsistencyFlags consistencyFlags = new ConsistencyFlags( true, true, true, true, true );
+        ConsistencyFlags consistencyFlags = new ConsistencyFlags( true, true, true, true, true, true );
 
         return consistencyCheckService.runFullConsistencyCheck( layout, config, progressMonitorFactory, logProvider, true, consistencyFlags );
     }

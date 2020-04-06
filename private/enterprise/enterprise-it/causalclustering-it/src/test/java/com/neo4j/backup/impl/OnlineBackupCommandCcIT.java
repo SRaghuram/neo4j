@@ -430,7 +430,7 @@ class OnlineBackupCommandCcIT
         Config config = Config.defaults();
         ProgressMonitorFactory progressMonitorFactory = ProgressMonitorFactory.textual( System.out );
         LogProvider logProvider = FormattedLogProvider.toOutputStream( System.out );
-        ConsistencyFlags flags = new ConsistencyFlags( true, true, true, true, true );
+        ConsistencyFlags flags = new ConsistencyFlags( true, true, true, true, true, true );
         ConsistencyCheckService service = new ConsistencyCheckService();
         ConsistencyCheckService.Result result = service.runFullConsistencyCheck( backupLayout, config, progressMonitorFactory, logProvider, true, flags );
         return result.isSuccessful();

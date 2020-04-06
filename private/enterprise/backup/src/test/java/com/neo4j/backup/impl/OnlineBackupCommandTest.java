@@ -19,7 +19,6 @@ import java.nio.file.Path;
 import java.time.ZoneOffset;
 import java.util.TimeZone;
 
-import org.neo4j.cli.Command;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.LogTimeZone;
@@ -57,8 +56,10 @@ class OnlineBackupCommandTest
                         "       [--additional-config=<path>] --backup-dir=<path>%n" +
                         "       [--check-graph=<true/false>] [--check-index-structure=<true/false>]%n" +
                         "       [--check-indexes=<true/false>] [--check-label-scan-store=<true/false>]%n" +
-                        "       [--check-property-owners=<true/false>] [--database=<database>]%n" +
-                        "       [--from=<host:port>] [--pagecache=<size>] [--report-dir=<path>]%n%n"
+                        "       [--check-property-owners=<true/false>]%n" +
+                        "       [--check-relationship-type-scan-store=<true/false>]%n" +
+                        "       [--database=<database>] [--from=<host:port>] [--pagecache=<size>]%n" +
+                        "       [--report-dir=<path>]%n%n"
                         + "DESCRIPTION%n" + "%n" +
                         "Perform an online backup from a running Neo4j enterprise server. Neo4j's backup%n" +
                         "service must have been configured on the server beforehand.%n%n" +
@@ -96,6 +97,10 @@ class OnlineBackupCommandTest
                         "                              Default: true%n" +
                         "      --check-label-scan-store=<true/false>%n" +
                         "                            Perform consistency checks on the label scan store.%n" +
+                        "                              Default: true%n" +
+                        "      --check-relationship-type-scan-store=<true/false>%n" +
+                        "                            Perform consistency checks on the relationship type%n" +
+                        "                              scan store.%n" +
                         "                              Default: true%n" +
                         "      --check-property-owners=<true/false>%n" +
                         "                            Perform additional consistency checks on property%n" +

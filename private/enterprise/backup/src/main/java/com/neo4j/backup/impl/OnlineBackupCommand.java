@@ -108,6 +108,7 @@ public class OnlineBackupCommand extends AbstractCommand
                 .withConsistencyCheckIndexStructure( consistencyCheckOptions.isCheckIndexStructure() )
                 .withConsistencyCheckPropertyOwners( consistencyCheckOptions.isCheckPropertyOwners() )
                 .withConsistencyCheckLabelScanStore( consistencyCheckOptions.isCheckLabelScanStore() )
+                .withConsistencyCheckRelationshipTypeScanStore( consistencyCheckOptions.isCheckRelationshipTypeScanStore() )
                 .build();
 
         final var userLogProvider = Util.configuredLogProvider( config, ctx.out() );

@@ -17,7 +17,7 @@ import org.neo4j.logging.NullLogProvider;
 
 final class ConsistencyHelper
 {
-    private static final ConsistencyFlags CONSISTENCY_FLAGS = new ConsistencyFlags( true, true, true, true, true );
+    private static final ConsistencyFlags CONSISTENCY_FLAGS = new ConsistencyFlags( true, true, true, true, true, true );
 
     private ConsistencyHelper()
     {
