@@ -19,6 +19,7 @@
  */
 package org.neo4j.internal.freki;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.collections.api.iterator.MutableLongIterator;
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Random;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -44,6 +46,9 @@ import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.nio.ByteBuffer.wrap;
+import static java.util.Arrays.sort;
+import static java.util.Comparator.comparingLong;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -168,6 +173,42 @@ class BigPropertyValueStoreTest
 
                 //then
                 assertEquals( data.length, store.length( cursor, pointer ) );
+            }
+        }
+    }
+
+    @Test
+    void shouldAllocateSpaceConcurrently()
+    {
+        try ( Lifespan life = new Lifespan() )
+        {
+            // given
+            BigPropertyValueStore store = new BigPropertyValueStore( directory.file( "dude" ), pageCache, false, true );
+            life.add( store );
+
+            // when
+            Race race = new Race().withEndCondition( () -> false );
+            ConcurrentLinkedQueue<Pair<Long,Integer>> allocations = new ConcurrentLinkedQueue<>();
+            race.addContestants( 8, i ->
+            {
+                Random rng = new Random( random.nextLong() );
+                return () ->
+                {
+                    int length = rng.nextInt( 200 ) + 1;
+                    long position = store.allocateSpace( length );
+                    allocations.add( Pair.of( position, length ) );
+                };
+            }, 100 );
+            race.goUnchecked();
+
+            // then
+            Pair<Long,Integer>[] allocationsArray = allocations.toArray( new Pair[allocations.size()] );
+            sort( allocationsArray, comparingLong( Pair::getLeft ) );
+            long prevHighPosition = 0;
+            for ( Pair<Long,Integer> allocation : allocationsArray )
+            {
+                assertThat( allocation.getLeft() ).isGreaterThanOrEqualTo( prevHighPosition );
+                prevHighPosition = allocation.getLeft() + allocation.getRight();
             }
         }
     }
