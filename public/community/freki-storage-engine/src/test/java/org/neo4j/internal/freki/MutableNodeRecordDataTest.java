@@ -197,7 +197,7 @@ class MutableNodeRecordDataTest
         //When
         buffer.position( 0 );
         MutableNodeRecordData after = new MutableNodeRecordData( ID );
-        after.deserialize( buffer, null );
+        after.deserialize( buffer, null, null );
 
         //Then
         assertEquals( record, after );

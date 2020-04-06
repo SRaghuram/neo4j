@@ -150,7 +150,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
         }
         if ( readValue == null )
         {
-            readValue = readEagerly( buffer.position( nextValuePosition ), stores.bigPropertyValueStore );
+            readValue = readEagerly( buffer.position( nextValuePosition ), stores.bigPropertyValueStore, cursorTracer );
             nextValuePosition = buffer.position();
         }
         return readValue;

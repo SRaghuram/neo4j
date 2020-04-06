@@ -113,7 +113,7 @@ class FrekiCommandCreationContext implements CommandCreationContext
             if ( store.read( cursor, record, id ) && record.hasFlag( FLAG_IN_USE ) )
             {
                 MutableNodeRecordData data = new MutableNodeRecordData( nodeId );
-                data.deserialize( record.data(), stores.bigPropertyValueStore );
+                data.deserialize( record.data(), stores.bigPropertyValueStore, cursorTracer );
                 return data;
             }
             return null;

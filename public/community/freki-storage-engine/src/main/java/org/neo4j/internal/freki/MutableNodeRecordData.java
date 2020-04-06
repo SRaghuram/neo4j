@@ -33,6 +33,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.util.EagerDegrees;
 import org.neo4j.util.Preconditions;
@@ -557,11 +558,11 @@ class MutableNodeRecordData
         }
     }
 
-    private void readProperties( MutableIntObjectMap<Value> into, ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore )
+    private void readProperties( MutableIntObjectMap<Value> into, ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore, PageCursorTracer tracer )
     {
         for ( int propertyKey : readIntDeltas( intArrayTarget(), buffer ).array() )
         {
-            into.put( propertyKey, PropertyValueFormat.read( buffer, bigPropertyValueStore ) );
+            into.put( propertyKey, PropertyValueFormat.read( buffer, bigPropertyValueStore, tracer ) );
         }
     }
 
@@ -580,7 +581,8 @@ class MutableNodeRecordData
         return relationshipOtherNodeRawLong >>> 2;
     }
 
-    void deserialize( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore /*temporary, should not be necessary in this scenario*/ )
+    void deserialize( ByteBuffer buffer,
+            SimpleBigValueStore bigPropertyValueStore, PageCursorTracer tracer ) /*temporary, should not be necessary in this scenario*/
     {
         assert buffer.position() == 0 : buffer.position();
         Header headerBuilder = new Header();
@@ -599,7 +601,7 @@ class MutableNodeRecordData
         if ( headerBuilder.hasOffset( Header.OFFSET_PROPERTIES ) )
         {
             buffer.position( headerBuilder.getOffset( Header.OFFSET_PROPERTIES ) );
-            readProperties( properties, buffer, bigPropertyValueStore );
+            readProperties( properties, buffer, bigPropertyValueStore, tracer );
         }
         if ( headerBuilder.hasOffset( Header.OFFSET_DEGREES ) )
         {
@@ -609,7 +611,7 @@ class MutableNodeRecordData
         if ( headerBuilder.hasOffset( Header.OFFSET_RELATIONSHIPS ) )
         {
             buffer.position( headerBuilder.getOffset( Header.OFFSET_RELATIONSHIPS ) );
-            readRelationships( buffer, bigPropertyValueStore );
+            readRelationships( buffer, bigPropertyValueStore, tracer );
         }
         if ( headerBuilder.hasOffset( Header.OFFSET_RECORD_POINTER ) )
         {
@@ -633,7 +635,7 @@ class MutableNodeRecordData
         recordPointer = readLongs( buffer )[0];
     }
 
-    private void readRelationships( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore )
+    private void readRelationships( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore, PageCursorTracer tracer )
     {
         int[] relationshipTypes = readIntDeltas( intArrayTarget(), buffer ).array();
         for ( int relationshipType : relationshipTypes )
@@ -656,7 +658,7 @@ class MutableNodeRecordData
                 if ( relationshipHasProperties( otherNodeRaw ) )
                 {
                     buffer.get(); //blocksize
-                    readProperties( relationship.properties, buffer, bigPropertyValueStore );
+                    readProperties( relationship.properties, buffer, bigPropertyValueStore, tracer );
                 }
             }
             this.relationships.put( relationships.type, relationships );
