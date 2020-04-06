@@ -145,6 +145,7 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     {
         traversalCursor.reset();
         singleId = reference;
+        singleTargetNodeReference = NULL;
         needsLoading = true;
         selection = RelationshipSelection.ALL_RELATIONSHIPS;
     }
