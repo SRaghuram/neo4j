@@ -33,6 +33,7 @@ import org.neo4j.internal.helpers.Args;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.index.label.LabelScanStore;
+import org.neo4j.internal.index.label.RelationshipTypeScanStore;
 import org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -253,6 +254,7 @@ class RebuildFromLogs
     {
         private final GraphDatabaseAPI graphdb;
         private final LabelScanStore labelScanStore;
+        private final RelationshipTypeScanStore relationshipTypeScanStore;
         private final Config tuningConfiguration = Config.defaults();
         private final IndexProviderMap indexes;
         private final TokenHolders tokenHolders;
@@ -264,6 +266,7 @@ class RebuildFromLogs
             this.graphdb = startTemporaryDb( layout, pageCache );
             DependencyResolver resolver = graphdb.getDependencyResolver();
             this.labelScanStore = resolver.resolveDependency( LabelScanStore.class );
+            this.relationshipTypeScanStore = resolver.resolveDependency( RelationshipTypeScanStore.class );
             this.indexes = resolver.resolveDependency( IndexProviderMap.class );
             this.tokenHolders = resolver.resolveDependency( TokenHolders.class );
             this.indexStatisticsStore = resolver.resolveDependency( IndexStatisticsStore.class );
@@ -276,7 +279,9 @@ class RebuildFromLogs
             var pageCacheTracer = graphdb.getDependencyResolver().resolveDependency( Tracers.class ).getPageCacheTracer();
             RecordStorageEngine storageEngine = graphdb.getDependencyResolver().resolveDependency( RecordStorageEngine.class );
             StoreAccess nativeStores = new StoreAccess( storageEngine.testAccessNeoStores() ).initialize();
-            DirectStoreAccess stores = new DirectStoreAccess( nativeStores, labelScanStore, indexes, tokenHolders, indexStatisticsStore, idGeneratorFactory );
+            DirectStoreAccess stores =
+                    new DirectStoreAccess( nativeStores, labelScanStore, relationshipTypeScanStore, indexes, tokenHolders, indexStatisticsStore,
+                            idGeneratorFactory );
             FullCheck fullCheck = new FullCheck( ProgressMonitorFactory.textual( System.err ), Statistics.NONE,
                     ConsistencyCheckService.defaultConsistencyCheckThreadsNumber(), ConsistencyFlags.DEFAULT, tuningConfiguration, false,
                     NodeBasedMemoryLimiter.DEFAULT );
