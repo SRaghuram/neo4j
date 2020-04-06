@@ -31,4 +31,16 @@ public interface StorageRelationshipScanCursor extends StorageRelationshipCursor
      * @param type relationship type to scan over, or -1 for all relationships regardless of type.
      */
     void scan( int type );
+
+    /**
+     * Initializes this cursor so that the next call to {@link #next()} will place this cursor at that entity.
+     * @param reference entity to place this cursor at the next call to {@link #next()}.
+     * @param reference source node reference of this relationship.
+     * @param reference type of this relationship.
+     * @param reference target node reference of this relationship.
+     */
+    default void single( long reference, long sourceNodeReference, int type, long targetNodeReference )
+    {
+        single( reference );
+    }
 }

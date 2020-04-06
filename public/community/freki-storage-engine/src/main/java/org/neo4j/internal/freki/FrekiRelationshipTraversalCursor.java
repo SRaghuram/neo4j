@@ -347,13 +347,14 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     {
         cursorAccessTracer.registerNodeToRelationshipsByReference( nodeId );
         //We don't use reference, is that a problem?
-        init( nodeId, selection );
+        initInternal( nodeId, NULL, selection );
     }
 
-    void init( long nodeId, RelationshipSelection selection )
+    void initInternal( long nodeId, long neighbourNodeReferenceSelection, RelationshipSelection selection )
     {
         reset();
         this.nodeId = nodeId;
+        this.neighbourNodeReferenceSelection = neighbourNodeReferenceSelection;
         this.selection = selection;
     }
 
@@ -361,7 +362,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     public void init( StorageNodeCursor nodeCursor, RelationshipSelection selection )
     {
         cursorAccessTracer.registerNodeToRelationshipsDirect();
-        init( nodeCursor.entityReference(), selection );
+        initInternal( nodeCursor.entityReference(), NULL, selection );
         ((FrekiMainStoreCursor) nodeCursor).initializeOtherCursorFromStateOfThisCursor( this );
         startIterationAfterLoad();
         readRelationshipTypesAndOffsets();
