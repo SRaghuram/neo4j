@@ -31,11 +31,11 @@ import com.neo4j.tools.migration.MigrateDataIntoOtherDatabase;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Random;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -296,7 +296,8 @@ public class RunCommand implements Runnable
                 Path tmpFrekiStoreDir = null;
                 try
                 {
-                    tmpFrekiStoreDir = Files.createTempDirectory( "freki" );
+                    //tmpdir is apparently not big enough, trying current working dir
+                    tmpFrekiStoreDir = Path.of( "freki_tmp" + Long.toUnsignedString( new Random().nextLong() ) ).toAbsolutePath();
                     String[] args = {
                             getJavaExecutable().toString(),
                             "-cp", getClassPath(),
