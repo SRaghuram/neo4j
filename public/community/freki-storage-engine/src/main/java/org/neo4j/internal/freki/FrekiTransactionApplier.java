@@ -302,7 +302,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     {
         try ( PageCursor cursor = stores.bigPropertyValueStore.openWriteCursor( cursorTracer ) )
         {
-            stores.bigPropertyValueStore.write( cursor, ByteBuffer.wrap( value.bytes ), value.pointer );
+            stores.bigPropertyValueStore.write( cursor, ByteBuffer.wrap( value.bytes, 0, value.length ), value.pointer );
         }
     }
 
