@@ -5,6 +5,8 @@
  */
 package com.neo4j.server.enterprise;
 
+import com.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.harness.internal.CausalClusterInProcessBuilder;
 import org.assertj.core.api.HamcrestCondition;
 import org.junit.jupiter.api.AfterAll;
@@ -13,8 +15,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.util.ArrayList;
 import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.TimeoutException;
 
+import org.neo4j.function.Predicates;
+import org.neo4j.harness.Neo4j;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -457,21 +465,17 @@ class CausalClusterRestEndpointsIT
     }
 
     @Test
-    void participatingInRaftGroupFalseWhenNotInGroup()
+    void participatingInRaftGroupFalseWhenNotInGroup() throws TimeoutException
     {
         try
         {
+
             var cores = cluster.getCores();
             assertThat( cores, hasSize( greaterThan( 1 ) ) );
-
-            // stop all cores except the first one
-            for ( var i = 1; i < cores.size(); i++ )
-            {
-                cores.get( i ).close();
-            }
-
-            var remainingCore = cores.get( 0 );
-            assertEventually( canVote( statusEndpoint( remainingCore, KNOWN_DB ) ), FALSE, 1, MINUTES );
+            var leader = awaitLeader( cluster, KNOWN_DB );
+            // stop all cores except the leader
+            cores.stream().filter( core -> !core.equals( leader ) ).forEach( core -> core.close() );
+            assertEventually( canVote( statusEndpoint( leader, KNOWN_DB ) ), FALSE, 1, MINUTES );
         }
         finally
         {
