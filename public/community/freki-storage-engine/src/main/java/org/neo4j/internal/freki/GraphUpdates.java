@@ -151,7 +151,7 @@ class GraphUpdates
                 throw new IllegalStateException( "Node[" + nodeId + "] should have existed" );
             }
 
-            sparse.data.deserialize( x1.data(), stores.bigPropertyValueStore );
+            sparse.data.deserialize( x1.data(), stores.bigPropertyValueStore, cursorTracer );
             x1Before = x1;
 
             long recordPointer = sparse.data.getRecordPointer();
@@ -159,7 +159,7 @@ class GraphUpdates
             {
                 Record xL = readRecord( stores, sizeExponentialFromRecordPointer( recordPointer ), idFromRecordPointer( recordPointer ), cursorTracer );
                 MutableNodeRecordData largeData = new MutableNodeRecordData( nodeId );
-                largeData.deserialize( xL.data(), stores.bigPropertyValueStore );
+                largeData.deserialize( xL.data(), stores.bigPropertyValueStore, cursorTracer );
                 sparse.data.copyDataFrom( FLAG_PROPERTIES | FLAG_DEGREES | FLAG_RELATIONSHIPS, largeData );
                 xLBefore = xL;
             }

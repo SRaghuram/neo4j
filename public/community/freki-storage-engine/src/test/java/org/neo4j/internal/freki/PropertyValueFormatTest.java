@@ -29,6 +29,7 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.Map;
 
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.rule.RandomRule;
@@ -633,6 +634,6 @@ class PropertyValueFormatTest
 
     private Value readValue()
     {
-        return PropertyValueFormat.read( readBuffer, bigValueStore );
+        return PropertyValueFormat.read( readBuffer, bigValueStore, PageCursorTracer.NULL );
     }
 }

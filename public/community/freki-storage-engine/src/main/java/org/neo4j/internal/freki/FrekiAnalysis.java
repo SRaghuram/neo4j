@@ -202,7 +202,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
     {
         System.out.println( record );
         MutableNodeRecordData data = new MutableNodeRecordData( nodeId );
-        data.deserialize( record.data( 0 ), stores.bigPropertyValueStore );
+        data.deserialize( record.data( 0 ), stores.bigPropertyValueStore, PageCursorTracer.NULL );
         System.out.println( "  " + data );
     }
 
@@ -389,7 +389,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
                                 var buffer = record.data();
                                 try
                                 {
-                                    data.deserialize( buffer, stores.bigPropertyValueStore );
+                                    data.deserialize( buffer, stores.bigPropertyValueStore, PageCursorTracer.NULL );
                                 }
                                 catch ( Exception e )
                                 {
@@ -423,7 +423,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         if ( record.hasFlag( FLAG_IN_USE ) )
         {
             var data = new MutableNodeRecordData( nodeId );
-            data.deserialize( record.data(), stores.bigPropertyValueStore );
+            data.deserialize( record.data(), stores.bigPropertyValueStore, PageCursorTracer.NULL );
             return data.isDense();
         }
         return false;
