@@ -6,9 +6,10 @@
 package com.neo4j.bench.client.queries.report;
 
 import com.neo4j.bench.client.queries.Query;
-import com.neo4j.bench.common.model.Benchmark;
-import com.neo4j.bench.common.model.Repository;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.Repository;
 import com.neo4j.bench.common.util.Resources;
+import com.neo4j.bench.model.util.UnitConverter;
 import com.neo4j.bench.common.util.Units;
 
 import java.util.Comparator;
@@ -62,8 +63,8 @@ public class LdbcComparison implements Query<List<LdbcComparisonResult>>, CsvHea
                                    Benchmark.Mode mode = Benchmark.Mode.valueOf( row.get( "mode" ).asString() );
                                    double oldResult = row.get( "old" ).asDouble();
                                    double newResult = row.get( "new" ).asDouble();
-                                   TimeUnit oldUnit = Units.toTimeUnit( row.get( "old_unit" ).asString() );
-                                   TimeUnit newUnit = Units.toTimeUnit( row.get( "new_unit" ).asString() );
+                                   TimeUnit oldUnit = UnitConverter.toTimeUnit( row.get( "old_unit" ).asString() );
+                                   TimeUnit newUnit = UnitConverter.toTimeUnit( row.get( "new_unit" ).asString() );
                                    TimeUnit saneOldUnit = Units.findSaneUnit( oldResult, oldUnit, mode, 1, 1000 );
                                    TimeUnit saneNewUnit = Units.findSaneUnit( newResult, newUnit, mode, 1, 1000 );
                                    TimeUnit commonUnit = Units.maxValueUnit( saneOldUnit, saneNewUnit, mode );

@@ -32,7 +32,7 @@ fi
 settings_file=$(realpath "private/benchmarks/settings.xml")
 
 # list of directories we want to deploy from
-declare -a dirs=("benchmark-common" "benchmark-results-client" "benchmark-infra/benchmark-infra-common" "jmh-benchmark-api" "benchmark-infra/benchmark-infra-worker" "benchmark-infra/benchmark-infra-scheduler")
+declare -a dirs=("benchmark-model" "benchmark-common" "benchmark-results-client" "benchmark-infra/benchmark-infra-common" "jmh-benchmark-api" "benchmark-infra/benchmark-infra-worker" "benchmark-infra/benchmark-infra-scheduler")
 
 # get modules names
 modules_names=()
@@ -58,6 +58,10 @@ for module_dir in "${dirs[@]}"; do
     cd "private/benchmarks/${module_dir}"
     module_name=$(basename "$module_dir")
     artifact_file="target/$module_name-$version.jar"
-    mvn --settings "$settings_file" deploy:deploy-file -Dfile="$artifact_file" -DpomFile=".flattened-pom.xml" -Durl="https://neo.jfrog.io/neo/benchmarking-local" -DrepositoryId="neo4j-internal-releases"
+    if [ "$module_dir" == "benchmark-model" ]; then
+      mvn --settings "$settings_file" deploy:deploy-file -Dfile="$artifact_file" -DpomFile=".flattened-pom.xml" -Durl="https://neo.jfrog.io/neo/benchmarking-public" -DrepositoryId="neo4j-internal-releases"
+    else
+      mvn --settings "$settings_file" deploy:deploy-file -Dfile="$artifact_file" -DpomFile=".flattened-pom.xml" -Durl="https://neo.jfrog.io/neo/benchmarking-local" -DrepositoryId="neo4j-internal-releases"
+    fi
   )
 done

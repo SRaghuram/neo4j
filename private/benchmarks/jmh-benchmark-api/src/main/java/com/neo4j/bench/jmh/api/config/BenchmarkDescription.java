@@ -6,7 +6,7 @@
 package com.neo4j.bench.jmh.api.config;
 
 import com.google.common.collect.Sets;
-import com.neo4j.bench.common.model.Benchmark;
+import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.jmh.api.BenchmarkDiscoveryUtils;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;

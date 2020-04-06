@@ -11,10 +11,10 @@ import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.AllowedEnumValues;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.client.queries.submit.SubmitTestRun;
-import com.neo4j.bench.common.model.TestRunError;
-import com.neo4j.bench.common.model.TestRunReport;
+import com.neo4j.bench.model.model.TestRunError;
+import com.neo4j.bench.model.model.TestRunReport;
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
-import com.neo4j.bench.common.util.JsonUtil;
+import com.neo4j.bench.model.util.JsonUtil;
 
 import java.io.File;
 import java.net.URI;

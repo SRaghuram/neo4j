@@ -5,9 +5,10 @@
  */
 package com.neo4j.bench.common.model;
 
+import com.neo4j.bench.model.model.Parameters;
 import org.junit.jupiter.api.Test;
 
-import static com.neo4j.bench.common.model.Parameters.fromMap;
+import static com.neo4j.bench.model.model.Parameters.fromMap;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonMap;
 import static org.hamcrest.MatcherAssert.assertThat;

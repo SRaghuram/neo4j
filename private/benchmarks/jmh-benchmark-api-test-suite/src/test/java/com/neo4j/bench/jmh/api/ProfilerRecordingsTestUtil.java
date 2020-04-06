@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.jmh.api;
 
-import com.neo4j.bench.common.profiling.RecordingType;
+import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 
 import java.io.IOException;

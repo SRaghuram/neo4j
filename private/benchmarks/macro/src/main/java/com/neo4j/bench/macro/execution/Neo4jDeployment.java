@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.macro.execution;
 
-import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.execution.process.DatabaseLauncher;

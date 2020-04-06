@@ -9,13 +9,13 @@ import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.AllowedEnumValues;
 import com.github.rvesse.airline.annotations.restrictions.Required;
-import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.tool.micro.RunMicroWorkloadParams;
+import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.common.util.ErrorReporter;
 
 import java.io.File;
 
-import static com.neo4j.bench.common.options.Edition.ENTERPRISE;
+import static com.neo4j.bench.model.options.Edition.ENTERPRISE;
 import static com.neo4j.bench.common.tool.micro.RunMicroWorkloadParams.CMD_BENCHMARK_CONFIG;
 import static com.neo4j.bench.common.tool.micro.RunMicroWorkloadParams.CMD_BRANCH_OWNER;
 import static com.neo4j.bench.common.tool.micro.RunMicroWorkloadParams.CMD_ERROR_POLICY;

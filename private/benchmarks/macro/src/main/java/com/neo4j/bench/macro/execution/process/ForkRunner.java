@@ -7,11 +7,11 @@ package com.neo4j.bench.macro.execution.process;
 
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
-import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
-import com.neo4j.bench.common.model.Neo4jConfig;
-import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
+import com.neo4j.bench.model.model.Neo4jConfig;
+import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.common.process.JpsPid;
-import com.neo4j.bench.common.process.JvmArgs;
+import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.common.process.JvmProcess;
 import com.neo4j.bench.common.process.JvmProcessArgs;
 import com.neo4j.bench.common.process.PgrepAndPsPid;

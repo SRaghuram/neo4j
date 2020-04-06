@@ -5,11 +5,9 @@
  */
 package com.neo4j.bench.infra;
 
-import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.options.Version;
-import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
@@ -17,9 +15,11 @@ import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
 import com.neo4j.bench.common.tool.macro.RunToolMacroWorkloadParams;
 import com.neo4j.bench.common.tool.micro.RunMicroWorkloadParams;
 import com.neo4j.bench.common.util.ErrorReporter;
-import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.infra.macro.MacroToolRunner;
 import com.neo4j.bench.infra.micro.MicroToolRunner;
+import com.neo4j.bench.model.options.Edition;
+import com.neo4j.bench.model.process.JvmArgs;
+import com.neo4j.bench.model.util.JsonUtil;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;

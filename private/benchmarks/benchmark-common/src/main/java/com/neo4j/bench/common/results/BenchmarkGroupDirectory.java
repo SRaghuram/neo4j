@@ -5,12 +5,12 @@
  */
 package com.neo4j.bench.common.results;
 
-import com.neo4j.bench.common.model.Benchmark;
-import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.common.profiling.NoOpProfiler;
-import com.neo4j.bench.common.profiling.RecordingType;
+import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.common.util.BenchmarkUtil;
-import com.neo4j.bench.common.util.JsonUtil;
+import com.neo4j.bench.model.util.JsonUtil;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;

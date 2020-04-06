@@ -6,8 +6,8 @@
 package com.neo4j.bench.infra.commands;
 
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
-import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.infra.AWSCredentials;
+import com.neo4j.bench.model.util.JsonUtil;
 import com.neo4j.bench.infra.InfraParams;
 import org.junit.jupiter.api.Test;
 import com.neo4j.bench.infra.Workspace;

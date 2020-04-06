@@ -5,10 +5,11 @@
  */
 package com.neo4j.bench.common.profiling;
 
-import com.neo4j.bench.common.model.Benchmark;
-import com.neo4j.bench.common.model.BenchmarkGroup;
-import com.neo4j.bench.common.model.Parameters;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.common.results.RunPhase;
+import com.neo4j.bench.model.profiling.RecordingType;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.macro.execution.database;
 
+
 import com.neo4j.bench.common.process.HasPid;
 
 import java.util.Map;

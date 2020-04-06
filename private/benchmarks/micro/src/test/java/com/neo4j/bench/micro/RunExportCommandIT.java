@@ -8,17 +8,16 @@ package com.neo4j.bench.micro;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
-import com.neo4j.bench.common.model.BenchmarkTool;
-import com.neo4j.bench.common.model.Project;
-import com.neo4j.bench.common.model.Repository;
-import com.neo4j.bench.common.model.TestRunReport;
 import com.neo4j.bench.common.profiling.ProfilerType;
-import com.neo4j.bench.common.profiling.RecordingType;
-import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.ErrorReporter;
-import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.micro.benchmarks.core.ReadById;
+import com.neo4j.bench.model.model.BenchmarkTool;
+import com.neo4j.bench.model.model.Project;
+import com.neo4j.bench.model.model.Repository;
+import com.neo4j.bench.model.model.TestRunReport;
+import com.neo4j.bench.model.profiling.RecordingType;
+import com.neo4j.bench.model.util.JsonUtil;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,7 +37,8 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.common.options.Edition.ENTERPRISE;
+import static com.neo4j.bench.model.options.Edition.ENTERPRISE;
+import static com.neo4j.bench.model.util.MapPrinter.prettyPrint;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -162,7 +162,7 @@ class RunExportCommandIT
                                                    .toMap()
                                                    .size();
 
-        assertThat( BenchmarkUtil.prettyPrint( report.baseNeo4jConfig().toMap() ), report.baseNeo4jConfig().toMap().size(), equalTo( expectedConfigSize ) );
+        assertThat( prettyPrint( report.baseNeo4jConfig().toMap() ), report.baseNeo4jConfig().toMap().size(), equalTo( expectedConfigSize ) );
         assertThat( report.java().jvmArgs(), equalTo(
                 "-Xms2g -Xmx2g -XX:+UseG1GC -XX:-OmitStackTraceInFastThrow -XX:+AlwaysPreTouch " +
                 "-XX:+UnlockExperimentalVMOptions " +

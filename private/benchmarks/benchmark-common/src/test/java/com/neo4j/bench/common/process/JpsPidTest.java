@@ -7,6 +7,7 @@ package com.neo4j.bench.common.process;
 
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Jvm;
+import com.neo4j.bench.model.process.JvmArgs;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;

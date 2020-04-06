@@ -6,8 +6,8 @@
 package com.neo4j.bench.macro.execution.process;
 
 import com.neo4j.bench.common.database.Store;
-import com.neo4j.bench.common.model.Parameters;
-import com.neo4j.bench.common.process.JvmArgs;
+import com.neo4j.bench.model.model.Parameters;
+import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ExternalProfiler;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.OOMProfiler;
@@ -56,7 +56,7 @@ public abstract class RunnableFork<LAUNCHER extends DatabaseLauncher<CONNECTION>
         this.originalStore = originalStore;
         this.neo4jConfigFile = neo4jConfigFile;
         this.jvm = jvm;
-        this.jvmArgs = JvmArgs.standardArgs( forkDirectory )
+        this.jvmArgs = JvmArgs.standardArgs()
                               .merge( jvmArgs )
                               // every fork will have its own temporary directory
                               .set( format( "-Djava.io.tmpdir=%s", BenchmarkUtil.tryMkDir( forkDirectory.pathFor( "tmp" ) ) ) );

@@ -6,7 +6,7 @@
 package com.neo4j.bench.common.profiling;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.common.util.JsonUtil;
+import com.neo4j.bench.model.util.JsonUtil;
 import org.junit.Test;
 
 import java.util.Collections;

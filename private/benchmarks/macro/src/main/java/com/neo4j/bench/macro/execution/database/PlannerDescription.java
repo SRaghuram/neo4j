@@ -7,9 +7,9 @@ package com.neo4j.bench.macro.execution.database;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.neo4j.bench.common.model.Plan;
-import com.neo4j.bench.common.model.PlanOperator;
-import com.neo4j.bench.common.model.PlanTree;
+import com.neo4j.bench.model.model.Plan;
+import com.neo4j.bench.model.model.PlanOperator;
+import com.neo4j.bench.model.model.PlanTree;
 
 import java.util.ArrayList;
 import java.util.HashMap;

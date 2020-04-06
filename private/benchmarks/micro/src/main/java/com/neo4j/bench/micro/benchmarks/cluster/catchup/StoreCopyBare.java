@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.micro.benchmarks.cluster.catchup;
 
-import com.neo4j.bench.common.model.BenchmarkGroup;
-import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
@@ -63,7 +63,7 @@ public class StoreCopyBare extends BaseRegularBenchmark
     }
 
     @Override
-    protected void benchmarkSetup( BenchmarkGroup group, com.neo4j.bench.common.model.Benchmark benchmark, Neo4jConfig neo4jConfig,
+    protected void benchmarkSetup( BenchmarkGroup group, com.neo4j.bench.model.model.Benchmark benchmark, Neo4jConfig neo4jConfig,
             ForkDirectory forkDirectory ) throws Throwable
     {
         log.info( "Starting preparing files" );

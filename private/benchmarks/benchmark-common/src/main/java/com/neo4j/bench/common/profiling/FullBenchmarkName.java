@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.common.profiling;
 
-import com.neo4j.bench.common.model.Benchmark;
-import com.neo4j.bench.common.model.BenchmarkGroup;
-import com.neo4j.bench.common.model.BenchmarkGroupBenchmark;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.BenchmarkGroupBenchmark;
 
 import static com.neo4j.bench.common.util.BenchmarkUtil.sanitize;
 

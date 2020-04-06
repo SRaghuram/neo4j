@@ -6,12 +6,12 @@
 package com.neo4j.bench.client.queries.submit;
 
 import com.neo4j.bench.client.queries.Query;
-import com.neo4j.bench.common.model.BenchmarkMetrics;
-import com.neo4j.bench.common.model.Project;
-import com.neo4j.bench.common.model.TestRun;
-import com.neo4j.bench.common.model.TestRunReport;
-import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.util.Resources;
+import com.neo4j.bench.model.model.BenchmarkMetrics;
+import com.neo4j.bench.model.model.Project;
+import com.neo4j.bench.model.model.TestRun;
+import com.neo4j.bench.model.model.TestRunReport;
+import com.neo4j.bench.common.options.Planner;
 
 import java.util.HashMap;
 import java.util.List;
@@ -27,8 +27,8 @@ import org.neo4j.driver.Result;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.Value;
 
-import static com.neo4j.bench.common.model.BenchmarkMetrics.extractBenchmarkMetrics;
-import static com.neo4j.bench.common.util.BenchmarkUtil.prettyPrint;
+import static com.neo4j.bench.model.model.BenchmarkMetrics.extractBenchmarkMetrics;
+import static com.neo4j.bench.model.util.MapPrinter.prettyPrint;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;

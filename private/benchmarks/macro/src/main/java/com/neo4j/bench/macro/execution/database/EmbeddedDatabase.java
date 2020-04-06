@@ -8,12 +8,12 @@ package com.neo4j.bench.macro.execution.database;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
-import com.neo4j.bench.common.model.Neo4jConfig;
-import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.process.HasPid;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.macro.execution.CountingResultVisitor;
+import com.neo4j.bench.model.model.Neo4jConfig;
+import com.neo4j.bench.model.options.Edition;
 import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 import picocli.CommandLine;
 
@@ -28,7 +28,6 @@ import org.neo4j.cli.ExecutionContext;
 import org.neo4j.commandline.dbms.StoreInfoCommand;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
-import org.neo4j.dbms.database.DatabaseManagementServiceImpl;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Result;
@@ -40,7 +39,6 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class EmbeddedDatabase implements Database
 {

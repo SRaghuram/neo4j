@@ -10,9 +10,9 @@ import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.AllowedEnumValues;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
-import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.tool.micro.RunExportParams;
+import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.common.util.ErrorReporter;
 import com.neo4j.bench.common.util.Jvm;
 
@@ -22,7 +22,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.neo4j.bench.common.options.Edition.ENTERPRISE;
+import static com.neo4j.bench.model.options.Edition.ENTERPRISE;
 import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_BENCHMARK_CONFIG;
 import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_BRANCH_OWNER;
 import static com.neo4j.bench.common.tool.micro.RunExportParams.CMD_ERROR_POLICY;

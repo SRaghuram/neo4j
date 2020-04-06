@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.infra.scheduler;
 
-import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.infra.AWSCredentials;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.InfraParams;
@@ -16,6 +15,7 @@ import com.neo4j.bench.infra.JobStatus;
 import com.neo4j.bench.infra.Workspace;
 import com.neo4j.bench.infra.aws.AWSBatchJobScheduler;
 import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
+import com.neo4j.bench.model.util.JsonUtil;
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;
 import org.apache.commons.lang3.StringUtils;

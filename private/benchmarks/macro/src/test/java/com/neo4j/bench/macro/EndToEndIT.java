@@ -6,13 +6,10 @@
 package com.neo4j.bench.macro;
 
 import com.neo4j.bench.common.Neo4jConfigBuilder;
-import com.neo4j.bench.common.model.Parameters;
-import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
 import com.neo4j.bench.common.profiling.ProfilerType;
-import com.neo4j.bench.common.profiling.RecordingType;
 import com.neo4j.bench.common.results.RunPhase;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
@@ -22,6 +19,9 @@ import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.Neo4jDeployment;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
+import com.neo4j.bench.model.model.Parameters;
+import com.neo4j.bench.model.options.Edition;
+import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.test.BaseEndToEndIT;
 import com.neo4j.common.util.TestSupport;
 
