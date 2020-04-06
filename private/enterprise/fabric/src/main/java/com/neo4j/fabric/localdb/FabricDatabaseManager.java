@@ -80,11 +80,11 @@ public class FabricDatabaseManager extends LifecycleAdapter
                 NormalizedDatabaseName dbName = fabricConfig.getDatabase().getName();
                 if ( exists )
                 {
-                    log.info( "Using existing Fabric virtual database '%s'", dbName.name());
+                    log.info( "Using existing Fabric virtual database '%s'", dbName.name() );
                 }
                 else
                 {
-                    log.info( "Creating Fabric virtual database '%s'", dbName.name());
+                    log.info( "Creating Fabric virtual database '%s'", dbName.name() );
                     newFabricDb( tx, dbName );
                 }
             }
@@ -100,7 +100,8 @@ public class FabricDatabaseManager extends LifecycleAdapter
         return !isSystemDatabase && (fabricByDefault || isConfiguredFabricDatabase( databaseNameRaw ));
     }
 
-    public boolean hasFabricRoutingTable( String databaseNameRaw ) {
+    public boolean hasFabricRoutingTable( String databaseNameRaw )
+    {
         return isConfiguredFabricDatabase( databaseNameRaw );
     }
 
@@ -118,9 +119,9 @@ public class FabricDatabaseManager extends LifecycleAdapter
     public GraphDatabaseFacade getDatabase( String databaseNameRaw ) throws UnavailableException
     {
         var graphDatabaseFacade = databaseIdRepository.getByName( databaseNameRaw )
-                .flatMap( databaseId -> databaseManager.getDatabaseContext( databaseId ) )
-                .orElseThrow( () -> new DatabaseNotFoundException( "Database " + databaseNameRaw + " not found" ) )
-                .databaseFacade();
+                                                      .flatMap( databaseId -> databaseManager.getDatabaseContext( databaseId ) )
+                                                      .orElseThrow( () -> new DatabaseNotFoundException( "Database " + databaseNameRaw + " not found" ) )
+                                                      .databaseFacade();
         if ( !graphDatabaseFacade.isAvailable( 0 ) )
         {
             throw new UnavailableException( "Database %s not available " + databaseNameRaw );
@@ -141,12 +142,12 @@ public class FabricDatabaseManager extends LifecycleAdapter
 
                 if ( !fabricConfig.isEnabled() || !fabricConfig.getDatabase().getName().name().equals( dbName ) )
                 {
-                    log.info( "Setting Fabric virtual database '%s' status to offline", dbName);
+                    log.info( "Setting Fabric virtual database '%s' status to offline", dbName );
                     fabricDb.setProperty( "status", "offline" );
                 }
                 else
                 {
-                    log.info( "Setting Fabric virtual database '%s' status to online", dbName);
+                    log.info( "Setting Fabric virtual database '%s' status to online", dbName );
                     fabricDb.setProperty( "status", "online" );
                     found = true;
                 }
