@@ -61,7 +61,7 @@ public class RelationshipEntity implements Relationship, RelationshipVisitor<Run
     public static final long SHALLOW_SIZE = shallowSizeOfInstance( RelationshipEntity.class );
 
     private final InternalTransaction internalTransaction;
-    private final RelationshipTraversalCursor cursor;
+    private RelationshipTraversalCursor cursor;
     private long id = NO_ID;
     private long startNode = NO_ID;
     private long endNode = NO_ID;
@@ -500,6 +500,14 @@ public class RelationshipEntity implements Relationship, RelationshipVisitor<Run
     {
         Relationship r = (Relationship) rel;
         return Long.compare( this.getId(), r.getId() );
+    }
+
+    /**
+     * Do this to not keep the reference to the cursor, because it will just carry unnecessary baggage that won't be useful anyway.
+     */
+    public void detachFromIterator()
+    {
+        this.cursor = null;
     }
 
     @Override
