@@ -586,10 +586,10 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
 
     static Value read( ByteBuffer buffer )
     {
-        return read( buffer, null );
+        return read( buffer, null, PageCursorTracer.NULL );
     }
 
-    static Value read( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore )
+    static Value read( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore, PageCursorTracer tracer )
     {
         byte typeByte = buffer.get();
         boolean isSimpleInlinedValue = (typeByte & SPECIAL_TYPE_MASK) == 0;
@@ -605,28 +605,28 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
                 long pointer = (long) readSimpleInlinedValue( buffer.get(), buffer ).asObject();
                 // TODO this is some sort of first approach to not blow up on reading big values on the write path
                 //      this ensures that the pointers will be kept and serialized back when writing
-                return new PointerValue( typeByte, pointer, bigPropertyValueStore );
+                return new PointerValue( typeByte, pointer, bigPropertyValueStore, tracer );
             }
 
             boolean isArray = (typeByte & SPECIAL_TYPE_ARRAY) != 0;
             if ( isArray ) // this only covers inlined arrays
             {
                 byte externalType = externalType( typeByte );
-                int length = (int) read( buffer, bigPropertyValueStore ).asObject();
-                return readArray( externalType, length, buffer, bigPropertyValueStore );
+                int length = (int) read( buffer, bigPropertyValueStore, tracer ).asObject();
+                return readArray( externalType, length, buffer, bigPropertyValueStore, tracer );
             }
 
             throw new IllegalArgumentException( "Unknown special type" );
         }
     }
 
-    static Value readEagerly( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore )
+    static Value readEagerly( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore, PageCursorTracer tracer )
     {
-        Value value = read( buffer, bigPropertyValueStore );
+        Value value = read( buffer, bigPropertyValueStore, tracer );
         return value instanceof PointerValue ? ((PointerValue) value).bigValue() : value;
     }
 
-    private static Value readArray( byte externalType, int length, ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore )
+    private static Value readArray( byte externalType, int length, ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore, PageCursorTracer tracer )
     {
         if ( externalType == EXTERNAL_TYPE_BYTE )
         {
@@ -647,7 +647,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         Object[] values = allocateTypeArray( externalType, length );
         for ( int i = 0; i < length; i++ )
         {
-            values[i] = read( buffer, bigPropertyValueStore ).asObject(); //This will force read if in BigPropertyStore, laziness ignored
+            values[i] = read( buffer, bigPropertyValueStore, tracer ).asObject(); //This will force read if in BigPropertyStore, laziness ignored
         }
         return Values.of( values );
     }
@@ -990,18 +990,20 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     private static class PointerValue extends Value
     {
         private final SimpleBigValueStore bigPropertyValueStore;
+        private final PageCursorTracer tracer;
         private final byte externalType;
         private final long pointer;
         private final boolean isArray;
 
         private Value cachedValue;
 
-        private PointerValue( byte typeByte, long pointer, SimpleBigValueStore bigPropertyValueStore )
+        private PointerValue( byte typeByte, long pointer, SimpleBigValueStore bigPropertyValueStore, PageCursorTracer tracer )
         {
             this.externalType = externalType( typeByte );
             isArray = (typeByte & SPECIAL_TYPE_ARRAY) != 0;
             this.pointer = pointer;
             this.bigPropertyValueStore = bigPropertyValueStore;
+            this.tracer = tracer;
         }
 
         private Value bigValue()
@@ -1012,7 +1014,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
             }
 
             ByteBuffer buffer;
-            try ( PageCursor cursor = bigPropertyValueStore.openReadCursor( PageCursorTracer.NULL ) )
+            try ( PageCursor cursor = bigPropertyValueStore.openReadCursor( tracer ) )
             {
                 int length = bigPropertyValueStore.length( cursor, pointer ); // this is not optimal, as read() re-reads the length.
                 buffer = ByteBuffer.wrap( new byte[length] );
@@ -1027,7 +1029,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
             if ( isArray )
             {
                 int length = (int) read( buffer ).asObject();
-                cachedValue = readArray( externalType, length, buffer, bigPropertyValueStore );
+                cachedValue = readArray( externalType, length, buffer, bigPropertyValueStore, tracer );
             }
             else
             {

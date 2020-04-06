@@ -107,7 +107,7 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
                             externalRelationshipId( nodeId, internalId, otherNodeId, outgoing ) );
                 }
                 MutableIntObjectMap<PropertyUpdate> properties = IntObjectMaps.mutable.empty();
-                RelationshipPropertyIterator relationshipProperties = relationshipPropertiesIterator( seek.value().data, bigPropertyValueStore );
+                RelationshipPropertyIterator relationshipProperties = relationshipPropertiesIterator( seek.value().data, bigPropertyValueStore, cursorTracer );
                 while ( relationshipProperties.hasNext() )
                 {
                     relationshipProperties.next();
@@ -139,7 +139,7 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
 
         try
         {
-            return new RelationshipIterator( tree.seek( from, to, cursorTracer ), filter, bigPropertyValueStore );
+            return new RelationshipIterator( tree.seek( from, to, cursorTracer ), filter, bigPropertyValueStore, cursorTracer );
         }
         catch ( IOException e )
         {
@@ -173,7 +173,7 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         DenseKey to = layout.newKey().initialize( nodeId, type, direction, neighbourNodeId, Long.MAX_VALUE );
         try
         {
-            return new RelationshipIterator( tree.seek( from, to, cursorTracer ), r -> true, bigPropertyValueStore );
+            return new RelationshipIterator( tree.seek( from, to, cursorTracer ), r -> true, bigPropertyValueStore, cursorTracer );
         }
         catch ( IOException e )
         {
@@ -184,7 +184,7 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
     RelationshipData getRelationship( long nodeId, int type, Direction direction, long otherNodeId, long internalId, PageCursorTracer cursorTracer )
     {
         DenseKey key = layout.newKey().initialize( nodeId, type, direction, otherNodeId, internalId );
-        try ( RelationshipIterator iterator = new RelationshipIterator( tree.seek( key, key, cursorTracer ), d -> true, bigPropertyValueStore ) )
+        try ( RelationshipIterator iterator = new RelationshipIterator( tree.seek( key, key, cursorTracer ), d -> true, bigPropertyValueStore, cursorTracer ) )
         {
             if ( iterator.hasNext() )
             {
@@ -198,8 +198,10 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         }
     }
 
-    private static RelationshipPropertyIterator relationshipPropertiesIterator( ByteBuffer relationshipData, SimpleBigValueStore bigPropertyValueStore )
+    private static RelationshipPropertyIterator relationshipPropertiesIterator( ByteBuffer relationshipData, SimpleBigValueStore bigPropertyValueStore,
+            PageCursorTracer tracer )
     {
+
         if ( relationshipData.remaining() == 0 )
         {
             return NO_PROPERTIES;
@@ -238,7 +240,7 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
             {
                 if ( currentValue == null )
                 {
-                    currentValue = PropertyValueFormat.readEagerly( relationshipData, bigPropertyValueStore );
+                    currentValue = PropertyValueFormat.readEagerly( relationshipData, bigPropertyValueStore, tracer );
                 }
                 return currentValue;
             }
@@ -645,11 +647,14 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
     private static class RelationshipIterator extends CursorIterator<RelationshipData> implements RelationshipData
     {
         private final SimpleBigValueStore bigPropertyValueStore;
+        private final PageCursorTracer tracer;
 
-        RelationshipIterator( Seeker<DenseKey,DenseValue> seek, Predicate<RelationshipData> filter, SimpleBigValueStore bigPropertyValueStore )
+        RelationshipIterator( Seeker<DenseKey,DenseValue> seek, Predicate<RelationshipData> filter, SimpleBigValueStore bigPropertyValueStore,
+                PageCursorTracer tracer )
         {
             super( seek, filter );
             this.bigPropertyValueStore = bigPropertyValueStore;
+            this.tracer = tracer;
         }
 
         @Override
@@ -687,13 +692,20 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         @Override
         public Iterator<StorageProperty> properties()
         {
-            return relationshipPropertiesIterator( value.data, bigPropertyValueStore );
+            return relationshipPropertiesIterator( value.data, bigPropertyValueStore, tracer );
         }
 
         @Override
         public boolean hasProperties()
         {
             return value.data.remaining() > 0;
+        }
+
+        @Override
+        public void close()
+        {
+            super.close();
+            tracer.close();
         }
     }
 
