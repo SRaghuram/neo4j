@@ -14,7 +14,6 @@
     <properties>
         <moduleName>com.neo4j.bench.common</moduleName>
         <metrics.version>3.1.2</metrics.version>
-        <commons.io.version>2.6</commons.io.version>
         <license-text.header>../build/license-header.txt</license-text.header>
     </properties>
 
@@ -33,7 +32,6 @@
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
-            <version>${commons.io.version}</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
