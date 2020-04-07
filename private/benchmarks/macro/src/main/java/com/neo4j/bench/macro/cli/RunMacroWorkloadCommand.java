@@ -161,6 +161,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
             System.out.println( "Running with Neo4j configuration:\n" + neo4jConfig.toString() );
 
             String configuredStorageEngine = neo4jConfig.toMap().get( GraphDatabaseSettings.storage_engine.name() );
+            configuredStorageEngine = configuredStorageEngine != null ? configuredStorageEngine : GraphDatabaseSettings.storage_engine.defaultValue();
             System.out.println( "Checking store format (configured storage engine: '" + configuredStorageEngine + "')..." );
             if ( "Freki".equals( configuredStorageEngine ) )
             {
