@@ -33,7 +33,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.memory.HeapEstimator
+import org.neo4j.internal.helpers.ArrayUtil
 
 /**
  * Reducing operator which collects pre-sorted input morsels until it
@@ -115,7 +115,7 @@ case class TopOperator(workIdentity: WorkIdentity,
                              state: PipelinedQueryState,
                              resources: QueryResources): ReduceOperatorState[Morsel, TopTable] = {
       // NOTE: If the _input size_ is larger than Int.MaxValue - 8 this will still fail, since an array cannot hold that many elements
-      val limit = Math.min(CountingState.evaluateCountValue(state, resources, countExpression), Int.MaxValue - HeapEstimator.ARRAY_HEADER_BYTES).toInt
+      val limit = Math.min(CountingState.evaluateCountValue(state, resources, countExpression), ArrayUtil.MAX_ARRAY_SIZE).toInt
       argumentStateCreator.createArgumentStateMap(argumentStateMapId, new TopOperator.Factory(stateFactory.memoryTracker, comparator, limit, id), ordered = false)
       this
     }
