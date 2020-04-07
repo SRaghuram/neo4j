@@ -13,7 +13,6 @@
 
     <properties>
         <moduleName>com.neo4j.bench.common</moduleName>
-        <apache-commons-lang3.version>3.3.2</apache-commons-lang3.version>
         <metrics.version>3.1.2</metrics.version>
         <commons.io.version>2.6</commons.io.version>
         <license-text.header>../build/license-header.txt</license-text.header>
@@ -48,7 +47,6 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
-            <version>${apache-commons-lang3.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
