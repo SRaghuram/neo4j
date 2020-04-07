@@ -20,7 +20,7 @@ trait AggregatorTest {
   private val random: ThreadLocalRandom = ThreadLocalRandom.current()
   private val randomValues: RandomValues = RandomValues.create(random)
 
-  private def runAggregator(aggregator: Aggregator, getReducer: Aggregator => Reducer, values: Seq[AnyValue]): AnyValue = {
+  private def runAggregator(aggregator: Aggregator, reducer: Reducer, values: Seq[AnyValue]): AnyValue = {
     val upperBound = Math.max(2, values.size / 10)
     val groups = values.grouped(random.nextInt(1, upperBound))
     val updaters = groups.map { group =>
@@ -28,16 +28,15 @@ trait AggregatorTest {
       group.foreach(updater.update)
       updater
     }
-    val reducer = getReducer(aggregator)
     updaters.foreach(reducer.update)
     reducer.result
   }
 
   def runStandardAggregator(aggregator: Aggregator, values: Seq[AnyValue]): AnyValue =
-    runAggregator(aggregator, _.newStandardReducer(NO_MEMORY_TRACKER, Id.INVALID_ID), values)
+    runAggregator(aggregator, aggregator.newStandardReducer(NO_MEMORY_TRACKER, Id.INVALID_ID), values)
 
   def runConcurrentAggregator(aggregator: Aggregator, values: Seq[AnyValue]): AnyValue =
-    runAggregator(aggregator, _.newConcurrentReducer, values)
+    runAggregator(aggregator, aggregator.newConcurrentReducer, values)
 
   protected val randomInts: Seq[Int] = random.ints(50, 0, 15).toArray
   protected val randomIntValues: Seq[Value] = randomInts.map(Values.intValue)
