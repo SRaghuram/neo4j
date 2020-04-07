@@ -196,7 +196,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     val node1 = createLabeledNode("FOO")
     val node2 = createNode()
     relate(node1, node2, "BAR")
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       """
         |MATCH (n:FOO)
         |WITH n, COLLECT (DISTINCT{
