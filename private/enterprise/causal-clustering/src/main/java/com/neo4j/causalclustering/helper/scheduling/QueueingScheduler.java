@@ -49,8 +49,8 @@ public class QueueingScheduler
     }
 
     /**
-     * The job that is offer has no guarantee that it will run. If it cannot be scheduled right away it will be offered to the queue which may or may not accept
-     * the job. If {@link #abort()} is currently being called, then no jobs are accepted and all jobs currently in the queue will be removed.
+     * If the job cannot be scheduled right away it will be offered to the jobsQueue. If {@link #abort()} is currently being called,
+     * then no jobs are accepted and all jobs currently in the queue will be removed.
      */
     public synchronized void offerJob( Runnable runnable )
     {
