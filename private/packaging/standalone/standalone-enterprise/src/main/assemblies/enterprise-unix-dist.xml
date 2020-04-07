@@ -94,6 +94,13 @@
         <exclude>**/*-tests.jar</exclude>
       </excludes>
     </fileSet>
+    <fileSet>
+      <directory>${project.parent.basedir}/src/main/distribution/</directory>
+      <outputDirectory>plugins</outputDirectory>
+      <includes>
+        <include>apoc*.jar</include>
+      </includes>
+    </fileSet>
   </fileSets>
 
   <dependencySets>
