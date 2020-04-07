@@ -1272,7 +1272,8 @@ class FrekiStorageEngineGraphWritesIT
         assertThat( readRelationships ).isEqualTo( relationships );
 
         // degrees
-        Degrees degrees = nodeCursor.degrees( ALL_RELATIONSHIPS );
+        EagerDegrees degrees = new EagerDegrees();
+        nodeCursor.degrees( ALL_RELATIONSHIPS, degrees );
         Degrees expectedDegrees = buildExpectedDegrees( nodeId, relationships );
         assertThat( IntSets.immutable.of( degrees.types() ) ).isEqualTo( IntSets.immutable.of( expectedDegrees.types() ) );
         for ( int type : degrees.types() )

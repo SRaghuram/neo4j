@@ -26,11 +26,11 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.AllNodeScan;
 import org.neo4j.storageengine.api.Degrees;
 import org.neo4j.storageengine.api.Reference;
+import org.neo4j.storageengine.api.RelationshipDirection;
 import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
-import org.neo4j.storageengine.util.EagerDegrees;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_LONG_ARRAY;
 import static org.neo4j.internal.freki.StreamVByte.nonEmptyIntDeltas;
@@ -97,58 +97,70 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     }
 
     @Override
-    public Degrees degrees( RelationshipSelection selection )
+    public void degrees( RelationshipSelection selection, Degrees.Mutator degrees )
     {
         // Dense
         if ( data.isDense )
         {
             ByteBuffer buffer = readRelationshipTypes();
-            EagerDegrees degrees = new EagerDegrees();
-            if ( relationshipTypesInNode.length == 0 )
+            if ( relationshipTypesInNode.length > 0 )
             {
-                return degrees;
-            }
-
-            // Read degrees where relationship data would be if this would have been a sparse node
-            int[] degreesArray = readInts( new StreamVByte.IntArrayTarget(), buffer ).array();
-            for ( int i = 0; i < selection.numberOfCriteria(); i++ )
-            {
-                RelationshipSelection.Criterion criterion = selection.criterion( i );
-                if ( criterion.type() == ANY_RELATIONSHIP_TYPE ) // all types
+                // Read degrees where relationship data would be if this would have been a sparse node
+                int[] degreesArray = readInts( new StreamVByte.IntArrayTarget(), buffer ).array();
+                for ( int i = 0; i < selection.numberOfCriteria(); i++ )
                 {
-                    for ( int typeIndex = 0; typeIndex < relationshipTypesInNode.length; typeIndex++ )
+                    RelationshipSelection.Criterion criterion = selection.criterion( i );
+                    if ( criterion.type() == ANY_RELATIONSHIP_TYPE ) // all types
                     {
-                        readDenseDegreesForType( degrees, degreesArray, typeIndex );
+                        for ( int typeIndex = 0; typeIndex < relationshipTypesInNode.length; typeIndex++ )
+                        {
+                            readDenseDegreesForType( degrees, degreesArray, typeIndex );
+                        }
                     }
-                }
-                else // a single type
-                {
-                    int typeIndex = Arrays.binarySearch( relationshipTypesInNode, criterion.type() );
-                    if ( typeIndex >= 0 )
+                    else // a single type
                     {
-                        readDenseDegreesForType( degrees, degreesArray, typeIndex );
+                        int typeIndex = Arrays.binarySearch( relationshipTypesInNode, criterion.type() );
+                        if ( typeIndex >= 0 )
+                        {
+                            readDenseDegreesForType( degrees, degreesArray, typeIndex );
+                        }
                     }
                 }
             }
-            return degrees;
         }
-
-        // Sparse
-        if ( relationshipsCursor == null )
+        else
         {
-            relationshipsCursor = new FrekiRelationshipTraversalCursor( stores, cursorAccessPatternTracer, cursorTracer );
+            // Sparse
+            if ( relationshipsCursor == null )
+            {
+                relationshipsCursor = new FrekiRelationshipTraversalCursor( stores, cursorAccessPatternTracer, cursorTracer );
+            }
+            relationshipsCursor.init( this, selection );
+            // TODO If the selection is for any direction then this can be made more efficient by simply looking at the vbyte relationship array length
+            while ( relationshipsCursor.next() )
+            {
+                int outgoing = 0;
+                int incoming = 0;
+                int loop = 0;
+                RelationshipDirection direction = relationshipsCursor.currentDirection();
+                if ( direction == RelationshipDirection.OUTGOING )
+                {
+                    outgoing++;
+                }
+                else if ( direction == RelationshipDirection.INCOMING )
+                {
+                    incoming++;
+                }
+                else
+                {
+                    loop++;
+                }
+                degrees.add( relationshipsCursor.type(), outgoing, incoming, loop );
+            }
         }
-        EagerDegrees degrees = new EagerDegrees();
-        relationshipsCursor.init( this, selection );
-        // TODO If the selection is for any direction then this can be made more efficient by simply looking at the vbyte relationship array length
-        while ( relationshipsCursor.next() )
-        {
-            degrees.add( relationshipsCursor.type(), relationshipsCursor.currentDirection(), 1 );
-        }
-        return degrees;
     }
 
-    private void readDenseDegreesForType( EagerDegrees degrees, int[] degreesArray, int typeIndex )
+    private void readDenseDegreesForType( Degrees.Mutator degrees, int[] degreesArray, int typeIndex )
     {
         int baseIndex = typeIndex * 3;
         degrees.add( relationshipTypesInNode[typeIndex], degreesArray[baseIndex], degreesArray[baseIndex + 1], degreesArray[baseIndex + 2] );
