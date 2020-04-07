@@ -56,6 +56,7 @@ import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.DefaultExpressionCompiler
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -543,19 +544,19 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
         param[Int]("minLength"),
         param[Int]("maxLength"),
         param[Read]("read"),
-        param[CypherRow]("context"),
-        param[DbAccess]("dbAccess"),
-        param[Array[AnyValue]]("params"),
-        param[ExpressionCursors]("cursors"),
-        param[Array[AnyValue]]("expressionVariables")),
+        param[CypherRow](ExpressionCompilation.ROW_NAME),
+        param[DbAccess](ExpressionCompilation.DB_ACCESS_NAME),
+        param[Array[AnyValue]](ExpressionCompilation.PARAMS_NAME),
+        param[ExpressionCursors](ExpressionCompilation.CURSORS_NAME),
+        param[Array[AnyValue]](ExpressionCompilation.EXPRESSION_VARIABLES_NAME)),
       Seq(methodDeclaration[Boolean]("satisfyPredicates",
         generatePredicate,
         () => locals.toSeq,
-        param[CypherRow]("context"),
-        param[DbAccess]("dbAccess"),
-        param[Array[AnyValue]]("params"),
-        param[ExpressionCursors]("cursors"),
-        param[Array[AnyValue]]("expressionVariables"),
+        param[CypherRow](ExpressionCompilation.ROW_NAME),
+        param[DbAccess](ExpressionCompilation.DB_ACCESS_NAME),
+        param[Array[AnyValue]](ExpressionCompilation.PARAMS_NAME),
+        param[ExpressionCursors](ExpressionCompilation.CURSORS_NAME),
+        param[Array[AnyValue]](ExpressionCompilation.EXPRESSION_VARIABLES_NAME),
         param[RelationshipTraversalCursor]("selectionCursor"))),
       fields)
   }

@@ -20,8 +20,14 @@ import org.neo4j.internal.kernel.api.PropertyCursor
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
 
 object ExpressionCompilation {
-  val DB_ACCESS: IntermediateRepresentation = load("dbAccess")
-  val CURSORS = load("cursors")
+  val DB_ACCESS_NAME: String = "dbAccess"
+  val DB_ACCESS: IntermediateRepresentation = load(DB_ACCESS_NAME)
+
+  val PARAMS_NAME: String = "params"
+  val PARAMS: IntermediateRepresentation = load(PARAMS_NAME)
+
+  val CURSORS_NAME = "cursors"
+  val CURSORS: IntermediateRepresentation = load(CURSORS_NAME)
 
   val NODE_CURSOR: IntermediateRepresentation = load("nodeCursor")
   val vNODE_CURSOR: LocalVariable = cursorVariable[NodeCursor]("nodeCursor")
@@ -33,12 +39,15 @@ object ExpressionCompilation {
   val vPROPERTY_CURSOR: LocalVariable = cursorVariable[PropertyCursor]("propertyCursor")
 
   private def cursorVariable[T](name: String)(implicit m: Manifest[T]): LocalVariable =
-    variable[T](name, invoke(load("cursors"), method[ExpressionCursors, T](name)))
+    variable[T](name, invoke(load(CURSORS_NAME), method[ExpressionCursors, T](name)))
 
   val vCURSORS = Seq(vNODE_CURSOR, vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR)
 
-  val CONTEXT = "context"
-  val LOAD_CONTEXT = load(CONTEXT)
+  val ROW_NAME: String = "row"
+  val ROW: IntermediateRepresentation = load(ROW_NAME)
+
+  val EXPRESSION_VARIABLES_NAME: String = "expressionVariables"
+  val EXPRESSION_VARIABLES: IntermediateRepresentation = load(EXPRESSION_VARIABLES_NAME)
 
   def noValueOr(expressions: IntermediateExpression*)(onNotNull: IntermediateRepresentation): IntermediateRepresentation = {
     nullCheck(expressions:_*)(noValue)(onNotNull)

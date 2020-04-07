@@ -215,7 +215,7 @@ object OperatorCodeGenHelperTemplates {
   val NEXT: Method = method[MorselCursor, Boolean]("next")
 
   val OUTPUT_FULL_CURSOR: IntermediateRepresentation = invoke(OUTPUT_MORSEL, method[Morsel, MorselFullCursor, Boolean]("fullCursor"), constant(true))
-  val OUTPUT_CURSOR_VAR: LocalVariable = variable[MorselFullCursor](ExpressionCompilation.CONTEXT, OUTPUT_FULL_CURSOR)
+  val OUTPUT_CURSOR_VAR: LocalVariable = variable[MorselFullCursor](ExpressionCompilation.ROW_NAME, OUTPUT_FULL_CURSOR)
   val OUTPUT_CURSOR: IntermediateRepresentation = load(OUTPUT_CURSOR_VAR.name)
   val OUTPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(OUTPUT_CURSOR, method[MorselFullCursor, Boolean]("onValidRow"))
 

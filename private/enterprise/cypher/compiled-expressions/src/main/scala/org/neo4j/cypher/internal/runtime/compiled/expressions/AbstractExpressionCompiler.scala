@@ -183,7 +183,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpression
 import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.className
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.CURSORS
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.LOAD_CONTEXT
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.ROW
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.NODE_CURSOR
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.PROPERTY_CURSOR
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.RELATIONSHIP_CURSOR
@@ -282,11 +282,11 @@ abstract class AbstractExpressionCompiler(val slots: SlotConfiguration,
           methods = Seq(
             MethodDeclaration("evaluate",
               returnType = typeRefOf[AnyValue],
-              parameters = Seq(param[ReadableRow]("context"),
-                param[DbAccess]("dbAccess"),
-                param[Array[AnyValue]]("params"),
-                param[ExpressionCursors]("cursors"),
-                param[Array[AnyValue]]("expressionVariables")),
+              parameters = Seq(param[ReadableRow](ExpressionCompilation.ROW_NAME),
+                param[DbAccess](ExpressionCompilation.DB_ACCESS_NAME),
+                param[Array[AnyValue]](ExpressionCompilation.PARAMS_NAME),
+                param[ExpressionCursors](ExpressionCompilation.CURSORS_NAME),
+                param[Array[AnyValue]](ExpressionCompilation.EXPRESSION_VARIABLES_NAME)),
               body = block(
                 block(expression.variables.distinct.map { v =>
                   declareAndAssign(v.typ, v.name, v.value)
@@ -311,11 +311,11 @@ abstract class AbstractExpressionCompiler(val slots: SlotConfiguration,
           methods = Seq(
             MethodDeclaration("project",
               returnType = typeRefOf[Unit],
-              parameters = Seq(param[ReadWriteRow]("context"),
-                param[DbAccess]("dbAccess"),
-                param[Array[AnyValue]]("params"),
-                param[ExpressionCursors]("cursors"),
-                param[Array[AnyValue]]("expressionVariables")),
+              parameters = Seq(param[ReadWriteRow](ExpressionCompilation.ROW_NAME),
+                param[DbAccess](ExpressionCompilation.DB_ACCESS_NAME),
+                param[Array[AnyValue]](ExpressionCompilation.PARAMS_NAME),
+                param[ExpressionCursors](ExpressionCompilation.CURSORS_NAME),
+                param[Array[AnyValue]](ExpressionCompilation.EXPRESSION_VARIABLES_NAME)),
               body = block(
                 block(expression.variables.distinct.map { v =>
                   declareAndAssign(v.typ, v.name, v.value)
@@ -348,24 +348,24 @@ abstract class AbstractExpressionCompiler(val slots: SlotConfiguration,
           methods = Seq(
             MethodDeclaration("projectGroupingKey",
               returnType = typeRefOf[Unit],
-              parameters = Seq(param[WritableRow]("context"),
+              parameters = Seq(param[WritableRow](ExpressionCompilation.ROW_NAME),
                 param[AnyValue]("key")),
               body = block(
                 declarations(grouping.projectKey),
                 grouping.projectKey.ir)),
             MethodDeclaration("computeGroupingKey",
               returnType = typeRefOf[AnyValue],
-              parameters = Seq(param[ReadableRow]("context"),
-                param[DbAccess]("dbAccess"),
-                param[Array[AnyValue]]("params"),
-                param[ExpressionCursors]("cursors"),
-                param[Array[AnyValue]]("expressionVariables")),
+              parameters = Seq(param[ReadableRow](ExpressionCompilation.ROW_NAME),
+                param[DbAccess](ExpressionCompilation.DB_ACCESS_NAME),
+                param[Array[AnyValue]](ExpressionCompilation.PARAMS_NAME),
+                param[ExpressionCursors](ExpressionCompilation.CURSORS_NAME),
+                param[Array[AnyValue]](ExpressionCompilation.EXPRESSION_VARIABLES_NAME)),
               body = block(
                 declarations(grouping.computeKey),
                 nullCheckIfRequired(grouping.computeKey))),
             MethodDeclaration("getGroupingKey",
               returnType = typeRefOf[AnyValue],
-              parameters = Seq(param[CypherRow]("context")),
+              parameters = Seq(param[CypherRow](ExpressionCompilation.ROW_NAME)),
               body = block(
                 declarations(grouping.getKey),
                 nullCheckIfRequired(grouping.getKey)))
@@ -1352,7 +1352,7 @@ abstract class AbstractExpressionCompiler(val slots: SlotConfiguration,
     case ParameterFromSlot(offset, name, _) =>
       val parameterVariable = namer.parameterName(name)
       val local = variable[AnyValue](parameterVariable,
-                                      arrayLoad(load("params"), offset))
+                                      arrayLoad(ExpressionCompilation.PARAMS, offset))
       Some(IntermediateExpression(load(parameterVariable), Seq.empty, Seq(local),
                                   Set(equal(load(parameterVariable), noValue)), requireNullCheck = false))
 
@@ -2331,29 +2331,28 @@ abstract class AbstractExpressionCompiler(val slots: SlotConfiguration,
       getLongAt(offset)
     }
 
-  final def getLongFromExecutionContext(offset: Int, context: IntermediateRepresentation = LOAD_CONTEXT): IntermediateRepresentation =
+  final def getLongFromExecutionContext(offset: Int, context: IntermediateRepresentation = ROW): IntermediateRepresentation =
     invoke(context, method[CypherRow, Long, Int]("getLongAt"), constant(offset))
 
-  final def getRefFromExecutionContext(offset: Int, context: IntermediateRepresentation = LOAD_CONTEXT): IntermediateRepresentation =
+  final def getRefFromExecutionContext(offset: Int, context: IntermediateRepresentation = ROW): IntermediateRepresentation =
     invoke(context, method[CypherRow, AnyValue, Int]("getRefAt"), constant(offset))
 
-  final def getCachedPropertyFromExecutionContext(offset: Int, context: IntermediateRepresentation = LOAD_CONTEXT): IntermediateRepresentation =
+  final def getCachedPropertyFromExecutionContext(offset: Int, context: IntermediateRepresentation = ROW): IntermediateRepresentation =
     getCachedPropertyFromExecutionContextWithDynamicOffset(constant(offset), context)
 
-  final def getCachedPropertyFromExecutionContextWithDynamicOffset(offset: IntermediateRepresentation, context: IntermediateRepresentation = LOAD_CONTEXT): IntermediateRepresentation =
+  final def getCachedPropertyFromExecutionContextWithDynamicOffset(offset: IntermediateRepresentation, context: IntermediateRepresentation = ROW): IntermediateRepresentation =
     invoke(context, method[CypherRow, Value, Int]("getCachedPropertyAt"), offset)
 
   final def setRefInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
-    invokeSideEffect(LOAD_CONTEXT, method[CypherRow, Unit, Int, AnyValue]("setRefAt"),
+    invokeSideEffect(ROW, method[CypherRow, Unit, Int, AnyValue]("setRefAt"),
                      constant(offset), value)
 
    final def setLongInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
-    invokeSideEffect(LOAD_CONTEXT, method[CypherRow, Unit, Int, Long]("setLongAt"),
+    invokeSideEffect(ROW, method[CypherRow, Unit, Int, Long]("setLongAt"),
                      constant(offset), value)
 
   protected final def setCachedPropertyInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
-    invokeSideEffect(LOAD_CONTEXT, method[CypherRow, Unit, Int, Value]("setCachedPropertyAt"),
-                     constant(offset), value)
+    invokeSideEffect(ROW, method[CypherRow, Unit, Int, Value]("setCachedPropertyAt"),
 
   //==================================================================================================
 
@@ -2640,7 +2639,7 @@ abstract class AbstractExpressionCompiler(val slots: SlotConfiguration,
 
       case _ =>
         val varName = namer.nextVariableName()
-        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], varName, invoke(LOAD_CONTEXT,
+        val lazySet = oneTime(declareAndAssign(typeRefOf[AnyValue], varName, invoke(ROW,
           method[CypherRow, AnyValue, String]("getByName"), constant(name))))
         computeRepresentation(ir = block(lazySet, load(varName)),
                               nullCheck = Some(block(lazySet, equal(load(varName), noValue))), nullable = true)
@@ -3133,11 +3132,11 @@ abstract class AbstractExpressionCompiler(val slots: SlotConfiguration,
   }
 
   private def setExpressionVariable(ev: ExpressionVariable, value: IntermediateRepresentation): IntermediateRepresentation = {
-    arraySet(load("expressionVariables"), ev.offset, value)
+    arraySet(ExpressionCompilation.EXPRESSION_VARIABLES, ev.offset, value)
   }
 
   private def loadExpressionVariable(ev: ExpressionVariable): IntermediateRepresentation = {
-    arrayLoad(load("expressionVariables"), ev.offset)
+    arrayLoad(ExpressionCompilation.EXPRESSION_VARIABLES, ev.offset)
   }
 
   private def getEntityId(offsetIsForLongSlot: Boolean, offset: Int, entityType: EntityType, nullable: Boolean): IntermediateRepresentation = {

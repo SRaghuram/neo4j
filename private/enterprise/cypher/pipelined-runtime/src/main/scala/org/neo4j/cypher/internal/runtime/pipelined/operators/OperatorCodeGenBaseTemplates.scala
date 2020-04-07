@@ -587,7 +587,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
         MethodDeclaration("compiledOperate",
           returnType = typeRefOf[Unit],
           Seq(param[Morsel]("outputMorsel"),
-            param[QueryContext]("dbAccess"),
+            param[QueryContext](ExpressionCompilation.DB_ACCESS_NAME),
             param[PipelinedQueryState]("state"),
             param[QueryResources]("resources"),
             param[QueryProfiler]("queryProfiler")
@@ -599,13 +599,13 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
           ),
           genLocalVariables = () => {
             Seq(
-              variable[Array[AnyValue]]("params",
+              variable[Array[AnyValue]](ExpressionCompilation.PARAMS_NAME,
                 invoke(QUERY_STATE,
                   method[PipelinedQueryState, Array[AnyValue]]("params"))),
-              variable[ExpressionCursors]("cursors",
+              variable[ExpressionCursors](ExpressionCompilation.CURSORS_NAME,
                 invoke(QUERY_RESOURCES,
                   method[QueryResources, ExpressionCursors]("expressionCursors"))),
-              variable[Array[AnyValue]]("expressionVariables",
+              variable[Array[AnyValue]](ExpressionCompilation.EXPRESSION_VARIABLES_NAME,
                 invoke(QUERY_RESOURCES,
                   method[QueryResources, Array[AnyValue], Int]("expressionVariables"),
                   invoke(QUERY_STATE,
