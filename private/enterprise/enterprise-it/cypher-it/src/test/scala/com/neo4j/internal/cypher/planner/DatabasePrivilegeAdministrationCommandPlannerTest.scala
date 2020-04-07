@@ -11,24 +11,7 @@ import org.neo4j.cypher.internal.plandescription.Arguments.Qualifier
 
 class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCommandPlannerTestBase {
 
-  val databaseActions = Seq(
-    "ACCESS",
-    "START",
-    "STOP",
-    "CREATE INDEX",
-    "DROP INDEX",
-    "INDEX MANAGEMENT",
-    "CREATE CONSTRAINT",
-    "DROP CONSTRAINT",
-    "CONSTRAINT MANAGEMENT",
-    "CREATE NEW NODE LABEL",
-    "CREATE NEW RELATIONSHIP TYPE",
-    "CREATE NEW PROPERTY NAME",
-    "NAME MANAGEMENT",
-    "ALL DATABASE PRIVILEGES"
-  )
-
-  databaseActions.foreach { action =>
+  (basicDatabaseCommands ++ schemaCommands).foreach { action =>
     test(s"GRANT $action") {
       // When
       val plan = execute(s"EXPLAIN GRANT $action ON DATABASE * TO reader, editor").executionPlanString()
@@ -120,13 +103,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
 
   // Transaction privileges
 
-  val transactionActions = Seq(
-    "SHOW TRANSACTION",
-    "TERMINATE TRANSACTION",
-    "TRANSACTION MANAGEMENT"
-  )
-
-  transactionActions.foreach { action =>
+  transactionCommands.foreach { action =>
     test(s"GRANT $action") {
       // When
       val plan = execute(s"EXPLAIN GRANT $action (*) ON DATABASE * TO reader, editor").executionPlanString()

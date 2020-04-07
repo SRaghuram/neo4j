@@ -258,6 +258,138 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   def transaction(username: String): Map[String, String] =
     baseMap + ("resource" -> "database", "segment" -> s"USER($username)", "action" -> "transaction_management")
 
+  // Collection of all dbms privileges
+
+  val dbmsCommands: Seq[String] = Seq(
+    "CREATE ROLE",
+    "DROP ROLE",
+    "ASSIGN ROLE",
+    "REMOVE ROLE",
+    "SHOW ROLE",
+    "ROLE MANAGEMENT",
+    "CREATE USER",
+    "DROP USER",
+    "SHOW USER",
+    "SET USER STATUS",
+    "SET PASSWORDS",
+    "ALTER USER",
+    "USER MANAGEMENT",
+    "CREATE DATABASE",
+    "DROP DATABASE",
+    "DATABASE MANAGEMENT",
+    "SHOW PRIVILEGE",
+    "ASSIGN PRIVILEGE",
+    "REMOVE PRIVILEGE",
+    "PRIVILEGE MANAGEMENT",
+    "ALL DBMS PRIVILEGES"
+  )
+
+  // Must be in the same order as dbmsCommands
+  val dbmsActions: Seq[Map[String, String]] = Seq(
+    adminAction("create_role"),
+    adminAction("drop_role"),
+    adminAction("assign_role"),
+    adminAction("remove_role"),
+    adminAction("show_role"),
+    adminAction("role_management"),
+    adminAction("create_user"),
+    adminAction("drop_user"),
+    adminAction("show_user"),
+    adminAction("set_user_status"),
+    adminAction("set_passwords"),
+    adminAction("alter_user"),
+    adminAction("user_management"),
+    adminAction("create_database"),
+    adminAction("drop_database"),
+    adminAction("database_management"),
+    adminAction("show_privilege"),
+    adminAction("assign_privilege"),
+    adminAction("remove_privilege"),
+    adminAction("privilege_management"),
+    adminAction("dbms_actions")
+  )
+
+  // Collection of all database privileges
+
+  val basicDatabaseCommands: Seq[String] = Seq(
+    "ACCESS",
+    "START",
+    "STOP"
+  )
+
+  // Must be in the same order as basicDatabaseCommands
+  private val basicDatabaseActions: Seq[Map[String, String]] = Seq(
+    access,
+    startDatabase,
+    stopDatabase
+  )
+
+  val schemaCommands = Seq(
+    "CREATE INDEX",
+    "DROP INDEX",
+    "INDEX MANAGEMENT",
+    "CREATE CONSTRAINT",
+    "DROP CONSTRAINT",
+    "CONSTRAINT MANAGEMENT",
+    "CREATE NEW NODE LABEL",
+    "CREATE NEW RELATIONSHIP TYPE",
+    "CREATE NEW PROPERTY NAME",
+    "NAME MANAGEMENT",
+    "ALL DATABASE PRIVILEGES"
+  )
+
+  // Must be in the same order as schemaCommands
+  val schemaActions: Seq[Map[String, String]] = Seq(
+    createIndex,
+    dropIndex,
+    indexManagement,
+    createConstraint,
+    dropConstraint,
+    constraintManagement,
+    createNodeLabel,
+    createRelationshipType,
+    createPropertyKey,
+    nameManagement,
+    allDatabasePrivilege
+  )
+
+  // Must be in the same order as transactionCommands
+  val transactionCommands = Seq(
+    "SHOW TRANSACTION",
+    "TERMINATE TRANSACTION",
+    "TRANSACTION MANAGEMENT"
+  )
+
+  private val transactionActions: Seq[Map[String, String]] = Seq(
+    showTransaction("*"),
+    terminateTransaction("*"),
+    transaction("*")
+  )
+
+  // Collection of all kinds of graph privileges
+
+  val graphCommands = Seq(
+    "TRAVERSE ON GRAPH * NODES A",
+    "READ {prop} ON GRAPH * NODES *",
+    "MATCH {prop} ON GRAPH * NODES A ",
+    "WRITE ON GRAPH *"
+  )
+
+  private val graphActions = Seq(
+    Set(traverse ++ Map("segment" -> "NODE(A)")),
+    Set(read ++ Map("segment" -> "NODE(*)", "resource" -> "property(prop)")),
+    Set(matchPrivilege ++ Map("segment" -> "NODE(A)", "resource" -> "property(prop)")),
+    Set(write ++ Map("segment" -> "NODE(*)"), write ++ Map("segment" -> "RELATIONSHIP(*)"))
+  )
+
+  // Collection of database, dbms and graph privileges
+
+  val allPrivilegeCommands: Seq[String] = (basicDatabaseCommands ++ schemaCommands ++ transactionCommands).map(command => command + " ON DATABASE *") ++
+    dbmsCommands.map(command => command + " ON DBMS")
+
+  private val allPrivilegeActions = (basicDatabaseActions ++ schemaActions ++ transactionActions ++ dbmsActions).map(action => Set(action)) ++ graphActions
+  val allPrivileges: Seq[(String, Set[Map[String, String]])] = allPrivilegeCommands zip allPrivilegeActions
+
   type builderType = (PrivilegeMapBuilder, String) => PrivilegeMapBuilder
   def addNode(source: PrivilegeMapBuilder, name: String): PrivilegeMapBuilder = source.node(name)
   def addRel(source: PrivilegeMapBuilder, name: String): PrivilegeMapBuilder = source.relationship(name)

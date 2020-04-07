@@ -134,7 +134,7 @@ class FailureAdministrationCommandAcceptanceTest extends AdministrationCommandAc
   }
 
   // Test for security commands not on system database
-  test("should fail when not on system database") {
+  test("should fail security when not on system database") {
     // GIVEN
     selectDatabase(DEFAULT_DATABASE_NAME)
 
@@ -143,9 +143,6 @@ class FailureAdministrationCommandAcceptanceTest extends AdministrationCommandAc
       ("SHOW DEFAULT DATABASE", "SHOW DEFAULT DATABASE"),
       ("CREATE USER foo SET PASSWORD 'bar'", "CREATE USER"),
       ("DROP ROLE reader", "DROP ROLE"),
-      ("GRANT WRITE ON GRAPH * TO reader", "GRANT WRITE"),
-      ("DENY USER MANAGEMENT ON DBMS TO editor", "DENY USER MANAGEMENT"),
-      ("REVOKE ACCESS ON DEFAULT DATABASE FROM reader", "REVOKE ACCESS")
     ).foreach {
       case (query, command) =>
         withClue(s"$query on default database:") {
@@ -161,6 +158,25 @@ class FailureAdministrationCommandAcceptanceTest extends AdministrationCommandAc
     // THEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers)
+  }
+
+  test("should fail privilege commands when not on system database") {
+    // GIVEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+
+    allPrivilegeCommands.foreach { command =>
+      withClue(s"$command on default database:") {
+        val e = the[DatabaseAdministrationException] thrownBy {
+          // WHEN
+          execute(s"DENY $command TO editor")
+          // THEN
+        }
+        e.getMessage should include("This is an administration command and it should be executed against the system database")
+      }
+    }
+
+    // THEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("SHOW PRIVILEGES").toSet should be(defaultRolePrivileges)
   }
 }
