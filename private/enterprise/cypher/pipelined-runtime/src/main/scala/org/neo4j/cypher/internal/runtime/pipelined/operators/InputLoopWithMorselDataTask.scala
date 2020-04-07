@@ -41,7 +41,7 @@ abstract class InputLoopWithMorselDataTask(override final val morselData: Morsel
   def processEndOfMorselData(outputCursor: MorselWriteCursor): Unit
 
   /**
-   * Called after all morsels from [[morselData]] have been processed, but task [[canContinue]]
+   * Called at the start of operate before processing rows and also after all morsels from [[morselData]] have been processed, if the task [[canContinue]].
    */
   def processRemainingOutput(outputCursor: MorselWriteCursor): Unit
 
@@ -50,6 +50,9 @@ abstract class InputLoopWithMorselDataTask(override final val morselData: Morsel
                        resources: QueryResources): Unit = {
     initialize(state, resources)
     val outputCursor = outputMorsel.writeCursor(onFirstRow = true)
+
+    // Before reading more input, try to write any remaining output.
+    processRemainingOutput(outputCursor)
 
     while (outputCursor.onValidRow && canContinue) {
       if (currentMorsel == null || !currentMorsel.onValidRow) {
