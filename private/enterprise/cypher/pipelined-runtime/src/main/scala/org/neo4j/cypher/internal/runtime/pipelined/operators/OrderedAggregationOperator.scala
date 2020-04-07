@@ -34,46 +34,44 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
                                  unorderedGroupings: GroupingExpression,
                                  outputSlots: Array[Int],
                                  argumentSize: SlotConfiguration.Size)
-                                (val id: Id = Id.INVALID_ID) extends Operator with OperatorState {
+                                (val id: Id = Id.INVALID_ID) extends Operator {
 
   private type ResultsMap = util.LinkedHashMap[unorderedGroupings.KeyType, Array[AggregationFunction]]
   private case class Chunk(orderedGroupingKey: orderedGroupings.KeyType, resultsMap: ResultsMap)
   private type ChunkList = util.LinkedList[Chunk]
 
-  private class OrderedAggregationState(var lastSeenGroupingKey: orderedGroupings.KeyType,
-                                        var resultsMap: ResultsMap,
-                                        var chunks: ChunkList) {
-    def this() = this(null.asInstanceOf[orderedGroupings.KeyType], new ResultsMap, new ChunkList)
-  }
-
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
                            state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = {
-    taskState = new OrderedAggregationState()
+
     argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id), ordered = true)
-    this
+    new OrderedAggregationState()
   }
 
   override def toString: String = "OrderedAggregationOperator"
 
-  override def nextTasks(state: PipelinedQueryState,
-                         operatorInput: OperatorInput,
-                         parallelism: Int,
-                         resources: QueryResources,
-                         argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
-    val input: MorselData = operatorInput.takeData()
-    if (input != null) {
-      IndexedSeq(new OrderedAggregationTask(input, taskState))
-    } else {
-      null
-    }
-  }
-
-  private var taskState: OrderedAggregationState = _
-
   private val newAggregationFunctions: util.function.Function[unorderedGroupings.KeyType, Array[AggregationFunction]] =
     (_: unorderedGroupings.KeyType) => aggregations.map(_.createAggregationFunction(id))
+
+  private class OrderedAggregationState(var lastSeenGroupingKey: orderedGroupings.KeyType,
+                                        var resultsMap: ResultsMap,
+                                        var chunks: ChunkList) extends OperatorState {
+    def this() = this(null.asInstanceOf[orderedGroupings.KeyType], new ResultsMap, new ChunkList)
+
+    override def nextTasks(state: PipelinedQueryState,
+                           operatorInput: OperatorInput,
+                           parallelism: Int,
+                           resources: QueryResources,
+                           argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
+      val input: MorselData = operatorInput.takeData()
+      if (input != null) {
+        IndexedSeq(new OrderedAggregationTask(input, this))
+      } else {
+        null
+      }
+    }
+  }
 
   class OrderedAggregationTask(morselData: MorselData,
                                taskState: OrderedAggregationState) extends InputLoopWithMorselDataTask(morselData) {

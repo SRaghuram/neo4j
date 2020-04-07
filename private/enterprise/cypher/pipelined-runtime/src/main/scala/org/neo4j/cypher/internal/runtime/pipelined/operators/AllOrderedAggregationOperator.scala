@@ -31,41 +31,38 @@ class AllOrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
                                     orderedGroupings: GroupingExpression,
                                     outputSlots: Array[Int],
                                     argumentSize: SlotConfiguration.Size)
-                                   (val id: Id = Id.INVALID_ID) extends Operator with OperatorState {
-
-  private class AllOrderedAggregationState(var lastSeenGrouping: orderedGroupings.KeyType,
-                                           val aggregationFunctions: Array[AggregationFunction]) {
-    def this() = this(null.asInstanceOf[orderedGroupings.KeyType], aggregations.map(_.createAggregationFunction(id)))
-  }
-
-  private var taskState: AllOrderedAggregationState = _
+                                   (val id: Id = Id.INVALID_ID) extends Operator {
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
                            state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = {
-    taskState = new AllOrderedAggregationState()
     argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id), ordered = true)
-    this
+    new AllOrderedAggregationState()
   }
 
   override def toString: String = "AllOrderedAggregationOperator"
 
-  override def nextTasks(state: PipelinedQueryState,
-                         operatorInput: OperatorInput,
-                         parallelism: Int,
-                         resources: QueryResources,
-                         argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
-    val input: MorselData = operatorInput.takeData()
-    if (input != null) {
-      IndexedSeq(new AllOrderedAggregationTask(input, taskState))
-    } else {
-      null
+  private class AllOrderedAggregationState(var lastSeenGrouping: orderedGroupings.KeyType,
+                                           val aggregationFunctions: Array[AggregationFunction]) extends OperatorState {
+    def this() = this(null.asInstanceOf[orderedGroupings.KeyType], aggregations.map(_.createAggregationFunction(id)))
+
+    override def nextTasks(state: PipelinedQueryState,
+                           operatorInput: OperatorInput,
+                           parallelism: Int,
+                           resources: QueryResources,
+                           argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
+      val input: MorselData = operatorInput.takeData()
+      if (input != null) {
+        IndexedSeq(new AllOrderedAggregationTask(input, this))
+      } else {
+        null
+      }
     }
   }
 
   class AllOrderedAggregationTask(morselData: MorselData,
-                                  oangState: AllOrderedAggregationState) extends InputLoopWithMorselDataTask(morselData) {
+                                  taskState: AllOrderedAggregationState) extends InputLoopWithMorselDataTask(morselData) {
 
     override def workIdentity: WorkIdentity = AllOrderedAggregationOperator.this.workIdentity
 
@@ -81,13 +78,13 @@ class AllOrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
                             inputCursor: MorselReadCursor): Unit = {
       val grouping = orderedGroupings.computeGroupingKey(inputCursor, queryState)
       // if new chunk
-      if (oangState.lastSeenGrouping != null && oangState.lastSeenGrouping != grouping) {
+      if (taskState.lastSeenGrouping != null && taskState.lastSeenGrouping != grouping) {
         writeRow(outputCursor, queryState)
       }
-      oangState.lastSeenGrouping = grouping
+      taskState.lastSeenGrouping = grouping
       var i = 0
       while (i < aggregations.length) {
-        oangState.aggregationFunctions(i).apply(inputCursor, queryState)
+        taskState.aggregationFunctions(i).apply(inputCursor, queryState)
         i += 1
       }
     }
@@ -96,7 +93,7 @@ class AllOrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
       morselData.argumentStream match {
         case EndOfNonEmptyStream =>
           writeRow(outputCursor, queryState)
-          oangState.lastSeenGrouping = null.asInstanceOf[orderedGroupings.KeyType]
+          taskState.lastSeenGrouping = null.asInstanceOf[orderedGroupings.KeyType]
         case _ =>
         // Do nothing
       }
@@ -106,12 +103,12 @@ class AllOrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
 
     private def writeRow(outputCursor: MorselWriteCursor, queryState: QueryState): Unit = {
       outputCursor.copyFrom(morselData.viewOfArgumentRow, argumentSize.nLongs, argumentSize.nReferences)
-      orderedGroupings.project(outputCursor, oangState.lastSeenGrouping)
+      orderedGroupings.project(outputCursor, taskState.lastSeenGrouping)
 
       var i = 0
       while (i < aggregations.length) {
-        outputCursor.setRefAt(outputSlots(i), oangState.aggregationFunctions(i).result(queryState))
-        oangState.aggregationFunctions(i) = aggregations(i).createAggregationFunction(id)
+        outputCursor.setRefAt(outputSlots(i), taskState.aggregationFunctions(i).result(queryState))
+        taskState.aggregationFunctions(i) = aggregations(i).createAggregationFunction(id)
         i += 1
       }
       outputCursor.next()
