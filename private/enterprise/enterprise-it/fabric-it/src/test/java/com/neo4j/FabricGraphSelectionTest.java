@@ -145,6 +145,7 @@ class FabricGraphSelectionTest
                 () -> extADriver.close(),
                 () -> extA.close()
         ).parallelStream().forEach( Runnable::run );
+        FeatureToggles.set( FabricDatabaseManager.class, FabricDatabaseManager.FABRIC_BY_DEFAULT_FLAG_NAME, false );
     }
 
     @Test

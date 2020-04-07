@@ -10,6 +10,7 @@ import com.neo4j.fabric.planning.Fragment.Init
 import com.neo4j.fabric.planning.Fragment.Leaf
 import com.neo4j.fabric.planning.Fragment.Union
 import com.neo4j.fabric.util.Errors
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.ast
 import org.neo4j.cypher.internal.ast.UseGraph
 import org.neo4j.cypher.internal.expressions.Variable
@@ -22,12 +23,18 @@ class FabricFragmenter(
   semantics: ast.semantics.SemanticState,
 ) {
 
-  private val start = Init(defaultUse(defaultGraphName, InputPosition.NONE))
+  private val defaultUse: Use = makeDefaultUse(defaultGraphName, InputPosition.NONE)
+  private val systemUse: Use = makeDefaultUse(GraphDatabaseSettings.SYSTEM_DATABASE_NAME, InputPosition.NONE)
+  private val start = Init(defaultUse)
 
   def fragment: Fragment = queryStatement match {
     case ast.Query(_, part)  => fragmentPart(start, part)
-    case ddl: ast.CatalogDDL => Errors.ddlNotSupported(ddl)
-    case _: ast.Command      => Errors.notSupported("This command")
+    case ddl: ast.MultiGraphDDL => Errors.notSupported(ddl.name)
+    case command: ast.AdministrationCommand =>
+      Fragment.AdminCommand(systemUse, command)
+    case command: ast.Command      =>
+      val use = command.getGraph.map(Use.Declared).getOrElse(defaultUse)
+      Fragment.SchemaCommand(use, command)
   }
 
   private def fragmentPart(
@@ -87,7 +94,7 @@ class FabricFragmenter(
     use
   }
 
-  private def defaultUse(graphName: String, pos: InputPosition) =
+  private def makeDefaultUse(graphName: String, pos: InputPosition) =
     Use.Inherited(Use.Default(UseGraph(Variable(graphName)(pos))(pos)))(pos)
 
   private def produced(clauses: Seq[ast.Clause]): Seq[String] =

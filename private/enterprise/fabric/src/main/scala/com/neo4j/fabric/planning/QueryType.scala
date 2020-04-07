@@ -7,7 +7,10 @@ package com.neo4j.fabric.planning
 
 import com.neo4j.fabric.util.Folded.FoldableOps
 import com.neo4j.fabric.util.Folded.Stop
+import org.neo4j.cypher.internal.ast.AdministrationCommand
 import org.neo4j.cypher.internal.ast.CallClause
+import org.neo4j.cypher.internal.ast.Clause
+import org.neo4j.cypher.internal.ast.Command
 import org.neo4j.cypher.internal.ast.UnresolvedCall
 import org.neo4j.cypher.internal.ast.UpdateClause
 import org.neo4j.cypher.internal.util.ASTNode
@@ -21,6 +24,7 @@ object QueryType {
   case object ReadPlusUnresolved extends QueryType
   case object Write extends QueryType
 
+  // Java access helpers
   val READ: QueryType = Read
   val READ_PLUS_UNRESOLVED: QueryType = ReadPlusUnresolved
   val WRITE: QueryType = Write
@@ -29,30 +33,34 @@ object QueryType {
 
   def of(ast: ASTNode): QueryType =
     ast.folded(default)(merge) {
-      case _: UpdateClause   => Stop(Write)
-      case _: UnresolvedCall => Stop(ReadPlusUnresolved)
-      case c: CallClause     => Stop(if (c.containsNoUpdates) Read else Write)
+      case _: UpdateClause          => Stop(Write)
+      case _: UnresolvedCall        => Stop(ReadPlusUnresolved)
+      case c: CallClause            => Stop(if (c.containsNoUpdates) Read else Write)
+      case _: Command               => Stop(Write)
+      case a: AdministrationCommand => Stop(if (a.isReadOnly) Read else Write)
     }
 
-  def of(ast: Seq[ASTNode]): QueryType =
-    ast.map(of).fold(Read)(merge)
+  def of(ast: Seq[Clause]): QueryType =
+    ast.map(of).fold(default)(merge)
 
   def recursive(fragment: Fragment): QueryType =
     fragment match {
-      case _: Fragment.Init      => default
-      case apply: Fragment.Apply => merge(recursive(apply.input), recursive(apply.inner))
-      case union: Fragment.Union => merge(recursive(union.lhs), recursive(union.rhs))
-      case leaf: Fragment.Leaf   => merge(recursive(leaf.input), leaf.queryType)
-      case exec: Fragment.Exec   => merge(recursive(exec.input), exec.queryType)
+      case _: Fragment.Init          => default
+      case apply: Fragment.Apply     => merge(recursive(apply.input), recursive(apply.inner))
+      case union: Fragment.Union     => merge(recursive(union.lhs), recursive(union.rhs))
+      case leaf: Fragment.Leaf       => merge(recursive(leaf.input), leaf.queryType)
+      case exec: Fragment.Exec       => merge(recursive(exec.input), exec.queryType)
+      case command: Fragment.Command => command.queryType
     }
 
   def local(fragment: Fragment): QueryType =
     fragment match {
-      case _: Fragment.Init      => default
-      case apply: Fragment.Apply => local(apply.inner)
-      case union: Fragment.Union => merge(local(union.lhs), local(union.rhs))
-      case leaf: Fragment.Leaf   => leaf.queryType
-      case exec: Fragment.Exec   => exec.queryType
+      case _: Fragment.Init          => default
+      case apply: Fragment.Apply     => local(apply.inner)
+      case union: Fragment.Union     => merge(local(union.lhs), local(union.rhs))
+      case leaf: Fragment.Leaf       => leaf.queryType
+      case exec: Fragment.Exec       => exec.queryType
+      case command: Fragment.Command => command.queryType
     }
 
   def merge(a: QueryType, b: QueryType): QueryType =

@@ -52,6 +52,11 @@ case class FabricStitcher(
   def convert(fragment: Fragment): Fragment = fragment match {
     case chain: Fragment.Chain => convertChain(chain)
     case union: Fragment.Union => convertUnion(union)
+    case command: Fragment.Command => Fragment.Exec(
+      Fragment.Init(command.use),
+      command.command,
+      command.outputColumns
+    )
   }
 
   def convertUnion(union: Fragment.Union): Fragment =

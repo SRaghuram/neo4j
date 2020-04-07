@@ -8,16 +8,16 @@ package com.neo4j.fabric.planning
 import java.util
 
 import com.neo4j.fabric.util.Folded
-import com.neo4j.fabric.util.PrettyPrinting
 import com.neo4j.fabric.util.Folded.FoldableOps
+import com.neo4j.fabric.util.PrettyPrinting
 import org.neo4j.cypher.internal.ast
 import org.neo4j.cypher.internal.ast.Clause
 import org.neo4j.cypher.internal.ast.GraphSelection
-import org.neo4j.cypher.internal.ast.Query
+import org.neo4j.cypher.internal.ast.Statement
 import org.neo4j.graphdb.ExecutionPlanDescription
 
-import scala.collection.JavaConverters.setAsJavaSet
 import scala.collection.JavaConverters.mapAsJavaMapConverter
+import scala.collection.JavaConverters.setAsJavaSet
 
 sealed trait Fragment {
   /** Columns available to this fragment from an applied argument */
@@ -42,6 +42,17 @@ object Fragment {
     val use: Use = input.use
     val argumentColumns: Seq[String] = input.argumentColumns
     val importColumns: Seq[String] = input.importColumns
+  }
+
+  sealed trait Command extends Fragment {
+    /** Graph selection for this fragment */
+    def use: Use
+    def command: ast.Statement
+    def queryType: QueryType
+
+    val argumentColumns: Seq[String] = Seq.empty
+    val importColumns: Seq[String] = Seq.empty
+    val outputColumns: Seq[String] = command.returnColumns.map(_.name)
   }
 
   final case class Init(
@@ -86,7 +97,7 @@ object Fragment {
 
   final case class Exec(
     input: Fragment.Chain,
-    query: Query,
+    query: Statement,
     outputColumns: Seq[String],
   ) extends Fragment.Segment {
     val parameters: Map[String, String] = Columns.asParamMappings(importColumns)
@@ -95,12 +106,30 @@ object Fragment {
     val queryType: QueryType = QueryType.of(query)
   }
 
+  final case class SchemaCommand(
+    use: Use,
+    command: ast.Command,
+  ) extends Command {
+    val description: Description = Description.CommandDesc(this, "Command")
+    val queryType: QueryType = QueryType.of(command)
+  }
+
+  final case class AdminCommand(
+    use: Use,
+    command: ast.AdministrationCommand,
+  ) extends Command {
+    val description: Description = Description.CommandDesc(this, "AdminCommand")
+    val queryType: QueryType = QueryType.of(command)
+  }
+
   private def hasExecutableClauses(clauses: Seq[ast.Clause]) =
     clauses.exists(isExecutable)
 
-  private def hasExecutableClauses(query: Query) =
+  private def hasExecutableClauses(query: Statement) =
     query.folded(false)(_ || _) {
       case clause: Clause => Folded.Stop(isExecutable(clause))
+      case _: ast.Command => Folded.Stop(true)
+      case _: ast.AdministrationCommand => Folded.Stop(true)
     }
 
   private def isExecutable(clause: ast.Clause) =
@@ -147,6 +176,11 @@ object Fragment {
     final case class UnionDesc(fragment: Fragment.Union) extends Description("Union", fragment) {
       override def getChildren: util.List[ExecutionPlanDescription] = list(fragment.lhs.description, fragment.rhs.description)
       override def getArguments: util.Map[String, AnyRef] = map()
+    }
+
+    final case class CommandDesc(fragment: Fragment.Command, name: String) extends Description(name, fragment) {
+      override def getChildren: util.List[ExecutionPlanDescription] = list()
+      override def getArguments: util.Map[String, AnyRef] = map("query" -> QueryRenderer.render(fragment.command))
     }
 
     private def list[E](es: E*): util.List[E] =

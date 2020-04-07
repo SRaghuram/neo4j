@@ -189,7 +189,7 @@ public class FabricExecutor
 
             if ( fragment instanceof Fragment.Init )
             {
-                return runInit( (Fragment.Init) fragment, argument );
+                return runInit();
             }
             else if ( fragment instanceof Fragment.Apply )
             {
@@ -209,7 +209,7 @@ public class FabricExecutor
             }
         }
 
-        Flux<Record> runInit( Fragment.Init input, Record argument )
+        Flux<Record> runInit()
         {
             return Flux.just( Records.empty() );
         }

@@ -160,7 +160,7 @@ public class ResultSummaryWrapper extends EmptySummary
         @Override
         public int getSystemUpdates()
         {
-            return 0;
+            return counters.systemUpdates();
         }
 
         @Override
@@ -172,7 +172,7 @@ public class ResultSummaryWrapper extends EmptySummary
         @Override
         public boolean containsSystemUpdates()
         {
-            return false;
+            return counters.containsSystemUpdates();
         }
     }
 }

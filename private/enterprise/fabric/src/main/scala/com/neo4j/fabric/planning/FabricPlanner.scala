@@ -127,14 +127,15 @@ case class FabricPlanner(
       inFabricDefaultContext || isFabricFragment(fragment)
     }
 
+    private def isFabricUse(use: Use) =
+      UseEvaluation.evaluateStatic(use.graphSelection)
+        .exists(cn => cn.parts == fabricContextName.toList)
+
     private def isFabricFragment(fragment: Fragment): Boolean =
       fragment match {
-        case chain: Fragment.Chain =>
-          UseEvaluation.evaluateStatic(chain.use.graphSelection)
-            .exists(cn => cn.parts == fabricContextName.toList)
-
-        case union: Fragment.Union =>
-          isFabricFragment(union.lhs) && isFabricFragment(union.rhs)
+        case chain: Fragment.Chain => isFabricUse(chain.use)
+        case union: Fragment.Union => isFabricFragment(union.lhs) && isFabricFragment(union.rhs)
+        case command: Fragment.Command => isFabricUse(command.use)
       }
 
     private[planning] def withForceFabricContext(force: Boolean) =
