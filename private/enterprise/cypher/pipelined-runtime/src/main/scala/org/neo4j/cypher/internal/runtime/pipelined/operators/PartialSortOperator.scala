@@ -28,43 +28,40 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
                           val workIdentity: WorkIdentity,
                           prefixComparator: Comparator[MorselRow],
                           suffixComparator: Comparator[MorselRow])
-                         (val id: Id = Id.INVALID_ID) extends Operator with OperatorState {
+                         (val id: Id = Id.INVALID_ID) extends Operator {
 
   private type ResultsBuffer = util.ArrayList[MorselRow]
   private class ResultsBufferAndIndex(val buffer: ResultsBuffer, var currentIndex: Int)
-
-  private class PartialSortState(val memoryTracker: QueryMemoryTracker,
-                                 var lastSeen: MorselRow,
-                                 var resultsBuffer: ResultsBuffer,
-                                 var remainingResults: ResultsBufferAndIndex) {
-    def this(memoryTracker: QueryMemoryTracker) = this(memoryTracker, null, new ResultsBuffer, null)
-  }
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
                            state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = {
-    taskState = new PartialSortState(stateFactory.memoryTracker)
     argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id), ordered = true)
-    this
+    new PartialSortState(stateFactory.memoryTracker)
   }
 
   override def toString: String = "PartialSortOperator"
 
-  override def nextTasks(state: PipelinedQueryState,
-                         operatorInput: OperatorInput,
-                         parallelism: Int,
-                         resources: QueryResources,
-                         argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
-    val input: MorselData = operatorInput.takeData()
-    if (input != null) {
-      IndexedSeq(new PartialSortTask(input, taskState))
-    } else {
-      null
+  private class PartialSortState(val memoryTracker: QueryMemoryTracker,
+                                 var lastSeen: MorselRow,
+                                 var resultsBuffer: ResultsBuffer,
+                                 var remainingResults: ResultsBufferAndIndex) extends OperatorState {
+    def this(memoryTracker: QueryMemoryTracker) = this(memoryTracker, null, new ResultsBuffer, null)
+
+    override def nextTasks(state: PipelinedQueryState,
+                           operatorInput: OperatorInput,
+                           parallelism: Int,
+                           resources: QueryResources,
+                           argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
+      val input: MorselData = operatorInput.takeData()
+      if (input != null) {
+        IndexedSeq(new PartialSortTask(input, this))
+      } else {
+        null
+      }
     }
   }
-
-  private var taskState: PartialSortState = _
 
   class PartialSortTask(morselData: MorselData,
                         taskState: PartialSortState) extends InputLoopWithMorselDataTask(morselData) {
