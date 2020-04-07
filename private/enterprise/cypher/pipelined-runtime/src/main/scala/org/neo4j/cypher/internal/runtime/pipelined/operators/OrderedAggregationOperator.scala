@@ -37,8 +37,8 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
                                 (val id: Id = Id.INVALID_ID) extends Operator {
 
   private type ResultsMap = util.LinkedHashMap[unorderedGroupings.KeyType, Array[AggregationFunction]]
-  private case class Chunk(orderedGroupingKey: orderedGroupings.KeyType, resultsMap: ResultsMap)
-  private type ChunkList = util.LinkedList[Chunk]
+  private case class Result(orderedGroupingKey: orderedGroupings.KeyType, resultsMap: ResultsMap)
+  private type ResultList = util.LinkedList[Result]
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
@@ -56,8 +56,8 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
 
   private class OrderedAggregationState(var lastSeenGroupingKey: orderedGroupings.KeyType,
                                         var resultsMap: ResultsMap,
-                                        var chunks: ChunkList) extends OperatorState {
-    def this() = this(null.asInstanceOf[orderedGroupings.KeyType], new ResultsMap, new ChunkList)
+                                        var outstandingResults: ResultList) extends OperatorState {
+    def this() = this(null.asInstanceOf[orderedGroupings.KeyType], new ResultsMap, new ResultList)
 
     override def nextTasks(state: PipelinedQueryState,
                            operatorInput: OperatorInput,
@@ -118,20 +118,20 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
     override def processRemainingOutput(outputCursor: MorselWriteCursor): Unit =
       tryWriteOutstandingResults(outputCursor, queryState)
 
-    override def canContinue: Boolean = super.canContinue || !taskState.chunks.isEmpty
+    override def canContinue: Boolean = super.canContinue || !taskState.outstandingResults.isEmpty
 
     private def tryWriteOutstandingResults(outputCursor: MorselWriteCursor, queryState: QueryState): Unit = {
-      while (!taskState.chunks.isEmpty && outputCursor.onValidRow()) {
-        val chunk = taskState.chunks.getFirst
-        val it = chunk.resultsMap.entrySet().iterator()
+      while (!taskState.outstandingResults.isEmpty && outputCursor.onValidRow()) {
+        val result = taskState.outstandingResults.getFirst
+        val it = result.resultsMap.entrySet().iterator()
         if (!it.hasNext) {
-          taskState.chunks.removeFirst()
+          taskState.outstandingResults.removeFirst()
         } else {
           val entry = it.next()
           val unorderedGroupingKey = entry.getKey
           val aggResults = entry.getValue
           outputCursor.copyFrom(morselData.viewOfArgumentRow, argumentSize.nLongs, argumentSize.nReferences)
-          orderedGroupings.project(outputCursor, chunk.orderedGroupingKey)
+          orderedGroupings.project(outputCursor, result.orderedGroupingKey)
           unorderedGroupings.project(outputCursor, unorderedGroupingKey)
 
           var i = 0
@@ -146,7 +146,7 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
     }
 
     private def completeCurrentChunk(): Unit = {
-      taskState.chunks.add(Chunk(taskState.lastSeenGroupingKey, taskState.resultsMap))
+      taskState.outstandingResults.add(Result(taskState.lastSeenGroupingKey, taskState.resultsMap))
       taskState.lastSeenGroupingKey = null.asInstanceOf[orderedGroupings.KeyType]
       taskState.resultsMap = new ResultsMap
     }

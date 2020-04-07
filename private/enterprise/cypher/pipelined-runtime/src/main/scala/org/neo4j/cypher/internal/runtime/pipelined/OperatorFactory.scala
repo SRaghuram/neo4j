@@ -503,8 +503,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
       case plans.OrderedAggregation(_, groupingExpressions, aggregationExpression, orderToLeverage) =>
         val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
-        val argumentDepth = physicalPlan.applyPlans(id)
-        val argumentSlotOffset = slots.getArgumentLongOffsetFor(argumentDepth)
+        val applyPlanId = physicalPlan.applyPlans(id)
+        val argumentSlotOffset = slots.getArgumentLongOffsetFor(applyPlanId)
 
         val aggExpressions = Array.newBuilder[AggregationExpression]
         val outputSlots = Array.newBuilder[Int]

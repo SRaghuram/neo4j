@@ -263,8 +263,8 @@ class PipelinedAggregationTest extends AggregationTestBase(FUSING, PIPELINED, SI
 class PipelinedAggregationNoFusingTest extends AggregationTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // ORDERED AGGREGATION
-class OrderedPipelinedAggregationTest extends OrderedAggregationTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
-class OrderedPipelinedAggregationNoFusingTest extends OrderedAggregationTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedOrderedAggregationTest extends OrderedAggregationTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedOrderedAggregationNoFusingTest extends OrderedAggregationTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // NODE HASH JOIN
 class PipelinedNodeHashJoinTest extends NodeHashJoinTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite

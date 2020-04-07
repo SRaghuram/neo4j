@@ -22,8 +22,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
 abstract class InputLoopWithMorselDataTask(override final val morselData: MorselData) extends ContinuableOperatorTaskWithMorselData {
 
   private val morselIterator = morselData.morsels.iterator
-  // To remember whether we already processed the ArgumentStream.
-  private var consumedArgumentStream = false
+  private var processedEndOfMorselData = false
   private var currentMorsel: MorselReadCursor = _
 
   /**
@@ -69,9 +68,9 @@ abstract class InputLoopWithMorselDataTask(override final val morselData: Morsel
           currentMorsel.next()
         }
       } else {
-        if (!consumedArgumentStream) {
+        if (!processedEndOfMorselData) {
           processEndOfMorselData(outputCursor)
-          consumedArgumentStream = true
+          processedEndOfMorselData = true
         }
         processRemainingOutput(outputCursor)
       }
@@ -82,7 +81,7 @@ abstract class InputLoopWithMorselDataTask(override final val morselData: Morsel
   override def canContinue: Boolean =
     (currentMorsel != null && currentMorsel.onValidRow) ||
       morselIterator.hasNext ||
-      !consumedArgumentStream
+      !processedEndOfMorselData
 
   override final protected def closeCursors(resources: QueryResources): Unit = ()
 
