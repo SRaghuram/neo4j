@@ -9,7 +9,6 @@ import java.lang.Boolean.TRUE
 
 import com.neo4j.cypher.EnterpriseGraphDatabaseTestSupport
 import cypher.features.Phase
-import cypher.features.ScenarioTestHelper
 import org.apache.commons.lang3.exception.ExceptionUtils
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
@@ -31,13 +30,11 @@ import org.neo4j.kernel.impl.query.TransactionalContext
 import org.neo4j.monitoring.Monitors
 import org.neo4j.values.virtual.MapValue
 
+import scala.collection.JavaConverters.iterableAsScalaIterableConverter
+import scala.collection.JavaConverters.mapAsScalaMapConverter
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
-
-
-import scala.collection.JavaConverters.mapAsScalaMapConverter
-import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 
 /**
  * Will run a query across configurations, making sure they all agree on the results and/or errors.
@@ -168,8 +165,6 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
             if (correctError(e.getMessage, message) && correctError(actualErrorType, errorType)) {
               if (!silentUnexpectedSuccess) {
                 fail("Unexpectedly (but correctly!) failed in " + thisScenario.name + " with the correct error. Did you forget to add this config?", e)
-              } else {
-                ScenarioTestHelper.unexpectedSuccessCount.getAndAdd(1)
               }
             }
           }

@@ -6,7 +6,6 @@
 package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
 import cypher.features.Phase
-import cypher.features.ScenarioTestHelper
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.plandescription.Arguments
@@ -68,8 +67,6 @@ case class TestScenario(planner: Planner, runtime: Runtime) extends Assertions {
                     |
                     |(Actually executed with $reportedRuntimeName runtime and $reportedPlannerName planner)
                     |""".stripMargin)
-          } else {
-            ScenarioTestHelper.unexpectedSuccessCount.getAndAdd(1)
           }
         }
     }
