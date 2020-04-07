@@ -50,9 +50,8 @@ import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPool
@@ -216,7 +215,7 @@ object OperatorCodeGenHelperTemplates {
   val NEXT: Method = method[MorselCursor, Boolean]("next")
 
   val OUTPUT_FULL_CURSOR: IntermediateRepresentation = invoke(OUTPUT_MORSEL, method[Morsel, MorselFullCursor, Boolean]("fullCursor"), constant(true))
-  val OUTPUT_CURSOR_VAR: LocalVariable = variable[MorselFullCursor](AbstractExpressionCompiler.CONTEXT, OUTPUT_FULL_CURSOR)
+  val OUTPUT_CURSOR_VAR: LocalVariable = variable[MorselFullCursor](ExpressionCompilation.CONTEXT, OUTPUT_FULL_CURSOR)
   val OUTPUT_CURSOR: IntermediateRepresentation = load(OUTPUT_CURSOR_VAR.name)
   val OUTPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(OUTPUT_CURSOR, method[MorselFullCursor, Boolean]("onValidRow"))
 
@@ -286,7 +285,7 @@ object OperatorCodeGenHelperTemplates {
     invokeStatic(
       method[CursorUtils, Boolean, Read, NodeCursor, Long, Int]("nodeHasLabel"),
       loadField(OperatorCodeGenHelperTemplates.DATA_READ),
-      AbstractExpressionCompiler.NODE_CURSOR,
+      ExpressionCompilation.NODE_CURSOR,
       node,
       labelToken)
   }
@@ -295,36 +294,36 @@ object OperatorCodeGenHelperTemplates {
     invokeStatic(
       method[CursorUtils, Value, Read, NodeCursor, Long, PropertyCursor, Int]("nodeGetProperty"),
       loadField(DATA_READ),
-      AbstractExpressionCompiler.NODE_CURSOR,
+      ExpressionCompilation.NODE_CURSOR,
       node,
-      AbstractExpressionCompiler.PROPERTY_CURSOR,
+      ExpressionCompilation.PROPERTY_CURSOR,
       propertyToken)
 
   def nodeHasProperty(node: IntermediateRepresentation, propertyToken: IntermediateRepresentation): IntermediateRepresentation =
     invokeStatic(
       method[CursorUtils, Boolean, Read, NodeCursor, Long, PropertyCursor, Int]("nodeHasProperty"),
       loadField(DATA_READ),
-      AbstractExpressionCompiler.NODE_CURSOR,
+      ExpressionCompilation.NODE_CURSOR,
       node,
-      AbstractExpressionCompiler.PROPERTY_CURSOR,
+      ExpressionCompilation.PROPERTY_CURSOR,
       propertyToken)
 
   def relationshipGetProperty(relationship: IntermediateRepresentation, propertyToken: IntermediateRepresentation): IntermediateRepresentation =
     invokeStatic(
       method[CursorUtils, Value, Read, RelationshipScanCursor, Long, PropertyCursor, Int]("relationshipGetProperty"),
       loadField(DATA_READ),
-      AbstractExpressionCompiler.RELATIONSHIP_CURSOR,
+      ExpressionCompilation.RELATIONSHIP_CURSOR,
       relationship,
-      AbstractExpressionCompiler.PROPERTY_CURSOR,
+      ExpressionCompilation.PROPERTY_CURSOR,
       propertyToken)
 
   def relationshipHasProperty(relationship: IntermediateRepresentation, propertyToken: IntermediateRepresentation): IntermediateRepresentation =
     invokeStatic(
       method[CursorUtils, Boolean, Read, RelationshipScanCursor, Long, PropertyCursor, Int]("relationshipHasProperty"),
       loadField(DATA_READ),
-      AbstractExpressionCompiler.RELATIONSHIP_CURSOR,
+      ExpressionCompilation.RELATIONSHIP_CURSOR,
       relationship,
-      AbstractExpressionCompiler.PROPERTY_CURSOR,
+      ExpressionCompilation.PROPERTY_CURSOR,
       propertyToken)
 
   def nodeIndexScan(indexReadSession: IntermediateRepresentation,

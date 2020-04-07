@@ -41,7 +41,7 @@ import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CursorRepresentation
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation
 import org.neo4j.cypher.internal.runtime.compiled.expressions.VariableNamer
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler.LocalsForSlots
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler.ScopeContinuationState
@@ -666,10 +666,10 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
       constant(key),
       container,
       loadField(DATA_READ),
-      AbstractExpressionCompiler.DB_ACCESS,
-      AbstractExpressionCompiler.NODE_CURSOR,
-      AbstractExpressionCompiler.RELATIONSHIP_CURSOR,
-      AbstractExpressionCompiler.PROPERTY_CURSOR)
+      ExpressionCompilation.DB_ACCESS,
+      ExpressionCompilation.NODE_CURSOR,
+      ExpressionCompilation.RELATIONSHIP_CURSOR,
+      ExpressionCompilation.PROPERTY_CURSOR)
 
   /**
    * Write to the output ExecutionContext
@@ -825,17 +825,17 @@ case class NodeCursorRepresentation(target: IntermediateRepresentation) extends 
 
   override def getProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation = {
     block(
-      invokeSideEffect(target, method[NodeCursor, Unit, PropertyCursor]("properties"), AbstractExpressionCompiler.PROPERTY_CURSOR),
-      ternary(invoke(AbstractExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken),
-        invoke( AbstractExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Value]("propertyValue")),
+      invokeSideEffect(target, method[NodeCursor, Unit, PropertyCursor]("properties"), ExpressionCompilation.PROPERTY_CURSOR),
+      ternary(invoke(ExpressionCompilation.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken),
+        invoke( ExpressionCompilation.PROPERTY_CURSOR, method[PropertyCursor, Value]("propertyValue")),
         noValue)
     )
   }
 
   override def hasProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation = {
     block(
-      invokeSideEffect(target, method[NodeCursor, Unit, PropertyCursor]("properties"), AbstractExpressionCompiler.PROPERTY_CURSOR),
-      invoke(AbstractExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken)
+      invokeSideEffect(target, method[NodeCursor, Unit, PropertyCursor]("properties"), ExpressionCompilation.PROPERTY_CURSOR),
+      invoke(ExpressionCompilation.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken)
     )
   }
 }
@@ -885,9 +885,9 @@ case class RelationshipCursorRepresentation(target: IntermediateRepresentation) 
   override def getProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation = {
     block(
       invokeSideEffect(target, method[RelationshipTraversalCursor, Unit, PropertyCursor]("properties"),
-        AbstractExpressionCompiler.PROPERTY_CURSOR),
-      ternary(invoke(AbstractExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken),
-        invoke( AbstractExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Value]("propertyValue")),
+        ExpressionCompilation.PROPERTY_CURSOR),
+      ternary(invoke(ExpressionCompilation.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken),
+        invoke( ExpressionCompilation.PROPERTY_CURSOR, method[PropertyCursor, Value]("propertyValue")),
         noValue)
     )
   }
@@ -895,8 +895,8 @@ case class RelationshipCursorRepresentation(target: IntermediateRepresentation) 
   override def hasProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation = {
     block(
       invokeSideEffect(target, method[RelationshipTraversalCursor, Unit, PropertyCursor]("properties"),
-        AbstractExpressionCompiler.PROPERTY_CURSOR),
-      invoke(AbstractExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken)
+        ExpressionCompilation.PROPERTY_CURSOR),
+      invoke(ExpressionCompilation.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken)
     )
   }
 }

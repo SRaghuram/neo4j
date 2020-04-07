@@ -44,7 +44,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.lessThan
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.loop
-import org.neo4j.codegen.api.IntermediateRepresentation.loop
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
 import org.neo4j.codegen.api.IntermediateRepresentation.noValue
@@ -65,7 +64,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.codegen.api.Method
 import org.neo4j.codegen.api.MethodDeclaration
-import org.neo4j.cypher.internal.compiler.helpers.PredicateHelper.isPredicate
 import org.neo4j.cypher.internal.compiler.helpers.PredicateHelper.isPredicate
 import org.neo4j.cypher.internal.expressions
 import org.neo4j.cypher.internal.expressions.ASTCachedProperty
@@ -175,27 +173,27 @@ import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.ast.ParameterFromSlot
 import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.ASSERT_PREDICATE
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.CURSORS
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.DB_ACCESS
 import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.GET_TX_STATE_NODE_PROP
 import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.GET_TX_STATE_RELATIONSHIP_PROP
 import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.HAS_TX_STATE_NODE_PROP
 import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.HAS_TX_STATE_RELATIONSHIP_PROP
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.LOAD_CONTEXT
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.NODE_CURSOR
 import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.NODE_PROPERTY
 import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.PACKAGE_NAME
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.PROPERTY_CURSOR
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.RELATIONSHIP_CURSOR
 import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.RELATIONSHIP_PROPERTY
 import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.className
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.noValueOr
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.nullCheck
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.nullCheckIfRequired
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.vCURSORS
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.vNODE_CURSOR
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.vPROPERTY_CURSOR
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.vRELATIONSHIP_CURSOR
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.CURSORS
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.LOAD_CONTEXT
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.NODE_CURSOR
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.PROPERTY_CURSOR
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.RELATIONSHIP_CURSOR
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.noValueOr
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheck
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.vCURSORS
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.vNODE_CURSOR
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.vPROPERTY_CURSOR
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.vRELATIONSHIP_CURSOR
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeCollectExpression
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.symbols.CTBoolean
@@ -264,7 +262,6 @@ import org.neo4j.values.virtual.VirtualRelationshipValue
 import org.neo4j.values.virtual.VirtualValues
 
 import scala.annotation.tailrec
-import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 abstract class AbstractExpressionCompiler(val slots: SlotConfiguration,
                                           val readOnly: Boolean,
@@ -3185,22 +3182,6 @@ object AbstractExpressionCompiler {
 
   private val COUNTER = new AtomicLong(0L)
   private val ASSERT_PREDICATE = method[CompiledHelpers, Value, AnyValue]("assertBooleanOrNoValue")
-  val DB_ACCESS: IntermediateRepresentation = load("dbAccess")
-  private val CURSORS = load("cursors")
-
-  val NODE_CURSOR: IntermediateRepresentation = load("nodeCursor")
-  val vNODE_CURSOR: LocalVariable = cursorVariable[NodeCursor]("nodeCursor")
-
-  val RELATIONSHIP_CURSOR: IntermediateRepresentation = load("relationshipScanCursor")
-  val vRELATIONSHIP_CURSOR: LocalVariable = cursorVariable[RelationshipScanCursor]("relationshipScanCursor")
-
-  val PROPERTY_CURSOR: IntermediateRepresentation = load("propertyCursor")
-  val vPROPERTY_CURSOR: LocalVariable = cursorVariable[PropertyCursor]("propertyCursor")
-
-  private val vCURSORS = Seq(vNODE_CURSOR, vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR)
-
-  val CONTEXT = "context"
-  private val LOAD_CONTEXT = load(CONTEXT)
 
   private val GET_TX_STATE_NODE_PROP: Method = method[DbAccess, Value, Long, Int]("getTxStateNodePropertyOrNull")
   private val GET_TX_STATE_RELATIONSHIP_PROP: Method = method[DbAccess, Value, Long, Int]("getTxStateRelationshipPropertyOrNull")
@@ -3213,22 +3194,6 @@ object AbstractExpressionCompiler {
   private val PACKAGE_NAME = "org.neo4j.codegen"
 
   private def className(): String = "Expression" + COUNTER.getAndIncrement()
-
-  private def cursorVariable[T](name: String)(implicit m: Manifest[T]): LocalVariable =
-    variable[T](name, invoke(load("cursors"), method[ExpressionCursors, T](name)))
-
-  def noValueOr(expressions: IntermediateExpression*)(onNotNull: IntermediateRepresentation): IntermediateRepresentation = {
-    nullCheck(expressions:_*)(noValue)(onNotNull)
-  }
-
-  def nullCheck(expressions: IntermediateExpression*)(onNull: IntermediateRepresentation = noValue)(onNotNull: IntermediateRepresentation): IntermediateRepresentation = {
-    val checks = expressions.foldLeft(Set.empty[IntermediateRepresentation])((acc, current) => acc ++ current.nullChecks)
-    if (checks.nonEmpty) ternary(checks.reduceLeft(or), onNull, onNotNull)
-    else onNotNull
-  }
-
-  def nullCheckIfRequired(expression: IntermediateExpression, onNull: IntermediateRepresentation = noValue): IntermediateRepresentation =
-    if (expression.requireNullCheck) nullCheck(expression)(onNull)(expression.ir) else expression.ir
 }
 
 trait CursorRepresentation {

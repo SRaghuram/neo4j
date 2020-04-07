@@ -23,12 +23,12 @@ import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter.DEFAULT_NULLAB
 import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter.DEFAULT_OFFSET_IS_FOR_LONG_SLOT
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.runtime.DbAccess
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.DB_ACCESS
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.NODE_CURSOR
 import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.NODE_PROPERTY
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.PROPERTY_CURSOR
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.RELATIONSHIP_CURSOR
 import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.RELATIONSHIP_PROPERTY
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.NODE_CURSOR
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.PROPERTY_CURSOR
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.RELATIONSHIP_CURSOR
 import org.neo4j.cypher.operations.CypherFunctions
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.PropertyCursor

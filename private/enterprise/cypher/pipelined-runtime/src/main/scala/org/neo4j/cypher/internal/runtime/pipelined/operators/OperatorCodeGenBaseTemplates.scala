@@ -50,7 +50,7 @@ import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
@@ -412,9 +412,7 @@ trait OperatorTaskTemplate {
     val assignments = localState.assignments
 
     val expressionCursors = genExpressions.flatMap(_.variables)
-      .intersect(Seq(AbstractExpressionCompiler.vNODE_CURSOR,
-        AbstractExpressionCompiler.vPROPERTY_CURSOR,
-        AbstractExpressionCompiler.vRELATIONSHIP_CURSOR))
+      .intersect(ExpressionCompilation.vCURSORS)
     val setTracerCalls =
       if (expressionCursors.nonEmpty) {
         expressionCursors.map(cursor => invokeSideEffect(load(cursor), SET_TRACER, loadField(executionEventField)))
