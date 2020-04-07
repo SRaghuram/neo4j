@@ -595,11 +595,10 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
       case plans.OrderedDistinct(_, groupingExpressions, orderToLeverage) =>
         val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
-        val groupings = converters.toGroupingExpression(id, groupingExpressions, Seq.empty)
-
-        if (groupingExpressions.values.forall(orderToLeverage.contains))
+        if (groupingExpressions.values.forall(orderToLeverage.contains)) {
+          val groupings = converters.toGroupingExpression(id, groupingExpressions, Seq.empty)
           Some(new AllOrderedDistinctOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), groupings)(id))
-        else {
+        } else {
           val (orderedGroupingExpressions, unorderedGroupingExpressions) = groupingExpressions.partition { case (_,v) => orderToLeverage.contains(v) }
           val orderedGroupingColumns = converters.toGroupingExpression(id, orderedGroupingExpressions, orderToLeverage)
           val unorderedGroupingColumns = converters.toGroupingExpression(id, unorderedGroupingExpressions, orderToLeverage)
