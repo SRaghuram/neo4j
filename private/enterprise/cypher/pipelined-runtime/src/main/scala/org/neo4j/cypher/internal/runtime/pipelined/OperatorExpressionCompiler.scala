@@ -39,6 +39,7 @@ import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.WritableRow
+import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CursorRepresentation
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
 import org.neo4j.cypher.internal.runtime.compiled.expressions.VariableNamer
@@ -178,7 +179,7 @@ object OperatorExpressionCompiler {
       }
     }
 
-    def genScopeLocalsState(codeGen: ExpressionCompiler, inputContext: IntermediateRepresentation): ScopeLocalsState = {
+    def genScopeLocalsState(codeGen: AbstractExpressionCompiler, inputContext: IntermediateRepresentation): ScopeLocalsState = {
       val locals = new ArrayBuffer[LocalVariable]()
 
       foreachLocalForLongSlot { case (slot, name, modified) =>
@@ -217,7 +218,7 @@ object OperatorExpressionCompiler {
       ScopeLocalsState(locals, declarations, assignments)
     }
 
-    def genScopeContinuationState(codeGen: ExpressionCompiler, inputContext: IntermediateRepresentation): ScopeContinuationState = {
+    def genScopeContinuationState(codeGen: AbstractExpressionCompiler, inputContext: IntermediateRepresentation): ScopeContinuationState = {
       val fields = new ArrayBuffer[Field]()
       val saveOps = new ArrayBuffer[IntermediateRepresentation]()
       val restoreOps = new ArrayBuffer[IntermediateRepresentation]()
@@ -410,7 +411,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
                                  readOnly: Boolean,
                                  codeGenerationMode: CodeGeneration.CodeGenerationMode,
                                  namer: VariableNamer)
-  extends ExpressionCompiler(slots, readOnly, codeGenerationMode, namer) {
+  extends AbstractExpressionCompiler(slots, readOnly, codeGenerationMode, namer) {
 
 
   /**
@@ -665,10 +666,10 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
       constant(key),
       container,
       loadField(DATA_READ),
-      ExpressionCompiler.DB_ACCESS,
-      ExpressionCompiler.NODE_CURSOR,
-      ExpressionCompiler.RELATIONSHIP_CURSOR,
-      ExpressionCompiler.PROPERTY_CURSOR)
+      AbstractExpressionCompiler.DB_ACCESS,
+      AbstractExpressionCompiler.NODE_CURSOR,
+      AbstractExpressionCompiler.RELATIONSHIP_CURSOR,
+      AbstractExpressionCompiler.PROPERTY_CURSOR)
 
   /**
    * Write to the output ExecutionContext
@@ -824,17 +825,17 @@ case class NodeCursorRepresentation(target: IntermediateRepresentation) extends 
 
   override def getProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation = {
     block(
-      invokeSideEffect(target, method[NodeCursor, Unit, PropertyCursor]("properties"), ExpressionCompiler.PROPERTY_CURSOR),
-      ternary(invoke(ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken),
-        invoke( ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Value]("propertyValue")),
+      invokeSideEffect(target, method[NodeCursor, Unit, PropertyCursor]("properties"), AbstractExpressionCompiler.PROPERTY_CURSOR),
+      ternary(invoke(AbstractExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken),
+        invoke( AbstractExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Value]("propertyValue")),
         noValue)
     )
   }
 
   override def hasProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation = {
     block(
-      invokeSideEffect(target, method[NodeCursor, Unit, PropertyCursor]("properties"), ExpressionCompiler.PROPERTY_CURSOR),
-      invoke(ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken)
+      invokeSideEffect(target, method[NodeCursor, Unit, PropertyCursor]("properties"), AbstractExpressionCompiler.PROPERTY_CURSOR),
+      invoke(AbstractExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken)
     )
   }
 }
@@ -884,9 +885,9 @@ case class RelationshipCursorRepresentation(target: IntermediateRepresentation) 
   override def getProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation = {
     block(
       invokeSideEffect(target, method[RelationshipTraversalCursor, Unit, PropertyCursor]("properties"),
-        ExpressionCompiler.PROPERTY_CURSOR),
-      ternary(invoke(ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken),
-        invoke( ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Value]("propertyValue")),
+        AbstractExpressionCompiler.PROPERTY_CURSOR),
+      ternary(invoke(AbstractExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken),
+        invoke( AbstractExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Value]("propertyValue")),
         noValue)
     )
   }
@@ -894,8 +895,8 @@ case class RelationshipCursorRepresentation(target: IntermediateRepresentation) 
   override def hasProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation = {
     block(
       invokeSideEffect(target, method[RelationshipTraversalCursor, Unit, PropertyCursor]("properties"),
-        ExpressionCompiler.PROPERTY_CURSOR),
-      invoke(ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken)
+        AbstractExpressionCompiler.PROPERTY_CURSOR),
+      invoke(AbstractExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken)
     )
   }
 }
