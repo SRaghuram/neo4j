@@ -734,6 +734,10 @@ class FabricPlannerTest
       s"""USE $graphName
          |MATCH (n) RETURN n
          |""".stripMargin,
+
+      s"""USE $graphName
+         |CREATE INDEX myIndex FOR (n:Label) ON (n.prop1, n.prop2)
+         |""".stripMargin,
     )
 
     def declaredSubqueryInherited(graphName: String) = Table(

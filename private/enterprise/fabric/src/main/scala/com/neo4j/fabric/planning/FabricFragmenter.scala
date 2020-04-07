@@ -33,7 +33,7 @@ class FabricFragmenter(
     case command: ast.AdministrationCommand =>
       Fragment.AdminCommand(systemUse, command)
     case command: ast.Command      =>
-      val use = command.getGraph.map(Use.Declared).getOrElse(defaultUse)
+      val use = command.useGraph.map(Use.Declared).getOrElse(defaultUse)
       Fragment.SchemaCommand(use, command)
   }
 

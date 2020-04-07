@@ -44,7 +44,6 @@ class FabricStitcherTest
       )
     }
 
-
     "single fragments with imports" in {
       stitching(
         init(defaultUse, Seq("x", "y"), Seq("y")).leaf(Seq(return_(literal(1).as("a"))), Seq("a"))
