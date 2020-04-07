@@ -30,14 +30,14 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
                           suffixComparator: Comparator[MorselRow])
                          (val id: Id = Id.INVALID_ID) extends Operator with OperatorState {
 
-  private type Buffer = util.ArrayList[MorselRow]
-  private type ChunkList = util.LinkedList[Buffer]
+  private type ResultsBuffer = util.ArrayList[MorselRow]
+  private class ResultsBufferAndIndex(val buffer: ResultsBuffer, var currentIndex: Int)
 
   private class PartialSortState(val memoryTracker: QueryMemoryTracker,
                                  var lastSeen: MorselRow,
-                                 var buffer: Buffer,
-                                 var chunks: ChunkList) {
-    def this(memoryTracker: QueryMemoryTracker) = this(memoryTracker, null, new Buffer, new ChunkList)
+                                 var resultsBuffer: ResultsBuffer,
+                                 var remainingResults: ResultsBufferAndIndex) {
+    def this(memoryTracker: QueryMemoryTracker) = this(memoryTracker, null, new ResultsBuffer, null)
   }
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
@@ -83,7 +83,7 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
         tryWriteOutstandingResults(outputCursor)
       }
       taskState.lastSeen = inputCursor.snapshot()
-      taskState.buffer.add(taskState.lastSeen)
+      taskState.resultsBuffer.add(taskState.lastSeen)
       taskState.memoryTracker.allocated(taskState.lastSeen, id.x)
     }
 
@@ -99,35 +99,35 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
     override def processRemainingOutput(outputCursor: MorselWriteCursor): Unit =
       tryWriteOutstandingResults(outputCursor)
 
-    override def canContinue: Boolean = super.canContinue || !taskState.chunks.isEmpty
+    override def canContinue: Boolean = super.canContinue || taskState.remainingResults != null
 
     private def tryWriteOutstandingResults(outputCursor: MorselWriteCursor): Unit = {
-      while (!taskState.chunks.isEmpty && outputCursor.onValidRow()) {
-        val chunk = taskState.chunks.getFirst
-        val it = chunk.iterator()
-        if (!it.hasNext) {
-          taskState.chunks.removeFirst()
+      while (taskState.remainingResults != null && outputCursor.onValidRow()) {
+        val resultsBufferAndIndex = taskState.remainingResults
+        if (resultsBufferAndIndex.currentIndex >= resultsBufferAndIndex.buffer.size()) {
+          taskState.remainingResults = null
         } else {
-          val morselRow = it.next()
+          val morselRow = resultsBufferAndIndex.buffer.get(resultsBufferAndIndex.currentIndex)
           outputCursor.copyFrom(morselRow)
 
           taskState.memoryTracker.deallocated(morselRow, id.x)
-          it.remove()
+          resultsBufferAndIndex.buffer.set(resultsBufferAndIndex.currentIndex, null)
+          resultsBufferAndIndex.currentIndex += 1
           outputCursor.next()
         }
       }
     }
 
     private def completeCurrentChunk(): Unit = {
-      val buffer = taskState.buffer
+      val buffer = taskState.resultsBuffer
 
       if(buffer.size() > 1) {
         buffer.sort(suffixComparator)
       }
 
-      taskState.chunks.add(buffer)
+      taskState.remainingResults = new ResultsBufferAndIndex(buffer, 0)
       taskState.lastSeen = null
-      taskState.buffer = new Buffer
+      taskState.resultsBuffer = new ResultsBuffer
     }
   }
 }
