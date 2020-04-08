@@ -311,7 +311,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
     def generateStartNodePredicate() = {
       if (startNodePredicate == null) {
         startNodePredicate = maybeNodeVariablePredicate
-          .map(p => codeGen.intermediateCompileExpression(p.predicate)
+          .map(p => codeGen.compileExpression(p.predicate)
             .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile ${p.predicate}")))
       }
 
@@ -515,13 +515,13 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
     if (nodePredicate == null) {
       nodePredicate = maybeNodeVariablePredicate
-        .map(p => newScopeExpressionCompiler.intermediateCompileExpression(p.predicate)
+        .map(p => newScopeExpressionCompiler.compileExpression(p.predicate)
           .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile ${p.predicate}")))
     }
 
     if (relPredicate == null) {
       relPredicate = maybeRelVariablePredicate
-        .map(p => newScopeExpressionCompiler.intermediateCompileExpression(p.predicate)
+        .map(p => newScopeExpressionCompiler.compileExpression(p.predicate)
           .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile ${p.predicate}")))
     }
 

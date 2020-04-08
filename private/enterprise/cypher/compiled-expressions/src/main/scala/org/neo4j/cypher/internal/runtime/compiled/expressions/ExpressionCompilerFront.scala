@@ -19,7 +19,7 @@ trait ExpressionCompilerFront {
     * @param orderedGroupings the groupings to compile, already sorted in correct grouping key order
     * @return an instance of [[IntermediateGroupingExpression]] corresponding to the provided groupings
     */
-  def intermediateCompileGroupingKey(orderedGroupings: Seq[Expression]): Option[IntermediateExpression]
+  def compileGroupingKey(orderedGroupings: Seq[Expression]): Option[IntermediateExpression]
 
   /**
     * Compiles the given expression to an [[IntermediateExpression]]
@@ -27,7 +27,7 @@ trait ExpressionCompilerFront {
     * @param expression the expression to compile
     * @return an [[IntermediateExpression]] corresponding to the provided expression.
     */
-  def intermediateCompileExpression(expression: Expression): Option[IntermediateExpression]
+  def compileExpression(expression: Expression): Option[IntermediateExpression]
 
   /**
     * Compiles the given projections to an [[IntermediateExpression]]
@@ -35,7 +35,7 @@ trait ExpressionCompilerFront {
     * @param projections the projections to compile
     * @return an [[IntermediateExpression]] corresponding to the provided projections.
     */
-  def intermediateCompileProjection(projections: Map[String, Expression]): Option[IntermediateExpression]
+  def compileProjection(projections: Map[String, Expression]): Option[IntermediateExpression]
 
   /**
     * Compiles the given ordered groupings to an [[IntermediateGroupingExpression]]
@@ -44,5 +44,5 @@ trait ExpressionCompilerFront {
     * @param keyName name of the grouping key variable
     * @return an [[IntermediateGroupingExpression]] corresponding to the provided ordered grouping.
     */
-  def intermediateCompileGroupingExpression(orderedGroupings: Seq[(Slot, IntermediateExpression)], keyName: String): IntermediateGroupingExpression
+  def compileGroupingExpression(orderedGroupings: Seq[(Slot, IntermediateExpression)], keyName: String): IntermediateGroupingExpression
 }

@@ -53,7 +53,7 @@ class CachePropertiesOperatorTemplate(override val inner: OperatorTaskTemplate,
   override def genOperate: IntermediateRepresentation = {
     if(properties == null) {
       properties =
-        propertyOps.map(p => codeGen.intermediateCompileExpression(p)
+        propertyOps.map(p => codeGen.compileExpression(p)
           .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $p"))
         )
     }

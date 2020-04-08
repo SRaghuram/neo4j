@@ -139,7 +139,7 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
                                    slots: SlotConfiguration,
                                    orderToLeverage: Seq[Expression]): () => IntermediateExpression = {
               val orderedGroupingExpressions = orderGroupingKeyExpressions(astExpressions, orderToLeverage)(slots).map(_._2)
-              () => ctx.expressionCompiler.intermediateCompileGroupingKey(orderedGroupingExpressions)
+              () => ctx.expressionCompiler.compileGroupingKey(orderedGroupingExpressions)
                 .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $astExpressions"))
             }
 

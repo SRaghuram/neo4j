@@ -139,7 +139,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                              expressionCompiler: OperatorExpressionCompiler) {
 
     def compileExpression(astExpression: Expression): () => IntermediateExpression =
-      () => expressionCompiler.intermediateCompileExpression(astExpression)
+      () => expressionCompiler.compileExpression(astExpression)
         .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $astExpression"))
   }
 

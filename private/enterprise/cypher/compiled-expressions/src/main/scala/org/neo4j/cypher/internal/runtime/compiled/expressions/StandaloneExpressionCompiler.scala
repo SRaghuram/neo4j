@@ -20,7 +20,7 @@ class StandaloneExpressionCompiler(front: AbstractExpressionCompilerFront, back:
     * @return an instance of [[CompiledExpression]] corresponding to the provided expression
     */
   def compileExpression(e: Expression): Option[CompiledExpression] = {
-    front.intermediateCompileExpression(e).map(back.compileExpression)
+    front.compileExpression(e).map(back.compileExpression)
   }
 
   /**
@@ -29,7 +29,7 @@ class StandaloneExpressionCompiler(front: AbstractExpressionCompilerFront, back:
     * @return an instance of [[CompiledProjection]] corresponding to the provided projection
     */
   def compileProjection(projections: Map[String, Expression]): Option[CompiledProjection] = {
-    front.intermediateCompileProjection(projections).map(back.compileProjection)
+    front.compileProjection(projections).map(back.compileProjection)
   }
 
   /**
@@ -40,10 +40,10 @@ class StandaloneExpressionCompiler(front: AbstractExpressionCompilerFront, back:
   def compileGrouping(orderedGroupings:  SlotConfiguration => Seq[(String, Expression, Boolean)]): Option[CompiledGroupingExpression] = {
     val orderedGroupingsBySlots = orderedGroupings(front.slots) // Apply the slot configuration to get the complete order
     val compiled = for {(k, v, _) <- orderedGroupingsBySlots
-                        c <- front.intermediateCompileExpression(v)} yield front.slots(k) -> c
+                        c <- front.compileExpression(v)} yield front.slots(k) -> c
     if (compiled.size < orderedGroupingsBySlots.size) None
     else {
-      val grouping = front.intermediateCompileGroupingExpression(compiled, "key")
+      val grouping = front.compileGroupingExpression(compiled, "key")
       Some(back.compileGrouping(grouping))
     }
   }

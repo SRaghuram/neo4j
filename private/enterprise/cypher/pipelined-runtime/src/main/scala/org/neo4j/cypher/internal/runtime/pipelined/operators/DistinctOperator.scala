@@ -148,11 +148,11 @@ class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate
   override protected def genOperate: IntermediateRepresentation = {
     val compiled = groupings.map {
       case (s, e) =>
-        s -> codeGen.intermediateCompileExpression(e).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $e"))
+        s -> codeGen.compileExpression(e).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $e"))
     }
     //note that this key ir read later also by project
     val keyVar = codeGen.namer.nextVariableName("groupingKey")
-    groupingExpression = codeGen.intermediateCompileGroupingExpression(compiled, keyVar)
+    groupingExpression = codeGen.compileGroupingExpression(compiled, keyVar)
 
     /**
       * val key = [computeKey]
