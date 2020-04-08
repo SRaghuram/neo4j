@@ -15,7 +15,7 @@ import java.io.StringReader;
 import org.neo4j.consistency.RecordType;
 import org.neo4j.consistency.report.InconsistencyMessageLogger;
 import org.neo4j.consistency.store.synthetic.IndexEntry;
-import org.neo4j.consistency.store.synthetic.LabelScanDocument;
+import org.neo4j.consistency.store.synthetic.TokenScanDocument;
 import org.neo4j.internal.index.label.EntityTokenRange;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.IndexPrototype;
@@ -60,7 +60,7 @@ class InconsistencyReportReaderTest
                 "Something wrong with index" );
         logger.error( RecordType.NODE, new NodeRecord( nodeNotInTheIndexId ), "Some index error",
                       IndexPrototype.forSchema( forLabel( 1, 2 ) ).withName( "index_" + indexId ).materialise( indexId ).userDescription( tokens ) );
-        logger.error( RecordType.LABEL_SCAN_DOCUMENT, new LabelScanDocument( new EntityTokenRange( 0, new long[0][] ) ),
+        logger.error( RecordType.LABEL_SCAN_DOCUMENT, new TokenScanDocument( new EntityTokenRange( 0, new long[0][] ) ),
                 "Some label index error", new NodeRecord( nodeNotInTheLabelIndexId ) );
         String text = out.toString();
 
