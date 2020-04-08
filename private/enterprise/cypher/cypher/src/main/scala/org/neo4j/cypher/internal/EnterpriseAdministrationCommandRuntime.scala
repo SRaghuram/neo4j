@@ -864,6 +864,11 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     )
   }
 
+  private def buildGraphCypher(name: Either[String, Parameter]) = {
+    val (key, value, converter) = getNameFields("nameScope", name, valueMapper = s => new NormalizedDatabaseName(s).name())
+    (key, value, converter, s"MATCH (d:Database {name: $$$key})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
+  }
+
   private def makeRevokeExecutionPlan(actionName: String, resource: ActionResource, database: GraphScope, qualifier: PrivilegeQualifier,
                                       roleName: Either[String, Parameter], revokeType: String, source: Option[ExecutionPlan],
                                       startOfErrorMessage: MapValue => String) = {

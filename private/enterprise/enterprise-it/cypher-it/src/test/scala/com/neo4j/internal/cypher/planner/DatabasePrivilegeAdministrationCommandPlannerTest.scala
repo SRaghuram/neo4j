@@ -88,13 +88,15 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
 
     test(s"REVOKE DENY $action") {
       // When
-      val plan = execute(s"EXPLAIN REVOKE DENY $action ON DEFAULT DATABASE FROM reader").executionPlanString()
+      val plan = execute(s"EXPLAIN REVOKE DENY $action ON DATABASES foo, bar FROM reader").executionPlanString()
 
       // Then
       plan should include(
         logPlan(
-          databasePrivilegePlan("RevokeDatabaseAction(DENIED)", action, allDatabases = false, "reader",
-            assertDbmsAdminPlan("REMOVE PRIVILEGE")
+          databasePrivilegePlan("RevokeDatabaseAction(DENIED)", action, databasePrivilegeArg("bar"), "reader",
+            databasePrivilegePlan("RevokeDatabaseAction(DENIED)", action, databasePrivilegeArg("foo"), "reader",
+              assertDbmsAdminPlan("REMOVE PRIVILEGE")
+            )
           )
         ).toString
       )

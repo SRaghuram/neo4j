@@ -166,6 +166,62 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     ))
   }
 
+  test("should grant and revoke multidatabase privileges on multiple databases") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
+    execute("CREATE ROLE role")
+
+    basicDatabasePrivileges.foreach {
+      case (command, action) =>
+        withClue(s"$command: \n") {
+          // WHEN
+          execute(s"GRANT $command ON DATABASE foo, bar TO role")
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+            granted(action).database("foo").role("role").map,
+            granted(action).database("bar").role("role").map,
+          ))
+
+          // WHEN
+          execute(s"REVOKE GRANT $command ON DATABASE foo, bar FROM role")
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+        }
+    }
+  }
+
+  test("should deny and revoke multidatabase privileges on multiple databases") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
+    execute("CREATE ROLE role")
+
+    basicDatabasePrivileges.foreach {
+      case (command, action) =>
+        withClue(s"$command: \n") {
+          // WHEN
+          execute(s"DENY $command ON DATABASE foo, bar TO role")
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+            denied(action).database("foo").role("role").map,
+            denied(action).database("bar").role("role").map,
+          ))
+
+          // WHEN
+          execute(s"REVOKE DENY $command ON DATABASE foo, bar FROM role")
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+        }
+    }
+  }
+
   test("should list database privilege on custom default database") {
     // GIVEN
     val config = Config.defaults()

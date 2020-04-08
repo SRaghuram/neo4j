@@ -129,6 +129,34 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     }
   }
 
+  test("should grant and revoke schema privileges on multiple databases") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
+    execute("CREATE ROLE role")
+
+    schemaPrivileges.foreach {
+      case (command, action) =>
+        withClue(s"$command: \n") {
+          // WHEN
+          execute(s"GRANT $command ON DATABASE foo, bar TO role")
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+            granted(action).database("foo").role("role").map,
+            granted(action).database("bar").role("role").map,
+          ))
+
+          // WHEN
+          execute(s"REVOKE GRANT $command ON DATABASE foo, bar FROM role")
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+        }
+    }
+  }
+
   test("should deny and revoke schema privileges") {
     // GIVEN
     setup()
@@ -162,6 +190,34 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     }
   }
 
+  test("should deny and revoke schema privileges on multiple databases") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
+    execute("CREATE ROLE role")
+
+    schemaPrivileges.foreach {
+      case (command, action) =>
+        withClue(s"$command: \n") {
+          // WHEN
+          execute(s"DENY $command ON DATABASE foo, bar TO role")
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+            denied(action).database("foo").role("role").map,
+            denied(action).database("bar").role("role").map,
+          ))
+
+          // WHEN
+          execute(s"REVOKE DENY $command ON DATABASE foo, bar FROM role")
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+        }
+    }
+  }
+
   test("should not revoke other index management privileges when revoking index management") {
     // GIVEN
     setup()
@@ -180,7 +236,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     ))
   }
 
-    test("should not revoke other constraint management privileges when revoking constraint management") {
+  test("should not revoke other constraint management privileges when revoking constraint management") {
     // GIVEN
     setup()
     execute("CREATE ROLE custom")
@@ -239,7 +295,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     ))
   }
 
-    test("Should revoke sub-privilege even if constraint management exists") {
+  test("Should revoke sub-privilege even if constraint management exists") {
     // Given
     setup()
     execute("CREATE ROLE custom")
@@ -260,7 +316,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     ))
   }
 
-    test("Should revoke sub-privilege even if name management exists") {
+  test("Should revoke sub-privilege even if name management exists") {
     // Given
     setup()
     execute("CREATE ROLE custom")

@@ -69,6 +69,33 @@ class FailureAdministrationCommandAcceptanceTest extends AdministrationCommandAc
     execute("SHOW ROLE wrongRole PRIVILEGES").toSet should be(Set.empty)
   }
 
+  test("should fail grant on existing and non-existing role") {
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("CREATE ROLE role")
+
+    val exception = the[InvalidArgumentsException] thrownBy {
+      execute("GRANT CREATE INDEX ON DATABASE foo TO role, role2")
+    }
+    exception.getMessage should include("Role does not exist")
+
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+  }
+
+  test("revoke on existing and non-existing role should revoke from existing") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("CREATE ROLE role")
+    execute("GRANT CREATE INDEX ON DATABASE foo TO role")
+
+    // WHEN
+    execute("REVOKE CREATE INDEX ON DATABASE foo FROM role, role2")
+
+    // THEN
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+  }
+
   // Tests for non-existing databases
 
   test("should give nothing when showing a non-existing database") {
@@ -131,6 +158,34 @@ class FailureAdministrationCommandAcceptanceTest extends AdministrationCommandAc
 
     // THEN
     execute("SHOW PRIVILEGES").toSet should be(defaultRolePrivileges)
+  }
+
+
+  test("should fail grant on existing and non-existing database") {
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("CREATE ROLE role")
+
+    val exception = the [DatabaseNotFoundException] thrownBy {
+    execute("GRANT CREATE INDEX ON DATABASE foo, bar TO role")
+    }
+    exception.getMessage should include("Database 'bar' does not exist")
+
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+  }
+
+  test("revoke on existing and non-existing database should revoke from existing") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("CREATE ROLE role")
+    execute("GRANT CREATE INDEX ON DATABASE foo TO role")
+
+    // WHEN
+    execute("REVOKE CREATE INDEX ON DATABASE foo, bar FROM role")
+
+    // THEN
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
   }
 
   // Test for security commands not on system database
