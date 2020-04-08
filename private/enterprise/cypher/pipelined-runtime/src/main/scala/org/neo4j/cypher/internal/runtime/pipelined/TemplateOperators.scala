@@ -291,7 +291,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               ctx.argumentSizes(plan.id),
               ctx.expressionCompiler)
 
-        case plan@plans.Expand(_, fromName, dir, types, to, relName, mode) if isHeadOperator || fuseOverPipelines =>
+        case plan@plans.Expand(_, fromName, dir, types, to, relName, mode, _) if isHeadOperator || fuseOverPipelines =>
           ctx: TemplateContext =>
             val fromSlot = ctx.slots(fromName)
             val relOffset = ctx.slots.getLongOffsetFor(relName)

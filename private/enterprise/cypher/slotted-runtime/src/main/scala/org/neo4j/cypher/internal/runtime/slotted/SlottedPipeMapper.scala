@@ -235,13 +235,13 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val runtimeColumns = createProjectionsForResult(columns, slots)
         ProduceResultSlottedPipe(source, runtimeColumns)(id)
 
-      case Expand(_, from, dir, types, to, relName, ExpandAll) =>
+      case Expand(_, from, dir, types, to, relName, ExpandAll, _) =>
         val fromSlot = slots(from)
         val relOffset = slots.getLongOffsetFor(relName)
         val toOffset = slots.getLongOffsetFor(to)
         ExpandAllSlottedPipe(source, fromSlot, relOffset, toOffset, dir, RelationshipTypes(types.toArray), slots)(id)
 
-      case Expand(_, from, dir, types, to, relName, ExpandInto) =>
+      case Expand(_, from, dir, types, to, relName, ExpandInto, _) =>
         val fromSlot = slots(from)
         val relOffset = slots.getLongOffsetFor(relName)
         val toSlot = slots(to)
