@@ -5,18 +5,21 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
 import com.neo4j.causalclustering.core.consensus.log.EntryRecord;
 import com.neo4j.causalclustering.core.consensus.log.LogPosition;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
-
-import java.io.IOException;
-
 import org.neo4j.cursor.CursorValue;
 import org.neo4j.cursor.IOCursor;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.io.memory.ByteBuffers;
+
+import static org.neo4j.io.fs.ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE;
 
 /**
  * A cursor for iterating over RAFT log entries starting at an index and until the end of the segment is met.
@@ -24,6 +27,7 @@ import org.neo4j.io.fs.StoreChannel;
  */
 class EntryRecordCursor implements IOCursor<EntryRecord>
 {
+    private final ByteBuffer buffer;
     private ReadAheadChannel<StoreChannel> bufferedReader;
 
     private final LogPosition position;
@@ -38,7 +42,8 @@ class EntryRecordCursor implements IOCursor<EntryRecord>
     EntryRecordCursor( Reader reader, ChannelMarshal<ReplicatedContent> contentMarshal,
             long currentIndex, long wantedIndex, SegmentFile segment ) throws IOException, EndOfStreamException
     {
-        this.bufferedReader = new ReadAheadChannel<>( reader.channel() );
+        this.buffer = ByteBuffers.allocateDirect( DEFAULT_READ_AHEAD_SIZE );
+        this.bufferedReader = new ReadAheadChannel<>( reader.channel(), buffer );
         this.reader = reader;
         this.contentMarshal = contentMarshal;
         this.segment = segment;
@@ -88,6 +93,7 @@ class EntryRecordCursor implements IOCursor<EntryRecord>
         }
 
         bufferedReader = null;
+        ByteBuffers.releaseBuffer( buffer );
         closed = true;
         segment.refCount().decrease();
 

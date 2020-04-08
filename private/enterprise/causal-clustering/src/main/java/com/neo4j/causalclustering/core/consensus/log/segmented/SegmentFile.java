@@ -5,24 +5,27 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
 import com.neo4j.causalclustering.core.consensus.log.EntryRecord;
 import com.neo4j.causalclustering.core.consensus.log.LogPosition;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
-
-import java.io.File;
-import java.io.IOException;
-
 import org.neo4j.cursor.EmptyIOCursor;
 import org.neo4j.cursor.IOCursor;
+import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.io.memory.ByteBuffers;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
+import static java.lang.Math.toIntExact;
 import static java.lang.String.format;
 
 /**
@@ -46,6 +49,7 @@ class SegmentFile implements AutoCloseable
     private final long version;
 
     private PhysicalFlushableChannel bufferedWriter;
+    private ByteBuffer writeBuffer;
 
     SegmentFile( FileSystemAbstraction fileSystem, File file, ReaderPool readerPool, long version,
             ChannelMarshal<ReplicatedContent> contentMarshal, LogProvider logProvider, SegmentHeader header )
@@ -128,7 +132,8 @@ class SegmentFile implements AutoCloseable
 
             StoreChannel channel = fileSystem.write( file );
             channel.position( channel.size() );
-            bufferedWriter = new PhysicalFlushableChannel( channel );
+            writeBuffer = ByteBuffers.allocateDirect( toIntExact( ByteUnit.kibiBytes( 512 ) ) );
+            bufferedWriter = new PhysicalFlushableChannel( channel, writeBuffer );
         }
         return bufferedWriter;
     }
@@ -155,9 +160,13 @@ class SegmentFile implements AutoCloseable
             {
                 log.error( "Failed to close writer for: " + file, e );
             }
-
-            bufferedWriter = null;
-            refCount.decrease();
+            finally
+            {
+                ByteBuffers.releaseBuffer( writeBuffer );
+                writeBuffer = null;
+                bufferedWriter = null;
+                refCount.decrease();
+            }
         }
     }
 

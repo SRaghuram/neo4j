@@ -5,15 +5,15 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import com.neo4j.causalclustering.core.state.storage.StateMarshal;
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
-
 import java.io.File;
 import java.io.IOException;
 
+import com.neo4j.causalclustering.core.state.storage.StateMarshal;
+import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.memory.BufferScope;
 
 public class StateRecoveryManager<STATE>
 {
@@ -86,7 +86,8 @@ public class StateRecoveryManager<STATE>
 
     private STATE readLastEntryFrom( File file ) throws IOException
     {
-        try ( ReadableChannel channel = new ReadAheadChannel<>( fileSystem.read( file ) ) )
+        try ( BufferScope bufferScope = new BufferScope( ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE );
+              ReadableChannel channel = new ReadAheadChannel<>( fileSystem.read( file ), bufferScope.buffer ) )
         {
             STATE result = null;
             STATE lastRead;

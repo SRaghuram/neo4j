@@ -5,19 +5,22 @@
  */
 package com.neo4j.causalclustering.core.state.storage;
 
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
-
 import java.io.File;
 import java.io.IOException;
 
+import com.neo4j.causalclustering.messaging.EndOfStreamException;
+import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
+import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FlushableChannel;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.memory.BufferScope;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+
+import static java.lang.Math.toIntExact;
 
 public class SimpleFileStorage<T> implements SimpleStorage<T>
 {
@@ -43,7 +46,8 @@ public class SimpleFileStorage<T> implements SimpleStorage<T>
     @Override
     public T readState() throws IOException
     {
-        try ( ReadableChannel channel = new ReadAheadChannel<>( fileSystem.read( file ) ) )
+        try ( BufferScope bufferScope = new BufferScope( ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE );
+              ReadableChannel channel = new ReadAheadChannel<>( fileSystem.read( file ), bufferScope.buffer ) )
         {
             return marshal.unmarshal( channel );
         }
@@ -63,7 +67,8 @@ public class SimpleFileStorage<T> implements SimpleStorage<T>
         }
         fileSystem.deleteFile( file );
 
-        try ( FlushableChannel channel = new PhysicalFlushableChannel( fileSystem.write( file ) ) )
+        try ( BufferScope bufferScope = new BufferScope( toIntExact( ByteUnit.kibiBytes( 512 ) ) );
+              FlushableChannel channel = new PhysicalFlushableChannel( fileSystem.write( file ), bufferScope.buffer ) )
         {
             marshal.marshal( state, channel );
         }

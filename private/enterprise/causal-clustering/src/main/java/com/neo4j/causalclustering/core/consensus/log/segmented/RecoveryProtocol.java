@@ -5,19 +5,19 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
-import com.neo4j.causalclustering.core.consensus.log.EntryRecord;
-import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
-
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.function.Function;
 
+import com.neo4j.causalclustering.core.consensus.log.EntryRecord;
+import com.neo4j.causalclustering.core.replication.ReplicatedContent;
+import com.neo4j.causalclustering.messaging.EndOfStreamException;
+import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import org.neo4j.cursor.IOCursor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
@@ -164,7 +164,8 @@ class RecoveryProtocol
     {
         try ( StoreChannel channel = fileSystem.read( file ) )
         {
-            return headerMarshal.unmarshal( new ReadAheadChannel<>( channel, SegmentHeader.CURRENT_RECORD_OFFSET ) );
+            ByteBuffer buffer = ByteBuffer.allocate( SegmentHeader.CURRENT_RECORD_OFFSET );
+            return headerMarshal.unmarshal( new ReadAheadChannel<>( channel, buffer ) );
         }
     }
 
@@ -176,7 +177,8 @@ class RecoveryProtocol
         try ( StoreChannel channel = fileSystem.write( file ) )
         {
             channel.position( 0 );
-            PhysicalFlushableChannel writer = new PhysicalFlushableChannel( channel, SegmentHeader.CURRENT_RECORD_OFFSET );
+            ByteBuffer buffer = ByteBuffer.allocate( SegmentHeader.CURRENT_RECORD_OFFSET );
+            PhysicalFlushableChannel writer = new PhysicalFlushableChannel( channel, buffer );
             headerMarshal.marshal( header, writer );
             writer.prepareForFlush().flush();
         }

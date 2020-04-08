@@ -5,19 +5,18 @@
  */
 package com.neo4j.causalclustering.catchup.tx;
 
-import org.apache.commons.lang3.SystemUtils;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.LongStream;
 
+import org.apache.commons.lang3.SystemUtils;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.helpers.collection.LongRange;
@@ -31,7 +30,6 @@ import org.neo4j.kernel.impl.api.TestCommand;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
-import org.neo4j.kernel.impl.transaction.log.LogVersionBridge;
 import org.neo4j.kernel.impl.transaction.log.LogVersionedStoreChannel;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionCursor;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
@@ -306,8 +304,7 @@ public class TransactionLogCatchUpWriterTest
     {
         long expectedTxId = fromTxId;
         LogVersionedStoreChannel versionedStoreChannel = logFiles.openForVersion( 0 );
-        try ( ReadableLogChannel channel =
-                      new ReadAheadLogChannel( versionedStoreChannel, LogVersionBridge.NO_MORE_CHANNELS, 1024 ) )
+        try ( ReadableLogChannel channel = new ReadAheadLogChannel( versionedStoreChannel ) )
         {
             try ( PhysicalTransactionCursor txCursor = new PhysicalTransactionCursor( channel, logEntryReader() ) )
             {

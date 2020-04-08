@@ -5,18 +5,21 @@
  */
 package com.neo4j.causalclustering.core.state.storage;
 
-import com.neo4j.causalclustering.core.state.CoreStateFiles;
-import com.neo4j.causalclustering.core.state.StateRecoveryManager;
-
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
+import com.neo4j.causalclustering.core.state.CoreStateFiles;
+import com.neo4j.causalclustering.core.state.StateRecoveryManager;
+import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FlushableChannel;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+
+import static java.lang.Math.toIntExact;
 
 public class DurableStateStorage<STATE> extends LifecycleAdapter implements StateStorage<STATE>
 {
@@ -65,7 +68,7 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
         if ( !fsa.fileExists( file ) )
         {
             fsa.mkdirs( file.getParentFile() );
-            try ( FlushableChannel channel = new PhysicalFlushableChannel( fsa.write( file ) ) )
+            try ( FlushableChannel channel = channelForFile( file ) )
             {
                 marshal.marshal( marshal.startState(), channel );
             }
@@ -146,7 +149,12 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
     private PhysicalFlushableChannel resetStoreFile( File nextStore ) throws IOException
     {
         fsa.truncate( nextStore, 0 );
-        return new PhysicalFlushableChannel( fsa.write( nextStore ) );
+        return channelForFile( nextStore );
     }
 
+    private PhysicalFlushableChannel channelForFile( File file ) throws IOException
+    {
+        ByteBuffer buffer = ByteBuffer.allocate( toIntExact( ByteUnit.kibiBytes( 512 ) ) );
+        return new PhysicalFlushableChannel( fsa.write( file ), buffer );
+    }
 }

@@ -5,20 +5,20 @@
  */
 package com.neo4j.tools.txlog;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.parallel.ResourceLock;
-import org.junit.jupiter.api.parallel.Resources;
-import org.mockito.Mockito;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.LongFunction;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
+import org.mockito.Mockito;
 import org.neo4j.function.ThrowingConsumer;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory;
@@ -862,10 +862,11 @@ class CheckTxLogsTest
             throws IOException
     {
         ensureLogExists( log );
+        ByteBuffer buf = ByteBuffer.allocate( 100 );
         try ( StoreChannel channel = fs.write( log );
                 LogVersionedStoreChannel versionedChannel = new PhysicalLogVersionedStoreChannel( channel, 0, (byte) 0, log,
                         getLogFiles().getChannelNativeAccessor() );
-              PhysicalFlushableChecksumChannel writableLogChannel = new PhysicalFlushableChecksumChannel( versionedChannel ) )
+              PhysicalFlushableChecksumChannel writableLogChannel = new PhysicalFlushableChecksumChannel( versionedChannel, buf ) )
         {
             long offset = channel.size();
             channel.position( offset );
