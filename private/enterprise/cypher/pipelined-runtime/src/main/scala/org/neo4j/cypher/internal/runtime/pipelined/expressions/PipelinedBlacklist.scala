@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.logical.plans.NestedPlanExpression
 import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
 import org.neo4j.cypher.internal.logical.plans.PartialSort
 import org.neo4j.cypher.internal.logical.plans.OrderedDistinct
+import org.neo4j.cypher.internal.logical.plans.PartialTop
 import org.neo4j.cypher.internal.logical.plans.ResolvedFunctionInvocation
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.LeveragedOrders
 import org.neo4j.exceptions.CantCompileQueryException
@@ -47,6 +48,10 @@ object PipelinedBlacklist {
 
         case _: PartialSort if parallelExecution =>
           _ + "PartialSort"
+
+        case _: PartialTop if parallelExecution =>
+          _ + "PartialTop"
+
       }
     if (unsupport.nonEmpty) {
       throw new CantCompileQueryException(s"Pipelined does not yet support ${unsupport.mkString("`", "`, `", "`")}, use another runtime.")

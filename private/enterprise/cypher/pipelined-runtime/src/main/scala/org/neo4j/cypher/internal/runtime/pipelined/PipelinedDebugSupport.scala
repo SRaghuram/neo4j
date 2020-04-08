@@ -86,7 +86,7 @@ object PipelinedDebugSupport {
 
   private def prettyStreamedData(streamedData: MorselData): Seq[String] = {
     Array(s"MorselData with argument row: ${streamedData.viewOfArgumentRow}",
-      "with downstream arg ids ${streamedData.argumentRowIdsForReducers.toSeq}") ++
+      s"with downstream arg ids ${streamedData.argumentRowIdsForReducers.toSeq}") ++
       streamedData.morsels.flatMap(morsel => prettyMorselWithHeader("", morsel)) ++
       (streamedData.argumentStream match {
         case EndOfEmptyStream => Array("EndOfEmptyStream")

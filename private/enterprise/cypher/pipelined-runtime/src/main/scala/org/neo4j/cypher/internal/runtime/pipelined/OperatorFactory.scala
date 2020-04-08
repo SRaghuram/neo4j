@@ -93,6 +93,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OrderedAggregationO
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OrderedDistinctOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.PartialSortOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.PartialTopOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProduceResultOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipCountFromCountStoreOperator
@@ -476,6 +477,26 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         TopOperator(WorkIdentity.fromPlan(plan),
           ordering,
           converters.toCommandExpression(id, limit)).reducer(argumentStateMapId, id)
+
+      case plans.PartialTop(_, alreadySortedPrefix, stillToSortSuffix, limit) =>
+        val prefixComparator = MorselSorting.createComparator(alreadySortedPrefix.map(translateColumnOrder(slots, _)))
+        val suffixComparator = MorselSorting.createComparator(stillToSortSuffix.map(translateColumnOrder(slots, _)))
+        val Seq(bufferAsmId, workCancellerAsmId) = executionGraphDefinition.argumentStateMaps.collect {
+          case argumentStateDef if argumentStateDef.planId == id => argumentStateDef.id
+        }
+
+        val applyPlanId = physicalPlan.applyPlans(id)
+        val argumentSlotOffset = slots.getArgumentLongOffsetFor(applyPlanId)
+
+        new PartialTopOperator(
+          bufferAsmId,
+          workCancellerAsmId,
+          argumentSlotOffset,
+          WorkIdentity.fromPlan(plan),
+          prefixComparator,
+          suffixComparator,
+          converters.toCommandExpression(id, limit),
+          id)
 
       case plans.Aggregation(_, groupingExpressions, aggregationExpression) if groupingExpressions.isEmpty =>
         val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStateBufferVariant].argumentStateMapId

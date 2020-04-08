@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.logical.plans.Distinct
 import org.neo4j.cypher.internal.logical.plans.Limit
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.OrderedDistinct
+import org.neo4j.cypher.internal.logical.plans.PartialTop
 import org.neo4j.cypher.internal.logical.plans.Skip
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.physicalplanning.FusedHead
@@ -52,6 +53,7 @@ class PipelineCompiler(operatorFactory: OperatorFactory,
   private def requiresUpstreamPipelinesToUseFilteringMorsel(plan: LogicalPlan): Boolean = plan match {
     case _: Limit => true // All upstreams from LIMIT need filtering morsels
     case _: Skip => true // All upstreams from SKIP need filtering morsels
+    case _: PartialTop => true
     case _ => false
   }
 
@@ -70,7 +72,7 @@ class PipelineCompiler(operatorFactory: OperatorFactory,
       p.middlePlans.exists(requiresUpstreamPipelinesToUseFilteringMorsel) ||
       (p.headPlan match {
         case FusedHead(fuser) => fuser.fusedPlans.exists(requiresUpstreamPipelinesToUseFilteringMorsel)
-        case _ => false
+        case InterpretedHead(plan) => requiresUpstreamPipelinesToUseFilteringMorsel(plan)
       })
 
     val headOperator =
