@@ -32,7 +32,7 @@ class FabricFragmenter(
     case ddl: ast.MultiGraphDDL => Errors.notSupported(ddl.name)
     case command: ast.AdministrationCommand =>
       Fragment.AdminCommand(systemUse, command)
-    case command: ast.Command      =>
+    case command: ast.SchemaCommand =>
       val use = command.useGraph.map(Use.Declared).getOrElse(defaultUse)
       Fragment.SchemaCommand(use, command)
   }

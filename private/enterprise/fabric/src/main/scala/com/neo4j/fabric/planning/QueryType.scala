@@ -10,7 +10,7 @@ import com.neo4j.fabric.util.Folded.Stop
 import org.neo4j.cypher.internal.ast.AdministrationCommand
 import org.neo4j.cypher.internal.ast.CallClause
 import org.neo4j.cypher.internal.ast.Clause
-import org.neo4j.cypher.internal.ast.Command
+import org.neo4j.cypher.internal.ast.SchemaCommand
 import org.neo4j.cypher.internal.ast.UnresolvedCall
 import org.neo4j.cypher.internal.ast.UpdateClause
 import org.neo4j.cypher.internal.util.ASTNode
@@ -33,11 +33,11 @@ object QueryType {
 
   def of(ast: ASTNode): QueryType =
     ast.folded(default)(merge) {
-      case _: UpdateClause          => Stop(Write)
-      case _: UnresolvedCall        => Stop(ReadPlusUnresolved)
-      case c: CallClause            => Stop(if (c.containsNoUpdates) Read else Write)
-      case _: Command               => Stop(Write)
-      case a: AdministrationCommand => Stop(if (a.isReadOnly) Read else Write)
+      case _: UpdateClause                => Stop(Write)
+      case _: UnresolvedCall              => Stop(ReadPlusUnresolved)
+      case c: CallClause                  => Stop(if (c.containsNoUpdates) Read else Write)
+      case _: SchemaCommand               => Stop(Write)
+      case a: AdministrationCommand       => Stop(if (a.isReadOnly) Read else Write)
     }
 
   def of(ast: Seq[Clause]): QueryType =

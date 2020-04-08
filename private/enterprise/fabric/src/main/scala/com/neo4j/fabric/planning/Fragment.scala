@@ -109,7 +109,7 @@ object Fragment {
 
   final case class SchemaCommand(
     use: Use,
-    command: ast.Command,
+    command: ast.SchemaCommand,
   ) extends Command {
     val description: Description = Description.CommandDesc(this, "Command")
     val queryType: QueryType = QueryType.of(command)
@@ -128,8 +128,8 @@ object Fragment {
 
   private def hasExecutableClauses(query: Statement) =
     query.folded(false)(_ || _) {
-      case clause: Clause => Folded.Stop(isExecutable(clause))
-      case _: ast.Command => Folded.Stop(true)
+      case clause: Clause               => Folded.Stop(isExecutable(clause))
+      case _: ast.SchemaCommand         => Folded.Stop(true)
       case _: ast.AdministrationCommand => Folded.Stop(true)
     }
 

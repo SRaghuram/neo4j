@@ -28,8 +28,8 @@ object StatementType {
 
   def of(statement: ast.Statement): StatementType =
     statement match {
-      case _: ast.Query => Query
-      case _: ast.Command => SchemaCommand
+      case _: ast.Query                 => Query
+      case _: ast.SchemaCommand         => SchemaCommand
       case _: ast.AdministrationCommand => AdminCommand
     }
 }
