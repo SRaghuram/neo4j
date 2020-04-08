@@ -73,11 +73,11 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DB_ACCESS
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.EXPRESSION_CURSORS
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.EXPRESSION_VARIABLES
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.CURSORS
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.EXPRESSION_VARIABLES
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.PARAMS
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.PARAMS
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
@@ -353,7 +353,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
             cast[CypherRow](INPUT_CURSOR),
             DB_ACCESS,
             PARAMS,
-            EXPRESSION_CURSORS,
+            CURSORS,
             EXPRESSION_VARIABLES)),
           invokeSideEffect(loadField(varExpandCursorField), method[VarExpandCursor, Unit, CursorPools]("enterWorkUnit"), CURSOR_POOL),
           invokeSideEffect(loadField(varExpandCursorField), method[VarExpandCursor, Unit, OperatorProfileEvent]("setTracer"), loadField(executionEventField)),

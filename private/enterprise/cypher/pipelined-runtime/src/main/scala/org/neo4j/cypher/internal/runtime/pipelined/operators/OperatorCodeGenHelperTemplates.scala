@@ -52,6 +52,7 @@ import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPool
@@ -165,18 +166,6 @@ object OperatorCodeGenHelperTemplates {
 
   val OUTPUT_MORSEL: IntermediateRepresentation =
     load("outputMorsel")
-
-  val DB_ACCESS: IntermediateRepresentation =
-    load("dbAccess")
-
-  val PARAMS: IntermediateRepresentation =
-    load("params")
-
-  val EXPRESSION_CURSORS: IntermediateRepresentation =
-    load("cursors")
-
-  val EXPRESSION_VARIABLES: IntermediateRepresentation =
-    load("expressionVariables")
 
   val EXECUTION_STATE: IntermediateRepresentation =
     load("executionState")
