@@ -5,6 +5,7 @@
  */
 package com.neo4j.fabric.planning
 
+import org.neo4j.cypher.CypherExecutionMode
 import org.neo4j.cypher.internal.QueryOptions
 import org.neo4j.cypher.internal.ast.Clause
 import org.neo4j.cypher.internal.ast.Query
@@ -46,9 +47,16 @@ object QueryRenderer {
     renderer.asString(statement)
 
   def render(statement: Statement, options: QueryOptions): String = {
+    val executionMode = renderExecutionMode(options.executionMode)
     val cypher = options.render.map(_ + NL).getOrElse("")
     val query = renderer.asString(statement)
-    cypher + query
+    executionMode + cypher + query
+  }
+
+  private def renderExecutionMode(executionMode: CypherExecutionMode): String = executionMode match {
+    case CypherExecutionMode.explain => "EXPLAIN "
+    case CypherExecutionMode.profile => "PROFILE "
+    case _ => ""
   }
 
   def pretty(expression: Expression): String =

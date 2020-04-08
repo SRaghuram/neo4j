@@ -274,7 +274,9 @@ public class FabricExecutor
                 {
                     FabricQuery.LocalQuery localQuery = plannerInstance.asLocal( fragment );
                     return runLocalQueryAt( local, transactionMode, localQuery.query(), parameters, input.records );
-                } else {
+                }
+                else
+                {
                     return input;
                 }
             }

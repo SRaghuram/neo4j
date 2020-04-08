@@ -9,7 +9,6 @@ import com.neo4j.fabric.planning.FabricPlan
 import com.neo4j.fabric.planning.QueryRenderer
 import com.neo4j.fabric.util.Errors
 import org.neo4j.cypher.CypherExecutionMode
-import org.neo4j.cypher.CypherUpdateStrategy
 import org.neo4j.cypher.CypherVersion
 import org.neo4j.cypher.internal.CypherConfiguration
 import org.neo4j.cypher.internal.NotificationWrapping
@@ -70,19 +69,15 @@ case class FabricFrontEnd(
       cypherConfig.queryCacheSize,
     )
 
-    private def assertValidExecutionType(options: QueryOptions): Unit =
-      executionType(options)
-
-    def executionType(options: QueryOptions): FabricPlan.ExecutionType = options.executionMode match {
+    def executionType(options: QueryOptions, singleGraphQuery: Boolean): FabricPlan.ExecutionType = options.executionMode match {
       case CypherExecutionMode.normal  => FabricPlan.Execute
       case CypherExecutionMode.explain => FabricPlan.Explain
-      case CypherExecutionMode.profile => Errors.notSupported("Query option: 'PROFILE'")
+      case CypherExecutionMode.profile if singleGraphQuery => FabricPlan.PROFILE
+      case CypherExecutionMode.profile => Errors.semantic("'PROFILE' not supported for multi graph queries")
     }
 
     def preParse(queryString: String): PreParsedQuery = {
-      val query = preParser.preParseQuery(queryString)
-      assertValidExecutionType(query.options)
-      query
+      preParser.preParseQuery(queryString)
     }
 
     def isPeriodicCommit(queryString: String): Boolean = {

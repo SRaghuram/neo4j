@@ -186,8 +186,6 @@ class ResultSummaryEndToEndTest
         expectedPlan.assertPlan( resultSummary.plan() );
     }
 
-    @Disabled( "Union is executed by fabric instead of Cypher runtime and therefore we get fabric plans." )
-    // TODO: crate a union profile test when this is resolved
     @Test
     void testLocalGraphUnionExplain()
     {
@@ -241,12 +239,12 @@ class ResultSummaryEndToEndTest
         assertNotNull( resultSummary.plan() );
 
         var expectedPlan =
-                plan("Leaf",
+                plan("Exec",
                         plan( "Apply",
-                                plan( "Leaf",
+                                plan( "Exec",
                                         plan( "Init" )
                                 ),
-                                plan( "Leaf",
+                                plan( "Exec",
                                         plan( "Init" )
                                 )
                         )

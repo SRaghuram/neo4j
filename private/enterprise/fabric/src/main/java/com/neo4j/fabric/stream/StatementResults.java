@@ -8,7 +8,6 @@ package com.neo4j.fabric.stream;
 import com.neo4j.fabric.executor.FabricException;
 import com.neo4j.fabric.executor.LocalExecutionSummary;
 import com.neo4j.fabric.stream.summary.EmptySummary;
-import com.neo4j.fabric.stream.summary.EmptySummary;
 import com.neo4j.fabric.stream.summary.Summary;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -292,7 +291,6 @@ public final class StatementResults
                     {
                         // ignore
                     }
-
 
                     if ( !summaryFuture.isDone() )
                     {

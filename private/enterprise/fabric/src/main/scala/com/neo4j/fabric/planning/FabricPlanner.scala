@@ -12,6 +12,8 @@ import com.neo4j.fabric.pipeline.FabricFrontEnd
 import com.neo4j.fabric.planning.FabricPlan.DebugOptions
 import com.neo4j.fabric.planning.FabricQuery.LocalQuery
 import com.neo4j.fabric.planning.FabricQuery.RemoteQuery
+import com.neo4j.fabric.planning.Fragment.Exec
+import com.neo4j.fabric.planning.Fragment.Init
 import org.neo4j.cypher.CypherExpressionEngineOption
 import org.neo4j.cypher.CypherRuntimeOption
 import org.neo4j.cypher.internal.CypherConfiguration
@@ -63,7 +65,7 @@ case class FabricPlanner(
         () => computePlan()
       )
       plan.copy(
-        executionType = frontend.preParsing.executionType(query.options))
+        executionType = frontend.preParsing.executionType(query.options, plan.singleGraphQuery))
     }
 
     private def computePlan(): FabricPlan = trace {
@@ -77,11 +79,12 @@ case class FabricPlanner(
       val stitching = FabricStitcher(query.statement, fabricContext, fabricContextName)
       val stitchedFragments = stitching.convert(fragments)
 
-      val singleGraphFragment = isSingleGraphFragment(fragments)
+      val singleGraphFragment = isSingleGraphFragment(stitchedFragments)
+
       FabricPlan(
         query = stitchedFragments,
         queryType = QueryType.recursive(stitchedFragments),
-        executionType = FabricPlan.Execute,
+        executionType = frontend.preParsing.executionType(query.options, singleGraphFragment),
         queryString = query.statement,
         debugOptions = DebugOptions.from(query.options.debugOptions),
         obfuscationMetadata = prepared.obfuscationMetadata(),
@@ -92,7 +95,7 @@ case class FabricPlanner(
 
     private def isSingleGraphFragment(fragment: Fragment): Boolean =
       fragment match {
-        case Leaf(_: Init, _, _) => true
+        case Exec(_: Init, _, _) => true
         case _ => false
       }
 

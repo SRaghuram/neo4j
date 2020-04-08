@@ -35,7 +35,6 @@ import org.neo4j.cypher.internal.ast.SingleQuery
 import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.tracing.TimingCompilationTracer
 import org.neo4j.cypher.internal.util.symbols.CTAny
-import org.neo4j.cypher.internal.util.symbols.CypherType
 import org.neo4j.exceptions.InvalidSemanticsException
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.MapValue
@@ -504,19 +503,18 @@ class FabricPlannerTest
         ))
     }
 
-    "disallow PROFILE" in {
-      "allow single graph PROFILE" in {
-        val q =
-          """PROFILE
-            |RETURN 1 AS x
-            |""".stripMargin
+    "allow single graph PROFILE" in {
+      val q =
+        """PROFILE
+          |RETURN 1 AS x
+          |""".stripMargin
 
-        plan(q, params)
-          .check(_.executionType.shouldEqual(FabricPlan.PROFILE))
-          .check(_.query.shouldEqual(
-            init(defaultUse).leaf(Seq(return_(literal(1).as("x"))), Seq("x"))
-          ))
-      }
+      plan(q, params)
+        .check(_.executionType.shouldEqual(FabricPlan.PROFILE))
+        .check(_.query.shouldEqual(
+          init(defaultUse).exec(query(return_(literal(1).as("x"))), Seq("x"))
+        ))
+    }
 
       "disallow multi graph PROFILE" in {
         val q =
@@ -529,8 +527,7 @@ class FabricPlannerTest
             |RETURN 1 AS x
             |""".stripMargin
 
-        the[InvalidSemanticsException].thrownBy(plan(q, params))
-          .check(_.getMessage.should(include("Query option: 'PROFILE' not supported in Fabric database")))
+        the[InvalidSemanticsException].thrownBy(plan(q, params, true))
           .check(_.getMessage.should(include("'PROFILE' not supported for multi graph queries")))
       }
 
