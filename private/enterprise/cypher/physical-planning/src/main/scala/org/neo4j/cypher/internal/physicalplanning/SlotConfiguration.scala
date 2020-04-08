@@ -87,8 +87,9 @@ class SlotConfiguration private(private val slots: mutable.Map[SlotConfiguration
 
   def apply(key: String): Slot = slots.apply(VariableSlotKey(key))
 
-  def nameOfLongSlot(offset: Int): Option[String] = slots.collectFirst {
-    case (VariableSlotKey(name), LongSlot(o, _, _)) if o == offset && !isAlias(name) => name
+  def nameOfSlot(offset: Int, longSlot: Boolean): Option[String] = slots.collectFirst {
+    case (VariableSlotKey(name), LongSlot(o, _, _)) if longSlot && o == offset && !isAlias(name) => name
+    case (VariableSlotKey(name), RefSlot(o, _, _)) if !longSlot && o == offset && !isAlias(name) => name
   }
 
   def filterSlots[U](f: ((SlotKey,Slot)) => Boolean): Iterable[Slot] = {

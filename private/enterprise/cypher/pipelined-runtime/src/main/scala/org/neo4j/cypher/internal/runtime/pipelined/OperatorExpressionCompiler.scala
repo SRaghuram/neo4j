@@ -32,6 +32,9 @@ import org.neo4j.codegen.api.IntermediateRepresentation.ternary
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter
+import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter.DEFAULT_NULLABLE
+import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter.DEFAULT_OFFSET_IS_FOR_LONG_SLOT
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.ReadableRow
@@ -58,9 +61,9 @@ import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
 import org.neo4j.internal.kernel.api.PropertyCursor
-import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
+import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
 
@@ -615,37 +618,43 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
 
   override protected def isLabelSetOnNode(labelToken: IntermediateRepresentation,
                                           offset: Int): IntermediateRepresentation = {
-    slots.nameOfLongSlot(offset).flatMap(cursorFor) match {
+    slots.nameOfSlot(offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT).flatMap(cursorFor) match {
       case Some(cursor) => cursor.hasLabel(labelToken)
-      case None => nodeHasLabel(getLongAt(offset), labelToken)
+      case None => nodeHasLabel(getNodeIdAt(offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT, DEFAULT_NULLABLE), labelToken)
     }
   }
 
-  override protected def getNodeProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation = {
-    slots.nameOfLongSlot(offset).flatMap(cursorFor) match {
+  override protected def getNodeProperty(propertyToken: IntermediateRepresentation,
+                                         offset: Int,
+                                         offsetIsForLongSlot: Boolean,
+                                         nullable: Boolean): IntermediateRepresentation = {
+    slots.nameOfSlot(offset, offsetIsForLongSlot).flatMap(cursorFor) match {
       case Some(cursor) => cursor.getProperty(propertyToken)
-      case None => nodeGetProperty(getLongAt(offset), propertyToken)
+      case None => nodeGetProperty(getNodeIdAt(offset, offsetIsForLongSlot, nullable), propertyToken)
     }
   }
 
   override protected def hasNodeProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation = {
-    slots.nameOfLongSlot(offset).flatMap(cursorFor) match {
+    slots.nameOfSlot(offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT).flatMap(cursorFor) match {
       case Some(cursor) => cursor.hasProperty(propertyToken)
-      case None => nodeHasProperty(getLongAt(offset), propertyToken)
+      case None => nodeHasProperty(getNodeIdAt(offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT, DEFAULT_NULLABLE), propertyToken)
     }
   }
 
-  override protected def getRelationshipProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation = {
-    slots.nameOfLongSlot(offset).flatMap(cursorFor) match {
+  override protected def getRelationshipProperty(propertyToken: IntermediateRepresentation,
+                                                 offset: Int,
+                                                 offsetIsForLongSlot: Boolean,
+                                                 nullable: Boolean): IntermediateRepresentation = {
+    slots.nameOfSlot(offset, offsetIsForLongSlot).flatMap(cursorFor) match {
       case Some(cursor) => cursor.getProperty(propertyToken)
-      case None => relationshipGetProperty(getLongAt(offset), propertyToken)
+      case None => relationshipGetProperty(getRelationshipIdAt(offset, offsetIsForLongSlot, nullable), propertyToken)
     }
   }
 
   override protected def hasRelationshipProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation = {
-    slots.nameOfLongSlot(offset).flatMap(cursorFor) match {
+    slots.nameOfSlot(offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT).flatMap(cursorFor) match {
       case Some(cursor) => cursor.hasProperty(propertyToken)
-      case None => relationshipHasProperty(getLongAt(offset), propertyToken)
+      case None => relationshipHasProperty(getRelationshipIdAt(offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT, DEFAULT_NULLABLE), propertyToken)
     }
   }
 
@@ -672,8 +681,8 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
    * accessed within the pipeline that always needs to be copied to the output context because a pipeline of an outer apply-nesting level may need them later on,
    * and a suffix range of n+1 to m arguments that are being accessed in this pipeline, and thus already declared as locals.
    * However, currently we copy the whole range from the input context, up to the first slot that was modified within this pipeline.
-   * If that range is very small, within a threshold, we use individual slot setter methods (e.g. [[CypherRow.setLongAt]]),
-   * otherwise we use the [[CypherRow.copyFrom]] method.
+   * If that range is very small, within a threshold, we use individual slot setter methods (e.g. [[WritableRow.setLongAt]]),
+   * otherwise we use the [[WritableRow.copyFrom]] method.
    *
    */
   def writeLocalsToSlots(): IntermediateRepresentation = {

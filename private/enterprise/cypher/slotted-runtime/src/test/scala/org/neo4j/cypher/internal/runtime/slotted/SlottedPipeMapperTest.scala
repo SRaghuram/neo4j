@@ -777,8 +777,8 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     val lhsSlots = pipe.left.asInstanceOf[ExpandAllSlottedPipe].slots
     val rhsSlots = pipe.right.asInstanceOf[ExpandAllSlottedPipe].slots
 
-    val lhsNodes = pipe.lhsOffsets.map(offset => lhsSlots.nameOfLongSlot(offset).get)
-    val rhsNodes = pipe.rhsOffsets.map(offset => rhsSlots.nameOfLongSlot(offset).get)
+    val lhsNodes = pipe.lhsOffsets.map(offset => lhsSlots.nameOfSlot(offset, longSlot = true).get)
+    val rhsNodes = pipe.rhsOffsets.map(offset => rhsSlots.nameOfSlot(offset, longSlot = true).get)
 
     for(i <- 0 until 6) {
       lhsNodes(i) should equal(rhsNodes(i))

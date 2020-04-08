@@ -135,6 +135,8 @@ import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter.DEFAULT_NULLABLE
+import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter.DEFAULT_OFFSET_IS_FOR_LONG_SLOT
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.physicalplanning.ast.GetDegreePrimitive
 import org.neo4j.cypher.internal.physicalplanning.ast.HasLabelsFromSlot
@@ -1485,7 +1487,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
     case NodeProperty(offset, token, _) =>
       val variableName = namer.nextVariableName()
       val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName,
-        getNodeProperty(constant(token), offset)))
+        getNodeProperty(constant(token), offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT, DEFAULT_NULLABLE)))
 
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -1497,7 +1499,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
       else {
         val variableName = namer.nextVariableName()
         val entityId = getEntityId(offsetIsForLongSlot, offset, entityType, nullable)
-        val (getFromStore, txStatePropertyGet, cursorVar) = callPropertyGet(entityType, constant(token), offset)
+        val (getFromStore, txStatePropertyGet, cursorVar) = callPropertyGet(entityType, constant(token), offset, offsetIsForLongSlot, nullable)
         def checkPropertyTxState(continuation: IntermediateRepresentation): IntermediateRepresentation = {
           if (readOnly) continuation
           else {
@@ -1546,7 +1548,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
       val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName,  block(
           condition(equal(loadField(f), constant(-1)))(
             setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
-          getNodeProperty(loadField(f), offset))))
+          getNodeProperty(loadField(f), offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT, DEFAULT_NULLABLE))))
 
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -1556,7 +1558,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
       val f = field[Int](namer.nextVariableName(), constant(-1))
       val variableName = namer.nextVariableName()
       val entityId = getEntityId(offsetIsForLongSlot, offset, entityType, nullable)
-      val (getFromStore, txStatePropertyGet, cursorVar) = callPropertyGet(entityType, loadField(f), offset)
+      val (getFromStore, txStatePropertyGet, cursorVar) = callPropertyGet(entityType, loadField(f), offset, offsetIsForLongSlot, nullable)
       def checkPropertyTxState(continuation: IntermediateRepresentation): IntermediateRepresentation = {
         if (readOnly) continuation
         else {
@@ -1624,7 +1626,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
     case RelationshipProperty(offset, token, _) =>
       val variableName = namer.nextVariableName()
       val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName,
-        getRelationshipProperty(constant(token), offset)))
+        getRelationshipProperty(constant(token), offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT, DEFAULT_NULLABLE)))
 
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -1636,7 +1638,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
       val lazySet = oneTime(declareAndAssign(typeRefOf[Value], variableName, block(
         condition(equal(loadField(f), constant(-1)))(
           setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
-        getRelationshipProperty(loadField(f), offset))))
+        getRelationshipProperty(loadField(f), offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT, DEFAULT_NULLABLE))))
 
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -1775,14 +1777,14 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
       Some(IntermediateExpression(loadRef, Seq.empty, Seq.empty, nullCheck, requireNullCheck = false))
 
     case IdFromSlot(offset) =>
-      val nameOfSlot = slots.nameOfLongSlot(offset)
+      val nameOfSlot = slots.nameOfSlot(offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT)
       val nullCheck = nameOfSlot.filter(n => slots(n).nullable).map(_ => equal(getLongAt(offset), constant(-1L))).toSet
       val value = invokeStatic(method[Values, LongValue, Long]("longValue"), getLongAt(offset))
 
       Some(IntermediateExpression(value, Seq.empty, Seq.empty, nullCheck))
 
     case LabelsFromSlot(offset) =>
-      val nameOfSlot = slots.nameOfLongSlot(offset)
+      val nameOfSlot = slots.nameOfSlot(offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT)
       val nullCheck = nameOfSlot.filter(n => slots(n).nullable).map(_ => equal(getLongAt(offset), constant(-1L))).toSet
 
       val value = invoke(DB_ACCESS, method[DbAccess, ListValue, Long, NodeCursor]("getLabelsForNode"), getLongAt(offset), NODE_CURSOR)
@@ -1790,7 +1792,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
       Some(IntermediateExpression(value, Seq.empty, Seq(vNODE_CURSOR), nullCheck))
 
     case RelationshipTypeFromSlot(offset) =>
-      val nameOfSlot = slots.nameOfLongSlot(offset)
+      val nameOfSlot = slots.nameOfSlot(offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT)
       val nullCheck = nameOfSlot.filter(n => slots(n).nullable).map(_ => equal(getLongAt(offset), constant(-1L))).toSet
 
       nameOfSlot.flatMap(cursorFor) match {
@@ -2328,6 +2330,14 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
 
   protected def getRefAt(offset: Int): IntermediateRepresentation
 
+  protected def getNodeIdAt(offset: Int, offsetIsLong: Boolean, nullable: Boolean): IntermediateRepresentation = {
+    getEntityId(offsetIsLong, offset, NODE_TYPE, nullable)
+  }
+
+  protected def getRelationshipIdAt(offset: Int, offsetIsLong: Boolean, nullable: Boolean): IntermediateRepresentation = {
+    getEntityId(offsetIsLong, offset, RELATIONSHIP_TYPE, nullable)
+  }
+
   protected def setRefAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation
 
   protected def setLongAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation
@@ -2338,11 +2348,11 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
 
   protected def isLabelSetOnNode(labelToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation
 
-  protected def getNodeProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation
+  protected def getNodeProperty(propertyToken: IntermediateRepresentation, offset: Int, offsetIsForLongSlot: Boolean, nullable: Boolean): IntermediateRepresentation
 
   protected def hasNodeProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation
 
-  protected def getRelationshipProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation
+  protected def getRelationshipProperty(propertyToken: IntermediateRepresentation, offset: Int, offsetIsForLongSlot: Boolean, nullable: Boolean): IntermediateRepresentation
 
   protected def hasRelationshipProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation
 
@@ -3188,12 +3198,17 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
     }
   }
 
-  private def callPropertyGet(entityType: EntityType, token: IntermediateRepresentation, offset: Int): (IntermediateRepresentation, Method, LocalVariable) = entityType match {
-    case NODE_TYPE =>
-      (getNodeProperty(token, offset), GET_TX_STATE_NODE_PROP, vNODE_CURSOR)
-    case RELATIONSHIP_TYPE =>
-      (getRelationshipProperty(token, offset), GET_TX_STATE_RELATIONSHIP_PROP, vRELATIONSHIP_CURSOR)
-  }
+  private def callPropertyGet(entityType: EntityType,
+                              token: IntermediateRepresentation,
+                              offset: Int,
+                              offsetIsForLongSlot: Boolean,
+                              nullable: Boolean): (IntermediateRepresentation, Method, LocalVariable) =
+    entityType match {
+      case NODE_TYPE =>
+        (getNodeProperty(token, offset, offsetIsForLongSlot, nullable), GET_TX_STATE_NODE_PROP, vNODE_CURSOR)
+      case RELATIONSHIP_TYPE =>
+        (getRelationshipProperty(token, offset, offsetIsForLongSlot, nullable), GET_TX_STATE_RELATIONSHIP_PROP, vRELATIONSHIP_CURSOR)
+    }
 
   private def callPropertyExists(entityType: EntityType) = entityType match {
     case NODE_TYPE =>
@@ -3289,28 +3304,34 @@ class DefaultExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, cod
   }
 
   override protected def isLabelSetOnNode(labelToken: IntermediateRepresentation,
-                                          offset: Int): IntermediateRepresentation =
+                                                                                  offset: Int): IntermediateRepresentation =
     invoke(DB_ACCESS,
            method[DbAccess, Boolean, Int, Long, NodeCursor]("isLabelSetOnNode"),
            labelToken,
-           getLongAt(offset),
+           getNodeIdAt(offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT, DEFAULT_NULLABLE),
            NODE_CURSOR)
 
-  override protected def getNodeProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
+  override protected def getNodeProperty(propertyToken: IntermediateRepresentation,
+                                         offset: Int,
+                                         offsetIsForLongSlot: Boolean,
+                                         nullable: Boolean): IntermediateRepresentation =
     invoke(DB_ACCESS, NODE_PROPERTY,
-           getLongAt(offset), propertyToken, NODE_CURSOR, PROPERTY_CURSOR, constant(true))
+      getNodeIdAt(offset, offsetIsForLongSlot, nullable), propertyToken, NODE_CURSOR, PROPERTY_CURSOR, constant(true))
 
   override protected def hasNodeProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
     invoke(DB_ACCESS, method[DbAccess, Boolean, Long, Int, NodeCursor, PropertyCursor]("nodeHasProperty"),
-           getLongAt(offset), propertyToken, NODE_CURSOR, PROPERTY_CURSOR)
+      getNodeIdAt(offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT, DEFAULT_NULLABLE), propertyToken, NODE_CURSOR, PROPERTY_CURSOR)
 
-  override protected def getRelationshipProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
+  override protected def getRelationshipProperty(propertyToken: IntermediateRepresentation,
+                                                 offset: Int,
+                                                 offsetIsForLongSlot: Boolean,
+                                                 nullable: Boolean): IntermediateRepresentation =
     invoke(DB_ACCESS, RELATIONSHIP_PROPERTY,
-           getLongAt(offset), propertyToken, RELATIONSHIP_CURSOR, PROPERTY_CURSOR, constant(true))
+      getRelationshipIdAt(offset, offsetIsForLongSlot, nullable), propertyToken, RELATIONSHIP_CURSOR, PROPERTY_CURSOR, constant(true))
 
   override protected def hasRelationshipProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
     invoke(DB_ACCESS, method[DbAccess, Boolean, Long, Int, RelationshipScanCursor, PropertyCursor]("relationshipHasProperty"),
-           getLongAt(offset), propertyToken, RELATIONSHIP_CURSOR, PROPERTY_CURSOR)
+      getRelationshipIdAt(offset, DEFAULT_OFFSET_IS_FOR_LONG_SLOT, DEFAULT_NULLABLE), propertyToken, RELATIONSHIP_CURSOR, PROPERTY_CURSOR)
 
   override protected def getProperty(key: String, container: IntermediateRepresentation): IntermediateRepresentation =
     invokeStatic(

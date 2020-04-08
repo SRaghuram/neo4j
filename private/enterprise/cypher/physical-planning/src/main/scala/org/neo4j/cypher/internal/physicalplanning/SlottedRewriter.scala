@@ -512,3 +512,20 @@ class SlottedRewriter(tokenContext: TokenContext) {
       false
   }
 }
+
+object SlottedRewriter {
+  /**
+   * Most expressions that are specialized by the SlottedRewriter only give benefits
+   * with long slots, so an expression containing only an offset without specification
+   * on whether it's for the ref or long slots, the offset should be interpreted as being
+   * a long slot offset.
+   */
+  val DEFAULT_OFFSET_IS_FOR_LONG_SLOT = true
+
+  /**
+   * Most specializations in the SlottedRewriter deal with slot nullability by wrapping
+   * the slot expression in a NullCheck(..), meaning that the specialized expression
+   * itself can assume the slot to not be nullable.
+   */
+  val DEFAULT_NULLABLE = false
+}
