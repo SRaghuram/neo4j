@@ -24,7 +24,7 @@ class InconsistentRecords
         RELATIONSHIP_GROUP,
         PROPERTY,
         SCHEMA_INDEX,
-        NODE_LABEL_RANGE
+        ENTITY_TOKEN_RANGE
         {
             @Override
             public long extractId( String line )
@@ -88,5 +88,13 @@ class InconsistentRecords
         {
             ids.computeIfAbsent( recordType, t -> LongSets.mutable.empty() ).add( recordId );
         }
+    }
+
+    @Override
+    public String toString()
+    {
+        return "InconsistentRecords{" +
+                "ids=" + ids +
+                '}';
     }
 }
