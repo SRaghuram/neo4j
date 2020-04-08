@@ -38,7 +38,6 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
 
   private type ResultsMap = util.LinkedHashMap[unorderedGroupings.KeyType, Array[AggregationFunction]]
   private case class Result(orderedGroupingKey: orderedGroupings.KeyType, resultsMap: ResultsMap)
-  private type ResultList = util.LinkedList[Result]
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
@@ -56,8 +55,8 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
 
   private class OrderedAggregationState(var lastSeenGroupingKey: orderedGroupings.KeyType,
                                         var resultsMap: ResultsMap,
-                                        var outstandingResults: ResultList) extends OperatorState {
-    def this() = this(null.asInstanceOf[orderedGroupings.KeyType], new ResultsMap, new ResultList)
+                                        var outstandingResults: Result) extends OperatorState {
+    def this() = this(null.asInstanceOf[orderedGroupings.KeyType], new ResultsMap, null)
 
     override def nextTasks(state: PipelinedQueryState,
                            operatorInput: OperatorInput,
@@ -118,14 +117,14 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
     override def processRemainingOutput(outputCursor: MorselWriteCursor): Unit =
       tryWriteOutstandingResults(outputCursor, queryState)
 
-    override def canContinue: Boolean = super.canContinue || !taskState.outstandingResults.isEmpty
+    override def canContinue: Boolean = super.canContinue || taskState.outstandingResults != null
 
     private def tryWriteOutstandingResults(outputCursor: MorselWriteCursor, queryState: QueryState): Unit = {
-      while (!taskState.outstandingResults.isEmpty && outputCursor.onValidRow()) {
-        val result = taskState.outstandingResults.getFirst
+      while (taskState.outstandingResults != null && outputCursor.onValidRow()) {
+        val result = taskState.outstandingResults
         val it = result.resultsMap.entrySet().iterator()
         if (!it.hasNext) {
-          taskState.outstandingResults.removeFirst()
+          taskState.outstandingResults = null
         } else {
           val entry = it.next()
           val unorderedGroupingKey = entry.getKey
@@ -146,7 +145,7 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
     }
 
     private def completeCurrentChunk(): Unit = {
-      taskState.outstandingResults.add(Result(taskState.lastSeenGroupingKey, taskState.resultsMap))
+      taskState.outstandingResults = Result(taskState.lastSeenGroupingKey, taskState.resultsMap)
       taskState.lastSeenGroupingKey = null.asInstanceOf[orderedGroupings.KeyType]
       taskState.resultsMap = new ResultsMap
     }
