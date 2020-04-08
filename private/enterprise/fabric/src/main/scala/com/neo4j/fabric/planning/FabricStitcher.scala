@@ -6,7 +6,6 @@
 package com.neo4j.fabric.planning
 
 import com.neo4j.fabric.eval.UseEvaluation
-import com.neo4j.fabric.planning.Ast.variable
 import com.neo4j.fabric.util.Rewritten.RewritingOps
 import org.neo4j.cypher.internal
 import org.neo4j.cypher.internal.ast.AliasedReturnItem

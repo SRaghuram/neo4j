@@ -58,7 +58,6 @@ class FabricPlannerTest
     with TableDrivenPropertyChecks {
 
   private def makeConfig(fabricDbName: String) = new FabricConfig(
-    true,
     new Database(
       new NormalizedDatabaseName(fabricDbName),
       util.Set.of(

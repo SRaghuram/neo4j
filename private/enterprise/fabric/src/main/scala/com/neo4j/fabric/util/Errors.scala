@@ -13,7 +13,6 @@ import org.neo4j.cypher.internal.ast.semantics.SemanticError
 import org.neo4j.cypher.internal.ast.semantics.SemanticErrorDef
 import org.neo4j.cypher.internal.util.ASTNode
 import org.neo4j.cypher.internal.util.InputPosition
-import org.neo4j.cypher.internal.util.symbols.CypherType
 import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.exceptions.DatabaseAdministrationException
 import org.neo4j.exceptions.EntityNotFoundException

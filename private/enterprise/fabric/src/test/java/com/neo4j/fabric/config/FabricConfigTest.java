@@ -16,10 +16,8 @@ import org.neo4j.configuration.helpers.SocketAddress;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FabricConfigTest
 {
@@ -40,7 +38,6 @@ class FabricConfigTest
                 .build();
 
         var fabricConfig = FabricConfig.from( config );
-        assertTrue( fabricConfig.isEnabled() );
 
         var database = fabricConfig.getDatabase();
         assertEquals( "mega", database.getName().name() );
@@ -63,7 +60,6 @@ class FabricConfigTest
                 .build();
 
         var fabricConfig = FabricConfig.from( config );
-        assertTrue( fabricConfig.isEnabled() );
 
         var database = fabricConfig.getDatabase();
         assertEquals( "mega", database.getName().name() );
@@ -176,7 +172,7 @@ class FabricConfigTest
                 .build();
 
         var fabricConfig = FabricConfig.from( config );
-        assertFalse( fabricConfig.isEnabled() );
+        assertNull( fabricConfig.getDatabase() );
     }
 
     @Test
@@ -189,7 +185,6 @@ class FabricConfigTest
                 .build();
 
         var fabricConfig = FabricConfig.from( config );
-        assertFalse( fabricConfig.isEnabled() );
         assertNull( fabricConfig.getDatabase() );
     }
 

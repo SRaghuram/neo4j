@@ -60,6 +60,7 @@ import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.dbms.procedures.ClusteredDatabaseStateProcedure;
 import com.neo4j.enterprise.edition.AbstractEnterpriseEditionModule;
+import com.neo4j.fabric.bootstrap.FabricServicesBootstrap;
 import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
@@ -77,6 +78,7 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -107,9 +109,11 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.recovery.RecoveryFacade;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 import org.neo4j.scheduler.Group;
 import org.neo4j.ssl.config.SslPolicyLoader;
+import org.neo4j.time.SystemNanoClock;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.status_throughput_window;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
@@ -143,8 +147,11 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     private final EnterpriseTemporaryDatabaseFactory temporaryDatabaseFactory;
     private final RaftSender raftSender;
 
+    private final FabricServicesBootstrap fabricServicesBootstrap;
+
     private CoreDatabaseFactory coreDatabaseFactory;
     private CoreTopologyService topologyService;
+    private LeaderService leaderService;
     private DatabaseStartAborter databaseStartAborter;
     private ClusteredDbmsReconcilerModule reconcilerModule;
 
@@ -208,6 +215,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         satisfyEnterpriseOnlyDependencies( this.globalModule );
 
         editionInvariants( globalModule, globalDependencies );
+
+        fabricServicesBootstrap = new FabricServicesBootstrap.Core( globalLife, globalDependencies, logService );
     }
 
     private void createCoreServers( LifeSupport life, DatabaseManager<?> databaseManager, FileSystemAbstraction fileSystem )
@@ -258,13 +267,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     @Override
     protected BaseRoutingProcedureInstaller createRoutingProcedureInstaller( GlobalModule globalModule, DatabaseManager<?> databaseManager )
     {
-        LeaderLocatorForDatabase leaderLocatorForDatabase = databaseId -> databaseManager
-                .getDatabaseContext( databaseId )
-                .map( DatabaseContext::dependencies )
-                .map( dep -> dep.resolveDependency( LeaderLocator.class ) );
-
         LogProvider logProvider = globalModule.getLogService().getInternalLogProvider();
-        LeaderService leaderService = new DefaultLeaderService( leaderLocatorForDatabase, topologyService, logProvider );
         Config config = globalModule.getGlobalConfig();
         return new CoreRoutingProcedureInstaller( topologyService, leaderService, databaseManager, config, logProvider );
     }
@@ -310,6 +313,13 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         topologyService = createTopologyService( myIdentity, databaseManager, reconcilerModule.reconciler() );
         dependencies.satisfyDependency( new GlobalTopologyStateDiagnosticProvider( topologyService ) );
         reconcilerModule.reconciler().registerListener( topologyService );
+
+        LeaderLocatorForDatabase leaderLocatorForDatabase = databaseId -> databaseManager
+                .getDatabaseContext( databaseId )
+                .map( DatabaseContext::dependencies )
+                .map( dep -> dep.resolveDependency( LeaderLocator.class ) );
+        leaderService = new DefaultLeaderService( leaderLocatorForDatabase, topologyService, logProvider );
+        dependencies.satisfyDependency( leaderService );
 
         RaftMessageLogger<MemberId> raftLogger = createRaftLogger( globalModule, myIdentity );
 
@@ -467,4 +477,19 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
                 sslPolicyLoader );
         return discoveryModule.topologyService();
     }
+
+    @Override
+    public void bootstrapFabricServices()
+    {
+        fabricServicesBootstrap.bootstrapServices();
+    }
+
+    @Override
+    public BoltGraphDatabaseManagementServiceSPI createBoltDatabaseManagementServiceProvider( Dependencies dependencies,
+            DatabaseManagementService managementService, Monitors monitors, SystemNanoClock clock, LogService logService )
+    {
+        var kernelDatabaseManagementService = super.createBoltDatabaseManagementServiceProvider(dependencies, managementService, monitors, clock, logService);
+        return fabricServicesBootstrap.createBoltDatabaseManagementServiceProvider( kernelDatabaseManagementService, managementService, monitors, clock );
+    }
+
 }

@@ -6,7 +6,6 @@
 package com.neo4j;
 
 import com.neo4j.fabric.eval.CatalogManager;
-import com.neo4j.fabric.eval.UseEvaluation;
 import com.neo4j.fabric.localdb.FabricDatabaseManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -97,7 +96,7 @@ class FabricDatabaseManagementTest
 
         createServer( "mega" );
 
-        assertThat( logProvider ).forClass( FabricDatabaseManager.class )
+        assertThat( logProvider ).forClass( FabricDatabaseManager.Single.class )
                 .forLevel( INFO ).containsMessages( "Creating Fabric virtual database '%s'", "mega" );
 
         try ( var tx = openSystemDbTransaction() )
@@ -113,7 +112,7 @@ class FabricDatabaseManagementTest
 
         createServer( "giga" );
 
-        assertThat( logProvider ).forClass( FabricDatabaseManager.class ).forLevel( INFO )
+        assertThat( logProvider ).forClass( FabricDatabaseManager.Single.class ).forLevel( INFO )
                 .containsMessageWithArguments( "Creating Fabric virtual database '%s'", "giga" )
                 .containsMessageWithArguments( "Setting Fabric virtual database '%s' status to offline", "mega" );
 
@@ -134,7 +133,7 @@ class FabricDatabaseManagementTest
 
         createServer( null );
 
-        assertThat( logProvider ).forClass( FabricDatabaseManager.class ).forLevel( INFO )
+        assertThat( logProvider ).forClass( FabricDatabaseManager.Single.class ).forLevel( INFO )
                             .containsMessageWithArguments( "Setting Fabric virtual database '%s' status to offline", "mega" )
                             .containsMessageWithArguments( "Setting Fabric virtual database '%s' status to offline", "giga" )
                             .doesNotContainMessage( "Creating Fabric virtual database" );
@@ -156,7 +155,7 @@ class FabricDatabaseManagementTest
 
         createServer( "mega" );
 
-        assertThat( logProvider ).forClass( FabricDatabaseManager.class ).forLevel( INFO )
+        assertThat( logProvider ).forClass( FabricDatabaseManager.Single.class ).forLevel( INFO )
                 .containsMessageWithArguments( "Setting Fabric virtual database '%s' status to online", "mega" )
                 .containsMessageWithArguments( "Setting Fabric virtual database '%s' status to offline", "giga" )
                 .containsMessageWithArguments( "Using existing Fabric virtual database '%s'", "mega" )

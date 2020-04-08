@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -34,21 +35,17 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Transaction;
-import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.ClientException;
-import org.neo4j.driver.summary.QueryType;
-import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.driver.types.Node;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
-import org.neo4j.util.FeatureToggles;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 import static org.neo4j.internal.helpers.collection.Iterables.stream;
 
+@ExtendWith( FabricEverywhereExtension.class )
 class FabricByDefaultTest
 {
 
@@ -62,9 +59,6 @@ class FabricByDefaultTest
     @BeforeAll
     static void beforeAll() throws KernelException
     {
-
-        FeatureToggles.set( FabricDatabaseManager.class, FabricDatabaseManager.FABRIC_BY_DEFAULT_FLAG_NAME, true );
-
         var configProperties = Map.of(
                 "fabric.database.name", "fabric",
                 "fabric.graph.0.uri", "neo4j://dummy:1234",

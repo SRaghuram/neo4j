@@ -96,6 +96,10 @@ public class FabricLocalExecutor
                 return existingTx.fabricKernelTransaction;
             }
 
+            // it is important to try to get the facade before handling bookmarks
+            // Unlike the bookmark logic, this will fail gracefully if the database is not available
+            var databaseFacade = getDatabaseFacade( location );
+
             bookmarkManager.awaitUpToDate( location );
             return kernelTransactions.computeIfAbsent( location.getGraphId(), locationId ->
             {
@@ -104,21 +108,21 @@ public class FabricLocalExecutor
                 case DEFINITELY_WRITE:
                     return compositeTransaction.startWritingTransaction( location, () ->
                     {
-                        var tx = beginKernelTx( location, AccessMode.WRITE, parentQuery );
+                        var tx = beginKernelTx( databaseFacade, AccessMode.WRITE, parentQuery );
                         return new KernelTxWrapper( tx, bookmarkManager, location );
                     } );
 
                 case MAYBE_WRITE:
                     return compositeTransaction.startReadingTransaction( location, () ->
                     {
-                        var tx = beginKernelTx( location, AccessMode.WRITE, parentQuery );
+                        var tx = beginKernelTx( databaseFacade, AccessMode.WRITE, parentQuery );
                         return new KernelTxWrapper( tx, bookmarkManager, location );
                     } );
 
                 case DEFINITELY_READ:
                     return compositeTransaction.startReadingOnlyTransaction( location, () ->
                     {
-                        var tx = beginKernelTx( location, AccessMode.READ, parentQuery );
+                        var tx = beginKernelTx( databaseFacade, AccessMode.READ, parentQuery );
                         return new KernelTxWrapper( tx, bookmarkManager, location );
                     } );
                 default:
@@ -135,18 +139,8 @@ public class FabricLocalExecutor
             }
         }
 
-        private FabricKernelTransaction beginKernelTx( Location.Local location, AccessMode accessMode, ExecutingQuery parentQuery )
+        private FabricKernelTransaction beginKernelTx( GraphDatabaseFacade databaseFacade, AccessMode accessMode, ExecutingQuery parentQuery )
         {
-            GraphDatabaseFacade databaseFacade;
-            try
-            {
-                databaseFacade = dbms.getDatabase( location.getDatabaseName() );
-            }
-            catch ( UnavailableException e )
-            {
-                throw new FabricException( Status.Database.DatabaseUnavailable, e );
-            }
-
             var dependencyResolver = databaseFacade.getDependencyResolver();
             var executionEngine = dependencyResolver.resolveDependency( ExecutionEngine.class );
 
@@ -156,6 +150,18 @@ public class FabricLocalExecutor
             var transactionalContextFactory = Neo4jTransactionalContextFactory.create( queryService );
 
             return new FabricKernelTransaction( parentQuery,executionEngine, transactionalContextFactory, internalTransaction, config );
+        }
+
+        private GraphDatabaseFacade getDatabaseFacade( Location.Local location )
+        {
+            try
+            {
+                return dbms.getDatabase( location.getDatabaseName() );
+            }
+            catch ( UnavailableException e )
+            {
+                throw new FabricException( Status.Database.DatabaseUnavailable, e );
+            }
         }
 
         private InternalTransaction beginInternalTransaction( GraphDatabaseFacade databaseFacade, FabricTransactionInfo transactionInfo )
@@ -194,7 +200,7 @@ public class FabricLocalExecutor
 
         private LoginContext maybeRestrictLoginContext( EnterpriseLoginContext originalContext, String databaseName )
         {
-            boolean isConfiguredFabricDatabase = dbms.isConfiguredFabricDatabase( databaseName );
+            boolean isConfiguredFabricDatabase = dbms.isFabricDatabase( databaseName );
             return isConfiguredFabricDatabase
                    ? new FabricLocalLoginContext( originalContext )
                    : transactionInfo.getLoginContext();

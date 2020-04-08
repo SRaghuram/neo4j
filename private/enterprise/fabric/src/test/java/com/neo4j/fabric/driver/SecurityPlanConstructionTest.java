@@ -42,7 +42,7 @@ class SecurityPlanConstructionTest
 
         var fabricConfig = FabricConfig.from( config );
         var sslLoader = SslPolicyLoader.create( config, NullLogProvider.nullLogProvider() );
-        var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, sslLoader );
+        var driverConfigFactory = new ExternalDriverConfigFactory( fabricConfig, config, sslLoader );
 
         var securityPlan = driverConfigFactory.createSecurityPlan( new Location.Remote.External( 0, null, null, null ) );
 
@@ -65,7 +65,7 @@ class SecurityPlanConstructionTest
 
         var fabricConfig = FabricConfig.from( config );
         var sslLoader = SslPolicyLoader.create( config, NullLogProvider.nullLogProvider() );
-        var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, sslLoader );
+        var driverConfigFactory = new ExternalDriverConfigFactory( fabricConfig, config, sslLoader );
 
         var securityPlan = driverConfigFactory.createSecurityPlan( new Location.Remote.External( 0, null, null, null ) );
 
@@ -92,7 +92,7 @@ class SecurityPlanConstructionTest
 
         var fabricConfig = FabricConfig.from( config );
         var sslLoader = SslPolicyLoader.create( config, NullLogProvider.nullLogProvider() );
-        var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, sslLoader );
+        var driverConfigFactory = new ExternalDriverConfigFactory( fabricConfig, config, sslLoader );
 
         var securityPlanForGraph0 = driverConfigFactory.createSecurityPlan( new Location.Remote.External( 0, null, null, null ) );
 

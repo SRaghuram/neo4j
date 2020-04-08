@@ -5,6 +5,8 @@
  */
 package com.neo4j.fabric.config;
 
+import com.neo4j.fabric.driver.DriverConfigFactory;
+
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -151,7 +153,10 @@ public class FabricSettings implements SettingsDeclaration
             .build();
 
     @Description( "Determines which driver API will be used. ASYNC must be used when the remote instance is 3.5" )
-    public static final Setting<DriverApi> driverApi = newBuilder( "fabric." + DRIVER_API, ofEnum(DriverApi.class), DriverApi.RX ).build();
+    public static final Setting<DriverConfigFactory.DriverApi> driverApi = newBuilder( "fabric." + DRIVER_API,
+            ofEnum(DriverConfigFactory.DriverApi.class),
+            DriverConfigFactory.DriverApi.RX )
+            .build();
 
     @ServiceProvider
     public static class GraphSetting extends GroupSetting
@@ -177,7 +182,10 @@ public class FabricSettings implements SettingsDeclaration
         public final Setting<Duration> driverMaxConnectionLifetime = getBuilder( DRIVER_MAX_CONNECTION_LIFETIME, DURATION, null ).build();
         public final Setting<Duration> driverConnectionAcquisitionTimeout = getBuilder( DRIVER_CONNECTION_ACQUISITION_TIMEOUT, DURATION, null ).build();
         public final Setting<Duration> driverConnectTimeout = getBuilder( DRIVER_CONNECT_TIMEOUT, DURATION, null ).build();
-        public final Setting<DriverApi> driverApi = getBuilder( DRIVER_API, ofEnum( DriverApi.class ), null ).build();
+        public final Setting<DriverConfigFactory.DriverApi> driverApi = getBuilder( DRIVER_API,
+                ofEnum( DriverConfigFactory.DriverApi.class ),
+                null )
+                .build();
 
         @Description( "SSL for Fabric drivers is configured using 'fabric' SSL policy." +
                 "This setting can be used to instruct the driver not to use SSL even though 'fabric' SSL policy is configured." +
@@ -204,11 +212,5 @@ public class FabricSettings implements SettingsDeclaration
         {
             return "fabric.graph";
         }
-    }
-
-    public enum DriverApi
-    {
-        RX,
-        ASYNC
     }
 }

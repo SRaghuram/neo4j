@@ -7,11 +7,9 @@ package com.neo4j.fabric.eval
 
 import java.util.function.Supplier
 
-import com.neo4j.fabric.executor.FabricException
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.dbms.database.DatabaseContext
 import org.neo4j.dbms.database.DatabaseManager
-import org.neo4j.kernel.api.exceptions.Status
 import org.neo4j.kernel.database.NamedDatabaseId
 
 import scala.compat.java8.OptionConverters.RichOptionalGeneric

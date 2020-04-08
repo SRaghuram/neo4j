@@ -18,17 +18,7 @@ import org.neo4j.cypher.internal.CypherConfiguration
 import org.neo4j.cypher.internal.FullyParsedQuery
 import org.neo4j.cypher.internal.PreParsedQuery
 import org.neo4j.cypher.internal.QueryOptions
-import org.neo4j.cypher.internal.ast.Clause
-import org.neo4j.cypher.internal.ast.Query
-import org.neo4j.cypher.internal.ast.QueryPart
-import org.neo4j.cypher.internal.ast.SingleQuery
-import org.neo4j.cypher.internal.ast.SubQuery
-import org.neo4j.cypher.internal.ast.UnionAll
-import org.neo4j.cypher.internal.ast.UnionDistinct
 import org.neo4j.cypher.internal.planner.spi.ProcedureSignatureResolver
-import org.neo4j.cypher.internal.util.ASTNode
-import org.neo4j.cypher.internal.util.InputPosition
-import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.Notification
 import org.neo4j.monitoring.Monitors
 import org.neo4j.values.virtual.MapValue

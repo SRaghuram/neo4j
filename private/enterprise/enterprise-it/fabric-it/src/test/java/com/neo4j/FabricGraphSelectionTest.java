@@ -5,16 +5,15 @@
  */
 package com.neo4j;
 
-import com.neo4j.fabric.localdb.FabricDatabaseManager;
 import com.neo4j.utils.DriverUtils;
 import com.neo4j.utils.ProxyFunctions;
 import com.neo4j.utils.ShardFunctions;
-import com.neo4j.utils.StdoutLogProvider;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.List;
 import java.util.Map;
@@ -22,7 +21,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
@@ -32,16 +30,15 @@ import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
-import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
-import org.neo4j.util.FeatureToggles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 
-public class FabricGraphSelectionTest
+@ExtendWith( FabricEverywhereExtension.class )
+class FabricGraphSelectionTest
 {
 
     private static Driver mainDriver;
@@ -57,9 +54,6 @@ public class FabricGraphSelectionTest
     @BeforeAll
     static void beforeAll() throws KernelException
     {
-
-        FeatureToggles.set( FabricDatabaseManager.class, FabricDatabaseManager.FABRIC_BY_DEFAULT_FLAG_NAME, true );
-
         extA = Neo4jBuilders.newInProcessBuilder().withProcedure( ShardFunctions.class ).build();
 
         var configProperties = Map.of(

@@ -18,16 +18,11 @@ import com.neo4j.dbms.StandaloneDbmsReconcilerModule;
 import com.neo4j.dbms.database.EnterpriseMultiDatabaseManager;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.fabric.auth.FabricAuthManagerWrapper;
-import com.neo4j.fabric.bolt.BoltFabricDatabaseManagementService;
-import com.neo4j.fabric.bookmark.LocalGraphTransactionIdTracker;
-import com.neo4j.fabric.bookmark.TransactionBookmarkManagerFactory;
 import com.neo4j.fabric.bootstrap.FabricServicesBootstrap;
 import com.neo4j.fabric.config.FabricConfig;
-import com.neo4j.fabric.executor.FabricExecutor;
 import com.neo4j.fabric.localdb.FabricDatabaseManager;
 import com.neo4j.fabric.localdb.FabricSystemGraphInitializer;
 import com.neo4j.fabric.routing.FabricRoutingProcedureInstaller;
-import com.neo4j.fabric.transaction.TransactionManager;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
@@ -47,12 +42,8 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
-import org.neo4j.bolt.dbapi.BoltGraphDatabaseServiceSPI;
-import org.neo4j.bolt.dbapi.CustomBookmarkFormatParser;
 import org.neo4j.bolt.txtracking.DefaultReconciledTransactionTracker;
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
-import org.neo4j.bolt.txtracking.SimpleReconciledTransactionTracker;
-import org.neo4j.bolt.txtracking.TransactionIdTracker;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
@@ -60,7 +51,6 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.cypher.internal.javacompat.EnterpriseCypherEngineProvider;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
@@ -75,7 +65,6 @@ import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
-import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
@@ -105,8 +94,8 @@ import static org.neo4j.token.api.TokenHolder.TYPE_RELATIONSHIP_TYPE;
 public class EnterpriseEditionModule extends CommunityEditionModule implements AbstractEnterpriseEditionModule
 {
     private final ReconciledTransactionTracker reconciledTxTracker;
-    private final FabricDatabaseManager fabricDatabaseManager;
     private final FabricServicesBootstrap fabricServicesBootstrap;
+    private final Dependencies dependencies;
     private DatabaseStartAborter databaseStartAborter;
 
     public EnterpriseEditionModule( GlobalModule globalModule )
@@ -117,11 +106,12 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     protected EnterpriseEditionModule( GlobalModule globalModule, Dependencies dependencies  )
     {
         super( globalModule );
+        this.dependencies = dependencies;
+
         satisfyEnterpriseOnlyDependencies( globalModule );
         ioLimiter = new ConfigurableIOLimiter( globalModule.getGlobalConfig() );
         reconciledTxTracker = new DefaultReconciledTransactionTracker( globalModule.getLogService() );
-        fabricServicesBootstrap = new FabricServicesBootstrap( globalModule.getGlobalLife(), dependencies, globalModule.getLogService() );
-        fabricDatabaseManager = dependencies.resolveDependency( FabricDatabaseManager.class );
+        fabricServicesBootstrap = new FabricServicesBootstrap.Single( globalModule.getGlobalLife(), dependencies, globalModule.getLogService() );
         SettingsWhitelist settingsWhiteList = new SettingsWhitelist( globalModule.getGlobalConfig() );
         dependencies.satisfyDependency( settingsWhiteList );
     }
@@ -217,6 +207,8 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     @Override
     public SystemGraphInitializer createSystemGraphInitializer( GlobalModule globalModule, DatabaseManager<?> databaseManager )
     {
+        var fabricDatabaseManager = dependencies.resolveDependency( FabricDatabaseManager.class );
+
         SystemGraphInitializer initializer = tryResolveOrCreate( SystemGraphInitializer.class, globalModule.getExternalDependencyResolver(),
                 () -> new FabricSystemGraphInitializer( databaseManager, globalModule.getGlobalConfig(), fabricDatabaseManager ) );
         return globalModule.getGlobalDependencies().satisfyDependency( globalModule.getGlobalLife().add( initializer ) );
@@ -254,7 +246,8 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         ConnectorPortRegister portRegister = globalModule.getConnectorPortRegister();
         Config config = globalModule.getGlobalConfig();
         LogProvider logProvider = globalModule.getLogService().getInternalLogProvider();
-        FabricConfig fabricConfig = globalModule.getGlobalDependencies().resolveDependency( FabricConfig.class );
+        var fabricConfig = dependencies.resolveDependency( FabricConfig.class );
+        var fabricDatabaseManager = dependencies.resolveDependency( FabricDatabaseManager.class );
         return new FabricRoutingProcedureInstaller( databaseManager, portRegister, config, fabricDatabaseManager, fabricConfig, logProvider );
     }
 
@@ -262,9 +255,9 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     public AuthManager getBoltAuthManager( DependencyResolver dependencyResolver )
     {
         AuthManager authManager = super.getBoltAuthManager( dependencyResolver );
-        var fabricConfig = dependencyResolver.resolveDependency( FabricConfig.class );
+        var fabricDatabaseManager = dependencyResolver.resolveDependency( FabricDatabaseManager.class );
 
-        if ( !fabricConfig.isEnabled() )
+        if ( !fabricDatabaseManager.isFabricDatabasePresent() )
         {
             return authManager;
         }
@@ -291,54 +284,17 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     }
 
     @Override
+    public void bootstrapFabricServices()
+    {
+        fabricServicesBootstrap.bootstrapServices();
+    }
+
+    @Override
     public BoltGraphDatabaseManagementServiceSPI createBoltDatabaseManagementServiceProvider( Dependencies dependencies,
             DatabaseManagementService managementService, Monitors monitors, SystemNanoClock clock, LogService logService )
     {
-        FabricConfig config = dependencies.resolveDependency( FabricConfig.class );
         var kernelDatabaseManagementService = super.createBoltDatabaseManagementServiceProvider(dependencies, managementService, monitors, clock, logService);
-        if ( !config.isEnabled() )
-        {
-            return kernelDatabaseManagementService;
-        }
-
-        FabricExecutor fabricExecutor = dependencies.resolveDependency( FabricExecutor.class );
-        TransactionManager transactionManager = dependencies.resolveDependency( TransactionManager.class );
-        FabricDatabaseManager fabricDatabaseManager = dependencies.resolveDependency( FabricDatabaseManager.class );
-
-        var serverConfig = dependencies.resolveDependency( Config.class );
-        var bookmarkTimeout =  serverConfig.get( GraphDatabaseSettings.bookmark_ready_timeout );
-        var reconciledTxTracker = new SimpleReconciledTransactionTracker( managementService, logService );
-
-        var transactionIdTracker = new TransactionIdTracker( managementService, reconciledTxTracker, monitors, clock );
-
-        var databaseManager = (DatabaseManager<DatabaseContext>) dependencies.resolveDependency( DatabaseManager.class );
-        var databaseIdRepository = databaseManager.databaseIdRepository();
-        var transactionBookmarkManagerFactory = dependencies.resolveDependency( TransactionBookmarkManagerFactory.class );
-
-        var localGraphTransactionIdTracker = new LocalGraphTransactionIdTracker( transactionIdTracker, databaseIdRepository, bookmarkTimeout );
-        var fabricDatabaseManagementService = new BoltFabricDatabaseManagementService( fabricExecutor, config, transactionManager, fabricDatabaseManager,
-                localGraphTransactionIdTracker, transactionBookmarkManagerFactory );
-
-        return new BoltGraphDatabaseManagementServiceSPI()
-        {
-
-            @Override
-            public BoltGraphDatabaseServiceSPI database( String databaseName ) throws UnavailableException, DatabaseNotFoundException
-            {
-                if ( fabricDatabaseManager.isFabricDatabase( databaseName ) )
-                {
-                    return fabricDatabaseManagementService.database( databaseName );
-                }
-
-                return kernelDatabaseManagementService.database( databaseName );
-            }
-
-            @Override
-            public Optional<CustomBookmarkFormatParser> getCustomBookmarkFormatParser()
-            {
-                return fabricDatabaseManagementService.getCustomBookmarkFormatParser();
-            }
-        };
+        return fabricServicesBootstrap.createBoltDatabaseManagementServiceProvider( kernelDatabaseManagementService, managementService, monitors, clock );
     }
 
     private void initBackupIfNeeded( GlobalModule globalModule, Config config, DatabaseManager<StandaloneDatabaseContext> databaseManager )

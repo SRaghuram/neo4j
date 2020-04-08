@@ -98,7 +98,7 @@ class DriverLoggingTest
         setUpLogging();
 
         var fabricConfig = FabricConfig.from( config );
-        var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, mock( SslPolicyLoader.class ) );
+        var driverConfigFactory = new ExternalDriverConfigFactory( fabricConfig, config, mock( SslPolicyLoader.class ) );
         var graph0DriverConfig = driverConfigFactory.createConfig( new Location.Remote.External( 0, null, createUri( "bolt://mega:1111" ), null ) );
 
         var logger = graph0DriverConfig.logging().getLog( LOG_NAME );

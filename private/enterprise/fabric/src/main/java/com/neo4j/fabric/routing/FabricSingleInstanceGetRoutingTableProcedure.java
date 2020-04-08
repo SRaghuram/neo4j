@@ -37,7 +37,7 @@ public class FabricSingleInstanceGetRoutingTableProcedure extends SingleInstance
     @Override
     protected RoutingResult invoke( NamedDatabaseId namedDatabaseId, MapValue routingContext ) throws ProcedureException
     {
-        if ( fabricDatabaseManager.hasFabricRoutingTable( namedDatabaseId.name() ) )
+        if ( fabricDatabaseManager.isFabricDatabase( namedDatabaseId.name() ) )
         {
             var fabricServers = fabricConfig.getFabricServers();
             return new RoutingResult( fabricServers, fabricServers, fabricServers, fabricConfig.getRoutingTtl().toSeconds() );

@@ -209,7 +209,8 @@ class DriverSslTest
         var jobScheduler = mock( JobScheduler.class );
         var credentialsProvider = mock( CredentialsProvider.class );
 
-        driverPool = new DriverPool( jobScheduler, fabricConfig, config, Clock.systemUTC(), credentialsProvider, sslLoader );
+        var driverConfigFactory = new ExternalDriverConfigFactory( fabricConfig, config, sslLoader );
+        driverPool = new DriverPool( jobScheduler, driverConfigFactory, fabricConfig, Clock.systemUTC(), credentialsProvider );
         driverPool.start();
         var driver = driverPool.getDriver( new Location.Remote.External( 0, null, createUri( graph0Uri ), null ), null );
 

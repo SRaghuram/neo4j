@@ -28,7 +28,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -168,7 +167,7 @@ class TransactionTest
         when( graphDatabaseFacade.databaseId() ).thenReturn( namedDatabaseId );
 
         when( fabricDatabaseManager.getDatabase( any() ) ).thenReturn( graphDatabaseFacade );
-        when( fabricDatabaseManager.isFabricDatabase( namedDatabaseId.name() ) ).thenReturn( true );
+        when( fabricDatabaseManager.hasMultiGraphCapabilities( namedDatabaseId.name() ) ).thenReturn( true );
 
         DatabaseIdRepository idRepository = mock( DatabaseIdRepository.class );
         when( idRepository.getByName( namedDatabaseId.name() ) ).thenReturn( Optional.of( namedDatabaseId ) );

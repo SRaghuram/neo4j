@@ -17,6 +17,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import java.util.List;
@@ -46,7 +47,6 @@ import org.neo4j.graphdb.QueryStatistics;
 import org.neo4j.graphdb.Result;
 import org.neo4j.kernel.impl.query.QueryExecution;
 import org.neo4j.kernel.impl.query.QuerySubscriber;
-import org.neo4j.util.FeatureToggles;
 
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -59,6 +59,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
+@ExtendWith( FabricEverywhereExtension.class )
 class FabricOnlyBookmarkEndToEndTest
 {
     private static Driver clientDriver;
@@ -72,8 +73,6 @@ class FabricOnlyBookmarkEndToEndTest
     @BeforeAll
     static void beforeAll()
     {
-        FeatureToggles.set(FabricDatabaseManager.class, FabricDatabaseManager.FABRIC_BY_DEFAULT_FLAG_NAME, "true" );
-
         remote1 = new TestBoltServer();
         remote1.start();
 
@@ -112,7 +111,6 @@ class FabricOnlyBookmarkEndToEndTest
     @AfterAll
     static void afterAll()
     {
-        FeatureToggles.set(FabricDatabaseManager.class, FabricDatabaseManager.FABRIC_BY_DEFAULT_FLAG_NAME, "false" );
         List.<Runnable>of(
                 () -> testServer.stop(),
                 () -> clientDriver.close(),

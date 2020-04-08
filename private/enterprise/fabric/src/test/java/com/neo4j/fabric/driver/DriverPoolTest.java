@@ -7,7 +7,6 @@ package com.neo4j.fabric.driver;
 
 import com.neo4j.fabric.auth.CredentialsProvider;
 import com.neo4j.fabric.config.FabricConfig;
-import com.neo4j.fabric.config.FabricSettings;
 import com.neo4j.fabric.executor.Location;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -83,7 +82,7 @@ class DriverPoolTest
         var driverConfig = mock( FabricConfig.DriverConfig.class );
         when( driverConfig.getMaxConnectionPoolSize() ).thenReturn( 10 );
         when( driverConfig.getLoggingLevel() ).thenReturn( Level.INFO );
-        when( driverConfig.getDriverApi() ).thenReturn( FabricSettings.DriverApi.RX );
+        when( driverConfig.getDriverApi() ).thenReturn(  DriverConfigFactory.DriverApi.RX );
 
         var remoteGraphDriver = new FabricConfig.GlobalDriverConfig( idleTimeout, ofMinutes( 1 ), 1, driverConfig );
         when( fabricConfig.getGlobalDriverConfig() ).thenReturn( remoteGraphDriver );
@@ -93,7 +92,9 @@ class DriverPoolTest
         var database = mock(FabricConfig.Database.class );
         when( fabricConfig.getDatabase() ).thenReturn( database );
 
-        driverPool = new DriverPool( jobScheduler, fabricConfig, config, Clock.systemUTC(), credentialsProvider, mock(SslPolicyLoader.class ) );
+        var driverConfigFactory = new ExternalDriverConfigFactory( fabricConfig, config, mock(SslPolicyLoader.class ) );
+
+        driverPool = new DriverPool( jobScheduler, driverConfigFactory, fabricConfig, Clock.systemUTC(), credentialsProvider );
     }
 
     @Test

@@ -68,7 +68,7 @@ class DriverConfigFactoryTest
                 .build();
 
         var fabricConfig = FabricConfig.from( config );
-        var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, mock( SslPolicyLoader.class ) );
+        var driverConfigFactory = new ExternalDriverConfigFactory( fabricConfig, config, mock( SslPolicyLoader.class ) );
 
         var graph0DriverConfig = driverConfigFactory.createConfig( new Location.Remote.External( 0, null, createUri( "bolt://mega:1111" ), null ) );
 
@@ -107,7 +107,7 @@ class DriverConfigFactoryTest
                 .build();
 
         var fabricConfig = FabricConfig.from( config );
-        var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, mock( SslPolicyLoader.class ) );
+        var driverConfigFactory = new ExternalDriverConfigFactory( fabricConfig, config, mock( SslPolicyLoader.class ) );
 
         var graph0DriverConfig = driverConfigFactory.createConfig( new Location.Remote.External( 0, null, createUri( "bolt://mega:1111" ), null ) );
 
@@ -132,7 +132,7 @@ class DriverConfigFactoryTest
                 .build();
 
         var fabricConfig = FabricConfig.from( config );
-        var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, mock( SslPolicyLoader.class ) );
+        var driverConfigFactory = new ExternalDriverConfigFactory( fabricConfig, config, mock( SslPolicyLoader.class ) );
 
         var address1 = new SocketAddress( "core-1", 1111 );
         var address2 = new SocketAddress( "core-2", 2222 );

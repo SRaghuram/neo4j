@@ -78,21 +78,26 @@ object Catalog {
   case class Arg[T <: AnyValue](name: String, tpe: Class[T])
 
   def create(config: FabricConfig, internalDatabases: Set[NamedDatabaseId]): Catalog = {
-    val fabricNamespace = config.getDatabase.getName.name()
-    val fabricGraphs = config.getDatabase.getGraphs.asScala.toSet
+    if (config.getDatabase == null) {
+      val internal = asInternal(0, internalDatabases)
+      byName(internal)
+    } else {
+      val fabricNamespace = config.getDatabase.getName.name()
+      val fabricGraphs = config.getDatabase.getGraphs.asScala.toSet
 
-    val external = asExternal(fabricGraphs)
-    val maxId = external
-      .collect { case g: Catalog.Graph => g.id }
-      .fold(0L)((a, b) => Math.max(a, b))
-    val internal = asInternal(maxId + 1, internalDatabases)
+      val external = asExternal(fabricGraphs)
+      val maxId = external
+        .collect { case g: Catalog.Graph => g.id }
+        .reduceOption((a, b) => Math.max(a, b)).getOrElse(-1L)
+      val internal = asInternal(maxId + 1, internalDatabases)
 
-    val allGraphs = external ++ internal
-    val byId = byIdView(allGraphs, fabricNamespace)
-    val externalByName = byName(external, fabricNamespace)
-    val internalByName = byName(internal)
+      val allGraphs = external ++ internal
+      val byId = byIdView(allGraphs, fabricNamespace)
+      val externalByName = byName(external, fabricNamespace)
+      val internalByName = byName(internal)
 
-    byId ++ externalByName ++ internalByName
+      byId ++ externalByName ++ internalByName
+    }
   }
 
   private def asExternal(graphs: Set[FabricConfig.Graph]) = for {

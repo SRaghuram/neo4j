@@ -32,6 +32,7 @@ import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.dbms.procedures.ClusteredDatabaseStateProcedure;
 import com.neo4j.enterprise.edition.AbstractEnterpriseEditionModule;
+import com.neo4j.fabric.bootstrap.FabricServicesBootstrap;
 import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
@@ -44,6 +45,7 @@ import java.io.File;
 import java.time.Duration;
 import java.util.function.Supplier;
 
+import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -69,10 +71,12 @@ import org.neo4j.kernel.impl.query.QueryEngineProvider;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
+import org.neo4j.time.SystemNanoClock;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.status_throughput_window;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
@@ -100,6 +104,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     private DatabaseStartAborter databaseStartAborter;
     private final ClusterStateStorageFactory storageFactory;
     private final ClusterStateLayout clusterStateLayout;
+    private final FabricServicesBootstrap fabricServicesBootstrap;
 
     public ReadReplicaEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory, MemberId myIdentity )
     {
@@ -144,6 +149,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         satisfyEnterpriseOnlyDependencies( this.globalModule );
 
         editionInvariants( globalModule, globalDependencies );
+
+        fabricServicesBootstrap = new FabricServicesBootstrap.ReadReplica( globalModule.getGlobalLife(), globalDependencies, logService );
     }
 
     private void addThroughputMonitorService()
@@ -311,5 +318,19 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     ReadReplicaDatabaseFactory readReplicaDatabaseFactory()
     {
         return readReplicaDatabaseFactory;
+    }
+
+    @Override
+    public void bootstrapFabricServices()
+    {
+        fabricServicesBootstrap.bootstrapServices();
+    }
+
+    @Override
+    public BoltGraphDatabaseManagementServiceSPI createBoltDatabaseManagementServiceProvider( Dependencies dependencies,
+            DatabaseManagementService managementService, Monitors monitors, SystemNanoClock clock, LogService logService )
+    {
+        var kernelDatabaseManagementService = super.createBoltDatabaseManagementServiceProvider(dependencies, managementService, monitors, clock, logService);
+        return fabricServicesBootstrap.createBoltDatabaseManagementServiceProvider( kernelDatabaseManagementService, managementService, monitors, clock );
     }
 }

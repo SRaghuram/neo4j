@@ -34,7 +34,6 @@ class SingleCatalogManagerTest extends FabricTest {
   private val megaUuid = UUID.randomUUID()
 
   private val config = new FabricConfig(
-    true,
     new FabricConfig.Database(new NormalizedDatabaseName("mega"), util.Set.of(mega0, mega1, mega2)),
     util.List.of(), Duration.ZERO, Duration.ZERO,
     new GlobalDriverConfig(Duration.ZERO, Duration.ZERO, 0, null),
@@ -47,19 +46,27 @@ class SingleCatalogManagerTest extends FabricTest {
     DatabaseIdFactory.from("mega", megaUuid),
   )
 
-  val manager = new SingleCatalogManager(
-    databaseLookup = new DatabaseLookup {
-      override def databaseIds: Set[NamedDatabaseId] =
-        internalDbs
-      override def databaseId(databaseName: NormalizedDatabaseName): Option[NamedDatabaseId] =
-        internalDbs.find(_.name() == databaseName.name())
-    },
+  private val databaseLookup = new DatabaseLookup {
+    override def databaseIds: Set[NamedDatabaseId] =
+      internalDbs
+
+    override def databaseId(databaseName: NormalizedDatabaseName): Option[NamedDatabaseId] =
+      internalDbs.find(_.name() == databaseName.name())
+  }
+
+  private val managerWithFabricDatabase = new SingleCatalogManager(
+    databaseLookup = databaseLookup,
     fabricConfig = config,
+  )
+
+  private val managerWithoutFabricDatabase = new SingleCatalogManager(
+    databaseLookup,
+    fabricConfig = new FabricConfig(null, util.List.of(), null, null, null, null),
   )
 
   "catalog resolution" in {
 
-    val catalog = manager.currentCatalog()
+    val catalog = managerWithFabricDatabase.currentCatalog()
     catalog.resolve(CatalogName("mega", "extA"))
       .shouldEqual(external(mega0))
 
@@ -81,6 +88,7 @@ class SingleCatalogManagerTest extends FabricTest {
 
   "location resolution" - {
 
+    val manager = managerWithFabricDatabase
     val catalog = manager.currentCatalog()
 
     def resolveAll(writable: Boolean) = {
@@ -110,6 +118,18 @@ class SingleCatalogManagerTest extends FabricTest {
     "when writable not required" in {
       resolveAll(false)
     }
+  }
+
+  "location resolution without fabric database" in {
+
+    val manager = managerWithoutFabricDatabase
+    val catalog = manager.currentCatalog()
+
+    manager.locationOf(catalog.resolve(CatalogName("intA")), false)
+      .shouldEqual(new Location.Local(0, intAUuid, "inta"))
+
+    manager.locationOf(catalog.resolve(CatalogName("intB")), false)
+      .shouldEqual(new Location.Local(1, intBUuid, "intb"))
   }
 
   private def external(graph: FabricConfig.Graph) = ExternalGraph(graph, uuid(graph.getId))

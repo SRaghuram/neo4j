@@ -21,13 +21,15 @@ public class TransactionBookmarkManagerFactory
 
     public TransactionBookmarkManager createTransactionBookmarkManager( LocalGraphTransactionIdTracker transactionIdTracker )
     {
-        if ( fabricDatabaseManager.fabricEnabledForAllDatabases() )
-        {
-            return new FabricOnlyBookmarkManager( transactionIdTracker );
-        }
-        else
-        {
-            return new MixedModeBookmarkManager( transactionIdTracker );
-        }
+        // TODO: We will get fabric only bookmarks only when system database supports Fabric
+//        if ( fabricDatabaseManager.multiGraphCapabilitiesEnabledForAllDatabases() )
+//        {
+//            return new FabricOnlyBookmarkManager( transactionIdTracker );
+//        }
+//        else
+//        {
+//            return new MixedModeBookmarkManager( transactionIdTracker );
+//        }
+        return new MixedModeBookmarkManager( transactionIdTracker );
     }
 }
