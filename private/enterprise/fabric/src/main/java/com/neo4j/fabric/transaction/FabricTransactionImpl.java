@@ -13,6 +13,7 @@ import com.neo4j.fabric.executor.FabricException;
 import com.neo4j.fabric.executor.FabricRemoteExecutor;
 import com.neo4j.fabric.executor.Location;
 import com.neo4j.fabric.executor.SingleDbTransaction;
+import com.neo4j.fabric.planning.StatementType;
 import com.neo4j.fabric.stream.StatementResult;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -24,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -59,6 +61,7 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
     private JobHandle timeoutHandle;
     private boolean terminated;
     private Status terminationStatus;
+    private AtomicReference<StatementType> statementType = new AtomicReference<>();
 
     private SingleDbTransaction writingTransaction;
 
@@ -109,6 +112,20 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
     public FabricLocalExecutor.LocalTransactionContext getLocal()
     {
         return localTransactionContext;
+    }
+
+    @Override
+    public void validateStatementType( StatementType type )
+    {
+        boolean wasNull = statementType.compareAndSet( null, type );
+        if ( !wasNull )
+        {
+            var oldType = statementType.get();
+            if ( oldType != type )
+            {
+                throw new FabricException( Status.Transaction.ForbiddenDueToTransactionType, "Tried to execute %s after executing %s", type, oldType );
+            }
+        }
     }
 
     @Override

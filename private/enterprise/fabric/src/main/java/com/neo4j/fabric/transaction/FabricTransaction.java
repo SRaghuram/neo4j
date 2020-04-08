@@ -8,6 +8,7 @@ package com.neo4j.fabric.transaction;
 import com.neo4j.fabric.bookmark.TransactionBookmarkManager;
 import com.neo4j.fabric.executor.FabricLocalExecutor;
 import com.neo4j.fabric.executor.FabricRemoteExecutor;
+import com.neo4j.fabric.planning.StatementType;
 import com.neo4j.fabric.stream.StatementResult;
 
 import java.util.Optional;
@@ -37,5 +38,7 @@ public interface FabricTransaction
         FabricRemoteExecutor.RemoteTransactionContext getRemote();
 
         FabricLocalExecutor.LocalTransactionContext getLocal();
+
+        void validateStatementType( StatementType type );
     }
 }

@@ -241,6 +241,7 @@ public class FabricExecutor
 
         Flux<Record> runExec( Fragment.Exec fragment, Record argument )
         {
+            ctx.validateStatementType( fragment.statementType() );
             Map<String,AnyValue> argumentValues = argumentValues( fragment, argument );
             MapValue parameters = addParamsFromRecord( queryParams, argumentValues, mapAsJavaMap( fragment.parameters() ) );
 

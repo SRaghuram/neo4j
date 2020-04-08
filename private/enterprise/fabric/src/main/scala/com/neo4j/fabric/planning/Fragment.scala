@@ -104,6 +104,7 @@ object Fragment {
     val executable: Boolean = hasExecutableClauses(query)
     val description: Fragment.Description = Description.ExecDesc(this)
     val queryType: QueryType = QueryType.of(query)
+    val statementType: StatementType = StatementType.of(query)
   }
 
   final case class SchemaCommand(

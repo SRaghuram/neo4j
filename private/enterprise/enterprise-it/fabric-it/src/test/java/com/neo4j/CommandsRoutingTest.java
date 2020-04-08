@@ -12,10 +12,15 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.driver.AuthTokens;
@@ -23,7 +28,6 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Transaction;
-import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.harness.Neo4j;
@@ -31,7 +35,7 @@ import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 
 @ExtendWith( FabricEverywhereExtension.class )
@@ -204,22 +208,13 @@ class CommandsRoutingTest
     @Test
     void testCreateConstraintFailOnFabric()
     {
-        ClientException ex = assertThrows( ClientException.class, () -> inMegaTx( tx ->
-        {
-            var query = joinAsLines( "CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT exists(n.name)" );
-            return tx.run( query ).consume();
-        } ) );
-        assertThat( ex.getMessage() ).contains( "Schema operations are not allowed for user '' with FULL restricted to ACCESS." );
+        assertThat( catchThrowable(() -> inMegaTx( tx ->
+                tx.run( "CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT exists(n.name)" ).consume()
+        ) ) ).hasMessageContaining( "Schema operations are not allowed for user '' with FULL restricted to ACCESS." );
 
-        ex = assertThrows( ClientException.class, () -> inNeo4jTx( tx ->
-        {
-            var query = joinAsLines(
-                    "USE mega",
-                    "CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT exists(n.name)"
-            );
-            return tx.run( query ).consume();
-        } ) );
-        assertThat( ex.getMessage() ).contains( "Schema operations are not allowed for user '' with FULL restricted to ACCESS." );
+        assertThat( catchThrowable( () -> inNeo4jTx( tx ->
+                tx.run( joinAsLines( "USE mega", "CREATE CONSTRAINT myConstraint ON (n:Person) ASSERT exists(n.name)" ) ).consume()
+        ) ) ).hasMessageContaining( "Schema operations are not allowed for user '' with FULL restricted to ACCESS." );
     }
 
     // Administration command tests
@@ -382,15 +377,73 @@ class CommandsRoutingTest
     @Test
     void testAdministrationCommandFailWhenHavingUseClause()
     {
-        ClientException ex = assertThrows( ClientException.class, () -> inNeo4jTx( tx ->
-        {
-            var query = joinAsLines(
-                    "USE system",
-                    "CREATE ROLE foo" );
-            return tx.run( query ).consume();
-        } ) );
+        assertThat( catchThrowable( () -> inNeo4jTx( tx ->
+                tx.run( joinAsLines( "USE system", "CREATE ROLE foo" ) ).consume()
+        ) ) ).hasMessageContaining( "The `USE` clause is not supported for Administration Commands." );
+    }
 
-        assertThat( ex.getMessage() ).contains( "The `USE` clause is not supported for Administration Commands." );
+    // Multiple statement types tests
+
+    private static final String queryString = "RETURN 1";
+    private static final String queryType = "Query";
+    private static final String schemaStringCreate = "CREATE INDEX myIndex FOR (n:Label) ON (n.prop)";
+    private static final String schemaStringDrop = "DROP INDEX myIndex";
+    private static final String schemaType = "Schema modification";
+    private static final String adminString = "SHOW DATABASES";
+    private static final String adminType = "Administration command";
+
+    @Test
+    void testQueryFollowsQuery()
+    {
+        doInNeo4jTx( tx ->
+        {
+            tx.run( queryString ).consume();
+            tx.run( queryString ).consume();
+        } );
+    }
+
+    @Test
+    void testSchemaFollowsSchema()
+    {
+        doInNeo4jTx( tx ->
+        {
+            tx.run( schemaStringCreate ).consume();
+            tx.run( schemaStringDrop ).consume();
+        } );
+    }
+
+    @Test
+    void testAdminFollowsAdmin()
+    {
+        doInNeo4jTx( tx ->
+        {
+            tx.run( adminString ).consume();
+            tx.run( adminString ).consume();
+        } );
+    }
+
+    @ParameterizedTest
+    @MethodSource( "getStatementTypeCombinations" )
+    void testMixingStatementTypesShouldFail( String firstStatement, String firstType, String secondStatement, String secondType )
+    {
+        doInNeo4jTx( tx ->
+        {
+            tx.run( firstStatement ).consume();
+            assertThat( catchThrowable( () ->
+                    tx.run( secondStatement ).consume()
+            ) ).hasMessageContaining( String.format( "Tried to execute %s after executing %s", secondType, firstType ) );
+            tx.rollback();
+        } );
+
+        // Possible clean-up
+        try
+        {
+            doInNeo4jTx( tx -> tx.run( schemaStringDrop ).consume() );
+        }
+        catch ( Throwable e )
+        {
+            // ignore
+        }
     }
 
     // Help methods
@@ -398,6 +451,11 @@ class CommandsRoutingTest
     private <T> T inNeo4jTx( Function<Transaction, T> workload )
     {
         return neo4j.inTx( clientDriver, workload );
+    }
+
+    private void doInNeo4jTx( Consumer<Transaction> workload )
+    {
+        neo4j.doInTx( clientDriver, workload );
     }
 
     private <T> T inMegaTx( Function<Transaction, T> workload )
@@ -408,5 +466,17 @@ class CommandsRoutingTest
     private static Function<Record,String> stringColumn( String column )
     {
         return row -> row.get( column ).asString();
+    }
+
+    private static Stream<Arguments> getStatementTypeCombinations()
+    {
+        return Stream.of(
+                Arguments.of( queryString, queryType, schemaStringCreate, schemaType ),
+                Arguments.of( queryString, queryType, adminString, adminType ),
+                Arguments.of( schemaStringCreate, schemaType, adminString, adminType ),
+                Arguments.of( schemaStringCreate, schemaType, queryString, queryType ),
+                Arguments.of( adminString, adminType, schemaStringCreate, schemaType ),
+                Arguments.of( adminString, adminType, queryString, queryType )
+        );
     }
 }
