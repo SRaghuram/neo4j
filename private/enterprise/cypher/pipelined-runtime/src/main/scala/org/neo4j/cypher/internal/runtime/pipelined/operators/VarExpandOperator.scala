@@ -55,7 +55,7 @@ import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
-import org.neo4j.cypher.internal.runtime.compiled.expressions.DefaultExpressionCompiler
+import org.neo4j.cypher.internal.runtime.compiled.expressions.DefaultExpressionCompilerFront
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -484,7 +484,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
     //use the provided OperatorExpressionCompiler since it will try to read from local variables instead of accessing the context.
     //Here we assume we are always running as start operator of a pipeline and will always read from context unless we are
     //accessing fromNode and toNode which we already have stored in fields.
-    val newScopeExpressionCompiler = new DefaultExpressionCompiler(codeGen.slots, codeGen.readOnly, codeGen.codeGenerationMode, codeGen.namer) {
+    val newScopeExpressionCompiler = new DefaultExpressionCompilerFront(codeGen.slots, codeGen.readOnly, codeGen.namer) {
       override protected def getLongAt(offset: Int): IntermediateRepresentation =
         if (fromSlot.isLongSlot && offset == fromSlot.offset) {
           invoke(self(), method[VarExpandCursor, Long]("fromNode"))

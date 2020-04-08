@@ -39,7 +39,7 @@ import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.WritableRow
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler
+import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompilerFront
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CursorRepresentation
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation
 import org.neo4j.cypher.internal.runtime.compiled.expressions.VariableNamer
@@ -179,7 +179,7 @@ object OperatorExpressionCompiler {
       }
     }
 
-    def genScopeLocalsState(codeGen: AbstractExpressionCompiler, inputContext: IntermediateRepresentation): ScopeLocalsState = {
+    def genScopeLocalsState(codeGen: AbstractExpressionCompilerFront, inputContext: IntermediateRepresentation): ScopeLocalsState = {
       val locals = new ArrayBuffer[LocalVariable]()
 
       foreachLocalForLongSlot { case (slot, name, modified) =>
@@ -218,7 +218,7 @@ object OperatorExpressionCompiler {
       ScopeLocalsState(locals, declarations, assignments)
     }
 
-    def genScopeContinuationState(codeGen: AbstractExpressionCompiler, inputContext: IntermediateRepresentation): ScopeContinuationState = {
+    def genScopeContinuationState(codeGen: AbstractExpressionCompilerFront, inputContext: IntermediateRepresentation): ScopeContinuationState = {
       val fields = new ArrayBuffer[Field]()
       val saveOps = new ArrayBuffer[IntermediateRepresentation]()
       val restoreOps = new ArrayBuffer[IntermediateRepresentation]()
@@ -409,9 +409,8 @@ object OperatorExpressionCompiler {
 class OperatorExpressionCompiler(slots: SlotConfiguration,
                                  val inputSlotConfiguration: SlotConfiguration,
                                  readOnly: Boolean,
-                                 codeGenerationMode: CodeGeneration.CodeGenerationMode,
                                  namer: VariableNamer)
-  extends AbstractExpressionCompiler(slots, readOnly, codeGenerationMode, namer) {
+  extends AbstractExpressionCompilerFront(slots, readOnly, namer) {
 
 
   /**

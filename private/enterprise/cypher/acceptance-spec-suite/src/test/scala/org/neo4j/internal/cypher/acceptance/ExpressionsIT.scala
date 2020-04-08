@@ -85,7 +85,7 @@ import org.neo4j.cypher.internal.runtime.ast.RuntimeProperty
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledExpression
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledGroupingExpression
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledProjection
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.defaultGenerator
+import org.neo4j.cypher.internal.runtime.compiled.expressions.StandaloneExpressionCompiler
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
@@ -4284,13 +4284,13 @@ class CompiledExpressionsIT extends ExpressionsIT {
   private val codeGenerationMode = ByteCodeGeneration(new CodeSaver(false, false))
 
   override def compile(e: Expression, slots: SlotConfiguration = SlotConfiguration.empty): CompiledExpression =
-    defaultGenerator(slots, readOnly = false, codeGenerationMode).compileExpression(e).getOrElse(fail(s"Failed to compile expression $e"))
+    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode).compileExpression(e).getOrElse(fail(s"Failed to compile expression $e"))
 
   override def compileProjection(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledProjection =
-    defaultGenerator(slots, readOnly = false, codeGenerationMode).compileProjection(projections).getOrElse(fail(s"Failed to compile projection $projections"))
+    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode).compileProjection(projections).getOrElse(fail(s"Failed to compile projection $projections"))
 
   override def compileGroupingExpression(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledGroupingExpression =
-    defaultGenerator(slots, readOnly = false, codeGenerationMode).compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage = Seq.empty))
+    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode).compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage = Seq.empty))
       .getOrElse(fail(s"Failed to compile grouping $projections"))
 }
 

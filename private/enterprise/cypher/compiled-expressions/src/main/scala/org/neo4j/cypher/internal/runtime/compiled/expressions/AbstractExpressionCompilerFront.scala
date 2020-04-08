@@ -7,12 +7,8 @@ package org.neo4j.cypher.internal.runtime.compiled.expressions
 
 import java.util
 import java.util.Optional
-import java.util.concurrent.atomic.AtomicLong
 import java.util.regex
 
-import org.neo4j.codegen.api.ClassDeclaration
-import org.neo4j.codegen.api.CodeGeneration
-import org.neo4j.codegen.api.CodeGeneration.compileAnonymousClass
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.InstanceField
 import org.neo4j.codegen.api.IntermediateRepresentation
@@ -47,12 +43,10 @@ import org.neo4j.codegen.api.IntermediateRepresentation.loop
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
 import org.neo4j.codegen.api.IntermediateRepresentation.noValue
-import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.not
 import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
 import org.neo4j.codegen.api.IntermediateRepresentation.oneTime
 import org.neo4j.codegen.api.IntermediateRepresentation.or
-import org.neo4j.codegen.api.IntermediateRepresentation.param
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.IntermediateRepresentation.staticConstant
 import org.neo4j.codegen.api.IntermediateRepresentation.ternary
@@ -63,7 +57,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.unbox
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.codegen.api.Method
-import org.neo4j.codegen.api.MethodDeclaration
 import org.neo4j.cypher.internal.compiler.helpers.PredicateHelper.isPredicate
 import org.neo4j.cypher.internal.expressions
 import org.neo4j.cypher.internal.expressions.ASTCachedProperty
@@ -167,26 +160,21 @@ import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedPropertyWitho
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
-import org.neo4j.cypher.internal.runtime.ReadWriteRow
-import org.neo4j.cypher.internal.runtime.ReadableRow
-import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.ast.ParameterFromSlot
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.ASSERT_PREDICATE
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.GET_TX_STATE_NODE_PROP
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.GET_TX_STATE_RELATIONSHIP_PROP
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.HAS_TX_STATE_NODE_PROP
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.HAS_TX_STATE_RELATIONSHIP_PROP
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.NODE_PROPERTY
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.PACKAGE_NAME
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.RELATIONSHIP_PROPERTY
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.className
+import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompilerFront.ASSERT_PREDICATE
+import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompilerFront.GET_TX_STATE_NODE_PROP
+import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompilerFront.GET_TX_STATE_RELATIONSHIP_PROP
+import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompilerFront.HAS_TX_STATE_NODE_PROP
+import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompilerFront.HAS_TX_STATE_RELATIONSHIP_PROP
+import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompilerFront.NODE_PROPERTY
+import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompilerFront.RELATIONSHIP_PROPERTY
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.CURSORS
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.ROW
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.NODE_CURSOR
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.PROPERTY_CURSOR
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.RELATIONSHIP_CURSOR
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.ROW
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.noValueOr
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheck
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
@@ -263,123 +251,12 @@ import org.neo4j.values.virtual.VirtualValues
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
-abstract class AbstractExpressionCompiler(val slots: SlotConfiguration,
-                                          val readOnly: Boolean,
-                                          val codeGenerationMode: CodeGeneration.CodeGenerationMode,
-                                          val namer: VariableNamer = new VariableNamer) extends ExpressionCompiler {
 
-  override def compileExpression(e: Expression): Option[CompiledExpression] = {
-    intermediateCompileExpression(e).map { expression =>
-      val classDeclaration =
-        ClassDeclaration[CompiledExpression](
-          PACKAGE_NAME,
-          className(),
-          None,
-          Seq(typeRefOf[CompiledExpression]),
-          Seq.empty,
-          initializationCode = noop(),
-          genFields = () => expression.fields,
-          methods = Seq(
-            MethodDeclaration("evaluate",
-              returnType = typeRefOf[AnyValue],
-              parameters = Seq(param[ReadableRow](ExpressionCompilation.ROW_NAME),
-                param[DbAccess](ExpressionCompilation.DB_ACCESS_NAME),
-                param[Array[AnyValue]](ExpressionCompilation.PARAMS_NAME),
-                param[ExpressionCursors](ExpressionCompilation.CURSORS_NAME),
-                param[Array[AnyValue]](ExpressionCompilation.EXPRESSION_VARIABLES_NAME)),
-              body = block(
-                block(expression.variables.distinct.map { v =>
-                  declareAndAssign(v.typ, v.name, v.value)
-                }: _*),
-                nullCheckIfRequired(expression)
-              ))))
-      compileAnonymousClass(classDeclaration, CodeGeneration.createGenerator(codeGenerationMode)).getDeclaredConstructor().newInstance()
-    }
-  }
+abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
+                                               val readOnly: Boolean,
+                                               val namer: VariableNamer) extends ExpressionCompilerFront {
 
-  override def compileProjection(projections: Map[String, Expression]): Option[CompiledProjection] = {
-    intermediateCompileProjection(projections).map(expression => {
-      val classDeclaration =
-        ClassDeclaration[CompiledProjection](
-          PACKAGE_NAME,
-          className(),
-          None,
-          Seq(typeRefOf[CompiledProjection]),
-          Seq.empty,
-          initializationCode = noop(),
-          genFields = () => expression.fields,
-          methods = Seq(
-            MethodDeclaration("project",
-              returnType = typeRefOf[Unit],
-              parameters = Seq(param[ReadWriteRow](ExpressionCompilation.ROW_NAME),
-                param[DbAccess](ExpressionCompilation.DB_ACCESS_NAME),
-                param[Array[AnyValue]](ExpressionCompilation.PARAMS_NAME),
-                param[ExpressionCursors](ExpressionCompilation.CURSORS_NAME),
-                param[Array[AnyValue]](ExpressionCompilation.EXPRESSION_VARIABLES_NAME)),
-              body = block(
-                block(expression.variables.distinct.map { v =>
-                  declareAndAssign(v.typ, v.name, v.value)
-                }: _*),
-                expression.ir
-              ))))
-      compileAnonymousClass(classDeclaration, CodeGeneration.createGenerator(codeGenerationMode)).getDeclaredConstructor().newInstance()
-    })
-  }
-
-  override def compileGrouping(orderedGroupings: SlotConfiguration => Seq[(String, Expression, Boolean)]): Option[CompiledGroupingExpression] = {
-    def declarations(e: IntermediateExpression) = block(e.variables.distinct.map { v =>
-      declareAndAssign(v.typ, v.name, v.value)
-    }: _*)
-    val orderedGroupingsBySlots = orderedGroupings(slots) // Apply the slot configuration to get the complete order
-    val compiled = for {(k, v, _) <- orderedGroupingsBySlots
-                        c <- intermediateCompileExpression(v)} yield slots(k) -> c
-    if (compiled.size < orderedGroupingsBySlots.size) None
-    else {
-      val grouping = intermediateCompileGroupingExpression(compiled, "key")
-      val classDeclaration =
-        ClassDeclaration[CompiledGroupingExpression](
-          PACKAGE_NAME,
-          className(),
-          None,
-          Seq(typeRefOf[CompiledGroupingExpression]),
-          Seq.empty,
-          initializationCode = noop(),
-          genFields = () => grouping.projectKey.fields ++ grouping.computeKey.fields ++ grouping.getKey.fields,
-          methods = Seq(
-            MethodDeclaration("projectGroupingKey",
-              returnType = typeRefOf[Unit],
-              parameters = Seq(param[WritableRow](ExpressionCompilation.ROW_NAME),
-                param[AnyValue]("key")),
-              body = block(
-                declarations(grouping.projectKey),
-                grouping.projectKey.ir)),
-            MethodDeclaration("computeGroupingKey",
-              returnType = typeRefOf[AnyValue],
-              parameters = Seq(param[ReadableRow](ExpressionCompilation.ROW_NAME),
-                param[DbAccess](ExpressionCompilation.DB_ACCESS_NAME),
-                param[Array[AnyValue]](ExpressionCompilation.PARAMS_NAME),
-                param[ExpressionCursors](ExpressionCompilation.CURSORS_NAME),
-                param[Array[AnyValue]](ExpressionCompilation.EXPRESSION_VARIABLES_NAME)),
-              body = block(
-                declarations(grouping.computeKey),
-                nullCheckIfRequired(grouping.computeKey))),
-            MethodDeclaration("getGroupingKey",
-              returnType = typeRefOf[AnyValue],
-              parameters = Seq(param[CypherRow](ExpressionCompilation.ROW_NAME)),
-              body = block(
-                declarations(grouping.getKey),
-                nullCheckIfRequired(grouping.getKey)))
-          ))
-      Some(compileAnonymousClass(classDeclaration, CodeGeneration.createGenerator(codeGenerationMode)).getDeclaredConstructor().newInstance())
-    }
-  }
-
-  /**
-    * Compiles the given grouping keys to an instance of [[IntermediateExpression]]
-    * @param orderedGroupings the groupings to compile, already sorted in correct grouping key order
-    * @return an instance of [[IntermediateGroupingExpression]] corresponding to the provided groupings
-    */
-  def intermediateCompileGroupingKey(orderedGroupings: Seq[Expression]): Option[IntermediateExpression] = {
+  override def intermediateCompileGroupingKey(orderedGroupings: Seq[Expression]): Option[IntermediateExpression] = {
     val projections = orderedGroupings.flatMap(intermediateCompileExpression)
     if (projections.size < orderedGroupings.size) None
     else {
@@ -395,12 +272,7 @@ abstract class AbstractExpressionCompiler(val slots: SlotConfiguration,
     }
   }
 
-  /**
-    * Compiles the given expression to an [[IntermediateExpression]]
-    * @param expression the expression to compile
-    * @return an [[IntermediateExpression]] corresponding to the provided expression.
-    */
-  def intermediateCompileExpression(expression: Expression): Option[IntermediateExpression] = expression match {
+  override def intermediateCompileExpression(expression: Expression): Option[IntermediateExpression] = expression match {
 
     //functions
     case f: FunctionInvocation if f.function.isInstanceOf[AggregatingFunction] => None
@@ -2211,7 +2083,7 @@ abstract class AbstractExpressionCompiler(val slots: SlotConfiguration,
       None
   }
 
-  def intermediateCompileProjection(projections: Map[String, Expression]): Option[IntermediateExpression] = {
+  override def intermediateCompileProjection(projections: Map[String, Expression]): Option[IntermediateExpression] = {
     val removed = projections.keys.count(slots(_).isLongSlot)
     val compiled = for {(k, v) <- projections
                         c <- intermediateCompileExpression(v) if !slots(k).isLongSlot}
@@ -2226,7 +2098,9 @@ abstract class AbstractExpressionCompiler(val slots: SlotConfiguration,
     }
   }
 
-  def intermediateCompileGroupingExpression(orderedGroupings: Seq[(Slot, IntermediateExpression)], keyName: String): IntermediateGroupingExpression = {
+  override def intermediateCompileGroupingExpression(orderedGroupings: Seq[(Slot, IntermediateExpression)],
+                                                     keyName: String
+                                                    ): IntermediateGroupingExpression = {
     require(orderedGroupings.nonEmpty)
     val listVar = namer.nextVariableName()
     val singleValue = orderedGroupings.size == 1
@@ -2347,12 +2221,13 @@ abstract class AbstractExpressionCompiler(val slots: SlotConfiguration,
     invokeSideEffect(ROW, method[CypherRow, Unit, Int, AnyValue]("setRefAt"),
                      constant(offset), value)
 
-   final def setLongInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
+  final def setLongInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(ROW, method[CypherRow, Unit, Int, Long]("setLongAt"),
                      constant(offset), value)
 
   protected final def setCachedPropertyInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(ROW, method[CypherRow, Unit, Int, Value]("setCachedPropertyAt"),
+                     constant(offset), value)
 
   //==================================================================================================
 
@@ -3177,9 +3052,8 @@ abstract class AbstractExpressionCompiler(val slots: SlotConfiguration,
   }
 }
 
-object AbstractExpressionCompiler {
+object AbstractExpressionCompilerFront {
 
-  private val COUNTER = new AtomicLong(0L)
   private val ASSERT_PREDICATE = method[CompiledHelpers, Value, AnyValue]("assertBooleanOrNoValue")
 
   private val GET_TX_STATE_NODE_PROP: Method = method[DbAccess, Value, Long, Int]("getTxStateNodePropertyOrNull")
@@ -3189,10 +3063,6 @@ object AbstractExpressionCompiler {
 
   val NODE_PROPERTY: Method = method[DbAccess, Value, Long, Int, NodeCursor, PropertyCursor, Boolean]("nodeProperty")
   val RELATIONSHIP_PROPERTY: Method = method[DbAccess, Value, Long, Int, RelationshipScanCursor, PropertyCursor, Boolean]("relationshipProperty")
-
-  private val PACKAGE_NAME = "org.neo4j.codegen"
-
-  private def className(): String = "Expression" + COUNTER.getAndIncrement()
 }
 
 trait CursorRepresentation {

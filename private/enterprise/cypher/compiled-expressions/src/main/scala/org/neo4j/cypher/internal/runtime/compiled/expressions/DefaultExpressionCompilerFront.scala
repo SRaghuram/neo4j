@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.expressions
 
-import org.neo4j.codegen.api.CodeGeneration
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
@@ -23,8 +22,8 @@ import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter.DEFAULT_NULLAB
 import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter.DEFAULT_OFFSET_IS_FOR_LONG_SLOT
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.runtime.DbAccess
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.NODE_PROPERTY
-import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompiler.RELATIONSHIP_PROPERTY
+import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompilerFront.NODE_PROPERTY
+import org.neo4j.cypher.internal.runtime.compiled.expressions.AbstractExpressionCompilerFront.RELATIONSHIP_PROPERTY
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.NODE_CURSOR
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.PROPERTY_CURSOR
@@ -36,11 +35,10 @@ import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
 
-class DefaultExpressionCompiler(slots: SlotConfiguration,
-                                readOnly: Boolean,
-                                codeGenerationMode: CodeGeneration.CodeGenerationMode,
-                                namer: VariableNamer
-                               ) extends AbstractExpressionCompiler(slots, readOnly, codeGenerationMode, namer) {
+class DefaultExpressionCompilerFront(slots: SlotConfiguration,
+                                     readOnly: Boolean,
+                                     namer: VariableNamer
+                               ) extends AbstractExpressionCompilerFront(slots, readOnly, namer) {
 
   override protected def getLongAt(offset: Int): IntermediateRepresentation = getLongFromExecutionContext(offset)
 

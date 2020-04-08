@@ -127,8 +127,8 @@ class UnionOperatorExpressionCompiler(unionSlotConfigurationFromOperator: SlotCo
                                       lhsSlotConfiguration: SlotConfiguration,
                                       rhsSlotConfiguration: SlotConfiguration,
                                       readOnly: Boolean,
-                                      codeGenerationMode: CodeGeneration.CodeGenerationMode,
-                                      namer: VariableNamer) extends OperatorExpressionCompiler(unionSlotConfigurationFromOperator, unionSlotConfigurationFromBuffer, readOnly, codeGenerationMode, namer) {
+                                      namer: VariableNamer
+                                     ) extends OperatorExpressionCompiler(unionSlotConfigurationFromOperator, unionSlotConfigurationFromBuffer, readOnly, namer) {
   Preconditions.checkArgument(unionSlotConfigurationFromOperator == unionSlotConfigurationFromBuffer, "Union must have the same slot configuration as its input buffer.")
 
   val fromLHSName: String = namer.nextVariableName("fromLHS")
