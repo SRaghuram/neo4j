@@ -43,7 +43,7 @@ class StandaloneExpressionCompiler(front: AbstractExpressionCompilerFront, back:
                         c <- front.compileExpression(v)} yield front.slots(k) -> c
     if (compiled.size < orderedGroupingsBySlots.size) None
     else {
-      val grouping = front.compileGroupingExpression(compiled, "key")
+      val grouping = front.compileGroupingExpression(compiled, ExpressionCompilation.GROUPING_KEY_NAME)
       Some(back.compileGrouping(grouping))
     }
   }

@@ -107,7 +107,7 @@ class ExpressionCompilerBack(codeGenerationMode: CodeGenerationMode) {
           MethodDeclaration("projectGroupingKey",
             returnType = typeRefOf[Unit],
             parameters = Seq(param[WritableRow](ExpressionCompilation.ROW_NAME),
-              param[AnyValue]("key")),
+              param[AnyValue](ExpressionCompilation.GROUPING_KEY_NAME)),
             body = block(
               declarations(grouping.projectKey),
               grouping.projectKey.ir)),

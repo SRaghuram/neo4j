@@ -2100,7 +2100,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
   override def compileGroupingExpression(orderedGroupings: Seq[(Slot, IntermediateExpression)],
                                          keyName: String
-                                                    ): IntermediateGroupingExpression = {
+                                        ): IntermediateGroupingExpression = {
     require(orderedGroupings.nonEmpty)
     val listVar = namer.nextVariableName()
     val singleValue = orderedGroupings.size == 1

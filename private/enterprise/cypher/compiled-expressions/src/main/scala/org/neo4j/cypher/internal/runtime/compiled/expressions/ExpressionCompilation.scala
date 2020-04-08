@@ -49,6 +49,8 @@ object ExpressionCompilation {
   val EXPRESSION_VARIABLES_NAME: String = "expressionVariables"
   val EXPRESSION_VARIABLES: IntermediateRepresentation = load(EXPRESSION_VARIABLES_NAME)
 
+  val GROUPING_KEY_NAME: String = "key"
+
   def noValueOr(expressions: IntermediateExpression*)(onNotNull: IntermediateRepresentation): IntermediateRepresentation = {
     nullCheck(expressions:_*)(noValue)(onNotNull)
   }
