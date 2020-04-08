@@ -28,6 +28,7 @@ import org.neo4j.cypher.internal.FullyParsedQuery;
 import org.neo4j.cypher.internal.javacompat.ExecutionEngine;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.LoginContext;
+import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.GraphDatabaseQueryService;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.Status;
@@ -168,7 +169,7 @@ public class FabricLocalExecutor
         {
             InternalTransaction internalTransaction;
             KernelTransaction.Type kernelTransactionType = getKernelTransactionType( transactionInfo );
-            var loginContext = maybeRestrictLoginContext( (EnterpriseLoginContext) transactionInfo.getLoginContext(), databaseFacade.databaseName() );
+            var loginContext = maybeRestrictLoginContext( transactionInfo.getLoginContext(), databaseFacade.databaseName() );
 
             if ( transactionInfo.getTxTimeout() == null )
             {
@@ -198,12 +199,24 @@ public class FabricLocalExecutor
             return KernelTransaction.Type.EXPLICIT;
         }
 
-        private LoginContext maybeRestrictLoginContext( EnterpriseLoginContext originalContext, String databaseName )
+        private LoginContext maybeRestrictLoginContext( LoginContext originalContext, String databaseName )
         {
             boolean isConfiguredFabricDatabase = dbms.isFabricDatabase( databaseName );
             return isConfiguredFabricDatabase
-                   ? new FabricLocalLoginContext( originalContext )
+                   ? wrappedLoginContext( originalContext )
                    : transactionInfo.getLoginContext();
+        }
+
+        private LoginContext wrappedLoginContext( LoginContext originalContext )
+        {
+            if ( originalContext instanceof EnterpriseLoginContext )
+            {
+                return new FabricLocalEnterpriseLoginContext( (EnterpriseLoginContext) originalContext );
+            }
+            else
+            {
+                return new FabricLocalLoginContext( originalContext );
+            }
         }
     }
 
@@ -243,11 +256,11 @@ public class FabricLocalExecutor
         }
     }
 
-    private static class FabricLocalLoginContext implements EnterpriseLoginContext
+    private static class FabricLocalEnterpriseLoginContext implements EnterpriseLoginContext
     {
         private final EnterpriseLoginContext inner;
 
-        private FabricLocalLoginContext( EnterpriseLoginContext inner )
+        private FabricLocalEnterpriseLoginContext( EnterpriseLoginContext inner )
         {
             this.inner = inner;
         }
@@ -271,6 +284,31 @@ public class FabricLocalExecutor
             var restrictedAccessMode =
                     new RestrictedAccessMode( originalSecurityContext.mode(), org.neo4j.internal.kernel.api.security.AccessMode.Static.ACCESS );
             return new EnterpriseSecurityContext( inner.subject(), restrictedAccessMode, inner.roles(), action -> false );
+        }
+    }
+
+    private static class FabricLocalLoginContext implements LoginContext
+    {
+        private final LoginContext inner;
+
+        private FabricLocalLoginContext( LoginContext inner )
+        {
+            this.inner = inner;
+        }
+
+        @Override
+        public AuthSubject subject()
+        {
+            return inner.subject();
+        }
+
+        @Override
+        public SecurityContext authorize( IdLookup idLookup, String dbName )
+        {
+            var originalSecurityContext = inner.authorize( idLookup, dbName );
+            var restrictedAccessMode =
+                    new RestrictedAccessMode( originalSecurityContext.mode(), org.neo4j.internal.kernel.api.security.AccessMode.Static.ACCESS );
+            return new SecurityContext( inner.subject(), restrictedAccessMode );
         }
     }
 }

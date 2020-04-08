@@ -6,27 +6,40 @@
 package com.neo4j.test;
 
 import com.neo4j.enterprise.edition.EnterpriseEditionModule;
+import com.neo4j.fabric.bolt.BoltFabricDatabaseManagementService;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.io.File;
 import java.util.Map;
 import java.util.function.Function;
 
+import org.neo4j.bolt.dbapi.BoltGraphDatabaseServiceSPI;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.common.Edition;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.dbms.api.DatabaseNotFoundException;
+import org.neo4j.dbms.database.DatabaseManagementServiceImpl;
+import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.graphdb.facade.ExternalDependencies;
+import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.security.URLAccessRule;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
+import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
+import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.TestDatabaseManagementServiceFactory;
 import org.neo4j.time.SystemNanoClock;
 
 import static java.lang.Boolean.FALSE;
@@ -51,6 +64,44 @@ public class TestEnterpriseDatabaseManagementServiceBuilder extends TestDatabase
     public TestEnterpriseDatabaseManagementServiceBuilder( DatabaseLayout layout )
     {
         super( layout );
+    }
+
+    @Override
+    protected DatabaseManagementService newDatabaseManagementService( Config config, ExternalDependencies dependencies )
+    {
+        var factory = new TestDatabaseManagementServiceFactory( getDatabaseInfo(), getEditionFactory(), impermanent, fileSystem, clock, internalLogProvider )
+        {
+            @Override
+            protected DatabaseManagementService createManagementService( GlobalModule globalModule, LifeSupport globalLife, Log internalLog,
+                                                                         DatabaseManager<?> databaseManager )
+            {
+                return new DatabaseManagementServiceImpl( databaseManager, globalModule.getGlobalAvailabilityGuard(),
+                                                          globalLife, globalModule.getDatabaseEventListeners(), globalModule.getTransactionEventListeners(),
+                                                          internalLog )
+                {
+                    @Override
+                    public GraphDatabaseService database( String name ) throws DatabaseNotFoundException
+                    {
+                        BoltFabricDatabaseManagementService fabricBoltDbms =
+                                globalModule.getGlobalDependencies().resolveDependency( BoltFabricDatabaseManagementService.class );
+
+                        try
+                        {
+                            var baseDb = databaseManager.getDatabaseContext( name )
+                                                  .orElseThrow( () -> new DatabaseNotFoundException( name ) ).databaseFacade();
+                            BoltGraphDatabaseServiceSPI fabricBoltDb = fabricBoltDbms.database( name );
+                            return new TestFabricGraphDatabaseService( baseDb, fabricBoltDb, config );
+                        }
+                        catch ( UnavailableException e )
+                        {
+                            throw new RuntimeException( e );
+                        }
+                    }
+                };
+            }
+        };
+
+        return factory.build( augmentConfig( config ), GraphDatabaseDependencies.newDependencies( dependencies ) );
     }
 
     @Override
