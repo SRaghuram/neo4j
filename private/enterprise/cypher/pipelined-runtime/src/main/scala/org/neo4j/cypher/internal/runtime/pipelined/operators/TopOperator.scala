@@ -33,7 +33,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.internal.helpers.ArrayUtil
 
 /**
  * Reducing operator which collects pre-sorted input morsels until it
@@ -114,8 +113,7 @@ case class TopOperator(workIdentity: WorkIdentity,
                              stateFactory: StateFactory,
                              state: PipelinedQueryState,
                              resources: QueryResources): ReduceOperatorState[Morsel, TopTable] = {
-      // NOTE: If the _input size_ is larger than Int.MaxValue - 8 this will still fail, since an array cannot hold that many elements
-      val limit = Math.min(CountingState.evaluateCountValue(state, resources, countExpression), ArrayUtil.MAX_ARRAY_SIZE).toInt
+      val limit = CountingState.evaluateCountValue(state, resources, countExpression)
       argumentStateCreator.createArgumentStateMap(argumentStateMapId, new TopOperator.Factory(stateFactory.memoryTracker, comparator, limit, id), ordered = false)
       this
     }
@@ -164,7 +162,7 @@ case class TopOperator(workIdentity: WorkIdentity,
 
 object TopOperator {
 
-  class Factory(memoryTracker: QueryMemoryTracker, comparator: Comparator[MorselRow], limit: Int, operatorId: Id) extends ArgumentStateFactory[TopTable] {
+  class Factory(memoryTracker: QueryMemoryTracker, comparator: Comparator[MorselRow], limit: Long, operatorId: Id) extends ArgumentStateFactory[TopTable] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): TopTable =
       if (limit <= 0) {
         ZeroTable(argumentRowId, argumentRowIdsForReducers)
@@ -219,12 +217,12 @@ object TopOperator {
                          override val argumentRowIdsForReducers: Array[Long],
                          memoryTracker: QueryMemoryTracker,
                          comparator: Comparator[MorselRow],
-                         limit: Int,
+                         limit: Long,
                          operatorId: Id) extends TopTable {
 
     private val topTable = new DefaultComparatorTopTable(comparator, limit)
     private var totalTopHeapUsage = 0L
-    private var morselCount = 0
+    private var morselCount = 0L
     private var maxMorselHeapUsage = 0L
 
     override def update(morsel: Morsel): Unit = {
@@ -257,7 +255,7 @@ object TopOperator {
   class ConcurrentTopTable(override val argumentRowId: Long,
                            override val argumentRowIdsForReducers: Array[Long],
                            comparator: Comparator[MorselRow],
-                           limit: Int) extends TopTable {
+                           limit: Long) extends TopTable {
 
     private val topTableByThread = new ConcurrentHashMap[Long, DefaultComparatorTopTable[MorselRow]]
 
