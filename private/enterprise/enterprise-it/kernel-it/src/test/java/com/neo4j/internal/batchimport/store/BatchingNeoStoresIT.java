@@ -106,10 +106,10 @@ class BatchingNeoStoresIT
             batchingNeoStores.createNew();
         }
 
-        assertThat( pageCacheTracer.pins() ).isEqualTo( 370 );
-        assertThat( pageCacheTracer.unpins() ).isEqualTo( 370 );
-        assertThat( pageCacheTracer.hits() ).isEqualTo( 356 );
-        assertThat( pageCacheTracer.faults() ).isEqualTo( 14 );
+        assertThat( pageCacheTracer.pins() ).isEqualTo( 387 );
+        assertThat( pageCacheTracer.unpins() ).isEqualTo( 387 );
+        assertThat( pageCacheTracer.hits() ).isEqualTo( 368 );
+        assertThat( pageCacheTracer.faults() ).isEqualTo( 19 );
     }
 
     private static TransactionIdStore getTransactionIdStore( GraphDatabaseAPI database )
