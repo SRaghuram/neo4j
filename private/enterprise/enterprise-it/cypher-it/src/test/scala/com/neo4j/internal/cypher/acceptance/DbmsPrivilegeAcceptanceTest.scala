@@ -254,6 +254,4 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
       execute(s"$privType $command ON DBMS $preposition custom")
     }
   }
-
-  private val dbmsPrivileges = dbmsCommands zip dbmsActions
 }

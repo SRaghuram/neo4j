@@ -1072,8 +1072,6 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     }) should be(1)
   }
 
-  private val schemaPrivileges = schemaCommands zip schemaActions
-
   // Disable normal database creation because we need different settings on each test
   override protected def initTest() {}
 }

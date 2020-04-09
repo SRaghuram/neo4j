@@ -166,7 +166,7 @@ class PrivilegeManagementPrivilegesAcceptanceTest extends AdministrationCommandA
 
   // ASSIGN & REMOVE PRIVILEGE
 
-  test("should enforce assign privilege privilege for GRANT dbms privilege") {
+  test("should enforce assign privilege privilege for GRANT privilege") {
     // GIVEN
     setupUserWithCustomRole("foo", "bar")
     execute("CREATE ROLE otherRole")
@@ -195,7 +195,7 @@ class PrivilegeManagementPrivilegesAcceptanceTest extends AdministrationCommandA
     }
   }
 
-  test("should enforce assign privilege privilege for DENY dbms privilege") {
+  test("should enforce assign privilege privilege for DENY privilege") {
     // GIVEN
     setupUserWithCustomRole("foo", "bar")
     execute("CREATE ROLE otherRole")
