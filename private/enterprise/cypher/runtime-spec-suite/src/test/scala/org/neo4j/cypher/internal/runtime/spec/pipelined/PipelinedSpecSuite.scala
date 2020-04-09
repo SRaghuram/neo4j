@@ -10,6 +10,7 @@ import java.lang.System.lineSeparator
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.PipelinedRuntime.PIPELINED
 import org.neo4j.cypher.internal.logical.plans.Ascending
+import org.neo4j.cypher.internal.runtime.spec.CompiledExpressionsTestBase
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.MORSEL_SIZE
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.WITH_MORSEL_SIZE
@@ -408,6 +409,9 @@ class PipelinedProfileMemoryTrackingDisabledTest extends ProfileMemoryTrackingDi
 
 class PipelinedNestedPlanExpressionTest extends NestedPlanExpressionTestBase(FUSING, PIPELINED, SIZE_HINT)
 class PipelinedNestedPlanExpressionNoFusingTest extends NestedPlanExpressionTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+
+class PipelinedCompiledExpressionsTest extends CompiledExpressionsTestBase(FUSING, PIPELINED, SIZE_HINT)
+class PipelinedCompiledExpressionsNoFusingTest extends CompiledExpressionsTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
 
 /**
  * This test is pipelined only, there is no reason to run in other runtimes

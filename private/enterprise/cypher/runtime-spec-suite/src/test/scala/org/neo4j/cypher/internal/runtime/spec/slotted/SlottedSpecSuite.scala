@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.spec.slotted
 
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.SlottedRuntime
+import org.neo4j.cypher.internal.runtime.spec.CompiledExpressionsTestBase
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
 import org.neo4j.cypher.internal.runtime.spec.interpreted.LegacyDbHitsTestBase
 import org.neo4j.cypher.internal.runtime.spec.slotted.SlottedSpecSuite.SIZE_HINT
@@ -174,6 +175,7 @@ class SlottedShortestPathTest extends ShortestPathTestBase(ENTERPRISE.DEFAULT, S
 class SlottedUnionTest extends UnionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedSemiApplyTest extends SemiApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedAntiSemiApplyTest extends AntiSemiApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedCompiledExpressionsTest extends CompiledExpressionsTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 
 class SlottedNestedPlanExpressionTest extends NestedPlanExpressionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedRollupApplyTest extends RollupApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)

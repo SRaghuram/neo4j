@@ -55,7 +55,7 @@ object StandaloneExpressionCompiler {
               codeGenerationMode: CodeGeneration.CodeGenerationMode
              ): StandaloneExpressionCompiler = {
     val front = new DefaultExpressionCompilerFront(slots, readOnly, new VariableNamer)
-    val back = new ExpressionCompilerBack(codeGenerationMode)
+    val back = new CachingExpressionCompilerBack(new DefaultExpressionCompilerBack(codeGenerationMode))
     new StandaloneExpressionCompiler(front, back)
   }
 }
