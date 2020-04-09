@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.PipelinedRuntime.PARALLEL
 import org.neo4j.cypher.internal.PipelinedRuntime.PIPELINED
 import org.neo4j.cypher.internal.logical.plans.Ascending
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.MORSEL_SIZE
 import org.neo4j.cypher.internal.runtime.spec.Edition
@@ -363,7 +364,7 @@ class ParallelRuntimeProfileNoTimeTest extends ProfileNoTimeTestBase(FUSING, PAR
       .aggregation(Seq("x AS x"), Seq("count(*) AS c"))
       .filter("x.prop = null")
       .expand("(x)-->(y)")
-      .nodeByLabelScan("x", "X")
+      .nodeByLabelScan("x", "X", IndexOrderNone)
       .build()
 
     val runtimeResult = profile(logicalQuery, runtime)

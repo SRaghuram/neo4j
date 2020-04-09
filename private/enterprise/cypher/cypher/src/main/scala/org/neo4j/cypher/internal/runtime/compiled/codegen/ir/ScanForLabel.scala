@@ -10,14 +10,13 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.Variable
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
 import org.neo4j.internal.schema.IndexOrder
 
-case class ScanForLabel(opName: String, labelName: String, labelVar: String) extends LoopDataGenerator {
+case class ScanForLabel(opName: String, labelName: String, labelVar: String, indexOrder: IndexOrder) extends LoopDataGenerator {
 
   override def init[E](generator: MethodStructure[E])(implicit context: CodeGenContext) =
     generator.lookupLabelId(labelVar, labelName)
 
   override def produceLoopData[E](cursorName: String, generator: MethodStructure[E])(implicit context: CodeGenContext) = {
-    // TODO use order provided by the LogicalPlan (follow-up PR)
-    generator.labelScan(cursorName, labelVar, IndexOrder.NONE)
+    generator.labelScan(cursorName, labelVar, indexOrder)
     generator.incrementDbHits()
   }
 

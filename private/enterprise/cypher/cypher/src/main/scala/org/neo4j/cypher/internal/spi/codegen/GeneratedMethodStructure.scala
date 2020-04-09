@@ -254,7 +254,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
       typeRef[PageCursorTracer]), get(generator.self(), fields.cursorTracer)))
     generator.expression(pop(invoke(get(generator.self(), fields.closeables), Methods.listAdd, generator.load(cursorName))))
     generator.expression(invoke(dataRead, method[Read, Unit]("nodeLabelScan", typeRef[Int], typeRef[NodeLabelIndexCursor], typeRef[IndexOrder]),
-      generator.load(labelIdVar), generator.load(cursorName), getStatic(FieldReference.staticField(typeRef[IndexOrder], typeRef[IndexOrder], "NONE"))))
+      generator.load(labelIdVar), generator.load(cursorName), Templates.indexOrder(indexOrder)))
   }
 
   override def lookupLabelId(labelIdVar: String, labelName: String): Unit =

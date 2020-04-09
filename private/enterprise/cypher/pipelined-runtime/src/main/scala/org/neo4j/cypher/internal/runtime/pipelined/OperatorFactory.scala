@@ -169,13 +169,14 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           slots.getLongOffsetFor(column),
           argumentSize)
 
-      case plans.NodeByLabelScan(column, label, _) =>
+      case plans.NodeByLabelScan(column, label, _, indexOrder) =>
         val argumentSize = physicalPlan.argumentSizes(id)
         indexRegistrator.registerLabelScan()
         new LabelScanOperator(WorkIdentity.fromPlan(plan),
           slots.getLongOffsetFor(column),
           LazyLabel(label)(semanticTable),
-          argumentSize)
+          argumentSize,
+          asKernelIndexOrder(indexOrder))
 
       case plans.NodeIndexSeek(column, label, properties, valueExpr, _, indexOrder) =>
         val argumentSize = physicalPlan.argumentSizes(id)

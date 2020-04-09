@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.logical.plans.AllNodesScan
 import org.neo4j.cypher.internal.logical.plans.Apply
 import org.neo4j.cypher.internal.logical.plans.Argument
 import org.neo4j.cypher.internal.logical.plans.CacheProperties
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.logical.plans.NodeByLabelScan
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.logical.plans.Projection
@@ -413,7 +414,7 @@ class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport
 
   test("rewriting variable should always work, even if Variable is not part of a bigger tree") {
     // given
-    val leaf = NodeByLabelScan("x", labelName("label"), Set.empty)
+    val leaf = NodeByLabelScan("x", labelName("label"), Set.empty, IndexOrderNone)
     val projection = Projection(leaf, Map("x" -> varFor("x"), "x.propertyKey" -> xPropKey))
     val tokenContext = mock[TokenContext]
     val tokenId = 2
@@ -440,7 +441,7 @@ class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport
 
   test("make sure to handle nullable nodes correctly") {
     // given
-    val leaf = NodeByLabelScan("x", labelName("label"), Set.empty)
+    val leaf = NodeByLabelScan("x", labelName("label"), Set.empty, IndexOrderNone)
     val projection = Projection(leaf, Map("x" -> varFor("x"), "x.propertyKey" -> xPropKey))
     val tokenContext = mock[TokenContext]
     val tokenId = 2
@@ -510,8 +511,8 @@ class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport
 
   test("ValueHashJoin needs to execute expressions with two different slots") {
     // MATCH (a:labelA), (b:labelB) WHERE a.prop = b.prop
-    val leafA = NodeByLabelScan("a", labelName("labelA"), Set.empty)
-    val leafB = NodeByLabelScan("b", labelName("labelB"), Set.empty)
+    val leafA = NodeByLabelScan("a", labelName("labelA"), Set.empty, IndexOrderNone)
+    val leafB = NodeByLabelScan("b", labelName("labelB"), Set.empty, IndexOrderNone)
 
     val join = ValueHashJoin(leafA, leafB, equals(aProp, bProp))
 

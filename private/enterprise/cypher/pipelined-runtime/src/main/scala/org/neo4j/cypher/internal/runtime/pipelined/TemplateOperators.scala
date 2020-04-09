@@ -166,7 +166,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               ctx.slots.getLongOffsetFor(nodeVariableName),
               ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
 
-        case plan@plans.NodeByLabelScan(node, label, _) =>
+        case plan@plans.NodeByLabelScan(node, label, _, indexOrder) =>
           ctx: TemplateContext =>
             val maybeToken = ctx.tokenContext.getOptLabelId(label.name)
             new SingleThreadedLabelScanTaskTemplate(ctx.inner,
@@ -176,7 +176,8 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               ctx.slots.getLongOffsetFor(node),
               label.name,
               maybeToken,
-              ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
+              ctx.argumentSizes(plan.id),
+              asKernelIndexOrder(indexOrder))(ctx.expressionCompiler)
 
         case plan@plans.NodeIndexScan(node, label, properties, _, indexOrder) =>
           ctx: TemplateContext =>

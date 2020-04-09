@@ -212,9 +212,9 @@ class SlottedPipeMapper(fallback: PipeMapper,
         NodeIndexSeekSlottedPipe(column, label, properties.map(SlottedIndexedProperty(column, _, slots)).toIndexedSeq,
           indexRegistrator.registerQueryIndex(label, properties), valueExpr.map(convertExpressions), indexSeekMode, indexOrder, slots, argumentSize)(id = id)
 
-      case NodeByLabelScan(column, label, _) =>
+      case NodeByLabelScan(column, label, _, indexOrder) =>
         indexRegistrator.registerLabelScan()
-        NodesByLabelScanSlottedPipe(column, LazyLabel(label), slots, argumentSize)(id)
+        NodesByLabelScanSlottedPipe(column, LazyLabel(label), slots, argumentSize, indexOrder)(id)
 
       case _: Argument =>
         ArgumentSlottedPipe(slots, argumentSize)(id)

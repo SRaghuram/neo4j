@@ -10,6 +10,7 @@ import java.lang.System.lineSeparator
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.PipelinedRuntime.PIPELINED
 import org.neo4j.cypher.internal.logical.plans.Ascending
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.runtime.spec.CompiledExpressionsTestBase
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.MORSEL_SIZE
@@ -392,7 +393,7 @@ class PipelinedProfileNoTimeTest extends ProfileNoTimeTestBase(FUSING, PIPELINED
       .aggregation(Seq("x AS x"), Seq("count(*) AS c"))
       .filter("x.prop = null")
       .expand("(x)-->(y)")
-      .nodeByLabelScan("x", "X")
+      .nodeByLabelScan("x", "X", IndexOrderNone)
       .build()
 
     val runtimeResult = profile(logicalQuery, runtime)

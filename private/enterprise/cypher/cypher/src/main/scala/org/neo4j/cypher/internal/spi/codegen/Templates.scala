@@ -16,10 +16,12 @@ import org.neo4j.codegen.ClassGenerator
 import org.neo4j.codegen.ClassHandle
 import org.neo4j.codegen.CodeBlock
 import org.neo4j.codegen.Expression
+import org.neo4j.codegen.Expression.getStatic
 import org.neo4j.codegen.ExpressionTemplate.get
 import org.neo4j.codegen.ExpressionTemplate.invoke
 import org.neo4j.codegen.ExpressionTemplate.load
 import org.neo4j.codegen.ExpressionTemplate.self
+import org.neo4j.codegen.FieldReference
 import org.neo4j.codegen.MethodDeclaration
 import org.neo4j.codegen.MethodDeclaration.Builder
 import org.neo4j.codegen.MethodReference
@@ -55,6 +57,7 @@ import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.kernel.api.SchemaRead
 import org.neo4j.internal.kernel.api.TokenRead
+import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.io.IOUtils
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
 import org.neo4j.kernel.api.KernelTransaction
@@ -80,6 +83,14 @@ import org.neo4j.values.virtual.VirtualValues
  */
 object Templates {
 
+  def indexOrder(indexOrder: IndexOrder): Expression = indexOrder match {
+    case IndexOrder.ASCENDING =>
+      getStatic(FieldReference.staticField(typeRef[IndexOrder], typeRef[IndexOrder], "ASCENDING"))
+    case IndexOrder.DESCENDING =>
+      getStatic(FieldReference.staticField(typeRef[IndexOrder], typeRef[IndexOrder], "DESCENDING"))
+    case IndexOrder.NONE =>
+      getStatic(FieldReference.staticField(typeRef[IndexOrder], typeRef[IndexOrder], "NONE"))
+  }
 
   def createNewInstance(valueType: TypeReference, args: (TypeReference,Expression)*): Expression = {
     val argTypes = args.map(_._1)
@@ -168,18 +179,18 @@ object Templates {
       (handle: CodeBlock) => catchBlock(handle), exception)
   }
 
-  val noValue = Expression.getStatic(staticField[Values, Value]("NO_VALUE"))
-  val incoming = Expression.getStatic(staticField[Direction, Direction](Direction.INCOMING.name()))
-  val outgoing = Expression.getStatic(staticField[Direction, Direction](Direction.OUTGOING.name()))
-  val both = Expression.getStatic(staticField[Direction, Direction](Direction.BOTH.name()))
+  val noValue = getStatic(staticField[Values, Value]("NO_VALUE"))
+  val incoming = getStatic(staticField[Direction, Direction](Direction.INCOMING.name()))
+  val outgoing = getStatic(staticField[Direction, Direction](Direction.OUTGOING.name()))
+  val both = getStatic(staticField[Direction, Direction](Direction.BOTH.name()))
   val newResultRow = Expression
     .invoke(Expression.newInstance(typeRef[ResultRowImpl]),
       MethodReference.constructorReference(typeRef[ResultRowImpl]))
   val newRelationshipDataExtractor = Expression
     .invoke(Expression.newInstance(typeRef[RelationshipDataExtractor]),
       MethodReference.constructorReference(typeRef[RelationshipDataExtractor]))
-  val valueComparator = Expression.getStatic(staticField[Values, ValueComparator]("COMPARATOR"))
-  val anyValueComparator = Expression.getStatic(staticField[AnyValues, Comparator[AnyValue]]("COMPARATOR"))
+  val valueComparator = getStatic(staticField[Values, ValueComparator]("COMPARATOR"))
+  val anyValueComparator = getStatic(staticField[AnyValues, Comparator[AnyValue]]("COMPARATOR"))
 
   def constructor(classHandle: ClassHandle) = MethodTemplate.constructor(
     param[QueryContext]("queryContext"),

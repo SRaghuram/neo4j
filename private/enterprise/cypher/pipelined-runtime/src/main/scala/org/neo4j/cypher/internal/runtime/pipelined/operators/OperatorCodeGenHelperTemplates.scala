@@ -267,10 +267,9 @@ object OperatorCodeGenHelperTemplates {
   def allNodeScan(cursor: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(loadField(DATA_READ), method[Read, Unit, NodeCursor]("allNodesScan"), cursor)
 
-  // TODO use order provided by the LogicalPlan (follow-up PR)
-  def nodeLabelScan(label: IntermediateRepresentation, cursor: IntermediateRepresentation): IntermediateRepresentation =
+  def nodeLabelScan(label: IntermediateRepresentation, cursor: IntermediateRepresentation, order: IndexOrder): IntermediateRepresentation =
     invokeSideEffect(loadField(DATA_READ), method[Read, Unit, Int, NodeLabelIndexCursor, IndexOrder]("nodeLabelScan"), label,
-      cursor, getStatic[IndexOrder, IndexOrder]("NONE"))
+      cursor, indexOrder(order))
 
   def nodeHasLabel(node: IntermediateRepresentation, labelToken: IntermediateRepresentation): IntermediateRepresentation = {
     invokeStatic(
