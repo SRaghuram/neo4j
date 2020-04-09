@@ -196,6 +196,44 @@ class RevokePrivilegeAdministrationCommandAcceptanceTest extends AdministrationC
         ))
       }
 
+      test(s"should revoke together $grantOrDeny read privilege on multiple databases with REVOKE $revokeType") {
+        // GIVEN
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute("CREATE DATABASE bar")
+        execute(s"$grantOrDenyCommand READ {*} ON GRAPH foo TO custom")
+        execute(s"$grantOrDenyCommand READ {*} ON GRAPH bar TO custom")
+
+        // WHEN
+        execute(s"REVOKE $revokeType READ {*} ON GRAPH foo, bar FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
+      }
+
+      test(s"should revoke individually $grantOrDeny read privilege on multiple databases with REVOKE $revokeType") {
+        // GIVEN
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute("CREATE DATABASE bar")
+        execute(s"$grantOrDenyCommand READ {*} ON GRAPH foo, bar TO custom")
+
+        // WHEN
+        execute(s"REVOKE $revokeType READ {*} ON GRAPH foo FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          grantedOrDenied(read).role("custom").node("*").database("bar").map,
+          grantedOrDenied(read).role("custom").relationship("*").database("bar").map
+        ))
+
+        // WHEN
+        execute(s"REVOKE $revokeType READ {*} ON GRAPH bar FROM custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
+      }
+
       test(s"should revoke correct $grantOrDeny traverse node privilege different label qualifier with REVOKE $revokeType") {
         // GIVEN
         execute("CREATE ROLE custom")

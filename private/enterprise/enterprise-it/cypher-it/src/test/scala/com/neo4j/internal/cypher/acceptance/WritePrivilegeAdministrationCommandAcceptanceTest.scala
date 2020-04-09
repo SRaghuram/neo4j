@@ -70,6 +70,24 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
         ))
       }
 
+      test(s"should $grantOrDeny write privilege to custom role for multiple databases and all elements") {
+        // GIVEN
+        execute("CREATE ROLE custom")
+        execute("CREATE DATABASE foo")
+        execute("CREATE DATABASE bar")
+
+        // WHEN
+        execute(s"$grantOrDenyCommand WRITE ON GRAPH foo, bar ELEMENTS * (*) TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          grantedOrDenied(write).role("custom").database("foo").node("*").map,
+          grantedOrDenied(write).role("custom").database("foo").relationship("*").map,
+          grantedOrDenied(write).role("custom").database("bar").node("*").map,
+          grantedOrDenied(write).role("custom").database("bar").relationship("*").map
+        ))
+      }
+
       test(s"should $grantOrDeny write privilege to custom role for specific database and all elements using parameter") {
         // GIVEN
         execute("CREATE ROLE custom")

@@ -320,6 +320,20 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
                 execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(segmentFunction(startExpected.role("custom"), "*").map))
               }
 
+              test(s"should $grantOrDeny $actionName privilege to custom role for multiple databases and all ${segmentName}s") {
+                // GIVEN
+                execute("CREATE ROLE custom")
+                execute("CREATE DATABASE foo")
+                execute("CREATE DATABASE bar")
+
+                // WHEN
+                execute(s"$grantOrDenyCommand $actionCommand ON GRAPH foo, bar $segmentCommand * (*) TO custom")
+
+                // THEN
+                execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(segmentFunction(startExpected.role("custom").database("foo"), "*").map,
+                  segmentFunction(startExpected.role("custom").database("bar"), "*").map))
+              }
+
               test(s"should $grantOrDeny $actionName privilege to custom role for all databases but only a specific $segmentName (that does not need to exist)") {
                 // GIVEN
                 execute("CREATE ROLE custom")

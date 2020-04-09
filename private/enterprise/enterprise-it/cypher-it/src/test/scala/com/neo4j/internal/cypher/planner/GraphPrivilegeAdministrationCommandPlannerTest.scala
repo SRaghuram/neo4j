@@ -88,20 +88,56 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     )
   }
 
-  // Read
-
-  test("Grant read") {
+  test("Revoke traverse on multiple dbs") {
     // When
-    val plan = execute(s"EXPLAIN GRANT READ {*} ON GRAPH $DEFAULT_DATABASE_NAME TO reader, editor").executionPlanString()
+    val plan = execute(s"EXPLAIN REVOKE TRAVERSE ON GRAPH $$db1, $$db2 RELATIONSHIPS A, B FROM reader").executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("GrantRead", DEFAULT_DATABASE_NAME, allResourceArg(), Qualifier("RELATIONSHIPS *"), "editor",
-          graphPrivilegePlan("GrantRead", DEFAULT_DATABASE_NAME, allResourceArg(), Qualifier("NODES *"), "editor",
-            graphPrivilegePlan("GrantRead", DEFAULT_DATABASE_NAME, allResourceArg(), Qualifier("RELATIONSHIPS *"), "reader",
-              graphPrivilegePlan("GrantRead", DEFAULT_DATABASE_NAME, allResourceArg(), Qualifier("NODES *"), "reader",
-                assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+        graphPrivilegePlan("RevokeTraverse(DENIED)", Database("GRAPH $db2"), qualifierArg("RELATIONSHIP", "B"), "reader",
+          graphPrivilegePlan("RevokeTraverse(GRANTED)", Database("GRAPH $db2"), qualifierArg("RELATIONSHIP", "B"), "reader",
+            graphPrivilegePlan("RevokeTraverse(DENIED)", Database("GRAPH $db2"), qualifierArg("RELATIONSHIP", "A"), "reader",
+              graphPrivilegePlan("RevokeTraverse(GRANTED)", Database("GRAPH $db2"), qualifierArg("RELATIONSHIP", "A"), "reader",
+                graphPrivilegePlan("RevokeTraverse(DENIED)", Database("GRAPH $db1"), qualifierArg("RELATIONSHIP", "B"), "reader",
+                  graphPrivilegePlan("RevokeTraverse(GRANTED)", Database("GRAPH $db1"), qualifierArg("RELATIONSHIP", "B"), "reader",
+                    graphPrivilegePlan("RevokeTraverse(DENIED)", Database("GRAPH $db1"), qualifierArg("RELATIONSHIP", "A"), "reader",
+                      graphPrivilegePlan("RevokeTraverse(GRANTED)", Database("GRAPH $db1"), qualifierArg("RELATIONSHIP", "A"), "reader",
+                        assertDbmsAdminPlan("REMOVE PRIVILEGE")
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      ).toString
+    )
+  }
+
+  // Read
+
+  test("Grant read") {
+    // When
+    val plan = execute(s"EXPLAIN GRANT READ {*} ON GRAPH foo, bar TO reader, editor").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("GrantRead", Database("GRAPH bar"), allResourceArg(), Qualifier("RELATIONSHIPS *"), "editor",
+          graphPrivilegePlan("GrantRead", Database("GRAPH bar"), allResourceArg(), Qualifier("NODES *"), "editor",
+            graphPrivilegePlan("GrantRead", Database("GRAPH bar"), allResourceArg(), Qualifier("RELATIONSHIPS *"), "reader",
+              graphPrivilegePlan("GrantRead", Database("GRAPH bar"), allResourceArg(), Qualifier("NODES *"), "reader",
+                graphPrivilegePlan("GrantRead", Database("GRAPH foo"), allResourceArg(), Qualifier("RELATIONSHIPS *"), "editor",
+                  graphPrivilegePlan("GrantRead", Database("GRAPH foo"), allResourceArg(), Qualifier("NODES *"), "editor",
+                    graphPrivilegePlan("GrantRead", Database("GRAPH foo"), allResourceArg(), Qualifier("RELATIONSHIPS *"), "reader",
+                      graphPrivilegePlan("GrantRead", Database("GRAPH foo"), allResourceArg(), Qualifier("NODES *"), "reader",
+                        assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+                      )
+                    )
+                  )
+                )
               )
             )
           )
@@ -236,6 +272,26 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     )
   }
 
+  test("Deny match prop with parameter and multiple databases") {
+    // When
+    val plan = execute("EXPLAIN DENY MATCH {prop} ON GRAPH $db1, $db2 TO $role", Map("db" -> DEFAULT_DATABASE_NAME, "role" -> "reader")).executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("DenyMatch", Database("GRAPH $db2"), resourceArg("prop"), Qualifier("RELATIONSHIPS *"), "$role",
+          graphPrivilegePlan("DenyMatch", Database("GRAPH $db2"), resourceArg("prop"), Qualifier("NODES *"), "$role",
+            graphPrivilegePlan("DenyMatch", Database("GRAPH $db1"), resourceArg("prop"), Qualifier("RELATIONSHIPS *"), "$role",
+              graphPrivilegePlan("DenyMatch", Database("GRAPH $db1"), resourceArg("prop"), Qualifier("NODES *"), "$role",
+                assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+              )
+            )
+          )
+        )
+      ).toString
+    )
+  }
+
   test("Revoke match") {
     // When
     val plan = execute(s"EXPLAIN REVOKE MATCH {prop} ON GRAPH $DEFAULT_DATABASE_NAME ELEMENTS A FROM reader").executionPlanString()
@@ -316,14 +372,18 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
 
   test("Revoke deny write") {
     // When
-    val plan = execute(s"EXPLAIN REVOKE DENY WRITE ON GRAPH $DEFAULT_DATABASE_NAME FROM reader").executionPlanString()
+    val plan = execute(s"EXPLAIN REVOKE DENY WRITE ON GRAPH $$foo, bar FROM reader").executionPlanString()
 
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("RevokeWrite(DENIED)", DEFAULT_DATABASE_NAME, Qualifier("RELATIONSHIPS *"), "reader",
-          graphPrivilegePlan("RevokeWrite(DENIED)", DEFAULT_DATABASE_NAME, Qualifier("NODES *"), "reader",
-            assertDbmsAdminPlan("REMOVE PRIVILEGE")
+        graphPrivilegePlan("RevokeWrite(DENIED)", Database("GRAPH bar"), Qualifier("RELATIONSHIPS *"), "reader",
+          graphPrivilegePlan("RevokeWrite(DENIED)", Database("GRAPH bar"), Qualifier("NODES *"), "reader",
+            graphPrivilegePlan("RevokeWrite(DENIED)", Database("GRAPH $foo"), Qualifier("RELATIONSHIPS *"), "reader",
+              graphPrivilegePlan("RevokeWrite(DENIED)", Database("GRAPH $foo"), Qualifier("NODES *"), "reader",
+                assertDbmsAdminPlan("REMOVE PRIVILEGE")
+              )
+            )
           )
         )
       ).toString
