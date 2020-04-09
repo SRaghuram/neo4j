@@ -10,7 +10,6 @@ import com.neo4j.fabric.config.FabricConfig;
 import java.util.UUID;
 import java.util.function.Function;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseContext;
@@ -53,13 +52,10 @@ public abstract class FabricDatabaseManager
 
     public boolean hasMultiGraphCapabilities( String databaseNameRaw )
     {
-        var multiGraphByDefault = multiGraphCapabilitiesEnabledForAllDatabases();
-        var databaseName = new NormalizedDatabaseName( databaseNameRaw ).name();
-        var isSystemDatabase = databaseName.equals( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
-        return !isSystemDatabase && (multiGraphByDefault || isFabricDatabase( databaseNameRaw ));
+        return multiGraphCapabilitiesEnabledForAllDatabases() || isFabricDatabase( databaseNameRaw );
     }
 
-    public boolean multiGraphCapabilitiesEnabledForAllDatabases()
+    private boolean multiGraphCapabilitiesEnabledForAllDatabases()
     {
         return FeatureToggles.flag( FabricDatabaseManager.class, FABRIC_BY_DEFAULT_FLAG_NAME, false );
     }

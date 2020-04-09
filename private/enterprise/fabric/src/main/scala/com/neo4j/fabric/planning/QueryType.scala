@@ -13,6 +13,9 @@ import org.neo4j.cypher.internal.ast.Clause
 import org.neo4j.cypher.internal.ast.SchemaCommand
 import org.neo4j.cypher.internal.ast.UnresolvedCall
 import org.neo4j.cypher.internal.ast.UpdateClause
+import org.neo4j.cypher.internal.logical.plans.ProcedureDbmsAccess
+import org.neo4j.cypher.internal.logical.plans.ProcedureReadOnlyAccess
+import org.neo4j.cypher.internal.logical.plans.ResolvedCall
 import org.neo4j.cypher.internal.util.ASTNode
 
 
@@ -34,14 +37,23 @@ object QueryType {
   def of(ast: ASTNode): QueryType =
     ast.folded(default)(merge) {
       case _: UpdateClause                => Stop(Write)
-      case _: UnresolvedCall              => Stop(ReadPlusUnresolved)
-      case c: CallClause                  => Stop(if (c.containsNoUpdates) Read else Write)
+      case c: CallClause                  => Stop(of(c))
       case _: SchemaCommand               => Stop(Write)
       case a: AdministrationCommand       => Stop(if (a.isReadOnly) Read else Write)
     }
 
   def of(ast: Seq[Clause]): QueryType =
     ast.map(of).fold(default)(merge)
+
+  def of(ast: CallClause): QueryType = ast match {
+    case _: UnresolvedCall => ReadPlusUnresolved
+    case c: ResolvedCall =>
+      c.signature.accessMode match {
+        case ProcedureReadOnlyAccess(_) => Read
+        case ProcedureDbmsAccess(_) => Read
+        case _ => Write
+      }
+  }
 
   def recursive(fragment: Fragment): QueryType =
     fragment match {

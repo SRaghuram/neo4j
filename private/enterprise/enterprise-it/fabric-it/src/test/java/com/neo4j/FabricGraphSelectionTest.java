@@ -159,6 +159,9 @@ class FabricGraphSelectionTest
         assertThat( run( fabric, query ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .isEmpty();
+
+        assertThat( catchThrowable( () -> run( system, query ) ) )
+                .isNotNull();
     }
 
     @Test
@@ -170,6 +173,9 @@ class FabricGraphSelectionTest
                 .isNotNull();
 
         assertThat( catchThrowable( () -> run( fabric, query ) ) )
+                .isNotNull();
+
+        assertThat( catchThrowable( () -> run( system, query ) ) )
                 .isNotNull();
     }
 
@@ -184,6 +190,10 @@ class FabricGraphSelectionTest
                 .containsExactly( "intA" );
 
         assertThat( run( fabric, query ) )
+                .extracting( nodeProperty( "n", "name" ) )
+                .containsExactly( "intA" );
+
+        assertThat( run( system, query ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .containsExactly( "intA" );
     }
@@ -201,6 +211,10 @@ class FabricGraphSelectionTest
         assertThat( run( fabric, query ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .containsExactly( "intB" );
+
+        assertThat( run( system, query ) )
+                .extracting( nodeProperty( "n", "name" ) )
+                .containsExactly( "intB" );
     }
 
     @Test
@@ -214,6 +228,10 @@ class FabricGraphSelectionTest
                 .containsExactly( "extA" );
 
         assertThat( run( fabric, query ) )
+                .extracting( nodeProperty( "n", "name" ) )
+                .containsExactly( "extA" );
+
+        assertThat( run( system, query ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .containsExactly( "extA" );
     }
@@ -232,6 +250,9 @@ class FabricGraphSelectionTest
         assertThat( run( fabric, query ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .isEmpty();
+
+        assertThat( catchThrowable( () -> run( system, query ) ) )
+                .isNotNull();
     }
 
     @Test
@@ -248,6 +269,10 @@ class FabricGraphSelectionTest
                 .containsExactly( "intB" );
 
         assertThat( run( fabric, query ) )
+                .extracting( nodeProperty( "n", "name" ) )
+                .containsExactly( "intB" );
+
+        assertThat( run( system, query ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .containsExactly( "intB" );
     }
@@ -267,6 +292,10 @@ class FabricGraphSelectionTest
         assertThat( run( fabric, query ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .containsExactly( "neo4j" );
+
+        assertThat( catchThrowable( () -> run( system, query ) ) )
+                .hasMessageContaining( "Multiple graphs in the same query not allowed" )
+                .hasMessageContaining( "Attempted to access graph system (transaction default)" );
     }
 
     @Test
@@ -284,6 +313,10 @@ class FabricGraphSelectionTest
         assertThat( run( fabric, query ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .containsExactly( "neo4j" );
+
+        assertThat( catchThrowable( () -> run( system, query ) ) )
+                .hasMessageContaining( "Multiple graphs in the same query not allowed" )
+                .hasMessageContaining( "Attempted to access graph neo4j" );
     }
 
     @Test
@@ -301,6 +334,10 @@ class FabricGraphSelectionTest
         assertThat( run( fabric, query ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .containsExactly( "neo4j" );
+
+        assertThat( catchThrowable( () -> run( system, query ) ) )
+                .hasMessageContaining( "Multiple graphs in the same query not allowed" )
+                .hasMessageContaining( "Attempted to access graph neo4j" );
     }
 
     @Test
@@ -318,6 +355,10 @@ class FabricGraphSelectionTest
         assertThat( run( fabric, query ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .containsExactly( "intB" );
+
+        assertThat( catchThrowable( () -> run( system, query ) ) )
+                .hasMessageContaining( "Multiple graphs in the same query not allowed" )
+                .hasMessageContaining( "Attempted to access graph system (transaction default)" );
     }
 
     @Test
@@ -338,6 +379,10 @@ class FabricGraphSelectionTest
         assertThat( run( fabric, query ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .containsExactlyInAnyOrder( "extA", "intB" );
+
+        assertThat( catchThrowable( () -> run( system, query ) ) )
+                .hasMessageContaining( "Multiple graphs in the same query not allowed" )
+                .hasMessageContaining( "Attempted to access graph intB" );
     }
 
     @Test
@@ -356,6 +401,10 @@ class FabricGraphSelectionTest
         assertThat( run( fabric, query ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .containsExactlyInAnyOrder( "extA", "intB" );
+
+        assertThat( catchThrowable( () -> run( system, query ) ) )
+                .hasMessageContaining( "Multiple graphs in the same query not allowed" )
+                .hasMessageContaining( "Attempted to access graph intB" );
     }
 
     @Test
@@ -373,6 +422,10 @@ class FabricGraphSelectionTest
         assertThat( run( fabric, query ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .containsExactly( "extA" );
+
+        assertThat( catchThrowable( () -> run( system, query ) ) )
+                .hasMessageContaining( "Dynamic graph lookup not allowed here" )
+                .hasMessageContaining( "Attempted to access graph fabric.graph(0)" );
     }
 
     @Test
@@ -392,6 +445,10 @@ class FabricGraphSelectionTest
         assertThat( run( fabric, query, params ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .containsExactly( "extA" );
+
+        assertThat( catchThrowable( () -> run( system, query, params ) ) )
+                .hasMessageContaining( "Dynamic graph lookup not allowed here" )
+                .hasMessageContaining( "Attempted to access graph fabric.graph($g)" );
     }
 
     @Test
@@ -409,6 +466,9 @@ class FabricGraphSelectionTest
         assertThat( run( fabric, query ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .isEmpty();
+
+        assertThat( catchThrowable( () -> run( system, query ) ) )
+                .isNotNull();
     }
 
     @Test
@@ -425,6 +485,10 @@ class FabricGraphSelectionTest
                 .containsExactly( "intB" );
 
         assertThat( run( fabric, query ) )
+                .extracting( nodeProperty( "n", "name" ) )
+                .containsExactly( "intB" );
+
+        assertThat( run( system, query ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .containsExactly( "intB" );
     }
@@ -446,6 +510,10 @@ class FabricGraphSelectionTest
         assertThat( run( fabric, query ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .containsExactly( "intB" );
+
+        assertThat( run( system, query ) )
+                .extracting( nodeProperty( "n", "name" ) )
+                .containsExactly( "intB" );
     }
 
     @Test
@@ -464,6 +532,10 @@ class FabricGraphSelectionTest
         assertThat( run( fabric, query ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .containsExactly( "intB" );
+
+        assertThat( catchThrowable( () -> run( system, query ) ) )
+                .hasMessageContaining( "Multiple graphs in the same query not allowed" )
+                .hasMessageContaining( "Attempted to access graph intB" );
     }
 
     @Test
@@ -482,69 +554,68 @@ class FabricGraphSelectionTest
         assertThat( run( fabric, query ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .containsExactly( "extA" );
+
+        assertThat( catchThrowable( () -> run( system, query ) ) )
+                .hasMessageContaining( "Dynamic graph lookup not allowed here" )
+                .hasMessageContaining( "Attempted to access graph fabric.graph(0)" );
     }
 
     @Test
-    @Disabled( "not implemented yet" )
     void commandDefault()
     {
         var query = joinAsLines( "CREATE INDEX FOR (n:Foo) ON (n.p)" );
 
-        assertThat( run( neo4j, query ) )
-                .isNotNull();
+        assertThat( run( neo4j, query ) ).isNotNull();
+        assertThat( catchThrowable( () -> run( fabric, query ) ) )
+                .hasMessageContaining( "Schema operations are not allowed for user '' with FULL restricted to ACCESS." );
+        assertThat( catchThrowable( () -> run( system, query ) ) )
+                .hasMessageContaining( "Not a recognised system command or procedure. This Cypher command can only be executed in a user database" );
     }
 
     @Test
-    @Disabled( "not implemented yet" )
     void commandExplicit()
     {
-        var query = joinAsLines( "USE intB",
-                                 "CREATE INDEX FOR (n:Foo) ON (n.p)" );
+        var queryCreate = joinAsLines( "USE intB", "CREATE INDEX myIndex FOR (n:Foo) ON (n.p)" );
+        var queryDrop = "DROP INDEX myIndex";
 
-        assertThat( run( neo4j, query ) )
-                .isNotNull();
+        assertThat( run( neo4j, queryCreate ) ).isNotNull();
+        run( intB, queryDrop );
+        assertThat( run( fabric, queryCreate ) ).isNotNull();
+        run( intB, queryDrop );
+        assertThat( run( system, queryCreate ) ).isNotNull();
+        run( intB, queryDrop );
     }
 
     @Test
-    @Disabled( "not implemented yet" )
-    void systemDefault1()
+    void systemDefault()
     {
         var query = joinAsLines( "SHOW DATABASES" );
 
-        assertThat( run( neo4j, query ) )
-                .isNotNull();
+        assertThat( run( neo4j, query ) ).isNotNull();
+        assertThat( run( fabric, query ) ).isNotNull();
+        assertThat( run( system, query ) ).isNotNull();
     }
 
     @Test
-    @Disabled( "not implemented yet" )
-    void systemDefault2()
-    {
-        var query = joinAsLines( "CREATE DATABASE customers" );
-
-        assertThat( run( neo4j, query ) )
-                .isNotNull();
-    }
-
-    @Test
-    @Disabled( "not implemented yet" )
     void systemExplicitSystem()
     {
         var query = joinAsLines( "USE system",
-                                 "CREATE DATABASE customers" );
+                                 "SHOW DATABASES" );
 
-        assertThat( run( neo4j, query ) )
-                .isNotNull();
+        assertThat( catchThrowable( () -> run( neo4j, query )) ).hasMessageContaining( "The `USE` clause is not supported for Administration Commands." );
+        assertThat( catchThrowable( () -> run( fabric, query )) ).hasMessageContaining( "The `USE` clause is not supported for Administration Commands." );
+        assertThat( catchThrowable( () -> run( system, query )) ).hasMessageContaining( "The `USE` clause is not supported for Administration Commands." );
     }
 
     @Test
-    @Disabled( "should this succeed or fail?" )
     void systemExplicitOther()
     {
         var query = joinAsLines( "USE intB",
-                                 "CREATE DATABASE customers" );
+                                 "SHOW DATABASES" );
 
-        assertThat( run( neo4j, query ) )
-                .isNotNull();
+        assertThat( catchThrowable( () -> run( neo4j, query )) ).hasMessageContaining( "The `USE` clause is not supported for Administration Commands." );
+        assertThat( catchThrowable( () -> run( fabric, query )) ).hasMessageContaining( "The `USE` clause is not supported for Administration Commands." );
+        assertThat( catchThrowable( () -> run( system, query )) ).hasMessageContaining( "The `USE` clause is not supported for Administration Commands." );
     }
 
     @Test
@@ -558,6 +629,10 @@ class FabricGraphSelectionTest
                 .containsExactly( 1 );
 
         assertThat( run( fabric, query ) )
+                .extracting( intValue( "a" ) )
+                .containsExactly( 1 );
+
+        assertThat( run( system, query ) )
                 .extracting( intValue( "a" ) )
                 .containsExactly( 1 );
     }
@@ -579,6 +654,10 @@ class FabricGraphSelectionTest
         assertThat( run( fabric, query ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .containsExactly( "intB" );
+
+        assertThat( run( system, query ) )
+                .extracting( nodeProperty( "n", "name" ) )
+                .containsExactly( "intB" );
     }
 
     @Test
@@ -596,6 +675,10 @@ class FabricGraphSelectionTest
                 .containsExactly( "extA" );
 
         assertThat( run( fabric, query ) )
+                .extracting( nodeProperty( "n", "name" ) )
+                .containsExactly( "extA" );
+
+        assertThat( run( system, query ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .containsExactly( "extA" );
     }
@@ -616,6 +699,10 @@ class FabricGraphSelectionTest
                 .containsExactly( "intB" );
 
         assertThat( run( fabric, query ) )
+                .extracting( nodeProperty( "n", "name" ) )
+                .containsExactly( "intB" );
+
+        assertThat( run( system, query ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .containsExactly( "intB" );
     }
@@ -642,6 +729,10 @@ class FabricGraphSelectionTest
         assertThat( run( fabric, query ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .containsExactlyInAnyOrder( "intB", "extA" );
+
+        assertThat( run( system, query ) )
+                .extracting( nodeProperty( "n", "name" ) )
+                .containsExactlyInAnyOrder( "intB", "extA" );
     }
 
     @Test
@@ -664,6 +755,10 @@ class FabricGraphSelectionTest
         assertThat( run( fabric, query ) )
                 .extracting( nodeProperty( "n", "name" ) )
                 .containsExactlyInAnyOrder( "intB", "extA" );
+
+        assertThat( run( system, query ) )
+                .extracting( nodeProperty( "n", "name" ) )
+                .containsExactlyInAnyOrder( "intB", "extA" );
     }
 
     @Test
@@ -684,6 +779,9 @@ class FabricGraphSelectionTest
                 .isNotNull();
 
         assertThat( catchThrowable( () -> run( fabric, query ) ) )
+                .isNotNull();
+
+        assertThat( catchThrowable( () -> run( system, query ) ) )
                 .isNotNull();
     }
 
