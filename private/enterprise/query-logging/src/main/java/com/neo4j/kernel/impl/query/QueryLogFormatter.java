@@ -62,18 +62,18 @@ class QueryLogFormatter
                         .append( key )
                         .append( ": " );
 
-                result.append( formatAnyValue( value ) );
+                formatAnyValue( value, result );
                 sep[0] = ", ";
             } );
         }
         result.append( "}" );
     }
 
-    private static String formatAnyValue( AnyValue value )
+    private static void formatAnyValue( AnyValue value, StringBuilder builder )
     {
         PrettyPrinter printer = new PrettyPrinter( "'" );
         value.writeTo( printer );
-        return printer.value();
+        printer.valueInto( builder );
     }
 
     static void formatMap( StringBuilder result, Map<String,Object> params )
@@ -112,6 +112,7 @@ class QueryLogFormatter
     {
         if ( value instanceof Map<?,?> )
         {
+            //noinspection unchecked
             formatMap( result, (Map<String, Object>) value, Collections.emptySet() );
         }
         else if ( value instanceof String )

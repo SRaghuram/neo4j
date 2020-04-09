@@ -95,7 +95,7 @@ class ConfiguredQueryLogger implements QueryLogger
         String queryText = shouldUseRawText ? query.rawQueryText()
                                             : query.obfuscatedQueryText().get();
 
-        StringBuilder result = new StringBuilder();
+        StringBuilder result = new StringBuilder( 80 );
         if ( verboseLogging )
         {
             result.append( "id:" ).append( query.id() ).append( " - " );
