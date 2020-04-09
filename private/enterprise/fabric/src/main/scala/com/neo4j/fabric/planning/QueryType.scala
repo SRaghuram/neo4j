@@ -47,12 +47,8 @@ object QueryType {
 
   def of(ast: CallClause): QueryType = ast match {
     case _: UnresolvedCall => ReadPlusUnresolved
-    case c: ResolvedCall =>
-      c.signature.accessMode match {
-        case ProcedureReadOnlyAccess(_) => Read
-        case ProcedureDbmsAccess(_) => Read
-        case _ => Write
-      }
+    case c: ResolvedCall if c.containsNoUpdates => Read
+    case _ => Write
   }
 
   def recursive(fragment: Fragment): QueryType =
