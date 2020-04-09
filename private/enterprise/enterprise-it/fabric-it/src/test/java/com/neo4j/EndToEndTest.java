@@ -868,7 +868,7 @@ class EndToEndTest
     }
 
     @Test
-    void testPeriodicCommitShouldFail()
+    void testPeriodicCommitInExplicitTransactionShouldFail()
     {
         ClientException ex = assertThrows( ClientException.class, () -> doInMegaTx( tx ->
         {
@@ -881,7 +881,7 @@ class EndToEndTest
             tx.run( query ).consume();
         } ) );
 
-        assertThat( ex.getMessage() ).containsIgnoringCase( "periodic commit" );
+        assertThat( ex.getMessage() ).containsIgnoringCase( "Executing queries that use periodic commit in an open transaction is not possible." );
     }
 
     @Test

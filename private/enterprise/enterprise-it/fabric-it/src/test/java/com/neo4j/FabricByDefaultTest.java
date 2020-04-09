@@ -11,16 +11,12 @@ import com.neo4j.utils.ProxyFunctions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.OffsetTime;
-import java.time.ZonedDateTime;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -308,6 +304,50 @@ class FabricByDefaultTest
         } ) );
 
         assertThat( ex.getMessage() ).contains( "Writing in read access mode not allowed" );
+    }
+
+    @Test
+    void testPeriodicCommitOnLocalGraph() throws IOException
+    {
+        Path csvFile = Files.createTempFile("fabric-test", "");
+        try
+        {
+            var csvContent = joinAsLines(
+                    "Eva",
+                    "Fiona",
+                    "Gustav"
+            );
+
+            Files.writeString( csvFile, csvContent );
+
+            var query = joinAsLines(
+                    "USING PERIODIC COMMIT 1",
+                    "LOAD CSV FROM $csv AS row",
+                    "WITH row[0] AS name",
+                    "CREATE (:Person {name:name})"
+            );
+
+            try ( var session = driver.session() )
+            {
+                session.run( query, Map.of( "csv", csvFile.toAbsolutePath().toUri().toString() ) ).consume();
+            }
+
+            var matchQuery = joinAsLines(
+                    "MATCH (n:Person)",
+                    "RETURN n.name AS name"
+            );
+
+            var records = inTx( driver, neo4j, tx -> tx.run( matchQuery ).list() );
+            List<String> names = records.stream()
+                    .map( c -> c.get( "name" ).asString() )
+                    .collect( Collectors.toList() );
+
+            assertEquals( List.of( "Eva", "Fiona", "Gustav" ), names );
+        }
+        finally
+        {
+            Files.delete( csvFile );
+        }
     }
 
     private <T> T inTx( Driver driver, DriverUtils driverUtils, AccessMode accessMode, Function<Transaction,T> workload )

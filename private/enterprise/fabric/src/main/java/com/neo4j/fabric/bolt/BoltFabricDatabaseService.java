@@ -89,10 +89,7 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
     @Override
     public boolean isPeriodicCommit( String query )
     {
-        // Since Fabric does not support periodic commit,
-        // there is no special transaction handling needed from Bolt server.
-        // If a periodic query is submitted, it will simply fail during planning
-        return false;
+        return fabricExecutor.isPeriodicCommit( query );
     }
 
     @Override

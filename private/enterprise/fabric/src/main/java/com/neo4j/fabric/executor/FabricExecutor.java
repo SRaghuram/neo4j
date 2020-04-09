@@ -120,6 +120,11 @@ public class FabricExecutor
         return withErrorMapping( statementResult, FabricSecondaryException.class, FabricSecondaryException::getPrimaryException );
     }
 
+    public boolean isPeriodicCommit( String query )
+    {
+        return planner.isPeriodicCommit( query );
+    }
+
     private class FabricStatementExecution
     {
         private final FabricPlan plan;

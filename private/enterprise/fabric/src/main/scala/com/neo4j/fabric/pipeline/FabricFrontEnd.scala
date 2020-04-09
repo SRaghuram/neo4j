@@ -70,9 +70,6 @@ case class FabricFrontEnd(
       cypherConfig.queryCacheSize,
     )
 
-    private def assertNotPeriodicCommit(options: QueryOptions): Unit =
-      if (options.isPeriodicCommit) Errors.notSupported("Periodic commit")
-
     private def assertValidExecutionType(options: QueryOptions): Unit =
       executionType(options)
 
@@ -85,8 +82,12 @@ case class FabricFrontEnd(
     def preParse(queryString: String): PreParsedQuery = {
       val query = preParser.preParseQuery(queryString)
       assertValidExecutionType(query.options)
-      assertNotPeriodicCommit(query.options)
       query
+    }
+
+    def isPeriodicCommit(queryString: String): Boolean = {
+      val preParsedQuery = preParser.preParseQuery(queryString)
+      preParsedQuery.options.isPeriodicCommit
     }
   }
 
