@@ -55,9 +55,9 @@ class FollowerTest
         var state = builder()
                 .myself( myself )
                 .addInitialOutcome( OutcomeTestBuilder.builder()
-                        .setVotesForMe( asSet( myself, member1, member2 ) )
                         .setCommitIndex( 2 )
                         .setTerm( 1 ).build() )
+                .votingMembers( myself, member1, member2 )
                 .supportsPreVoting( true )
                 .build();
 
@@ -78,9 +78,9 @@ class FollowerTest
         var state = builder()
                 .myself( myself )
                 .addInitialOutcome( OutcomeTestBuilder.builder()
-                        .setVotesForMe( asSet( myself, member1, member2 ) )
                         .setCommitIndex( 3 )
                         .setTerm( 1 ).build() )
+                .votingMembers( myself, member1, member2 )
                 .supportsPreVoting( true )
                 .build();
 
@@ -90,8 +90,8 @@ class FollowerTest
         Outcome outcome = new Follower().handle( message, state, log() );
 
         // then
-        assertThat( RaftMessages.Type.PRE_VOTE_REQUEST ).isEqualTo( messageFor( outcome, member1 ).type() );
-        assertThat( RaftMessages.Type.PRE_VOTE_REQUEST ).isEqualTo( messageFor( outcome, member2 ).type() );
+        assertThat( RaftMessages.Type.VOTE_REQUEST ).isEqualTo( messageFor( outcome, member1 ).type() );
+        assertThat( RaftMessages.Type.VOTE_REQUEST ).isEqualTo( messageFor( outcome, member2 ).type() );
     }
 
     @Test
@@ -101,9 +101,9 @@ class FollowerTest
         var state = builder()
                 .myself( myself )
                 .addInitialOutcome( OutcomeTestBuilder.builder()
-                        .setVotesForMe( asSet( myself, member1, member2 ) )
                         .setCommitIndex( 2 )
                         .setTerm( 1 ).build() )
+                .votingMembers( myself, member1, member2 )
                 .supportsPreVoting( true )
                 .build();
 

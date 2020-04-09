@@ -74,7 +74,7 @@ class Follower implements RaftMessageHandler
         var upToDate = ctx.commitIndex() >= request.previousIndex();
         var myGroups = ctx.serverGroups();
 
-        if ( sameOrEarlierTerm && upToDate && iAmInPriority( myGroups, request ) )
+        if ( sameOrEarlierTerm && upToDate && (noRequestedPriority( request ) || iAmInPriority( myGroups, request )) )
         {
             if ( Election.startRealElection( ctx, outcomeBuilder, log, ctx.term() ) )
             {
@@ -90,11 +90,21 @@ class Follower implements RaftMessageHandler
         }
     }
 
+    private static boolean noRequestedPriority( RaftMessages.LeadershipTransfer.Request request )
+    {
+        return request.groups().isEmpty();
+    }
+
     private static boolean iAmInPriority( Set<String> myGroups, RaftMessages.LeadershipTransfer.Request request )
     {
-        var groups = new HashSet<>( myGroups );
-        groups.retainAll( request.groups() );
-        return !groups.isEmpty();
+        for ( String priorityGroup : request.groups() )
+        {
+            if ( myGroups.contains( priorityGroup ) )
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

@@ -57,16 +57,20 @@ class TransferLeader implements Runnable
 
         var leaderTransferContext = createContext( notPrioritisedLeadership(), PRIORITISED_SELECTION_STRATEGY );
 
-        // This instance is high priority for all its leaderships, so just do normal load balancing
-        if ( leaderTransferContext == NO_TARGET )
-        {
-            leaderTransferContext = createContext( leadershipsResolver.get(), selectionStrategy );
-        }
-
-        // If leaderTransferContext is still no target, there is no need to transfer leadership
         if ( leaderTransferContext != NO_TARGET )
         {
-            handleProposal( leaderTransferContext );
+            handleProposal( leaderTransferContext, getPrioritisedGroups( config ) );
+        }
+        else
+        {
+            // This instance is high priority for all its leaderships, so just do normal load balancing
+            leaderTransferContext = createContext( leadershipsResolver.get(), selectionStrategy );
+
+            // If leaderTransferContext is still no target, there is no need to transfer leadership
+            if ( leaderTransferContext != NO_TARGET )
+            {
+                handleProposal( leaderTransferContext, Set.of() );
+            }
         }
     }
 
@@ -87,23 +91,23 @@ class TransferLeader implements Runnable
         var raftMembership = membershipResolver.membersFor( namedDatabaseId );
         var votingMembers = raftMembership.votingMembers();
 
-        if ( votingMembers.isEmpty() )
-        {
-            return Stream.empty();
-        }
-
         var validMembers = votingMembers.stream()
                 .filter( member -> databasePenalties.notSuspended( namedDatabaseId.databaseId(), member ) && !member.equals( myself ) )
                 .collect( toSet() );
+
+        if ( validMembers.isEmpty() )
+        {
+            return Stream.empty();
+        }
 
         var raftId = RaftId.from( namedDatabaseId.databaseId() );
 
         return Stream.of( new TransferCandidates( namedDatabaseId.databaseId(), raftId, validMembers ) );
     }
 
-    private void handleProposal( LeaderTransferContext transferContext )
+    private void handleProposal( LeaderTransferContext transferContext, Set<String> prioritisedGroups )
     {
-        var proposal = new Proposal( myself, transferContext.to(), getPrioritisedGroups( config ) );
+        var proposal = new Proposal( myself, transferContext.to(), prioritisedGroups );
         var message = RaftMessages.InboundRaftMessageContainer.of( Instant.now(), transferContext.raftId(), proposal );
         messageHandler.handle( message );
     }
@@ -112,9 +116,13 @@ class TransferLeader implements Runnable
     {
         // TODO:  Prioritized should be per database
         Set<String> myGroups = getMyGroups( config );
-        Set<String> myPrioritizedGroups = getPrioritisedGroups( config );
-        myPrioritizedGroups.retainAll( myGroups );
-        if ( !myPrioritizedGroups.isEmpty() )
+        var prioritisedGroups = getPrioritisedGroups( config );
+        if ( prioritisedGroups.isEmpty() )
+        {
+            return List.of();
+        }
+        prioritisedGroups.retainAll( myGroups );
+        if ( !prioritisedGroups.isEmpty() )
         {
             return List.of();
         }

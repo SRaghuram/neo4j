@@ -24,13 +24,15 @@ import static org.neo4j.test.assertion.Assert.assertEventually;
 class LeaderTransferIT
 {
     @Inject
-    ClusterFactory clusterFactory;
+    private ClusterFactory clusterFactory;
 
     @Test
     void shouldTransferLeadershipToPriorityMember() throws ExecutionException, InterruptedException, TimeoutException
     {
         var cluster = clusterFactory.createCluster(
-                clusterConfig().withSharedCoreParam( CausalClusteringSettings.leadership_priority_groups, "prio" ).withNumberOfCoreMembers( 3 ) );
+                clusterConfig().withSharedCoreParam( CausalClusteringSettings.leadership_priority_groups, "prio" )
+                        .withNumberOfCoreMembers( 3 )
+                        .withSharedCoreParam( CausalClusteringSettings.leader_transfer_interval, "5s" ) );
         cluster.start();
         cluster.awaitLeader();
 

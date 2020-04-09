@@ -1314,7 +1314,10 @@ public interface RaftMessages
             @Override
             public String toString()
             {
-                return String.format( "Timeout.LeadershipTransfer{proposed=%s}", proposed );
+                return "Proposal{" +
+                       "proposed=" + proposed +
+                       ", priorityGroups=" + priorityGroups +
+                       '}';
             }
 
             @Override

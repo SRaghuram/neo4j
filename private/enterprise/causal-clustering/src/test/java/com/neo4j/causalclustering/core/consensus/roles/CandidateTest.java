@@ -52,9 +52,9 @@ class CandidateTest
         var state = RaftStateBuilder.builder()
                 .myself( myself )
                 .addInitialOutcome( OutcomeTestBuilder.builder()
-                        .setVotesForMe( Set.of( myself, member1, member2 ) )
                         .setCommitIndex( 2 )
                         .setTerm( 1 ).build() )
+                .votingMembers( myself, member1, member2 )
                 .supportsPreVoting( true )
                 .build();
 
@@ -75,9 +75,9 @@ class CandidateTest
         var state = RaftStateBuilder.builder()
                 .myself( myself )
                 .addInitialOutcome( OutcomeTestBuilder.builder()
-                        .setVotesForMe( Set.of( myself, member1, member2 ) )
                         .setCommitIndex( 3 )
                         .setTerm( 1 ).build() )
+                .votingMembers( myself, member1, member2 )
                 .supportsPreVoting( true )
                 .build();
 

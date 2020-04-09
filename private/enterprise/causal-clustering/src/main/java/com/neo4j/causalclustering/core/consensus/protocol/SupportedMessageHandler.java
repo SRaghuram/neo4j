@@ -12,24 +12,24 @@ import io.netty.handler.codec.MessageToMessageEncoder;
 
 import java.util.List;
 
-public class ContainsSupportedMessage extends MessageToMessageEncoder<RaftMessages.OutboundRaftMessageContainer<?>>
+public class SupportedMessageHandler extends MessageToMessageEncoder<RaftMessages.OutboundRaftMessageContainer<?>>
 {
     private RaftMessages.Handler<Boolean,?> isSupportedHandler;
 
-    public ContainsSupportedMessage( SupportedMessages isSupportedHandler )
+    public SupportedMessageHandler( SupportedMessages isSupportedHandler )
     {
         this.isSupportedHandler = isSupportedHandler;
     }
 
     @Override
-    protected void encode( ChannelHandlerContext channelHandlerContext, RaftMessages.OutboundRaftMessageContainer<?> raftIdAwareMessage, List<Object> list )
+    protected void encode( ChannelHandlerContext channelHandlerContext, RaftMessages.OutboundRaftMessageContainer<?> outbound, List<Object> list )
             throws Exception
     {
-        var message = raftIdAwareMessage.message();
+        var message = outbound.message();
 
         if ( message.dispatch( isSupportedHandler ) )
         {
-            list.add( raftIdAwareMessage );
+            list.add( outbound );
         }
     }
 }

@@ -9,12 +9,14 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembership;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.Inbound;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
@@ -22,6 +24,7 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.time.Clocks;
 
 import static java.util.UUID.randomUUID;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
@@ -56,6 +59,7 @@ class TransferLeaderTest
         var propose = messageHandler.proposals.get( 0 );
         assertEquals( propose.raftId().uuid(), databaseId.databaseId().uuid() );
         assertEquals( propose.message().proposed(), core1 );
+        assertEquals( propose.message().priorityGroups(), Set.of( "prio" ) );
     }
 
     @Test
@@ -85,7 +89,7 @@ class TransferLeaderTest
         var myLeaderships = new ArrayList<NamedDatabaseId>();
         TransferLeader transferLeader =
                 new TransferLeader( config, messageHandler, myself, databasePenalties,
-                                    SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships );
+                        SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships );
         var databaseId = databaseIds.iterator().next();
         // I am leader
         myLeaderships.add( databaseId );
@@ -99,6 +103,49 @@ class TransferLeaderTest
 
         // then
         assertTrue( messageHandler.proposals.isEmpty() );
+    }
+
+    @Test
+    void shouldNotTransferIfPriorityGroupsIsEmpty()
+    {
+        var myLeaderships = new ArrayList<NamedDatabaseId>();
+        TransferLeader transferLeader =
+                new TransferLeader( config, messageHandler, myself, databasePenalties,
+                        SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships );
+        var databaseId = databaseIds.iterator().next();
+        // I am leader
+        myLeaderships.add( databaseId );
+        // Priority group does not exist
+        config.set( CausalClusteringSettings.leadership_priority_groups, List.of() );
+
+        // when
+        transferLeader.run();
+
+        // then
+        assertTrue( messageHandler.proposals.isEmpty() );
+    }
+
+    @Test
+    void shouldFallBackToNormalLoadBalancingWithNoGroupsIfNoTarget()
+    {
+        var loadaBalancerLTC = new LeaderTransferContext( RaftId.from( databaseIds.iterator().next().databaseId() ), new MemberId( UUID.randomUUID() ) );
+        var myLeaderships = new ArrayList<NamedDatabaseId>();
+        TransferLeader transferLeader =
+                new TransferLeader( config, messageHandler, myself, databasePenalties,
+                        validTopologies -> loadaBalancerLTC, raftMembershipResolver, () -> myLeaderships );
+        var databaseId = databaseIds.iterator().next();
+        // I am leader
+        myLeaderships.add( databaseId );
+        // Priority group exist and I am not in it
+        config.set( CausalClusteringSettings.leadership_priority_groups, List.of( "prio" ) );
+        // I am of group prio
+        config.set( CausalClusteringSettings.server_groups, List.of( "prio" ) );
+        // when
+        transferLeader.run();
+
+        // then
+        assertThat( messageHandler.proposals.get( 0 ).message() ).isEqualTo(
+                new RaftMessages.LeadershipTransfer.Proposal( myself, loadaBalancerLTC.to(), Set.of() ) );
     }
 
     // TODO add more tests!

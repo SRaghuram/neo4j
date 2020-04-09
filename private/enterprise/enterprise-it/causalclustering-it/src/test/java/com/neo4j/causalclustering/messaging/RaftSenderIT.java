@@ -9,6 +9,8 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.membership.MemberIdSet;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
+import com.neo4j.causalclustering.core.consensus.protocol.v3.RaftProtocolClientInstallerV3;
+import com.neo4j.causalclustering.core.consensus.protocol.v3.RaftProtocolServerInstallerV3;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
@@ -87,7 +89,7 @@ class RaftSenderIT
 
     private final Duration handshakeTimeout = Duration.ofSeconds( 20 );
 
-    private final ApplicationProtocolRepository applicationProtocolRepository =
+    private final ApplicationProtocolRepository clientProtocolRepository =
             new ApplicationProtocolRepository( ApplicationProtocols.values(), supportedApplicationProtocol );
     private final ModifierProtocolRepository modifierProtocolRepository =
             new ModifierProtocolRepository( ModifierProtocols.values(), supportedModifierProtocols );
@@ -130,7 +132,7 @@ class RaftSenderIT
     @EnumSource( value = ApplicationProtocols.class, mode = EnumSource.Mode.MATCH_ALL, names = "RAFT_.+" )
     void shouldReturnSameChannelForMultipleRequests( ApplicationProtocols clientProtocol ) throws Exception
     {
-        Server server = life.add( raftServer( new ChannelInboundHandlerAdapter() ) );
+        Server server = life.add( raftServer( new ChannelInboundHandlerAdapter(), clientProtocol ) );
         RaftChannelPoolService clientPool = life.add( raftPoolService( clientProtocol ) );
 
         Channel channelA = clientPool.acquire( server.address() ).get( 10, SECONDS ).channel();
@@ -145,7 +147,7 @@ class RaftSenderIT
     @EnumSource( value = ApplicationProtocols.class, mode = EnumSource.Mode.MATCH_ALL, names = "RAFT_.+" )
     void shouldReturnNewChannelAfterClose( ApplicationProtocols clientProtocol ) throws Exception
     {
-        Server server = life.add( raftServer( new ChannelInboundHandlerAdapter() ) );
+        Server server = life.add( raftServer( new ChannelInboundHandlerAdapter(), clientProtocol ) );
         RaftChannelPoolService clientPool = life.add( raftPoolService( clientProtocol ) );
 
         Channel channelA = clientPool.acquire( server.address() ).get( 10, SECONDS ).channel();
@@ -163,7 +165,7 @@ class RaftSenderIT
     @EnumSource( value = ApplicationProtocols.class, mode = EnumSource.Mode.MATCH_ALL, names = "RAFT_.+" )
     void shouldCloseChannelOnCloseOfPool( ApplicationProtocols clientProtocol ) throws Exception
     {
-        Server server = life.add( raftServer( new ChannelInboundHandlerAdapter() ) );
+        Server server = life.add( raftServer( new ChannelInboundHandlerAdapter(), clientProtocol ) );
         RaftChannelPoolService clientPool = life.add( raftPoolService( clientProtocol ) );
 
         Channel channelA = clientPool.acquire( server.address() ).get( 10, SECONDS ).channel();
@@ -184,7 +186,7 @@ class RaftSenderIT
     @EnumSource( value = ApplicationProtocols.class, mode = EnumSource.Mode.MATCH_ALL, names = "RAFT_.+" )
     void shouldReacquireAfterInitialFailure( ApplicationProtocols clientProtocol ) throws Exception
     {
-        Server server = life.add( raftServer( new ChannelInboundHandlerAdapter() ) );
+        Server server = life.add( raftServer( new ChannelInboundHandlerAdapter(), clientProtocol ) );
         RaftChannelPoolService clientPool = life.add( raftPoolService( clientProtocol ) );
 
         server.stop();
@@ -200,7 +202,7 @@ class RaftSenderIT
     @EnumSource( value = ApplicationProtocols.class, mode = EnumSource.Mode.MATCH_ALL, names = "RAFT_.+" )
     void shouldAcquireInQuickSuccession( ApplicationProtocols clientProtocol ) throws Exception
     {
-        Server server = life.add( raftServer( new ChannelInboundHandlerAdapter() ) );
+        Server server = life.add( raftServer( new ChannelInboundHandlerAdapter(), clientProtocol ) );
         RaftChannelPoolService clientPool = life.add( raftPoolService( clientProtocol ) );
 
         // this tries to be a bit racy, acquiring several times before the connection is fully up
@@ -239,7 +241,7 @@ class RaftSenderIT
                 messageReceived.release();
             }
         };
-        Server raftServer = life.add( raftServer( nettyHandler ) );
+        Server raftServer = life.add( raftServer( nettyHandler, clientProtocol ) );
 
         // given: raft messaging service
         RaftChannelPoolService raftPoolService = life.add( raftPoolService( clientProtocol ) );
@@ -260,16 +262,30 @@ class RaftSenderIT
         assertTrue( messageReceived.tryAcquire( 15, SECONDS ) );
     }
 
-    private Server raftServer( ChannelInboundHandler nettyHandler )
+    private Server raftServer( ChannelInboundHandler nettyHandler, ApplicationProtocols protocols )
     {
         NettyPipelineBuilderFactory pipelineFactory = NettyPipelineBuilderFactory.insecure();
 
-        RaftProtocolServerInstallerV2.Factory factoryV2 =
-                new RaftProtocolServerInstallerV2.Factory( nettyHandler, pipelineFactory, logProvider );
-        ProtocolInstallerRepository<ProtocolInstaller.Orientation.Server> installer =
-                new ProtocolInstallerRepository<>( List.of( factoryV2 ), ModifierProtocolInstaller.allServerInstallers );
+        ProtocolInstallerRepository<ProtocolInstaller.Orientation.Server> installer;
+        if ( protocols == ApplicationProtocols.RAFT_2_0 )
+        {
 
-        HandshakeServerInitializer handshakeInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
+            var factoryV2 =
+                    new RaftProtocolServerInstallerV2.Factory( nettyHandler, pipelineFactory, logProvider );
+            installer = new ProtocolInstallerRepository<>( List.of( factoryV2 ), ModifierProtocolInstaller.allServerInstallers );
+        }
+        else if ( protocols == ApplicationProtocols.RAFT_3_0 )
+        {
+            var factoryV3 =
+                    new RaftProtocolServerInstallerV3.Factory( nettyHandler, pipelineFactory, logProvider );
+            installer = new ProtocolInstallerRepository<>( List.of( factoryV3 ), ModifierProtocolInstaller.allServerInstallers );
+        }
+        else
+        {
+            throw new IllegalArgumentException( "Unknown protocol " + protocols );
+        }
+
+        HandshakeServerInitializer handshakeInitializer = new HandshakeServerInitializer( clientProtocolRepository, modifierProtocolRepository,
                 installer, pipelineFactory, logProvider, Config.defaults() );
 
         ServerChannelInitializer channelInitializer = new ServerChannelInitializer( handshakeInitializer, pipelineFactory, handshakeTimeout, logProvider,
@@ -289,6 +305,11 @@ class RaftSenderIT
         if ( clientProtocol == ApplicationProtocols.RAFT_2_0 )
         {
             RaftProtocolClientInstallerV2.Factory factoryV2 = new RaftProtocolClientInstallerV2.Factory( pipelineFactory, logProvider );
+            protocolInstaller = new ProtocolInstallerRepository<>( Collections.singleton( factoryV2 ), ModifierProtocolInstaller.allClientInstallers );
+        }
+        else if ( clientProtocol == ApplicationProtocols.RAFT_3_0 )
+        {
+            RaftProtocolClientInstallerV3.Factory factoryV2 = new RaftProtocolClientInstallerV3.Factory( pipelineFactory, logProvider );
             protocolInstaller = new ProtocolInstallerRepository<>( Collections.singleton( factoryV2 ), ModifierProtocolInstaller.allClientInstallers );
         }
         else

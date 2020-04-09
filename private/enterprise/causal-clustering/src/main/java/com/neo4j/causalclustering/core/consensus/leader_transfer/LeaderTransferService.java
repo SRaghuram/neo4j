@@ -25,8 +25,6 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobScheduler;
 
-import static java.util.stream.Collectors.toList;
-
 public class LeaderTransferService extends LifecycleAdapter implements RejectedLeaderTransferHandler
 {
     private final TransferLeader transferLeader;

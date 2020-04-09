@@ -72,8 +72,7 @@ class RaftOutcomeApplier
 
         driveMembership( outcome );
 
-        var attemptedTransferWasRejected = outcome.getLeaderTransferRejection();
-        if ( attemptedTransferWasRejected != null )
+        if ( outcome.getLeaderTransferRejection() != null )
         {
             rejectionConsumer.accept( outcome.getLeaderTransferRejection() );
         }

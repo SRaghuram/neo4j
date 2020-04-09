@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.protocol.v3;
 
-import com.neo4j.causalclustering.core.consensus.protocol.ContainsSupportedMessage;
+import com.neo4j.causalclustering.core.consensus.protocol.SupportedMessageHandler;
 import com.neo4j.causalclustering.messaging.marshalling.ReplicatedContentCodec;
 import com.neo4j.causalclustering.messaging.marshalling.v2.encoding.ContentTypeEncoder;
 import com.neo4j.causalclustering.messaging.marshalling.v2.encoding.RaftMessageContentEncoder;
@@ -66,7 +66,7 @@ public class RaftProtocolClientInstallerV3 implements ProtocolInstaller<Protocol
                 .add( "raft_content_type_encoder", new ContentTypeEncoder() )
                 .add( "raft_chunked_writer", new ChunkedWriteHandler() )
                 .add( "raft_message_content_encoder", new RaftMessageContentEncoder( new ReplicatedContentCodec() ) )
-                .add( "message_validator", new ContainsSupportedMessage( SUPPORT_ALL ) )
+                .add( "message_validator", new SupportedMessageHandler( SUPPORT_ALL ) )
                 .install();
     }
 
