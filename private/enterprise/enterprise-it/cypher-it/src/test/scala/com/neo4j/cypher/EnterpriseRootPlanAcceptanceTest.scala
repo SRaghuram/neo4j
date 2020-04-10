@@ -56,8 +56,7 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with Ente
     children.get(0).getArguments.get("DbHits") should equal(1) // AllNodesScan has 1 hit
   }
 
-  // re-enable on pipelined PROFILE rows
-  ignore("Rows should be properly formatted in pipelined runtime") {
+  test("Rows should be properly formatted in pipelined runtime") {
     given("match (n) return n")
       .withRuntime(PipelinedRuntimeName)
       .planDescription.getArguments.get("Rows") should equal(0)
