@@ -32,7 +32,7 @@ import org.neo4j.values.AnyValue
 /**
   * Compiles [[IntermediateExpression]] into compiled byte code.
   */
-class DefaultExpressionCompilerBack(codeGenerationMode: CodeGenerationMode) {
+class DefaultExpressionCompilerBack(codeGenerationMode: CodeGenerationMode) extends ExpressionCompilerBack {
 
   def compileExpression(expression: IntermediateExpression): CompiledExpression = {
     val classDeclaration =
