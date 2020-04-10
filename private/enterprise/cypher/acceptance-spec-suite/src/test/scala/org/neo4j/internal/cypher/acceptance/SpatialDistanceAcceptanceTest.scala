@@ -849,7 +849,6 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   private def expectResultsAndIndexUsage(query: String, expectedResults: Set[_ <: Any], inclusiveRange: Boolean,
                                          config: TestConfiguration = Configs.CachedProperty): Unit = {
     val result = executeWith(config, query)
-    println(result.executionPlanDescription())
 
     // Then
     val plan = result.executionPlanDescription()
