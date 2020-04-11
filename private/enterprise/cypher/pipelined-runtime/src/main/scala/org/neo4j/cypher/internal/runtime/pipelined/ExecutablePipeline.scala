@@ -32,6 +32,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperatorState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndMorsel
@@ -103,6 +104,13 @@ class PipelineState(val pipeline: ExecutablePipeline,
                     outputOperatorStateCreator: OperatorTask => OutputOperatorState,
                     executionState: ExecutionState) extends OperatorInput with OperatorCloser {
 
+  private val workLimiterASM =
+    pipeline.workLimiter match {
+      case None => null
+      case Some(id) =>
+        executionState.argumentStateMaps(id).asInstanceOf[ArgumentStateMap[WorkCanceller]]
+    }
+
   /**
    * Returns the next task for this pipeline, or `null` if no task is available.
    *
@@ -172,11 +180,11 @@ class PipelineState(val pipeline: ExecutablePipeline,
     }
   }
 
-  private def remainingRows = {
-    pipeline.workLimiter
-      .map(id => executionState.argumentStateMaps(id).asInstanceOf[ArgumentStateMap[WorkCanceller]].peek(TopLevelArgument.VALUE).remaining)
-      .getOrElse(Long.MaxValue)
-  }
+  private def remainingRows: Long =
+    if (workLimiterASM != null)
+      workLimiterASM.peek(TopLevelArgument.VALUE).remaining
+    else
+      Long.MaxValue
 
   private def innerNextTask(state: PipelinedQueryState,
                             resources: QueryResources): PipelineTask = {
