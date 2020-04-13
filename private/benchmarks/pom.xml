@@ -123,6 +123,7 @@
         <module>benchmark-neo4j-common</module>
         <module>benchmark-neo4j-common-test</module>
         <module>benchmark-results-client-tests</module>
+        <module>quick</module>
     </modules>
 
     <profiles>
