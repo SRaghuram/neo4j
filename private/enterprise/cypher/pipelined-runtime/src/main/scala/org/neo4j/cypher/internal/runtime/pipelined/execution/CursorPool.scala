@@ -32,9 +32,9 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
   val relationshipScanCursorPool: CursorPool[RelationshipScanCursor] = CursorPool[RelationshipScanCursor](
     () => cursorFactory.allocateRelationshipScanCursor(pageCursorTracer))
   val nodeValueIndexCursorPool: CursorPool[NodeValueIndexCursor] = CursorPool[NodeValueIndexCursor](
-    () => cursorFactory.allocateNodeValueIndexCursor())
+    () => cursorFactory.allocateNodeValueIndexCursor(pageCursorTracer))
   val nodeLabelIndexCursorPool: CursorPool[NodeLabelIndexCursor] = CursorPool[NodeLabelIndexCursor](
-    () => cursorFactory.allocateNodeLabelIndexCursor())
+    () => cursorFactory.allocateNodeLabelIndexCursor(pageCursorTracer))
 
   def setKernelTracer(tracer: KernelReadTracer): Unit = {
     nodeCursorPool.setKernelTracer(tracer)
@@ -74,11 +74,11 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
 
   override def allocateFullAccessPropertyCursor(cursorTracer: PageCursorTracer): PropertyCursor = fail("FullAccessPropertyCursor")
 
-  override def allocateNodeValueIndexCursor(): NodeValueIndexCursor = nodeValueIndexCursorPool.allocate()
+  override def allocateNodeValueIndexCursor(cursorTracer: PageCursorTracer): NodeValueIndexCursor = nodeValueIndexCursorPool.allocate()
 
-  override def allocateNodeLabelIndexCursor(): NodeLabelIndexCursor = nodeLabelIndexCursorPool.allocate()
+  override def allocateNodeLabelIndexCursor(cursorTracer: PageCursorTracer): NodeLabelIndexCursor = nodeLabelIndexCursorPool.allocate()
 
-  override def allocateRelationshipIndexCursor(): RelationshipIndexCursor = fail("RelationshipIndexCursor")
+  override def allocateRelationshipIndexCursor(cursorTracer: PageCursorTracer): RelationshipIndexCursor = fail("RelationshipIndexCursor")
 
   override def allocateRelationshipTypeIndexCursor(): RelationshipTypeIndexCursor = fail("RelationshipTypeIndexCursor")
 

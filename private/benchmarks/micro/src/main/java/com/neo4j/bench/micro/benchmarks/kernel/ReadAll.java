@@ -91,7 +91,7 @@ public class ReadAll extends AbstractKernelBenchmark
         {
             initializeTx( benchmark );
             node = kernelTx.cursors.allocateNodeCursor( NULL );
-            nodeByLabel = kernelTx.cursors.allocateNodeLabelIndexCursor();
+            nodeByLabel = kernelTx.cursors.allocateNodeLabelIndexCursor( NULL );
             edge = kernelTx.cursors.allocateRelationshipScanCursor( NULL );
             read = kernelTx.read;
             labelId = labelToId( LABEL );

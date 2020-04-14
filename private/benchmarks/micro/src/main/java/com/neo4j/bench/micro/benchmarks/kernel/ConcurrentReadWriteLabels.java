@@ -42,6 +42,7 @@ import static com.neo4j.bench.micro.Main.run;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.nonContendingStridingFor;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 @BenchmarkEnabled( true )
 public class ConcurrentReadWriteLabels extends AbstractKernelBenchmark
@@ -305,7 +306,7 @@ public class ConcurrentReadWriteLabels extends AbstractKernelBenchmark
     public void readNodesWithLabel( ReadTxState readTxState, RNGState rngState, Blackhole bh )
     {
         int label = readTxState.label( rngState.rng );
-        try ( NodeLabelIndexCursor nodeCursor = readTxState.kernelTx.cursors.allocateNodeLabelIndexCursor() )
+        try ( NodeLabelIndexCursor nodeCursor = readTxState.kernelTx.cursors.allocateNodeLabelIndexCursor( NULL ) )
         {
             readTxState.read.nodeLabelScan( label, nodeCursor );
             assertCount( nodeCursor, readTxState.minCount, readTxState.maxCount, bh );

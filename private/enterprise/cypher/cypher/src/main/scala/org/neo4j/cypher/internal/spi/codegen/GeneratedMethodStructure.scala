@@ -249,7 +249,8 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
   }
 
   override def labelScan(cursorName: String, labelIdVar: String): Unit = {
-    generator.assign(typeRef[NodeLabelIndexCursor], cursorName, invoke(cursors, method[CursorFactory, NodeLabelIndexCursor]("allocateNodeLabelIndexCursor")))
+    generator.assign(typeRef[NodeLabelIndexCursor], cursorName, invoke(cursors, method[CursorFactory, NodeLabelIndexCursor]("allocateNodeLabelIndexCursor",
+      typeRef[PageCursorTracer]), get(generator.self(), fields.cursorTracer)))
     generator.expression(pop(invoke(get(generator.self(), fields.closeables), Methods.listAdd, generator.load(cursorName))))
     generator.expression(invoke(dataRead, method[Read, Unit]("nodeLabelScan", typeRef[Int], typeRef[NodeLabelIndexCursor]),
       generator.load(labelIdVar), generator.load(cursorName) ))
@@ -1659,8 +1660,8 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
       body.assign(local,
         invoke(
           methodReference(typeRef[CompiledIndexUtils], typeRef[NodeValueIndexCursor], "indexSeek",
-            typeRef[Read], typeRef[CursorFactory], typeRef[IndexDescriptor], typeRef[AnyRef]),
-          dataRead, cursors, index, boxedValue)
+            typeRef[Read], typeRef[CursorFactory], typeRef[IndexDescriptor], typeRef[AnyRef], typeRef[PageCursorTracer]),
+          dataRead, cursors, index, boxedValue, get(generator.self(), fields.cursorTracer))
       )
       body.expression(pop(invoke(get(generator.self(), fields.closeables), Methods.listAdd, generator.load(cursorName))))
     }

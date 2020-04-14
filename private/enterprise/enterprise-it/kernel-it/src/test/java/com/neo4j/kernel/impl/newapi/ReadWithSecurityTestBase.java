@@ -204,7 +204,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         // given
         changeUser( getLoginContext() );
         List<Long> ids = new ArrayList<>();
-        try ( NodeLabelIndexCursor nodes = cursors.allocateNodeLabelIndexCursor() )
+        try ( NodeLabelIndexCursor nodes = cursors.allocateNodeLabelIndexCursor( NULL ) )
         {
             // when
             read.nodeLabelScan( barLabel, nodes );
@@ -226,7 +226,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         // given
         changeUser( getLoginContext() );
         List<Long> ids = new ArrayList<>();
-        try ( NodeLabelIndexCursor nodes = cursors.allocateNodeLabelIndexCursor() )
+        try ( NodeLabelIndexCursor nodes = cursors.allocateNodeLabelIndexCursor( NULL ) )
         {
             Scan<NodeLabelIndexCursor> scan = read.nodeLabelScan( barLabel );
             scan.reserveBatch( nodes, 5 );
@@ -343,7 +343,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         List<Long> ids = new ArrayList<>();
         IndexDescriptor index = schemaRead.indexGetForName( "barIndex" );
         IndexReadSession indexSession = read.indexReadSession( index );
-        try ( NodeValueIndexCursor cursor = cursors.allocateNodeValueIndexCursor() )
+        try ( NodeValueIndexCursor cursor = cursors.allocateNodeValueIndexCursor( NULL ) )
         {
             read.nodeIndexSeek( indexSession, cursor, IndexQueryConstraints.unconstrained(), IndexQuery.exact( prop1Key, 1 ) );
             while ( cursor.next() )
@@ -363,8 +363,8 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         changeUser( getLoginContext() );
         List<Long> ids = new ArrayList<>();
         IndexDescriptor index = schemaRead.indexGetForName( "distinctBarIndex" );
-        try ( NodeValueIndexCursor cursor1 = cursors.allocateNodeValueIndexCursor();
-              NodeValueIndexCursor cursor2 = cursors.allocateNodeValueIndexCursor() )
+        try ( NodeValueIndexCursor cursor1 = cursors.allocateNodeValueIndexCursor( NULL );
+              NodeValueIndexCursor cursor2 = cursors.allocateNodeValueIndexCursor( NULL ) )
         {
             ids.add( read.lockingNodeUniqueIndexSeek( index, cursor1, IndexQuery.exact( prop2Key, 3 ) ) );
             ids.add( read.lockingNodeUniqueIndexSeek( index, cursor2, IndexQuery.exact( prop2Key, 4 ) ) );
@@ -382,7 +382,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         List<Long> ids = new ArrayList<>();
         IndexDescriptor index = schemaRead.indexGetForName( "barIndex" );
         IndexReadSession indexSession = read.indexReadSession( index );
-        try ( NodeValueIndexCursor cursor = cursors.allocateNodeValueIndexCursor() )
+        try ( NodeValueIndexCursor cursor = cursors.allocateNodeValueIndexCursor( NULL ) )
         {
             read.nodeIndexScan( indexSession, cursor, IndexQueryConstraints.unconstrained() );
             while ( cursor.next() )

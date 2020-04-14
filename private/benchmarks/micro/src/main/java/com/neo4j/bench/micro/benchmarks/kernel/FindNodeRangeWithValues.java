@@ -56,6 +56,7 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.defaultRangeFor;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
 import static org.neo4j.internal.kernel.api.IndexQueryConstraints.unorderedValues;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 @BenchmarkEnabled( true )
 @OutputTimeUnit( MICROSECONDS )
@@ -156,7 +157,7 @@ public class FindNodeRangeWithValues extends AbstractKernelBenchmark
 
             index = single( kernelTx.schemaRead.index( SchemaDescriptor.forLabel( labelToId( LABEL ), propertyKey ) ) );
             indexReadSession = kernelTx.read.indexReadSession( index );
-            node = kernelTx.cursors.allocateNodeValueIndexCursor();
+            node = kernelTx.cursors.allocateNodeValueIndexCursor( NULL );
             read = kernelTx.read;
         }
 

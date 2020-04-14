@@ -56,6 +56,7 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
 import static org.neo4j.internal.kernel.api.IndexQueryConstraints.unconstrained;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 @BenchmarkEnabled( true )
 @OutputTimeUnit( MICROSECONDS )
@@ -152,7 +153,7 @@ public class FindNodeUnique extends AbstractKernelBenchmark
             valueFun = propertyDefinition.value().create();
             index = single( kernelTx.schemaRead.index( SchemaDescriptor.forLabel( labelId, propertyKey ) ) );
             indexReadSession = kernelTx.read.indexReadSession( index );
-            node = kernelTx.cursors.allocateNodeValueIndexCursor();
+            node = kernelTx.cursors.allocateNodeValueIndexCursor( NULL );
             read = kernelTx.read;
         }
 
