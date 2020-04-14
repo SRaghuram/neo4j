@@ -46,17 +46,20 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
 {
     private static final String TRANSACTION_LOG_CATCHUP_TAG = "transactionLogCatchup";
 
-    private final Lifespan lifespan = new Lifespan();
     private final Log log;
-    private final boolean fullStoreCopy;
-    private final TransactionLogWriter writer;
+
+    private final Lifespan life = new Lifespan();
     private final LogFiles logFiles;
+    private final TransactionLogWriter writer;
+    private final FlushablePositionAwareChecksumChannel logChannel;
+    private final LogPositionMarker logPositionMarker = new LogPositionMarker();
+
     private final TransactionMetaDataStore metaDataStore;
     private final DatabasePageCache databasePageCache;
     private final PageCacheTracer pageCacheTracer;
+
     private final LongRange validInitialTxId;
-    private final FlushablePositionAwareChecksumChannel logChannel;
-    private final LogPositionMarker logPositionMarker = new LogPositionMarker();
+    private final boolean fullStoreCopy;
 
     private long lastTxId = -1;
     private long expectedTxId = -1;
@@ -76,8 +79,10 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
 
         Config customConfig = customisedConfig( config, keepTxLogsInStoreDir, fullStoreCopy );
         this.logFiles = getLogFiles( databaseLayout, fs, customConfig, storageEngineFactory, validInitialTxId,
-                configWithoutSpecificStoreFormat, metaDataStore, databasePageCache );
-        this.lifespan.add( logFiles );
+                configWithoutSpecificStoreFormat, metaDataStore );
+
+        this.life.add( logFiles );
+
         this.logChannel = logFiles.getLogFile().getWriter();
         this.writer = new TransactionLogWriter( new LogEntryWriter( logChannel ) );
 
@@ -86,10 +91,10 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
 
     private static LogFiles getLogFiles( DatabaseLayout databaseLayout, FileSystemAbstraction fs, Config customConfig,
             StorageEngineFactory storageEngineFactory, LongRange validInitialTxId, Config configWithoutSpecificStoreFormat,
-            TransactionMetaDataStore metaDataStore, DatabasePageCache databasePageCache ) throws IOException
+            TransactionMetaDataStore metaDataStore ) throws IOException
     {
         Dependencies dependencies = new Dependencies();
-        dependencies.satisfyDependencies( databaseLayout, fs, databasePageCache, configWithoutSpecificStoreFormat );
+        dependencies.satisfyDependencies( databaseLayout, fs, configWithoutSpecificStoreFormat );
 
         LogPosition startPosition = getLastClosedTransactionPosition( databaseLayout, metaDataStore, fs );
         LogFilesBuilder logFilesBuilder = LogFilesBuilder
@@ -168,6 +173,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         catch ( IOException e )
         {
             log.error( "Failed when appending to transaction log", e );
+            throw new UncheckedIOException( e );
         }
     }
 
@@ -228,7 +234,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
                     lastCommittedTx.commitTimestamp(), checkPointPosition.getByteOffset(), logVersion, cursorTracer );
         }
 
-        lifespan.close();
+        life.close();
 
         if ( lastTxId != -1 )
         {
