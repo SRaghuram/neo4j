@@ -437,27 +437,27 @@ class CheckTxLogsTest
 
         writeTxContent( log, 0,
                 new Command.RelationshipCommand(
-                        new RelationshipRecord( 42, false, -1, -1, -1, -1, -1, -1, -1, false, false ),
-                        new RelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, true, true )
+                        createRelationshipRecord( 42, false, -1, -1, -1, -1, -1, -1, -1, false, false ),
+                        createRelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, true, true )
                 ),
                 new Command.PropertyCommand(
                         propertyRecord( 5, false, -1, -1 ),
                         propertyRecord( 5, true, -1, -1, 777 )
                 ),
                 new Command.RelationshipCommand(
-                        new RelationshipRecord( 21, true, 1, 2, 3, 4, 5, 6, 7, true, true ),
-                        new RelationshipRecord( 21, false, -1, -1, -1, -1, -1, -1, -1, false, false )
+                        createRelationshipRecord( 21, true, 1, 2, 3, 4, 5, 6, 7, true, true ),
+                        createRelationshipRecord( 21, false, -1, -1, -1, -1, -1, -1, -1, false, false )
                 )
         );
 
         writeTxContent( log, 0,
                 new Command.RelationshipCommand(
-                        new RelationshipRecord( 53, true, 1, 2, 3, 4, 5, 6, 7, true, true ),
-                        new RelationshipRecord( 53, true, 1, 2, 30, 4, 14, 6, 7, true, true )
+                        createRelationshipRecord( 53, true, 1, 2, 3, 4, 5, 6, 7, true, true ),
+                        createRelationshipRecord( 53, true, 1, 2, 30, 4, 14, 6, 7, true, true )
                 ),
                 new Command.RelationshipCommand(
-                        new RelationshipRecord( 42, true, 1, 2, 3, 9, 5, 6, 7, true, true ),
-                        new RelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, true, true )
+                        createRelationshipRecord( 42, true, 1, 2, 3, 9, 5, 6, 7, true, true ),
+                        createRelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, true, true )
                 )
         );
 
@@ -489,34 +489,34 @@ class CheckTxLogsTest
 
         writeTxContent( log1, 0,
                 new Command.RelationshipCommand(
-                        new RelationshipRecord( 42, false, -1, -1, -1, -1, -1, -1, -1, false, false ),
-                        new RelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, true, true )
+                        createRelationshipRecord( 42, false, -1, -1, -1, -1, -1, -1, -1, false, false ),
+                        createRelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, true, true )
                 ),
                 new Command.PropertyCommand(
                         propertyRecord( 5, false, -1, -1 ),
                         propertyRecord( 5, true, -1, -1, 777 )
                 ),
                 new Command.RelationshipCommand(
-                        new RelationshipRecord( 21, true, 1, 2, 3, 4, 5, 6, 7, true, true ),
-                        new RelationshipRecord( 21, false, -1, -1, -1, -1, -1, -1, -1, false, false )
+                        createRelationshipRecord( 21, true, 1, 2, 3, 4, 5, 6, 7, true, true ),
+                        createRelationshipRecord( 21, false, -1, -1, -1, -1, -1, -1, -1, false, false )
                 )
         );
 
         writeTxContent( log2, 0,
                 new Command.RelationshipCommand(
-                        new RelationshipRecord( 42, true, 1, 2, 3, 9, 5, 6, 7, true, true ),
-                        new RelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, true, true )
+                        createRelationshipRecord( 42, true, 1, 2, 3, 9, 5, 6, 7, true, true ),
+                        createRelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, true, true )
                 )
         );
 
         writeTxContent( log3, 0,
                 new Command.RelationshipCommand(
-                        new RelationshipRecord( 53, true, 1, 2, 3, 4, 5, 6, 7, true, true ),
-                        new RelationshipRecord( 53, true, 1, 2, 30, 4, 14, 6, 7, true, true )
+                        createRelationshipRecord( 53, true, 1, 2, 3, 4, 5, 6, 7, true, true ),
+                        createRelationshipRecord( 53, true, 1, 2, 30, 4, 14, 6, 7, true, true )
                 ),
                 new Command.RelationshipCommand(
-                        new RelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, false, true ),
-                        new RelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, false, true )
+                        createRelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, false, true ),
+                        createRelationshipRecord( 42, true, 1, 2, 3, 4, 5, 6, 7, false, true )
                 )
         );
 
@@ -821,6 +821,15 @@ class CheckTxLogsTest
 
         assertTrue( logsValidity, "empty logs should be valid" );
         verify( entryCursor ).close();
+    }
+
+    private static RelationshipRecord createRelationshipRecord( long id, boolean inUse, long firstNode, long secondNode, int type, long firstPrevRel,
+            long firstNextRel, long secondPrevRel, long secondNextRel, boolean firstInFirstChain, boolean firstInSecondChain )
+    {
+        RelationshipRecord record = new RelationshipRecord( id );
+        record.initialize( inUse, 0, firstNode, secondNode, type, firstPrevRel, firstNextRel, secondPrevRel, secondNextRel, firstInFirstChain,
+                firstInSecondChain );
+        return record;
     }
 
     private File logFile( long version )
