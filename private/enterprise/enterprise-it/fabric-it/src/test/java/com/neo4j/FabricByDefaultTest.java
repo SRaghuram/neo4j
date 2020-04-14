@@ -5,7 +5,6 @@
  */
 package com.neo4j;
 
-import com.neo4j.fabric.localdb.FabricDatabaseManager;
 import com.neo4j.utils.DriverUtils;
 import com.neo4j.utils.ProxyFunctions;
 import org.junit.jupiter.api.AfterAll;
@@ -342,7 +341,7 @@ class FabricByDefaultTest
                     .map( c -> c.get( "name" ).asString() )
                     .collect( Collectors.toList() );
 
-            assertEquals( List.of( "Eva", "Fiona", "Gustav" ), names );
+            assertThat( names ).containsExactlyInAnyOrder( "Eva", "Fiona", "Gustav" );
         }
         finally
         {
