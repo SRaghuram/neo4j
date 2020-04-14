@@ -11,8 +11,9 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
+import org.neo4j.kernel.impl.util.collection
 
-import scala.collection.mutable
+import scala.collection.JavaConverters.asScalaIteratorConverter
 
 abstract class AbstractHashJoinPipe[Key, T](left: Pipe,
                                             right: Pipe,
@@ -40,9 +41,9 @@ abstract class AbstractHashJoinPipe[Key, T](left: Pipe,
     val result = for {rhs: CypherRow <- rhsIterator
                       joinKey <- computeKey(rhs, rightSide, state)}
       yield {
-        val matchesFromLhs: mutable.Seq[CypherRow] = table.getOrElse(joinKey, mutable.MutableList.empty)
+        val matchesFromLhs = table.get(joinKey)
 
-        matchesFromLhs.map { lhs =>
+        matchesFromLhs.asScala.map { lhs =>
           val newRow = SlottedRow(slots)
           lhs.copyTo(newRow)
           copyDataFromRhs(newRow, rhs)
@@ -53,14 +54,12 @@ abstract class AbstractHashJoinPipe[Key, T](left: Pipe,
     result.flatten
   }
 
-  // TODO: Memory tracking
-  private def buildProbeTable(input: Iterator[CypherRow], queryState: QueryState): mutable.HashMap[Key, mutable.MutableList[CypherRow]] = {
-    val table = new mutable.HashMap[Key, mutable.MutableList[CypherRow]]
+  private def buildProbeTable(input: Iterator[CypherRow], queryState: QueryState): collection.ProbeTable[Key, CypherRow] = {
+    val table = collection.ProbeTable.createProbeTable[Key, CypherRow](queryState.memoryTracker.memoryTrackerForOperator(id.x))
 
     for {context <- input
          joinKey <- computeKey(context, leftSide, queryState)} {
-      val matchingRows = table.getOrElseUpdate(joinKey, mutable.MutableList.empty)
-      matchingRows += context
+      table.put(joinKey, context)
     }
 
     table
