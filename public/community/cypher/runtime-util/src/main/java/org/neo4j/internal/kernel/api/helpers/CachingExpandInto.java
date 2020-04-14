@@ -113,29 +113,26 @@ public class CachingExpandInto
         Preconditions.requireNegative( this.fromNode );
         Preconditions.requireNegative( this.toNode );
         Direction reverseDirection = direction.reverse();
-
-        if ( FAST )
-        {
-            // First of all check if the cursor can do this efficiently itself
-            RelationshipTraversalCursor fastPathCursor = tryFastPath( nodeCursor, traversalCursor, fromNode, types, reverseDirection, toNode );
-            if ( fastPathCursor != null )
-            {
-                return traversalCursor;
-            }
-            // ^^^ node cursor should be left at toNode, because that's what the code below expects
-        }
-
-        // Otherwise do it the slow way and add caching to try and speed things up
-        List<Relationship> connections = relationshipCache.get( fromNode, toNode, direction );
-
         this.fromNode = fromNode;
         this.toNode = toNode;
 
+        List<Relationship> connections = relationshipCache.get( fromNode, toNode, direction );
         if ( connections != null )
         {
             return new FromCachedSelectionCursor( connections.iterator(), read );
         }
-        //Check toNode, note that nodeCursor is already positioned at toNode
+
+        if ( FAST )
+        {
+            RelationshipTraversalCursor fastPathCursor = tryFastPath( nodeCursor, traversalCursor, fromNode, types, reverseDirection, toNode );
+            if ( fastPathCursor != null )
+            {
+                return connectingRelationshipsCursor( fastPathCursor, fromNode );
+            }
+            // ^^^ node cursor should be left at toNode, because that's what the code below expects
+        }
+
+        //Check toNode, note that nodeCursor is already positioned at toNode if fast path has been tried
         int toDegree = degreeCache.getIfAbsentPut( toNode,
                 () -> calculateTotalDegreeIfCheap( read, toNode, nodeCursor, reverseDirection, types ));
 
