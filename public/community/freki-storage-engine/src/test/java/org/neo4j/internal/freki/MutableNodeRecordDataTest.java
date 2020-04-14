@@ -188,6 +188,21 @@ class MutableNodeRecordDataTest
         checkIfDeserializedRecordIsEqual();
     }
 
+    @Test
+    void canHaveZeroLoopDegreesForDenseNode()
+    {
+        // given
+        record.setRecordPointer( buildRecordPointer( 0, 0 ) );
+        record.setDense( true );
+
+        // when
+        record.degrees.add( 3, 1234, 5678, 0 );
+        record.degrees.add( 5, 4321, 21, 0 );
+
+        // then
+        checkIfDeserializedRecordIsEqual();
+    }
+
     private void checkIfDeserializedRecordIsEqual()
     {
         //Given
