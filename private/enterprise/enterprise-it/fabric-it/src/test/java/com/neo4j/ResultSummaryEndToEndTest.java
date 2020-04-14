@@ -5,12 +5,12 @@
  */
 package com.neo4j;
 
-import com.neo4j.fabric.localdb.FabricDatabaseManager;
 import com.neo4j.utils.DriverUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Arrays;
 import java.util.List;
@@ -31,7 +31,6 @@ import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.kernel.api.exceptions.Status;
-import org.neo4j.util.FeatureToggles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -41,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 
+@ExtendWith( FabricEverywhereExtension.class )
 class ResultSummaryEndToEndTest
 {
     private static Driver clientDriver;
@@ -53,7 +53,6 @@ class ResultSummaryEndToEndTest
     @BeforeAll
     static void beforeAll()
     {
-        FeatureToggles.set( FabricDatabaseManager.class, FabricDatabaseManager.FABRIC_BY_DEFAULT_FLAG_NAME, true );
         shard0 = Neo4jBuilders.newInProcessBuilder().build();
 
         var configProperties = Map.of(
@@ -126,8 +125,6 @@ class ResultSummaryEndToEndTest
                 () -> shard0Driver.close(),
                 () -> shard0.close()
         ).parallelStream().forEach( Runnable::run );
-
-        FeatureToggles.set( FabricDatabaseManager.class, FabricDatabaseManager.FABRIC_BY_DEFAULT_FLAG_NAME, false );
     }
 
     @Test

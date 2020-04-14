@@ -12,8 +12,6 @@ import com.neo4j.fabric.pipeline.FabricFrontEnd
 import com.neo4j.fabric.planning.FabricPlan.DebugOptions
 import com.neo4j.fabric.planning.FabricQuery.LocalQuery
 import com.neo4j.fabric.planning.FabricQuery.RemoteQuery
-import com.neo4j.fabric.planning.Fragment.Exec
-import com.neo4j.fabric.planning.Fragment.Init
 import org.neo4j.cypher.CypherExpressionEngineOption
 import org.neo4j.cypher.CypherRuntimeOption
 import org.neo4j.cypher.internal.CypherConfiguration
@@ -89,12 +87,6 @@ case class FabricPlanner(
         inFabricContext = fabricContext
       )
     }
-
-    private def isSingleGraphFragment(fragment: Fragment): Boolean =
-      fragment match {
-        case Exec(_: Init, _, _) => true
-        case _ => false
-      }
 
     private def trace(compute: => FabricPlan): FabricPlan = {
       val event = pipeline.traceStart()

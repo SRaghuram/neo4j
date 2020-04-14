@@ -68,6 +68,7 @@ case class FabricFrontEnd(
       cypherConfig.interpretedPipesFallback,
       cypherConfig.queryCacheSize,
     )
+
     def executionType(options: QueryOptions, inFabricContext: Boolean): FabricPlan.ExecutionType = options.executionMode match {
       case CypherExecutionMode.normal  => FabricPlan.Execute
       case CypherExecutionMode.explain => FabricPlan.Explain
