@@ -21,8 +21,8 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
   case class TestOrder(cypherToken: String,
                        expectedOrder: Seq[Map[String, Any]] => Seq[Map[String, Any]],
                        providedOrder: Expression => ProvidedOrder)
-  val ASCENDING = TestOrder("ASC", x => x, ProvidedOrder.asc)
-  val DESCENDING = TestOrder("DESC", x => x.reverse, ProvidedOrder.desc)
+  private val ASCENDING = TestOrder("ASC", x => x, ProvidedOrder.asc)
+  private val DESCENDING = TestOrder("DESC", x => x.reverse, ProvidedOrder.desc)
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -161,7 +161,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
     }
 
     test(s"$cypherToken: Order by index backed property in a plan with an aggregation and an expand") {
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
         s"MATCH (a:Awesome)-[r]->(b) WHERE a.prop2 > 1 RETURN a.prop2, count(b) ORDER BY a.prop2 $cypherToken", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should (
