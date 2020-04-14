@@ -54,7 +54,7 @@ case object AvgAggregator extends Aggregator {
 
 case object AvgDistinctAggregator extends Aggregator {
   override def newUpdater: Updater = new DistinctUpdater
-  override def newStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id): Reducer = new DistinctStandardReducer(new AvgDistinctStandardReducer)
+  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new DistinctStandardReducer(new AvgDistinctStandardReducer)
   override def newConcurrentReducer: Reducer = new DistinctConcurrentReducer(new AvgDistinctConcurrentReducer)
 }
 

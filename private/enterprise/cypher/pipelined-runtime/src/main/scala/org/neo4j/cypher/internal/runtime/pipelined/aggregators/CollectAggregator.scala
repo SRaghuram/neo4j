@@ -31,7 +31,7 @@ case object CollectAllAggregator extends Aggregator {
 
 case object CollectDistinctAggregator extends Aggregator {
   override def newUpdater: Updater = new DistinctInOrderUpdater
-  override def newStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id): Reducer = new DistinctInOrderStandardReducer(new MemoryTrackingReducer(memoryTracker, operatorId)) with CollectDistinctReducer
+  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new DistinctInOrderStandardReducer(new MemoryTrackingReducer(memoryTracker)) with CollectDistinctReducer
   override def newConcurrentReducer: Reducer = new DistinctConcurrentReducer(new DummyReducer) with CollectDistinctReducer
 }
 
@@ -70,8 +70,8 @@ class CollectConcurrentReducer() extends Reducer {
   override def result: AnyValue = VirtualValues.concat(collections.toArray(new Array[ListValue](0)):_*)
 }
 
-class MemoryTrackingReducer(memoryTracker: QueryMemoryTracker, operatorId: Id) extends DistinctInnerReducer {
-  override def update(value: AnyValue): Unit = memoryTracker.allocated(value, operatorId.x)
+class MemoryTrackingReducer(memoryTracker: MemoryTracker) extends DistinctInnerReducer {
+  override def update(value: AnyValue): Unit = memoryTracker.allocateHeap(value.estimatedHeapUsage)
   override def result: AnyValue = throw new IllegalStateException("Must be used inside of CollectDistinctReducer")
 }
 

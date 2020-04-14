@@ -29,7 +29,7 @@ case object SumAggregator extends Aggregator {
  */
 case object SumDistinctAggregator extends Aggregator {
   override def newUpdater: Updater = new DistinctUpdater
-  override def newStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id): Reducer = new DistinctStandardReducer(new SumDistinctStandardReducer())
+  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new DistinctStandardReducer(new SumDistinctStandardReducer())
   override def newConcurrentReducer: Reducer = new DistinctConcurrentReducer(new SumDistinctConcurrentReducer())
 }
 

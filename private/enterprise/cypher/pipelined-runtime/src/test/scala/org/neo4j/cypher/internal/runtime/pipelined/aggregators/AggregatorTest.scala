@@ -7,8 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
 import java.util.concurrent.ThreadLocalRandom
 
-import org.neo4j.cypher.internal.runtime.QueryMemoryTracker.NO_MEMORY_TRACKER
-import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.DurationValue
 import org.neo4j.values.storable.RandomValues
@@ -33,7 +32,7 @@ trait AggregatorTest {
   }
 
   def runStandardAggregator(aggregator: Aggregator, values: Seq[AnyValue]): AnyValue =
-    runAggregator(aggregator, aggregator.newStandardReducer(NO_MEMORY_TRACKER, Id.INVALID_ID), values)
+    runAggregator(aggregator, aggregator.newStandardReducer(EmptyMemoryTracker.INSTANCE), values)
 
   def runConcurrentAggregator(aggregator: Aggregator, values: Seq[AnyValue]): AnyValue =
     runAggregator(aggregator, aggregator.newConcurrentReducer, values)
