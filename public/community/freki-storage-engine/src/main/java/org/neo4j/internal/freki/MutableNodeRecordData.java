@@ -34,6 +34,7 @@ import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.storageengine.api.Degrees;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.util.EagerDegrees;
 import org.neo4j.util.Preconditions;
@@ -533,16 +534,20 @@ class MutableNodeRecordData
         }
         Arrays.sort( types );
         int[] degreesArray = new int[typesLength * 3];
-        for ( int t = 0, i = 0; t < typesLength; t++ )
+        int degreesArrayIndex = 0;
+        for ( int t = 0; t < typesLength; t++ )
         {
             EagerDegrees.Degree typeDegrees = degrees.findDegree( types[t] );
-            // TODO Potentially optimize away loop somehow since it's 99,99% zero anyways
-            degreesArray[i++] = typeDegrees.outgoing();
-            degreesArray[i++] = typeDegrees.incoming();
-            degreesArray[i++] = typeDegrees.loop();
+            int loop = typeDegrees.loop();
+            degreesArray[degreesArrayIndex++] = typeDegrees.outgoing() << 1 | (loop > 0 ? 1 : 0);
+            degreesArray[degreesArrayIndex++] = typeDegrees.incoming();
+            if ( loop > 0 )
+            {
+                degreesArray[degreesArrayIndex++] = loop;
+            }
         }
         writeIntDeltas( types, buffer );
-        writeInts( degreesArray, buffer );
+        writeInts( Arrays.copyOf( degreesArray, degreesArrayIndex ), buffer );
     }
 
     private static void writeProperties( MutableIntObjectMap<Value> properties, ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore,
@@ -670,8 +675,19 @@ class MutableNodeRecordData
         int[] degreesArray = readInts( buffer );
         for ( int t = 0, i = 0; t < relationshipTypes.length; t++ )
         {
-            degrees.add( relationshipTypes[t], degreesArray[i++], degreesArray[i++], degreesArray[i++] );
+            i = readDegreesForNextType( degrees, relationshipTypes[t], degreesArray, i );
         }
+    }
+
+    static int readDegreesForNextType( Degrees.Mutator degrees, int relationshipType, int[] degreesArray, int degreesArrayIndex )
+    {
+        int outgoingRaw = degreesArray[degreesArrayIndex++];
+        int outgoing = outgoingRaw >>> 1;
+        int incoming = degreesArray[degreesArrayIndex++];
+        boolean hasLoop = (outgoingRaw & 0x1) == 1;
+        int loop = hasLoop ? degreesArray[degreesArrayIndex++] : 0;
+        degrees.add( relationshipType, outgoing, incoming, loop );
+        return degreesArrayIndex;
     }
 
     private void readLabels( ByteBuffer buffer )

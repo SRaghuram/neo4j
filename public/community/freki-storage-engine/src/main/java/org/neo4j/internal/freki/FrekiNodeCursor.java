@@ -33,6 +33,7 @@ import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_LONG_ARRAY;
+import static org.neo4j.internal.freki.MutableNodeRecordData.readDegreesForNextType;
 import static org.neo4j.internal.freki.StreamVByte.LONG_CONSUMER;
 import static org.neo4j.internal.freki.StreamVByte.LONG_CREATOR;
 import static org.neo4j.internal.freki.StreamVByte.hasNonEmptyIntArray;
@@ -109,14 +110,15 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
             {
                 // Read degrees where relationship data would be if this would have been a sparse node
                 int[] degreesArray = readInts( buffer );
+                int degreesIndex = 0;
                 for ( int i = 0; i < selection.numberOfCriteria(); i++ )
                 {
                     RelationshipSelection.Criterion criterion = selection.criterion( i );
                     if ( criterion.type() == ANY_RELATIONSHIP_TYPE ) // all types
                     {
-                        for ( int typeIndex = 0; typeIndex < relationshipTypesInNode.length; typeIndex++ )
+                        for ( int type : relationshipTypesInNode )
                         {
-                            readDenseDegreesForType( degrees, degreesArray, typeIndex );
+                            degreesIndex = readDegreesForNextType( degrees, type, degreesArray, degreesIndex );
                         }
                     }
                     else // a single type
@@ -124,7 +126,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
                         int typeIndex = Arrays.binarySearch( relationshipTypesInNode, criterion.type() );
                         if ( typeIndex >= 0 )
                         {
-                            readDenseDegreesForType( degrees, degreesArray, typeIndex );
+                            degreesIndex = readDegreesForNextType( degrees, relationshipTypesInNode[typeIndex], degreesArray, degreesIndex );
                         }
                     }
                 }
@@ -160,12 +162,6 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
                 degrees.add( relationshipsCursor.type(), outgoing, incoming, loop );
             }
         }
-    }
-
-    private void readDenseDegreesForType( Degrees.Mutator degrees, int[] degreesArray, int typeIndex )
-    {
-        int baseIndex = typeIndex * 3;
-        degrees.add( relationshipTypesInNode[typeIndex], degreesArray[baseIndex], degreesArray[baseIndex + 1], degreesArray[baseIndex + 2] );
     }
 
     @Override
