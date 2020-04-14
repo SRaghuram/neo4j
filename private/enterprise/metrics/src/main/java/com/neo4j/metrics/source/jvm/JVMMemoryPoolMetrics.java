@@ -17,7 +17,7 @@ import static com.codahale.metrics.MetricRegistry.name;
 import static java.lang.String.format;
 
 @Documented( ".JVM memory pools metrics." )
-public class MemoryPoolMetrics extends JvmMetrics
+public class JVMMemoryPoolMetrics extends JvmMetrics
 {
     private final String memoryPoolPrefix;
     private final String memoryPool;
@@ -27,7 +27,7 @@ public class MemoryPoolMetrics extends JvmMetrics
     @Documented( "Estimated number of buffers in the pool." )
     private static final String MEMORY_POOL_USAGE_TEMPLATE = name( MEMORY_POOL_PREFIX, "%s" );
 
-    public MemoryPoolMetrics( String metricsPrefix, MetricRegistry registry )
+    public JVMMemoryPoolMetrics( String metricsPrefix, MetricRegistry registry )
     {
         this.registry = registry;
         this.memoryPoolPrefix = name( metricsPrefix, MEMORY_POOL_PREFIX );

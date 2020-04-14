@@ -101,6 +101,9 @@ public class MetricsSettings implements SettingsDeclaration
     @Description( "Enable reporting metrics about Bolt Protocol message processing." )
     public static final Setting<Boolean> boltMessagesEnabled = newBuilder( "metrics.bolt.messages.enabled", BOOL, true ).build();
 
+    @Description( "Enable reporting metrics about Neo4j memory pools." )
+    public static final Setting<Boolean> neoMemoryPoolsEnabled = newBuilder( "metrics.neo4j.pools.enabled", BOOL, true ).build();
+
     // CSV settings
     @Description( "Set to `true` to enable exporting metrics to CSV files" )
     public static final Setting<Boolean> csvEnabled = newBuilder( "metrics.csv.enabled", BOOL, true ).build();

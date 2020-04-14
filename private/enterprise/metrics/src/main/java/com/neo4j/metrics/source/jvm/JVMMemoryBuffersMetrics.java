@@ -17,7 +17,7 @@ import static com.codahale.metrics.MetricRegistry.name;
 import static java.lang.String.format;
 
 @Documented( ".JVM memory buffers metrics." )
-public class MemoryBuffersMetrics extends JvmMetrics
+public class JVMMemoryBuffersMetrics extends JvmMetrics
 {
     private static final String MEMORY_BUFFER_PREFIX = name( VM_NAME_PREFIX, "memory.buffer" );
 
@@ -34,7 +34,7 @@ public class MemoryBuffersMetrics extends JvmMetrics
     private final String memoryBufferUsed;
     private final String memoryBufferCapacity;
 
-    public MemoryBuffersMetrics( String metricsPrefix, MetricRegistry registry )
+    public JVMMemoryBuffersMetrics( String metricsPrefix, MetricRegistry registry )
     {
         this.registry = registry;
         this.memoryBufferPrefix = name( metricsPrefix, MEMORY_BUFFER_PREFIX );

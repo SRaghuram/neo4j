@@ -25,6 +25,7 @@ import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.SimpleLogService;
+import org.neo4j.memory.MemoryPools;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.server.web.WebContainerThreadInfo;
@@ -161,6 +162,12 @@ class GlobalMetricsExtensionTest
 
         @Override
         public Supplier<WebContainerThreadInfo> webContainerThreadInfo()
+        {
+            return null;
+        }
+
+        @Override
+        public MemoryPools memoryPools()
         {
             return null;
         }

@@ -17,6 +17,7 @@ import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.internal.LogService;
+import org.neo4j.memory.MemoryPools;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.server.web.WebContainerThreadInfo;
@@ -43,6 +44,8 @@ public class GlobalMetricsExtensionFactory extends ExtensionFactory<GlobalMetric
         ConnectorPortRegister portRegister();
 
         Supplier<WebContainerThreadInfo> webContainerThreadInfo();
+
+        MemoryPools memoryPools();
     }
 
     public GlobalMetricsExtensionFactory()

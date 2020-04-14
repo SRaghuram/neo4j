@@ -13,6 +13,7 @@ import com.neo4j.metrics.source.causalclustering.ReadReplicaMetrics;
 import com.neo4j.metrics.source.db.CheckPointingMetrics;
 import com.neo4j.metrics.source.db.CypherMetrics;
 import com.neo4j.metrics.source.db.DatabaseCountMetrics;
+import com.neo4j.metrics.source.db.DatabaseMemoryPoolMetrics;
 import com.neo4j.metrics.source.db.EntityCountMetrics;
 import com.neo4j.metrics.source.db.StoreSizeMetrics;
 import com.neo4j.metrics.source.db.TransactionLogsMetrics;
@@ -20,7 +21,6 @@ import com.neo4j.metrics.source.db.TransactionMetrics;
 
 import org.neo4j.common.Edition;
 import org.neo4j.configuration.Config;
-import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.impl.factory.OperationalMode;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -88,6 +88,11 @@ public class DatabaseMetricsExporter
         if ( config.get( MetricsSettings.cypherPlanningEnabled ) )
         {
             life.add( new CypherMetrics( metricsPrefix, registry, dependencies.monitors() ) );
+        }
+
+        if ( config.get( MetricsSettings.neoMemoryPoolsEnabled ) )
+        {
+            life.add( new DatabaseMemoryPoolMetrics( metricsPrefix, registry, dependencies.memoryPools() ) );
         }
 
         if ( config.get( MetricsSettings.causalClusteringEnabled ) )
