@@ -116,7 +116,7 @@ class ExecutionResultTest
         createNode();
 
         // When
-        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "LEGACY_COMPILED" ) )//TODO PIPELINED leaves cursors open
+        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "LEGACY_COMPILED", "PIPELINED" ) )
         {
             try ( Transaction transaction = db.beginTx() )
             {
@@ -178,7 +178,7 @@ class ExecutionResultTest
         createNode();
 
         // When
-        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "LEGACY_COMPILED" ) )//TODO PIPELINED leaves cursors open
+        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "LEGACY_COMPILED", "PIPELINED" ) )
         {
             try ( Transaction transaction = db.beginTx() )
             {
