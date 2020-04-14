@@ -26,6 +26,7 @@ import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.internal.NullLogService;
+import org.neo4j.memory.MemoryPools;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
@@ -99,7 +100,8 @@ public class TestBoltServer
                 monitors,
                 NullLogService.getInstance(),
                 dependencies,
-                authManager
+                authManager,
+                new MemoryPools()
         );
 
         try
