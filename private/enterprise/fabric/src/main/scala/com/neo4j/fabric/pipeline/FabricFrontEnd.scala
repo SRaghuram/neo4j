@@ -68,12 +68,11 @@ case class FabricFrontEnd(
       cypherConfig.interpretedPipesFallback,
       cypherConfig.queryCacheSize,
     )
-
-    def executionType(options: QueryOptions, singleGraphQuery: Boolean): FabricPlan.ExecutionType = options.executionMode match {
+    def executionType(options: QueryOptions, inFabricContext: Boolean): FabricPlan.ExecutionType = options.executionMode match {
       case CypherExecutionMode.normal  => FabricPlan.Execute
       case CypherExecutionMode.explain => FabricPlan.Explain
-      case CypherExecutionMode.profile if singleGraphQuery => FabricPlan.PROFILE
-      case CypherExecutionMode.profile => Errors.semantic("'PROFILE' not supported for multi graph queries")
+      case CypherExecutionMode.profile if inFabricContext => Errors.semantic("'PROFILE' not supported in Fabric context")
+      case CypherExecutionMode.profile => FabricPlan.PROFILE
     }
 
     def preParse(queryString: String): PreParsedQuery = {

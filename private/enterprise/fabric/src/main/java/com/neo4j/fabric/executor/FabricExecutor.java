@@ -124,9 +124,8 @@ public class FabricExecutor
                     return execution.run();
                 } );
 
-        return withErrorMapping( statementResult, FabricSecondaryException.class, FabricSecondaryException::getPrimaryException );
-
-        return new FabricExecutionStatementResultImpl( statementResult, plan, accessMode );
+        var resultWithErrorMapping =  withErrorMapping( statementResult, FabricSecondaryException.class, FabricSecondaryException::getPrimaryException );
+        return new FabricExecutionStatementResultImpl( resultWithErrorMapping, plan, accessMode );
     }
 
     public boolean isPeriodicCommit( String query )
@@ -177,7 +176,7 @@ public class FabricExecutor
 
             // EXPLAIN for multi-graph queries returns only fabric plan,
             // because it is very hard to produce anything better without actually executing the query
-            if ( plan.executionType() == FabricPlan.EXPLAIN() && !plan.singleGraphQuery() )
+            if ( plan.executionType() == FabricPlan.EXPLAIN() && plan.inFabricContext() )
             {
                 queryMonitor.endSuccess();
                 return StatementResults.create(

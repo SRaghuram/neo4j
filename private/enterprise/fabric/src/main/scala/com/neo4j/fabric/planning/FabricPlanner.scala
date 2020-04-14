@@ -65,7 +65,7 @@ case class FabricPlanner(
         () => computePlan()
       )
       plan.copy(
-        executionType = frontend.preParsing.executionType(query.options, plan.singleGraphQuery))
+        executionType = frontend.preParsing.executionType(query.options, plan.inFabricContext))
     }
 
     private def computePlan(): FabricPlan = trace {
@@ -79,17 +79,14 @@ case class FabricPlanner(
       val stitching = FabricStitcher(query.statement, fabricContext, fabricContextName)
       val stitchedFragments = stitching.convert(fragments)
 
-      val singleGraphFragment = isSingleGraphFragment(stitchedFragments)
-
       FabricPlan(
         query = stitchedFragments,
         queryType = QueryType.recursive(stitchedFragments),
-        executionType = frontend.preParsing.executionType(query.options, singleGraphFragment),
+        executionType = frontend.preParsing.executionType(query.options, fabricContext),
         queryString = query.statement,
         debugOptions = DebugOptions.from(query.options.debugOptions),
         obfuscationMetadata = prepared.obfuscationMetadata(),
-        inFabricContext = fabricContext,
-        singleGraphQuery = singleGraphFragment
+        inFabricContext = fabricContext
       )
     }
 

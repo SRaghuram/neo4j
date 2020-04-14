@@ -70,10 +70,6 @@ class FabricPlannerTest
   private val config = makeConfig("mega")
   private val planner = FabricPlanner(config, cypherConfig, monitors, signatures)
 
-  // Even if we don't want to test parsing, we need something that parses,
-  // because it will be used when computing the Cypher execution mode
-  private def instance(): planner.PlannerInstance = instance("RETURN 1")
-
   private def instance(query: String, params: MapValue = params, fabricContext: Boolean = false): planner.PlannerInstance =
     planner.instance(query, params, defaultGraphName).withForceFabricContext(fabricContext)
 
@@ -528,7 +524,7 @@ class FabricPlannerTest
             |""".stripMargin
 
         the[InvalidSemanticsException].thrownBy(plan(q, params, true))
-          .check(_.getMessage.should(include("'PROFILE' not supported for multi graph queries")))
+          .check(_.getMessage.should(include("'PROFILE' not supported in Fabric context")))
       }
 
     "allow fabric debug options" in {

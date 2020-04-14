@@ -5,11 +5,11 @@
  */
 package com.neo4j;
 
+import com.neo4j.fabric.localdb.FabricDatabaseManager;
 import com.neo4j.utils.DriverUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -21,6 +21,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.summary.Plan;
@@ -30,6 +31,7 @@ import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.util.FeatureToggles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -45,11 +47,13 @@ class ResultSummaryEndToEndTest
     private static TestServer testServer;
     private static Neo4j shard0;
     private static Driver shard0Driver;
-    private static DriverUtils driverUtils;
+    private static DriverUtils fooDriverUtils;
+    private static DriverUtils megaDriverUtils;
 
     @BeforeAll
     static void beforeAll()
     {
+        FeatureToggles.set( FabricDatabaseManager.class, FabricDatabaseManager.FABRIC_BY_DEFAULT_FLAG_NAME, true );
         shard0 = Neo4jBuilders.newInProcessBuilder().build();
 
         var configProperties = Map.of(
@@ -84,7 +88,13 @@ class ResultSummaryEndToEndTest
                         .withMaxConnectionPoolSize( 3 )
                         .build() );
 
-        driverUtils = new DriverUtils( "mega" );
+        try ( var session = clientDriver.session( SessionConfig.builder().withDatabase( "system" ).build() ) )
+        {
+            session.run( "CREATE DATABASE foo" );
+        }
+
+        fooDriverUtils = new DriverUtils( "foo" );
+        megaDriverUtils = new DriverUtils( "mega" );
     }
 
     @BeforeEach
@@ -116,6 +126,8 @@ class ResultSummaryEndToEndTest
                 () -> shard0Driver.close(),
                 () -> shard0.close()
         ).parallelStream().forEach( Runnable::run );
+
+        FeatureToggles.set( FabricDatabaseManager.class, FabricDatabaseManager.FABRIC_BY_DEFAULT_FLAG_NAME, false );
     }
 
     @Test
@@ -125,15 +137,15 @@ class ResultSummaryEndToEndTest
                 "MATCH (n {name: 'Carrie'})",
                 "RETURN n" );
 
-        var resultSummary = runAndGetSummary( query, 0 );
+        var resultSummary = runOnFooAndGetSummary( query, 0 );
         assertTrue(resultSummary.hasPlan());
         assertFalse( resultSummary.hasProfile() );
         assertNotNull( resultSummary.plan() );
 
         var expectedPlan =
-                plan( "ProduceResults@mega",
-                        plan( "Filter@mega",
-                                plan( "AllNodesScan@mega" )
+                plan( "ProduceResults@foo",
+                        plan( "Filter@foo",
+                                plan( "AllNodesScan@foo" )
                         )
                 );
 
@@ -148,7 +160,7 @@ class ResultSummaryEndToEndTest
                 "MATCH (n {name: 'Carrie'} )",
                 "RETURN n" );
 
-        var resultSummary = runAndGetSummary( query, 0 );
+        var resultSummary = runOnFooAndGetSummary( query, 0 );
         assertTrue(resultSummary.hasPlan());
         assertNotNull( resultSummary.plan() );
 
@@ -170,17 +182,13 @@ class ResultSummaryEndToEndTest
                 "MATCH (n {name: 'Anna'} )",
                 "RETURN n" );
 
-        var resultSummary = runAndGetSummary( query, 0 );
+        var resultSummary = runOnMegaAndGetSummary( query, 0 );
         assertTrue(resultSummary.hasPlan());
         assertNotNull( resultSummary.plan() );
 
         var expectedPlan =
-                plan("RemoteExecution@graph(0)",
-                        plan( "ProduceResults",
-                                plan( "Filter",
-                                        plan( "AllNodesScan" )
-                                )
-                        )
+                plan("Exec",
+                        plan( "Init" )
                 );
 
         expectedPlan.assertPlan( resultSummary.plan() );
@@ -196,23 +204,23 @@ class ResultSummaryEndToEndTest
                 "MATCH (n {name: 'Dan'})",
                 "RETURN n" );
 
-        var resultSummary = runAndGetSummary( query, 0 );
+        var resultSummary = runOnFooAndGetSummary( query, 0 );
         assertTrue(resultSummary.hasPlan());
         assertFalse( resultSummary.hasProfile() );
         assertNotNull( resultSummary.plan() );
 
         var expectedPlan =
-                plan( "ProduceResults@mega",
-                        plan( "Distinct@mega",
-                                plan( "Union@mega",
-                                        plan( "Projection@mega",
-                                                plan( "Filter@mega",
-                                                        plan( "AllNodesScan@mega" )
+                plan( "ProduceResults@foo",
+                        plan( "Distinct@foo",
+                                plan( "Union@foo",
+                                        plan( "Projection@foo",
+                                                plan( "Filter@foo",
+                                                        plan( "AllNodesScan@foo" )
                                                 )
                                         ),
-                                        plan( "Projection@mega",
-                                                plan( "Filter@mega",
-                                                        plan( "AllNodesScan@mega" )
+                                        plan( "Projection@foo",
+                                                plan( "Filter@foo",
+                                                        plan( "AllNodesScan@foo" )
                                                 )
                                         )
                                 )
@@ -234,7 +242,7 @@ class ResultSummaryEndToEndTest
                 "}",
                 "RETURN n" );
 
-        var resultSummary = runAndGetSummary( query, 0 );
+        var resultSummary = runOnMegaAndGetSummary( query, 0 );
         assertTrue(resultSummary.hasPlan());
         assertNotNull( resultSummary.plan() );
 
@@ -261,7 +269,7 @@ class ResultSummaryEndToEndTest
                 "MATCH (n {name: 'Carrie'})",
                 "RETURN n" );
 
-        var resultSummary = runAndGetSummary( query, 1 );
+        var resultSummary = runOnFooAndGetSummary( query, 1 );
         assertTrue(resultSummary.hasPlan());
         assertTrue( resultSummary.hasProfile() );
         assertNotNull( resultSummary.plan() );
@@ -288,44 +296,6 @@ class ResultSummaryEndToEndTest
     }
 
     @Test
-    void testSingleRemoteGraphProfile()
-    {
-        var query = joinAsLines( "PROFILE",
-                "USE mega.remote1",
-                "MATCH (n {name: 'Anna'} )",
-                "RETURN n" );
-
-        var resultSummary = runAndGetSummary( query, 1 );
-        assertTrue(resultSummary.hasPlan());
-        assertNotNull( resultSummary.plan() );
-        assertNotNull( resultSummary.plan() );
-        assertNotNull( resultSummary.profile() );
-
-        var expectedPlan =
-                plan("RemoteExecution@graph(0)",
-                        plan( "ProduceResults",
-                                plan( "Filter",
-                                        plan( "AllNodesScan" )
-                                )
-                        )
-                );
-
-        var profiledPlan = resultSummary.profile();
-        expectedPlan.assertPlan( profiledPlan );
-
-        var expectedStats =
-                stats( 1, false,
-                        stats( 1, false,
-                                stats( 1, true,
-                                        stats( 2, true )
-                                )
-                        )
-                );
-
-        expectedStats.assertStats( profiledPlan );
-    }
-
-    @Test
     void testMultiGraphProfile()
     {
         var query = joinAsLines( "PROFILE",
@@ -337,8 +307,8 @@ class ResultSummaryEndToEndTest
                 "}",
                 "RETURN n" );
 
-        var exception = assertThrows( ClientException.class, () -> runAndGetSummary( query, 0 ) );
-        assertEquals( "'PROFILE' not supported for multi graph queries", exception.getMessage() );
+        var exception = assertThrows( ClientException.class, () -> runOnMegaAndGetSummary( query, 0 ) );
+        assertEquals( "'PROFILE' not supported in Fabric context", exception.getMessage() );
     }
 
     @Test
@@ -350,7 +320,7 @@ class ResultSummaryEndToEndTest
                 "SET n.uid = 99"
         );
 
-        var resultSummary = runAndGetSummary( query, 0 );
+        var resultSummary = runOnFooAndGetSummary( query, 0 );
         var counters = resultSummary.counters();
         assertNotNull( counters );
         assertTrue( counters.containsUpdates() );
@@ -378,7 +348,7 @@ class ResultSummaryEndToEndTest
                 "SET n:Friend"
         );
 
-        var resultSummary = runAndGetSummary( query, 0 );
+        var resultSummary = runOnMegaAndGetSummary( query, 0 );
         var counters = resultSummary.counters();
         assertNotNull( counters );
         assertTrue( counters.containsUpdates() );
@@ -421,7 +391,7 @@ class ResultSummaryEndToEndTest
                 "RETURN x"
         );
 
-        var resultSummary = runAndGetSummary( query, 1 );
+        var resultSummary = runOnMegaAndGetSummary( query, 1 );
 
         assertThat( resultSummary.queryType() ).isEqualTo( QueryType.READ_WRITE );
         assertThat( resultSummary.counters().containsUpdates() ).isEqualTo( true );
@@ -448,29 +418,25 @@ class ResultSummaryEndToEndTest
                 "RETURN n"
         );
 
-        var resultSummary = runAndGetSummary( query, 0 );
+        var resultSummary = runOnFooAndGetSummary( query, 0 );
         assertEquals( 1, resultSummary.notifications().size() );
         assertThat( resultSummary.notifications().get( 0 ).code() ).contains( Status.Statement.UnknownLabelWarning.code().serialize() );
     }
 
-    @Test
-    void testRemoteGraphNotifications()
+    private ResultSummary runOnFooAndGetSummary( String query, int expectedNumberOfRecords )
     {
-        var query = joinAsLines(
-                "EXPLAIN",
-                "USE mega.remote1",
-                "MATCH (n:NonExistentLabel)",
-                "RETURN n"
-        );
-
-        var resultSummary = runAndGetSummary( query, 0 );
-        assertEquals( 1, resultSummary.notifications().size() );
-        assertThat( resultSummary.notifications().get( 0 ).code() ).contains( Status.Statement.UnknownLabelWarning.code().serialize() );
+        return fooDriverUtils.inSession( clientDriver, session ->
+        {
+            var result = session.run( query );
+            assertEquals( expectedNumberOfRecords, result.list().size() );
+            return result.consume();
+        } );
     }
 
-    private ResultSummary runAndGetSummary( String query, int expectedNumberOfRecords )
+    private ResultSummary runOnMegaAndGetSummary( String query, int expectedNumberOfRecords )
     {
-        return driverUtils.inSession( clientDriver, session -> {
+        return megaDriverUtils.inSession( clientDriver, session ->
+        {
             var result = session.run( query );
             assertEquals( expectedNumberOfRecords, result.list().size() );
             return result.consume();
