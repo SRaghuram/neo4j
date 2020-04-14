@@ -584,9 +584,10 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         assertSuccess( adminSubject, "CALL dbms.listPools()", r ->
         {
             List<Map<String,Object>> maps = collectResults( r );
-            assertEquals( 2, maps.size() );
+            assertEquals( 3, maps.size() );
             assertTrue( maps.stream().anyMatch( map -> "neo4j transactions pool".equals( map.get( "poolName" ) ) ) );
             assertTrue( maps.stream().anyMatch( map -> "system transactions pool".equals( map.get( "poolName" ) ) ) );
+            assertTrue( maps.stream().anyMatch( map -> "Global Page Cache Pool".equals( map.get( "poolName" ) ) ) );
         } );
     }
 
