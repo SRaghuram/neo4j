@@ -24,6 +24,7 @@ import org.neo4j.cypher.CypherExpressionEngineOption
 import org.neo4j.cypher.CypherInterpretedPipesFallbackOption
 import org.neo4j.cypher.CypherOperatorEngineOption
 import org.neo4j.cypher.CypherPlannerOption
+import org.neo4j.cypher.CypherReplanOption
 import org.neo4j.cypher.CypherRuntimeOption
 import org.neo4j.cypher.CypherUpdateStrategy
 import org.neo4j.cypher.CypherVersion
@@ -32,8 +33,8 @@ import org.neo4j.cypher.internal.QueryOptions
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.ast.Query
 import org.neo4j.cypher.internal.ast.SingleQuery
-import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.tracing.TimingCompilationTracer
+import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.exceptions.InvalidSemanticsException
 import org.neo4j.values.storable.Values
@@ -550,6 +551,7 @@ class FabricPlannerTest
           |  expressionEngine=compiled
           |  operatorEngine=interpreted
           |  interpretedPipesFallback=disabled
+          |  replan=force
           |  debug=foo
           |  debug=bar
           |WITH 1 AS a
@@ -576,6 +578,7 @@ class FabricPlannerTest
         expressionEngine = CypherExpressionEngineOption.compiled,
         operatorEngine = CypherOperatorEngineOption.interpreted,
         interpretedPipesFallback = CypherInterpretedPipesFallbackOption.disabled,
+        replan = CypherReplanOption.force,
         debugOptions = Set("foo", "bar"),
       )
 
@@ -624,6 +627,7 @@ class FabricPlannerTest
         expressionEngine = CypherExpressionEngineOption.default,
         operatorEngine = CypherOperatorEngineOption.default,
         interpretedPipesFallback = CypherInterpretedPipesFallbackOption.default,
+        replan = CypherReplanOption.default,
         debugOptions = Set(),
       )
 
