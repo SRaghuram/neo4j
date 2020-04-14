@@ -409,4 +409,52 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
       ).toString
     )
   }
+
+  // Set label
+
+  test("Grant set label") {
+    // When
+    val plan = execute("EXPLAIN GRANT SET LABEL foo ON GRAPH * TO role").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("GrantSetLabel", Database("ALL GRAPHS"), Qualifier("LABEL foo"), "role",
+          assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+        )
+      ).toString
+    )
+  }
+
+  test("Deny set label") {
+    // When
+    val plan = execute("EXPLAIN DENY SET LABEL foo, bar ON GRAPH * TO role").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("DenySetLabel", Database("ALL GRAPHS"), Qualifier("LABEL bar"), "role",
+          graphPrivilegePlan("DenySetLabel", Database("ALL GRAPHS"), Qualifier("LABEL foo"), "role",
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke remove label") {
+    // When
+    val plan = execute("EXPLAIN REVOKE REMOVE LABEL * ON GRAPH * FROM role").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("RevokeRemoveLabel(DENIED)", Database("ALL GRAPHS"), Qualifier("ALL LABELS"), "role",
+          graphPrivilegePlan("RevokeRemoveLabel(GRANTED)", Database("ALL GRAPHS"), Qualifier("ALL LABELS"), "role",
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
 }

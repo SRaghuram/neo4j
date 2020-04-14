@@ -15,8 +15,6 @@ import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
   test("should return empty counts to the outside for commands that update the system graph internally") {
-    //TODO: ADD ANY NEW UPDATING COMMANDS HERE
-
     // GIVEN
     execute("CREATE ROLE custom")
 

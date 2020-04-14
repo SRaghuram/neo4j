@@ -10,6 +10,7 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DATABASE_ACTIONS;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.GRAPH_ACTIONS;
 
 public interface Resource
 {
@@ -32,8 +33,7 @@ public interface Resource
         @Override
         public void assertValidCombination( PrivilegeAction action ) throws InvalidArgumentsException
         {
-            if ( !(action.equals( PrivilegeAction.WRITE ) || action.equals( PrivilegeAction.READ ) ||
-                   action.equals( PrivilegeAction.TRAVERSE ) || action.equals( PrivilegeAction.MATCH )) )
+            if ( !(GRAPH_ACTIONS.satisfies( action )) )
             {
                 throw new InvalidArgumentsException( String.format( "Graph resource cannot be combined with action '%s'", action.toString() ) );
             }

@@ -53,6 +53,8 @@ import org.neo4j.cypher.internal.logical.plans.DenyDatabaseAction
 import org.neo4j.cypher.internal.logical.plans.DenyDbmsAction
 import org.neo4j.cypher.internal.logical.plans.DenyMatch
 import org.neo4j.cypher.internal.logical.plans.DenyRead
+import org.neo4j.cypher.internal.logical.plans.DenyRemoveLabel
+import org.neo4j.cypher.internal.logical.plans.DenySetLabel
 import org.neo4j.cypher.internal.logical.plans.DenyTraverse
 import org.neo4j.cypher.internal.logical.plans.DenyWrite
 import org.neo4j.cypher.internal.logical.plans.DropDatabase
@@ -63,7 +65,9 @@ import org.neo4j.cypher.internal.logical.plans.GrantDatabaseAction
 import org.neo4j.cypher.internal.logical.plans.GrantDbmsAction
 import org.neo4j.cypher.internal.logical.plans.GrantMatch
 import org.neo4j.cypher.internal.logical.plans.GrantRead
+import org.neo4j.cypher.internal.logical.plans.GrantRemoveLabel
 import org.neo4j.cypher.internal.logical.plans.GrantRoleToUser
+import org.neo4j.cypher.internal.logical.plans.GrantSetLabel
 import org.neo4j.cypher.internal.logical.plans.GrantTraverse
 import org.neo4j.cypher.internal.logical.plans.GrantWrite
 import org.neo4j.cypher.internal.logical.plans.LogSystemCommand
@@ -74,7 +78,9 @@ import org.neo4j.cypher.internal.logical.plans.RevokeDatabaseAction
 import org.neo4j.cypher.internal.logical.plans.RevokeDbmsAction
 import org.neo4j.cypher.internal.logical.plans.RevokeMatch
 import org.neo4j.cypher.internal.logical.plans.RevokeRead
+import org.neo4j.cypher.internal.logical.plans.RevokeRemoveLabel
 import org.neo4j.cypher.internal.logical.plans.RevokeRoleFromUser
+import org.neo4j.cypher.internal.logical.plans.RevokeSetLabel
 import org.neo4j.cypher.internal.logical.plans.RevokeTraverse
 import org.neo4j.cypher.internal.logical.plans.RevokeWrite
 import org.neo4j.cypher.internal.logical.plans.ShowPrivileges
@@ -458,6 +464,33 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     case RevokeWrite(source, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
       makeRevokeExecutionPlan(PrivilegeAction.WRITE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke write privilege from role '${runtimeValue(roleName, params)}'")
+
+      // GRANT/DENY/REVOKE SET LABEL * ON GRAPH foo TO role
+    case GrantSetLabel(source, database, qualifier, roleName) => (context, parameterMapping) =>
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.SET_LABEL.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant set label privilege to role '${runtimeValue(roleName, params)}'")
+
+    case DenySetLabel(source, database, qualifier, roleName) => (context, parameterMapping) =>
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.SET_LABEL.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny set label privilege to role '${runtimeValue(roleName, params)}'")
+
+    case RevokeSetLabel(source, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
+      makeRevokeExecutionPlan(PrivilegeAction.SET_LABEL.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke set label privilege from role '${runtimeValue(roleName, params)}'")
+
+      // GRANT/DENY/REVOKE REMOVE LABEL * ON GRAPH foo TO role
+    case GrantRemoveLabel(source, database, qualifier, roleName) => (context, parameterMapping) =>
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.REMOVE_LABEL.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant removel label privilege to role '${runtimeValue(roleName, params)}'")
+
+    case DenyRemoveLabel(source, database, qualifier, roleName) => (context, parameterMapping) =>
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.REMOVE_LABEL.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny removel label privilege to role '${runtimeValue(roleName, params)}'")
+
+    case RevokeRemoveLabel(source, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
+      makeRevokeExecutionPlan(PrivilegeAction.REMOVE_LABEL.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke removel label privilege from role '${runtimeValue(roleName, params)}'")
+
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES
     case ShowPrivileges(source, scope) => (context, parameterMapping) =>

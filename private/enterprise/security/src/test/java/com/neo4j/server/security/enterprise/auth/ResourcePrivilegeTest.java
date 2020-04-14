@@ -28,6 +28,8 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.GRAPH_ACTIO
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.INDEX;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.MATCH;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.READ;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_LABEL;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_LABEL;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRAVERSE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.WRITE;
@@ -62,6 +64,14 @@ class ResourcePrivilegeTest
                     assertOk( privilegeType, action, new PropertyResource( "foo" ) );
                 }
                 else if ( WRITE.satisfies( action ) )
+                {
+                    assertOk( privilegeType, action, new GraphResource() );
+                }
+                else if ( SET_LABEL.satisfies( action ) )
+                {
+                    assertOk( privilegeType, action, new GraphResource() );
+                }
+                else if ( REMOVE_LABEL.satisfies( action ) )
                 {
                     assertOk( privilegeType, action, new GraphResource() );
                 }
