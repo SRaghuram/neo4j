@@ -314,8 +314,6 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   )
   val transactionCommands: Iterable[String] = transactionPrivileges.keys
 
-  val transactionPrivileges: Seq[(String, Map[String, String])] = transactionCommands zip transactionActions
-
   // Collection of all kinds of graph privileges
 
   val graphPrivileges: Map[String, Set[Map[String, String]]] = Map(
