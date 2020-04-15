@@ -1237,4 +1237,21 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     selectDatabase("foo")
     execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "b")))
   }
+
+  test("should be able to set and remove a label with just WRITE privilege") {
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT WRITE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CALL db.createLabel('Label')")
+    execute("CREATE ({name:'Bob'})")
+
+    executeOnDefault("joe", "soap", "MATCH (n) SET n:Label")
+    execute("MATCH (n:Label) RETURN n.name").toSet should be(Set(Map("n.name" -> "Bob")))
+
+    executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:Label")
+    execute("MATCH (n:Label) RETURN n.name").toSet should be(Set.empty)
+  }
+
 }

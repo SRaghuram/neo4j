@@ -571,4 +571,31 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     // THEN
     executeSingle("SHOW ROLE role PRIVILEGES").toList should not be List.empty
   }
+
+  Seq("SET", "REMOVE").foreach(verb =>
+    Seq(("GRANT", "TO"), ("DENY", "TO"), ("REVOKE GRANT", "FROM")).foreach { case (cmd, preposition) =>
+      test(s"$cmd $verb LABEL is not supported in 3.5 or 4.0") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        executeSingle("CREATE ROLE role")
+
+        // WHEN 3.5
+        val exception_35 = the[SyntaxException] thrownBy {
+          executeSingle(s"CYPHER 3.5 $cmd $verb LABEL label ON GRAPH * $preposition role")
+        }
+        exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+        // WHEN 4.0
+        val exception_40 = the[SyntaxException] thrownBy {
+          executeSingle(s"CYPHER 4.0 $cmd $verb LABEL label ON GRAPH * $preposition role")
+        }
+        exception_40.getMessage should include("Fine-grained writes are not supported in this Cypher version.")
+
+        // THEN
+        executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)
+      }
+    }
+  )
+
 }
+

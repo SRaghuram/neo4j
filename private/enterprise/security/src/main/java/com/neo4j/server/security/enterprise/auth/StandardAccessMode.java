@@ -35,6 +35,8 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CONSTRAINT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DATABASE_ACTIONS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.INDEX;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_LABEL;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_LABEL;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
 import static org.neo4j.token.api.TokenConstants.ANY_LABEL;
 import static org.neo4j.token.api.TokenConstants.ANY_PROPERTY_KEY;
@@ -45,6 +47,7 @@ class StandardAccessMode implements AccessMode
     private final boolean allowsAccess;
     private final boolean allowsReads;
     private final boolean allowsWrites;
+    private final boolean disallowWrites;
     private final boolean allowsTokenCreates;
     private final boolean allowsSchemaWrites;
     private final boolean passwordChangeRequired;
@@ -80,6 +83,14 @@ class StandardAccessMode implements AccessMode
     private final IntObjectMap<IntSet> blacklistedLabelsForProperty;
     private final IntObjectMap<IntSet> blacklistedRelTypesForProperty;
 
+    private final boolean allowsSetAllLabels;
+    private final IntSet whitelistSetLabels;
+    private final boolean disallowSetAllLabels;
+    private final IntSet blacklistSetLabels;
+    private final boolean allowsRemoveAllLabels;
+    private final IntSet whitelistRemoveLabels;
+    private final boolean disallowRemoveAllLabels;
+    private final IntSet blacklistRemoveLabels;
     private AdminAccessMode adminAccessMode;
     private AdminActionOnResource.DatabaseScope database;
 
@@ -87,6 +98,7 @@ class StandardAccessMode implements AccessMode
             boolean allowsAccess,
             boolean allowsReads,
             boolean allowsWrites,
+            boolean disallowWrites,
             boolean allowsTokenCreates,
             boolean allowsSchemaWrites,
             boolean passwordChangeRequired,
@@ -120,6 +132,15 @@ class StandardAccessMode implements AccessMode
             IntObjectMap<IntSet> blacklistedLabelsForProperty,
             IntObjectMap<IntSet> blacklistedRelTypesForProperty,
 
+            boolean allowsSetAllLabels,
+            IntSet whitelistSetLabels,
+            boolean disallowSetAllLabels,
+            IntSet blacklistSetLabels,
+            boolean allowsRemoveAllLabels,
+            IntSet whitelistRemoveLabels,
+            boolean disallowRemoveAllLabels,
+            IntSet blacklistRemoveLabels,
+
             AdminAccessMode adminAccessMode,
             String database
     )
@@ -127,6 +148,7 @@ class StandardAccessMode implements AccessMode
         this.allowsAccess = allowsAccess;
         this.allowsReads = allowsReads;
         this.allowsWrites = allowsWrites;
+        this.disallowWrites = disallowWrites;
         this.allowsTokenCreates = allowsTokenCreates;
         this.allowsSchemaWrites = allowsSchemaWrites;
         this.passwordChangeRequired = passwordChangeRequired;
@@ -160,6 +182,15 @@ class StandardAccessMode implements AccessMode
         this.blacklistedLabelsForProperty = blacklistedLabelsForProperty;
         this.blacklistedRelTypesForProperty = blacklistedRelTypesForProperty;
 
+        this.allowsSetAllLabels = allowsSetAllLabels;
+        this.whitelistSetLabels = whitelistSetLabels;
+        this.disallowSetAllLabels = disallowSetAllLabels;
+        this.blacklistSetLabels = blacklistSetLabels;
+        this.allowsRemoveAllLabels = allowsRemoveAllLabels;
+        this.whitelistRemoveLabels = whitelistRemoveLabels;
+        this.disallowRemoveAllLabels = disallowRemoveAllLabels;
+        this.blacklistRemoveLabels = blacklistRemoveLabels;
+
         this.adminAccessMode = adminAccessMode;
         this.database = new AdminActionOnResource.DatabaseScope( database );
 
@@ -173,7 +204,7 @@ class StandardAccessMode implements AccessMode
     @Override
     public boolean allowsWrites()
     {
-        return allowsWrites;
+        return allowsWrites && !disallowWrites;
     }
 
     @Override
@@ -413,6 +444,26 @@ class StandardAccessMode implements AccessMode
     }
 
     @Override
+    public boolean allowsSetLabel( long labelId )
+    {
+        if ( disallowWrites || disallowSetAllLabels || blacklistSetLabels.contains( (int) labelId ) )
+        {
+            return false;
+        }
+        return allowsWrites || allowsSetAllLabels || whitelistSetLabels.contains( (int) labelId );
+    }
+
+    @Override
+    public boolean allowsRemoveLabel( long labelId )
+    {
+        if ( disallowWrites || disallowRemoveAllLabels || blacklistRemoveLabels.contains( (int) labelId ) )
+        {
+            return false;
+        }
+        return allowsWrites || allowsRemoveAllLabels || whitelistRemoveLabels.contains( (int) labelId );
+    }
+
+    @Override
     public AuthorizationViolationException onViolation( String msg )
     {
         if ( passwordChangeRequired )
@@ -468,6 +519,11 @@ class StandardAccessMode implements AccessMode
         private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> traverseLabels = new HashMap<>();
         private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> traverseRelTypes = new HashMap<>();
 
+        private Map<ResourcePrivilege.GrantOrDeny,Boolean> setAllLabels = new HashMap<>();
+        private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> settableLabels = new HashMap<>();
+        private Map<ResourcePrivilege.GrantOrDeny,Boolean> removeAllLabels = new HashMap<>();
+        private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> removableLabels = new HashMap<>();
+
         private Map<ResourcePrivilege.GrantOrDeny,Boolean> readAllPropertiesAllLabels = new HashMap<>();
         private Map<ResourcePrivilege.GrantOrDeny,Boolean> readAllPropertiesAllRelTypes = new HashMap<>();
         private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> nodeSegmentForAllProperties = new HashMap<>();
@@ -497,6 +553,8 @@ class StandardAccessMode implements AccessMode
                 this.relationshipProperties.put( privilegeType, IntSets.mutable.empty() );
                 this.nodeSegmentForProperty.put( privilegeType, IntObjectMaps.mutable.empty() );
                 this.relationshipSegmentForProperty.put( privilegeType, IntObjectMaps.mutable.empty() );
+                this.settableLabels.put( privilegeType, IntSets.mutable.empty() );
+                this.removableLabels.put( privilegeType, IntSets.mutable.empty() );
             }
         }
 
@@ -505,7 +563,8 @@ class StandardAccessMode implements AccessMode
             return new StandardAccessMode(
                     isAuthenticated && anyAccess.getOrDefault( GRANT, false ) && !anyAccess.getOrDefault( DENY, false ),
                     isAuthenticated && anyRead.getOrDefault( GRANT, false ),
-                    isAuthenticated && anyWrite.getOrDefault( GRANT, false ) && !anyWrite.getOrDefault( DENY, false ),
+                    isAuthenticated && anyWrite.getOrDefault( GRANT, false ),
+                    anyWrite.getOrDefault( DENY, false ),
                     isAuthenticated && token,
                     isAuthenticated && schema,
                     passwordChangeRequired,
@@ -538,6 +597,15 @@ class StandardAccessMode implements AccessMode
                     relationshipProperties.get( DENY ),
                     nodeSegmentForProperty.get( DENY ),
                     relationshipSegmentForProperty.get( DENY ),
+
+                    setAllLabels.getOrDefault(GRANT, false),
+                    settableLabels.get( GRANT ),
+                    setAllLabels.getOrDefault(DENY, false),
+                    settableLabels.get( DENY ),
+                    removeAllLabels.getOrDefault(GRANT, false),
+                    removableLabels.get( GRANT ),
+                    removeAllLabels.getOrDefault(DENY, false),
+                    removableLabels.get( DENY ),
 
                     adminModeBuilder.build(),
                     database );
@@ -584,6 +652,11 @@ class StandardAccessMode implements AccessMode
 
             case WRITE:
                 anyWrite.put( privilegeType, true );
+                break;
+
+            case SET_LABEL:
+            case REMOVE_LABEL:
+                handleLabelPrivilege( segment, privilegeType, action );
                 break;
 
             default:
@@ -639,6 +712,32 @@ class StandardAccessMode implements AccessMode
             else
             {
                 throw new IllegalStateException( "Unsupported segment qualifier for " + privilegeName + " privilege: " + segment.getClass().getSimpleName() );
+            }
+        }
+
+        private void handleLabelPrivilege( Segment segment, ResourcePrivilege.GrantOrDeny privilegeType, PrivilegeAction action )
+        {
+            if ( segment.equals( LabelSegment.ALL ) )
+            {
+                if ( action == SET_LABEL )
+                {
+                    setAllLabels.put( privilegeType, true );
+                }
+                else if ( action == REMOVE_LABEL )
+                {
+                    removeAllLabels.put( privilegeType, true );
+                }
+            }
+            else
+            {
+                if ( action == SET_LABEL )
+                {
+                    addLabel( settableLabels.get( privilegeType ), (LabelSegment) segment );
+                }
+                else if ( action == REMOVE_LABEL )
+                {
+                    addLabel( removableLabels.get( privilegeType ), (LabelSegment) segment );
+                }
             }
         }
 

@@ -6,6 +6,7 @@
 package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
+import org.neo4j.graphdb.security.AuthorizationViolationException
 
 class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
@@ -265,16 +266,252 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     }
   }
 
-  ignore("set label allows user to create a label") {
+  test("set label allows user to create a label") {
+    // GIVEN
     setupUserWithCustomRole()
     execute("GRANT MATCH {*} ON GRAPH * TO custom")
-    execute("GRANT CREATE NEW LABEL ON DATABASE * TO custom")
     execute("GRANT SET LABEL * ON GRAPH * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CALL db.createLabel('Label')")
     execute("CREATE ()")
 
+    // WHEN
     executeOnDefault("joe", "soap", "MATCH (n) SET n:Label")
 
+    // THEN
+    execute("MATCH (n:Label) RETURN n").toSet should have size (1)
   }
+
+  test("remove label should allow user to remove a label") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT REMOVE LABEL Label ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:Label)")
+    execute("MATCH (n:Label) RETURN n").toSet should have size (1)
+
+    // WHEN
+    executeOnDefault("joe", "soap", "MATCH (n) Remove n:Label")
+
+    // THEN
+    execute("MATCH (n:Label) RETURN n.name").toSet should be(Set.empty)
+  }
+
+  test("set label should only allow the allowed label") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT SET LABEL foo ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CALL db.createLabel('bar')")
+    execute("CALL db.createLabel('foo')")
+    execute("CREATE ()")
+
+    executeOnDefault("joe", "soap", "MATCH (n) SET n:foo")
+    execute("MATCH (n:foo) RETURN n").toSet should have size (1)
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n) SET n:bar")
+      // THEN
+    } should have message "Set label for label 'bar' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+  }
+
+  test("remove label should only allow removing allowed label") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT REMOVE LABEL Label ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:Label :AnotherLabel)")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:Label")
+    execute("MATCH (n:Label) RETURN n").toSet should have size (0)
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:AnotherLabel")
+      // THEN
+    } should have message "Remove label for label 'AnotherLabel' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH (n:AnotherLabel) RETURN n").toSet should have size(1)
+  }
+
+  test("deny set label should override grant") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT SET LABEL * ON GRAPH * TO custom")
+    execute("DENY SET LABEL Label ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CALL db.createLabel('Label')")
+    execute("CREATE ()")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n) SET n:Label")
+      // THEN
+    } should have message "Set label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+  }
+
+  test("deny remove label should override grant") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT REMOVE LABEL * ON GRAPH * TO custom")
+    execute("DENY REMOVE LABEL Label ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:Label)")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:Label")
+      // THEN
+    } should have message "Remove label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+  }
+
+  test("deny set all labels should override grant") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT SET LABEL Label ON GRAPH * TO custom")
+    execute("DENY SET LABEL * ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CALL db.createLabel('Label')")
+    execute("CREATE ()")
+
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n) SET n:Label")
+      // THEN
+    } should have message "Set label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+  }
+
+  test("deny remove all labels should override grant") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT REMOVE LABEL Label ON GRAPH * TO custom")
+    execute("DENY REMOVE LABEL * ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:Label)")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:Label")
+      // THEN
+    } should have message "Remove label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+  }
+
+  test("denying all writes prevents setting labels") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT SET LABEL * ON GRAPH * TO custom")
+    execute("DENY WRITE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CALL db.createLabel('Label')")
+    execute("CREATE ()")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n) SET n:Label")
+      // THEN
+    } should have message "Set label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+  }
+
+  test("denying all writes prevents removing labels") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT REMOVE LABEL * ON GRAPH * TO custom")
+    execute("DENY WRITE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:Label)")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:Label")
+      // THEN
+    } should have message "Remove label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+  }
+
+  test("set a label already there will succeed if allowed") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT SET LABEL * ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:Label)")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "MATCH (n) SET n:Label")
+
+    // THEN
+    execute("MATCH (n:Label) RETURN n").toSet should have size (1)
+  }
+
+  test("setting a label already there will succeed if not allowed as no write takes place") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("DENY SET LABEL * ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:Label)")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "MATCH (n) SET n:Label")
+
+    // THEN
+    execute("MATCH (n:Label) RETURN n").toSet should have size (1)
+  }
+
+  test("removing a label not present there will succeed if not allowed as no write occurs") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("DENY REMOVE LABEL * ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:Label)")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:AnotherLabel RETURN n")
+
+    // THEN
+    execute("MATCH (n:Label) RETURN n").toSet should have size (1)
+  }
+
+  test("removing a label not present will succeed but do nothing if allowed") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT REMOVE LABEL * ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:Label)")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "MATCH (n) REMOVE n:AnotherLabel")
+
+    // THEN
+    execute("MATCH (n:Label) RETURN n").toSet should have size (1)
+  }
+
 }
