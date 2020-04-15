@@ -61,7 +61,7 @@ public class IdGeneratorUpdatesWorkSync
         private final Map<IdGenerator,ChangedIds> idUpdatesMap = new HashMap<>();
         private PageCacheTracer pageCacheTracer;
 
-        Batch( PageCacheTracer pageCacheTracer )
+        protected Batch( PageCacheTracer pageCacheTracer )
         {
             this.pageCacheTracer = pageCacheTracer;
         }
