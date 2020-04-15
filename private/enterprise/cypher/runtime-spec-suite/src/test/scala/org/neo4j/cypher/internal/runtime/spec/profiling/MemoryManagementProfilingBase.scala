@@ -202,14 +202,14 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: EnterpriseRuntimeContext
     val input = finiteCyclicInputWithPeriodicHeapDump(data, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
 
     // then
-    val result = profile(logicalQuery, runtime, input)
-    consume(result)
+    val result = profileNonRecording(logicalQuery, runtime, input)
+    consumeNonRecording(result)
 
     val queryProfile = result.runtimeResult.queryProfile()
     printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
   }
 
-  test("measure sort 1") {
+  test("measure sort 1 column") {
     val testName = "sort1"
     val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_${runtimeName}"
 
@@ -250,7 +250,8 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: EnterpriseRuntimeContext
     val random = new Random(seed = 1337)
     var payload: Array[ListValue] = (1 to n).map { _ => VirtualValues.list((1 to 8).map(Values.longValue(_)).toArray: _*)}.toArray
     val data: Array[Array[Any]] = (0 until n).map { i => Array[Any](random.nextInt(10000), payload(i)) }.toArray
-    payload = null
+
+    payload = null // Clear unnecessary reference
 
     val input = finiteCyclicInputWithPeriodicHeapDump(data, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
 
@@ -275,13 +276,16 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: EnterpriseRuntimeContext
 
     // when
     val random = new Random(seed = 1337)
-    val data = (1L to 10000L).map(Array[Any](_))
+    var data = (1L to 10000L).map(Array[Any](_))
     val shuffledData = random.shuffle(data).toArray
+
+    data = null // Clear unnecessary reference
+
     val input = finiteCyclicInputWithPeriodicHeapDump(shuffledData, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
 
     // then
-    val result = profile(logicalQuery, runtime, input)
-    consume(result)
+    val result = profileNonRecording(logicalQuery, runtime, input)
+    consumeNonRecording(result)
 
     val queryProfile = result.runtimeResult.queryProfile()
     printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
@@ -300,13 +304,16 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: EnterpriseRuntimeContext
 
     // when
     val random = new Random(seed = 1337)
-    val data = (1L to DEFAULT_INPUT_LIMIT).map(Array[Any](_))
+    var data = (1L to DEFAULT_INPUT_LIMIT).map(Array[Any](_))
     val shuffledData = random.shuffle(data).toArray
+
+    data = null // Clear unnecessary reference
+
     val input = finiteCyclicInputWithPeriodicHeapDump(shuffledData, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
 
     // then
-    val result = profile(logicalQuery, runtime, input)
-    consume(result)
+    val result = profileNonRecording(logicalQuery, runtime, input)
+    consumeNonRecording(result)
 
     val queryProfile = result.runtimeResult.queryProfile()
     printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
@@ -471,11 +478,12 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: EnterpriseRuntimeContext
     val shuffledData = random.shuffle(data).toArray
     val input = finiteCyclicInputWithPeriodicHeapDump(shuffledData, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
 
-    // TODO: We need another mechanism to heap dump when the usage is at its actual peak here
+    // TODO: We need another mechanism to heap dump when the usage is at its actual peak here.
+    //       E.g. Run query once to determine estimated peak usage, then run again and dump when that estimated peak usage is reached.
 
     // then
-    val result = profile(logicalQuery, runtime, input)
-    consume(result)
+    val result = profileNonRecording(logicalQuery, runtime, input)
+    consumeNonRecording(result)
 
     val queryProfile = result.runtimeResult.queryProfile()
     printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
