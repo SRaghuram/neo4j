@@ -95,7 +95,7 @@ class CoreStatus extends ClusterMemberStatus
         Double raftCommandsPerSecond = throughputMonitor.throughput().orElse( null );
 
         return statusResponse( lastAppliedRaftIndex, participatingInRaftGroup, votingMembers, databaseHealth.isHealthy(), myId, leaderId,
-                millisSinceLastLeaderMessage, raftCommandsPerSecond, true );
+                millisSinceLastLeaderMessage, raftCommandsPerSecond, true, topologyService.isHealthy() );
     }
 
     private MemberId getLeader()

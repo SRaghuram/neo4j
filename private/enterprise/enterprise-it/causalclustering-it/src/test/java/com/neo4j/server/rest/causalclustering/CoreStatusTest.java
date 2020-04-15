@@ -213,6 +213,7 @@ class CoreStatusTest
         assertThat( response, containsAndEquals( "leader", core2.getUuid().toString() ) );
         assertThat( response, containsAndEquals( "raftCommandsPerSecond", 423.0 ) );
         assertThat( response.toString(), Long.parseLong( response.get( "millisSinceLastLeaderMessage" ).toString() ), greaterThan( 0L ) );
+        assertThat( response, containsAndEquals( "discoveryHealthy", true ) );
     }
 
     @Test

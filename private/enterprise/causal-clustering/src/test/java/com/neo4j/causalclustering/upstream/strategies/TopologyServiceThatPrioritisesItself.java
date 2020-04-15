@@ -130,6 +130,12 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
         return Map.of();
     }
 
+    @Override
+    public boolean isHealthy()
+    {
+        return true;
+    }
+
     private static CoreServerInfo coreServerInfo( ServerGroupName... groupNames )
     {
         SocketAddress anyRaftAddress = new SocketAddress( "hostname", 1234 );

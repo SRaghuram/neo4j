@@ -259,6 +259,12 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
         return getMemberStatesForRole( namedDatabaseId, allReadReplicas().keySet() );
     }
 
+    @Override
+    public boolean isHealthy()
+    {
+        return true;
+    }
+
     private Map<MemberId,DiscoveryDatabaseState> getMemberStatesForRole( final NamedDatabaseId namedDatabaseId, Set<MemberId> membersOfRole )
     {
         final var members = Set.copyOf( membersOfRole );

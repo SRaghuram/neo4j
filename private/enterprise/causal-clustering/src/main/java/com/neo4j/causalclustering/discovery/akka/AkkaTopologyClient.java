@@ -211,6 +211,12 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
         return Map.copyOf( globalTopologyState.readReplicaStatesForDatabase( namedDatabaseId ).memberStates() );
     }
 
+    @Override
+    public boolean isHealthy()
+    {
+        return true;
+    }
+
     @VisibleForTesting
     GlobalTopologyState topologyState()
     {

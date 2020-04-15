@@ -33,6 +33,7 @@ class CausalClusterStatusEndpointMatchers
     private static final String FIELD_MEMBER = "memberId";
     private static final String FIELD_LAST_INDEX = "lastAppliedRaftIndex";
     private static final String FIELD_HEALTHY = "healthy";
+    private static final String DISCOVERY_FIELD_HEALTHY = "discoveryHealthy";
     private static final String FIELD_LEADER = "leader";
     private static final String FIELD_VOTING = "votingMembers";
     private static final String FIELD_PARTICIPATING = "participatingInRaftGroup";
@@ -58,6 +59,11 @@ class CausalClusterStatusEndpointMatchers
         static Matcher<Map<String,Object>> healthFieldIs( Matcher<Boolean> matcher )
         {
             return new StatusDescriptionFieldMatcher<>( o -> Boolean.parseBoolean( o.toString() ), FIELD_HEALTHY, matcher );
+        }
+
+        static Matcher<Map<String,Object>> discoveryHealthFieldIs( Matcher<Boolean> matcher )
+        {
+            return new StatusDescriptionFieldMatcher<>( o -> Boolean.parseBoolean( o.toString() ), DISCOVERY_FIELD_HEALTHY, matcher );
         }
 
         static Matcher<Map<String,Object>> leaderFieldIs( Matcher<String> matcher )

@@ -38,7 +38,7 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
 {
     private static final long RESTART_RETRY_DELAY_MS = 1000L;
     private static final long RESTART_RETRY_DELAY_MAX_MS = 60 * 1000L;
-    private static final long RESTART_RETRIES = 0L;
+    private static final int RESTART_FAILURES_BEFORE_UNHEALTHY = 8;
 
     @Override
     public final AkkaCoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler, LogProvider logProvider,
@@ -47,7 +47,7 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
     {
         Executor executor = executorService( config, jobScheduler );
         TimeoutStrategy timeoutStrategy = new ExponentialBackoffStrategy( RESTART_RETRY_DELAY_MS, RESTART_RETRY_DELAY_MAX_MS, MILLISECONDS );
-        RetryStrategy restartRetryStrategy = new RetryStrategy( timeoutStrategy, RESTART_RETRIES );
+        Restarter restarter = new Restarter( timeoutStrategy, RESTART_FAILURES_BEFORE_UNHEALTHY );
 
         return new AkkaCoreTopologyService(
                 config,
@@ -56,7 +56,7 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
                 logProvider,
                 userLogProvider,
                 catchupAddressRetryStrategy,
-                restartRetryStrategy,
+                restarter,
                 discoveryMemberFactory,
                 executor,
                 clock,

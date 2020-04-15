@@ -28,12 +28,14 @@ import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.function.ThrowingConsumer;
+import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 
 import static com.neo4j.causalclustering.discovery.akka.GlobalTopologyStateTestUtil.setupCoreTopologyState;
 import static com.neo4j.causalclustering.discovery.akka.GlobalTopologyStateTestUtil.setupReadReplicaTopologyState;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.is;
@@ -65,7 +67,7 @@ class AkkaCoreTopologyServiceTest
 
     private ActorSystemLifecycle system = mock( ActorSystemLifecycle.class, RETURNS_MOCKS );
 
-    private RetryStrategy restartRetryStrategy = new RetryStrategy( 0L, 0L );
+    private Restarter restarter = new Restarter( new ConstantTimeTimeoutStrategy( 1, MILLISECONDS ), 0 );
 
     private AkkaCoreTopologyService service = new AkkaCoreTopologyService(
             config,
@@ -73,8 +75,7 @@ class AkkaCoreTopologyServiceTest
             system,
             logProvider,
             userLogProvider,
-            catchupAddressretryStrategy,
-            restartRetryStrategy,
+            catchupAddressretryStrategy, restarter,
             TestDiscoveryMember::new,
             executor,
             clock,
