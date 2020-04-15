@@ -120,7 +120,7 @@ public abstract class FabricServicesBootstrap
         var useEvaluation =
                 serviceBootstrapper.registerService( new UseEvaluation( catalogManager, proceduresSupplier, signatureResolver ), UseEvaluation.class );
 
-        FabricReactorHooks.register( internalLogProvider );
+        serviceBootstrapper.registerService( new FabricReactorHooksService( internalLogProvider ), FabricReactorHooksService.class );
 
         Executor fabricWorkerExecutor = jobScheduler.executor( FABRIC_WORKER );
         var fabricExecutor = new FabricExecutor( fabricConfig, planner, useEvaluation, catalogManager, internalLogProvider, monitoring, fabricWorkerExecutor );
