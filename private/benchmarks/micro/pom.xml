@@ -302,6 +302,9 @@
                     <args>
                         <arg>-target:jvm-${scala.target.vm}</arg>
                     </args>
+                    <javacArgs>
+                        <javacArg>-proc:none</javacArg>
+                    </javacArgs>
                 </configuration>
                 <executions>
                     <execution>
