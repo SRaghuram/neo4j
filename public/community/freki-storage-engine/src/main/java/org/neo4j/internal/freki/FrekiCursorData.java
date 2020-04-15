@@ -73,6 +73,11 @@ class FrekiCursorData
         if ( header.hasOffset( OFFSET_RECORD_POINTER ) )
         {
             forwardPointer = readRecordPointer( buffer );
+            // xL can be loaded lazily when/if needed
+        }
+        else
+        {
+            xLLoaded = true;
         }
     }
 

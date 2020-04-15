@@ -117,6 +117,18 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         return data.records[sizeExp];
     }
 
+    boolean loadSuperLight( long nodeId )
+    {
+        boolean reused = ensureFreshDataInstanceForLoadingNewNode();
+        cursorAccessTracer.registerNode( nodeId, reused );
+        if ( !stores.mainStore.exists( xCursor( 0 ), nodeId ) )
+        {
+            return false;
+        }
+        data.nodeId = nodeId;
+        return true;
+    }
+
     /**
      * Loads raw byte contents and does minimal parsing of higher-level offsets of the given node into {@link #data}.
      * @param nodeId node id to load.
@@ -134,12 +146,19 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
 
         data.nodeId = nodeId;
         data.gatherDataFromX1( x1Record );
-        if ( data.forwardPointer == NULL )
-        {
-            data.xLLoaded = true;
-        }
-        // else xL can be loaded lazily when/if needed
         return true;
+    }
+
+    private void ensureX1Loaded()
+    {
+        if ( !data.x1Loaded )
+        {
+            Record x1Record = loadRecord( 0, data.nodeId );
+            if ( x1Record != null )
+            {
+                data.gatherDataFromX1( x1Record );
+            }
+        }
     }
 
     private void ensureXLLoaded()
@@ -156,8 +175,14 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         }
     }
 
+    void ensureLabelsLoaded()
+    {
+        ensureX1Loaded();
+    }
+
     void ensureRelationshipsLoaded()
     {
+        ensureX1Loaded();
         if ( !data.isDense && data.relationshipOffset == 0 )
         {
             ensureXLLoaded();
@@ -166,6 +191,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
 
     void ensurePropertiesLoaded()
     {
+        ensureX1Loaded();
         if ( data.propertyOffset == 0 )
         {
             ensureXLLoaded();

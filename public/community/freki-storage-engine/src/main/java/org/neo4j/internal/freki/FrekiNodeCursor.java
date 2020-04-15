@@ -56,6 +56,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     public long[] labels()
     {
         cursorAccessTracer.registerNodeLabelsAccess();
+        ensureLabelsLoaded();
         ByteBuffer buffer = data.labelBuffer();
         return buffer != null ? (long[]) readIntDeltas( buffer, LONG_CREATOR, LONG_CONSUMER ) : EMPTY_LONG_ARRAY;
     }
