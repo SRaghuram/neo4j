@@ -220,11 +220,6 @@ public class EnterpriseBuiltInDbmsProcedures
     @SuppressWarnings( "WeakerAccess" )
     public static class ProcedureResult
     {
-        // These two procedures are admin procedures but may be executed for your own user,
-        // this is not documented anywhere but we cannot change the behaviour in a point release
-        private static final List<String> ADMIN_PROCEDURES =
-                Arrays.asList( "changeUserPassword", "listRolesForUser" );
-
         // These procedures have WRITE mode but an editor is not allowed to execute them. So we need to not add that role to the list of roles
         private static final List<String> NON_EDITOR_PROCEDURES =
                 Arrays.asList( "createLabel", "createProperty", "createRelationshipType" );
@@ -244,43 +239,49 @@ public class EnterpriseBuiltInDbmsProcedures
             this.mode = signature.mode().toString();
             this.worksOnSystem = signature.systemProcedure();
             defaultBuiltInRoles = new ArrayList<>();
-            switch ( signature.mode() )
+            if ( !isInvalidProcedure() )
             {
-            case DBMS:
-                if ( signature.admin() || isAdminProcedure( signature.name().name() ) )
+                if ( signature.admin() || isAdminProcedure() )
                 {
                     defaultBuiltInRoles.add( "admin" );
                 }
                 else
                 {
-                    defaultBuiltInRoles.add( "reader" );
-                    defaultBuiltInRoles.add( "editor" );
-                    defaultBuiltInRoles.add( "publisher" );
-                    defaultBuiltInRoles.add( "architect" );
+                    switch ( signature.mode() )
+                    {
+                    case SCHEMA:
+                        defaultBuiltInRoles.add( "architect" );
+                        break;
+                    case WRITE:
+                        if ( !NON_EDITOR_PROCEDURES.contains( signature.name().name() ) )
+                        {
+                            defaultBuiltInRoles.add( "editor" );
+                        }
+                        defaultBuiltInRoles.add( "publisher" );
+                        defaultBuiltInRoles.add( "architect" );
+                        break;
+                    default:
+                        defaultBuiltInRoles.add( "reader" );
+                        defaultBuiltInRoles.add( "editor" );
+                        defaultBuiltInRoles.add( "publisher" );
+                        defaultBuiltInRoles.add( "architect" );
+                    }
                     defaultBuiltInRoles.add( "admin" );
                     defaultBuiltInRoles.addAll( Arrays.asList( signature.allowed() ) );
                 }
-                break;
-            case DEFAULT:
-            case READ:
-                defaultBuiltInRoles.add( "reader" );
-            case WRITE:
-                if ( !NON_EDITOR_PROCEDURES.contains( signature.name().name() ) )
-                {
-                    defaultBuiltInRoles.add( "editor" );
-                }
-                defaultBuiltInRoles.add( "publisher" );
-            case SCHEMA:
-                defaultBuiltInRoles.add( "architect" );
-            default:
-                defaultBuiltInRoles.add( "admin" );
-                defaultBuiltInRoles.addAll( Arrays.asList( signature.allowed() ) );
             }
         }
 
-        private boolean isAdminProcedure( String procedureName )
+        private boolean isAdminProcedure()
         {
-            return name.startsWith( "dbms.security." ) && ADMIN_PROCEDURES.contains( procedureName );
+            // This procedure asserts admin right internally (to be able to execute for your own user) so we can't rely on the signature to detect that
+            return name.startsWith( "dbms.security.listRolesForUser" );
+        }
+
+        private boolean isInvalidProcedure()
+        {
+            // This procedure has been disabled and always throws an error
+            return name.startsWith( "dbms.security.changePassword" );
         }
     }
 
