@@ -14,6 +14,7 @@ import org.neo4j.internal.helpers.Strings;
 import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.memory.OptionalMemoryTracker;
 import org.neo4j.values.AnyValue;
+import org.neo4j.values.AnyValueWriter.EntityMode;
 import org.neo4j.values.utils.PrettyPrinter;
 import org.neo4j.values.virtual.MapValue;
 
@@ -50,7 +51,7 @@ class QueryLogFormatter
         result.append( ") - " );
     }
 
-    static void formatMapValue( StringBuilder result, MapValue params )
+    static void formatMapValue( StringBuilder result, MapValue params, EntityMode entityMode )
     {
         result.append( '{' );
         if ( params != null )
@@ -62,16 +63,16 @@ class QueryLogFormatter
                         .append( key )
                         .append( ": " );
 
-                formatAnyValue( value, result );
+                formatAnyValue( value, result, entityMode );
                 sep[0] = ", ";
             } );
         }
         result.append( "}" );
     }
 
-    private static void formatAnyValue( AnyValue value, StringBuilder builder )
+    private static void formatAnyValue( AnyValue value, StringBuilder builder, EntityMode entityMode )
     {
-        PrettyPrinter printer = new PrettyPrinter( "'" );
+        PrettyPrinter printer = new PrettyPrinter( "'", entityMode );
         value.writeTo( printer );
         printer.valueInto( builder );
     }

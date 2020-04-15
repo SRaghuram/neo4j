@@ -14,15 +14,19 @@ import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
+import org.neo4j.values.AnyValueWriter;
 import org.neo4j.values.virtual.MapValue;
 
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import static org.neo4j.values.AnyValueWriter.EntityMode.FULL;
+import static org.neo4j.values.AnyValueWriter.EntityMode.REFERENCE;
 
 class ConfiguredQueryLogger implements QueryLogger
 {
     private final Log log;
     private final long thresholdMillis;
     private final boolean logQueryParameters;
+    private final AnyValueWriter.EntityMode parameterEntityMode;
     private final boolean logDetailedTime;
     private final boolean logAllocatedBytes;
     private final boolean logPageDetails;
@@ -35,6 +39,7 @@ class ConfiguredQueryLogger implements QueryLogger
         this.log = log;
         this.thresholdMillis = config.get( GraphDatabaseSettings.log_queries_threshold ).toMillis();
         this.logQueryParameters = config.get( GraphDatabaseSettings.log_queries_parameter_logging_enabled );
+        this.parameterEntityMode = config.get( GraphDatabaseSettings.log_queries_parameter_full_entities ) ? FULL : REFERENCE;
         this.logDetailedTime = config.get( GraphDatabaseSettings.log_queries_detailed_time_logging_enabled );
         this.logAllocatedBytes = config.get( GraphDatabaseSettings.log_queries_allocation_logging_enabled );
         this.logPageDetails = config.get( GraphDatabaseSettings.log_queries_page_detail_logging_enabled );
@@ -118,7 +123,7 @@ class ConfiguredQueryLogger implements QueryLogger
         {
             MapValue params = shouldUseRawText ? query.rawQueryParameters()
                                                : query.obfuscatedQueryParameters().get();
-            QueryLogFormatter.formatMapValue( result.append(" - "), params );
+            QueryLogFormatter.formatMapValue( result.append(" - "), params, parameterEntityMode );
         }
         if ( logRuntime )
         {
