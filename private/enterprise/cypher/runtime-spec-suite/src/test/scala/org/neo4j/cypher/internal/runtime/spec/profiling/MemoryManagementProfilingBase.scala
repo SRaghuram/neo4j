@@ -12,6 +12,7 @@ import java.nio.file.Path
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings
 import com.neo4j.kernel.impl.query.HeapDumper
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
+import org.github.jamm.MemoryMeter
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
@@ -37,6 +38,7 @@ import org.neo4j.cypher.internal.util.test_helpers.TimeLimitedCypherTest
 import org.neo4j.kernel.api.Kernel
 import org.neo4j.scheduler.JobScheduler
 import org.neo4j.values.storable.Values
+import org.neo4j.values.virtual.ListValue
 import org.neo4j.values.virtual.VirtualValues
 
 import scala.util.Random
@@ -158,7 +160,12 @@ trait ProfilingInputStreams[CONTEXT <: RuntimeContext] extends InputStreams[CONT
         }
         j = 0
       }
-      data(((i - 1) % data.length).toInt)
+      val index = ((i - 1) % data.length).toInt
+      val dataElement = data(index)
+      if (limit.isDefined && ((i - 1) >= (limit.get - data.length))) {
+        data(index) = null // Clear the reference to the data in the last run over it to avoid retaining heap in the test case
+      }
+      dataElement
     }
   }
 }
@@ -220,8 +227,36 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: EnterpriseRuntimeContext
     val input = finiteCyclicInputWithPeriodicHeapDump(data, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
 
     // then
-    val result = profile(logicalQuery, runtime, input)
-    consume(result)
+    val result = profileNonRecording(logicalQuery, runtime, input)
+    consumeNonRecording(result)
+
+    val queryProfile = result.runtimeResult.queryProfile()
+    printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
+  }
+
+  test("measure sort 1 column with payload") {
+    val testName = "sort1-pay"
+    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_${runtimeName}"
+
+    // given
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .sort(Seq(Ascending("x")))
+      .input(variables = Seq("x", "payload"))
+      .build()
+
+    // when
+    val n = DEFAULT_INPUT_LIMIT.toInt
+    val random = new Random(seed = 1337)
+    var payload: Array[ListValue] = (1 to n).map { _ => VirtualValues.list((1 to 8).map(Values.longValue(_)).toArray: _*)}.toArray
+    val data: Array[Array[Any]] = (0 until n).map { i => Array[Any](random.nextInt(10000), payload(i)) }.toArray
+    payload = null
+
+    val input = finiteCyclicInputWithPeriodicHeapDump(data, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
+
+    // then
+    val result = profileNonRecording(logicalQuery, runtime, input)
+    consumeNonRecording(result)
 
     val queryProfile = result.runtimeResult.queryProfile()
     printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
@@ -282,7 +317,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: EnterpriseRuntimeContext
     val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_${runtimeName}"
 
     // given
-    val nodes = given { nodeGraph(DEFAULT_INPUT_LIMIT.toInt) }
+    var nodes = given { nodeGraph(DEFAULT_INPUT_LIMIT.toInt) }
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("x")
       .nodeHashJoin("x")
@@ -292,13 +327,19 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: EnterpriseRuntimeContext
 
     // when
     val random = new Random(seed = 1337)
-    val data = nodes.map(Array[Any](_))
+    var data = nodes.map(Array[Any](_))
     val shuffledData = random.shuffle(data).toArray
+
+    // Make sure to clear out all unnecessary references to get a clean dominator tree in the heap dump
+    // (The elements of shuffledData will be cleared as they are streamed by finiteCyclicInputWithPeriodicHeapDump)
+    nodes = null
+    data = null
+
     val input = finiteCyclicInputWithPeriodicHeapDump(shuffledData, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
 
     // then
-    val result = profile(logicalQuery, runtime, input)
-    consume(result)
+    val result = profileNonRecording(logicalQuery, runtime, input)
+    consumeNonRecording(result)
 
     val queryProfile = result.runtimeResult.queryProfile()
     printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
@@ -310,7 +351,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: EnterpriseRuntimeContext
 
     // given
     val n = DEFAULT_INPUT_LIMIT.toInt
-    val paths = given { chainGraphs(n, "R") }
+    var paths = given { chainGraphs(n, "R") }
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("x")
       .nodeHashJoin("x", "y")
@@ -321,13 +362,19 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: EnterpriseRuntimeContext
 
     // when
     val random = new Random(seed = 1337)
-    val data = (0 until n).map { i => Array[Any](paths(i).startNode, paths(i).endNode()) }
+    var data = (0 until n).map { i => Array[Any](paths(i).startNode, paths(i).endNode()) }
     val shuffledData = random.shuffle(data).toArray
+
+    // Make sure to clear out all unnecessary references to get a clean dominator tree in the heap dump
+    // (The elements of shuffledData will be cleared as they are streamed by finiteCyclicInputWithPeriodicHeapDump)
+    paths = null
+    data = null
+
     val input = finiteCyclicInputWithPeriodicHeapDump(shuffledData, n, n/2, heapDumpFileNamePrefix)
 
     // then
-    val result = profile(logicalQuery, runtime, input)
-    consume(result)
+    val result = profileNonRecording(logicalQuery, runtime, input)
+    consumeNonRecording(result)
 
     val queryProfile = result.runtimeResult.queryProfile()
     printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
@@ -340,8 +387,8 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: EnterpriseRuntimeContext
 
     // given
     val n = DEFAULT_INPUT_LIMIT.toInt
-    val payload = (1L to n).map { _ => VirtualValues.list((1 to 8).map(Values.longValue(_)).toArray: _*)}.toArray
-    val nodes = given { nodeGraph(n) }.toArray[Any]
+    var payload = (1L to n).map { _ => VirtualValues.list((1 to 8).map(Values.longValue(_)).toArray: _*)}.toArray
+    var nodes = given { nodeGraph(n) }.toArray[Any]
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("x", "payload")
       .nodeHashJoin("x")
@@ -350,13 +397,20 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: EnterpriseRuntimeContext
       .build()
 
     // when
-    val data = (0 until n).map { i => Array[Any](nodes(i), payload(i)) }
+    var data = (0 until n).map { i => Array[Any](nodes(i), payload(i)) }
     val shuffledData = random.shuffle(data).toArray
+
+    // Make sure to clear out all unnecessary references to get a clean dominator tree in the heap dump
+    // (The elements of shuffledData will be cleared as they are streamed by finiteCyclicInputWithPeriodicHeapDump)
+    nodes = null
+    payload = null
+    data = null
+
     val input = finiteCyclicInputWithPeriodicHeapDump(shuffledData, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
 
     // then
-    val result = profile(logicalQuery, runtime, input)
-    consume(result)
+    val result = profileNonRecording(logicalQuery, runtime, input)
+    consumeNonRecording(result)
 
     val queryProfile = result.runtimeResult.queryProfile()
     printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
@@ -369,8 +423,8 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: EnterpriseRuntimeContext
 
     // given
     val n = DEFAULT_INPUT_LIMIT.toInt
-    val payload = (1L to n).map { _ => VirtualValues.list((1 to 8).map(Values.longValue(_)).toArray: _*)}.toArray
-    val nodes = given { nodeGraph(n) }.toArray[Any]
+    var payload = (1L to n).map { _ => VirtualValues.list((1 to 8).map(Values.longValue(_)).toArray: _*)}.toArray
+    var nodes = given { nodeGraph(n) }.toArray[Any]
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("x", "payload")
       .limit(n)
@@ -380,13 +434,20 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: EnterpriseRuntimeContext
       .build()
 
     // when
-    val data = (0 until n).map { i => Array[Any](nodes(i), payload(i)) }
+    var data = (0 until n).map { i => Array[Any](nodes(i), payload(i)) }
     val shuffledData = random.shuffle(data).toArray
+
+    // Make sure to clear out all unnecessary references to get a clean dominator tree in the heap dump
+    // (The elements of shuffledData will be cleared as they are streamed by finiteCyclicInputWithPeriodicHeapDump)
+    nodes = null
+    payload = null
+    data = null
+
     val input = finiteCyclicInputWithPeriodicHeapDump(shuffledData, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
 
     // then
-    val result = profile(logicalQuery, runtime, input)
-    consume(result)
+    val result = profileNonRecording(logicalQuery, runtime, input)
+    consumeNonRecording(result)
 
     val queryProfile = result.runtimeResult.queryProfile()
     printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
