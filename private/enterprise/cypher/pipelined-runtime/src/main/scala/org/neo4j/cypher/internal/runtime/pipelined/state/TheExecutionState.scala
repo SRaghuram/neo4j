@@ -58,9 +58,9 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   // of any reducing operators.
 
   private val queryStatus = new QueryStatus
-  private val argumentStateMapHolder = new Array[ArgumentStateMap[_ <: ArgumentState]](executionGraphDefinition.argumentStateMaps.size)
+  private val argumentStateMapHolder = new Array[ArgumentStateMap[_ <: ArgumentState]](executionGraphDefinition.argumentStateMaps.length)
   override val argumentStateMaps: ArgumentStateMap.ArgumentStateMaps = id => argumentStateMapHolder(id.x)
-  private val buffers: Buffers = new Buffers(executionGraphDefinition.buffers.size,
+  private val buffers: Buffers = new Buffers(executionGraphDefinition.buffers.length,
     tracker,
     argumentStateMaps,
     stateFactory,
@@ -83,7 +83,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     }
     // We don't reach the first apply buffer because it is not the output buffer of any pipeline, and also
     // not the input buffer, because all apply buffers are consumed through delegates.
-    buffers.constructBuffer(executionGraphDefinition.buffers.head)
+    buffers.constructBuffer(executionGraphDefinition.buffers(0))
     states
   }
 
@@ -345,7 +345,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     }
 
     i = 0
-    while (i < executionGraphDefinition.buffers.size) {
+    while (i < executionGraphDefinition.buffers.length) {
       Preconditions
         .checkState(i == executionGraphDefinition.buffers(i).id.x, "Buffer definition id does not match offset!")
       i += 1

@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.physicalplanning.Initialization
+import org.neo4j.cypher.internal.physicalplanning.ReadOnlyArray
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ArgumentSlots
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
@@ -31,10 +32,10 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.Accumul
  * @param argumentReducersOnTopOfThisApply ids of reducers _after_ the Apply this Buffer is for.
  */
 class MorselApplyBuffer(id: BufferId,
-                        workCancellersOnRHSOfThisApply: IndexedSeq[Initialization[ArgumentStateMapId]],
-                        argumentStatesOnRHSOfThisApply: IndexedSeq[ArgumentStateMapId],
-                        argumentReducersOnRHSOfThisApply: IndexedSeq[Initialization[AccumulatingBuffer]],
-                        argumentReducersOnTopOfThisApply: IndexedSeq[AccumulatingBuffer],
+                        workCancellersOnRHSOfThisApply: ReadOnlyArray[Initialization[ArgumentStateMapId]],
+                        argumentStatesOnRHSOfThisApply: ReadOnlyArray[ArgumentStateMapId],
+                        argumentReducersOnRHSOfThisApply: ReadOnlyArray[Initialization[AccumulatingBuffer]],
+                        argumentReducersOnTopOfThisApply: ReadOnlyArray[AccumulatingBuffer],
                         override val argumentStateMaps: ArgumentStateMaps,
                         argumentSlotOffset: Int,
                         idAllocator: IdAllocator,

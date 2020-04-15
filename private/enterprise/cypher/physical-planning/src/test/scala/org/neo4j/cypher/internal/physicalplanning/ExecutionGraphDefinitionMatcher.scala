@@ -386,13 +386,13 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
 
   override def apply(graph: ExecutionGraphDefinition): MatchResult = {
     val expectedBuffers = buffers.values.toSeq.sortBy(_.id.x)
-    val gotBuffers = graph.buffers
+    val gotBuffers = graph.buffers.toSeq
     if (expectedBuffers != gotBuffers) {
       return MatcherWords.equal(expectedBuffers).matcher[Seq[BufferDefinition]].apply(gotBuffers)
     }
 
     val expectedASMs = argumentStates.values.toSeq.sortBy(_.id.x)
-    val gotASMs = graph.argumentStateMaps
+    val gotASMs = graph.argumentStateMaps.toSeq
     if (expectedASMs != gotASMs) {
       return MatcherWords.equal(expectedASMs).matcher[Seq[ArgumentStateDefinition]].apply(gotASMs)
     }

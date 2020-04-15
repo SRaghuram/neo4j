@@ -9,6 +9,7 @@ import java.util
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
+import org.neo4j.cypher.internal.physicalplanning.ReadOnlyArray
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ArgumentSlots
 import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorsel
@@ -38,8 +39,8 @@ object MorselBuffer {
  */
 class MorselBuffer(id: BufferId,
                    tracker: QueryCompletionTracker,
-                   downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
-                   workCancellers: IndexedSeq[ArgumentStateMapId],
+                   downstreamArgumentReducers: ReadOnlyArray[AccumulatingBuffer],
+                   workCancellers: ReadOnlyArray[ArgumentStateMapId],
                    override val argumentStateMaps: ArgumentStateMaps,
                    inner: Buffer[Morsel]
                   ) extends ArgumentCountUpdater
@@ -48,9 +49,9 @@ class MorselBuffer(id: BufferId,
                     with DataHolder {
 
   private val cancellerASMs = {
-    val x = new Array[ArgumentStateMap[WorkCanceller]](workCancellers.size)
+    val x = new Array[ArgumentStateMap[WorkCanceller]](workCancellers.length)
     var i = 0
-    while (i < workCancellers.size) {
+    while (i < workCancellers.length) {
       x(i) = argumentStateMaps(workCancellers(i)).asInstanceOf[ArgumentStateMap[WorkCanceller]]
       i += 1
     }
@@ -136,12 +137,12 @@ class MorselBuffer(id: BufferId,
   private def decrementReducers(filteringMorsel: FilteringMorsel, rowsToCancel: util.BitSet): Unit = {
     val cursor = filteringMorsel.readCursor()
 
-    val reducerArgumentRowIds = new Array[Long](downstreamArgumentReducers.size)
+    val reducerArgumentRowIds = new Array[Long](downstreamArgumentReducers.length)
     util.Arrays.fill(reducerArgumentRowIds, INVALID_ARG_ROW_ID) // otherwise we do not decrement for argumentRowId 0
-    val reducerDecrementFlags = new util.BitSet(downstreamArgumentReducers.size) // OBS: We interpret "set" as leave the row alone and "unset" as decrement.
+    val reducerDecrementFlags = new util.BitSet(downstreamArgumentReducers.length) // OBS: We interpret "set" as leave the row alone and "unset" as decrement.
     while (cursor.next()) {
       var j = 0
-      while (j < downstreamArgumentReducers.size) {
+      while (j < downstreamArgumentReducers.length) {
         val reducer = downstreamArgumentReducers(j)
         val reducerArgumentSlotOffset = reducer.argumentSlotOffset
 
@@ -172,7 +173,7 @@ class MorselBuffer(id: BufferId,
     }
     // Any remaining decrement for the last block for each reducer
     var j = 0
-    while (j < downstreamArgumentReducers.size) {
+    while (j < downstreamArgumentReducers.length) {
       val reducer = downstreamArgumentReducers(j)
 
       if (!reducerDecrementFlags.get(j) && reducerArgumentRowIds(j) != INVALID_ARG_ROW_ID) {
@@ -192,7 +193,7 @@ class MorselBuffer(id: BufferId,
       var cancellerArgumentSlotOffset: Int = INVALID_ARG_SLOT_OFFSET
 
       // Determine if the current row is cancelled by any canceller
-      while (i < workCancellers.size && !isCancelled) {
+      while (i < workCancellers.length && !isCancelled) {
         val cancellerASM = cancellerASMs(i)
         cancellerArgumentRowId = ArgumentSlots.getArgumentAt(cursor, cancellerASM.argumentSlotOffset)
         if (cancellerASM.peek(cancellerArgumentRowId).isCancelled) {

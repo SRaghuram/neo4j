@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
+import org.neo4j.cypher.internal.physicalplanning.ReadOnlyArray
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
@@ -30,7 +31,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.DataHol
 abstract class BaseArgExistsMorselBuffer[PRODUCES <: AnyRef, S <: ArgumentState](
                                                              id: BufferId,
                                                              tracker: QueryCompletionTracker,
-                                                             downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
+                                                             downstreamArgumentReducers: ReadOnlyArray[AccumulatingBuffer],
                                                              override val argumentStateMaps: ArgumentStateMaps,
                                                              val argumentStateMapId: ArgumentStateMapId
                                                             )

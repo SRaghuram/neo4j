@@ -71,15 +71,15 @@ case class BufferDefinition(id: BufferId,
                             // We need multiple reducers because a buffer might need to
                             // reference count for multiple downstream reduce operators,
                             // at potentially different argument depths
-                            reducers: IndexedSeq[ArgumentStateMapId],
-                            workCancellers: IndexedSeq[Initialization[ArgumentStateMapId]],
+                            reducers: ReadOnlyArray[ArgumentStateMapId],
+                            workCancellers: ReadOnlyArray[Initialization[ArgumentStateMapId]],
                             variant: BufferVariant)(val bufferSlotConfiguration: SlotConfiguration) {
-  val workCancellerIds: IndexedSeq[ArgumentStateMapId] = workCancellers.map(_.receiver)
+  val workCancellerIds: ReadOnlyArray[ArgumentStateMapId] = workCancellers.map(_.receiver)
 
-  def withReducers(reducers: IndexedSeq[ArgumentStateMapId]): BufferDefinition =
+  def withReducers(reducers: ReadOnlyArray[ArgumentStateMapId]): BufferDefinition =
     copy(reducers = reducers)(bufferSlotConfiguration)
 
-  def withWorkCancellers(workCancellers: IndexedSeq[Initialization[ArgumentStateMapId]]): BufferDefinition =
+  def withWorkCancellers(workCancellers: ReadOnlyArray[Initialization[ArgumentStateMapId]]): BufferDefinition =
     copy(workCancellers = workCancellers)(bufferSlotConfiguration)
 }
 
@@ -117,9 +117,9 @@ case class Initialization[T](receiver: T, initialCount: Int)
  *                              their downstreams, which have to be initialized first in order to do that.
  */
 case class ApplyBufferVariant(argumentSlotOffset: Int,
-                              reducersOnRHSReversed: IndexedSeq[Initialization[ArgumentStateMapId]],
-                              downstreamStatesOnRHS: IndexedSeq[ArgumentStateMapId],
-                              delegates: IndexedSeq[BufferId]) extends BufferVariant
+                              reducersOnRHSReversed: ReadOnlyArray[Initialization[ArgumentStateMapId]],
+                              downstreamStatesOnRHS: ReadOnlyArray[ArgumentStateMapId],
+                              delegates: ReadOnlyArray[BufferId]) extends BufferVariant
 
 case class AttachBufferVariant(applyBuffer: BufferDefinition,
                                outputSlots: SlotConfiguration,
@@ -158,19 +158,24 @@ case object NoOutput extends OutputDefinition
 
 // -- EXECUTION GRAPH
 case class ExecutionGraphDefinition(physicalPlan: PhysicalPlan,
-                                    buffers: IndexedSeq[BufferDefinition],
-                                    argumentStateMaps: IndexedSeq[ArgumentStateDefinition],
+                                    buffers: ReadOnlyArray[BufferDefinition],
+                                    argumentStateMaps: ReadOnlyArray[ArgumentStateDefinition],
                                     pipelines: IndexedSeq[PipelineDefinition],
                                     applyRhsPlans: Map[Int, Int]) {
   def findArgumentStateMapForPlan(planId: Id): ArgumentStateMapId = {
-    argumentStateMaps.find(_.planId == planId).map(_.id).getOrElse {
-      throw new IllegalStateException("Requested an ArgumentStateMap for an operator which does not have any.")
+    var i = 0
+    while (i < argumentStateMaps.length) {
+      val asm = argumentStateMaps(i)
+      if (asm.planId == planId)
+        return asm.id
+      i += 1
     }
+    throw new IllegalStateException("Requested an ArgumentStateMap for an operator which does not have any.")
   }
 }
 
 object ExecutionGraphDefinition {
-  val NO_ARGUMENT_STATE_MAPS = new Array[ArgumentStateMapId](0)
-  val NO_ARGUMENT_STATE_MAP_INITIALIZATIONS = new Array[Initialization[ArgumentStateMapId]](0)
-  val NO_BUFFERS = new Array[BufferId](0)
+  val NO_ARGUMENT_STATE_MAPS: ReadOnlyArray[ArgumentStateMapId] = ReadOnlyArray.empty
+  val NO_ARGUMENT_STATE_MAP_INITIALIZATIONS: ReadOnlyArray[Initialization[ArgumentStateMapId]] = ReadOnlyArray.empty
+  val NO_BUFFERS: ReadOnlyArray[BufferId] = ReadOnlyArray.empty
 }

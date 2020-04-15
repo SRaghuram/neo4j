@@ -138,8 +138,8 @@ object PipelineTreeBuilder {
 
       BufferDefinition(id,
                        memoryTrackingOperatorId,
-                       downstreamReducers.result(),
-                       downstreamWorkCancellers.result(),
+                       new ReadOnlyArray(downstreamReducers.result()),
+                       new ReadOnlyArray(downstreamWorkCancellers.result()),
                        variant
                      )(bufferConfiguration)
     }
@@ -205,9 +205,9 @@ object PipelineTreeBuilder {
       val reducersOnRHSReversed = reducersOnRHS.result().sortBy(_.receiver.x * -1)
 
       ApplyBufferVariant(argumentSlotOffset,
-                         reducersOnRHSReversed,
-                         downstreamStatesOnRHS.result(),
-                         delegates.result())
+                         new ReadOnlyArray(reducersOnRHSReversed),
+                         new ReadOnlyArray(downstreamStatesOnRHS.result()),
+                         new ReadOnlyArray(delegates.result()))
     }
   }
 

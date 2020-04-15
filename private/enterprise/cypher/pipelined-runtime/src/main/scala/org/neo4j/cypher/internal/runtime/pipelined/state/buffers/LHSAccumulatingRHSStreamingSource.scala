@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.ReadOnlyArray
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.PipelinedDebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
@@ -68,7 +69,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.DataHol
 class LHSAccumulatingRHSStreamingSource[DATA <: AnyRef,
                                         LHS_ACC <: MorselAccumulator[DATA]
                                        ](tracker: QueryCompletionTracker,
-                                         downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
+                                         downstreamArgumentReducers: ReadOnlyArray[AccumulatingBuffer],
                                          override val argumentStateMaps: ArgumentStateMaps,
                                          val lhsArgumentStateMapId: ArgumentStateMapId,
                                          val rhsArgumentStateMapId: ArgumentStateMapId,
@@ -161,7 +162,7 @@ class LHSAccumulatingRHSStreamingSource[DATA <: AnyRef,
 // The LHS does not need any reference counting, because no tasks
 // will ever be produced from the LHS
 class LHSAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[DATA]](val argumentStateMapId: ArgumentStateMapId,
-                                                                              downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
+                                                                              downstreamArgumentReducers: ReadOnlyArray[AccumulatingBuffer],
                                                                               override val argumentStateMaps: ArgumentStateMaps)
   extends ArgumentCountUpdater
   with Sink[IndexedSeq[PerArgument[DATA]]]
@@ -205,7 +206,7 @@ class LHSAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[DATA]](va
 // Tasks need to be tracked since the RHS accumulator's Buffer is used multiple times
 // to spawn tasks, unlike in the MorselArgumentStateBuffer where you only take the accumulator once.
 class RHSStreamingSink(val argumentStateMapId: ArgumentStateMapId,
-                       downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
+                       downstreamArgumentReducers: ReadOnlyArray[AccumulatingBuffer],
                        override val argumentStateMaps: ArgumentStateMaps,
                        tracker: QueryCompletionTracker) extends ArgumentCountUpdater
                                                with Sink[IndexedSeq[PerArgument[Morsel]]]

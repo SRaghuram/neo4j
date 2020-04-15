@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.physicalplanning.Initialization
 import org.neo4j.cypher.internal.physicalplanning.LHSAccumulatingBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.LHSAccumulatingRHSStreamingBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.RHSStreamingBufferVariant
+import org.neo4j.cypher.internal.physicalplanning.ReadOnlyArray
 import org.neo4j.cypher.internal.physicalplanning.RegularBufferVariant
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
@@ -48,7 +49,9 @@ class Buffers(numBuffers: Int,
 
   // Constructor code
 
-  private def findRHSAccumulatingStateBuffers(initialIndex: Int, argumentStateMapIds: Array[ArgumentStateMapId]): Array[AccumulatingBuffer] = {
+  private def findRHSAccumulatingStateBuffers(initialIndex: Int,
+                                              argumentStateMapIds: ReadOnlyArray[ArgumentStateMapId]
+                                             ): ReadOnlyArray[AccumulatingBuffer] = {
     var j = 0
     val reducersBuilder = Array.newBuilder[AccumulatingBuffer]
     reducersBuilder.sizeHint(argumentStateMapIds.length)
@@ -58,9 +61,12 @@ class Buffers(numBuffers: Int,
       reducersBuilder += accumulatingBuffer
       j += 1
     }
-    reducersBuilder.result()
+    new ReadOnlyArray(reducersBuilder.result())
   }
-  private def findRHSAccumulatingStateBuffersWithInitialization(initialIndex: Int, argumentStateMapInitializations: Array[Initialization[ArgumentStateMapId]]): Array[Initialization[AccumulatingBuffer]] = {
+
+  private def findRHSAccumulatingStateBuffersWithInitialization(initialIndex: Int,
+                                                                argumentStateMapInitializations: ReadOnlyArray[Initialization[ArgumentStateMapId]]
+                                                               ): ReadOnlyArray[Initialization[AccumulatingBuffer]] = {
     var j = 0
     val reducersBuilder = Array.newBuilder[Initialization[AccumulatingBuffer]]
     reducersBuilder.sizeHint(argumentStateMapInitializations.length)
@@ -70,7 +76,7 @@ class Buffers(numBuffers: Int,
       reducersBuilder += Initialization(accumulatingBuffer, initialCount)
       j += 1
     }
-    reducersBuilder.result()
+    new ReadOnlyArray(reducersBuilder.result())
   }
 
   /**
@@ -113,7 +119,7 @@ class Buffers(numBuffers: Int,
     if (buffers(i) != null)
       return
 
-    val reducers = findRHSAccumulatingStateBuffers(i, bufferDefinition.reducers.toArray)
+    val reducers = findRHSAccumulatingStateBuffers(i, bufferDefinition.reducers)
 
     buffers(i) =
       bufferDefinition.variant match {
@@ -132,9 +138,9 @@ class Buffers(numBuffers: Int,
             x.argumentSize.nReferences)
 
         case x: ApplyBufferVariant =>
-          val workCancellers = bufferDefinition.workCancellers.toArray
-          val downstreamStates = x.downstreamStatesOnRHS.toArray
-          val reducersOnRHS = findRHSAccumulatingStateBuffersWithInitialization(i, x.reducersOnRHSReversed.toArray)
+          val workCancellers = bufferDefinition.workCancellers
+          val downstreamStates = x.downstreamStatesOnRHS
+          val reducersOnRHS = findRHSAccumulatingStateBuffersWithInitialization(i, x.reducersOnRHSReversed)
           new MorselApplyBuffer(bufferDefinition.id,
             workCancellers,
             downstreamStates,
@@ -143,7 +149,7 @@ class Buffers(numBuffers: Int,
             argumentStateMaps,
             x.argumentSlotOffset,
             stateFactory.newIdAllocator(),
-            morselBuffers(x.delegates.toArray))
+            morselBuffers(x.delegates))
 
         case x: ArgumentStateBufferVariant =>
           new MorselArgumentStateBuffer(tracker,
@@ -191,11 +197,10 @@ class Buffers(numBuffers: Int,
             morselSize)
 
         case RegularBufferVariant =>
-          val workCancellersIds = bufferDefinition.workCancellerIds.toArray
           new MorselBuffer(bufferDefinition.id,
             tracker,
             reducers,
-            workCancellersIds,
+            bufferDefinition.workCancellerIds,
             argumentStateMaps,
             stateFactory.newBuffer[Morsel](bufferDefinition.memoryTrackingOperatorId))
       }
@@ -291,7 +296,7 @@ class Buffers(numBuffers: Int,
   }
 
   // Specialization to remove overheads from scala collection `map`
-  private def morselBuffers(bufferIds: Array[BufferId]): Array[MorselBuffer] = {
+  private def morselBuffers(bufferIds: ReadOnlyArray[BufferId]): Array[MorselBuffer] = {
     val result = new Array[MorselBuffer](bufferIds.length)
     var i = 0
     while (i < result.length) {

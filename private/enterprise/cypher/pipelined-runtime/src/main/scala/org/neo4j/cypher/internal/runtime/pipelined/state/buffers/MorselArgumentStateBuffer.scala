@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.ReadOnlyArray
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
@@ -29,7 +30,7 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
   ACC <: MorselAccumulator[DATA]
 ](
    tracker: QueryCompletionTracker,
-   downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
+   downstreamArgumentReducers: ReadOnlyArray[AccumulatingBuffer],
    override val argumentStateMaps: ArgumentStateMaps,
    val argumentStateMapId: ArgumentStateMapId
  ) extends ArgumentCountUpdater
