@@ -223,7 +223,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
         {
             while ( singleId < stores.mainStore.getHighId() )
             {
-                if ( load( singleId++ ) )
+                if ( loadSuperLight( singleId++ ) )
                 {
                     return true;
                 }
