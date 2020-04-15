@@ -9,6 +9,7 @@ import java.util
 
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
+import org.neo4j.graphdb.Label
 import org.neo4j.graphdb.Node
 
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
@@ -234,6 +235,113 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     executeOnDefault("joe", "soap", "MATCH ()-[r]->() RETURN count(r)", resultHandler = (row, _) => {
       row.get("count(r)") should be(0)
     }) should be(1)
+  }
+
+  test("should get correct count for specific relationship with super nodes") {
+    val superCount = 100
+    val sizeOfLovesSparseNode = "MATCH (b:B {name:'b'}) RETURN size((b)<-[:LOVES]-()) AS count"
+    val sizeOfAllSparseNode = "MATCH (b:B {name:'b'}) RETURN size((b)<--()) AS count"
+    val sizeOfLoves = "MATCH (a:A {name:'a'}) RETURN size((a)-[:LOVES]->()) AS count"
+    val sizeOfAll = "MATCH (a:A {name:'a'}) RETURN size((a)-->()) AS count"
+    val countLoves = "MATCH (:A {name:'a'})-[r:LOVES]->() RETURN count(r) AS count"
+    val countAll = "MATCH (:A {name:'a'})-[r]->() RETURN count(r) AS count"
+    val testCounts: PartialFunction[AnyRef, Unit] = {
+      case (query: String, (expectedCount: Int, expectedRows: Int)) =>
+        withClue(s"$query:") {
+          executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+            withClue("result should be:") {
+              row.get("count") should be(expectedCount)
+            }
+          }) should be(expectedRows)
+        }
+    }
+
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.withTx { tx =>
+      val a = tx.createNode(Label.label("A"))
+      a.setProperty("name", "a")
+      Range(0, superCount).foreach { _ =>
+        tx.execute("WITH $a AS a CREATE (a)-[:LOVES]->(:B {name:'b'})<-[:KNOWS]-(c:C {name:'c'}), (a)-[:KNOWS]->(c)", util.Map.of("a", a))
+      }
+    }
+    withClue("No TRAVERSE on relationship:") {
+      Seq(
+        sizeOfLovesSparseNode -> (0, superCount),
+        sizeOfAllSparseNode -> (0, superCount),
+        sizeOfLoves -> (0, 1),
+        sizeOfAll -> (0, 1),
+        countLoves -> (0, 1),
+        countAll -> (0, 1)
+      ).foreach(testCounts)
+    }
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
+
+    // THEN
+    withClue("TRAVERSE LOVES on relationship:") {
+      Seq(
+        sizeOfLovesSparseNode -> (1, superCount),
+        sizeOfAllSparseNode -> (1, superCount),
+        sizeOfLoves -> (superCount, 1),
+        sizeOfAll -> (superCount, 1),
+        countLoves -> (superCount, 1),
+        countAll -> (superCount, 1)
+      ).foreach(testCounts)
+    }
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS KNOWS TO custom")
+
+    // THEN
+    withClue("TRAVERSE * on relationship:") {
+      Seq(
+        sizeOfLovesSparseNode -> (1, superCount),
+        sizeOfAllSparseNode -> (2, superCount),
+        sizeOfLoves -> (superCount, 1),
+        sizeOfAll -> (superCount * 2, 1),
+        countLoves -> (superCount, 1),
+        countAll -> (superCount * 2, 1)
+      ).foreach(testCounts)
+    }
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * NODES C TO custom")
+
+    // THEN
+    withClue("deny TRAVERSE C on nodes:") {
+      Seq(
+        sizeOfLovesSparseNode -> (1, superCount),
+        sizeOfAllSparseNode -> (1, superCount),
+        sizeOfLoves -> (superCount, 1),
+        sizeOfAll -> (superCount, 1),
+        countLoves -> (superCount, 1),
+        countAll -> (superCount, 1)
+      ).foreach(testCounts)
+    }
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
+
+    // THEN
+    withClue("deny TRAVERSE LOVES on relationship:") {
+      Seq(
+        sizeOfLovesSparseNode -> (0, superCount),
+        sizeOfAllSparseNode -> (0, superCount),
+        sizeOfLoves -> (0, 1),
+        sizeOfAll -> (0, 1),
+        countLoves -> (0, 1),
+        countAll -> (0, 1)
+      ).foreach(testCounts)
+    }
   }
 
   test("should get correct count for relationship within transaction with traversal privilege") {
