@@ -22,9 +22,11 @@ package org.neo4j.internal.freki;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 import org.neo4j.common.TokenNameLookup;
 import org.neo4j.counts.CountsAccessor;
+import org.neo4j.function.ThrowingFunction;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.internal.counts.CountsBuilder;
 import org.neo4j.internal.counts.GBPTreeCountsStore;
@@ -44,6 +46,7 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.storageengine.api.ConstraintRuleAccessor;
 import org.neo4j.storageengine.api.TransactionMetaDataStore;
+import org.neo4j.token.api.NamedToken;
 
 import static org.neo4j.internal.helpers.ArrayUtil.concat;
 import static org.neo4j.io.IOUtils.closeAllSilently;
@@ -64,8 +67,7 @@ public class Stores extends MainStores
 
     public Stores( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache, IdGeneratorFactory idGeneratorFactory,
             PageCacheTracer pageCacheTracer, RecoveryCleanupWorkCollector recoveryCleanupWorkCollector,
-            boolean createStoreIfNotExists, ConstraintRuleAccessor constraintSemantics, IndexConfigCompleter indexConfigCompleter,
-            TokenNameLookup tokenNameLookup )
+            boolean createStoreIfNotExists, ConstraintRuleAccessor constraintSemantics, IndexConfigCompleter indexConfigCompleter )
             throws IOException
     {
         super( fs, databaseLayout, pageCache, idGeneratorFactory, pageCacheTracer, recoveryCleanupWorkCollector, createStoreIfNotExists );
@@ -81,9 +83,6 @@ public class Stores extends MainStores
             metaDataStore = FrekiStorageEngineFactory.openMetaDataStore( databaseLayout, pageCache, pageCacheTracer );
             countsStore = new GBPTreeCountsStore( pageCache, databaseLayout.countStore(), fs, recoveryCleanupWorkCollector,
                     initialCountsBuilder( metaDataStore ), false, pageCacheTracer, GBPTreeCountsStore.NO_MONITOR );
-            schemaStore = new GBPTreeSchemaStore( pageCache, databaseLayout.schemaStore(), recoveryCleanupWorkCollector, idGeneratorFactory, tokenNameLookup,
-                    false, pageCacheTracer, cursorTracer );
-            idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( idGeneratorFactory, IdType.SCHEMA ) );
             propertyKeyTokenStore = new GBPTreeTokenStore( pageCache, databaseLayout.propertyKeyTokenStore(), recoveryCleanupWorkCollector,
                     idGeneratorFactory, IdType.PROPERTY_KEY_TOKEN, MAX_TOKEN_ID, false, pageCacheTracer, cursorTracer );
             idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( idGeneratorFactory, IdType.PROPERTY_KEY_TOKEN ) );
@@ -93,6 +92,9 @@ public class Stores extends MainStores
             labelTokenStore = new GBPTreeTokenStore( pageCache, databaseLayout.labelTokenStore(), recoveryCleanupWorkCollector,
                     idGeneratorFactory, IdType.LABEL_TOKEN, MAX_TOKEN_ID, false, pageCacheTracer, cursorTracer );
             idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( idGeneratorFactory, IdType.LABEL_TOKEN ) );
+            schemaStore = new GBPTreeSchemaStore( pageCache, databaseLayout.schemaStore(), recoveryCleanupWorkCollector, idGeneratorFactory,
+                    tokenNameLookup( propertyKeyTokenStore, relationshipTypeTokenStore, labelTokenStore, cursorTracer ), false, pageCacheTracer, cursorTracer );
+            idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( idGeneratorFactory, IdType.SCHEMA ) );
             SchemaCache schemaCache = new SchemaCache( constraintSemantics, indexConfigCompleter );
             success = true;
 
@@ -179,6 +181,44 @@ public class Stores extends MainStores
             public long lastCommittedTxId()
             {
                 return metaDataStore.getLastCommittedTransactionId();
+            }
+        };
+    }
+
+    private static TokenNameLookup tokenNameLookup( GBPTreeTokenStore propertyKeyTokens, GBPTreeTokenStore relationshipTypeTokens,
+            GBPTreeTokenStore labelTokens, PageCursorTracer cursorTracer )
+    {
+        return new TokenNameLookup()
+        {
+            @Override
+            public String labelGetName( int labelId )
+            {
+                return tokenName( labelId, id -> labelTokens.loadToken( id, cursorTracer ) );
+            }
+
+            @Override
+            public String relationshipTypeGetName( int relationshipTypeId )
+            {
+                return tokenName( relationshipTypeId, id -> relationshipTypeTokens.loadToken( id, cursorTracer ) );
+            }
+
+            @Override
+            public String propertyKeyGetName( int propertyKeyId )
+            {
+                return tokenName( propertyKeyId, id -> propertyKeyTokens.loadToken( id, cursorTracer ) );
+            }
+
+            private String tokenName( int id, ThrowingFunction<Integer,NamedToken,IOException> lookup )
+            {
+                try
+                {
+                    NamedToken token = lookup.apply( id );
+                    return token != null ? token.name() : "<unknown token with id:" + id + ">";
+                }
+                catch ( IOException e )
+                {
+                    throw new UncheckedIOException( e );
+                }
             }
         };
     }
