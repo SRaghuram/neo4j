@@ -107,7 +107,7 @@ public class FrekiStorageEngine extends Life implements StorageEngine
         this.cursorAccessPatternTracer = cursorAccessPatternTracer;
         this.idGeneratorUpdatesWorkSync = new IdGeneratorUpdatesWorkSync();
         this.stores = new Stores( fs, databaseLayout, pageCache, idGeneratorFactory, pageCacheTracer, recoveryCleanupWorkCollector,
-                createStoreIfNotExists, constraintSemantics, indexConfigCompleter, tokenHolders );
+                createStoreIfNotExists, constraintSemantics, indexConfigCompleter );
         this.singleReader = new FrekiStorageReader( stores, cursorAccessPatternTracer, tokenHolders );
         this.denseRelationshipsWorkSync = new DenseRelationshipsWorkSync( stores.denseStore );
         life.add( stores );

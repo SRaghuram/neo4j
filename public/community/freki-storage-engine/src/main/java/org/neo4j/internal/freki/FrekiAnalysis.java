@@ -56,7 +56,6 @@ import static org.neo4j.storageengine.api.RelationshipDirection.INCOMING;
 import static org.neo4j.storageengine.api.RelationshipDirection.LOOP;
 import static org.neo4j.storageengine.api.RelationshipDirection.OUTGOING;
 import static org.neo4j.storageengine.api.RelationshipSelection.ALL_RELATIONSHIPS;
-import static org.neo4j.token.TokenHolders.readOnlyTokenHolders;
 
 public class FrekiAnalysis extends Life implements AutoCloseable
 {
@@ -66,8 +65,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
     public FrekiAnalysis( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException
     {
         this( new Stores( fs, databaseLayout, pageCache, new DefaultIdGeneratorFactory( fs, immediate() ), PageCacheTracer.NULL,
-                immediate(), false, new StandardConstraintRuleAccessor(), i -> i, readOnlyTokenHolders() ), true,
-                stores -> new FrekiCursorFactory( stores, NO_TRACING ) );
+                immediate(), false, new StandardConstraintRuleAccessor(), i -> i ), true, stores -> new FrekiCursorFactory( stores, NO_TRACING ) );
     }
 
     public FrekiAnalysis( MainStores stores )
