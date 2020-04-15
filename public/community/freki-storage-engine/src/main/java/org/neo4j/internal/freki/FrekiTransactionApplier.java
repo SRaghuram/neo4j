@@ -140,7 +140,8 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         SimpleStore store = stores.mainStore( sizeExp );
         try ( PageCursor cursor = store.openWriteCursor( cursorTracer ) )
         {
-            store.write( cursor, node.after, idUpdates != null ? idUpdates : IGNORE, cursorTracer );
+            boolean onlyUpdated = node.before.hasFlag( FLAG_IN_USE ) && node.after.hasFlag( FLAG_IN_USE );
+            store.write( cursor, node.after, idUpdates == null || onlyUpdated ? IGNORE : idUpdates, cursorTracer );
         }
         // OK so this logic here is quite specific to the format, it knows that labels are kept in the smallest records only and
         // reads label information from it and hands off to the label index updates listener.
