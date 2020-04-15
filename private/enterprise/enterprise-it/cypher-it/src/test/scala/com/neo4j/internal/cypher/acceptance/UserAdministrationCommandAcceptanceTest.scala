@@ -9,6 +9,8 @@ import java.util
 
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
+import org.neo4j.cypher.CacheCounts
+import org.neo4j.cypher.ExecutionEngineCacheCounter
 import org.neo4j.cypher.internal.DatabaseStatus.Online
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.exceptions.ParameterNotFoundException
@@ -151,7 +153,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val misses = total - hits
 
     // WHEN
-    val counter = new CacheCounter()
+    val counter = new ExecutionEngineCacheCounter()
     kernelMonitors.addMonitorListener(counter)
     counter.counts should equal(CacheCounts())
     passwords.foreach { pw =>
@@ -163,7 +165,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     }
 
     // THEN
-    counter.counts should equal(CacheCounts(misses = misses, hits = hits))
+    counter.counts should equal(CacheCounts(misses = misses, hits = hits), compilations = commandCount)
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
   }
 

@@ -114,6 +114,48 @@ class ExpressionEngineConfigurationTest
         assertUsingCompiled( db, "CYPHER expressionEngine=COMPILED " + query );
     }
 
+    @Test
+    void shouldUseCompiledExpressionsWithReplanForceAndDefaultSettings()
+    {
+        assertUsingCompiled( withEngineAndLimit( GraphDatabaseSettings.CypherExpressionEngine.DEFAULT, 42 ),
+                             "CYPHER replan=force RETURN sin(cos(sin(cos(rand()))))" );
+    }
+
+    @Test
+    void shouldNotUseCompiledExpressionsWithReplanForceAndInterpretedSettings()
+    {
+        assertNotUsingCompiled( withEngineAndLimit( GraphDatabaseSettings.CypherExpressionEngine.INTERPRETED, 42 ),
+                                "CYPHER replan=force RETURN sin(cos(sin(cos(rand()))))" );
+    }
+
+    @Test
+    void shouldNotUseCompiledExpressionsWithReplanForceWhenExplicitlyAskingForInterpreted()
+    {
+        assertNotUsingCompiled( withEngineAndLimit( GraphDatabaseSettings.CypherExpressionEngine.COMPILED, 42 ),
+                                "CYPHER expressionEngine=INTERPRETED replan=force RETURN sin(cos(sin(cos(rand()))))" );
+    }
+
+    @Test
+    void shouldNotUseCompiledExpressionsWithReplanSkipAndDefaultSettings()
+    {
+        assertNotUsingCompiled( withEngineAndLimit( GraphDatabaseSettings.CypherExpressionEngine.DEFAULT, 42 ),
+                                "CYPHER replan=skip RETURN sin(cos(sin(cos(rand()))))" );
+    }
+
+    @Test
+    void shouldUseCompiledExpressionsWithReplanSkipAndCompiledSettings()
+    {
+        assertUsingCompiled( withEngineAndLimit( GraphDatabaseSettings.CypherExpressionEngine.COMPILED, 42 ),
+                             "CYPHER replan=skip RETURN sin(cos(sin(cos(rand()))))" );
+    }
+
+    @Test
+    void shouldUseCompiledExpressionsWithReplanSkipWhenExplicitlyAskingForCompiled()
+    {
+        assertUsingCompiled( withEngineAndLimit( GraphDatabaseSettings.CypherExpressionEngine.INTERPRETED, 42 ),
+                             "CYPHER expressionEngine=COMPILED replan=skip RETURN sin(cos(sin(cos(rand()))))" );
+    }
+
     private GraphDatabaseService withEngineAndLimit( GraphDatabaseSettings.CypherExpressionEngine engine, int limit )
     {
 
@@ -152,7 +194,8 @@ class ExpressionEngineConfigurationTest
         }
 
         assertThat( logProvider ).forClass( EnterpriseCompilerFactory.class ).forLevel( DEBUG )
-                .doesNotContainMessageWithArguments( "Compiling expression:", "Compiling projection:" );
+                .doesNotContainMessage( "Compiling expression:" )
+                .doesNotContainMessage( "Compiling projection:" );
     }
 
 }

@@ -8,6 +8,8 @@ package org.neo4j.internal.cypher.acceptance
 import java.time.Duration
 
 import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.cypher.CacheCounts
+import org.neo4j.cypher.ExecutionEngineCacheCounter
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.ExecutionEngineHelper.createEngine
 import org.neo4j.cypher.internal.ExecutionEngine
@@ -20,23 +22,26 @@ import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 
 class CypherCompilerStringCacheMonitoringAcceptanceTest extends ExecutionEngineFunSuite {
 
-  override def databaseConfig(): Map[Setting[_],Object] = super.databaseConfig() ++ Map(GraphDatabaseSettings.cypher_min_replan_interval -> Duration.ZERO)
+  override def databaseConfig(): Map[Setting[_],Object] = super.databaseConfig() ++
+    Map(GraphDatabaseSettings.cypher_min_replan_interval -> Duration.ZERO,
+      GraphDatabaseSettings.cypher_expression_recompilation_limit -> Integer.valueOf(2)
+    )
 
   test("should monitor cache miss") {
     // given
-    val counter = new CacheCounter()
+    val counter = new ExecutionEngineCacheCounter()
     kernelMonitors.addMonitorListener(counter)
 
     // when
     execute("return 42").toList
 
     // then
-    counter.counts should equal(CacheCounts(misses = 1, flushes = 1))
+    counter.counts should equal(CacheCounts(misses = 1, flushes = 1, compilations = 1))
   }
 
   test("should monitor cache misses and hits") {
     // given
-    val counter = new CacheCounter()
+    val counter = new ExecutionEngineCacheCounter()
     kernelMonitors.addMonitorListener(counter)
 
     // when
@@ -44,12 +49,27 @@ class CypherCompilerStringCacheMonitoringAcceptanceTest extends ExecutionEngineF
     execute("return 42").toList
 
     // then
-    counter.counts should equal(CacheCounts(hits = 1, misses = 1, flushes = 1))
+    counter.counts should equal(CacheCounts(hits = 1, misses = 1, flushes = 1, compilations = 1))
+  }
+
+  test("should monitor jit compilations") {
+    // given
+    val counter = new ExecutionEngineCacheCounter()
+    kernelMonitors.addMonitorListener(counter)
+
+    // when
+    execute("return 42").toList
+    execute("return 42").toList
+    execute("return 42").toList
+    execute("return 42").toList
+
+    // then
+    counter.counts should equal(CacheCounts(hits = 3, misses = 1, flushes = 1, compilations = 1, jitCompilations = 1))
   }
 
   test("should monitor cache flushes") {
     // given
-    val counter = new CacheCounter()
+    val counter = new ExecutionEngineCacheCounter()
     kernelMonitors.addMonitorListener(counter)
 
     // when
@@ -58,12 +78,12 @@ class CypherCompilerStringCacheMonitoringAcceptanceTest extends ExecutionEngineF
     execute("return 42").toList
 
     // then
-    counter.counts should equal(CacheCounts(misses = 3, flushes = 2))
+    counter.counts should equal(CacheCounts(misses = 3, flushes = 2, compilations = 3))
   }
 
   test("should monitor cache evictions") {
     // given
-    val counter = new CacheCounter()
+    val counter = new ExecutionEngineCacheCounter()
     kernelMonitors.addMonitorListener(counter)
     val query = "match (n:Person:Dog) return n"
 
@@ -76,7 +96,7 @@ class CypherCompilerStringCacheMonitoringAcceptanceTest extends ExecutionEngineF
     execute(query).toList
 
     // then
-    counter.counts should equal(CacheCounts(misses = 2, flushes = 1, evicted = 1))
+    counter.counts should equal(CacheCounts(misses = 2, flushes = 1, evicted = 1, compilations = 2))
   }
 
   override lazy val logProvider: AssertableLogProvider = new AssertableLogProvider()
@@ -84,7 +104,7 @@ class CypherCompilerStringCacheMonitoringAcceptanceTest extends ExecutionEngineF
   test("should log on cache evictions") {
     // given
     val engine = createEngine(graph)
-    val counter = new CacheCounter()
+    val counter = new ExecutionEngineCacheCounter()
     kernelMonitors.addMonitorListener(counter)
     val query = "match (n:Person:Dog) return n"
 
