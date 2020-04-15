@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -48,10 +49,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.atMostOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
@@ -296,5 +299,47 @@ class DbmsReconcilerModuleTest
         // then
         assertTrue( startFailure.isPresent() );
         assertEquals( failure, startFailure.get() );
+    }
+
+    @Test
+    void priorityRequestsShouldIgnoreAndHealFailedStates()
+    {
+        // given
+        MultiDatabaseManager<?> databaseManager = mock( MultiDatabaseManager.class );
+
+        var foo = idRepository.getRaw( "foo" );
+        var failure = new RuntimeException( "An error has occurred" );
+
+        doThrow( failure )
+                .doNothing() // Second attempt succeeds
+                .when( databaseManager ).startDatabase( any( NamedDatabaseId.class ) );
+
+        var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
+
+        var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), nullLogProvider(), jobScheduler, transitionsTable );
+        var operator = new LocalDbmsOperator( idRepository );
+        operator.startDatabase( "foo" );
+
+        // when/then
+        assertThrows( DatabaseManagementException.class, () -> reconciler.reconcile( List.of( operator ), ReconcilerRequest.simple() ).join( foo ) );
+        var startFailure = reconciler.causeOfFailure( foo );
+        assertTrue( startFailure.isPresent() );
+        assertEquals( failure, startFailure.get() );
+
+        verify( databaseManager ).startDatabase( foo );
+
+        // when
+        reconciler.reconcile( List.of( operator ), ReconcilerRequest.simple() ).await( foo );
+
+        // then
+        verify( databaseManager, atMostOnce() ).startDatabase( foo );
+
+        // when
+        reconciler.reconcile( List.of( operator ), ReconcilerRequest.priority( foo ) ).join( foo );
+
+        // then
+        startFailure = reconciler.causeOfFailure( foo );
+        assertTrue( startFailure.isEmpty() );
+        verify( databaseManager, times( 2 ) ).startDatabase( foo );
     }
 }

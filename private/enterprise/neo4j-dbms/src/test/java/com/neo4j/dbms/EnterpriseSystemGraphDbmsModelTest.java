@@ -8,12 +8,15 @@ package com.neo4j.dbms;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.Collection;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -38,6 +41,7 @@ import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_NAME_PROPERT
 import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_STATUS_PROPERTY;
 import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_UUID_PROPERTY;
 import static org.neo4j.dbms.database.SystemGraphDbmsModel.DELETED_DATABASE_LABEL;
+import static org.neo4j.dbms.database.SystemGraphDbmsModel.UPDATED_AT_PROPERTY;
 
 @ImpermanentDbmsExtension
 class EnterpriseSystemGraphDbmsModelTest
@@ -47,7 +51,7 @@ class EnterpriseSystemGraphDbmsModelTest
 
     @Inject
     private GraphDatabaseService db;
-    private Collection<NamedDatabaseId> updatedDatabases = new ArrayList<>();
+    private final AtomicReference<DatabaseUpdates> updatedDatabases = new AtomicReference<>( DatabaseUpdates.EMPTY );
     private EnterpriseSystemGraphDbmsModel dbmsModel;
 
     @BeforeEach
@@ -60,13 +64,20 @@ class EnterpriseSystemGraphDbmsModelTest
             @Override
             public void afterCommit( TransactionData txData, Object state, GraphDatabaseService databaseService )
             {
-                updatedDatabases.addAll( dbmsModel.updatedDatabases( txData ) );
+                updatedDatabases.getAndUpdate( previous -> mergeUpdates( previous, dbmsModel.updatedDatabases( txData ) ) );
             }
         } );
     }
 
+    private DatabaseUpdates mergeUpdates( DatabaseUpdates left, DatabaseUpdates right )
+    {
+        var changed = Stream.concat( left.changed().stream(), right.changed().stream() ).collect( Collectors.toSet() );
+        var touched = Stream.concat( left.touched().stream(), right.touched().stream() ).collect( Collectors.toSet() );
+        return new DatabaseUpdates( changed, touched );
+    }
+
     @Test
-    void shouldDetectUpdatedDatabases()
+    void shouldDetectChangedDatabases()
     {
         // when
         HashMap<NamedDatabaseId,EnterpriseDatabaseState> expectedCreated = new HashMap<>();
@@ -79,10 +90,10 @@ class EnterpriseSystemGraphDbmsModelTest
         }
 
         // then
-        assertThat( updatedDatabases ).containsAll( expectedCreated.keySet() );
+        assertThat( updatedDatabases.get().changed() ).containsAll( expectedCreated.keySet() );
 
         // given
-        updatedDatabases.clear();
+        updatedDatabases.set( DatabaseUpdates.EMPTY );
 
         // when
         HashMap<NamedDatabaseId,EnterpriseDatabaseState> expectedDeleted = new HashMap<>();
@@ -95,7 +106,7 @@ class EnterpriseSystemGraphDbmsModelTest
         }
 
         // then
-        assertThat( updatedDatabases ).containsAll( expectedDeleted.keySet() );
+        assertThat( updatedDatabases.get().changed() ).containsAll( expectedDeleted.keySet() );
     }
 
     @Test
@@ -123,6 +134,88 @@ class EnterpriseSystemGraphDbmsModelTest
 
         // then
         assertEquals( expectedNames, dbmsModel.getDatabaseStates() );
+    }
+
+    @Test
+    void shouldDetectDatabasesOnlyTouchedInMultiUpdateTransactions()
+    {
+        // given
+        var aState = new HashMap<NamedDatabaseId,EnterpriseDatabaseState>();
+        try ( var tx = db.beginTx() )
+        {
+            makeDatabaseNode( tx, "A", true, aState );
+            tx.commit();
+        }
+
+        var aName = new NormalizedDatabaseName( "A" ).name();
+        updatedDatabases.set( DatabaseUpdates.EMPTY );
+
+        // when
+        var bState = new HashMap<NamedDatabaseId,EnterpriseDatabaseState>();
+        try ( var tx = db.beginTx() )
+        {
+            makeDatabaseNode( tx, "B", true, bState );
+            var aNode = tx.findNode( DATABASE_LABEL, DATABASE_NAME_PROPERTY, aName );
+            if ( aNode != null )
+            {
+                aNode.setProperty( UPDATED_AT_PROPERTY, Instant.now().toString() );
+            }
+            tx.commit();
+        }
+
+        // then
+        var touched = updatedDatabases.get().touched();
+        var changed = updatedDatabases.get().changed();
+        assertEquals( aState.keySet(), touched );
+        assertThat( touched ).hasSize( 1 );
+        assertEquals( bState.keySet(), changed );
+        assertThat( changed ).hasSize( 1 );
+    }
+
+    @Test
+    void shouldDetectDatabasesOnlyTouched()
+    {
+        // given
+        var aState = new HashMap<NamedDatabaseId,EnterpriseDatabaseState>();
+        try ( var tx = db.beginTx() )
+        {
+            makeDatabaseNode( tx, "A", true, aState );
+            tx.commit();
+        }
+
+        var aName = new NormalizedDatabaseName( "A" ).name();
+        updatedDatabases.set( DatabaseUpdates.EMPTY );
+
+        // when
+        var bState = new HashMap<NamedDatabaseId,EnterpriseDatabaseState>();
+        try ( var tx = db.beginTx() )
+        {
+            makeDatabaseNode( tx, "B", true, bState );
+            tx.commit();
+        }
+
+        // then
+        var touched = updatedDatabases.get().touched();
+        var changed = updatedDatabases.get().changed();
+        assertThat( touched ).hasSize( 0 );
+        assertEquals( bState.keySet(), changed );
+        assertThat( changed ).hasSize( 1 );
+
+        // when
+        try ( var tx = db.beginTx() )
+        {
+            var aNode = tx.findNode( DATABASE_LABEL, DATABASE_NAME_PROPERTY, aName );
+            if ( aNode != null )
+            {
+                aNode.setProperty( UPDATED_AT_PROPERTY, Instant.now().toString() );
+            }
+            tx.commit();
+        }
+
+        // then
+        touched = updatedDatabases.get().touched();
+        assertEquals( aState.keySet(), touched );
+        assertThat( touched ).hasSize( 1 );
     }
 
     private void makeDatabaseNode( Transaction tx, String databaseName, boolean online, HashMap<NamedDatabaseId,EnterpriseDatabaseState> expected )

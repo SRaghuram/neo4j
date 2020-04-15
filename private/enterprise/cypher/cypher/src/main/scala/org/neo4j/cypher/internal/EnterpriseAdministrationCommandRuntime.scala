@@ -620,10 +620,12 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     case DropDatabase(source, dbName) => (context, parameterMapping) =>
       val (key, value, converter) = getNameFields("databaseName", dbName, valueMapper = s => new NormalizedDatabaseName(s).name())
       UpdatingSystemCommandExecutionPlan("DropDatabase", normalExecutionEngine,
-        s"""MATCH (d:Database {name: $$`$key`})
+        s"""OPTIONAL MATCH (d:Database {name: $$`$key`})
+          |OPTIONAL MATCH (d2:DeletedDatabase {name: $$`$key`})
           |REMOVE d:Database
           |SET d:DeletedDatabase
           |SET d.deleted_at = datetime()
+          |SET d2.updated_at = datetime()
           |RETURN d.name as name, d.status as status""".stripMargin,
         VirtualValues.map(Array(key), Array(value)),
         QueryHandler.handleError {
@@ -643,6 +645,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       UpdatingSystemCommandExecutionPlan("StartDatabase", normalExecutionEngine,
         s"""OPTIONAL MATCH (d:Database {name: $$`$key`})
           |OPTIONAL MATCH (d2:Database {name: $$`$key`, status: $$`$oldStatusKey`})
+          |SET d.updated_at = datetime()
           |SET d2.status = $$`$statusKey`
           |SET d2.started_at = datetime()
           |RETURN d2.name as name, d2.status as status, d.name as db""".stripMargin,
@@ -673,7 +676,9 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       val statusKey = internalKey("status")
       val (key, value, converter) = getNameFields("databaseName", dbName, valueMapper = s => new NormalizedDatabaseName(s).name())
       UpdatingSystemCommandExecutionPlan("StopDatabase", normalExecutionEngine,
-        s"""OPTIONAL MATCH (d2:Database {name: $$`$key`, status: $$`$oldStatusKey`})
+        s"""OPTIONAL MATCH (d:Database {name: $$`$key`})
+          |OPTIONAL MATCH (d2:Database {name: $$`$key`, status: $$`$oldStatusKey`})
+          |SET d.updated_at = datetime()
           |SET d2.status = $$`$statusKey`
           |SET d2.stopped_at = datetime()
           |RETURN d2.name as name, d2.status as status""".stripMargin,
