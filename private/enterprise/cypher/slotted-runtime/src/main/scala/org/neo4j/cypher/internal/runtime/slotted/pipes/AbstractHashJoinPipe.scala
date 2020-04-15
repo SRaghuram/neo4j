@@ -12,12 +12,13 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.kernel.impl.util.collection
+import org.neo4j.memory.Measurable
 
 import scala.collection.JavaConverters.asScalaIteratorConverter
 
-abstract class AbstractHashJoinPipe[Key, T](left: Pipe,
-                                            right: Pipe,
-                                            slots: SlotConfiguration) extends PipeWithSource(left) {
+abstract class AbstractHashJoinPipe[Key <: Measurable, T](left: Pipe,
+                                                          right: Pipe,
+                                                          slots: SlotConfiguration) extends PipeWithSource(left) {
   protected val leftSide: T
   protected val rightSide: T
 
