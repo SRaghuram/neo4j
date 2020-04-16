@@ -450,7 +450,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     } should have message "Remove label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
-  test("set a label already there will succeed if allowed") {
+  test("setting a label that already exists will succeed if SET LABEL permission was granted") {
     // GIVEN
     setupUserWithCustomRole()
     execute("GRANT MATCH {*} ON GRAPH * TO custom")
@@ -466,7 +466,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("MATCH (n:Label) RETURN n").toSet should have size (1)
   }
 
-  test("setting a label already there will succeed if not allowed as no write takes place") {
+  test("setting a label that already exists will succeed if SET LABEL permission was denied as no write takes place") {
     // GIVEN
     setupUserWithCustomRole()
     execute("GRANT MATCH {*} ON GRAPH * TO custom")
