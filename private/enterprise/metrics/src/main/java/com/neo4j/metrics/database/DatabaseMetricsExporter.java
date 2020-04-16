@@ -92,7 +92,8 @@ public class DatabaseMetricsExporter
 
         if ( config.get( MetricsSettings.neoMemoryPoolsEnabled ) )
         {
-            life.add( new DatabaseMemoryPoolMetrics( metricsPrefix, registry, dependencies.memoryPools() ) );
+            life.add( new DatabaseMemoryPoolMetrics( metricsPrefix, registry, dependencies.memoryPools(),
+                            dependencies.database().getNamedDatabaseId().name() ) );
         }
 
         if ( config.get( MetricsSettings.causalClusteringEnabled ) )

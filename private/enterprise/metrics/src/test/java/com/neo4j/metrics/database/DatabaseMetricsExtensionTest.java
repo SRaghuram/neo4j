@@ -190,7 +190,7 @@ class DatabaseMetricsExtensionTest
         @Override
         public MemoryPools memoryPools()
         {
-            return null;
+            return new MemoryPools();
         }
     }
 
@@ -273,7 +273,7 @@ class DatabaseMetricsExtensionTest
         @Override
         public MemoryPools memoryPools()
         {
-            return null;
+            return new MemoryPools();
         }
 
         @Override
