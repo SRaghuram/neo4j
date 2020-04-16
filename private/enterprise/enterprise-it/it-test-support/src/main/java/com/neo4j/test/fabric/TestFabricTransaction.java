@@ -1,10 +1,16 @@
-package com.neo4j.test;
+/*
+ * Copyright (c) 2002-2020 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
+package com.neo4j.test.fabric;
 
 import java.util.Map;
 import java.util.Optional;
 
 import org.neo4j.bolt.dbapi.BoltQueryExecution;
 import org.neo4j.bolt.dbapi.BoltTransaction;
+import org.neo4j.cypher.internal.javacompat.ResultSubscriber;
 import org.neo4j.graphdb.Entity;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Lock;
@@ -53,11 +59,11 @@ public class TestFabricTransaction implements InternalTransaction
     public Result execute( String query, Map<String,Object> parameters ) throws QueryExecutionException
     {
         var params = ValueUtils.asParameterMapValue( parameters );
-        var result = new TestFabricResultSubscriber();
+        var result = new ResultSubscriber( null, new TestFabricValueMapper() );
         try
         {
             BoltQueryExecution boltQueryExecution = transaction.executeQuery( query, params, false, result );
-            result.materialize(boltQueryExecution.getQueryExecution());
+            result.materialize( boltQueryExecution.getQueryExecution() );
         }
         catch ( QueryExecutionKernelException e )
         {

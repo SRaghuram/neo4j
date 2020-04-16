@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.test;
+package com.neo4j.test.fabric;
 
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -15,7 +15,7 @@ import org.neo4j.values.virtual.VirtualRelationshipValue;
 
 public class TestFabricValueMapper extends DefaultValueMapper
 {
-    public TestFabricValueMapper(  )
+    public TestFabricValueMapper()
     {
         super( null );
     }
@@ -27,7 +27,7 @@ public class TestFabricValueMapper extends DefaultValueMapper
         { // this is the back door through which "virtual nodes" slip
             return ((NodeEntityWrappingNodeValue) value).nodeEntity();
         }
-        throw new UnsupportedOperationException("can't map VirtualNodeValue");
+        throw new UnsupportedOperationException( "can't map VirtualNodeValue" );
     }
 
     @Override
@@ -37,6 +37,6 @@ public class TestFabricValueMapper extends DefaultValueMapper
         { // this is the back door through which "virtual relationships" slip
             return ((RelationshipEntityWrappingValue) value).relationshipEntity();
         }
-        throw new UnsupportedOperationException("can't map VirtualRelationshipValue");
+        throw new UnsupportedOperationException( "can't map VirtualRelationshipValue" );
     }
 }

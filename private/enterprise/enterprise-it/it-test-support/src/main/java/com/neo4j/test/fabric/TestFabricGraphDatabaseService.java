@@ -1,4 +1,11 @@
-package com.neo4j.test;
+/*
+ * Copyright (c) 2002-2020 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
+package com.neo4j.test.fabric;
+
+import com.neo4j.test.fabric.TestFabricTransaction;
 
 import java.time.Duration;
 import java.util.List;
@@ -13,7 +20,6 @@ import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.impl.query.TransactionalContextFactory;
 
 import static java.util.Objects.requireNonNull;
 
