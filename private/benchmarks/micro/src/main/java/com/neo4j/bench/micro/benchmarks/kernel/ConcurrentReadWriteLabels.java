@@ -37,6 +37,7 @@ import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.kernel.api.Write;
 import org.neo4j.internal.kernel.api.exceptions.InvalidTransactionTypeKernelException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.internal.schema.IndexOrder;
 
 import static com.neo4j.bench.micro.Main.run;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
@@ -308,7 +309,7 @@ public class ConcurrentReadWriteLabels extends AbstractKernelBenchmark
         int label = readTxState.label( rngState.rng );
         try ( NodeLabelIndexCursor nodeCursor = readTxState.kernelTx.cursors.allocateNodeLabelIndexCursor( NULL ) )
         {
-            readTxState.read.nodeLabelScan( label, nodeCursor );
+            readTxState.read.nodeLabelScan( label, nodeCursor, IndexOrder.NONE );
             assertCount( nodeCursor, readTxState.minCount, readTxState.maxCount, bh );
         }
     }

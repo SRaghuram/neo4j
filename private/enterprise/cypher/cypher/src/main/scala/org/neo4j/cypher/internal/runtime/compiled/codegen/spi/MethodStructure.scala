@@ -9,6 +9,7 @@ import org.neo4j.codegen.Expression
 import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.runtime.compiled.codegen.Variable
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CodeGenType
+import org.neo4j.internal.schema.IndexOrder
 
 /**
  * Describes the SPI for generating a method.
@@ -137,7 +138,7 @@ trait MethodStructure[E] {
   def incrementRows(): Unit
 
   // db access
-  def labelScan(iterVar: String, labelIdVar: String): Unit
+  def labelScan(iterVar: String, labelIdVar: String, indexOrder: IndexOrder): Unit
   def hasLabel(nodeVar: String, labelVar: String, predVar: String): E
   def allNodesScan(iterVar: String): Unit
   def lookupLabelId(labelIdVar: String, labelName: String): Unit

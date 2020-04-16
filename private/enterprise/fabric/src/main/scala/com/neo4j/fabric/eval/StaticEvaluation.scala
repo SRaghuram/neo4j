@@ -46,14 +46,14 @@ import org.neo4j.kernel.impl.core.TransactionalEntityFactory
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.kernel.internal.GraphDatabaseAPI
+import org.neo4j.values.AnyValue
+import org.neo4j.values.ValueMapper
 import org.neo4j.values.storable.TextValue
 import org.neo4j.values.storable.Value
 import org.neo4j.values.virtual.ListValue
 import org.neo4j.values.virtual.MapValue
 import org.neo4j.values.virtual.NodeValue
 import org.neo4j.values.virtual.RelationshipValue
-import org.neo4j.values.AnyValue
-import org.neo4j.values.ValueMapper
 
 import scala.collection.Iterator
 
@@ -185,9 +185,9 @@ object StaticEvaluation {
 
     override def lockingUniqueIndexSeek[RESULT](index: IndexDescriptor, queries: Seq[IndexQuery.ExactPredicate]): NodeValueIndexCursor = notAvailable()
 
-    override def getNodesByLabel(id: Int): Iterator[NodeValue] = notAvailable()
+    override def getNodesByLabel(id: Int, indexOrder: IndexOrder): Iterator[NodeValue] = notAvailable()
 
-    override def getNodesByLabelPrimitive(id: Int): LongIterator = notAvailable()
+    override def getNodesByLabelPrimitive(id: Int, indexOrder: IndexOrder): LongIterator = notAvailable()
 
     override def createNodeKeyConstraint(labelId: Int, propertyKeyIds: Seq[Int], name: Option[String]): Unit = notAvailable()
 

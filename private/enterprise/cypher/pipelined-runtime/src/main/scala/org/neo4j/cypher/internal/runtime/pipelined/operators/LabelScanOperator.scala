@@ -52,6 +52,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
+import org.neo4j.internal.schema.IndexOrder
 
 
 class LabelScanOperator(val workIdentity: WorkIdentity,
@@ -89,7 +90,8 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
       else {
         cursor = resources.cursorPools.nodeLabelIndexCursorPool.allocateAndTrace()
         val read = state.queryContext.transactionalContext.dataRead
-        read.nodeLabelScan(id, cursor)
+        // TODO use order provided by the LogicalPlan (follow-up PR)
+        read.nodeLabelScan(id, cursor, IndexOrder.NONE)
         true
       }
     }
