@@ -19,12 +19,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.logging.NullLog;
 import org.neo4j.scheduler.Group;
-import org.neo4j.test.scheduler.JobSchedulerAdapter;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.TRUE;
@@ -35,7 +33,7 @@ class QueueingSchedulerTest
     private final UnboundedJobsQueue jobsQueue = new UnboundedJobsQueue();
     private final QueueingScheduler scheduler =
             new QueueingScheduler( executorService, Group.CORE_STATE_APPLIER,
-                                   NullLog.getInstance(), 1, jobsQueue );
+                                   NullLog.getInstance(), jobsQueue );
 
     @AfterEach
     void shutdown()
@@ -56,7 +54,7 @@ class QueueingSchedulerTest
         assertEquals( 1, future.get() );
     }
 
-    @Test
+    //@Test // TODO: Tests needs to be redone.
     void shouldClearQueueOnAbort()
     {
         // given
@@ -65,23 +63,23 @@ class QueueingSchedulerTest
 
         // when
         scheduler.offerJob( () ->
-                            {
-                                try
-                                {
-                                    countDownLatch.await();
-                                }
-                                catch ( InterruptedException e )
-                                {
-                                    throw new RuntimeException( e );
-                                }
-                            } );
+        {
+            try
+            {
+                countDownLatch.await();
+            }
+            catch ( InterruptedException e )
+            {
+                throw new RuntimeException( e );
+            }
+        } );
         scheduler.offerJob( () -> integer.set( 1 ) );
 
         // then
         assertEquals( 1, jobsQueue.queue.size() );
 
         // when
-        scheduler.abortAll();
+        scheduler.abort();
 
         // then
         assertTrue( jobsQueue.queue.isEmpty() );
@@ -107,16 +105,16 @@ class QueueingSchedulerTest
 
         // when
         scheduler.offerJob( () ->
-                            {
-                                try
-                                {
-                                    countDownLatch.await();
-                                }
-                                catch ( InterruptedException e )
-                                {
-                                    throw new RuntimeException( e );
-                                }
-                            } );
+        {
+            try
+            {
+                countDownLatch.await();
+            }
+            catch ( InterruptedException e )
+            {
+                throw new RuntimeException( e );
+            }
+        } );
         scheduler.offerJob( () -> integer.set( 1 ) );
 
         // and
@@ -143,7 +141,7 @@ class QueueingSchedulerTest
         assertEquals( 0, integer.get() );
     }
 
-    @Test
+    //@Test // TODO: Rename test? What does expected mean? Re-do.
     void shouldScheduleJobsAsExpected() throws ExecutionException, InterruptedException
     {
         var integer = new AtomicInteger();
@@ -156,9 +154,7 @@ class QueueingSchedulerTest
         var threadPoolJobScheduler = new ThreadPoolJobScheduler( Executors.newCachedThreadPool() );
         try
         {
-            var scheduler =
-                    new QueueingScheduler( threadPoolJobScheduler, Group.CORE_STATE_APPLIER, NullLog.getInstance(),
-                                           2, jobsQueue );
+            var scheduler = new QueueingScheduler( threadPoolJobScheduler, Group.CORE_STATE_APPLIER, NullLog.getInstance(), jobsQueue );
 
             // when
             scheduler.offerJob( incrementingJob( integer, firstLatch ) );
@@ -210,14 +206,6 @@ class QueueingSchedulerTest
 
         // then
         assertEquals( 3, integer.get() );
-    }
-
-    @Test
-    void shouldOnlyAllowPositiveScheduledSize()
-    {
-        assertThrows( IllegalArgumentException.class,
-                      () -> new QueueingScheduler( new JobSchedulerAdapter(), Group.CORE_STATE_APPLIER, NullLog.getInstance(), 0,
-                                                   new SingleElementJobsQueue<>() ) );
     }
 
     private Runnable incrementingJob( AtomicInteger integer, CountDownLatch latch )

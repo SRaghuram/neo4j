@@ -5,9 +5,6 @@
  */
 package com.neo4j.causalclustering.helper.scheduling;
 
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.logging.Log;
@@ -16,36 +13,33 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobScheduler;
 
-import static org.neo4j.util.Preconditions.requirePositive;
-
 public class QueueingScheduler
 {
-    private final JobScheduler scheduler;
-    private Group group;
-    private int maxScheduledJobs;
-    private final ScheduledJobsTracker scheduledJobs;
-    private final JobsQueue<Runnable> queuedJobs;
+    private final JobScheduler executor;
+    private final Group group;
+    private final JobsQueue<Runnable> jobsQueue;
     private final AtomicInteger stopCount = new AtomicInteger();
+    private final Log log;
+
+    private volatile AbortableJob job;
+    private volatile JobHandle<?> jobHandle;
 
     /**
-     * Schedule {@link AbortableJob} on the provided {@link JobScheduler} and keeps track of how many currently running jobs are scheduled. It can also abort
-     * all not yet started jobs. All calls to the provided {@link JobsQueue} is performed under a lock so it is not required for {@link JobsQueue} to be
-     * thread-safe.
-     * <p>
+     * Schedule {@link AbortableJob} on the provided {@link JobScheduler}.
+     *
+     * All calls to the provided {@link JobsQueue} is performed under a lock so it is not
+     * required for {@link JobsQueue} to be thread-safe.
+     *
      * After a job completes it will schedule a new job from the queue if present.
      *
-     * @param maxScheduledJobs defines how many concurrent jobs that can be scheduled at the same time
-     * @param jobsQueue        if {@param maxScheduledJobs} is reached then any offered jobs will be put on this queue. When a job completes it will schedule a
-     *                         new job from this queue. This queue should not be blocking.
+     * @param jobsQueue        When a job completes it will schedule a new job from this queue. This queue should not be blocking.
      */
-    public QueueingScheduler( JobScheduler scheduler, Group group, Log log, int maxScheduledJobs, JobsQueue<Runnable> jobsQueue )
+    public QueueingScheduler( JobScheduler executor, Group group, Log log, JobsQueue<Runnable> jobsQueue )
     {
-        requirePositive( maxScheduledJobs );
-        this.scheduler = scheduler;
+        this.executor = executor;
         this.group = group;
-        this.maxScheduledJobs = maxScheduledJobs;
-        this.queuedJobs = jobsQueue;
-        scheduledJobs = new ScheduledJobsTracker( log );
+        this.jobsQueue = jobsQueue;
+        this.log = log;
     }
 
     /**
@@ -58,11 +52,11 @@ public class QueueingScheduler
         {
             return;
         }
-        queuedJobs.offer( runnable );
-        scheduleNextJob();
+        jobsQueue.offer( runnable );
+        trySchedule();
     }
 
-    private void scheduleNextJob()
+    private void trySchedule()
     {
         if ( stopCount.get() > 0 )
         {
@@ -70,40 +64,40 @@ public class QueueingScheduler
         }
         synchronized ( this )
         {
-            if ( scheduledJobs.scheduledJobs() < maxScheduledJobs )
+            if ( job != null )
             {
-                var nextJob = queuedJobs.poll();
-                if ( nextJob != null )
-                {
-                    var job = new AbortableJob( nextJob );
-                    var handle = scheduler.schedule( group, job );
-                    scheduledJobs.put( job, handle );
-                }
+                return;
             }
+
+            var nextJob = jobsQueue.poll();
+            if ( nextJob == null )
+            {
+                return;
+            }
+
+            this.job = new AbortableJob( nextJob );
+            this.jobHandle = executor.schedule( group, job );
         }
     }
 
     /**
+     * TODO: Remake this to a stop() and make sure no jobs will be processed afterwards?
      * Aborts any offered jobs that are not running and waits for currently running jobs to complete.
      */
     public void abort()
     {
+        // TODO: Why this reference counting thing?
         stopCount.incrementAndGet();
         try
         {
-            abortAll();
-            scheduledJobs.awaitAll();
+            jobsQueue.clear(); // TODO: Should this also be under synchronized?
+            job.abort();
+            waitTermination( jobHandle );
         }
         finally
         {
             stopCount.decrementAndGet();
         }
-    }
-
-    synchronized void abortAll()
-    {
-        queuedJobs.clear();
-        scheduledJobs.abortAll();
     }
 
     private class AbortableJob implements Runnable, CancelListener
@@ -128,8 +122,8 @@ public class QueueingScheduler
             }
             finally
             {
-                scheduledJobs.remove( this );
-                scheduleNextJob();
+                job = null;
+                trySchedule();
             }
         }
 
@@ -145,66 +139,25 @@ public class QueueingScheduler
         public void cancelled()
         {
             abort();
-            scheduledJobs.remove( this );
+            job = null;
         }
     }
 
-    private static class ScheduledJobsTracker
+    private void waitTermination( JobHandle<?> jobHandle )
     {
-        private final ConcurrentHashMap<AbortableJob,JobHandle<?>> jobs = new ConcurrentHashMap<>();
-        private final Log log;
-        private final AtomicInteger size = new AtomicInteger();
-
-        private ScheduledJobsTracker( Log log )
+        if ( jobHandle == null )
         {
-            this.log = log;
+            return;
         }
 
-        void put( AbortableJob job, JobHandle<?> handle )
+        try
         {
-            size.incrementAndGet();
-            jobs.put( job, handle );
+            jobHandle.waitTermination();
         }
-
-        void remove( AbortableJob job )
+        catch ( Exception e )
         {
-            size.decrementAndGet();
-            jobs.remove( job );
-        }
-
-        void abortAll()
-        {
-            jobs.keySet().forEach( AbortableJob::abort );
-        }
-
-        void awaitAll()
-        {
-            jobs.forEach( ( key, value ) ->
-                          {
-                              try
-                              {
-                                  value.waitTermination();
-                              }
-                              catch ( CancellationException e )
-                              {
-                                  // Cancelled jobs may not have been removed from the registry.
-                                  jobs.remove( key );
-                                  log.warn( "Job has been unexpectedly cancelled by some other process" );
-                              }
-                              catch ( InterruptedException e )
-                              {
-                                  log.warn( "Unexpected interrupt", e );
-                              }
-                              catch ( ExecutionException e )
-                              {
-                                  log.warn( "Exception waiting for job to finish", e );
-                              }
-                          } );
-        }
-
-        int scheduledJobs()
-        {
-            return size.get();
+            job = null;
+            log.warn( "Unexpected exception", e );
         }
     }
 }

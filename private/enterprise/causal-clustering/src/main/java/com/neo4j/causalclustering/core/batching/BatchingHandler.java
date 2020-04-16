@@ -49,8 +49,7 @@ class BatchingHandler extends RaftMessages.HandlerAdaptor<RaftMessages.InboundRa
     }
 
     @Override
-    public RaftMessages.InboundRaftMessageContainer<?> handle( RaftMessages.AppendEntries.Request request ) throws
-                                                                                                                  RuntimeException
+    public RaftMessages.InboundRaftMessageContainer<?> handle( RaftMessages.AppendEntries.Request request ) throws RuntimeException
     {
         if ( request.entries().length == 0 )
         {

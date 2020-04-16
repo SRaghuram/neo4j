@@ -71,7 +71,7 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
         this.appliedIndexMonitor = monitors.newMonitor( RaftLogAppliedIndexMonitor.class, getClass().getName() );
         this.batcher = new CommandBatcher( maxBatchSize, this::applyBatch );
         this.panicker = panicker;
-        this.scheduler = new QueueingScheduler( scheduler, Group.CORE_STATE_APPLIER, log, 1, new SingleElementJobsQueue<>() );
+        this.scheduler = new QueueingScheduler( scheduler, Group.CORE_STATE_APPLIER, log, new SingleElementJobsQueue<>() );
         this.batchStat = StatUtil.create( "BatchSize", log, 4096, true );
     }
 

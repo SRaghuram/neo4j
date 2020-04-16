@@ -18,7 +18,6 @@ import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentMatchers;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
@@ -103,7 +102,7 @@ class BatchingMessageHandlerTest
     {
         // given
         var scheduler = new OnDemandJobScheduler();
-        var queueingScheduler = new QueueingScheduler( scheduler, Group.RAFT_BATCH_HANDLER, NullLog.getInstance(), 1, new ReoccurringJobQueue<>() );
+        var queueingScheduler = new QueueingScheduler( scheduler, Group.RAFT_BATCH_HANDLER, NullLog.getInstance(), new ReoccurringJobQueue<>() );
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
                                                                           BATCH_CONFIG, queueingScheduler, NullLogProvider.getInstance() );
         ReplicatedString content = new ReplicatedString( "dummy" );
@@ -427,21 +426,6 @@ class BatchingMessageHandlerTest
     }
 
     @Test
-    void shouldScheduleJobOnStart() throws Throwable
-    {
-        // given
-        BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
-                                                                          BATCH_CONFIG, jobScheduler, NullLogProvider.getInstance() );
-        RaftId raftId = RaftIdFactory.random();
-
-        // when
-        batchHandler.start( raftId );
-
-        // then
-        Mockito.verify( jobScheduler ).offerJob( any() );
-    }
-
-    @Test
     void shouldStopJob() throws Throwable
     {
         // given
@@ -455,7 +439,7 @@ class BatchingMessageHandlerTest
         Mockito.verify( jobScheduler ).abort();
     }
 
-    private InboundRaftMessageContainer wrap( RaftMessage message )
+    private InboundRaftMessageContainer<?> wrap( RaftMessage message )
     {
         return wrap( now, message );
     }

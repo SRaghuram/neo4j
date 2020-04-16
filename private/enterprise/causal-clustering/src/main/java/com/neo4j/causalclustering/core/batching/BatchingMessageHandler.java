@@ -64,14 +64,13 @@ public class BatchingMessageHandler implements Runnable, LifecycleMessageHandler
         return delegate -> new BatchingMessageHandler( delegate, inQueueConfig, batchConfig,
                                                        new QueueingScheduler( jobScheduler, Group.RAFT_BATCH_HANDLER,
                                                                               logProvider.getLog( BatchingMessageHandler.class ),
-                                                                              1, new ReoccurringJobQueue<>() ), logProvider );
+                                                                              new ReoccurringJobQueue<>() ), logProvider );
     }
 
     @Override
     public void start( RaftId raftId ) throws Exception
     {
         handler.start( raftId );
-        scheduler.offerJob( this );
     }
 
     @Override
@@ -125,10 +124,9 @@ public class BatchingMessageHandler implements Runnable, LifecycleMessageHandler
     public void run()
     {
         inQueue.poll().ifPresent( message ->
-                                  {
-                                      var batchedMessage =
-                                              message.message().dispatch( batchingHandlerFactory.batchingHandler( message.receivedAt(), message.raftId() ) );
-                                      handler.handle( batchedMessage == null ? message : batchedMessage );
-                                  } );
+        {
+            var batchedMessage = message.message().dispatch( batchingHandlerFactory.batchingHandler( message.receivedAt(), message.raftId() ) );
+            handler.handle( batchedMessage == null ? message : batchedMessage );
+        } );
     }
 }
