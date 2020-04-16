@@ -24,6 +24,7 @@ import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
 import org.eclipse.collections.impl.factory.primitive.IntSets;
 
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -379,6 +380,44 @@ class MutableNodeRecordData
         return this.isDense;
     }
 
+    boolean serializeMainData( ByteBuffer[] intermediateBuffers, SimpleBigValueStore bigPropertyValueStore, Consumer<StorageCommand> bigValueCommandConsumer )
+    {
+        assert Arrays.stream( intermediateBuffers ).allMatch( buff -> buff.position() == 0 );
+
+        if ( labels.notEmpty() )
+        {
+            writeLabels( intermediateBuffers[GraphUpdates.LABELS] );
+        }
+
+        if ( properties.notEmpty() )
+        {
+            writeProperties( properties, intermediateBuffers[GraphUpdates.PROPERTIES], bigPropertyValueStore, bigValueCommandConsumer );
+        }
+
+        boolean guaranteedDense = this.isDense;
+        if ( relationships.notEmpty() )
+        {
+            try
+            {
+                int[] typeOffsets = writeRelationships( intermediateBuffers[GraphUpdates.RELATIONSHIPS], bigPropertyValueStore, bigValueCommandConsumer );
+                writeTypeOffsets( intermediateBuffers[GraphUpdates.RELATIONSHIPS_OFFSETS], typeOffsets );
+                guaranteedDense = false;
+            } catch ( BufferOverflowException | ArrayIndexOutOfBoundsException e )
+            {
+                //TODO this is slow, better check after each serialized rel for overflow.
+                guaranteedDense = true;
+            }
+        }
+        return guaranteedDense;
+    }
+
+
+    public void serializeDegrees( ByteBuffer degreesBuffer )
+    {
+        //TODO check if degrees, or rely on caller?
+        writeDegrees( degreesBuffer );
+    }
+
     void serialize( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore, Consumer<StorageCommand> commandConsumer )
     {
         buffer.clear();
@@ -404,7 +443,7 @@ class MutableNodeRecordData
         if ( !relationships.isEmpty() )
         {
             headerBuilder.markHasOffset( Header.OFFSET_RELATIONSHIPS );
-            headerBuilder.markHasOffset( Header.OFFSET_RELATIONSHIP_TYPE_OFFSETS );
+            headerBuilder.markHasOffset( Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
         }
         if ( recordPointer != NULL )
         {
@@ -431,7 +470,7 @@ class MutableNodeRecordData
             headerBuilder.setOffset( Header.OFFSET_RELATIONSHIPS, buffer.position() );
             int[] typeOffsets = writeRelationships( buffer, bigPropertyValueStore, commandConsumer );
 
-            headerBuilder.setOffset( Header.OFFSET_RELATIONSHIP_TYPE_OFFSETS, buffer.position() );
+            headerBuilder.setOffset( Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS, buffer.position() );
             writeTypeOffsets( buffer, typeOffsets );
         }
         if ( headerBuilder.hasOffset( Header.OFFSET_RECORD_POINTER ) )

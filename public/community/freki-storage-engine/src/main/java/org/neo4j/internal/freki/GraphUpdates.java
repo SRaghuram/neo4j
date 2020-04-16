@@ -66,6 +66,15 @@ class GraphUpdates
     private final MainStores stores;
     private final PageCursorTracer cursorTracer;
 
+    //Intermediate buffer slots
+    static final int LABELS = 0;
+    static final int PROPERTIES = 1;
+    static final int RELATIONSHIPS = 2;
+    static final int DEGREES = 2; //Note, same pos as RELATIONSHIPS
+    static final int RELATIONSHIPS_OFFSETS = 3;
+    static final int NEXT_INTERNAL_RELATIONSHIP_ID = 4;
+    static final int RECORD_POINTER = 5;
+
     GraphUpdates( MainStores stores, PageCursorTracer cursorTracer )
     {
         this.stores = stores;
@@ -90,11 +99,19 @@ class GraphUpdates
     void extractUpdates( Consumer<StorageCommand> commands ) throws ConstraintViolationTransactionFailureException
     {
         List<StorageCommand> otherCommands = new ArrayList<>();
+        ByteBuffer[] intermediateBuffers = new ByteBuffer[RECORD_POINTER + 1];
+        intermediateBuffers[LABELS] = ByteBuffer.wrap( new byte[stores.mainStore.recordDataSize()] );
+        intermediateBuffers[PROPERTIES] = ByteBuffer.wrap( new byte[stores.largestMainStore().recordDataSize()] );
+        intermediateBuffers[RELATIONSHIPS] = ByteBuffer.wrap( new byte[stores.largestMainStore().recordDataSize()] );
+        intermediateBuffers[RELATIONSHIPS_OFFSETS] = ByteBuffer.wrap( new byte[stores.mainStore.recordDataSize()] );
+        intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID] = ByteBuffer.wrap( new byte[9] );
+        intermediateBuffers[RECORD_POINTER] = ByteBuffer.wrap( new byte[9] );
+
         ByteBuffer smallBuffer = ByteBuffer.wrap( new byte[stores.mainStore.recordDataSize()] );
         ByteBuffer maxBuffer = ByteBuffer.wrap( new byte[stores.largestMainStore().recordDataSize()] );
         for ( NodeUpdates mutation : mutations )
         {
-            mutation.serialize( smallBuffer, maxBuffer, otherCommands::add );
+            mutation.serialize( smallBuffer, maxBuffer, intermediateBuffers, otherCommands::add );
         }
         bigValueCommands.forEach( commands );
         otherCommands.forEach( commands );
@@ -228,7 +245,7 @@ class GraphUpdates
             }
         }
 
-        void serialize( ByteBuffer smallBuffer, ByteBuffer maxBuffer, Consumer<StorageCommand> otherCommands )
+        void serialize( ByteBuffer smallBuffer, ByteBuffer maxBuffer, ByteBuffer[] intermediateBuffers, Consumer<StorageCommand> otherCommands )
                 throws ConstraintViolationTransactionFailureException
         {
             prepareForCommandExtraction();
@@ -250,92 +267,221 @@ class GraphUpdates
                 return;
             }
 
-            // === ATTEMPT serialize everything into x1 ===
-            // The reason we try x1 first is that there'll be overhead in the form of forward pointer and potentially next-relationship-id inside x1
-            // if points to a larger record.
-            long prevRecordPointer = sparse.data.getRecordPointer();
-            sparse.data.setRecordPointer( NULL );
-            if ( trySerialize( sparse.data, smallBuffer.clear() ) )
+            smallBuffer.clear();
+            maxBuffer.clear();
+            for ( ByteBuffer buffer : intermediateBuffers )
             {
-                x1Command( smallBuffer, otherCommands );
-                if ( xLBefore != null )
+                buffer.clear();
+            }
+
+            boolean isGuaranteedDense = sparse.data.serializeMainData( intermediateBuffers, stores.bigPropertyValueStore, bigValueCommandConsumer );
+
+            boolean isDense = isGuaranteedDense;
+
+            if ( !isGuaranteedDense )
+            {
+                //TODO calculate actual isDense
+//                isDense = totalSize > x8
+            }
+            if ( isDense )
+            {
+                //set state in sparse data
+
+                if ( dense == null ) //just became dense?
                 {
-                    otherCommands.accept( new FrekiCommand.SparseNode( nodeId, xLBefore, deletedVersionOf( xLBefore ) ) );
+                    //TODO move rels to dense
                 }
+                intermediateBuffers[RELATIONSHIPS_OFFSETS].clear();
+                intermediateBuffers[RELATIONSHIPS].clear();
+                sparse.data.serializeDegrees( intermediateBuffers[DEGREES] );
+
+                //TODO dense commands
+            }
+
+            for ( ByteBuffer buffer : intermediateBuffers )
+            {
+                buffer.flip();
+            }
+            //LEGO TIME
+            int labelsSize = intermediateBuffers[LABELS].limit();
+            int propsSize = intermediateBuffers[PROPERTIES].limit();
+            int relsSize = intermediateBuffers[RELATIONSHIPS].limit() + intermediateBuffers[RELATIONSHIPS_OFFSETS].limit();
+            int degSize = intermediateBuffers[DEGREES].limit();
+            int miscSize = 0;
+
+            Header header = new Header();
+            if ( labelsSize > 0 )
+            {
+                header.setFlag( Header.FLAG_LABELS );
+            }
+            if ( propsSize > 0 )
+            {
+                header.markHasOffset( Header.OFFSET_PROPERTIES );
+            }
+            if ( isDense )
+            {
+                header.setFlag( Header.FLAG_IS_DENSE );
+                header.markHasOffset( Header.OFFSET_DEGREES );
+                header.markHasOffset( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
+
+                sparse.data.serializeNextInternalRelationshipId( intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID] );
+                intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].flip();
+                miscSize += intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].limit();
             }
             else
             {
-                sparse.data.setRecordPointer( prevRecordPointer );
-                // Then try various constellations of larger records (make sure sparse.data is left with correct data to be serialized as part of this call)
-                moveDataToAndSerializeLargerRecords( maxBuffer, otherCommands );
-
-                // After that has been done serialize x1 because it's likely pointing to one or more larger records
-                if ( !trySerialize( sparse.data, smallBuffer ) )
-                {
-                    throw new UnsupportedOperationException( "Couldn't serialize x1 after some data moved from it" );
-                }
-                x1Command( smallBuffer, otherCommands );
+                header.markHasOffset( Header.OFFSET_RELATIONSHIPS );
+                header.markHasOffset( Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
             }
-            if ( dense != null )
+
+            if ( header.spaceNeeded() + labelsSize + propsSize + Math.max(relsSize, degSize) + miscSize <= stores.mainStore.recordDataSize() )
+            {
+                //WE FIT IN x1
+                serializeParts( smallBuffer, intermediateBuffers, header );
+                return;
+            }
+
+            //we did not fit in x1 only
+            header.markHasOffset( Header.OFFSET_RECORD_POINTER );
+            //TODO get a record pointer and update sparse.data state
+            sparse.data.serializeRecordPointer( intermediateBuffers[RECORD_POINTER] );
+            intermediateBuffers[RECORD_POINTER].flip();
+            miscSize += intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].limit();
+
+            header.unmarkHasOffset( Header.OFFSET_PROPERTIES );
+            header.unmarkHasOffset( Header.OFFSET_RELATIONSHIPS );
+            header.unmarkHasOffset( Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
+            header.unmarkHasOffset( Header.OFFSET_DEGREES );
+
+            //first do x1
+            //set offsets in header
+            //serialize header, labels + misc
+
+            //then do XL
+            //set offsets in header,
+            //unmark labels from header
+            //mark props and rels in header
+            //serialize header + props + rels + misc
+
+
+            sparse.data.serializeX1HeaderAndMisc();
+            sparse.data.serializeXLHeaderAndMisc();
+            if ( isDense && dense != null )
             {
                 dense.createCommands( otherCommands );
+            }
+
+//            // === ATTEMPT serialize everything into x1 ===
+//            // The reason we try x1 first is that there'll be overhead in the form of forward pointer and potentially next-relationship-id inside x1
+//            // if points to a larger record.
+//            long prevRecordPointer = sparse.data.getRecordPointer();
+//            sparse.data.setRecordPointer( NULL );
+//            if ( trySerialize( sparse.data, smallBuffer.clear() ) )
+//            {
+//                x1Command( smallBuffer, otherCommands );
+//                if ( xLBefore != null )
+//                {
+//                    otherCommands.accept( new FrekiCommand.SparseNode( nodeId, xLBefore, deletedVersionOf( xLBefore ) ) );
+//                }
+//            }
+//            else
+//            {
+//                sparse.data.setRecordPointer( prevRecordPointer );
+//                // Then try various constellations of larger records (make sure sparse.data is left with correct data to be serialized as part of this call)
+//                moveDataToAndSerializeLargerRecords( maxBuffer, otherCommands );
+//
+//                // After that has been done serialize x1 because it's likely pointing to one or more larger records
+//                if ( !trySerialize( sparse.data, smallBuffer ) )
+//                {
+//                    throw new UnsupportedOperationException( "Couldn't serialize x1 after some data moved from it" );
+//                }
+//                x1Command( smallBuffer, otherCommands );
+//            }
+//            if ( dense != null )
+//            {
+//                dense.createCommands( otherCommands );
+//            }
+        }
+
+        private static void serializeParts( ByteBuffer into, ByteBuffer[] intermediateBuffers, Header header )
+        {
+            header.allocateSpace( into );
+            if ( header.hasFlag( Header.FLAG_LABELS ) )
+            {
+                into.put( intermediateBuffers[LABELS] );
+            }
+            serializePart( into, intermediateBuffers[PROPERTIES], header, Header.OFFSET_PROPERTIES );
+            serializePart( into, intermediateBuffers[RELATIONSHIPS], header, Header.OFFSET_RELATIONSHIPS );
+            serializePart( into, intermediateBuffers[RELATIONSHIPS_OFFSETS], header, Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
+            serializePart( into, intermediateBuffers[DEGREES], header, Header.OFFSET_DEGREES );
+            serializePart( into, intermediateBuffers[RECORD_POINTER], header, Header.OFFSET_RECORD_POINTER );
+            serializePart( into, intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID], header, Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
+            header.serialize( into.position( 0 ) );
+        }
+
+        private static void serializePart( ByteBuffer into, ByteBuffer part, Header header, int headerOffsetSlot )
+        {
+            if ( header.hasOffset( headerOffsetSlot ) )
+            {
+                header.setOffset( headerOffsetSlot, into.position() );
+                into.put( part );
             }
         }
 
         private void moveDataToAndSerializeLargerRecords( ByteBuffer maxBuffer, Consumer<StorageCommand> otherCommands )
         {
-            // Can we fit labels+properties in x1?
-            //   - yes: good, just place relationships in xL or DENSE
-            // Can we fit properties+relationships in xL?
-            //   - yes: good
-            // Can we fit properties in xL?
-            //   - yes: good, just place relationships in DENSE
-
-            // TODO === ATTEMPT move relationships to a larger x ===
-
-            // === ATTEMPT move properties, degrees and relationships to a larger x ===
-            {
-                MutableNodeRecordData largeData = new MutableNodeRecordData( nodeId );
-                largeData.copyDataFrom( FLAG_PROPERTIES | FLAG_DEGREES | FLAG_RELATIONSHIPS, sparse.data );
-                largeData.setRecordPointer( buildRecordPointer( 0, nodeId ) );
-                if ( trySerialize( largeData, maxBuffer.clear() ) )
-                {
-                    // We were able to fit properties and relationships into this larger store.
-                    SimpleStore store = stores.storeSuitableForRecordSize( maxBuffer.limit(), 1 );
-                    xLargeCommands( maxBuffer, store, otherCommands, d -> d.clearData( FLAG_PROPERTIES | FLAG_DEGREES | FLAG_RELATIONSHIPS ) );
-                    return;
-                }
-            }
-
-            // === ATTEMPT move properties and degrees to a larger x (and relationships to dense store) ===
-            {
-                moveDataToDense();
-                MutableNodeRecordData largeData = new MutableNodeRecordData( nodeId );
-                largeData.copyDataFrom( FLAG_PROPERTIES | FLAG_DEGREES, sparse.data );
-                largeData.setRecordPointer( buildRecordPointer( 0, nodeId ) );
-                sparse.data.setDense( true );
-                largeData.setDense( true );
-                if ( trySerialize( largeData, maxBuffer.clear() ) )
-                {
-                    // We were able to fit properties and relationships into this larger store. The reason we try x1 first is that there'll be overhead
-                    // in the form of forward pointer and potentially next-relationship-id inside x1 if points to a larger record.
-                    SimpleStore store = stores.storeSuitableForRecordSize( maxBuffer.limit(), 1 );
-                    xLargeCommands( maxBuffer, store, otherCommands, d -> d.clearData( FLAG_PROPERTIES | FLAG_DEGREES ) );
-                    return;
-                }
-            }
-
-            throw new UnsupportedOperationException( "Properties must fit in an x record a.t.m." );
-
-//            // === Move properties and relationships to dense
+//            // Can we fit labels+properties in x1?
+//            //   - yes: good, just place relationships in xL or DENSE
+//            // Can we fit properties+relationships in xL?
+//            //   - yes: good
+//            // Can we fit properties in xL?
+//            //   - yes: good, just place relationships in DENSE
+//
+//            // TODO === ATTEMPT move relationships to a larger x ===
+//
+//            // === ATTEMPT move properties, degrees and relationships to a larger x ===
 //            {
-//                if ( xLBefore != null )
+//                MutableNodeRecordData largeData = new MutableNodeRecordData( nodeId );
+//                largeData.copyDataFrom( FLAG_PROPERTIES | FLAG_DEGREES | FLAG_RELATIONSHIPS, sparse.data );
+//                largeData.setRecordPointer( buildRecordPointer( 0, nodeId ) );
+//                if ( trySerialize( largeData, maxBuffer.clear() ) )
 //                {
-//                    otherCommands.accept( new FrekiCommand.SparseNode( nodeId, xLBefore, deletedVersionOf( xLBefore ) ) );
+//                    // We were able to fit properties and relationships into this larger store.
+//                    SimpleStore store = stores.storeSuitableForRecordSize( maxBuffer.limit(), 1 );
+//                    xLargeCommands( maxBuffer, store, otherCommands, d -> d.clearData( FLAG_PROPERTIES | FLAG_DEGREES | FLAG_RELATIONSHIPS ) );
+//                    return;
 //                }
-//                moveDataToDense( FLAG_PROPERTIES | FLAG_RELATIONSHIPS );
-//                // TODO update the x1 fw-pointer to also say dense
 //            }
+//
+//            // === ATTEMPT move properties and degrees to a larger x (and relationships to dense store) ===
+//            {
+//                moveDataToDense();
+//                MutableNodeRecordData largeData = new MutableNodeRecordData( nodeId );
+//                largeData.copyDataFrom( FLAG_PROPERTIES | FLAG_DEGREES, sparse.data );
+//                largeData.setRecordPointer( buildRecordPointer( 0, nodeId ) );
+//                sparse.data.setDense( true );
+//                largeData.setDense( true );
+//                if ( trySerialize( largeData, maxBuffer.clear() ) )
+//                {
+//                    // We were able to fit properties and relationships into this larger store. The reason we try x1 first is that there'll be overhead
+//                    // in the form of forward pointer and potentially next-relationship-id inside x1 if points to a larger record.
+//                    SimpleStore store = stores.storeSuitableForRecordSize( maxBuffer.limit(), 1 );
+//                    xLargeCommands( maxBuffer, store, otherCommands, d -> d.clearData( FLAG_PROPERTIES | FLAG_DEGREES ) );
+//                    return;
+//                }
+//            }
+//
+//            throw new UnsupportedOperationException( "Properties must fit in an x record a.t.m." );
+//
+////            // === Move properties and relationships to dense
+////            {
+////                if ( xLBefore != null )
+////                {
+////                    otherCommands.accept( new FrekiCommand.SparseNode( nodeId, xLBefore, deletedVersionOf( xLBefore ) ) );
+////                }
+////                moveDataToDense( FLAG_PROPERTIES | FLAG_RELATIONSHIPS );
+////                // TODO update the x1 fw-pointer to also say dense
+////            }
         }
 
         private Record deletedVersionOf( Record record )

@@ -28,7 +28,7 @@ import static org.neo4j.internal.freki.Header.OFFSET_DEGREES;
 import static org.neo4j.internal.freki.Header.OFFSET_PROPERTIES;
 import static org.neo4j.internal.freki.Header.OFFSET_RECORD_POINTER;
 import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIPS;
-import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIP_TYPE_OFFSETS;
+import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS;
 import static org.neo4j.internal.freki.MutableNodeRecordData.recordPointerToString;
 import static org.neo4j.internal.freki.StreamVByte.readLongs;
 
@@ -111,7 +111,7 @@ class FrekiCursorData
         {
             relationshipOffset = header.getOffset( OFFSET_RELATIONSHIPS );
             relationshipBuffer = x1Buffer;
-            relationshipTypeOffsetsOffset = header.getOffset( OFFSET_RELATIONSHIP_TYPE_OFFSETS );
+            relationshipTypeOffsetsOffset = header.getOffset( OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
         }
         if ( header.hasOffset( OFFSET_DEGREES ) )
         {
