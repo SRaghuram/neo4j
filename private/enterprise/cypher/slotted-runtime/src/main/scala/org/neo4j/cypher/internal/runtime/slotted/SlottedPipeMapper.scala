@@ -92,6 +92,7 @@ import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionS
 import org.neo4j.cypher.internal.physicalplanning.ast.NodeFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckVariable
 import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipFromSlot
+import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
@@ -126,6 +127,7 @@ import org.neo4j.cypher.internal.runtime.slotted.aggregation.SlottedNonGroupingA
 import org.neo4j.cypher.internal.runtime.slotted.aggregation.SlottedOrderedGroupingAggTable
 import org.neo4j.cypher.internal.runtime.slotted.aggregation.SlottedOrderedNonGroupingAggTable
 import org.neo4j.cypher.internal.runtime.slotted.aggregation.SlottedPrimitiveGroupingAggTable
+import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPropertyKeys
 import org.neo4j.cypher.internal.runtime.slotted.pipes.AllNodesScanSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.AllOrderedDistinctSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.AllOrderedDistinctSlottedPrimitivePipe
@@ -173,6 +175,7 @@ import scala.collection.mutable.ArrayBuffer
 
 class SlottedPipeMapper(fallback: PipeMapper,
                         expressionConverters: ExpressionConverters,
+                        tokenContext: TokenContext,
                         physicalPlan: PhysicalPlan,
                         readOnly: Boolean,
                         indexRegistrator: QueryIndexRegistrator)
@@ -235,11 +238,17 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val runtimeColumns = createProjectionsForResult(columns, slots)
         ProduceResultSlottedPipe(source, runtimeColumns)(id)
 
-      case Expand(_, from, dir, types, to, relName, ExpandAll, _) =>
+      case Expand(_, from, dir, types, to, relName, ExpandAll, expandProperties) =>
         val fromSlot = slots(from)
         val relOffset = slots.getLongOffsetFor(relName)
         val toOffset = slots.getLongOffsetFor(to)
-        ExpandAllSlottedPipe(source, fromSlot, relOffset, toOffset, dir, RelationshipTypes(types.toArray), slots)(id)
+        val (nodePropsToCache, relPropsToCache) = expandProperties match {
+          case Some(rp) => (
+            if (rp.nodeProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.nodeProperties, slots, tokenContext)),
+            if (rp.relProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.relProperties, slots, tokenContext)))
+          case None => (None, None)
+        }
+        ExpandAllSlottedPipe(source, fromSlot, relOffset, toOffset, dir, RelationshipTypes(types.toArray), slots, nodePropsToCache, relPropsToCache)(id)
 
       case Expand(_, from, dir, types, to, relName, ExpandInto, _) =>
         val fromSlot = slots(from)

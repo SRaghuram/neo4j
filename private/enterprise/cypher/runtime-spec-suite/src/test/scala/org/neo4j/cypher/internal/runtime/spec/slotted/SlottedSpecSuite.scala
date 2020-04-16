@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.AntiSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArgumentTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArrayIndexSupport
+import org.neo4j.cypher.internal.runtime.spec.tests.CacheFromCursorTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CachePropertiesTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
@@ -179,6 +180,7 @@ class SlottedCompiledExpressionsTest extends CompiledExpressionsTestBase(ENTERPR
 
 class SlottedNestedPlanExpressionTest extends NestedPlanExpressionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedRollupApplyTest extends RollupApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedCacheFromCursorTest extends CacheFromCursorTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 
 // EXPERIMENTAL PROFILING
 

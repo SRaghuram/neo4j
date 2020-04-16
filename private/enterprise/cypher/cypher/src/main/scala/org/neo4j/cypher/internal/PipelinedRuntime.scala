@@ -178,7 +178,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
     val pipeMapper =
       {
         val interpretedPipeMapper = InterpretedPipeMapper(query.readOnly, converters, context.tokenContext, queryIndexRegistrator)(query.semanticTable)
-        new SlottedPipeMapper(interpretedPipeMapper, converters, physicalPlan, query.readOnly, queryIndexRegistrator)(query.semanticTable)
+        new SlottedPipeMapper(interpretedPipeMapper, converters, context.tokenContext, physicalPlan, query.readOnly, queryIndexRegistrator)(query.semanticTable)
       }
 
     val pipeTreeBuilder = PipeTreeBuilder(pipeMapper)

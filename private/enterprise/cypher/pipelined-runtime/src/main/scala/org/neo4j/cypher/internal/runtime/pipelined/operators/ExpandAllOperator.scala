@@ -227,26 +227,19 @@ class ExpandAllTask(inputMorsel: Morsel,
   private def cacheNodeProperties(outputRow: MorselFullCursor, queryContext: QueryContext): Unit = {
     nodePropsToRead.foreach(p => {
       nodeCursor.properties(propertyCursor)
-      ExpandAllTask.cacheProperties(outputRow, queryContext, propertyCursor, p)
+      while (propertyCursor.next() && p.accept(queryContext, propertyCursor.propertyKey())) {
+        outputRow.setCachedPropertyAt(p.offset, propertyCursor.propertyValue())
+      }
     })
   }
 
   private def cacheRelationshipProperties(outputRow: MorselFullCursor, queryContext: QueryContext): Unit = {
     relsPropsToRead.foreach(p => {
       relationships.properties(propertyCursor)
-      ExpandAllTask.cacheProperties(outputRow, queryContext, propertyCursor, p)
+      while (propertyCursor.next() && p.accept(queryContext, propertyCursor.propertyKey())) {
+        outputRow.setCachedPropertyAt(p.offset, propertyCursor.propertyValue())
+      }
     })
-  }
-}
-
-object ExpandAllTask {
-  def cacheProperties(outputRow: MorselFullCursor,
-                      dbAccess: DbAccess,
-                      propertyCursor: PropertyCursor,
-                      propertyKeys: SlottedPropertyKeys): Unit = {
-    while (propertyCursor.next() && propertyKeys.accept(dbAccess, propertyCursor.propertyKey())) {
-      outputRow.setCachedPropertyAt(propertyKeys.offset, propertyCursor.propertyValue())
-    }
   }
 }
 

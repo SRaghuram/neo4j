@@ -284,12 +284,12 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           maybeEndLabel,
           physicalPlan.argumentSizes(id))
 
-      case plans.Expand(_, fromName, dir, types, to, relName, plans.ExpandAll, readProperties) =>
+      case plans.Expand(_, fromName, dir, types, to, relName, plans.ExpandAll, expandProperties) =>
         val fromSlot = slots(fromName)
         val relOffset = slots.getLongOffsetFor(relName)
         val toOffset = slots.getLongOffsetFor(to)
         val lazyTypes = RelationshipTypes(types.toArray)(semanticTable)
-        val (nodePropsToCache, relPropsToCache) = readProperties match {
+        val (nodePropsToCache, relPropsToCache) = expandProperties match {
           case Some(rp) => (
             if (rp.nodeProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.nodeProperties, slots, tokenContext)),
             if (rp.relProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.relProperties, slots, tokenContext)))

@@ -120,7 +120,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       CommunityExpressionConverter(TokenContext.EMPTY))
 
     val fallback = InterpretedPipeMapper(true, converters, tokenContext, mock[QueryIndexRegistrator])(table)
-    val pipeBuilder = new SlottedPipeMapper(fallback, converters, physicalPlan, true, mock[QueryIndexRegistrator])(table)
+    val pipeBuilder = new SlottedPipeMapper(fallback, converters, tokenContext, physicalPlan, true, mock[QueryIndexRegistrator])(table)
     PipeTreeBuilder(pipeBuilder).build(physicalPlan.logicalPlan)
   }
 

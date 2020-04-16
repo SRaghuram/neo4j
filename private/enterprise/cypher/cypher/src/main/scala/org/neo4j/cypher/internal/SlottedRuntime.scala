@@ -73,7 +73,7 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
 
       val queryIndexRegistrator = new QueryIndexRegistrator(context.schemaRead)
       val fallback = InterpretedPipeMapper(query.readOnly, converters, context.tokenContext, queryIndexRegistrator)(query.semanticTable)
-      val pipeBuilder = new SlottedPipeMapper(fallback, converters, physicalPlan, query.readOnly, queryIndexRegistrator)(query.semanticTable)
+      val pipeBuilder = new SlottedPipeMapper(fallback, converters, context.tokenContext, physicalPlan, query.readOnly, queryIndexRegistrator)(query.semanticTable)
       val pipeTreeBuilder = PipeTreeBuilder(pipeBuilder)
       val logicalPlanWithConvertedNestedPlans = NestedPipeExpressions.build(pipeTreeBuilder, physicalPlan.logicalPlan, physicalPlan.availableExpressionVariables)
       val pipe = pipeTreeBuilder.build(logicalPlanWithConvertedNestedPlans)
