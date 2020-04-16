@@ -38,9 +38,12 @@ trait StateFactory {
                                               ordered: Boolean): ArgumentStateMap[S]
 
   /**
-   * Obtain the memory tracker (this call does not create a new object).
+   * Obtain the query memory tracker (this call does not create a new object).
    */
-  def memoryTracker: QueryMemoryTracker // TODO: Looks like slotted pipes may still need this?
+  def memoryTracker: QueryMemoryTracker
 
+  /**
+   * Obtain the memory tracker (this call may create a new object or return an already existing one).
+   */
   def newMemoryTracker(operatorId: Int): MemoryTracker
 }

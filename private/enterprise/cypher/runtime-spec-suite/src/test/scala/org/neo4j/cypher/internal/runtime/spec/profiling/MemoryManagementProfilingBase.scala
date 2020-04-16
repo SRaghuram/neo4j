@@ -12,7 +12,6 @@ import java.nio.file.Path
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings
 import com.neo4j.kernel.impl.query.HeapDumper
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
-import org.github.jamm.MemoryMeter
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext

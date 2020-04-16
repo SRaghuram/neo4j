@@ -53,7 +53,6 @@ import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNul
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.helpers.CachingExpandInto
-import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.storable.Values
 
@@ -64,8 +63,6 @@ class OptionalExpandIntoOperator(val workIdentity: WorkIdentity,
                                  dir: SemanticDirection,
                                  types: RelationshipTypes,
                                  maybeExpression: Option[Expression]) (val id: Id = Id.INVALID_ID) extends StreamingOperator {
-
-  private var memoryTracker: MemoryTracker = EmptyMemoryTracker.INSTANCE // TODO: FIXME We cannot cache this with the query plan
 
   override def toString: String = "OptionalExpandInto"
 
