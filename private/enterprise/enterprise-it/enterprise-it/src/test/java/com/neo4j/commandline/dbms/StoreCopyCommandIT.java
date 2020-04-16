@@ -59,7 +59,8 @@ class StoreCopyCommandIT extends AbstractCommandIT
     private static final Label NUMBER_LABEL = Label.label( "Number" );
     private static final Label CHARACTER_LABEL = Label.label( "Character" );
     private static final Label ERROR_LABEL = Label.label( "Error" );
-    private static final RelationshipType KNOWS_RELATIONSHIP_TYPE = RelationshipType.withName( "KNOWS" );
+    private static final RelationshipType KNOWS = RelationshipType.withName( "KNOWS" );
+    private static final RelationshipType SECRET = RelationshipType.withName( "SECRET" );
 
     @Test
     void cantCopyFromRunningDatabase()
@@ -144,7 +145,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
             Node c = tx.createNode( NUMBER_LABEL );
             c.setProperty( "name", "Tres" );
 
-            a.createRelationshipTo( b, RelationshipType.withName( "KNOWS" ) );
+            a.createRelationshipTo( b, KNOWS );
             tx.commit();
         }
         String databaseName = databaseAPI.databaseName();
@@ -160,7 +161,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
             assertEquals( "Uno", tx.getNodeById( 0 ).getProperty( "name" ) );
             assertEquals( "Dos", tx.getNodeById( 1 ).getProperty( "name" ) );
             assertEquals( "Tres", tx.getNodeById( 2 ).getProperty( "name" ) );
-            assertEquals( RelationshipType.withName( "KNOWS" ), single( tx.getNodeById( 1 ).getRelationships() ).getType() );
+            assertEquals( KNOWS, single( tx.getNodeById( 1 ).getRelationships() ).getType() );
             assertThrows( NotFoundException.class, () -> tx.getNodeById( 3 ) );
             tx.commit();
         }
@@ -180,7 +181,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
             Node c = tx.createNode( NUMBER_LABEL );
             c.setProperty( "name", "Trays" );
 
-            a.createRelationshipTo( b, RelationshipType.withName( "KNOWS" ) );
+            a.createRelationshipTo( b, KNOWS );
             tx.commit();
         }
         String databaseName = databaseAPI.databaseName();
@@ -204,7 +205,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
             assertEquals( "On", tx.getNodeById( 0 ).getProperty( "name" ) );
             assertEquals( "Those", tx.getNodeById( 1 ).getProperty( "name" ) );
             assertEquals( "Trays", tx.getNodeById( 2 ).getProperty( "name" ) );
-            assertEquals( RelationshipType.withName( "KNOWS" ), single( tx.getNodeById( 1 ).getRelationships() ).getType() );
+            assertEquals( KNOWS, single( tx.getNodeById( 1 ).getRelationships() ).getType() );
             assertThrows( NotFoundException.class, () -> tx.getNodeById( 3 ) );
             tx.commit();
         }
@@ -224,7 +225,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
             Node c = tx.createNode( NUMBER_LABEL );
             c.setProperty( "name", "Tres" );
 
-            a.createRelationshipTo( b, RelationshipType.withName( "KNOWS" ) );
+            a.createRelationshipTo( b, KNOWS );
             tx.commit();
         }
         String databaseName = databaseAPI.databaseName();
@@ -260,9 +261,9 @@ class StoreCopyCommandIT extends AbstractCommandIT
             Node c = tx.createNode( NUMBER_LABEL );
             c.setProperty( "name", "Trays" );
 
-            a.createRelationshipTo( b, RelationshipType.withName( "KNOWS" ) );
-            b.createRelationshipTo( c, RelationshipType.withName( "KNOWS" ) );
-            a.createRelationshipTo( c, RelationshipType.withName( "HATES" ) );
+            a.createRelationshipTo( b, KNOWS );
+            b.createRelationshipTo( c, KNOWS );
+            a.createRelationshipTo( c, SECRET );
             tx.commit();
         }
         String databaseName = databaseAPI.databaseName();
@@ -273,7 +274,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
                 "--to-database=" + copyName,
                 "--skip-labels=Error",
                 "--skip-properties=secretProperty",
-                "--skip-relationships=HATES" );
+                "--skip-relationships=" + SECRET.name() );
 
         managementService.createDatabase( copyName );
         GraphDatabaseService copyDb = managementService.database( copyName );
@@ -320,8 +321,8 @@ class StoreCopyCommandIT extends AbstractCommandIT
             b.setProperty( "name", "Bob" );
             Node c = tx.createNode( NUMBER_LABEL, ERROR_LABEL );
             c.setProperty( "name", "Carrie" );
-            a.createRelationshipTo( b, KNOWS_RELATIONSHIP_TYPE );
-            b.createRelationshipTo( c, KNOWS_RELATIONSHIP_TYPE );
+            a.createRelationshipTo( b, KNOWS );
+            b.createRelationshipTo( c, KNOWS );
             tx.commit();
         }
         try ( Transaction tx = databaseAPI.beginTx() )
@@ -369,7 +370,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
         {
             assertEquals( "Anna", tx.getNodeById( 0 ).getProperty( "name" ) );
             assertEquals( "Bob", tx.getNodeById( 1 ).getProperty( "name" ) );
-            assertEquals( KNOWS_RELATIONSHIP_TYPE, single( tx.getNodeById( 0 ).getRelationships() ).getType() );
+            assertEquals( KNOWS, single( tx.getNodeById( 0 ).getRelationships() ).getType() );
             assertThrows( NotFoundException.class, () -> tx.getNodeById( 2 ) );
             assertThrows( NotFoundException.class, () -> tx.getRelationshipById( 1 ) );
             tx.commit();
@@ -390,7 +391,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
             Node c = tx.createNode( NUMBER_LABEL );
             c.setProperty( "name", "Tres" );
 
-            a.createRelationshipTo( b, RelationshipType.withName( "KNOWS" ) );
+            a.createRelationshipTo( b, KNOWS );
             tx.commit();
         }
         try ( Transaction tx = databaseAPI.beginTx() )
@@ -421,7 +422,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
             Node c = tx.createNode( NUMBER_LABEL );
             c.setProperty( "name", "Tres" );
 
-            a.createRelationshipTo( b, RelationshipType.withName( "KNOWS" ) );
+            a.createRelationshipTo( b, KNOWS );
             tx.commit();
         }
         String databaseName = databaseAPI.databaseName();
