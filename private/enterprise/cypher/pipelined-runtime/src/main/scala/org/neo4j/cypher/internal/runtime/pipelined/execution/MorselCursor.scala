@@ -45,7 +45,7 @@ trait MorselDerivedRow extends SlottedCompatible with Measurable {
     while (i < morsel.refsPerRow) {
       val ref = morsel.refs(refOffset(i))
       if (ref != null) {
-        usage += morsel.refs(i).estimatedHeapUsage()
+        usage += ref.estimatedHeapUsage()
       }
       i += 1
     }
