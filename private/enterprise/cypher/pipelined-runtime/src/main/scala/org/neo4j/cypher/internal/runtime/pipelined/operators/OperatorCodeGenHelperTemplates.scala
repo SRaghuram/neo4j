@@ -462,6 +462,7 @@ object OperatorCodeGenHelperTemplates {
 
   def nodeLabelId(labelName: String): IntermediateRepresentation = invoke(DB_ACCESS, method[DbAccess, Int, String]("nodeLabel"), constant(labelName))
   def relationshipTypeId(typeName: String): IntermediateRepresentation = invoke(DB_ACCESS, method[DbAccess, Int, String]("relationshipType"), constant(typeName))
+  def propertyKeyId(propName: String): IntermediateRepresentation = invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(propName))
 
   // Profiling
 

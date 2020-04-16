@@ -15,7 +15,7 @@ import org.neo4j.internal.kernel.api.TokenRead
 
 import scala.collection.mutable
 
-class SlottedPropertyKeys(resolved: Seq[(Int, Int)], private var unresolved: Seq[(String, Int)]) {
+class SlottedPropertyKeys(val resolved: Seq[(Int, Int)], var unresolved: Seq[(String, Int)]) {
   private var _offset = - 1
   private var (resolvedTokens, resolvedOffsets) = resolved.sortBy(_._1).toArray.unzip
 

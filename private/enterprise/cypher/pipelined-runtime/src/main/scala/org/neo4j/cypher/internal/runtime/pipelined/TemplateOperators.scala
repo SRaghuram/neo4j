@@ -99,6 +99,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
+import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPropertyKeys
 import org.neo4j.cypher.internal.util.Many
 import org.neo4j.cypher.internal.util.One
 import org.neo4j.cypher.internal.util.Zero
@@ -291,22 +292,26 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               ctx.argumentSizes(plan.id),
               ctx.expressionCompiler)
 
-        case plan@plans.Expand(_, fromName, dir, types, to, relName, mode, _) if isHeadOperator || fuseOverPipelines =>
+        case plan@plans.Expand(_, fromName, dir, types, to, relName, mode, expandProperties) if isHeadOperator || fuseOverPipelines =>
           ctx: TemplateContext =>
             val fromSlot = ctx.slots(fromName)
             val relOffset = ctx.slots.getLongOffsetFor(relName)
             val toSlot = ctx.slots(to)
             val tokensOrNames = types.map(r => ctx.tokenContext.getOptRelTypeId(r.name) match {
               case Some(token) => Left(token)
-              case None => Right(r.name)
-            }
-            )
+              case None => Right(r.name)})
 
             val typeTokens = tokensOrNames.collect {
               case Left(token: Int) => token
             }
             val missingTypes = tokensOrNames.collect {
               case Right(name: String) => name
+            }
+            val (nodePropsToCache, relPropsToCache) = expandProperties match {
+              case Some(rp) => (
+                if (rp.nodeProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.nodeProperties, ctx.slots, ctx.tokenContext)),
+                if (rp.relProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.relProperties, ctx.slots, ctx.tokenContext)))
+              case None => (None, None)
             }
 
             mode match {
@@ -322,7 +327,9 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   toSlot.offset,
                   dir,
                   typeTokens.toArray,
-                  missingTypes.toArray)(ctx.expressionCompiler)
+                  missingTypes.toArray,
+                  nodePropsToCache,
+                  relPropsToCache)(ctx.expressionCompiler)
               case ExpandInto =>
                 new ExpandIntoOperatorTaskTemplate(ctx.inner,
                   plan.id,

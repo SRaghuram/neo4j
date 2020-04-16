@@ -232,6 +232,7 @@ class PipelinedCachePropertiesTest extends CachePropertiesTestBase(FUSING, PIPEL
 class PipelinedCachePropertiesNoFusingTest extends CachePropertiesTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // Cache properties from cursors
+class PipelinedCacheFromCursorTest extends CacheFromCursorTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedCacheFromCursorNoFusingTest extends CacheFromCursorTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // FILTER

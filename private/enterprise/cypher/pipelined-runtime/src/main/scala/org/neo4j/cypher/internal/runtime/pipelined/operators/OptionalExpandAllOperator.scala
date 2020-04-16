@@ -191,7 +191,9 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     toOffset,
     dir,
     types,
-    missingTypes)(codeGen) {
+    missingTypes,
+    None,
+    None)(codeGen) {
 
 
   private val hasWritten = field[Boolean](codeGen.namer.nextVariableName())
