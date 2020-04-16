@@ -9,10 +9,11 @@ import com.neo4j.fabric.pipeline.FabricFrontEnd
 import com.neo4j.fabric.pipeline.SignatureResolver
 import com.neo4j.fabric.planning.Fragment.Apply
 import com.neo4j.fabric.planning.Fragment.Chain
+import com.neo4j.fabric.planning.Fragment.Exec
 import com.neo4j.fabric.planning.Fragment.Init
 import com.neo4j.fabric.planning.Fragment.Leaf
-import com.neo4j.fabric.planning.Fragment.Exec
 import com.neo4j.fabric.planning.Fragment.Union
+import com.neo4j.fabric.util.Rewritten.RewritingOps
 import org.neo4j.configuration.Config
 import org.neo4j.cypher.internal.CypherConfiguration
 import org.neo4j.cypher.internal.PreParsedQuery
@@ -21,8 +22,15 @@ import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.ast.Query
 import org.neo4j.cypher.internal.ast.Statement
 import org.neo4j.cypher.internal.ast.UseGraph
+import org.neo4j.cypher.internal.ast.semantics.SemanticState
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.frontend.PlannerName
+import org.neo4j.cypher.internal.frontend.phases.BaseState
+import org.neo4j.cypher.internal.frontend.phases.Condition
 import org.neo4j.cypher.internal.util.InputPosition
+import org.neo4j.cypher.internal.util.ObfuscationMetadata
 import org.neo4j.cypher.internal.util.symbols.AnyType
+import org.neo4j.cypher.internal.util.symbols.CypherType
 import org.neo4j.cypher.internal.util.symbols.FloatType
 import org.neo4j.monitoring.Monitors
 import org.neo4j.procedure.impl.GlobalProceduresRegistry
@@ -36,7 +44,34 @@ trait FragmentTestUtils {
   implicit class FragBuilder(input: Chain) {
     def apply(fragmentInheritUse: Use => Fragment): Apply = Apply(input, fragmentInheritUse(input.use))
     def leaf(clauses: Seq[ast.Clause], outputColumns: Seq[String]): Leaf = Leaf(input, clauses, outputColumns)
-    def exec(query: Query, outputColumns: Seq[String]): Exec = Exec(input, query, outputColumns)
+    def exec(query: Query, outputColumns: Seq[String]): Exec = Exec(input, query, dummyLocalQuery, dummyRemoteQuery, outputColumns)
+  }
+
+  val dummyLocalQuery: BaseState = DummyState
+  val dummyRemoteQuery: String = ""
+
+  case object DummyState extends BaseState {
+    override val queryText: String = ""
+    override val plannerName: PlannerName = new PlannerName {
+      def name: String = ""
+      def toTextOutput: String = ""
+      def version: String = ""
+    }
+    override val startPosition: Option[InputPosition] = Option.empty
+    override val initialFields: Map[String, CypherType] = Map.empty
+    override val maybeStatement: Option[Statement] = Option.empty
+    override val maybeReturnColumns: Option[Seq[String]] = Option.empty
+    override val maybeSemantics: Option[SemanticState] = Option.empty
+    override val maybeExtractedParams: Option[Map[String, Any]] = Option.empty
+    override val maybeSemanticTable: Option[SemanticTable] = Option.empty
+    override val maybeObfuscationMetadata: Option[ObfuscationMetadata] = Option.empty
+    override val accumulatedConditions: Set[Condition] = Set.empty
+    override def withStatement(s: Statement): BaseState = this
+    override def withReturnColumns(cols: Seq[String]): BaseState = this
+    override def withSemanticTable(s: SemanticTable): BaseState = this
+    override def withSemanticState(s: SemanticState): BaseState = this
+    override def withParams(p: Map[String, Any]): BaseState = this
+    override def withObfuscationMetadata(o: ObfuscationMetadata): BaseState = this
   }
 
   implicit class FragBuilderInit(input: Fragment.Init) {
@@ -79,4 +114,13 @@ trait FragmentTestUtils {
 
   def preParse(query: String): PreParsedQuery =
     frontend.preParsing.preParse(query)
+
+  implicit class FragmentOps[F <: Fragment](fragment: F) {
+    def withoutLocalAndRemote: F =
+      fragment
+        .rewritten
+        .topDown {
+          case e: Fragment.Exec => e.copy(localQuery = dummyLocalQuery, remoteQuery = dummyRemoteQuery)
+        }
+  }
 }

@@ -23,10 +23,15 @@ class FabricStitcherTest
     with_(names.map(v => parameter(Columns.paramName(v), ct.any).as(v)): _*)
 
 
+  private val dummyQuery = ""
+  private val dummyPipeline = pipeline("RETURN 1")
+
   "Single-graph:" - {
 
     def stitching(fragment: Fragment) =
-      FabricStitcher("", allowMultiGraph = false, None).convert(fragment)
+      FabricStitcher(dummyQuery, allowMultiGraph = false, None, dummyPipeline)
+        .convert(fragment).withoutLocalAndRemote
+
 
     "single fragment" in {
       stitching(
@@ -182,7 +187,9 @@ class FabricStitcherTest
 
   "Multi-graph:" - {
 
-    def stitching(fragment: Fragment) = FabricStitcher("", allowMultiGraph = true, Some(defaultGraphName)).convert(fragment)
+    def stitching(fragment: Fragment) =
+      FabricStitcher(dummyQuery, allowMultiGraph = true, Some(defaultGraphName), dummyPipeline)
+        .convert(fragment).withoutLocalAndRemote
 
     "nested fragment, different USE" in {
       stitching(

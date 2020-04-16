@@ -495,7 +495,7 @@ class FabricPlannerTest
 
       plan(q)
         .check(_.executionType.shouldEqual(FabricPlan.EXPLAIN))
-        .check(_.query.shouldEqual(
+        .check(_.query.withoutLocalAndRemote.shouldEqual(
           init(defaultUse).exec(query(return_(literal(1).as("x"))), Seq("x"))
         ))
     }
@@ -508,7 +508,7 @@ class FabricPlannerTest
 
       plan(q, params)
         .check(_.executionType.shouldEqual(FabricPlan.PROFILE))
-        .check(_.query.shouldEqual(
+        .check(_.query.withoutLocalAndRemote.shouldEqual(
           init(defaultUse).exec(query(return_(literal(1).as("x"))), Seq("x"))
         ))
     }
@@ -536,7 +536,7 @@ class FabricPlannerTest
 
       plan(q)
         .check(_.debugOptions.shouldEqual(DebugOptions(logPlan = true, logRecords = true)))
-        .check(_.query.shouldEqual(
+        .check(_.query.withoutLocalAndRemote.shouldEqual(
           init(defaultUse).exec(query(return_(literal(1).as("x"))), Seq("x"))
         ))
     }
@@ -1277,7 +1277,7 @@ class FabricPlannerTest
   val beFullyStitched: Matcher[Try[FabricPlan]] = Matcher[Try[FabricPlan]] {
     case Success(value)     =>
       value.query match {
-        case frag @ Fragment.Exec(_: Fragment.Init, _, _) => MatchResult(matches = true,
+        case frag @ Fragment.Exec(_: Fragment.Init, _, _, _, _) => MatchResult(matches = true,
           s"Expectation failed, got: $frag",
           s"Expectation failed, got: $frag")
 

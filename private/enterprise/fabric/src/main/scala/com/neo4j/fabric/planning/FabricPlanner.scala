@@ -75,19 +75,29 @@ case class FabricPlanner(
 
       val fabricContext = inFabricContext(fragments)
 
-      val stitching = FabricStitcher(query.statement, fabricContext, fabricContextName)
-      val stitchedFragments = stitching.convert(fragments)
+      val stitcher = FabricStitcher(query.statement, fabricContext, fabricContextName, pipeline)
+      val stitchedFragments = stitcher.convert(fragments)
 
       FabricPlan(
         query = stitchedFragments,
         queryType = QueryType.recursive(stitchedFragments),
-        executionType = frontend.preParsing.executionType(query.options, fabricContext),
+        executionType = FabricPlan.Execute,
         queryString = query.statement,
         debugOptions = DebugOptions.from(query.options.debugOptions),
         obfuscationMetadata = prepared.obfuscationMetadata(),
         inFabricContext = fabricContext
       )
     }
+
+    private def optionsFor(fragment: Fragment) =
+      if (isFabricFragment(fragment))
+        QueryOptions.default.copy(
+          runtime = CypherRuntimeOption.slotted,
+          expressionEngine = CypherExpressionEngineOption.interpreted,
+          materializedEntitiesMode = true,
+        )
+      else
+        query.options
 
     private def trace(compute: => FabricPlan): FabricPlan = {
       val event = pipeline.traceStart()
@@ -99,26 +109,13 @@ case class FabricPlanner(
       pipeline.notifications
 
     def asLocal(fragment: Fragment.Exec): LocalQuery = LocalQuery(
-      query = FullyParsedQuery(
-        state = pipeline.checkAndFinalize.process(fragment.query),
-        options = optionsFor(fragment)
-      ),
-      queryType = fragment.queryType
+      FullyParsedQuery(fragment.localQuery, optionsFor(fragment)),
+      fragment.queryType,
     )
 
-    private def optionsFor(fragment: Fragment.Exec) =
-      if (isFabricFragment(fragment))
-        QueryOptions.default.copy(
-          runtime = CypherRuntimeOption.slotted,
-          expressionEngine = CypherExpressionEngineOption.interpreted,
-          materializedEntitiesMode = true,
-        )
-      else
-        query.options
-
     def asRemote(fragment: Fragment.Exec): RemoteQuery = RemoteQuery(
-      query = QueryRenderer.render(fragment.query, optionsFor(fragment)),
-      queryType = fragment.queryType,
+      QueryRenderer.addOptions(fragment.remoteQuery, optionsFor(fragment)),
+      fragment.queryType,
     )
 
     private def inFabricContext(fragment: Fragment): Boolean = {
@@ -128,16 +125,19 @@ case class FabricPlanner(
       inFabricDefaultContext || isFabricFragment(fragment)
     }
 
-    private def isFabricUse(use: Use) =
-      UseEvaluation.evaluateStatic(use.graphSelection)
-        .exists(cn => cn.parts == fabricContextName.toList)
+    private def isFabricFragment(fragment: Fragment): Boolean = {
+      def isFabricUse(use: Use): Boolean =
+        UseEvaluation.evaluateStatic(use.graphSelection)
+          .exists(cn => cn.parts == fabricContextName.toList)
 
-    private def isFabricFragment(fragment: Fragment): Boolean =
-      fragment match {
+      def check(frag: Fragment): Boolean = frag match {
         case chain: Fragment.Chain => isFabricUse(chain.use)
-        case union: Fragment.Union => isFabricFragment(union.lhs) && isFabricFragment(union.rhs)
+        case union: Fragment.Union => check(union.lhs) && check(union.rhs)
         case command: Fragment.Command => isFabricUse(command.use)
       }
+
+      check(fragment)
+    }
 
     private[planning] def withForceFabricContext(force: Boolean) =
       if (force) this.copy(fabricContextName = Some(defaultContextName))

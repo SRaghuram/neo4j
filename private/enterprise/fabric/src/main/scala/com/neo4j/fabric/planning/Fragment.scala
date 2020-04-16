@@ -13,6 +13,8 @@ import com.neo4j.fabric.util.PrettyPrinting
 import org.neo4j.cypher.internal.ast
 import org.neo4j.cypher.internal.ast.Clause
 import org.neo4j.cypher.internal.ast.GraphSelection
+import org.neo4j.cypher.internal.ast.Query
+import org.neo4j.cypher.internal.frontend.phases.BaseState
 import org.neo4j.cypher.internal.ast.Statement
 import org.neo4j.cypher.internal.frontend.phases.BaseState
 import org.neo4j.cypher.rendering.QueryRenderer
@@ -100,6 +102,8 @@ object Fragment {
   final case class Exec(
     input: Fragment.Chain,
     query: Statement,
+    localQuery: BaseState,
+    remoteQuery: String,
     outputColumns: Seq[String],
   ) extends Fragment.Segment {
     val parameters: Map[String, String] = Columns.asParamMappings(importColumns)

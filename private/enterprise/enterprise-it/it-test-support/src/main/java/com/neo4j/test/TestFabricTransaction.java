@@ -53,12 +53,11 @@ public class TestFabricTransaction implements InternalTransaction
     public Result execute( String query, Map<String,Object> parameters ) throws QueryExecutionException
     {
         var params = ValueUtils.asParameterMapValue( parameters );
-//        var context = contextFactory.newContext( this, query, params );
         var result = new TestFabricResultSubscriber();
         try
         {
             BoltQueryExecution boltQueryExecution = transaction.executeQuery( query, params, false, result );
-            result.init( boltQueryExecution.getQueryExecution() );
+            result.materialize(boltQueryExecution.getQueryExecution());
         }
         catch ( QueryExecutionKernelException e )
         {

@@ -9,6 +9,7 @@ import com.neo4j.fabric.planning.FabricPlan
 import com.neo4j.fabric.util.Errors
 import org.neo4j.cypher.CypherExecutionMode
 import org.neo4j.cypher.CypherVersion
+import org.neo4j.cypher.internal.Assertion
 import org.neo4j.cypher.internal.CypherConfiguration
 import org.neo4j.cypher.internal.NotificationWrapping
 import org.neo4j.cypher.internal.PreParsedQuery
@@ -121,10 +122,9 @@ case class FabricFrontEnd(
       )
 
     private val parsingConfig = CompilationPhases.ParsingConfig(
-      sequencer = RewriterStepSequencer.newPlain,
+      sequencer = if (Assertion.assertionsEnabled()) RewriterStepSequencer.newValidating else RewriterStepSequencer.newPlain,
       innerVariableNamer = new GeneratingNamer,
       compatibilityMode = compatibilityMode,
-      literalExtraction = Never,
       parameterTypeMapping = ParameterValueTypeHelper.asCypherTypeMap(params),
       semanticFeatures = semanticFeatures,
     )
@@ -142,7 +142,7 @@ case class FabricFrontEnd(
         CompilationPhases.fabricFinalize(parsingConfig)
 
       def process(query: Statement): BaseState = {
-        val localQueryString = QueryRenderer.render(query)
+        val localQueryString = QueryRenderer.pretty(query)
         transformer.transform(InitialState(localQueryString, None, CostBasedPlannerName.default).withStatement(query), context)
       }
     }

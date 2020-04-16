@@ -6,6 +6,7 @@
 package com.neo4j.fabric.planning
 
 import com.neo4j.fabric.eval.UseEvaluation
+import com.neo4j.fabric.pipeline.FabricFrontEnd
 import com.neo4j.fabric.util.Rewritten.RewritingOps
 import org.neo4j.cypher.internal
 import org.neo4j.cypher.internal.ast.AliasedReturnItem
@@ -35,6 +36,7 @@ case class FabricStitcher(
   queryString: String,
   allowMultiGraph: Boolean,
   fabricContextName: Option[String],
+  pipeline: FabricFrontEnd#Pipeline,
 ) {
 
   /**
@@ -97,7 +99,7 @@ case class FabricStitcher(
         Ast.aliasedReturn(leaf.clauses.last, leaf.outputColumns, pos).toSeq,
     ).flatten
 
-    Fragment.Exec(
+    asExec(
       input = leaf.input,
       query = Query(None, SingleQuery(clauses)(pos))(pos),
       outputColumns = leaf.outputColumns
@@ -131,10 +133,22 @@ case class FabricStitcher(
       case (_, _, None, None) =>
         val query = Query(None, stitched.queryPart)(stitched.queryPart.position)
         val init = Fragment.Init(stitched.lastUse, fragment.argumentColumns, fragment.importColumns)
-        Some(Fragment.Exec(init, query, fragment.outputColumns))
+        Some(asExec(init, query, fragment.outputColumns))
 
       case (_, _, _, _) => None
     }
+  }
+
+  private def asExec(
+    input: Fragment.Chain,
+    query: Query,
+    outputColumns: Seq[String],
+  ): Fragment.Exec = {
+
+    val local = pipeline.checkAndFinalize.process(query)
+    val remote = QueryRenderer.render(query)
+
+    Fragment.Exec(input, query, local, remote, outputColumns)
   }
 
   private def failDynamicGraph(use: Use): Nothing =
