@@ -59,7 +59,7 @@ public class OutcomeBuilder
     private long steppingDownInTerm;
     private Set<MemberId> heartbeatResponses;
     private RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection;
-    private MemberId transferingTo;
+    private MemberId transferringTo;
 
     @VisibleForTesting
     OutcomeBuilder( Role currentRole, long term, MemberId leader, long leaderCommit, MemberId votedFor, ElectionTimerMode electionTimerMode,
@@ -248,7 +248,7 @@ public class OutcomeBuilder
 
     public OutcomeBuilder startTransferringLeadership( MemberId proposed )
     {
-        this.transferingTo = proposed;
+        this.transferringTo = proposed;
         return this;
     }
 
@@ -273,22 +273,22 @@ public class OutcomeBuilder
                Objects.equals( votedFor, outcome.votedFor ) && Objects.equals( preVotesForMe, outcome.preVotesForMe ) &&
                Objects.equals( votesForMe, outcome.votesForMe ) && Objects.equals( followerStates, outcome.followerStates ) &&
                Objects.equals( shipCommands, outcome.shipCommands ) && Objects.equals( heartbeatResponses, outcome.heartbeatResponses ) &&
-               Objects.equals( transferingTo, outcome.transferingTo ) && Objects.equals( leadershipTransferRejection, outcome.leadershipTransferRejection );
+               Objects.equals( transferringTo, outcome.transferringTo ) && Objects.equals( leadershipTransferRejection, outcome.leadershipTransferRejection );
     }
 
     @Override
     public int hashCode()
     {
         return Objects.hash( role, term, leader, leaderCommit, logCommands, outgoingMessages, commitIndex, votedFor, electionTimerMode,
-                snapshotRequirement, isPreElection, preVotesForMe, votesForMe, lastLogIndexBeforeWeBecameLeader, followerStates, shipCommands, electedLeader,
-                steppingDownInTerm, heartbeatResponses, transferingTo, leadershipTransferRejection );
+                             snapshotRequirement, isPreElection, preVotesForMe, votesForMe, lastLogIndexBeforeWeBecameLeader, followerStates, shipCommands,
+                             electedLeader, steppingDownInTerm, heartbeatResponses, transferringTo, leadershipTransferRejection );
     }
 
     public Outcome build()
     {
 
         return new Outcome( role, term, leader, leaderCommit, votedFor, votesForMe, preVotesForMe, lastLogIndexBeforeWeBecameLeader, followerStates,
-                electionTimerMode, logCommands, outgoingMessages, shipCommands, commitIndex, heartbeatResponses, isPreElection, electedLeader,
-                steppingDownInTerm, snapshotRequirement, leadershipTransferRejection, transferingTo );
+                            electionTimerMode, logCommands, outgoingMessages, shipCommands, commitIndex, heartbeatResponses, isPreElection, electedLeader,
+                            steppingDownInTerm, snapshotRequirement, leadershipTransferRejection, transferringTo );
     }
 }

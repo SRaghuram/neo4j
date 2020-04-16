@@ -148,6 +148,7 @@ class RaftOutcomeApplier
 
         if ( nextRole == LEADER )
         {
+            membershipManager.handleLeadershipTransfers( state.areTransferringLeadership() );
             membershipManager.onFollowerStateChange( outcome.getFollowerStates() );
         }
     }

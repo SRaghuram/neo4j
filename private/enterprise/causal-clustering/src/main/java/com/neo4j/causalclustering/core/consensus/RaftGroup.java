@@ -112,10 +112,10 @@ public class RaftGroup
 
         Supplier<Set<String>> serverGroupsSupplier = () -> copyOf( config.get( CausalClusteringSettings.server_groups ) );
 
-        var leaderTransferTimer = new ExpiringSet<MemberId>( config.get( CausalClusteringSettings.leader_transfer_timeout ).toMillis(), clock );
+        var leaderTransfers = new ExpiringSet<MemberId>( config.get( CausalClusteringSettings.leader_transfer_timeout ).toMillis(), clock );
 
         var state = new RaftState( myself, termState, raftMembershipManager, raftLog, voteState, inFlightCache,
-                                   logProvider, supportsPreVoting, config.get( refuse_to_be_leader ), serverGroupsSupplier, leaderTransferTimer );
+                                   logProvider, supportsPreVoting, config.get( refuse_to_be_leader ), serverGroupsSupplier, leaderTransfers );
 
         var raftMessageTimerResetMonitor = monitors.newMonitor( RaftMessageTimerResetMonitor.class );
         var raftOutcomeApplier = new RaftOutcomeApplier( state, outbound, leaderAvailabilityTimers, raftMessageTimerResetMonitor, logShipping,

@@ -318,6 +318,34 @@ class RaftOutcomeApplierTest
     }
 
     @Test
+    void shouldChangeMembershipManagerStateIfTransferringLeadership() throws IOException
+    {
+        var transferTarget = new MemberId( UUID.randomUUID() );
+        var outcome = outcomeTestBuilder.setRole( Role.LEADER )
+                                        .startTransferringLeadership( transferTarget )
+                                        .build();
+        when( raftState.areTransferringLeadership() ).thenReturn( true );
+
+        raftOutcomeApplier.handle( outcome );
+
+        verify( membershipManager ).handleLeadershipTransfers( true );
+    }
+
+    @Test
+    void shouldNotChangeMembershipManagerStateIfNextRoleIsNotLeader() throws IOException
+    {
+        var transferTarget = new MemberId( UUID.randomUUID() );
+        var outcome = outcomeTestBuilder.setRole( Role.FOLLOWER )
+                                        .startTransferringLeadership( transferTarget )
+                                        .build();
+        when( raftState.areTransferringLeadership() ).thenReturn( true );
+
+        raftOutcomeApplier.handle( outcome );
+
+        verify( membershipManager, never() ).handleLeadershipTransfers( true );
+    }
+
+    @Test
     void shouldReturnNextRole() throws IOException
     {
         var outcome = outcomeTestBuilder.setRole( Role.CANDIDATE ).build();

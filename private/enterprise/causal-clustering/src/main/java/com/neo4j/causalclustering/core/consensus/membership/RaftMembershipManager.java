@@ -256,6 +256,11 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
         membershipChanger.onRole( role );
     }
 
+    public void handleLeadershipTransfers( boolean areTransferring )
+    {
+        membershipChanger.onLeadershipTransfer( areTransferring );
+    }
+
     @Override
     public Set<MemberId> votingMembers()
     {

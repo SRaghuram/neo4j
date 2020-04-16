@@ -25,6 +25,8 @@ interface RaftMembershipStateMachineEventHandler
 
     RaftMembershipStateMachineEventHandler onTargetChanged( Set<MemberId> targetMembers );
 
+    RaftMembershipStateMachineEventHandler onLeadershipTransfer( boolean areTransferring );
+
     void onExit();
 
     void onEntry();
@@ -63,6 +65,12 @@ interface RaftMembershipStateMachineEventHandler
 
         @Override
         public RaftMembershipStateMachineEventHandler onTargetChanged( Set targetMembers )
+        {
+            return this;
+        }
+
+        @Override
+        public RaftMembershipStateMachineEventHandler onLeadershipTransfer( boolean areTransferring )
         {
             return this;
         }
