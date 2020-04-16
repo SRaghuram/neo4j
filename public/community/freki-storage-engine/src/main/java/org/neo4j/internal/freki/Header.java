@@ -35,7 +35,7 @@ class Header
     static final int OFFSET_PROPERTIES = 0;
     static final int OFFSET_RELATIONSHIPS = 1;
     static final int OFFSET_DEGREES = 2;
-    static final int OFFSET_RELATIONSHIP_TYPE_OFFSETS = 3;
+    static final int OFFSET_RELATIONSHIPS_TYPE_OFFSETS = 3;
     static final int OFFSET_RECORD_POINTER = 4;
     static final int OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID = 5;
 
@@ -56,6 +56,11 @@ class Header
     void markHasOffset( int offsetSlot )
     {
         offsetBits |= offsetBit( offsetSlot );
+    }
+
+    void unmarkHasOffset( int offsetSlot )
+    {
+        offsetBits &= ~offsetBit( offsetSlot );
     }
 
     private byte offsetBit( int offsetSlot )
@@ -82,8 +87,12 @@ class Header
 
     void allocateSpace( ByteBuffer buffer )
     {
-        int space = 1 + offsetBytesNeeded();
-        buffer.position( buffer.position() + space );
+        buffer.position( buffer.position() + spaceNeeded() );
+    }
+
+    int spaceNeeded()
+    {
+        return 1 + offsetBytesNeeded();
     }
 
     private int offsetBytesNeeded()
