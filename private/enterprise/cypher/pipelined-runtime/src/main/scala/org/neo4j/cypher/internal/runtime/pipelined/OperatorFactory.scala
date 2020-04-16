@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
+import org.neo4j.cypher.internal.logical.plans.ExpandCursorProperties
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NodeUniqueIndexSeek
 import org.neo4j.cypher.internal.logical.plans.QueryExpression
@@ -26,6 +27,7 @@ import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
 import org.neo4j.cypher.internal.physicalplanning.ReduceOutput
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotWithKeyAndAliases
@@ -289,12 +291,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val relOffset = slots.getLongOffsetFor(relName)
         val toOffset = slots.getLongOffsetFor(to)
         val lazyTypes = RelationshipTypes(types.toArray)(semanticTable)
-        val (nodePropsToCache, relPropsToCache) = expandProperties match {
-          case Some(rp) => (
-            if (rp.nodeProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.nodeProperties, slots, tokenContext)),
-            if (rp.relProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.relProperties, slots, tokenContext)))
-          case None => (None, None)
-        }
+        val (nodePropsToCache, relPropsToCache) = getExpandProperties(slots, expandProperties)
         new ExpandAllOperator(WorkIdentity.fromPlan(plan),
           fromSlot,
           relOffset,
@@ -351,16 +348,19 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           nodePredicate.map(x => converters.toCommandExpression(id, x.predicate)).getOrElse(True()),
           relationshipPredicate.map(x => converters.toCommandExpression(id, x.predicate)).getOrElse(True()))
 
-      case plans.OptionalExpand(_, fromName, dir, types, to, relName, plans.ExpandAll, maybePredicate) =>
+      case plans.OptionalExpand(_, fromName, dir, types, to, relName, plans.ExpandAll, maybePredicate, expandProperties) =>
+        val (nodePropsToCache, relPropsToCache) = getExpandProperties(slots, expandProperties)
         new OptionalExpandAllOperator(WorkIdentity.fromPlan(plan),
           slots(fromName),
           slots.getLongOffsetFor(relName),
           slots.getLongOffsetFor(to),
           dir,
           RelationshipTypes(types.toArray)(semanticTable),
-          maybePredicate.map(converters.toCommandExpression(id, _)))
+          maybePredicate.map(converters.toCommandExpression(id, _)),
+          nodePropsToCache,
+          relPropsToCache)
 
-      case plans.OptionalExpand(_, fromName, dir, types, to, relName, plans.ExpandInto, maybePredicate) =>
+      case plans.OptionalExpand(_, fromName, dir, types, to, relName, plans.ExpandInto, maybePredicate, _) =>
         new OptionalExpandIntoOperator(WorkIdentity.fromPlan(plan),
           slots(fromName),
           slots.getLongOffsetFor(relName),
@@ -650,6 +650,17 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         // Nothing changes in this regard, keep going with or without a slotted pipe chain
         acc
     }
+  }
+
+  private def getExpandProperties(slots: SlotConfiguration,
+                                  expandProperties: Option[ExpandCursorProperties]) = {
+    val (nodePropsToCache, relPropsToCache) = expandProperties match {
+      case Some(rp) => (
+        if (rp.nodeProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.nodeProperties, slots, tokenContext)),
+        if (rp.relProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.relProperties, slots, tokenContext)))
+      case None => (None, None)
+    }
+    (nodePropsToCache, relPropsToCache)
   }
 
   // Returns Some new middle operator or None if the existing slotted pipe chain has been updated instead

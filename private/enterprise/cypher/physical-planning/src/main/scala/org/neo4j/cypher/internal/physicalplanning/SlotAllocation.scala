@@ -538,13 +538,17 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
             slots.newReference(key, nullable = true, CTAny)
         }
 
-      case OptionalExpand(_, _, _, _, to, rel, ExpandAll, _) =>
+      case OptionalExpand(_, _, _, _, to, rel, ExpandAll, _, expandProperties) =>
         // Note that OptionExpand only is optional on the expand and not on incoming rows, so
         // we do not need to record the argument here.
         slots.newLong(rel, nullable = true, CTRelationship)
         slots.newLong(to, nullable = true, CTNode)
+        for (rp <- expandProperties) {
+          rp.nodeProperties.foreach(n => slots.newCachedProperty(n.asCachedProperty))
+          rp.relProperties.foreach(r => slots.newCachedProperty(r.asCachedProperty))
+        }
 
-      case OptionalExpand(_, _, _, _, _, rel, ExpandInto, _) =>
+      case OptionalExpand(_, _, _, _, _, rel, ExpandInto, _, _) =>
         // Note that OptionExpand only is optional on the expand and not on incoming rows, so
         // we do not need to record the argument here.
         slots.newLong(rel, nullable = true, CTRelationship)

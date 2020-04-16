@@ -152,7 +152,7 @@ class ExpandAllTask(inputMorsel: Morsel,
   protected var nodeCursor: NodeCursor = _
   private var traversalCursor: RelationshipTraversalCursor = _
   protected var relationships: RelationshipTraversalCursor = _
-  private var propertyCursor: PropertyCursor = _
+  protected var propertyCursor: PropertyCursor = _
 
   protected override def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
     val fromNode = getFromNodeFunction.applyAsLong(inputCursor)
@@ -224,7 +224,7 @@ class ExpandAllTask(inputMorsel: Morsel,
     }
   }
 
-  private def cacheNodeProperties(outputRow: MorselFullCursor, queryContext: QueryContext): Unit = {
+  protected def cacheNodeProperties(outputRow: MorselFullCursor, queryContext: QueryContext): Unit = {
     nodePropsToRead.foreach(p => {
       nodeCursor.properties(propertyCursor)
       while (propertyCursor.next() && p.accept(queryContext, propertyCursor.propertyKey())) {
@@ -233,7 +233,7 @@ class ExpandAllTask(inputMorsel: Morsel,
     })
   }
 
-  private def cacheRelationshipProperties(outputRow: MorselFullCursor, queryContext: QueryContext): Unit = {
+  protected def cacheRelationshipProperties(outputRow: MorselFullCursor, queryContext: QueryContext): Unit = {
     relsPropsToRead.foreach(p => {
       relationships.properties(propertyCursor)
       while (propertyCursor.next() && p.accept(queryContext, propertyCursor.propertyKey())) {

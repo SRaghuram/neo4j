@@ -49,6 +49,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
+import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPropertyKeys
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.values.storable.Values
@@ -59,7 +60,10 @@ class OptionalExpandAllOperator(val workIdentity: WorkIdentity,
                                 toOffset: Int,
                                 dir: SemanticDirection,
                                 types: RelationshipTypes,
-                                maybeExpression: Option[Expression]) extends StreamingOperator {
+                                maybeExpression: Option[Expression],
+                                nodePropsToRead: Option[SlottedPropertyKeys],
+                                relsPropsToRead: Option[SlottedPropertyKeys]
+                               ) extends StreamingOperator {
 
 
 
@@ -83,8 +87,8 @@ class OptionalExpandAllOperator(val workIdentity: WorkIdentity,
     toOffset,
     dir,
     types,
-    None,
-    None) {
+    nodePropsToRead,
+    relsPropsToRead) {
 
     override def toString: String = "OptionalExpandAllTask"
 
@@ -106,12 +110,16 @@ class OptionalExpandAllOperator(val workIdentity: WorkIdentity,
         nodeCursor = pools.nodeCursorPool.allocateAndTrace()
         relationships = getRelationshipsCursor(state.queryContext, pools, fromNode, dir, types.types(state.queryContext))
       }
+      if (nodePropsToRead.isDefined || relsPropsToRead.isDefined) {
+        propertyCursor = resources.expressionCursors.propertyCursor
+      }
       true
     }
 
     override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
-
+      cacheNodeProperties(outputRow, state.query)
       while (outputRow.onValidRow && relationships.next()) {
+        cacheRelationshipProperties(outputRow, state.query)
         hasWritten = writeRow(outputRow,
           relationships.relationshipReference(),
           relationships.otherNodeReference())
