@@ -17,13 +17,11 @@ import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphVisualizer
 import org.neo4j.cypher.internal.physicalplanning.FusedHead
 import org.neo4j.cypher.internal.physicalplanning.InterpretedHead
-import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphVisualizer
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanner
 import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.plandescription.Arguments.PipelineInfo
-import org.neo4j.cypher.internal.rewriting.RewriterStepSequencer
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ExecutionMode
 import org.neo4j.cypher.internal.runtime.InputDataStream
@@ -215,6 +213,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
       readOnly = readOnly,
       queryIndexRegistrator,
       query.semanticTable,
+      context.tokenContext,
       interpretedPipesFallbackPolicy,
       maybePipeMapper)
 

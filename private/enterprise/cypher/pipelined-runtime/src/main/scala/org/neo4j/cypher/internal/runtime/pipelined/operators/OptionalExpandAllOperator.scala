@@ -82,7 +82,9 @@ class OptionalExpandAllOperator(val workIdentity: WorkIdentity,
     relOffset,
     toOffset,
     dir,
-    types) {
+    types,
+    None,
+    None) {
 
     override def toString: String = "OptionalExpandAllTask"
 

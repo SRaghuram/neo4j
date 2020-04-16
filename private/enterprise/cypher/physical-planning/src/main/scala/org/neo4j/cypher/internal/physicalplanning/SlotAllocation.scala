@@ -497,9 +497,13 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         }
         recordArgument(lp)
 
-      case Expand(_, _, _, _, to, relName, ExpandAll, _) =>
+      case Expand(_, from, _, _, to, relName, ExpandAll, expandProperties) =>
         slots.newLong(relName, nullable, CTRelationship)
         slots.newLong(to, nullable, CTNode)
+        for (rp <- expandProperties) {
+          rp.nodeProperties.foreach(n => slots.newCachedProperty(n.asCachedProperty))
+          rp.relProperties.foreach(r => slots.newCachedProperty(r.asCachedProperty))
+        }
 
       case Expand(_, _, _, _, _, relName, ExpandInto, _) =>
         slots.newLong(relName, nullable, CTRelationship)

@@ -245,6 +245,7 @@ class OperatorFactoryTest extends CypherFunSuite with AstConstructionTestSupport
         readOnly,
         indexRegistrator,
         semanticTable,
+        TokenContext.EMPTY,
         fallbackPolicy,
         slottedPipeBuilder = Some(fallbackPipeMapper))
 

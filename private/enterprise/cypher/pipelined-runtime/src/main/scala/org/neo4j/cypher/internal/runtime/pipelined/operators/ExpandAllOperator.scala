@@ -80,10 +80,12 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
+import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPropertyKeys
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.NodeCursor
+import org.neo4j.internal.kernel.api.PropertyCursor
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.TokenRead
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections
@@ -97,7 +99,9 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
                         relOffset: Int,
                         toOffset: Int,
                         dir: SemanticDirection,
-                        types: RelationshipTypes) extends StreamingOperator {
+                        types: RelationshipTypes,
+                        nodePropsToRead: Option[SlottedPropertyKeys],
+                        relsPropsToRead: Option[SlottedPropertyKeys]) extends StreamingOperator {
 
   override def toString: String = "ExpandAll"
 
@@ -112,7 +116,9 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
       relOffset,
       toOffset,
       dir,
-      types))
+      types,
+      nodePropsToRead,
+      relsPropsToRead))
 
 }
 
@@ -122,7 +128,9 @@ class ExpandAllTask(inputMorsel: Morsel,
                     relOffset: Int,
                     toOffset: Int,
                     dir: SemanticDirection,
-                    types: RelationshipTypes) extends InputLoopTask(inputMorsel) {
+                    types: RelationshipTypes,
+                    nodePropsToRead: Option[SlottedPropertyKeys],
+                    relsPropsToRead: Option[SlottedPropertyKeys]) extends InputLoopTask(inputMorsel) {
 
   override def toString: String = "ExpandAllTask"
 
@@ -130,7 +138,7 @@ class ExpandAllTask(inputMorsel: Morsel,
   // Compile-time initializations
   //===========================================================================
   protected val getFromNodeFunction: ToLongFunction[ReadableRow] =
-    makeGetPrimitiveNodeFromSlotFunctionFor(fromSlot)
+  makeGetPrimitiveNodeFromSlotFunctionFor(fromSlot)
 
   /*
   This might look wrong, but it's like this by design. This allows the loop to terminate early and still be
@@ -140,6 +148,7 @@ class ExpandAllTask(inputMorsel: Morsel,
   protected var nodeCursor: NodeCursor = _
   private var traversalCursor: RelationshipTraversalCursor = _
   protected var relationships: RelationshipTraversalCursor = _
+  private var propertyCursor: PropertyCursor = _
 
   protected override def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
     val fromNode = getFromNodeFunction.applyAsLong(inputCursor)
@@ -149,13 +158,18 @@ class ExpandAllTask(inputMorsel: Morsel,
       val pools: CursorPools = resources.cursorPools
       nodeCursor = pools.nodeCursorPool.allocateAndTrace()
       relationships = getRelationshipsCursor(state.queryContext, pools, fromNode, dir, types.types(state.queryContext))
+      if (nodePropsToRead.isDefined || relsPropsToRead.isDefined) {
+        propertyCursor = resources.expressionCursors.propertyCursor
+      }
       true
     }
   }
 
   override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
 
+    cacheNodeProperties(outputRow, state.queryContext)
     while (outputRow.onValidRow && relationships.next()) {
+      cacheRelationshipProperties(outputRow, state.queryContext)
       val relId = relationships.relationshipReference()
       val otherSide = relationships.otherNodeReference()
 
@@ -204,6 +218,30 @@ class ExpandAllTask(inputMorsel: Morsel,
           RelationshipSelections.allCursor(traversalCursor, nodeCursor, types)
       }
     }
+  }
+
+  private def cacheNodeProperties(outputRow: MorselFullCursor, queryContext: QueryContext): Unit = {
+    nodePropsToRead.foreach(p => {
+      nodeCursor.properties(propertyCursor)
+      ExpandAllTask.cacheProperties(outputRow, queryContext, propertyCursor, p)
+    })
+  }
+
+  private def cacheRelationshipProperties(outputRow: MorselFullCursor, queryContext: QueryContext): Unit = {
+    relsPropsToRead.foreach(p => {
+      relationships.properties(propertyCursor)
+      ExpandAllTask.cacheProperties(outputRow, queryContext, propertyCursor, p)
+    })
+  }
+}
+
+object ExpandAllTask {
+  def cacheProperties(outputRow: MorselFullCursor,
+                      dbAccess: DbAccess,
+                      propertyCursor: PropertyCursor,
+                      propertyKeys: SlottedPropertyKeys): Unit = {
+    while (propertyCursor.next() && propertyKeys.accept(dbAccess, propertyCursor.propertyKey()))
+      outputRow.setCachedPropertyAt(propertyKeys.offset, propertyCursor.propertyValue())
   }
 }
 

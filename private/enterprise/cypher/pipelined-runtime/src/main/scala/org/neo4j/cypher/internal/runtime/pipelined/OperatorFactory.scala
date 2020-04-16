@@ -35,6 +35,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generat
 import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionSlotForPredicate
 import org.neo4j.cypher.internal.physicalplanning.ast.NodeProperty
+import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
@@ -116,6 +117,7 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionsForResult
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.partitionGroupingExpressions
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColumnOrder
+import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPropertyKeys
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.InternalException
@@ -133,6 +135,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                       val readOnly: Boolean,
                       val indexRegistrator: QueryIndexRegistrator,
                       semanticTable: SemanticTable,
+                      tokenContext: TokenContext,
                       val interpretedPipesFallbackPolicy: InterpretedPipesFallbackPolicy,
                       val slottedPipeBuilder: Option[PipeMapper]) {
 
@@ -281,17 +284,25 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           maybeEndLabel,
           physicalPlan.argumentSizes(id))
 
-      case plans.Expand(_, fromName, dir, types, to, relName, plans.ExpandAll, _) =>
+      case plans.Expand(_, fromName, dir, types, to, relName, plans.ExpandAll, readProperties) =>
         val fromSlot = slots(fromName)
         val relOffset = slots.getLongOffsetFor(relName)
         val toOffset = slots.getLongOffsetFor(to)
         val lazyTypes = RelationshipTypes(types.toArray)(semanticTable)
+        val (nodePropsToCache, relPropsToCache) = readProperties match {
+          case Some(rp) => (
+            if (rp.nodeProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.nodeProperties, slots, tokenContext)),
+            if (rp.relProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.relProperties, slots, tokenContext)))
+          case None => (None, None)
+        }
         new ExpandAllOperator(WorkIdentity.fromPlan(plan),
           fromSlot,
           relOffset,
           toOffset,
           dir,
-          lazyTypes)
+          lazyTypes,
+          nodePropsToCache,
+          relPropsToCache)
 
       case plans.Expand(_, fromName, dir, types, to, relName, plans.ExpandInto, _) =>
         val fromSlot = slots(fromName)
