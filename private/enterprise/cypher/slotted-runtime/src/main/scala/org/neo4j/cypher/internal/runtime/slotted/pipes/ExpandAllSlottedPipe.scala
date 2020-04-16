@@ -21,6 +21,8 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPropertyKeys
+import org.neo4j.cypher.internal.runtime.slotted.pipes.ExpandAllSlottedPipe.cacheRelationshipProperties
+import org.neo4j.cypher.internal.runtime.slotted.pipes.ExpandAllSlottedPipe.getNodePropertiesToCache
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.PropertyCursor
@@ -65,51 +67,24 @@ case class ExpandAllSlottedPipe(source: Pipe,
             if (!nodeCursor.next()) {
               Iterator.empty
             } else {
-              val nodePropsToCache = getNodePropertiesToCache(nodeCursor, state.cursors.propertyCursor, state.query)
+              val nodePropsToCache = getNodePropertiesToCache(nodePropsToRead, nodeCursor, state.cursors.propertyCursor, state.query)
               val selectionCursor = dir match {
                 case OUTGOING => RelationshipSelections.outgoingCursor(relCursor, nodeCursor, types.types(state.query))
                 case INCOMING => RelationshipSelections.incomingCursor(relCursor, nodeCursor, types.types(state.query))
                 case BOTH => RelationshipSelections.allCursor(relCursor, nodeCursor, types.types(state.query))
               }
-              state.query.resources.trace(selectionCursor)
-              new Iterator[CypherRow] {
-                private var initialized = false
-                private var hasMore = false
-
-                private def fetchNext(): Boolean =
-                  if (selectionCursor.next()) {
-                    true
-                  } else {
-                    selectionCursor.close()
-                    false
-                  }
-
-                override def hasNext: Boolean = {
-                  if (!initialized) {
-                    hasMore = fetchNext()
-                    initialized = true
-                  }
-
-                  hasMore
-                }
-
-                override def next(): CypherRow = {
-                  if (!hasNext) {
-                    selectionCursor.close()
-                    Iterator.empty.next()
-                  }
-
+              new ExpandIterator(selectionCursor, state.query) {
+                override protected def createOutputRow(relationship: Long, otherNode: Long): SlottedRow = {
                   val outputRow = SlottedRow(slots)
                   inputRow.copyTo(outputRow)
-                  outputRow.setLongAt(relOffset, selectionCursor.relationshipReference())
-                  outputRow.setLongAt(toOffset, selectionCursor.otherNodeReference())
+                  outputRow.setLongAt(relOffset, relationship)
+                  outputRow.setLongAt(toOffset, otherNode)
                   nodePropsToCache.foreach {
                     case (offset, value) => outputRow.setCachedPropertyAt(offset, value)
                   }
-                  cacheRelationshipProperties(relCursor, state.cursors.propertyCursor, outputRow, state.query)
-
-                  hasMore = fetchNext()
+                  cacheRelationshipProperties(relsPropsToRead, relCursor, state.cursors.propertyCursor, outputRow, state.query)
                   outputRow
+
                 }
               }
             }
@@ -119,10 +94,13 @@ case class ExpandAllSlottedPipe(source: Pipe,
         }
     }
   }
+}
 
-  private def getNodePropertiesToCache(nodeCursor: NodeCursor,
-                                       propertyCursor: PropertyCursor,
-                                       queryContext: QueryContext): Seq[(Int, Value)] = {
+object ExpandAllSlottedPipe {
+  def getNodePropertiesToCache(nodePropsToRead: Option[SlottedPropertyKeys],
+                               nodeCursor: NodeCursor,
+                               propertyCursor: PropertyCursor,
+                               queryContext: QueryContext): Seq[(Int, Value)] = {
     nodePropsToRead.map(p => {
       nodeCursor.properties(propertyCursor)
       val props = mutable.ArrayBuffer.empty[(Int, Value)]
@@ -133,14 +111,51 @@ case class ExpandAllSlottedPipe(source: Pipe,
     }).getOrElse(Seq.empty)
   }
 
-  private def cacheRelationshipProperties(relationships: RelationshipTraversalCursor,
-                                          propertyCursor: PropertyCursor,
-                                          outputRow: CypherRow, queryContext: QueryContext): Unit = {
+  def cacheRelationshipProperties(relsPropsToRead: Option[SlottedPropertyKeys],
+                                  relationships: RelationshipTraversalCursor,
+                                  propertyCursor: PropertyCursor,
+                                  outputRow: CypherRow, queryContext: QueryContext): Unit = {
     relsPropsToRead.foreach(p => {
       relationships.properties(propertyCursor)
       while (propertyCursor.next() && p.accept(queryContext, propertyCursor.propertyKey())) {
         outputRow.setCachedPropertyAt(p.offset, propertyCursor.propertyValue())
       }
     })
+  }
+}
+
+abstract class ExpandIterator(selectionCursor: RelationshipTraversalCursor, queryContext: QueryContext) extends Iterator[SlottedRow] {
+  queryContext.resources.trace(selectionCursor)
+
+  private var initialized = false
+  private var hasMore = false
+
+  private def fetchNext(): Boolean =
+    if (selectionCursor.next()) {
+      true
+    } else {
+      selectionCursor.close()
+      false
+    }
+
+  override def hasNext: Boolean = {
+    if (!initialized) {
+      hasMore = fetchNext()
+      initialized = true
+    }
+
+    hasMore
+  }
+
+  protected def createOutputRow(relationship: Long, otherNode: Long): SlottedRow
+
+  override def next(): SlottedRow = {
+    if (!hasNext) {
+      selectionCursor.close()
+      Iterator.empty.next()
+    }
+    val outputRow = createOutputRow(selectionCursor.relationshipReference(), selectionCursor.otherNodeReference())
+    hasMore = fetchNext()
+    outputRow
   }
 }

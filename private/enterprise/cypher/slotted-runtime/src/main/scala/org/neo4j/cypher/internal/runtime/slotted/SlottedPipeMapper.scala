@@ -36,6 +36,7 @@ import org.neo4j.cypher.internal.logical.plans.EmptyResult
 import org.neo4j.cypher.internal.logical.plans.ErrorPlan
 import org.neo4j.cypher.internal.logical.plans.Expand
 import org.neo4j.cypher.internal.logical.plans.ExpandAll
+import org.neo4j.cypher.internal.logical.plans.ExpandCursorProperties
 import org.neo4j.cypher.internal.logical.plans.ExpandInto
 import org.neo4j.cypher.internal.logical.plans.ForeachApply
 import org.neo4j.cypher.internal.logical.plans.IncludeTies
@@ -242,12 +243,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val fromSlot = slots(from)
         val relOffset = slots.getLongOffsetFor(relName)
         val toOffset = slots.getLongOffsetFor(to)
-        val (nodePropsToCache, relPropsToCache) = expandProperties match {
-          case Some(rp) => (
-            if (rp.nodeProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.nodeProperties, slots, tokenContext)),
-            if (rp.relProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.relProperties, slots, tokenContext)))
-          case None => (None, None)
-        }
+        val (nodePropsToCache, relPropsToCache) = getExpandProperties(slots, expandProperties)
         ExpandAllSlottedPipe(source, fromSlot, relOffset, toOffset, dir, RelationshipTypes(types.toArray), slots, nodePropsToCache, relPropsToCache)(id)
 
       case Expand(_, from, dir, types, to, relName, ExpandInto, _) =>
@@ -256,14 +252,15 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val toSlot = slots(to)
         ExpandIntoSlottedPipe(source, fromSlot, relOffset, toSlot, dir, RelationshipTypes(types.toArray), slots)(id)
 
-      case OptionalExpand(_, fromName, dir, types, toName, relName, ExpandAll, predicate) =>
+      case OptionalExpand(_, fromName, dir, types, toName, relName, ExpandAll, predicate, expandProperties) =>
         val fromSlot = slots(fromName)
         val relOffset = slots.getLongOffsetFor(relName)
         val toOffset = slots.getLongOffsetFor(toName)
+        val (nodePropsToCache, relPropsToCache) = getExpandProperties(slots, expandProperties)
         OptionalExpandAllSlottedPipe(source, fromSlot, relOffset, toOffset, dir, RelationshipTypes(types.toArray), slots,
-          predicate.map(convertExpressions))(id)
+          predicate.map(convertExpressions), nodePropsToCache, relPropsToCache)(id)
 
-      case OptionalExpand(_, fromName, dir, types, toName, relName, ExpandInto, predicate) =>
+      case OptionalExpand(_, fromName, dir, types, toName, relName, ExpandInto, predicate, _) =>
         val fromSlot = slots(fromName)
         val relOffset = slots.getLongOffsetFor(relName)
         val toSlot = slots(toName)
@@ -593,6 +590,17 @@ class SlottedPipeMapper(fallback: PipeMapper,
     }
     pipe.executionContextFactory = SlottedExecutionContextFactory(slots)
     pipe
+  }
+
+  private def getExpandProperties(slots: SlotConfiguration,
+                                  expandProperties: Option[ExpandCursorProperties]) = {
+    val (nodePropsToCache, relPropsToCache) = expandProperties match {
+      case Some(rp) => (
+        if (rp.nodeProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.nodeProperties, slots, tokenContext)),
+        if (rp.relProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.relProperties, slots, tokenContext)))
+      case None => (None, None)
+    }
+    (nodePropsToCache, relPropsToCache)
   }
 
   private def computeSlotsToCopy(rhsSlots: SlotConfiguration, argumentSize: SlotConfiguration.Size, slots: SlotConfiguration): (Array[(Int, Int)], Array[(Int, Int)], Array[(Int, Int)]) = {
