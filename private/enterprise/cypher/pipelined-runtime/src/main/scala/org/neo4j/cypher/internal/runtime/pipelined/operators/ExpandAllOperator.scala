@@ -505,7 +505,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     }
   }
 
-  private def cacheProperties(props: Option[SlottedPropertyKeys], setupPropertyCursor: IntermediateRepresentation) = {
+  protected def cacheProperties(props: Option[SlottedPropertyKeys], setupPropertyCursor: IntermediateRepresentation) = {
     props.map(p => {
       val resolvedOps = p.resolved.map {
         case (token, offset) =>

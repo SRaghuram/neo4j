@@ -54,6 +54,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
+import org.neo4j.cypher.internal.runtime.pipelined.OperatorFactory.getExpandProperties
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AggregatorFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationOperator
@@ -291,7 +292,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val relOffset = slots.getLongOffsetFor(relName)
         val toOffset = slots.getLongOffsetFor(to)
         val lazyTypes = RelationshipTypes(types.toArray)(semanticTable)
-        val (nodePropsToCache, relPropsToCache) = getExpandProperties(slots, expandProperties)
+        val (nodePropsToCache, relPropsToCache) = getExpandProperties(slots, tokenContext, expandProperties)
         new ExpandAllOperator(WorkIdentity.fromPlan(plan),
           fromSlot,
           relOffset,
@@ -349,7 +350,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           relationshipPredicate.map(x => converters.toCommandExpression(id, x.predicate)).getOrElse(True()))
 
       case plans.OptionalExpand(_, fromName, dir, types, to, relName, plans.ExpandAll, maybePredicate, expandProperties) =>
-        val (nodePropsToCache, relPropsToCache) = getExpandProperties(slots, expandProperties)
+        val (nodePropsToCache, relPropsToCache) = getExpandProperties(slots, tokenContext, expandProperties)
         new OptionalExpandAllOperator(WorkIdentity.fromPlan(plan),
           slots(fromName),
           slots.getLongOffsetFor(relName),
@@ -652,17 +653,6 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
     }
   }
 
-  private def getExpandProperties(slots: SlotConfiguration,
-                                  expandProperties: Option[ExpandCursorProperties]) = {
-    val (nodePropsToCache, relPropsToCache) = expandProperties match {
-      case Some(rp) => (
-        if (rp.nodeProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.nodeProperties, slots, tokenContext)),
-        if (rp.relProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.relProperties, slots, tokenContext)))
-      case None => (None, None)
-    }
-    (nodePropsToCache, relPropsToCache)
-  }
-
   // Returns Some new middle operator or None if the existing slotted pipe chain has been updated instead
   private def createMiddleOrUpdateSlottedPipeChain(plan: LogicalPlan, maybeSlottedPipeOperatorToChainOnTo: Option[SlottedPipeOperator]): Option[MiddleOperator] = {
     val id = plan.id
@@ -856,6 +846,20 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
     }
   }
 
+}
+
+object OperatorFactory {
+  def getExpandProperties(slots: SlotConfiguration,
+                          tokenContext: TokenContext,
+                          expandProperties: Option[ExpandCursorProperties]): (Option[SlottedPropertyKeys], Option[SlottedPropertyKeys]) = {
+    val (nodePropsToCache, relPropsToCache) = expandProperties match {
+      case Some(rp) => (
+        if (rp.nodeProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.nodeProperties, slots, tokenContext)),
+        if (rp.relProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.relProperties, slots, tokenContext)))
+      case None => (None, None)
+    }
+    (nodePropsToCache, relPropsToCache)
+  }
 }
 
 case class NodeIndexSeekParameters(nodeSlotOffset: Int,

@@ -17,9 +17,11 @@ import org.neo4j.codegen.api.IntermediateRepresentation.equal
 import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.getStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.loop
+import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.not
 import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
@@ -30,6 +32,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.PROPERTY_CURSOR
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -51,6 +54,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPropertyKeys
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.internal.kernel.api.PropertyCursor
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.values.storable.Values
 
@@ -186,7 +190,9 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                             dir: SemanticDirection,
                                             types: Array[Int],
                                             missingTypes: Array[String],
-                                            generatePredicate: Option[() => IntermediateExpression])
+                                            generatePredicate: Option[() => IntermediateExpression],
+                                            nodePropsToRead: Option[SlottedPropertyKeys],
+                                            relPropsToRead: Option[SlottedPropertyKeys])
                                            (codeGen: OperatorExpressionCompiler)
   extends ExpandAllOperatorTaskTemplate(inner,
     id,
@@ -200,8 +206,8 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     dir,
     types,
     missingTypes,
-    None,
-    None)(codeGen) {
+    nodePropsToRead,
+    relPropsToRead)(codeGen) {
 
 
   private val hasWritten = field[Boolean](codeGen.namer.nextVariableName())
@@ -274,6 +280,7 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       doIfPredicate(declareAndAssign(typeRefOf[Boolean], shouldWriteRow, constant(false))),
       loop(or(not(loadField(hasWritten)), and(innermost.predicate, loadField(canContinue))))(
         block(
+          cacheProperties(relPropsToRead, invokeSideEffect(loadField(relationshipsField), method[RelationshipTraversalCursor, Unit, PropertyCursor]("properties"), PROPERTY_CURSOR)),
           ifElse(and(not(loadField(hasWritten)), not(loadField(canContinue))))(
             block(
               writeRow(constant(-1L), constant(-1L)),
