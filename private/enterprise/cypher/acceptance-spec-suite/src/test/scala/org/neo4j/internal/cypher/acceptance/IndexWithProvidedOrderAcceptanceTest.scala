@@ -248,7 +248,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
     test(s"$cypherToken: should plan partial sort after index provided order") {
       val query = s"MATCH (n:Awesome) WHERE n.prop2 > 0 RETURN n.prop2, n.prop1 ORDER BY n.prop2 $cypherToken, n.prop1 $cypherToken"
-      val result = executeWith(Configs.InterpretedAndSlotted, query)
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
       val order = cypherToken match {
         case "ASC" => ProvidedOrder.asc(varFor("n.prop2")).asc(varFor("n.prop1")).fromLeft
@@ -369,8 +369,8 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       (Configs.CachedProperty, "n.prop1 ASC", expectedAscAsc, false, propAsc, varAsc.fromLeft, ProvidedOrder.empty),
       (Configs.CachedProperty, "n.prop1 DESC", expectedDescDesc, false, propDesc, varDesc.fromLeft, ProvidedOrder.empty),
       (Configs.CachedProperty, "n.prop1 ASC, n.prop2 ASC", expectedAscAsc, false, propAsc, varAsc.fromLeft, ProvidedOrder.empty),
-      (Configs.InterpretedAndSlotted, "n.prop1 ASC, n.prop2 DESC", expectedAscDesc, true, propAsc, varAsc.fromLeft, ProvidedOrder.asc(var1).desc(var2).fromLeft),
-      (Configs.InterpretedAndSlotted, "n.prop1 DESC, n.prop2 ASC", expectedDescAsc, true, propDesc, varDesc.fromLeft, ProvidedOrder.desc(var1).asc(var2).fromLeft),
+      (Configs.CachedProperty, "n.prop1 ASC, n.prop2 DESC", expectedAscDesc, true, propAsc, varAsc.fromLeft, ProvidedOrder.asc(var1).desc(var2).fromLeft),
+      (Configs.CachedProperty, "n.prop1 DESC, n.prop2 ASC", expectedDescAsc, true, propDesc, varDesc.fromLeft, ProvidedOrder.desc(var1).asc(var2).fromLeft),
       (Configs.CachedProperty, "n.prop1 DESC, n.prop2 DESC", expectedDescDesc, false, propDesc, varDesc.fromLeft, ProvidedOrder.empty)
     ).foreach {
       case (config, orderByString, expected, shouldSort, indexOrder, projectionOrder, sortOrder) =>
@@ -570,7 +570,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
              |WHERE n.prop1 < 42 AND n.prop2 > 0
              |RETURN n.prop1, n.prop2, n.prop3, n.prop4
              |ORDER BY $orderByString""".stripMargin
-        val result = executeWith(Configs.InterpretedAndSlotted, query)
+        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
         // Then
         result.executionPlanDescription() should includeSomewhere
@@ -743,7 +743,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
              |WHERE n.prop1 < 42 AND n.prop2 > 0 AND n.prop3 >= '' AND n.prop5 <= 5.5
              |RETURN n.prop1, n.prop2, n.prop3, n.prop4, n.prop5
              |ORDER BY $orderByString""".stripMargin
-        val result = executeWith(Configs.InterpretedAndSlotted, query)
+        val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
         result.executionPlanDescription() should includeSomewhere
           .aPlan("PartialSort")

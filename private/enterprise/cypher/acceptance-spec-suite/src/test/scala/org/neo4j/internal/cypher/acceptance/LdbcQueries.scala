@@ -212,7 +212,7 @@ object LdbcQueries {
       )
     }
 
-    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlotted
+    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndPipelined
 
   }
 

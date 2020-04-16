@@ -68,7 +68,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test("should use partial sort after full sort") {
     val query = "MATCH (a:A) WITH a, a.gender AS gender ORDER BY gender ASC RETURN gender, a.name ORDER BY gender ASC, a.name ASC"
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined + Configs.Compiled, query)
     result.executionPlanDescription() should includeSomewhere
       .aPlan("PartialSort")
       .withOrder(ProvidedOrder.asc(varFor("gender")).asc(varFor("a.name")).fromLeft)
@@ -779,7 +779,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |RETURN u.name, b.title
         |ORDER BY u.name, b.title
       """.stripMargin
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("PartialSort").onTopOf(
