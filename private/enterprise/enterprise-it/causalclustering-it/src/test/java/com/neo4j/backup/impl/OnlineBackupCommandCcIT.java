@@ -36,6 +36,7 @@ import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.internal.index.label.RelationshipTypeScanStoreSettings;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -430,7 +431,8 @@ class OnlineBackupCommandCcIT
         Config config = Config.defaults();
         ProgressMonitorFactory progressMonitorFactory = ProgressMonitorFactory.textual( System.out );
         LogProvider logProvider = FormattedLogProvider.toOutputStream( System.out );
-        ConsistencyFlags flags = new ConsistencyFlags( true, true, true, true, true, true );
+        Boolean checkRelationshipTypeScanStore = config.get( RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store );
+        ConsistencyFlags flags = new ConsistencyFlags( true, true, true, true, checkRelationshipTypeScanStore, true );
         ConsistencyCheckService service = new ConsistencyCheckService();
         ConsistencyCheckService.Result result = service.runFullConsistencyCheck( backupLayout, config, progressMonitorFactory, logProvider, true, flags );
         return result.isSuccessful();

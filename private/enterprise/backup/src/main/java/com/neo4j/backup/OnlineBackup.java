@@ -17,6 +17,7 @@ import java.nio.file.Path;
 import org.neo4j.annotations.api.PublicApi;
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.internal.index.label.RelationshipTypeScanStoreSettings;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
 
@@ -182,6 +183,7 @@ public final class OnlineBackup
                 .withBackupDirectory( targetDirectory )
                 .withReportsDirectory( targetDirectory )
                 .withDatabaseName( databaseName )
+                .withConsistencyCheckRelationshipTypeScanStore( config.get( RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store ) )
                 .build();
 
         backupExecutor.executeBackup( context );
