@@ -28,6 +28,7 @@ import static org.apache.commons.lang3.ArrayUtils.EMPTY_LONG_ARRAY;
 
 class StreamVByte
 {
+    static final int SINGLE_VLONG_MAX_SIZE = 8;
     private static final int[] INT_CODE_SIZES = {1, 2, 3, 4};
     private static final int[] INT_RELATIVE_OFFSETS = new int[256];
     private static final int[] LONG_CODE_SIZES = {1, 3, 5, 7};

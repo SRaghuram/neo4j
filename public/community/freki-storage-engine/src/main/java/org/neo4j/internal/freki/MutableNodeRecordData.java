@@ -394,99 +394,45 @@ class MutableNodeRecordData
             writeProperties( properties, intermediateBuffers[GraphUpdates.PROPERTIES], bigPropertyValueStore, bigValueCommandConsumer );
         }
 
-        boolean guaranteedDense = this.isDense;
         if ( relationships.notEmpty() )
         {
+            // TODO cheaper pre-check if best case cannot fit
             try
             {
                 int[] typeOffsets = writeRelationships( intermediateBuffers[GraphUpdates.RELATIONSHIPS], bigPropertyValueStore, bigValueCommandConsumer );
                 writeTypeOffsets( intermediateBuffers[GraphUpdates.RELATIONSHIPS_OFFSETS], typeOffsets );
-                guaranteedDense = false;
-            } catch ( BufferOverflowException | ArrayIndexOutOfBoundsException e )
+                return false;
+            }
+            catch ( BufferOverflowException | ArrayIndexOutOfBoundsException e )
             {
                 //TODO this is slow, better check after each serialized rel for overflow.
-                guaranteedDense = true;
+                return true;
             }
         }
-        return guaranteedDense;
+
+        if ( !degrees.isEmpty() )
+        {
+            writeDegrees( intermediateBuffers[GraphUpdates.DEGREES] );
+        }
+        return isDense;
     }
 
-
-    public void serializeDegrees( ByteBuffer degreesBuffer )
+    void serializeDegrees( ByteBuffer degreesBuffer )
     {
-        //TODO check if degrees, or rely on caller?
+        assert isDense;
         writeDegrees( degreesBuffer );
     }
 
-    void serialize( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore, Consumer<StorageCommand> commandConsumer )
+    void serializeNextInternalRelationshipId( ByteBuffer buffer )
     {
-        buffer.clear();
-        int headerOffset = buffer.position();
-        Header headerBuilder = new Header();
-        if ( !labels.isEmpty() )
-        {
-            headerBuilder.setFlag( Header.FLAG_LABELS );
-        }
-        if ( isDense )
-        {
-            headerBuilder.setFlag( Header.FLAG_IS_DENSE );
-            headerBuilder.markHasOffset( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
-        }
-        if ( !degrees.isEmpty() )
-        {
-            headerBuilder.markHasOffset( Header.OFFSET_DEGREES );
-        }
-        if ( !properties.isEmpty() )
-        {
-            headerBuilder.markHasOffset( Header.OFFSET_PROPERTIES );
-        }
-        if ( !relationships.isEmpty() )
-        {
-            headerBuilder.markHasOffset( Header.OFFSET_RELATIONSHIPS );
-            headerBuilder.markHasOffset( Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
-        }
-        if ( recordPointer != NULL )
-        {
-            headerBuilder.markHasOffset( Header.OFFSET_RECORD_POINTER );
-        }
-        headerBuilder.allocateSpace( buffer );
+        assert buffer.position() == 0;
+        writeNextInternalRelationshipId( buffer );
+    }
 
-        if ( headerBuilder.hasFlag( Header.FLAG_LABELS ) )
-        {
-            writeLabels( buffer );
-        }
-        if ( headerBuilder.hasOffset( Header.OFFSET_PROPERTIES ) )
-        {
-            headerBuilder.setOffset( Header.OFFSET_PROPERTIES, buffer.position() );
-            writeProperties( properties, buffer, bigPropertyValueStore, commandConsumer );
-        }
-        if ( headerBuilder.hasOffset( Header.OFFSET_DEGREES ) )
-        {
-            headerBuilder.setOffset( Header.OFFSET_DEGREES, buffer.position() );
-            writeDegrees( buffer );
-        }
-        if ( headerBuilder.hasOffset( Header.OFFSET_RELATIONSHIPS ) )
-        {
-            headerBuilder.setOffset( Header.OFFSET_RELATIONSHIPS, buffer.position() );
-            int[] typeOffsets = writeRelationships( buffer, bigPropertyValueStore, commandConsumer );
-
-            headerBuilder.setOffset( Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS, buffer.position() );
-            writeTypeOffsets( buffer, typeOffsets );
-        }
-        if ( headerBuilder.hasOffset( Header.OFFSET_RECORD_POINTER ) )
-        {
-            headerBuilder.setOffset( Header.OFFSET_RECORD_POINTER, buffer.position() );
-            writeRecordPointer( buffer );
-        }
-        if ( headerBuilder.hasOffset( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID ) )
-        {
-            headerBuilder.setOffset( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID, buffer.position() );
-            writeNextInternalRelationshipId( buffer );
-        }
-
-        int endOffset = buffer.position();
-        headerBuilder.serialize( buffer.position( headerOffset ) );
-        buffer.position( endOffset ).flip();
+    void serializeRecordPointer( ByteBuffer buffer )
+    {
+        assert buffer.position() == 0;
+        writeRecordPointer( buffer );
     }
 
     private void writeNextInternalRelationshipId( ByteBuffer buffer )
