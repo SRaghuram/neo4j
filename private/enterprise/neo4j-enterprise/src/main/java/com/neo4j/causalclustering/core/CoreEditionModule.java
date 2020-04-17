@@ -297,7 +297,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         Supplier<GraphDatabaseService> systemDbSupplier = () -> databaseManager.getDatabaseContext( NAMED_SYSTEM_DATABASE_ID ).orElseThrow().databaseFacade();
         var dbmsModel = new ClusterSystemGraphDbmsModel( systemDbSupplier );
 
-        reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, databaseEventService, storageFactory,
+        reconcilerModule = ClusteredDbmsReconcilerModule.create( globalModule, databaseManager, databaseEventService, storageFactory,
                 reconciledTxTracker, panicService, dbmsModel );
 
         databaseStartAborter = new DatabaseStartAborter( globalModule.getGlobalAvailabilityGuard(), dbmsModel, globalModule.getGlobalClock(),

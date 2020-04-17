@@ -5,6 +5,7 @@
  */
 package com.neo4j.dbms;
 
+import com.neo4j.dbms.database.DatabaseOperationCountMonitor;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.dbms.database.StubMultiDatabaseManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,7 +19,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -65,6 +65,7 @@ class DbmsReconcilerModuleTest
     @Inject
     private LifeSupport lifeSupport;
     private StubMultiDatabaseManager databaseManager;
+    private DatabaseOperationCountMonitor monitor;
     private final TestDatabaseIdRepository idRepository = new TestDatabaseIdRepository();
     private final EnterpriseSystemGraphDbmsModel dbmsModel = mock( EnterpriseSystemGraphDbmsModel.class );
     private final JobScheduler jobScheduler = new ThreadPoolJobScheduler();
@@ -74,6 +75,7 @@ class DbmsReconcilerModuleTest
     {
         lifeSupport.add( jobScheduler );
         databaseManager = lifeSupport.add( new StubMultiDatabaseManager( jobScheduler ) );
+        monitor = databaseManager.globalModule().getGlobalMonitors().newMonitor( DatabaseOperationCountMonitor.class );
         when( databaseManager.globalModule().getGlobalLife() ).thenReturn( lifeSupport );
     }
 
@@ -83,7 +85,7 @@ class DbmsReconcilerModuleTest
         // given
         when( dbmsModel.getDatabaseStates() ).thenReturn(
                 singletonMap( idRepository.defaultDatabase().name(), new EnterpriseDatabaseState( idRepository.defaultDatabase(), STARTED ) ) );
-        var reconcilerModule = new StandaloneDbmsReconcilerModule( databaseManager.globalModule(), databaseManager,
+        var reconcilerModule = StandaloneDbmsReconcilerModule.create( databaseManager.globalModule(), databaseManager,
                 mock( ReconciledTransactionTracker.class ), dbmsModel );
 
         // when
@@ -106,7 +108,7 @@ class DbmsReconcilerModuleTest
         var mockKernelSystemDb = mockSystemDb.database();
         doThrow( new RuntimeException() ).when( mockKernelSystemDb ).start();
 
-        var reconcilerModule = new StandaloneDbmsReconcilerModule( databaseManager.globalModule(), databaseManager,
+        var reconcilerModule = StandaloneDbmsReconcilerModule.create( databaseManager.globalModule(), databaseManager,
                 mock( ReconciledTransactionTracker.class ), dbmsModel );
 
         // when / then
@@ -118,7 +120,7 @@ class DbmsReconcilerModuleTest
     {
         // given
         var operator = new LocalDbmsOperator( idRepository );
-        var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
+        var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager, monitor ) );
         var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), NullLogProvider.getInstance(), jobScheduler, transitionsTable );
         var waitingFinished = new CountDownLatch( 1 );
         var result = reconciler.reconcile( List.of( operator ), ReconcilerRequest.simple() );
@@ -146,7 +148,7 @@ class DbmsReconcilerModuleTest
                 .collect( Collectors.toMap( NamedDatabaseId::name, id -> new EnterpriseDatabaseState( id, STARTED ) ) );
 
         when( dbmsModel.getDatabaseStates() ).thenReturn( desiredDbStates );
-        var reconcilerModule = new StandaloneDbmsReconcilerModule( databaseManager.globalModule(), databaseManager,
+        var reconcilerModule = StandaloneDbmsReconcilerModule.create( databaseManager.globalModule(), databaseManager,
                 mock( ReconciledTransactionTracker.class ), dbmsModel );
         reconcilerModule.start();
 
@@ -188,7 +190,7 @@ class DbmsReconcilerModuleTest
             return null;
         } ).when( databaseManager ).startDatabase( any( NamedDatabaseId.class ) );
 
-        var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
+        var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager, monitor ) );
 
         // a reconciler with a proper multi threaded executor
         var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), NullLogProvider.getInstance(), jobScheduler, transitionsTable );
@@ -240,7 +242,7 @@ class DbmsReconcilerModuleTest
             return null;
         } ).when( databaseManager ).startDatabase( any( NamedDatabaseId.class ) );
 
-        var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
+        var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager, monitor ) );
 
         // a reconciler with a proper multi threaded executor
         var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), NullLogProvider.getInstance(), jobScheduler, transitionsTable );
@@ -283,7 +285,7 @@ class DbmsReconcilerModuleTest
         NamedDatabaseId foo = idRepository.getRaw( "foo" );
         doThrow( failure ).when( databaseManager ).startDatabase( any( NamedDatabaseId.class ) );
 
-        var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
+        var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager, monitor ) );
 
         DbmsReconciler reconciler = new DbmsReconciler( databaseManager, Config.defaults(), nullLogProvider(), jobScheduler, transitionsTable );
 

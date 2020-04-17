@@ -177,6 +177,11 @@ public class DbmsReconciler implements DatabaseStateService
         return EnterpriseDatabaseState.initial( namedDatabaseId );
     }
 
+    Collection<EnterpriseDatabaseState> statesSnapshot()
+    {
+        return Collections.unmodifiableCollection( currentStates.values() );
+    }
+
     /**
      * This method attempts to perform reconciliation of the given database to the desired state, as specified via {@link DbmsOperator#desired()} for each of
      * the provided operators.

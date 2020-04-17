@@ -111,7 +111,7 @@ class CausalClusterDatabaseOperationCountMetricIT
     {
         var metricsDir = new File( member.homeDir(), MetricsSettings.csvPath.defaultValue().toString() );
         File file = metricsCsv( metricsDir, metricsName );
-        assertEventually( () -> readValue( file ), Matchers.equalTo( count ), TIMEOUT, SECONDS );
+        assertEventually( () -> readValue( file ), t ->  t == count, TIMEOUT, SECONDS );
     }
 
     private static Long readValue( File file ) throws InterruptedException

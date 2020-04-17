@@ -15,10 +15,6 @@ public interface DatabaseOperationCountMonitor
 
     long dropCount();
 
-    long failedCount();
-
-    long recoveredCount();
-
     void increaseCreateCount();
 
     void increaseStartCount();
@@ -26,10 +22,6 @@ public interface DatabaseOperationCountMonitor
     void increaseStopCount();
 
     void increaseDropCount();
-
-    void increaseFailedCount();
-
-    void increaseRecoveredCount();
 
     void resetCounts();
 }

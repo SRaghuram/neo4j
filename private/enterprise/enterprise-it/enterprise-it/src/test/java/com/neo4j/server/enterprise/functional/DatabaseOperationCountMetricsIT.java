@@ -21,7 +21,6 @@ import org.neo4j.test.rule.TestDirectory;
 import static com.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static com.neo4j.metrics.MetricsTestHelper.readLongCounterAndAssert;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -99,7 +98,7 @@ class DatabaseOperationCountMetricsIT
     private static void assertMetricsEqual( File metricsPath, String metricsName, long count ) throws InterruptedException
     {
         File file = metricsCsv( metricsPath, metricsName );
-        assertEventually( () -> readValue( file ), equalTo( count ), TIMEOUT, SECONDS );
+        assertEventually( () -> readValue( file ), x -> x == count, TIMEOUT, SECONDS );
     }
 
     private static Long readValue( File file ) throws InterruptedException

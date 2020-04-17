@@ -7,6 +7,7 @@ package com.neo4j.metrics.source.db;
 
 import com.codahale.metrics.MetricRegistry;
 import com.neo4j.dbms.database.DatabaseOperationCountMonitor;
+import com.neo4j.dbms.database.DatabaseOperationFailCountMonitor;
 import com.neo4j.metrics.metric.MetricsCounter;
 
 import java.util.concurrent.atomic.AtomicLong;
@@ -85,7 +86,7 @@ public class DatabaseOperationCountMetrics extends LifecycleAdapter
         monitors.removeMonitorListener( databaseCountMetric );
     }
 
-    static class DatabaseOperationCountMetric implements DatabaseOperationCountMonitor
+    static class DatabaseOperationCountMetric implements DatabaseOperationCountMonitor, DatabaseOperationFailCountMonitor
     {
         private AtomicLong createCount = new AtomicLong( 0 );
         private AtomicLong startCount = new AtomicLong( 0 );

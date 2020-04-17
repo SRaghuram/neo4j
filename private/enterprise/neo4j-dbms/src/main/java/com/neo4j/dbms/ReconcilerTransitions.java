@@ -5,6 +5,7 @@
  */
 package com.neo4j.dbms;
 
+import com.neo4j.dbms.database.DatabaseOperationCountMonitor;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 
 import java.util.function.Consumer;
@@ -35,43 +36,47 @@ class ReconcilerTransitions
     private final Transition drop;
     private final Transition prepareDrop;
 
-    ReconcilerTransitions( MultiDatabaseManager<? extends DatabaseContext> databaseManager )
+    ReconcilerTransitions( MultiDatabaseManager<? extends DatabaseContext> databaseManager, DatabaseOperationCountMonitor monitor )
     {
-        this.create = createFactory( databaseManager );
-        this.start = startFactory( databaseManager );
-        this.stop = stopFactory( databaseManager );
-        this.drop = dropFactory( databaseManager );
+        this.create = createFactory( databaseManager, monitor );
+        this.start = startFactory( databaseManager, monitor );
+        this.stop = stopFactory( databaseManager, monitor );
+        this.drop = dropFactory( databaseManager, monitor );
         this.prepareDrop = prepareDropFactory( databaseManager );
     }
 
-    private static Transition createFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager )
+    private static Transition createFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager, DatabaseOperationCountMonitor monitor )
     {
         return Transition.from( INITIAL )
                          .doTransition( databaseManager::createDatabase )
+                         .andMonitorWith( monitor::increaseCreateCount )
                          .ifSucceeded( STOPPED )
                          .ifFailed( DIRTY );
     }
 
-    private static Transition startFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager )
+    private static Transition startFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager, DatabaseOperationCountMonitor monitor )
     {
         return Transition.from( STOPPED )
                          .doTransition( databaseManager::startDatabase )
+                         .andMonitorWith( monitor::increaseStartCount )
                          .ifSucceeded( STARTED )
                          .ifFailed( STOPPED );
     }
 
-    private static Transition stopFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager )
+    private static Transition stopFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager, DatabaseOperationCountMonitor monitor )
     {
         return Transition.from( STARTED, STORE_COPYING )
                          .doTransition( databaseManager::stopDatabase )
+                         .andMonitorWith( monitor::increaseStopCount )
                          .ifSucceeded( STOPPED )
                          .ifFailed( STOPPED );
     }
 
-    private static Transition dropFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager )
+    private static Transition dropFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager, DatabaseOperationCountMonitor monitor )
     {
         return Transition.from( STOPPED )
                          .doTransition( databaseManager::dropDatabase )
+                         .andMonitorWith( monitor::increaseDropCount )
                          .ifSucceeded( DROPPED )
                          .ifFailed( DIRTY );
     }
