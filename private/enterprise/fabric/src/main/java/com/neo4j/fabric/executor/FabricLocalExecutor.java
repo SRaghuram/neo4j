@@ -94,7 +94,7 @@ public class FabricLocalExecutor
             return internalTransactions;
         }
 
-        private FabricKernelTransaction getOrCreateTx( Location.Local location, TransactionMode transactionMode, ExecutingQuery parentQuery )
+        public FabricKernelTransaction getOrCreateTx( Location.Local location, TransactionMode transactionMode, ExecutingQuery parentQuery )
         {
             var existingTx = kernelTransactions.get( location.getGraphId() );
             if ( existingTx != null )

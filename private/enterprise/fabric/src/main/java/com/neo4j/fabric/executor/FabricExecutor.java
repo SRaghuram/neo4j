@@ -21,7 +21,6 @@ import com.neo4j.fabric.stream.Record;
 import com.neo4j.fabric.stream.Records;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.stream.StatementResults;
-import com.neo4j.fabric.stream.summary.EmptyExecutionPlanDescription;
 import com.neo4j.fabric.stream.summary.MergedQueryStatistics;
 import com.neo4j.fabric.stream.summary.MergedSummary;
 import com.neo4j.fabric.stream.summary.Summary;
@@ -32,6 +31,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -41,11 +41,13 @@ import java.util.stream.IntStream;
 import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.cypher.internal.CypherQueryObfuscator;
 import org.neo4j.cypher.internal.FullyParsedQuery;
+import org.neo4j.cypher.internal.ast.CatalogName;
 import org.neo4j.cypher.internal.ast.GraphSelection;
 import org.neo4j.exceptions.InvalidSemanticsException;
 import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.Notification;
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.values.AnyValue;
@@ -131,6 +133,41 @@ public class FabricExecutor
     public boolean isPeriodicCommit( String query )
     {
         return planner.isPeriodicCommit( query );
+    }
+
+
+    /**
+     * This is a hack to be able to get an InternalTransaction for the TestFabricTransaction tx wrapper
+     */
+    @Deprecated
+    public InternalTransaction forceKernelTxCreation( FabricTransaction fabricTransaction )
+    {
+        FabricQueryMonitoring.QueryMonitor queryMonitor =
+                queryMonitoring.queryMonitor( fabricTransaction.getTransactionInfo(), "", MapValue.EMPTY, Thread.currentThread() );
+        try
+        {
+            queryMonitor.start();
+            var dbName = fabricTransaction.getTransactionInfo().getDatabaseName();
+            var graph = catalogManager.currentCatalog().resolve( CatalogName.apply( dbName, scala.collection.immutable.List.<String>empty() ) );
+            var location = (Location.Local) catalogManager.locationOf( graph, false );
+            var internalTransaction = new CompletableFuture<InternalTransaction>();
+            fabricTransaction.execute( ctx ->
+                                       {
+                                           FabricKernelTransaction fabricKernelTransaction =
+                                                   ctx.getLocal().getOrCreateTx( location, TransactionMode.MAYBE_WRITE, queryMonitor.getMonitoredQuery() );
+                                           internalTransaction.complete( fabricKernelTransaction.getInternalTransaction() );
+                                           return StatementResults.initial();
+                                       } );
+            return internalTransaction.get();
+        }
+        catch ( Exception e )
+        {
+            throw new IllegalStateException( "Failed to force open local transaction", e );
+        }
+        finally
+        {
+            queryMonitor.endSuccess();
+        }
     }
 
     private class FabricStatementExecution

@@ -122,6 +122,15 @@ public class FabricKernelTransaction
         internalTransaction.terminate();
     }
 
+    /**
+     * This is a hack to be able to get an InternalTransaction for the TestFabricTransaction tx wrapper
+     */
+    @Deprecated
+    public InternalTransaction getInternalTransaction()
+    {
+        return internalTransaction;
+    }
+
     private class ContextClosingResultInterceptor implements StatementResult
     {
         private final StatementResult wrappedResult;

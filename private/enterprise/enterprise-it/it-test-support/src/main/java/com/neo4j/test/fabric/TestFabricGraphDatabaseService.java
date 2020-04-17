@@ -5,30 +5,25 @@
  */
 package com.neo4j.test.fabric;
 
-import com.neo4j.fabric.transaction.FabricTransactionImpl;
-import com.neo4j.fabric.transaction.TransactionManager;
+import com.neo4j.fabric.bolt.BoltFabricDatabaseService;
+import com.neo4j.fabric.executor.FabricExecutor;
+import com.neo4j.fabric.transaction.FabricTransaction;
 
 import java.time.Duration;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.neo4j.bolt.dbapi.BoltGraphDatabaseServiceSPI;
 import org.neo4j.bolt.dbapi.BoltTransaction;
 import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.configuration.Config;
-import org.neo4j.graphdb.QueryStatistics;
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.impl.query.QuerySubscriberAdapter;
-import org.neo4j.values.virtual.MapValue;
 
 import static java.util.Objects.requireNonNull;
 
@@ -58,76 +53,16 @@ public class TestFabricGraphDatabaseService extends GraphDatabaseFacade
 
         var fabricTxId = TRANSACTION_COUNTER.incrementAndGet();
         var boltTransaction = boltFabricDatabaseService.beginTransaction( type, loginContext, connectionInfo, List.of(),
-                Duration.ofMillis( timeoutMillis ), AccessMode.WRITE, Map.of( TAG_NAME, fabricTxId) );
-        forceKernelTxCreation( boltTransaction );
-        var internalTransaction = findInternalTransaction( fabricTxId );
+                                                                          Duration.ofMillis( timeoutMillis ), AccessMode.WRITE,
+                                                                          Map.of( TAG_NAME, fabricTxId ) );
+        var internalTransaction = forceKernelTxCreation( boltTransaction );
         return new TestFabricTransaction( contextFactory, boltTransaction, internalTransaction );
     }
 
-    private void forceKernelTxCreation( BoltTransaction boltTransaction )
+    private InternalTransaction forceKernelTxCreation( BoltTransaction boltTransaction )
     {
-        var future = new CompletableFuture<>();
-
-        try
-        {
-            var queryExecution = boltTransaction.executeQuery( "RETURN 1", MapValue.EMPTY, true, new QuerySubscriberAdapter()
-            {
-                @Override
-                public void onError( Throwable throwable )
-                {
-                    future.completeExceptionally( throwable );
-                }
-
-                @Override
-                public void onResultCompleted( QueryStatistics statistics )
-                {
-                    future.complete( null );
-                }
-            } );
-
-            queryExecution.getQueryExecution().request( Long.MAX_VALUE );
-            future.get();
-        }
-        catch ( Exception e )
-        {
-            throw new IllegalStateException( "Failed to run the initialization query" );
-        }
-    }
-
-    private InternalTransaction findInternalTransaction( long fabricTxId )
-    {
-        var fabricTransaction = findFabricTransaction( fabricTxId );
-        var internalTransactions = fabricTransaction.getInternalTransactions();
-        assertOneTransaction( internalTransactions );
-        return internalTransactions.stream().findAny().get();
-    }
-
-    private FabricTransactionImpl findFabricTransaction( long fabricTxId )
-    {
-        var transactionManager = getDependencyResolver().resolveDependency( TransactionManager.class );
-        var foundTransactions = transactionManager.getOpenTransactions().stream()
-                .filter( fabricTransaction -> isWantedTransaction( fabricTransaction.getTransactionInfo().getTxMetadata(), fabricTxId ) )
-                .collect( Collectors.toList() );
-        assertOneTransaction( foundTransactions );
-        return foundTransactions.get( 0 );
-    }
-
-    private boolean isWantedTransaction( Map<String,Object> txMetadata, long wantedTxId )
-    {
-        var txId = txMetadata.get( TAG_NAME );
-        return txId != null && txId.equals( wantedTxId );
-    }
-
-    private void assertOneTransaction( Collection<?> transactions )
-    {
-        if ( transactions.isEmpty() )
-        {
-            throw new IllegalStateException( "No transaction found" );
-        }
-
-        if ( transactions.size() > 1 )
-        {
-            throw new IllegalStateException( "More than one transaction found" );
-        }
+        FabricExecutor fabricExecutor = getDependencyResolver().resolveDependency( FabricExecutor.class );
+        FabricTransaction fabricTransaction = ((BoltFabricDatabaseService.BoltTransactionImpl) boltTransaction).getFabricTransaction();
+        return fabricExecutor.forceKernelTxCreation( fabricTransaction );
     }
 }

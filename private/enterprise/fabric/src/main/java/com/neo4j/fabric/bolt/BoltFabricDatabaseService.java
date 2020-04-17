@@ -99,7 +99,7 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
         return namedDatabaseId;
     }
 
-    private class BoltTransactionImpl implements BoltTransaction
+    public class BoltTransactionImpl implements BoltTransaction
     {
         private final FabricTransaction fabricTransaction;
 
@@ -149,6 +149,14 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
         {
             FabricExecutionStatementResult statementResult = fabricExecutor.run( fabricTransaction, query, parameters );
             return new BoltQueryExecutionImpl( statementResult, subscriber, config );
+        }
+
+        /**
+         * This is a hack to be able to get an InternalTransaction for the TestFabricTransaction tx wrapper
+         */
+        @Deprecated
+        public FabricTransaction getFabricTransaction() {
+            return fabricTransaction;
         }
     }
 }
