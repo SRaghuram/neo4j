@@ -1928,7 +1928,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         assertDDLCommandSuccess( adminSubject, String.format( "GRANT ROLE %s to notAllowedToWrite", READER ) );
         // should be able to invoke allowed procedure
         assertSuccess( neo.login( "notAllowedToWrite", "abc" ), "CALL test.allowedWriteProcedure()",
-                itr -> assertEquals( (int) itr.stream().count(), 2 ) );
+                itr -> assertEquals( 2, (int) itr.stream().count() ) );
         // should not be able to do writes
         assertFail( neo.login( "notAllowedToWrite", "abc" ),
                 "CALL test.allowedWriteProcedure() YIELD value CREATE (:NEWNODE {name:value})", WRITE_OPS_NOT_ALLOWED );
@@ -1954,7 +1954,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     {
         setupTestSubject();
         assertSuccess( neo.login( SUBJECT, PASSWORD ), "CALL test.allowedReadProcedure()",
-                itr -> assertEquals( (int) itr.stream().count(), 1 ) );
+                itr -> assertEquals( 1, (int) itr.stream().count() ) );
         assertSuccess( neo.login( SUBJECT, PASSWORD ), "CALL test.allowedReadProcedure() YIELD value MATCH (n) RETURN count(n) AS count",
                        itr -> assertThat( itr.next().get( "count" ), equalTo( valueOf( 0L ) ) ) );
     }
