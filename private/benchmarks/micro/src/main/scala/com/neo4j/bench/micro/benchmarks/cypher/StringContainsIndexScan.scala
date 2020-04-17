@@ -52,8 +52,8 @@ import scala.collection.JavaConverters.asScalaBufferConverter
 @BenchmarkEnabled(true)
 class StringContainsIndexScan extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME, Parallel.NAME),
-    base = Array(Interpreted.NAME, Morsel.NAME))
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Pipelined.NAME, Parallel.NAME),
+    base = Array(Interpreted.NAME, Pipelined.NAME))
   @Param(Array[String]())
   var runtime: String = _
 
