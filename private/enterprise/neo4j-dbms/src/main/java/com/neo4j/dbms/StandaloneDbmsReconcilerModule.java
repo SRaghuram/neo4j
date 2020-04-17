@@ -137,12 +137,12 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
     {
         return TransitionsTable.builder()
                 .from( INITIAL ).to( DROPPED ).doNothing()
-                .from( INITIAL ).to( STOPPED ).doTransitions( t::create )
-                .from( INITIAL ).to( STARTED ).doTransitions( t::create, t::start )
-                .from( STOPPED ).to( STARTED ).doTransitions( t::start )
-                .from( STARTED ).to( STOPPED ).doTransitions( t::stop )
-                .from( STOPPED ).to( DROPPED ).doTransitions( t::drop )
-                .from( STARTED ).to( DROPPED ).doTransitions( t::prepareDrop, t::stop, t::drop )
+                .from( INITIAL ).to( STOPPED ).doTransitions( t.create() )
+                .from( INITIAL ).to( STARTED ).doTransitions( t.create(), t.start() )
+                .from( STOPPED ).to( STARTED ).doTransitions( t.start() )
+                .from( STARTED ).to( STOPPED ).doTransitions( t.stop() )
+                .from( STOPPED ).to( DROPPED ).doTransitions( t.drop() )
+                .from( STARTED ).to( DROPPED ).doTransitions( t.prepareDrop(), t.stop(), t.drop() )
                 .build();
     }
 

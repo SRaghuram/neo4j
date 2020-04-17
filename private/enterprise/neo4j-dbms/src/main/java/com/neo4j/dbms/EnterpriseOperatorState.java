@@ -23,12 +23,16 @@ import static java.util.Comparator.nullsLast;
  */
 public enum EnterpriseOperatorState implements OperatorState
 {
+    // States which may be desired by an operator
     STOPPED( "offline", 100 ),
     STORE_COPYING( "store copying", 200 ),
     STARTED( "online", 300 ),
     DROPPED( "dropped", 0 ),
+
+    // States which should never be desired by an operator
     UNKNOWN( "unknown", 400 ),
-    INITIAL( "initial", 500 );
+    INITIAL( "initial", 500 ),
+    DIRTY( "dirty", 600 );
 
     private final String description;
     private final int precedence;

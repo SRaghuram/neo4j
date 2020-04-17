@@ -54,14 +54,14 @@ public final class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcile
         TransitionsTable clusteredTransitionsTable = TransitionsTable.builder()
                 // All transitions from UNKNOWN to $X get deconstructed into UNKNOWN -> DROPPED -> $X
                 //     inside Transitions so only actions for this from/to pair need to be specified
-                .from( UNKNOWN ).to( DROPPED ).doTransitions( t::logCleanupAndDrop )
+                .from( UNKNOWN ).to( DROPPED ).doTransitions( t.logCleanupAndDrop() )
                 // No prepareDrop step needed here as the database will be stopped for store copying anyway
-                .from( STORE_COPYING ).to( DROPPED ).doTransitions( t::stop, t::drop )
+                .from( STORE_COPYING ).to( DROPPED ).doTransitions( t.stop(), t.drop() )
                 // Some Cluster components still need stopped when store copying.
                 //   This will attempt to stop the kernel database again, but that should be idempotent.
-                .from( STORE_COPYING ).to( STOPPED ).doTransitions( t::stop )
-                .from( STORE_COPYING ).to( STARTED ).doTransitions( t::startAfterStoreCopy )
-                .from( STARTED ).to( STORE_COPYING ).doTransitions( t::stopBeforeStoreCopy )
+                .from( STORE_COPYING ).to( STOPPED ).doTransitions( t.stop() )
+                .from( STORE_COPYING ).to( STARTED ).doTransitions( t.startAfterStoreCopy() )
+                .from( STARTED ).to( STORE_COPYING ).doTransitions( t.stopBeforeStoreCopy() )
                 .build();
 
         return standaloneTransitionsTable.extendWith( clusteredTransitionsTable );

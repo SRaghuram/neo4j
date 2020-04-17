@@ -26,9 +26,9 @@ import static java.lang.String.format;
  */
 final class TransitionsTable
 {
-    private final Map<Pair<EnterpriseOperatorState,EnterpriseOperatorState>,TransitionFunction[]> transitionsTable;
+    private final Map<Pair<EnterpriseOperatorState,EnterpriseOperatorState>,Transition[]> transitionsTable;
 
-    private TransitionsTable( Map<Pair<EnterpriseOperatorState,EnterpriseOperatorState>,TransitionFunction[]> transitionsTable )
+    private TransitionsTable( Map<Pair<EnterpriseOperatorState,EnterpriseOperatorState>,Transition[]> transitionsTable )
     {
         this.transitionsTable = transitionsTable;
     }
@@ -50,7 +50,7 @@ final class TransitionsTable
         return new TransitionsTable( combined );
     }
 
-    private Stream<Transition> lookup( TransitionLookup lookup )
+    private Stream<Transition.Prepared> lookup( TransitionLookup lookup )
     {
         if ( !Objects.equals( lookup.current.databaseId(), lookup.desired.databaseId() ) )
         {
@@ -65,7 +65,8 @@ final class TransitionsTable
         return prepareTransitionFunctions( lookup.current.operatorState(), lookup.desired.operatorState(), lookup.current.databaseId() );
     }
 
-    private Stream<Transition> prepareTransitionFunctions( EnterpriseOperatorState current, EnterpriseOperatorState desired, NamedDatabaseId namedDatabaseId )
+    private Stream<Transition.Prepared> prepareTransitionFunctions( EnterpriseOperatorState current, EnterpriseOperatorState desired,
+                                                                    NamedDatabaseId namedDatabaseId )
     {
         if ( current == desired )
         {
@@ -105,7 +106,7 @@ final class TransitionsTable
         }
 
         @Override
-        public Stream<Transition> toDesired( EnterpriseDatabaseState desired )
+        public Stream<Transition.Prepared> toDesired( EnterpriseDatabaseState desired )
         {
             Objects.requireNonNull( desired, "You must specify a desired state for a transition!" );
             this.desired = desired;
@@ -115,7 +116,7 @@ final class TransitionsTable
 
     public interface NeedsDesired
     {
-        Stream<Transition> toDesired( EnterpriseDatabaseState desired );
+        Stream<Transition.Prepared> toDesired( EnterpriseDatabaseState desired );
     }
 
     /**
@@ -127,8 +128,8 @@ final class TransitionsTable
     {
         private EnterpriseOperatorState from;
         private EnterpriseOperatorState to;
-        private TransitionFunction[] transitions;
-        private final Map<Pair<EnterpriseOperatorState,EnterpriseOperatorState>,TransitionFunction[]> transitionsTable;
+        private Transition[] transitions;
+        private final Map<Pair<EnterpriseOperatorState,EnterpriseOperatorState>,Transition[]> transitionsTable;
 
         private TransitionsBuilder()
         {
@@ -151,8 +152,9 @@ final class TransitionsTable
         }
 
         @Override
-        public BuildOrContinue doTransitions( TransitionFunction... transitions )
+        public BuildOrContinue doTransitions( Transition... transitions )
         {
+            Transition.validate( from, to, Arrays.stream( transitions ).iterator() );
             this.transitions = transitions;
             return this;
         }
@@ -161,7 +163,8 @@ final class TransitionsTable
         public BuildOrContinue doNothing()
         {
             // A function to transfer to the desired state with no side effects.
-            this.transitions = new TransitionFunction[] { id -> new EnterpriseDatabaseState( id, to ) };
+            var noOp = Transition.from( from ).doTransition( ignored -> {} ).ifSucceeded( to ).ifFailed( to );
+            this.transitions = new Transition[] { noOp };
             return this;
         }
 
@@ -198,7 +201,7 @@ final class TransitionsTable
 
     public interface NeedsDo
     {
-        BuildOrContinue doTransitions( TransitionFunction... transitions );
+        BuildOrContinue doTransitions( Transition... transitions );
         BuildOrContinue doNothing();
     }
 
@@ -209,19 +212,9 @@ final class TransitionsTable
     }
 
     /* Transition function type and its lazy/supplier wrapper */
-    @FunctionalInterface
-    public interface TransitionFunction
-    {
-        EnterpriseDatabaseState forTransition( NamedDatabaseId namedDatabaseId );
-
-        default Transition prepare( NamedDatabaseId namedDatabaseId )
-        {
-            return () -> forTransition( namedDatabaseId );
-        }
-    }
 
     @FunctionalInterface
-    public interface Transition extends Supplier<EnterpriseDatabaseState>
+    public interface PreparedTransition extends Supplier<EnterpriseDatabaseState>
     {
         EnterpriseDatabaseState doTransition();
 

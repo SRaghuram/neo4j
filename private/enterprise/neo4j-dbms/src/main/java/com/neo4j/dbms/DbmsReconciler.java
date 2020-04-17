@@ -5,7 +5,6 @@
  */
 package com.neo4j.dbms;
 
-import com.neo4j.dbms.TransitionsTable.Transition;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 
 import java.util.HashMap;
@@ -307,7 +306,9 @@ public class DbmsReconciler implements DatabaseStateService
                 .thenCompose( result -> handleResult( namedDatabaseId, desiredState, result, executor, backoff, 0 ) );
     }
 
-    private static ReconcilerStepResult doTransitions( EnterpriseDatabaseState currentState, Stream<Transition> steps, EnterpriseDatabaseState desiredState )
+    private static ReconcilerStepResult doTransitions( EnterpriseDatabaseState currentState,
+                                                       Stream<Transition.Prepared> steps,
+                                                       EnterpriseDatabaseState desiredState )
     {
         Supplier<ReconcilerStepResult> job = () -> doTransitionStep( steps.iterator(), new ReconcilerStepResult( currentState, null, desiredState ) );
         return namedJob( desiredState.databaseId().name(), job );
@@ -328,7 +329,7 @@ public class DbmsReconciler implements DatabaseStateService
         }
     }
 
-    private static ReconcilerStepResult doTransitionStep( Iterator<Transition> steps, ReconcilerStepResult result )
+    private static ReconcilerStepResult doTransitionStep( Iterator<Transition.Prepared> steps, ReconcilerStepResult result )
     {
         if ( !steps.hasNext() )
         {
@@ -340,9 +341,19 @@ public class DbmsReconciler implements DatabaseStateService
             var nextState = steps.next().doTransition();
             return doTransitionStep( steps, result.withState( nextState ) );
         }
-        catch ( Throwable error )
+        catch ( TransitionFailureException failure )
         {
-            return result.withError( error );
+            return result.withState( failure.failedState() ).withError( failure.getCause() );
+        }
+        catch ( Throwable throwable )
+        {
+            // This is last line of defense:
+            //   We think the two scenarios here where we would get a Throwable which isn't wrapped in a TransitionFailure are:
+            //   - The assignment of nextState is the "hair that broke the camel's back" and throws and OOM.
+            //   - There are way too many steps and doTransitionStep eventually throws a StackOverflowError.
+            //   Since in this case we don't know what would have been the failed state we leave the database in the last state it successfully reached
+            //   and just set that to failed with the catched Throwable
+            return result.withError( throwable );
         }
     }
 
@@ -487,7 +498,7 @@ public class DbmsReconciler implements DatabaseStateService
         return !canRetry || t instanceof Error || t instanceof DatabaseStartAbortedException;
     }
 
-    private Stream<Transition> getLifecycleTransitionSteps( EnterpriseDatabaseState currentState, EnterpriseDatabaseState desiredState )
+    private Stream<Transition.Prepared> getLifecycleTransitionSteps( EnterpriseDatabaseState currentState, EnterpriseDatabaseState desiredState )
     {
         return transitionsTable.fromCurrent( currentState ).toDesired( desiredState );
     }
@@ -499,7 +510,7 @@ public class DbmsReconciler implements DatabaseStateService
                 .ifPresent( health -> health.panic( error ) );
     }
 
-    /* DaatabaseStateService implementation */
+    /* DatabaseStateService implementation */
     @Override
     public OperatorState stateOfDatabase( NamedDatabaseId namedDatabaseId )
     {
