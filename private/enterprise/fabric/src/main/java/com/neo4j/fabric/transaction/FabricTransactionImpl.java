@@ -33,6 +33,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.JobHandle;
@@ -510,5 +511,10 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
             this.singleDbTransaction = singleDbTransaction;
             this.readingOnly = readingOnly;
         }
+    }
+
+    public Set<InternalTransaction> getInternalTransactions()
+    {
+        return localTransactionContext.getInternalTransactions();
     }
 }

@@ -61,6 +61,7 @@ public class FabricLocalExecutor
     public class LocalTransactionContext implements AutoCloseable
     {
         private final Map<Long, KernelTxWrapper> kernelTransactions = new ConcurrentHashMap<>();
+        private final Set<InternalTransaction> internalTransactions = ConcurrentHashMap.newKeySet();
 
         private final CompositeTransaction compositeTransaction;
         private final FabricTransactionInfo transactionInfo;
@@ -86,6 +87,11 @@ public class FabricLocalExecutor
         public void close()
         {
 
+        }
+
+        public Set<InternalTransaction> getInternalTransactions()
+        {
+            return internalTransactions;
         }
 
         private FabricKernelTransaction getOrCreateTx( Location.Local location, TransactionMode transactionMode, ExecutingQuery parentQuery )
@@ -185,6 +191,8 @@ public class FabricLocalExecutor
             {
                 internalTransaction.setMetaData( transactionInfo.getTxMetadata() );
             }
+
+            internalTransactions.add( internalTransaction );
 
             return internalTransaction;
         }

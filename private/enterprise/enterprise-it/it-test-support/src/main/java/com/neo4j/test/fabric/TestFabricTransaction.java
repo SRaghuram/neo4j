@@ -41,12 +41,14 @@ public class TestFabricTransaction implements InternalTransaction
 {
 
     private final TransactionalContextFactory contextFactory;
-    private final BoltTransaction transaction;
+    private final BoltTransaction fabricTransaction;
+    private final InternalTransaction kernelInternalTransaction;
 
-    TestFabricTransaction( TransactionalContextFactory contextFactory, BoltTransaction transaction )
+    TestFabricTransaction( TransactionalContextFactory contextFactory, BoltTransaction transaction, InternalTransaction kernelInternalTransaction )
     {
         this.contextFactory = contextFactory;
-        this.transaction = transaction;
+        this.fabricTransaction = transaction;
+        this.kernelInternalTransaction = kernelInternalTransaction;
     }
 
     @Override
@@ -62,7 +64,7 @@ public class TestFabricTransaction implements InternalTransaction
         var result = new ResultSubscriber( null, new TestFabricValueMapper() );
         try
         {
-            BoltQueryExecution boltQueryExecution = transaction.executeQuery( query, params, false, result );
+            BoltQueryExecution boltQueryExecution = fabricTransaction.executeQuery( query, params, false, result );
             result.materialize( boltQueryExecution.getQueryExecution() );
         }
         catch ( QueryExecutionKernelException e )
@@ -76,7 +78,7 @@ public class TestFabricTransaction implements InternalTransaction
     @Override
     public void terminate()
     {
-        transaction.markForTermination( Terminated );
+        fabricTransaction.markForTermination( Terminated );
     }
 
     @Override
@@ -84,7 +86,7 @@ public class TestFabricTransaction implements InternalTransaction
     {
         try
         {
-            transaction.commit();
+            fabricTransaction.commit();
         }
         catch ( TransactionFailureException e )
         {
@@ -97,7 +99,7 @@ public class TestFabricTransaction implements InternalTransaction
     {
         try
         {
-            transaction.rollback();
+            fabricTransaction.rollback();
         }
         catch ( TransactionFailureException e )
         {
@@ -113,227 +115,222 @@ public class TestFabricTransaction implements InternalTransaction
     @Override
     public Node createNode()
     {
-        throw fail();
+        return kernelInternalTransaction.createNode();
     }
 
     @Override
     public Node createNode( Label... labels )
     {
-        throw fail();
+        return kernelInternalTransaction.createNode( labels );
     }
 
     @Override
     public Node getNodeById( long id )
     {
-        throw fail();
+        return kernelInternalTransaction.getNodeById( id );
     }
 
     @Override
     public Relationship getRelationshipById( long id )
     {
-        throw fail();
+        return kernelInternalTransaction.getRelationshipById( id );
     }
 
     @Override
     public BidirectionalTraversalDescription bidirectionalTraversalDescription()
     {
-        throw fail();
+        return kernelInternalTransaction.bidirectionalTraversalDescription();
     }
 
     @Override
     public TraversalDescription traversalDescription()
     {
-        throw fail();
+        return kernelInternalTransaction.traversalDescription();
     }
 
     @Override
     public Iterable<Label> getAllLabelsInUse()
     {
-        throw fail();
+        return kernelInternalTransaction.getAllLabelsInUse();
     }
 
     @Override
     public Iterable<RelationshipType> getAllRelationshipTypesInUse()
     {
-        throw fail();
+        return kernelInternalTransaction.getAllRelationshipTypesInUse();
     }
 
     @Override
     public Iterable<Label> getAllLabels()
     {
-        throw fail();
+        return kernelInternalTransaction.getAllLabels();
     }
 
     @Override
     public Iterable<RelationshipType> getAllRelationshipTypes()
     {
-        throw fail();
+        return kernelInternalTransaction.getAllRelationshipTypes();
     }
 
     @Override
     public Iterable<String> getAllPropertyKeys()
     {
-        throw fail();
+        return kernelInternalTransaction.getAllPropertyKeys();
     }
 
     @Override
     public ResourceIterator<Node> findNodes( Label label, String key, String template, StringSearchMode searchMode )
     {
-        throw fail();
+        return kernelInternalTransaction.findNodes( label, key, template, searchMode );
     }
 
     @Override
     public ResourceIterator<Node> findNodes( Label label, Map<String,Object> propertyValues )
     {
-        throw fail();
+        return kernelInternalTransaction.findNodes( label, propertyValues );
     }
 
     @Override
     public ResourceIterator<Node> findNodes( Label label, String key1, Object value1, String key2, Object value2, String key3, Object value3 )
     {
-        throw fail();
+        return kernelInternalTransaction.findNodes( label, key1, value1, key2, value2, key3, value3 );
     }
 
     @Override
     public ResourceIterator<Node> findNodes( Label label, String key1, Object value1, String key2, Object value2 )
     {
-        throw fail();
+        return kernelInternalTransaction.findNodes( label, key1, value1, key2, value2 );
     }
 
     @Override
     public Node findNode( Label label, String key, Object value )
     {
-        throw fail();
+        return kernelInternalTransaction.findNode( label, key, value );
     }
 
     @Override
     public ResourceIterator<Node> findNodes( Label label, String key, Object value )
     {
-        throw fail();
+        return kernelInternalTransaction.findNodes( label, key, value );
     }
 
     @Override
     public ResourceIterator<Node> findNodes( Label label )
     {
-        throw fail();
+        return kernelInternalTransaction.findNodes( label );
     }
 
     @Override
     public ResourceIterable<Node> getAllNodes()
     {
-        throw fail();
+        return kernelInternalTransaction.getAllNodes();
     }
 
     @Override
     public ResourceIterable<Relationship> getAllRelationships()
     {
-        throw fail();
+        return kernelInternalTransaction.getAllRelationships();
     }
 
     @Override
     public Lock acquireWriteLock( Entity entity )
     {
-        throw fail();
+        return kernelInternalTransaction.acquireWriteLock( entity );
     }
 
     @Override
     public Lock acquireReadLock( Entity entity )
     {
-        throw fail();
+        return kernelInternalTransaction.acquireReadLock( entity );
     }
 
     @Override
     public Schema schema()
     {
-        throw fail();
+        return kernelInternalTransaction.schema();
     }
 
     @Override
     public void setTransaction( KernelTransaction transaction )
     {
-        throw fail();
+        kernelInternalTransaction.setTransaction( transaction );
     }
 
     @Override
     public KernelTransaction kernelTransaction()
     {
-        throw fail();
+        return kernelInternalTransaction.kernelTransaction();
     }
 
     @Override
     public KernelTransaction.Type transactionType()
     {
-        throw fail();
+        return kernelInternalTransaction.transactionType();
     }
 
     @Override
     public SecurityContext securityContext()
     {
-        throw fail();
+        return kernelInternalTransaction.securityContext();
     }
 
     @Override
     public ClientConnectionInfo clientInfo()
     {
-        throw fail();
+        return kernelInternalTransaction.clientInfo();
     }
 
     @Override
     public KernelTransaction.Revertable overrideWith( SecurityContext context )
     {
-        throw fail();
+        return kernelInternalTransaction.overrideWith( context );
     }
 
     @Override
     public Optional<Status> terminationReason()
     {
-        throw fail();
+        return kernelInternalTransaction.terminationReason();
     }
 
     @Override
     public void setMetaData( Map<String,Object> txMeta )
     {
-        throw fail();
+        kernelInternalTransaction.setMetaData( txMeta );
     }
 
     @Override
     public void checkInTransaction()
     {
-        throw fail();
+        kernelInternalTransaction.checkInTransaction();
     }
 
     @Override
     public boolean isOpen()
     {
-        throw fail();
+        return kernelInternalTransaction.isOpen();
     }
 
     @Override
     public Relationship newRelationshipEntity( long id )
     {
-        throw fail();
+        return kernelInternalTransaction.newRelationshipEntity( id );
     }
 
     @Override
     public Relationship newRelationshipEntity( long id, long startNodeId, int typeId, long endNodeId )
     {
-        throw fail();
+        return kernelInternalTransaction.newRelationshipEntity( id, startNodeId, typeId, endNodeId );
     }
 
     @Override
     public Node newNodeEntity( long nodeId )
     {
-        throw fail();
+        return kernelInternalTransaction.newNodeEntity( nodeId );
     }
 
     @Override
     public RelationshipType getRelationshipTypeById( int type )
     {
-        throw fail();
-    }
-
-    private UnsupportedOperationException fail()
-    {
-        return new UnsupportedOperationException( "This method is not implemented in fabric test facade." );
+        return kernelInternalTransaction.getRelationshipTypeById( type );
     }
 }
