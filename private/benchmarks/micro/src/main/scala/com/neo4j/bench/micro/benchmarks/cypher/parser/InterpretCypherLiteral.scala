@@ -12,6 +12,7 @@ import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark
 import com.neo4j.bench.micro.benchmarks.RNGState
+import org.neo4j.cypher.internal.ast.factory.ASTExceptionFactory
 import org.neo4j.cypher.internal.ast.factory.LiteralInterpreter
 import org.neo4j.cypher.internal.evaluator.Evaluator
 import org.neo4j.cypher.internal.parser.javacc
@@ -170,7 +171,7 @@ class InterpretCypherLiteralState {
   }
 }
 
-class TestExceptionFactory extends javacc.ParseExceptionFactory {
+class TestExceptionFactory extends ASTExceptionFactory {
   override def syntaxException(source: Exception): Exception = new SyntaxException("", source)
   override def invalidUnicodeLiteral(msg: String): Exception = new InvalidUnicodeLiteral(msg)
 }
