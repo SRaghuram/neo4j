@@ -237,14 +237,14 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     }) should be(1)
   }
 
-  test("should get correct count for specific relationship with super nodes") {
+  object denseTestHelper {
     val superCount = 100
-    val sizeOfLovesSparseNode = "MATCH (b:B {name:'b'}) RETURN size((b)<-[:LOVES]-()) AS count"
-    val sizeOfAllSparseNode = "MATCH (b:B {name:'b'}) RETURN size((b)<--()) AS count"
-    val sizeOfLoves = "MATCH (a:A {name:'a'}) RETURN size((a)-[:LOVES]->()) AS count"
-    val sizeOfAll = "MATCH (a:A {name:'a'}) RETURN size((a)-->()) AS count"
-    val countLoves = "MATCH (:A {name:'a'})-[r:LOVES]->() RETURN count(r) AS count"
-    val countAll = "MATCH (:A {name:'a'})-[r]->() RETURN count(r) AS count"
+    val sizeOfLovesSparseNode = "MATCH (b:B {name:'sparse'}) RETURN size((b)<-[:LOVES]-()) AS count"
+    val sizeOfAllSparseNode = "MATCH (b:B {name:'sparse'}) RETURN size((b)<--()) AS count"
+    val sizeOfLovesDenseNode = "MATCH (a:A {name:'dense'}) RETURN size((a)-[:LOVES]->()) AS count"
+    val sizeOfAllDenseNode = "MATCH (a:A {name:'dense'}) RETURN size((a)-->()) AS count"
+    val countLovesDenseNode = "MATCH (:A {name:'dense'})-[r:LOVES]->() RETURN count(r) AS count"
+    val countAllDenseNode = "MATCH (:A {name:'dense'})-[r]->() RETURN count(r) AS count"
     val testCounts: PartialFunction[AnyRef, Unit] = {
       case (query: String, (expectedCount: Int, expectedRows: Int)) =>
         withClue(s"$query:") {
@@ -256,91 +256,117 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
         }
     }
 
+    def setupGraph(): Unit = {
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      graph.withTx { tx =>
+        val a = tx.createNode(Label.label("A"))
+        a.setProperty("name", "dense")
+        Range(0, superCount).foreach { _ =>
+          tx.execute("WITH $a AS a CREATE (a)-[:LOVES]->(:B {name:'sparse'})<-[:KNOWS]-(c:C {name:'c'}), (a)-[:KNOWS]->(c)", util.Map.of("a", a))
+        }
+      }
+    }
+  }
+
+  test("should get zero count for relationships with no traverse relationship privilege") {
     // GIVEN
     setupUserWithCustomRole()
     execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
+    denseTestHelper.setupGraph()
 
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.withTx { tx =>
-      val a = tx.createNode(Label.label("A"))
-      a.setProperty("name", "a")
-      Range(0, superCount).foreach { _ =>
-        tx.execute("WITH $a AS a CREATE (a)-[:LOVES]->(:B {name:'b'})<-[:KNOWS]-(c:C {name:'c'}), (a)-[:KNOWS]->(c)", util.Map.of("a", a))
-      }
-    }
+    // WHEN .. THEN
     withClue("No TRAVERSE on relationship:") {
       Seq(
-        sizeOfLovesSparseNode -> (0, superCount),
-        sizeOfAllSparseNode -> (0, superCount),
-        sizeOfLoves -> (0, 1),
-        sizeOfAll -> (0, 1),
-        countLoves -> (0, 1),
-        countAll -> (0, 1)
-      ).foreach(testCounts)
+        denseTestHelper.sizeOfLovesSparseNode -> (0, denseTestHelper.superCount),
+        denseTestHelper.sizeOfAllSparseNode -> (0, denseTestHelper.superCount),
+        denseTestHelper.sizeOfLovesDenseNode -> (0, 1),
+        denseTestHelper.sizeOfAllDenseNode -> (0, 1),
+        denseTestHelper.countLovesDenseNode -> (0, 1),
+        denseTestHelper.countAllDenseNode -> (0, 1)
+      ).foreach(denseTestHelper.testCounts)
     }
+  }
 
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
+  test("should get correct count for relationships with traverse on LOVES relationship") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
+    denseTestHelper.setupGraph()
 
-    // THEN
+    // WHEN .. THEN
     withClue("TRAVERSE LOVES on relationship:") {
       Seq(
-        sizeOfLovesSparseNode -> (1, superCount),
-        sizeOfAllSparseNode -> (1, superCount),
-        sizeOfLoves -> (superCount, 1),
-        sizeOfAll -> (superCount, 1),
-        countLoves -> (superCount, 1),
-        countAll -> (superCount, 1)
-      ).foreach(testCounts)
+        denseTestHelper.sizeOfLovesSparseNode -> (1, denseTestHelper.superCount),
+        denseTestHelper.sizeOfAllSparseNode -> (1, denseTestHelper.superCount),
+        denseTestHelper.sizeOfLovesDenseNode -> (denseTestHelper.superCount, 1),
+        denseTestHelper.sizeOfAllDenseNode -> (denseTestHelper.superCount, 1),
+        denseTestHelper.countLovesDenseNode -> (denseTestHelper.superCount, 1),
+        denseTestHelper.countAllDenseNode -> (denseTestHelper.superCount, 1)
+      ).foreach(denseTestHelper.testCounts)
     }
+  }
 
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS KNOWS TO custom")
+  test("should get correct count for relationships with traverse on all relationships") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES, KNOWS TO custom")
+    denseTestHelper.setupGraph()
 
-    // THEN
+    // WHEN .. THEN
     withClue("TRAVERSE * on relationship:") {
       Seq(
-        sizeOfLovesSparseNode -> (1, superCount),
-        sizeOfAllSparseNode -> (2, superCount),
-        sizeOfLoves -> (superCount, 1),
-        sizeOfAll -> (superCount * 2, 1),
-        countLoves -> (superCount, 1),
-        countAll -> (superCount * 2, 1)
-      ).foreach(testCounts)
+        denseTestHelper.sizeOfLovesSparseNode -> (1, denseTestHelper.superCount),
+        denseTestHelper.sizeOfAllSparseNode -> (2, denseTestHelper.superCount),
+        denseTestHelper.sizeOfLovesDenseNode -> (denseTestHelper.superCount, 1),
+        denseTestHelper.sizeOfAllDenseNode -> (denseTestHelper.superCount * 2, 1),
+        denseTestHelper.countLovesDenseNode -> (denseTestHelper.superCount, 1),
+        denseTestHelper.countAllDenseNode -> (denseTestHelper.superCount * 2, 1)
+      ).foreach(denseTestHelper.testCounts)
     }
+  }
 
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
+  test("should get correct count for relationships with traverse on all relationships, deny traverse C nodes") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES, KNOWS TO custom")
     execute("DENY TRAVERSE ON GRAPH * NODES C TO custom")
+    denseTestHelper.setupGraph()
 
-    // THEN
+    // WHEN .. THEN
     withClue("deny TRAVERSE C on nodes:") {
       Seq(
-        sizeOfLovesSparseNode -> (1, superCount),
-        sizeOfAllSparseNode -> (1, superCount),
-        sizeOfLoves -> (superCount, 1),
-        sizeOfAll -> (superCount, 1),
-        countLoves -> (superCount, 1),
-        countAll -> (superCount, 1)
-      ).foreach(testCounts)
+        denseTestHelper.sizeOfLovesSparseNode -> (1, denseTestHelper.superCount),
+        denseTestHelper.sizeOfAllSparseNode -> (1, denseTestHelper.superCount),
+        denseTestHelper.sizeOfLovesDenseNode -> (denseTestHelper.superCount, 1),
+        denseTestHelper.sizeOfAllDenseNode -> (denseTestHelper.superCount, 1),
+        denseTestHelper.countLovesDenseNode -> (denseTestHelper.superCount, 1),
+        denseTestHelper.countAllDenseNode -> (denseTestHelper.superCount, 1)
+      ).foreach(denseTestHelper.testCounts)
     }
+  }
 
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
+  test("should get correct count for relationships with traverse on KNOWS relationships, deny traverse C nodes") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * NODES * TO custom")
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES, KNOWS TO custom")
+    execute("DENY TRAVERSE ON GRAPH * NODES C TO custom")
     execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
+    denseTestHelper.setupGraph()
 
-    // THEN
+    // WHEN .. THEN
     withClue("deny TRAVERSE LOVES on relationship:") {
       Seq(
-        sizeOfLovesSparseNode -> (0, superCount),
-        sizeOfAllSparseNode -> (0, superCount),
-        sizeOfLoves -> (0, 1),
-        sizeOfAll -> (0, 1),
-        countLoves -> (0, 1),
-        countAll -> (0, 1)
-      ).foreach(testCounts)
+        denseTestHelper.sizeOfLovesSparseNode -> (0, denseTestHelper.superCount),
+        denseTestHelper.sizeOfAllSparseNode -> (0, denseTestHelper.superCount),
+        denseTestHelper.sizeOfLovesDenseNode -> (0, 1),
+        denseTestHelper.sizeOfAllDenseNode -> (0, 1),
+        denseTestHelper.countLovesDenseNode -> (0, 1),
+        denseTestHelper.countAllDenseNode -> (0, 1)
+      ).foreach(denseTestHelper.testCounts)
     }
   }
 
