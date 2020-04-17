@@ -136,6 +136,6 @@ public class ReadAll extends AbstractKernelBenchmark
 
     public static void main( String... methods ) throws Exception
     {
-        run( ReadAll.class, methods );
+        run( ReadAll.class, "allNodes" );
     }
 }

@@ -385,6 +385,7 @@ class FrekiStorageEngineGraphWritesIT
         MutableInt nextPropertyKey = new MutableInt();
         for ( int i = 0, relationshipsToAdd = 5; i < 5; i++, relationshipsToAdd *= 4 )
         {
+            System.out.println( i );
             int relationshipCount = relationshipsToAdd;
             createAndApplyTransaction( target ->
             {
