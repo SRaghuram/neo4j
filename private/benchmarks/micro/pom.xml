@@ -121,6 +121,34 @@
         </dependency>
 
         <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-cypher-ast-factory</artifactId>
+            <version>${neo4j.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.opencypher</groupId>
+            <artifactId>tck</artifactId>
+            <version>${opencypher.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.opencypher</groupId>
+            <artifactId>tck-api_2.12</artifactId>
+            <version>${opencypher.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.junit.jupiter</groupId>
+                    <artifactId>junit-jupiter-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apiguardian</groupId>
+                    <artifactId>apiguardian-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
             <groupId>commons-logging</groupId>
             <artifactId>commons-logging</artifactId>
         </dependency>
