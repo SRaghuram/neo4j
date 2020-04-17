@@ -274,9 +274,14 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         if ( smallRecord.hasFlag( FLAG_IN_USE ) )
         {
             nodeCursor.initializeFromRecord( smallRecord );
-            return nodeCursor.data.forwardPointer == NULL
-                   ? smallRecord
-                   : recordFunction.apply( currentSparseNodeCommands[sizeExponentialFromRecordPointer( nodeCursor.data.forwardPointer )] );
+            if ( nodeCursor.data.forwardPointer != NULL )
+            {
+                if ( nodeCursor.data.propertyOffset == 0 )
+                {
+                    return recordFunction.apply( currentSparseNodeCommands[sizeExponentialFromRecordPointer( nodeCursor.data.forwardPointer )] );
+                }
+            }
+            return smallRecord;
         }
         return null;
     }
