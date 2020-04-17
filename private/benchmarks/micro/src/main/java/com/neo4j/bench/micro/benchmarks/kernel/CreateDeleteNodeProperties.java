@@ -70,13 +70,13 @@ public class CreateDeleteNodeProperties extends AbstractKernelBenchmark
 
     @ParamValues(
             allowed = {"NONE", "SCHEMA", "COMPOSITE_SCHEMA"},
-            base = {"NONE", "SCHEMA", "COMPOSITE_SCHEMA"} )
+            base = {"SCHEMA"} )
     @Param( {} )
     public IndexType index;
 
     @ParamValues(
             allowed = {"1", "10", "100", "1000"},
-            base = {"1", "100"} )
+            base = {"100"} )
     @Param( {} )
     public int txSize;
 
@@ -88,7 +88,7 @@ public class CreateDeleteNodeProperties extends AbstractKernelBenchmark
 
     @ParamValues(
             allowed = {"4", "64"},
-            base = {"4", "64"} )
+            base = {"64"} )
     @Param( {} )
     public int count;
 
@@ -97,7 +97,7 @@ public class CreateDeleteNodeProperties extends AbstractKernelBenchmark
                     INT, LNG, FLT, DBL, STR_SML, STR_BIG,
                     DATE_TIME, LOCAL_DATE_TIME, TIME, LOCAL_TIME, DATE, DURATION, POINT,
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
-            base = {LNG, STR_SML} )
+            base = {STR_SML} )
     @Param( {} )
     public String type;
 

@@ -273,10 +273,11 @@ class GraphUpdates
             }
 
             boolean isDense = sparse.data.serializeMainData( intermediateBuffers, stores.bigPropertyValueStore, bigValueCommandConsumer );
-            for ( ByteBuffer buffer : intermediateBuffers )
-            {
-                buffer.flip();
-            }
+            intermediateBuffers[LABELS].flip();
+            intermediateBuffers[PROPERTIES].flip();
+            intermediateBuffers[RELATIONSHIPS].flip();
+            intermediateBuffers[RELATIONSHIPS_OFFSETS].flip();
+            intermediateBuffers[DEGREES].flip();
             int labelsSize = intermediateBuffers[LABELS].limit();
             int propsSize = intermediateBuffers[PROPERTIES].limit();
             int relsSize = intermediateBuffers[RELATIONSHIPS].limit() + intermediateBuffers[RELATIONSHIPS_OFFSETS].limit();
@@ -325,7 +326,7 @@ class GraphUpdates
                 intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].flip();
                 miscSize += intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].limit();
             }
-            else
+            else if ( relsSize > 0 )
             {
                 header.markHasOffset( Header.OFFSET_RELATIONSHIPS );
                 header.markHasOffset( Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
@@ -351,12 +352,15 @@ class GraphUpdates
             {
                 header.markHasOffset( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
             }
+
+            // build x1 header
             int spaceLeftInX1 = stores.mainStore.recordDataSize() - worstCaseMiscSize;
             spaceLeftInX1 = tryKeepInX1Flag( header, labelsSize, spaceLeftInX1, Header.FLAG_LABELS );
             spaceLeftInX1 = tryKeepInX1( header, propsSize, spaceLeftInX1, Header.OFFSET_PROPERTIES );
             spaceLeftInX1 = tryKeepInX1( header, degreesSize, spaceLeftInX1, Header.OFFSET_DEGREES );
             tryKeepInX1( header, relsSize, spaceLeftInX1, Header.OFFSET_RELATIONSHIPS, Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
 
+            // build xL header and serialize
             Header xlHeader = new Header();
             prepareRecordPointer( xlHeader, intermediateBuffers[RECORD_POINTER], buildRecordPointer( 0, nodeId ) );
             movePartToXLFlag( header, xlHeader, labelsSize, Header.FLAG_LABELS );
@@ -364,12 +368,11 @@ class GraphUpdates
             movePartToXL( header, xlHeader, degreesSize, Header.OFFSET_DEGREES );
             movePartToXL( header, xlHeader, relsSize, Header.OFFSET_RELATIONSHIPS );
             movePartToXL( header, xlHeader, relsSize, Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
-
             serializeParts( maxBuffer, intermediateBuffers, xlHeader );
-
             SimpleStore xLStore = stores.storeSuitableForRecordSize( maxBuffer.limit(), 1 );
             long forwardPointer = xLargeCommands( maxBuffer, xLStore, otherCommands );
 
+            // serialize x1
             prepareRecordPointer( xlHeader, intermediateBuffers[RECORD_POINTER], forwardPointer );
             serializeParts( smallBuffer, intermediateBuffers, header );
             x1Command( smallBuffer, otherCommands );
@@ -393,6 +396,7 @@ class GraphUpdates
 
         private void prepareRecordPointer( Header xlHeader, ByteBuffer intermediateBuffer, long recordPointer )
         {
+            intermediateBuffer.clear();
             xlHeader.markHasOffset( Header.OFFSET_RECORD_POINTER );
             sparse.data.setRecordPointer( recordPointer );
             sparse.data.serializeRecordPointer( intermediateBuffer );
@@ -464,8 +468,9 @@ class GraphUpdates
             serializePart( into, intermediateBuffers[DEGREES], header, Header.OFFSET_DEGREES );
             serializePart( into, intermediateBuffers[RECORD_POINTER], header, Header.OFFSET_RECORD_POINTER );
             serializePart( into, intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID], header, Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
+            int endPosition = into.position();
             header.serialize( into.position( 0 ) );
-            into.flip();
+            into.position( endPosition ).flip();
         }
 
         private static void serializePart( ByteBuffer into, ByteBuffer part, Header header, int headerOffsetSlot )
