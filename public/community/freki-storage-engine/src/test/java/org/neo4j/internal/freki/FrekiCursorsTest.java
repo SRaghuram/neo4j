@@ -29,7 +29,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.stream.IntStream;
@@ -85,10 +84,13 @@ abstract class FrekiCursorsTest
     {
         private final NodeUpdates updates;
         private long nextInternalId = 1;
+        private final GraphUpdates graphUpdates;
 
         Node( long id )
         {
-            updates = new NodeUpdates( id, stores, applyToStoreImmediately( stores.bigPropertyValueStore ), PageCursorTracer.NULL );
+            graphUpdates = new GraphUpdates( stores, new ArrayList<>(), applyToStoreImmediately( stores.bigPropertyValueStore ), PageCursorTracer.NULL );
+            graphUpdates.create( id );
+            updates = graphUpdates.getOrLoad( id );
         }
 
         long id()
@@ -101,26 +103,24 @@ abstract class FrekiCursorsTest
             try
             {
                 MutableObject<Record> x1 = new MutableObject<>();
-                updates.serialize(
-                        ByteBuffer.wrap( new byte[stores.mainStore.recordDataSize()] ),
-                        ByteBuffer.wrap( new byte[stores.largestMainStore().recordDataSize()] ), command ->
-                        {
-                            FrekiCommand.SparseNode sparseNode = (FrekiCommand.SparseNode) command;
-                            Record record = sparseNode.after;
-                            SimpleStore store = stores.mainStore( record.sizeExp() );
-                            try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
-                            {
-                                store.write( cursor, record, IdUpdateListener.IGNORE, PageCursorTracer.NULL );
-                            }
-                            catch ( IOException e )
-                            {
-                                throw new UncheckedIOException( e );
-                            }
-                            if ( record.sizeExp() == 0 )
-                            {
-                                x1.setValue( record );
-                            }
-                        } );
+                graphUpdates.extractUpdates( command ->
+                {
+                    FrekiCommand.SparseNode sparseNode = (FrekiCommand.SparseNode) command;
+                    Record record = sparseNode.after;
+                    SimpleStore store = stores.mainStore( record.sizeExp() );
+                    try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
+                    {
+                        store.write( cursor, record, IdUpdateListener.IGNORE, PageCursorTracer.NULL );
+                    }
+                    catch ( IOException e )
+                    {
+                        throw new UncheckedIOException( e );
+                    }
+                    if ( record.sizeExp() == 0 )
+                    {
+                        x1.setValue( record );
+                    }
+                } );
                 return x1.getValue();
             }
             catch ( ConstraintViolationTransactionFailureException e )

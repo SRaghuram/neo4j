@@ -48,14 +48,43 @@ class Header
         flags |= flag;
     }
 
+    void setFlag( int flag, boolean set )
+    {
+        if ( set )
+        {
+            setFlag( flag );
+        }
+        else
+        {
+            removeFlag( flag );
+        }
+    }
+
     boolean hasFlag( int flag )
     {
         return (flags & flag) != 0;
     }
 
+    void removeFlag( int flag )
+    {
+        flags &= ~flag;
+    }
+
     void markHasOffset( int offsetSlot )
     {
         offsetBits |= offsetBit( offsetSlot );
+    }
+
+    void markHasOffset( int offsetSlot, boolean hasOffset )
+    {
+        if ( hasOffset )
+        {
+            markHasOffset( offsetSlot );
+        }
+        else
+        {
+            unmarkHasOffset( offsetSlot );
+        }
     }
 
     void unmarkHasOffset( int offsetSlot )
@@ -142,5 +171,11 @@ class Header
             data >>>= BITS_PER_OFFSET;
             bits &= bits - 1;
         }
+    }
+
+    void clearOffsetMarksAndFlags()
+    {
+        flags = 0;
+        offsetBits = 0;
     }
 }
