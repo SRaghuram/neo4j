@@ -303,9 +303,11 @@ class GraphUpdates
                 if ( dense == null )
                 {
                     moveDataToDense();
-                    intermediateBuffers[RELATIONSHIPS_OFFSETS].clear();
-                    intermediateBuffers[RELATIONSHIPS].clear();
-                    sparse.data.serializeDegrees( intermediateBuffers[DEGREES] );
+                    intermediateBuffers[RELATIONSHIPS_OFFSETS].clear().flip();
+                    intermediateBuffers[RELATIONSHIPS].clear().flip();
+                    relsSize = 0;
+
+                    sparse.data.serializeDegrees( intermediateBuffers[DEGREES].clear() );
                     intermediateBuffers[DEGREES].flip();
                     degreesSize = intermediateBuffers[DEGREES].limit();
                 }
@@ -317,6 +319,7 @@ class GraphUpdates
             header.clearOffsetMarksAndFlags();
             header.setFlag( Header.FLAG_LABELS, labelsSize > 0 );
             header.markHasOffset( Header.OFFSET_PROPERTIES, propsSize > 0 );
+            int nextInternalRelIdSize = 0;
             if ( isDense )
             {
                 header.setFlag( Header.FLAG_IS_DENSE );
@@ -324,17 +327,15 @@ class GraphUpdates
                 header.markHasOffset( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
                 sparse.data.serializeNextInternalRelationshipId( intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID] );
                 intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].flip();
-                miscSize += intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].limit();
+                nextInternalRelIdSize = intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].limit();
+                miscSize += nextInternalRelIdSize;
             }
             else if ( relsSize > 0 )
             {
                 header.markHasOffset( Header.OFFSET_RELATIONSHIPS );
                 header.markHasOffset( Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
             }
-            if ( dense != null && isDense ) /*Although there's no way we can go back from dense*/
-            {
-                dense.createCommands( otherCommands );
-            }
+
             if ( header.spaceNeeded() + labelsSize + propsSize + Math.max( relsSize, degreesSize ) + miscSize <= stores.mainStore.recordDataSize() )
             {
                 //WE FIT IN x1
@@ -344,28 +345,27 @@ class GraphUpdates
             }
 
             //we did not fit in x1 only, fit as many things as possible in x1
-            header.markHasOffset( Header.OFFSET_RECORD_POINTER );
             int worstCaseMiscSize = miscSize + SINGLE_VLONG_MAX_SIZE;
 
             header.clearOffsetMarksAndFlags();
-            if ( isDense )
-            {
-                header.markHasOffset( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
-            }
-
             // build x1 header
+            header.markHasOffset( Header.OFFSET_RECORD_POINTER );
+            header.setFlag( Header.FLAG_IS_DENSE, isDense );
             int spaceLeftInX1 = stores.mainStore.recordDataSize() - worstCaseMiscSize;
             spaceLeftInX1 = tryKeepInX1Flag( header, labelsSize, spaceLeftInX1, Header.FLAG_LABELS );
+            spaceLeftInX1 = tryKeepInX1( header, nextInternalRelIdSize, spaceLeftInX1, Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
             spaceLeftInX1 = tryKeepInX1( header, propsSize, spaceLeftInX1, Header.OFFSET_PROPERTIES );
             spaceLeftInX1 = tryKeepInX1( header, degreesSize, spaceLeftInX1, Header.OFFSET_DEGREES );
             tryKeepInX1( header, relsSize, spaceLeftInX1, Header.OFFSET_RELATIONSHIPS, Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
 
             // build xL header and serialize
             Header xlHeader = new Header();
+            xlHeader.setFlag( Header.FLAG_IS_DENSE, isDense );
             prepareRecordPointer( xlHeader, intermediateBuffers[RECORD_POINTER], buildRecordPointer( 0, nodeId ) );
             movePartToXLFlag( header, xlHeader, labelsSize, Header.FLAG_LABELS );
             movePartToXL( header, xlHeader, propsSize, Header.OFFSET_PROPERTIES );
             movePartToXL( header, xlHeader, degreesSize, Header.OFFSET_DEGREES );
+            movePartToXL( header, xlHeader, nextInternalRelIdSize, Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
             movePartToXL( header, xlHeader, relsSize, Header.OFFSET_RELATIONSHIPS );
             movePartToXL( header, xlHeader, relsSize, Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
             serializeParts( maxBuffer, intermediateBuffers, xlHeader );
@@ -373,7 +373,7 @@ class GraphUpdates
             long forwardPointer = xLargeCommands( maxBuffer, xLStore, otherCommands );
 
             // serialize x1
-            prepareRecordPointer( xlHeader, intermediateBuffers[RECORD_POINTER], forwardPointer );
+            prepareRecordPointer( header, intermediateBuffers[RECORD_POINTER], forwardPointer );
             serializeParts( smallBuffer, intermediateBuffers, header );
             x1Command( smallBuffer, otherCommands );
         }
@@ -394,10 +394,10 @@ class GraphUpdates
             }
         }
 
-        private void prepareRecordPointer( Header xlHeader, ByteBuffer intermediateBuffer, long recordPointer )
+        private void prepareRecordPointer( Header header, ByteBuffer intermediateBuffer, long recordPointer )
         {
             intermediateBuffer.clear();
-            xlHeader.markHasOffset( Header.OFFSET_RECORD_POINTER );
+            header.markHasOffset( Header.OFFSET_RECORD_POINTER );
             sparse.data.setRecordPointer( recordPointer );
             sparse.data.serializeRecordPointer( intermediateBuffer );
             intermediateBuffer.flip();
@@ -706,6 +706,7 @@ class GraphUpdates
                             serializeAddedProperties( from.properties, IntObjectMaps.mutable.empty() ) ) ) );
             smallRecord.data.nextInternalRelationshipId = data.nextInternalRelationshipId;
             data.clearData( FLAG_RELATIONSHIPS );
+            data.setDense( true );
         }
 
         private IntObjectMap<PropertyUpdate> serializeAddedProperties( IntObjectMap<Value> properties, MutableIntObjectMap<PropertyUpdate> target )

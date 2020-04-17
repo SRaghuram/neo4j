@@ -178,4 +178,19 @@ class Header
         flags = 0;
         offsetBits = 0;
     }
+
+    @Override
+    public String toString()
+    {
+        return String.format( "Header{ %s%s%s%s%s%s%s%s}",
+                hasFlag( FLAG_LABELS ) ? "hasLabels, " : "",
+                hasFlag( FLAG_IS_DENSE ) ? "isDense, " : "",
+                hasOffset( OFFSET_PROPERTIES ) ? "properties:" + getOffset( OFFSET_PROPERTIES ) + ", " : "",
+                hasOffset( OFFSET_RELATIONSHIPS ) ? "relationships:" + getOffset( OFFSET_RELATIONSHIPS ) + ", " : "",
+                hasOffset( OFFSET_RELATIONSHIPS_TYPE_OFFSETS ) ? "relTypeOffsets:" + getOffset( OFFSET_RELATIONSHIPS_TYPE_OFFSETS ) + ", " : "",
+                hasOffset( OFFSET_DEGREES ) ? "degrees:" + getOffset( OFFSET_DEGREES ) + ", " : "",
+                hasOffset( OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID ) ? "nextInternalRelId:" + getOffset( OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID ) + ", " : "",
+                hasOffset( OFFSET_RECORD_POINTER ) ? "recordPointer:" + getOffset( OFFSET_RECORD_POINTER ) + ", " : ""
+        );
+    }
 }

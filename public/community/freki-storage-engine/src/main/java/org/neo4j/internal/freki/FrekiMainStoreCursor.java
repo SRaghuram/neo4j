@@ -183,7 +183,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     void ensureRelationshipsLoaded()
     {
         ensureX1Loaded();
-        if ( !data.isDense && data.relationshipOffset == 0 )
+        if ( data.relationshipOffset == 0 )
         {
             ensureXLLoaded();
         }
