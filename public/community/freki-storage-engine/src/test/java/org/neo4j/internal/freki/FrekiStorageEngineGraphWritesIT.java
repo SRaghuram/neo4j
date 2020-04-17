@@ -117,7 +117,9 @@ import org.neo4j.token.DelegatingTokenHolder;
 import org.neo4j.token.TokenCreator;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.token.api.TokenHolder;
+import org.neo4j.values.storable.IntValue;
 import org.neo4j.values.storable.Value;
+import org.neo4j.values.storable.Values;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -364,6 +366,46 @@ class FrekiStorageEngineGraphWritesIT
 
         // then
         assertContentsOfNode( nodeId, labels, nodeProperties, relationships );
+    }
+
+    @Test
+    void shouldAllowLabelsInXL() throws Exception
+    {
+        long nodeId = commandCreationContext.reserveNode();
+        MutableLongSet labels = LongSets.mutable.empty();
+        for ( int i = 0; i < 200; i++ ) //should not fit in x1
+        {
+            labels.add( i * 5 );
+        }
+        Set<StorageProperty> nodeProperties = new HashSet<>();
+        Set<RelationshipSpec> relationships = new HashSet<>();
+        createAndApplyTransaction( target ->
+        {
+            target.visitCreatedNode( nodeId );
+            target.visitNodeLabelChanges( nodeId, labels, LongSets.immutable.empty() );
+        } );
+
+        assertContentsOfNode( nodeId, labels, nodeProperties, relationships );
+    }
+
+    @Test
+    void shouldHaveIndexUpdatesWhenLabelsAreInXL() throws Exception
+    {
+        long nodeId = commandCreationContext.reserveNode();
+        MutableLongSet labels = LongSets.mutable.empty();
+        for ( int i = 0; i < 200; i++ ) //should not fit in x1
+        {
+            labels.add( i * 5 );
+        }
+        labels.add( SCHEMA_DESCRIPTOR.getLabelId() );
+
+        IntValue afterValue = Values.intValue( 77 );
+        shouldGenerateIndexUpdates( target ->
+        {
+            target.visitCreatedNode( nodeId );
+            target.visitNodeLabelChanges( nodeId, labels, LongSets.immutable.empty() );
+        }, target -> target.visitNodePropertyChanges( nodeId, emptyList(), singleton( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), afterValue ) ),
+                IntSets.immutable.empty() ), index -> asSet( IndexEntryUpdate.add( nodeId, index, afterValue ) ) );
     }
 
     @Test

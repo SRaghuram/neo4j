@@ -44,8 +44,6 @@ import org.neo4j.values.storable.Value;
 
 import static java.lang.Math.toIntExact;
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
-import static org.neo4j.internal.freki.MutableNodeRecordData.FLAG_DEGREES;
-import static org.neo4j.internal.freki.MutableNodeRecordData.FLAG_PROPERTIES;
 import static org.neo4j.internal.freki.MutableNodeRecordData.FLAG_RELATIONSHIPS;
 import static org.neo4j.internal.freki.MutableNodeRecordData.buildRecordPointer;
 import static org.neo4j.internal.freki.MutableNodeRecordData.idFromRecordPointer;
@@ -108,16 +106,17 @@ class GraphUpdates
     {
         List<StorageCommand> otherCommands = new ArrayList<>();
         ByteBuffer[] intermediateBuffers = new ByteBuffer[Header.NUM_OFFSETS + 1];
-        intermediateBuffers[PROPERTIES] = ByteBuffer.wrap( new byte[stores.largestMainStore().recordDataSize()] );
-        intermediateBuffers[RELATIONSHIPS] = ByteBuffer.wrap( new byte[stores.largestMainStore().recordDataSize()] );
-        intermediateBuffers[DEGREES] = ByteBuffer.wrap( new byte[stores.largestMainStore().recordDataSize()] );
-        intermediateBuffers[RELATIONSHIPS_OFFSETS] = ByteBuffer.wrap( new byte[stores.mainStore.recordDataSize()] );
-        intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID] = ByteBuffer.wrap( new byte[9] );
-        intermediateBuffers[RECORD_POINTER] = ByteBuffer.wrap( new byte[9] );
-        intermediateBuffers[LABELS] = ByteBuffer.wrap( new byte[stores.mainStore.recordDataSize()] );
+        final int x8Size = stores.largestMainStore().recordDataSize();
+        intermediateBuffers[PROPERTIES] = ByteBuffer.wrap( new byte[x8Size] );
+        intermediateBuffers[RELATIONSHIPS] = ByteBuffer.wrap( new byte[x8Size] );
+        intermediateBuffers[DEGREES] = ByteBuffer.wrap( new byte[x8Size] );
+        intermediateBuffers[RELATIONSHIPS_OFFSETS] = ByteBuffer.wrap( new byte[x8Size] );
+        intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID] = ByteBuffer.wrap( new byte[SINGLE_VLONG_MAX_SIZE] );
+        intermediateBuffers[RECORD_POINTER] = ByteBuffer.wrap( new byte[SINGLE_VLONG_MAX_SIZE] );
+        intermediateBuffers[LABELS] = ByteBuffer.wrap( new byte[x8Size] );
 
         ByteBuffer smallBuffer = ByteBuffer.wrap( new byte[stores.mainStore.recordDataSize()] );
-        ByteBuffer maxBuffer = ByteBuffer.wrap( new byte[stores.largestMainStore().recordDataSize()] );
+        ByteBuffer maxBuffer = ByteBuffer.wrap( new byte[x8Size] );
         for ( NodeUpdates mutation : mutations )
         {
             mutation.serialize( smallBuffer, maxBuffer, intermediateBuffers, otherCommands::add );
@@ -186,7 +185,7 @@ class GraphUpdates
                 Record xL = readRecord( stores, sizeExponentialFromRecordPointer( recordPointer ), idFromRecordPointer( recordPointer ), cursorTracer );
                 MutableNodeRecordData largeData = new MutableNodeRecordData( nodeId );
                 largeData.deserialize( xL.data(), stores.bigPropertyValueStore, cursorTracer );
-                sparse.data.copyDataFrom( FLAG_PROPERTIES | FLAG_DEGREES | FLAG_RELATIONSHIPS, largeData );
+                sparse.data.copyDataFrom( largeData );
                 xLBefore = xL;
             }
             if ( sparse.data.isDense() )
@@ -403,9 +402,9 @@ class GraphUpdates
             intermediateBuffer.flip();
         }
 
-        private void movePartToXLFlag( Header header, Header xlHeader, int labelsSize, int flag )
+        private void movePartToXLFlag( Header header, Header xlHeader, int partSize, int flag )
         {
-            xlHeader.setFlag( flag, labelsSize > 0 && !header.hasFlag( flag ) );
+            xlHeader.setFlag( flag, partSize > 0 && !header.hasFlag( flag ) );
         }
 
         private void movePartToXL( Header header, Header xlHeader, int partSize, int offset )

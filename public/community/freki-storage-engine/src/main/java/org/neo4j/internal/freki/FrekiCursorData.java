@@ -91,7 +91,7 @@ class FrekiCursorData
         backwardPointer = readRecordPointer( buffer );
     }
 
-    private void assignDataOffsets( ByteBuffer x1Buffer )
+    private void assignDataOffsets( ByteBuffer buffer )
     {
         if ( header.hasFlag( FLAG_IS_DENSE ) )
         {
@@ -99,24 +99,24 @@ class FrekiCursorData
         }
         if ( header.hasFlag( FLAG_LABELS ) )
         {
-            labelOffset = x1Buffer.position();
-            labelBuffer = x1Buffer;
+            labelOffset = buffer.position();
+            labelBuffer = buffer;
         }
         if ( header.hasOffset( OFFSET_PROPERTIES ) )
         {
             propertyOffset = header.getOffset( OFFSET_PROPERTIES );
-            propertyBuffer = x1Buffer;
+            propertyBuffer = buffer;
         }
         if ( header.hasOffset( OFFSET_RELATIONSHIPS ) )
         {
             relationshipOffset = header.getOffset( OFFSET_RELATIONSHIPS );
-            relationshipBuffer = x1Buffer;
+            relationshipBuffer = buffer;
             relationshipTypeOffsetsOffset = header.getOffset( OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
         }
         if ( header.hasOffset( OFFSET_DEGREES ) )
         {
             relationshipOffset = header.getOffset( OFFSET_DEGREES );
-            relationshipBuffer = x1Buffer;
+            relationshipBuffer = buffer;
         }
     }
 
