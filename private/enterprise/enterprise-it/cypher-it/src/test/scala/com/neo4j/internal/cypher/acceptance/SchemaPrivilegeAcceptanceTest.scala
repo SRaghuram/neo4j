@@ -218,6 +218,34 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     }
   }
 
+    test("should deny and revoke schema privileges on multiple databases with parameter") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
+    execute("CREATE ROLE role")
+
+    schemaPrivileges.foreach {
+      case (command, action) =>
+        withClue(s"$command: \n") {
+          // WHEN
+          execute(s"DENY $command ON DATABASE $$dbParam, bar TO role", Map("dbParam" -> "foo"))
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+            denied(action).database("foo").role("role").map,
+            denied(action).database("bar").role("role").map,
+          ))
+
+          // WHEN
+          execute(s"REVOKE DENY $command ON DATABASE foo, $$dbParam FROM role", Map("dbParam" -> "bar"))
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+        }
+    }
+  }
+
   test("should not revoke other index management privileges when revoking index management") {
     // GIVEN
     setup()

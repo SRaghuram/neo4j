@@ -194,6 +194,34 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     }
   }
 
+    test("should grant and revoke multidatabase privileges on multiple databases with parameter") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
+    execute("CREATE ROLE role")
+
+    basicDatabasePrivileges.foreach {
+      case (command, action) =>
+        withClue(s"$command: \n") {
+          // WHEN
+          execute(s"GRANT $command ON DATABASE foo, $$dbParam TO role", Map("dbParam" -> "bar"))
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+            granted(action).database("foo").role("role").map,
+            granted(action).database("bar").role("role").map,
+          ))
+
+          // WHEN
+          execute(s"REVOKE GRANT $command ON DATABASE $$dbParam, bar FROM role", Map("dbParam" -> "foo"))
+
+          // THEN
+          execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+        }
+    }
+  }
+
   test("should deny and revoke multidatabase privileges on multiple databases") {
     // GIVEN
     setup()
