@@ -5,17 +5,16 @@
  */
 package com.neo4j.commandline.dbms;
 
-import com.neo4j.dbms.commandline.StoreCopyCommand;
-import com.neo4j.kernel.impl.store.format.highlimit.HighLimitFormatFamily;
-import org.junit.jupiter.api.Test;
-import picocli.CommandLine;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Objects;
 
+import com.neo4j.dbms.commandline.StoreCopyCommand;
+import com.neo4j.kernel.impl.store.format.highlimit.HighLimitFormatFamily;
+import org.junit.jupiter.api.Test;
 import org.neo4j.cli.CommandFailedException;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.graphdb.Direction;
@@ -26,18 +25,24 @@ import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.kernel.impl.store.PropertyKeyTokenStore;
 import org.neo4j.kernel.impl.store.format.FormatFamily;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.format.standard.StandardFormatFamily;
+import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.kernel.internal.locker.FileLockException;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.token.TokenHolders;
+import picocli.CommandLine;
 
 import static java.lang.Math.min;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -406,7 +411,65 @@ class StoreCopyCommandIT extends AbstractCommandIT
 
         copyDatabase( "--from-database=" + databaseName, "--to-database=" + copyName );
 
-        suppressOutput.getOutputVoice().containsMessage( "CALL db.createIndex('myIndex'" );
+        assertTrue( suppressOutput.getOutputVoice().containsMessage( "CALL db.createIndex('myIndex'" ) );
+    }
+
+    @Test
+    void mustRepairBrokenTokens() throws Exception
+    {
+        // Create some data
+        try ( Transaction tx = databaseAPI.beginTx() )
+        {
+            Node a = tx.createNode( NUMBER_LABEL );
+            a.setProperty( "a", 1 );
+            a.setProperty( "b", 2 );
+            a.createRelationshipTo( a, KNOWS );
+            tx.commit();
+        }
+
+        String databaseName = databaseAPI.databaseName();
+        String copyName = getCopyName( databaseName, "copy" );
+
+        // Create a name duplication inconsistency in the property key token store:
+        TokenHolders tokens = databaseAPI.getDependencyResolver().resolveDependency( TokenHolders.class );
+        RecordStorageEngine engine = databaseAPI.getDependencyResolver().resolveDependency( RecordStorageEngine.class );
+        int idA = tokens.propertyKeyTokens().getIdByName( "a" );
+        int idB = tokens.propertyKeyTokens().getIdByName( "b" );
+        PropertyKeyTokenStore store = engine.testAccessNeoStores().getPropertyKeyTokenStore();
+        var tokenA = store.getRecord( idA, store.newRecord(), RecordLoad.NORMAL, PageCursorTracer.NULL );
+        var tokenB = store.getRecord( idB, store.newRecord(), RecordLoad.NORMAL, PageCursorTracer.NULL );
+        tokenB.initialize( tokenA.inUse(), tokenA.getNameId(), tokenA.getPropertyCount() );
+        store.updateRecord( tokenB, PageCursorTracer.NULL );
+
+        managementService.shutdownDatabase( databaseName );
+
+        copyDatabase( "--from-database=" + databaseName, "--to-database=" + copyName );
+
+        managementService.createDatabase( copyName );
+        GraphDatabaseService db = managementService.database( copyName );
+        try ( Transaction tx = db.beginTx() )
+        {
+            Node node  = single( tx.getAllNodes() );
+            Map<String, Object> properties = node.getAllProperties();
+            assertThat( properties.remove( "a" ) ).isEqualTo( 1 );
+            assertThat( single( properties.values() ) ).isEqualTo( 2 );
+        }
+        String output = suppressOutput.getOutputVoice().toString();
+        assertTrue( output.contains( "tokens had to be invented" ) );
+        // One occurrence reporting the broken token. Then another reporting its invented replacement:
+        assertThat( countOccurrences( output, "PropertyKey(" + idB + ")" ) ).isEqualTo( 2 );
+    }
+
+    private int countOccurrences( String haystack, String needle )
+    {
+        int count = 0;
+        int index = 0;
+        while ( ( index = haystack.indexOf( needle, index ) ) != -1 )
+        {
+            count++;
+            index++;
+        }
+        return count;
     }
 
     @Test
@@ -434,8 +497,8 @@ class StoreCopyCommandIT extends AbstractCommandIT
                 "--from-pagecache=6m",
                 "--to-pagecache=7m" );
 
-        suppressOutput.getOutputVoice().containsMessage( "(page cache 6m)" );
-        suppressOutput.getOutputVoice().containsMessage( "(page cache 7m)" );
+        assertTrue( suppressOutput.getOutputVoice().containsMessage( "(page cache 6m)" ) );
+        assertTrue( suppressOutput.getOutputVoice().containsMessage( "(page cache 7m)" ) );
     }
 
     private void copyDatabase( String... args ) throws Exception
