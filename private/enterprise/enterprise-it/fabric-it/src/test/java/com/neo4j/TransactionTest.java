@@ -48,6 +48,7 @@ import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.DatabaseException;
+import org.neo4j.internal.kernel.api.exceptions.ConstraintViolationTransactionFailureException;
 import org.neo4j.kernel.GraphDatabaseQueryService;
 import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.DatabaseIdFactory;
@@ -268,17 +269,17 @@ class TransactionTest
     @Test
     void testWriteShardTxCommitFailure()
     {
-        when( tx1.commit() ).thenReturn( Mono.error( new IllegalStateException( "Commit failed on shard 1" ) ) );
+        when( tx1.commit() ).thenReturn( Mono.error( new ConstraintViolationTransactionFailureException( "Commit failed on shard 1" ) ) );
 
-        var e = assertThrows( DatabaseException.class, () -> doInMegaTx( tx ->
+        var e = assertThrows( ClientException.class, () -> doInMegaTx( tx ->
         {
             writeToShard1( tx );
             readFromShard2( tx );
             readFromShard3( tx );
         } ) );
 
-        assertEquals( "Neo.DatabaseError.Transaction.TransactionCommitFailed", e.code() );
-        assertThat( e.getMessage() ).contains( "Failed to commit a composite transaction" );
+        assertEquals( "Neo.ClientError.Schema.ConstraintValidationFailed", e.code() );
+        assertThat( e.getMessage() ).contains( "Commit failed on shard 1" );
 
         waitForDriverRelease( 3 );
         verifyCommitted( tx1, tx2, tx3 );
@@ -288,7 +289,30 @@ class TransactionTest
     @Test
     void testReadShardTxCommitFailure()
     {
-        when( tx3.commit() ).thenReturn( Mono.error( new IllegalStateException( "Commit failed on shard 3" ) ) );
+        when( tx3.commit() ).thenReturn( Mono.error( new ConstraintViolationTransactionFailureException( "Commit failed on shard 3" ) ) );
+
+        var e = assertThrows( ClientException.class, () -> doInMegaTx( tx ->
+        {
+            writeToShard1( tx );
+            readFromShard2( tx );
+            readFromShard3( tx );
+        } ) );
+
+        assertEquals( "Neo.ClientError.Schema.ConstraintValidationFailed", e.code() );
+        assertThat( e.getMessage() ).contains( "Commit failed on shard 3" );
+
+        waitForDriverRelease( 3 );
+        verifyCommitted( tx2, tx3 );
+        verifyRolledBack( tx1 );
+        verifyDriverReturned( shard1Driver, shard2Driver, shard3Driver );
+    }
+
+    @Test
+    void testMultipleShardTxCommitFailure()
+    {
+        when( tx1.rollback() ).thenReturn( Mono.error( new ConstraintViolationTransactionFailureException( "Rollback failed on shard 1" ) ) );
+        when( tx2.commit() ).thenReturn( Mono.error( new ConstraintViolationTransactionFailureException( "Commit failed on shard 2" ) ) );
+        when( tx3.commit() ).thenReturn( Mono.error( new ConstraintViolationTransactionFailureException( "Commit failed on shard 3" ) ) );
 
         var e = assertThrows( DatabaseException.class, () -> doInMegaTx( tx ->
         {
@@ -298,7 +322,7 @@ class TransactionTest
         } ) );
 
         assertEquals( "Neo.DatabaseError.Transaction.TransactionCommitFailed", e.code() );
-        assertThat( e.getMessage() ).contains( "Failed to commit a composite transaction" );
+        assertThat( e.getMessage() ).contains( "Failed to commit composite transaction" );
 
         waitForDriverRelease( 3 );
         verifyCommitted( tx2, tx3 );
@@ -309,7 +333,29 @@ class TransactionTest
     @Test
     void testShardTxRollbackFailure()
     {
-        when( tx1.rollback() ).thenReturn( Mono.error( new IllegalStateException( "Rollback failed on shard 1" ) ) );
+        when( tx1.rollback() ).thenReturn( Mono.error( new ConstraintViolationTransactionFailureException( "Rollback failed on shard 1" ) ) );
+
+        var e = assertThrows( ClientException.class, () -> doInMegaTx( tx ->
+        {
+            writeToShard1( tx );
+            readFromShard2( tx );
+            readFromShard3( tx );
+            tx.rollback();
+        } ) );
+
+        assertEquals( "Neo.ClientError.Schema.ConstraintValidationFailed", e.code() );
+        assertThat( e.getMessage() ).contains( "Rollback failed on shard 1" );
+
+        waitForDriverRelease( 3 );
+        verifyRolledBack( tx1, tx2, tx3 );
+        verifyDriverReturned( shard1Driver, shard2Driver, shard3Driver );
+    }
+
+    @Test
+    void testMultipleShardTxRollbackFailure()
+    {
+        when( tx1.rollback() ).thenReturn( Mono.error( new ConstraintViolationTransactionFailureException( "Rollback failed on shard 1" ) ) );
+        when( tx2.rollback() ).thenReturn( Mono.error( new ConstraintViolationTransactionFailureException( "Rollback failed on shard 2" ) ) );
 
         var e = assertThrows( DatabaseException.class, () -> doInMegaTx( tx ->
         {
@@ -320,12 +366,14 @@ class TransactionTest
         } ) );
 
         assertEquals( "Neo.DatabaseError.Transaction.TransactionRollbackFailed", e.code() );
-        assertThat( e.getMessage() ).contains( "Failed to rollback a composite transaction" );
+        assertThat( e.getMessage() ).contains( "Failed to rollback composite transaction" );
 
         waitForDriverRelease( 3 );
         verifyRolledBack( tx1, tx2, tx3 );
         verifyDriverReturned( shard1Driver, shard2Driver, shard3Driver );
     }
+
+
 
     @Test
     void testShardRunFailure()

@@ -12,6 +12,7 @@ public class Exceptions
     public static RuntimeException transform( Status defaultStatus, Throwable t )
     {
         var unwrapped = reactor.core.Exceptions.unwrap( t );
+        String message = unwrapped.getMessage();
 
         // preserve the original exception if possible
         // or try to preserve  at least the original status
@@ -22,9 +23,9 @@ public class Exceptions
                 return (RuntimeException) unwrapped;
             }
 
-            return new FabricException( ((Status.HasStatus) unwrapped).status(), unwrapped );
+            return new FabricException( ((Status.HasStatus) unwrapped).status(), message, unwrapped );
         }
 
-        return new FabricException( defaultStatus, unwrapped );
+        return new FabricException( defaultStatus, message, unwrapped );
     }
 }

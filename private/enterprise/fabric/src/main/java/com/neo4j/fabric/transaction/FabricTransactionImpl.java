@@ -19,11 +19,12 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
@@ -144,23 +145,31 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
 
             internalLog.debug( "Committing transaction %d", id );
 
+            var allFailures = new ArrayList<Throwable>();
+
             try
             {
                 cancelTimeout();
 
-                AtomicBoolean failure = new AtomicBoolean();
-                Flux.fromIterable( readingTransactions )
-                        .map( txWrapper -> txWrapper.singleDbTransaction )
-                        .flatMap( tx -> Mono.from( tx.commit() ).onErrorResume( t ->
-                        {
-                            userLog.error( "Failed to commit a child read transaction", t );
-                            failure.set( true );
-                            return Mono.empty();
-                        } ) )
-                        .then()
-                        .block();
+                List<Throwable> readFailures =
+                        Flux.fromIterable( readingTransactions )
+                            .map( txWrapper -> txWrapper.singleDbTransaction )
+                            .flatMap( tx -> Mono.from( tx.commit() )
+                                                .flatMap( v -> Mono.<Throwable>empty() )
+                                                .onErrorResume( t ->
+                                                                {
+                                                                    userLog.error( "Failed to commit a child read transaction", t );
+                                                                    return Mono.just( t );
+                                                                } ) )
+                            .collectList()
+                            .block();
 
-                if ( failure.get() )
+                if ( readFailures != null )
+                {
+                    allFailures.addAll( readFailures );
+                }
+
+                if ( !allFailures.isEmpty() )
                 {
                     if ( writingTransaction != null )
                     {
@@ -171,10 +180,9 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
                         catch ( Exception writeRollbackException )
                         {
                             userLog.error( "Failed to rollback a child write transaction", writeRollbackException );
+                            allFailures.add( writeRollbackException );
                         }
                     }
-
-                    throw new FabricException( Status.Transaction.TransactionCommitFailed, "Failed to commit a composite transaction %d", id );
                 }
                 else
                 {
@@ -187,14 +195,14 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
                         catch ( Exception writeCommitException )
                         {
                             userLog.error( "Failed to commit a child write transaction", writeCommitException );
-                            throw new FabricException( Status.Transaction.TransactionCommitFailed, "Failed to commit a composite transaction %d", id );
+                            allFailures.add( writeCommitException );
                         }
                     }
                 }
             }
             catch ( Exception e )
             {
-                throw new FabricException( Status.Transaction.TransactionCommitFailed, "Failed to commit a composite transaction %d", id );
+                allFailures.add( new FabricException( Status.Transaction.TransactionCommitFailed, "Failed to commit composite transaction %d", id ) );
             }
             finally
             {
@@ -202,6 +210,8 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
                 localTransactionContext.close();
                 transactionManager.removeTransaction( this );
             }
+
+            throwIfNonEmpty( allFailures, new FabricException( Status.Transaction.TransactionCommitFailed, "Failed to commit composite transaction %d", id ) );
 
             internalLog.debug( "Transaction %d committed", id );
         }
@@ -241,30 +251,34 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
 
         terminated = true;
         internalLog.debug( "Rolling back transaction %d", id );
+
+        var allFailures = new ArrayList<Throwable>();
+
         try
         {
             cancelTimeout();
 
-            AtomicBoolean failure = new AtomicBoolean();
-            Flux.fromIterable( readingTransactions )
-                    .map( txWrapper -> txWrapper.singleDbTransaction )
-                    .concatWith( Mono.justOrEmpty( writingTransaction ) )
-                    .flatMap( tx -> Mono.from( tx.rollback() ).onErrorResume( t ->
-                    {
-                        userLog.error( "Failed to rollback a child transaction", t );
-                        failure.set( true );
-                        return Mono.empty();
-                    } ) )
-                    .then()
-                    .block();
-            if ( failure.get() )
+            var failures = Flux.fromIterable( readingTransactions )
+                .map( txWrapper -> txWrapper.singleDbTransaction )
+                .concatWith( Mono.justOrEmpty( writingTransaction ) )
+                .flatMap( tx -> Mono.from( tx.rollback() )
+                                    .flatMap( v -> Mono.<Throwable>empty() )
+                                    .onErrorResume( t ->
+                                                    {
+                                                        userLog.error( "Failed to rollback a child transaction", t );
+                                                        return Mono.just( t );
+                                                    } ) )
+                .collectList()
+                .block();
+
+            if ( failures != null )
             {
-                throw new FabricException( Status.Transaction.TransactionRollbackFailed, "Failed to rollback a composite transaction %d", id );
+                allFailures.addAll( failures );
             }
         }
         catch ( Exception e )
         {
-            throw new FabricException( Status.Transaction.TransactionRollbackFailed, "Failed to rollback a composite transaction %d", id );
+            allFailures.add( new FabricException( Status.Transaction.TransactionRollbackFailed, "Failed to rollback composite transaction %d", id ) );
         }
         finally
 
@@ -274,7 +288,25 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
             transactionManager.removeTransaction( this );
         }
 
+        throwIfNonEmpty(allFailures, new FabricException( Status.Transaction.TransactionRollbackFailed, "Failed to rollback composite transaction %d", id ));
+
         internalLog.debug( "Transaction %d rolled back", id );
+    }
+
+    private void throwIfNonEmpty(List<Throwable> failures, FabricException genericException)
+    {
+        if ( !failures.isEmpty() )
+        {
+            if ( failures.size() == 1 )
+            {
+                throw Exceptions.transform(genericException.status(), failures.get( 0 ));
+            }
+            else
+            {
+                failures.forEach( genericException::addSuppressed );
+                throw genericException;
+            }
+        }
     }
 
     @Override
