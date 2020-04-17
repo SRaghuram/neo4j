@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.ast.QueryPart
 import org.neo4j.cypher.internal.ast.Return
 import org.neo4j.cypher.internal.ast.ReturnItems
 import org.neo4j.cypher.internal.ast.SingleQuery
+import org.neo4j.cypher.internal.ast.Statement
 import org.neo4j.cypher.internal.ast.SubQuery
 import org.neo4j.cypher.internal.ast.UnionAll
 import org.neo4j.cypher.internal.ast.UnionDistinct
@@ -51,10 +52,10 @@ case class FabricStitcher(
       if (!allowMultiGraph && !UseEvaluation.isStatic(command.use.graphSelection)) {
         failDynamicGraph(command.use)
       }
-      Fragment.Exec(
+      asExec(
         Fragment.Init(command.use),
         command.command,
-        command.outputColumns
+        command.outputColumns,
       )
   }
 
@@ -141,7 +142,7 @@ case class FabricStitcher(
 
   private def asExec(
     input: Fragment.Chain,
-    query: Query,
+    query: Statement,
     outputColumns: Seq[String],
   ): Fragment.Exec = {
 
