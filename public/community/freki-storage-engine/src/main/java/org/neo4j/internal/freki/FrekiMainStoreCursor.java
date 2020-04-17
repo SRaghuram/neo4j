@@ -178,6 +178,10 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     void ensureLabelsLoaded()
     {
         ensureX1Loaded();
+        if ( data.labelOffset == 0 )
+        {
+            ensureXLLoaded();
+        }
     }
 
     void ensureRelationshipsLoaded()
@@ -252,7 +256,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         else
         {
             data.gatherDataFromXL( record );
-            data.nodeId = data.backwardPointer;
+            data.nodeId = MutableNodeRecordData.idFromRecordPointer( data.backwardPointer );
         }
         return true;
     }

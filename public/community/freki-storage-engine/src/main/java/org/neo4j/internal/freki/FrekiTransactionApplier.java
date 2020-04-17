@@ -185,10 +185,12 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         boolean nodeIsCreatedRightNow = false;
         if ( x1 != null )
         {
-            labelsBefore = parseLabels( x1.before );
-            labelsAfter = parseLabels( x1.after );
-            initializePropertyCursorOnRecord( propertyCursorBefore, findRelevantUsedRecord( node -> node.before ) );
-            initializePropertyCursorOnRecord( propertyCursorAfter, findRelevantUsedRecord( node -> node.after ) );
+            // This is very broken. We may be looking in the XL record FIRST,
+            // it will do ensureX1Loaded() and load that, overwriting stuff (like all offsets/buffers etc)
+            labelsBefore = parseLabels( findRelevantUsedRecord( node -> node.before, data -> data.labelOffset ) );
+            labelsAfter = parseLabels( findRelevantUsedRecord( node -> node.after, data -> data.labelOffset ) );
+            initializePropertyCursorOnRecord( propertyCursorBefore, findRelevantUsedRecord( node -> node.before, data -> data.propertyOffset ) );
+            initializePropertyCursorOnRecord( propertyCursorAfter, findRelevantUsedRecord( node -> node.after, data -> data.propertyOffset ) );
             nodeIsCreatedRightNow = !x1.before.hasFlag( FLAG_IN_USE );
         }
         else
@@ -268,7 +270,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         return builder.build();
     }
 
-    private Record findRelevantUsedRecord( Function<FrekiCommand.SparseNode,Record> recordFunction )
+    private Record findRelevantUsedRecord( Function<FrekiCommand.SparseNode,Record> recordFunction, Function<FrekiCursorData, Integer> test )
     {
         Record smallRecord = recordFunction.apply( currentSparseNodeCommands[0] );
         if ( smallRecord.hasFlag( FLAG_IN_USE ) )
@@ -276,9 +278,15 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
             nodeCursor.initializeFromRecord( smallRecord );
             if ( nodeCursor.data.forwardPointer != NULL )
             {
-                if ( nodeCursor.data.propertyOffset == 0 )
+                if ( test.apply( nodeCursor.data ) == 0 )
                 {
-                    return recordFunction.apply( currentSparseNodeCommands[sizeExponentialFromRecordPointer( nodeCursor.data.forwardPointer )] );
+                    Record xlRecord = recordFunction.apply( currentSparseNodeCommands[sizeExponentialFromRecordPointer( nodeCursor.data.forwardPointer )] );
+                    //this is stupid..
+                    nodeCursor.initializeFromRecord( xlRecord );
+                    if ( test.apply( nodeCursor.data ) > 0 )
+                    {
+                        return xlRecord;
+                    }
                 }
             }
             return smallRecord;
@@ -300,7 +308,11 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
 
     private long[] parseLabels( Record record )
     {
-        return nodeCursor.initializeFromRecord( record ) ? nodeCursor.labels() : EMPTY_LONG_ARRAY;
+        if ( record != null )
+        {
+            return nodeCursor.initializeFromRecord( record ) ? nodeCursor.labels() : EMPTY_LONG_ARRAY;
+        }
+        return EMPTY_LONG_ARRAY;
     }
 
     @Override

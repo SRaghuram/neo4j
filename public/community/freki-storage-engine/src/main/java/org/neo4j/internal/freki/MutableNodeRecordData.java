@@ -116,25 +116,13 @@ class MutableNodeRecordData
                 relationships, degrees, recordPointerToString( recordPointer ), isDense, nextInternalRelationshipId );
     }
 
-    void copyDataFrom( int flags, MutableNodeRecordData from )
+    void copyDataFrom( MutableNodeRecordData from )
     {
-        if ( (flags & FLAG_LABELS) != 0 )
-        {
-            labels.addAll( labels );
-        }
-        if ( (flags & FLAG_PROPERTIES) != 0 )
-        {
-            properties.putAll( from.properties );
-        }
-        if ( (flags & FLAG_DEGREES) != 0 )
-        {
-            degrees.addAll( from.degrees );
-        }
-        if ( (flags & FLAG_RELATIONSHIPS) != 0 )
-        {
-            relationships.putAll( from.relationships );
-            nextInternalRelationshipId = max( from.nextInternalRelationshipId, nextInternalRelationshipId );
-        }
+        labels.addAll( from.labels );
+        properties.putAll( from.properties );
+        degrees.addAll( from.degrees );
+        relationships.putAll( from.relationships );
+        nextInternalRelationshipId = max( from.nextInternalRelationshipId, nextInternalRelationshipId );
         // pointers and nodeId are left untouched
     }
 
