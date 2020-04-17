@@ -68,11 +68,13 @@ public class FabricQueryMonitoring
 
         void endSuccess()
         {
+            monitor.beforeEnd( executingQuery, true );
             monitor.endSuccess( executingQuery );
         }
 
         void endFailure( Throwable failure )
         {
+            monitor.beforeEnd( executingQuery, false );
             monitor.endFailure( executingQuery, failure );
         }
 
