@@ -5,6 +5,8 @@
  */
 package com.neo4j.fabric.stream.summary;
 
+import reactor.core.publisher.Mono;
+
 import java.util.Collection;
 import java.util.Set;
 
@@ -16,9 +18,9 @@ public class MergedSummary implements Summary
 {
     private final MergedQueryStatistics statistics;
     private final Set<Notification> notifications;
-    private ExecutionPlanDescription executionPlanDescription;
+    private Mono<ExecutionPlanDescription> executionPlanDescription;
 
-    public MergedSummary( ExecutionPlanDescription executionPlanDescription, MergedQueryStatistics statistics, Set<Notification> notifications )
+    public MergedSummary( Mono<ExecutionPlanDescription> executionPlanDescription, MergedQueryStatistics statistics, Set<Notification> notifications )
     {
         this.executionPlanDescription = executionPlanDescription;
         this.statistics = statistics;
@@ -28,7 +30,7 @@ public class MergedSummary implements Summary
     @Override
     public ExecutionPlanDescription executionPlanDescription()
     {
-        return executionPlanDescription;
+        return executionPlanDescription.cache().block();
     }
 
     @Override

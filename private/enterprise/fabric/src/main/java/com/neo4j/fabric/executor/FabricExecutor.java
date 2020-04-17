@@ -182,7 +182,7 @@ public class FabricExecutor
                 return StatementResults.create(
                         columns,
                         Flux.empty(),
-                        Mono.just( new MergedSummary( plan.query().description(), statistics, notifications )));
+                        Mono.just( new MergedSummary( Mono.just( plan.query().description() ), statistics, notifications ) ) );
 
             }
 
@@ -192,10 +192,7 @@ public class FabricExecutor
                     columns,
                     fragmentResult.records.doOnComplete( queryMonitor::endSuccess )
                            .doOnError( queryMonitor::endFailure ),
-                    fragmentResult.planDescription
-                            .defaultIfEmpty( new EmptyExecutionPlanDescription() )
-                            .map( planDescription -> new MergedSummary( planDescription, statistics, notifications ) )
-
+                    Mono.just( new MergedSummary( fragmentResult.planDescription, statistics, notifications ) )
             );
         }
 
