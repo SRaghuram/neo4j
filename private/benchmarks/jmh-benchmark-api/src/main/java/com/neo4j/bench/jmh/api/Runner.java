@@ -181,16 +181,21 @@ public abstract class Runner
                             runnerParams,
                             errorReporter );
 
-                    if ( !profilers.isEmpty() )
+                    try
                     {
-                        moveProfilerRecordingsTo( profilerRecordingsOutputDir, workDir );
+                        if ( !profilers.isEmpty() )
+                        {
+                            moveProfilerRecordingsTo( profilerRecordingsOutputDir, workDir );
+                        }
                     }
-
-                    // Print Pretty Results Summary
-                    boolean verbose = true;
-                    String prettyResultsString = new BenchmarkGroupBenchmarkMetricsPrinter( verbose )
-                            .toPrettyString( benchmarkGroupBenchmarkMetrics, errorReporter.errors() );
-                    System.out.println( prettyResultsString );
+                    finally
+                    {
+                        // Print Pretty Results Summary
+                        boolean verbose = true;
+                        String prettyResultsString = new BenchmarkGroupBenchmarkMetricsPrinter( verbose )
+                                .toPrettyString( benchmarkGroupBenchmarkMetrics, errorReporter.errors() );
+                        System.out.println( prettyResultsString );
+                    }
                 }
             }
             Instant finish = Instant.now();
