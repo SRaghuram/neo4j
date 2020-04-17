@@ -41,13 +41,16 @@ public abstract class NodeCursorWithSecurityTestBase<G extends KernelAPIReadTest
     {
         try ( Transaction tx = graphDb.beginTx() )
         {
-            // (foo :Foo), (bar :Bar), (baz: Baz)
-            // (foo)-[:A]->(:Bar) x100
+            // (foo :Foo), (bar :Bar), (baz: Baz), (denseFoo :Foo)
             // (foo)-[:B]->(bar)
             // (foo)<-[:A]-(bar)
 
             // (foo)-[:C]->(bar)
             // (foo)-[:A]->(baz)
+
+            // (denseFoo)-[:A]->(:Bar) x100
+            // (denseFoo)-[:C]->(bar)
+            // (denseFoo)-[:A]->(baz)
 
             Node fooNode = tx.createNode( label( "Foo" ) );
             Node denseFooNode = tx.createNode( label( "Foo" ) );
@@ -85,11 +88,14 @@ public abstract class NodeCursorWithSecurityTestBase<G extends KernelAPIReadTest
             tx.execute( "CREATE USER testUser SET PASSWORD 'abc123' CHANGE NOT REQUIRED" );
             tx.execute( "CREATE ROLE testRole" );
             tx.execute( "GRANT ROLE testRole TO testUser" );
-            tx.execute( "GRANT ACCESS ON DATABASE * TO testRole" );
-            tx.execute( "GRANT TRAVERSE ON GRAPH * NODES Foo, Bar, Super, Dense TO testRole" );
-            tx.execute( "GRANT TRAVERSE ON GRAPH * RELATIONSHIPS A, B, D TO testRole" );
+            tx.execute( "GRANT TRAVERSE ON GRAPH * NODES Foo, Bar TO testRole" );
+            tx.execute( "GRANT TRAVERSE ON GRAPH * RELATIONSHIPS A, B TO testRole" );
             tx.execute( "DENY TRAVERSE ON GRAPH * NODES Baz TO testRole" );
-            tx.execute( "GRANT READ {prop1,prop2} ON GRAPH * NODES Bar TO testRole" );
+
+            tx.execute( "CREATE USER userDeniedLabel SET PASSWORD 'abc123' CHANGE NOT REQUIRED" );
+            tx.execute( "CREATE ROLE testRole2 AS COPY OF reader" );
+            tx.execute( "GRANT ROLE testRole2 TO userDeniedLabel" );
+            tx.execute( "DENY TRAVERSE ON GRAPH * NODES Baz TO testRole2" );
 
             tx.commit();
         }
@@ -132,8 +138,49 @@ public abstract class NodeCursorWithSecurityTestBase<G extends KernelAPIReadTest
         }
     }
 
+    @Test
+    void getDegreeUserDenyTraverseOneLabel() throws Throwable
+    {
+        // given
+        changeUser( getLoginContext( "userDeniedLabel" ) );
+
+        try ( NodeCursor node = cursors.allocateNodeCursor( NULL ) )
+        {
+            // when
+            read.singleNode( foo, node );
+            node.next();
+            int degree = node.degree( RelationshipSelection.selection( Direction.OUTGOING ) );
+
+            // then
+            assertThat( degree, equalTo( 3 ) );
+        }
+    }
+
+    @Test
+    void getDegreeDenseNodeUserDenyTraverseOneLabel() throws Throwable
+    {
+        // given
+        changeUser( getLoginContext( "userDeniedLabel" ) );
+
+        try ( NodeCursor node = cursors.allocateNodeCursor( NULL ) )
+        {
+            // when
+            read.singleNode( denseFoo, node );
+            node.next();
+            int degree = node.degree( RelationshipSelection.selection( Direction.OUTGOING ) );
+
+            // then
+            assertThat( degree, equalTo( 101 ) );
+        }
+    }
+
     private LoginContext getLoginContext() throws InvalidAuthTokenException
     {
-        return authManager.login( Map.of( "principal", "testUser", "credentials", "abc123".getBytes( StandardCharsets.UTF_8 ), "scheme", "basic" ) );
+        return getLoginContext( "testUser" );
+    }
+
+    private LoginContext getLoginContext( String username ) throws InvalidAuthTokenException
+    {
+        return authManager.login( Map.of( "principal", username, "credentials", "abc123".getBytes( StandardCharsets.UTF_8 ), "scheme", "basic" ) );
     }
 }
