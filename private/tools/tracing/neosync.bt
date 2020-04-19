@@ -1,0 +1,37 @@
+#!/usr/bin/bpftrace
+
+BEGIN
+{
+    printf("Tracing neo4j sync calls.. Hit Ctrl-C to end.\n");
+    printf("%-10s %-16s %-4s %-12s %s\n", "TIME", "NAME", "FD", "DURATION(us)", "EVENT");
+}
+
+t:syscalls:sys_enter_fdatasync,
+t:syscalls:sys_enter_fsync
+/pid == $1/
+{
+    @time[tid] = nsecs;
+    @name[tid] = comm;
+    @probes[tid] = probe;
+    @fds[tid] = args->fd;
+}
+
+t:syscalls:sys_exit_fdatasync,
+t:syscalls:sys_exit_fsync
+/@time[tid]/
+{
+    time("%H:%M:%S   ");
+  	printf("%-16s %-4d %-12d %s\n", @name[tid], @fds[tid], (nsecs - @time[tid]) / 1000, @probes[tid] );
+	delete(@time[tid]);
+	delete(@name[tid]);
+    delete(@probes[tid]);
+    delete(@fds[tid]);
+}
+
+END
+{
+   clear(@time);
+   clear(@name);
+   clear(@probes);
+   clear(@fds);
+}
