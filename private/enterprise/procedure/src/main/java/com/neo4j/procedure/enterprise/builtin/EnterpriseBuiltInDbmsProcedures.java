@@ -346,8 +346,26 @@ public class EnterpriseBuiltInDbmsProcedures
     {
         var memoryPools = resolver.resolveDependency( MemoryPools.class );
         var registeredPools = memoryPools.getPools();
-        registeredPools.sort( Comparator.comparing( NamedMemoryPool::name ) );
+        registeredPools.sort( Comparator.comparing( NamedMemoryPool::group )
+                .thenComparing( NamedMemoryPool::name ) );
         return registeredPools.stream().map( MemoryPoolResult::new );
+    }
+
+    @SystemProcedure
+    @Description( "List all memory pools, including sub pools, currently registered at this instance that are visible to the user." )
+    @Procedure( name = "dbms.listPoolsExt", mode = DBMS )
+    public Stream<MemoryPoolResult> listMemoryPoolsExt()
+    {
+        var memoryPools = resolver.resolveDependency( MemoryPools.class );
+        var registeredPools = memoryPools.getPools();
+        var allPools = new ArrayList<>( registeredPools );
+        for ( NamedMemoryPool registeredPool : registeredPools )
+        {
+            allPools.addAll( registeredPool.getSubPools() );
+        }
+        allPools.sort( Comparator.comparing( NamedMemoryPool::group )
+                .thenComparing( NamedMemoryPool::name ) );
+        return allPools.stream().map( MemoryPoolResult::new );
     }
 
     @SystemProcedure
@@ -747,11 +765,12 @@ public class EnterpriseBuiltInDbmsProcedures
         }
     }
 
+    @SuppressWarnings( "WeakerAccess" )
     public static class MemoryPoolResult
     {
         private static final String UNBOUNDED = "Unbounded";
-        public final String poolName;
         public final String group;
+        public final String poolName;
         public final String heapMemoryUsed;
         public final String heapMemoryUsedBytes;
         public final String nativeMemoryUsed;
@@ -763,8 +782,8 @@ public class EnterpriseBuiltInDbmsProcedures
 
         public MemoryPoolResult( NamedMemoryPool memoryPool )
         {
-            this.poolName = memoryPool.name();
             this.group = memoryPool.group().getName();
+            this.poolName = memoryPool.name();
             this.heapMemoryUsed = bytesToString( memoryPool.usedHeap() );
             this.heapMemoryUsedBytes = valueOf( memoryPool.usedHeap() );
             this.nativeMemoryUsed = bytesToString( memoryPool.usedNative() );

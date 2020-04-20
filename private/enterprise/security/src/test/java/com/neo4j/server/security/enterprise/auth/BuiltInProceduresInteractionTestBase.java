@@ -584,10 +584,23 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         assertSuccess( adminSubject, "CALL dbms.listPools()", r ->
         {
             List<Map<String,Object>> maps = collectResults( r );
-            assertEquals( 3, maps.size() );
-            assertTrue( maps.stream().anyMatch( map -> "neo4j transactions pool".equals( map.get( "poolName" ) ) ) );
-            assertTrue( maps.stream().anyMatch( map -> "system transactions pool".equals( map.get( "poolName" ) ) ) );
-            assertTrue( maps.stream().anyMatch( map -> "Global Page Cache Pool".equals( map.get( "poolName" ) ) ) );
+            assertEquals( 2, maps.size() );
+            assertTrue( maps.stream().anyMatch( map -> "Transaction".equals( map.get( "group" ) ) ) );
+            assertTrue( maps.stream().anyMatch( map -> "Page Cache".equals( map.get( "group" ) ) ) );
+        } );
+    }
+
+    @Test
+    void listMemoryPoolsExt()
+    {
+        assertSuccess( adminSubject, "CALL dbms.listPoolsExt()", r ->
+        {
+            List<Map<String,Object>> maps = collectResults( r );
+            assertEquals( 4, maps.size() );
+            assertTrue( maps.stream().anyMatch( map -> "Transaction".equals( map.get( "group" ) ) ) );
+            assertTrue( maps.stream().anyMatch( map -> "Transaction".equals( map.get( "group" ) ) && "system".equals( map.get( "poolName" ) ) ) );
+            assertTrue( maps.stream().anyMatch( map -> "Transaction".equals( map.get( "group" ) ) && "neo4j".equals( map.get( "poolName" ) ) ) );
+            assertTrue( maps.stream().anyMatch( map -> "Page Cache".equals( map.get( "group" ) ) ) );
         } );
     }
 
