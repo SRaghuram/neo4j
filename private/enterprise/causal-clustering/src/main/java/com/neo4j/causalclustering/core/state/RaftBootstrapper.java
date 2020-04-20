@@ -164,14 +164,23 @@ public class RaftBootstrapper
     private void bootstrapExistingSystemDatabase() throws IOException
     {
         File bootstrapRootDir = new File( bootstrapContext.databaseLayout().databaseDirectory(), TEMP_BOOTSTRAP_DIRECTORY_NAME );
-        File tempDefaultDatabaseDir = new File( bootstrapRootDir, SYSTEM_DATABASE_NAME );
 
-        fs.copyRecursively(  bootstrapContext.databaseLayout().databaseDirectory(), tempDefaultDatabaseDir );
-        fs.copyRecursively(  bootstrapContext.databaseLayout().getTransactionLogsDirectory(), tempDefaultDatabaseDir );
+        fs.deleteRecursively( bootstrapRootDir );
+        try
+        {
+            File tempDefaultDatabaseDir = new File( bootstrapRootDir, SYSTEM_DATABASE_NAME );
 
-        DatabaseLayout databaseLayout = initializeStoreUsingTempDatabase( bootstrapRootDir, true );
+            fs.copyRecursively(  bootstrapContext.databaseLayout().databaseDirectory(), tempDefaultDatabaseDir );
+            fs.copyRecursively(  bootstrapContext.databaseLayout().getTransactionLogsDirectory(), tempDefaultDatabaseDir );
 
-        bootstrapContext.replaceWith( databaseLayout.databaseDirectory() );
+            DatabaseLayout tempDatabaseLayout = initializeStoreUsingTempDatabase( bootstrapRootDir, true );
+
+            bootstrapContext.replaceWith( tempDatabaseLayout.databaseDirectory() );
+        }
+        finally
+        {
+            fs.deleteRecursively( bootstrapRootDir );
+        }
     }
 
     private boolean isStorePresent()
