@@ -142,9 +142,11 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
         while (i < indexPropertyIndices.length) {
           val indexPropertyIndex = indexPropertyIndices(i)
           val value =
-            if (exactSeekValues != null) exactSeekValues(indexPropertyIndex)
-            else nodeCursor.propertyValue(indexPropertyIndex)
-
+            if (exactSeekValues != null) {
+              exactSeekValues(indexPropertyIndex)
+            } else {
+              nodeCursor.propertyValue(indexPropertyIndex)
+            }
           outputRow.setCachedPropertyAt(indexPropertySlotOffsets(i), value)
           i += 1
         }
@@ -199,11 +201,11 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
 
       // We don't need property values from the index for an exact seek
       exactSeekValues =
-        if (needsValues && predicates.forall(_.isInstanceOf[ExactPredicate]))
+        if (needsValues && predicates.forall(_.isInstanceOf[ExactPredicate])) {
           predicates.map(_.asInstanceOf[ExactPredicate].value()).toArray
-        else
+        } else {
           null
-
+        }
       val needsValuesFromIndexSeek = exactSeekValues == null && needsValues
       read.nodeIndexSeek(index, nodeCursor, IndexQueryConstraints.constrained(indexOrder, needsValuesFromIndexSeek), predicates: _*)
     }
