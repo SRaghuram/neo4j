@@ -51,7 +51,7 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
     private int currentMaxArchives;
     private Log log;
     private Closeable closable;
-    private boolean heapDumpEnabled;
+    private HeapDumper heapDumper;
     private Path heapDumpPath;
 
     DynamicLoggingQueryExecutionMonitor( Config config, FileSystemAbstraction fileSystem, JobScheduler scheduler, Log debugLog )
@@ -105,16 +105,17 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
         // are prime candidates.
         if ( config.get( GraphDatabaseSettings.log_queries ) != LogQueryLevel.OFF )
         {
-            heapDumpEnabled = config.get( GraphDatabaseSettings.log_queries_heap_dump_enabled );
+            boolean heapDumpEnabled = config.get( GraphDatabaseSettings.log_queries_heap_dump_enabled );
             if ( heapDumpEnabled )
             {
+                heapDumper = new HeapDumper();
                 heapDumpPath = config.get( GraphDatabaseSettings.log_queries_filename ).getParent();
             }
             currentLog = new ConfiguredQueryLogger( log, config );
         }
         else
         {
-            heapDumpEnabled = false;
+            heapDumper = null;
             currentLog = NO_LOG;
         }
     }
@@ -234,7 +235,7 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
     @Override
     public void beforeEnd( ExecutingQuery query, boolean success )
     {
-        if ( heapDumpEnabled )
+        if ( heapDumper != null )
         {
             QuerySnapshot snapshot = query.snapshot();
 
@@ -242,7 +243,7 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
             {
                 String suffix = success ? "" : "-fail";
                 String dumpFilename = heapDumpPath.resolve( String.format( "query-%s%s.hprof", snapshot.id(), suffix ) ).toString();
-                HeapDumper.createHeapDump( dumpFilename, true );
+                heapDumper.createHeapDump( dumpFilename, true );
             }
         }
     }

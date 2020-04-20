@@ -14,8 +14,25 @@ import com.sun.management.HotSpotDiagnosticMXBean;
 
 public class HeapDumper
 {
-    private static final HotSpotDiagnosticMXBean HOT_SPOT_DIAGNOSTIC_MX_BEAN = getHotspotDiagnosticMxBean();
     private static final String HOTSPOT_BEAN_NAME = "com.sun.management:type=HotSpotDiagnostic";
+    private final HotSpotDiagnosticMXBean hotspotDiagnosticMxBean;
+
+    public HeapDumper()
+    {
+        hotspotDiagnosticMxBean = getHotspotDiagnosticMxBean();
+    }
+
+    public void createHeapDump( String fileName, boolean live )
+    {
+        try
+        {
+            hotspotDiagnosticMxBean.dumpHeap( fileName, live );
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( e );
+        }
+    }
 
     private static HotSpotDiagnosticMXBean getHotspotDiagnosticMxBean()
     {
@@ -27,18 +44,6 @@ public class HeapDumper
         catch ( IOException error )
         {
             throw new RuntimeException( "failed getting Hotspot Diagnostic MX bean", error );
-        }
-    }
-
-    public static void createHeapDump( String fileName, boolean live )
-    {
-        try
-        {
-            HOT_SPOT_DIAGNOSTIC_MX_BEAN.dumpHeap( fileName, live );
-        }
-        catch ( IOException e )
-        {
-            throw new RuntimeException( e );
         }
     }
 }
