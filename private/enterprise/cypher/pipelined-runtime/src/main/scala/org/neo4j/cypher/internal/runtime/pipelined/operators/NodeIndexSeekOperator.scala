@@ -39,9 +39,9 @@ import org.neo4j.cypher.internal.logical.plans.QueryExpression
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.CompositeValueIndexCursor
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.RANGE_SEEKABLE_VALUE_GROUPS
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
-import org.neo4j.cypher.internal.runtime.ManyNodeValueIndexCursor
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
@@ -147,9 +147,9 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
     }
 
     private def orderedCursor(indexOrder: IndexOrder, cursors: Array[NodeValueIndexCursor]): NodeValueIndexCursor = indexOrder match {
-      case IndexOrder.NONE => ManyNodeValueIndexCursor.unordered(cursors)
-      case IndexOrder.ASCENDING => ManyNodeValueIndexCursor.ascending(cursors)
-      case IndexOrder.DESCENDING => ManyNodeValueIndexCursor.descending(cursors)
+      case IndexOrder.NONE => CompositeValueIndexCursor.unordered(cursors)
+      case IndexOrder.ASCENDING => CompositeValueIndexCursor.ascending(cursors)
+      case IndexOrder.DESCENDING => CompositeValueIndexCursor.descending(cursors)
     }
 
     override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
