@@ -349,8 +349,9 @@ class CoreDatabaseFactory
 
         CorePanicHandlers panicHandler = new CorePanicHandlers( raftGroup.raftMachine(), kernelDatabase, applicationProcess, internalOperator, panicService );
 
+        TempBootstrapDir tempBootstrapDir = new TempBootstrapDir( fileSystem, kernelDatabase.getDatabaseLayout() );
         CoreBootstrap bootstrap = new CoreBootstrap( kernelDatabase, raftContext.raftBinder(), messageHandler, snapshotService, downloadService,
-                internalOperator, databaseStartAborter, raftContext.raftIdStorage(), bootstrapSaver );
+                internalOperator, databaseStartAborter, raftContext.raftIdStorage(), bootstrapSaver, tempBootstrapDir );
 
         return new CoreDatabase( raftGroup.raftMachine(), kernelDatabase, applicationProcess, messageHandler, downloadService, recoveryFacade,
                 clusterComponents, panicHandler, bootstrap, topologyNotifier );
