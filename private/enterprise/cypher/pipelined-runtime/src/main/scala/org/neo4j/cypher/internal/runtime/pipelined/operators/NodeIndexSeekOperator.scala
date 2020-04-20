@@ -41,6 +41,9 @@ import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.RANGE_SEEKABLE_VALUE_GROUPS
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
+import org.neo4j.cypher.internal.runtime.ManyNodeValueIndexCursor
+import org.neo4j.cypher.internal.runtime.NoMemoryTracker
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -118,7 +121,6 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
 
     override def workIdentity: WorkIdentity = NodeIndexSeekOperator.this.workIdentity
 
-    private var indexQueries: Iterator[Seq[IndexQuery]] = _
     private var nodeCursor: NodeValueIndexCursor = _
     private var exactSeekValues: Array[Value] = _
 
@@ -128,14 +130,31 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
 
       val queryState = state.queryStateForExpressionEvaluation(resources)
       initExecutionContext.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
-      indexQueries = computeIndexQueries(queryState, initExecutionContext).toIterator
-      nodeCursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
+      val indexQueries = computeIndexQueries(queryState, initExecutionContext)
+      val read = state.query.transactionalContext.transaction.dataRead
+      if (indexQueries.size == 1) {
+        nodeCursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
+        seek(state.queryIndexes(queryIndexId), nodeCursor, read, indexQueries.head)
+      } else {
+        nodeCursor = orderedCursor(indexOrder, indexQueries.filterNot(impossiblePredicates).map(query => {
+          val cursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
+          read.nodeIndexSeek(state.queryIndexes(queryIndexId), cursor, IndexQueryConstraints.constrained(indexOrder, true), query: _*)
+          cursor
+        }).toArray)
+      }
+
       true
+    }
+
+    private def orderedCursor(indexOrder: IndexOrder, cursors: Array[NodeValueIndexCursor]): NodeValueIndexCursor = indexOrder match {
+      case IndexOrder.NONE => ManyNodeValueIndexCursor.unordered(cursors)
+      case IndexOrder.ASCENDING => ManyNodeValueIndexCursor.ascending(cursors)
+      case IndexOrder.DESCENDING => ManyNodeValueIndexCursor.descending(cursors)
     }
 
     override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
       val read = state.queryContext.transactionalContext.transaction.dataRead()
-      while (outputRow.onValidRow && next(state, read)) {
+      while (outputRow.onValidRow && nodeCursor != null && nodeCursor.next()) {
         outputRow.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
         outputRow.setLongAt(offset, nodeCursor.nodeReference())
         var i = 0
@@ -161,41 +180,20 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
     }
 
     override protected def closeInnerLoop(resources: QueryResources): Unit = {
-      indexQueries = null
       resources.cursorPools.nodeValueIndexCursorPool.free(nodeCursor)
       nodeCursor = null
     }
 
     // HELPERS
 
-    private def next(state: PipelinedQueryState, read: Read): Boolean = {
-      while (true) {
-        if (nodeCursor != null && nodeCursor.next()) {
-          return true
-        } else if (indexQueries.hasNext) {
-          val indexQuery = indexQueries.next()
-          seek(state.queryIndexes(queryIndexId), nodeCursor, read, indexQuery)
-        } else {
-          return false
-        }
-      }
-      throw new IllegalStateException("Unreachable code")
-    }
-
     private def seek[RESULT <: AnyRef](index: IndexReadSession,
                                        nodeCursor: NodeValueIndexCursor,
                                        read: Read,
                                        predicates: Seq[IndexQuery]): Unit = {
 
-      val impossiblePredicate =
-        predicates.exists {
-          case p: IndexQuery.ExactPredicate => (p.value() eq Values.NO_VALUE) || (p.value().isInstanceOf[FloatingPointValue] && p.value().asInstanceOf[FloatingPointValue].isNaN)
-          case _: IndexQuery.ExistsPredicate if predicates.length > 1 => false
-          case p: IndexQuery =>
-            !RANGE_SEEKABLE_VALUE_GROUPS.contains(p.valueGroup())
-        }
 
-      if (impossiblePredicate) {
+
+      if (impossiblePredicates(predicates)) {
         return // leave cursor un-initialized/empty
       }
 
@@ -208,6 +206,15 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
         }
       val needsValuesFromIndexSeek = exactSeekValues == null && needsValues
       read.nodeIndexSeek(index, nodeCursor, IndexQueryConstraints.constrained(indexOrder, needsValuesFromIndexSeek), predicates: _*)
+    }
+  }
+
+  def impossiblePredicates(predicates: Seq[IndexQuery]): Boolean  = {
+    predicates.exists {
+      case p: IndexQuery.ExactPredicate => (p.value() eq Values.NO_VALUE) || (p.value().isInstanceOf[FloatingPointValue] && p.value().asInstanceOf[FloatingPointValue].isNaN)
+      case _: IndexQuery.ExistsPredicate if predicates.length > 1 => false
+      case p: IndexQuery =>
+        !RANGE_SEEKABLE_VALUE_GROUPS.contains(p.valueGroup())
     }
   }
 }
