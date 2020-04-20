@@ -53,30 +53,28 @@ class Buffers(numBuffers: Int,
                                               argumentStateMapIds: ReadOnlyArray[ArgumentStateMapId]
                                              ): ReadOnlyArray[AccumulatingBuffer] = {
     var j = 0
-    val reducersBuilder = Array.newBuilder[AccumulatingBuffer]
-    reducersBuilder.sizeHint(argumentStateMapIds.length)
+    val reducers = new Array[AccumulatingBuffer](argumentStateMapIds.length)
     while (j < argumentStateMapIds.length) {
       val asmId = argumentStateMapIds(j)
       val accumulatingBuffer = findRHSAccumulatingStateBuffer(initialIndex, asmId)
-      reducersBuilder += accumulatingBuffer
+      reducers(j) = accumulatingBuffer
       j += 1
     }
-    new ReadOnlyArray(reducersBuilder.result())
+    new ReadOnlyArray(reducers)
   }
 
   private def findRHSAccumulatingStateBuffersWithInitialization(initialIndex: Int,
                                                                 argumentStateMapInitializations: ReadOnlyArray[Initialization[ArgumentStateMapId]]
                                                                ): ReadOnlyArray[Initialization[AccumulatingBuffer]] = {
     var j = 0
-    val reducersBuilder = Array.newBuilder[Initialization[AccumulatingBuffer]]
-    reducersBuilder.sizeHint(argumentStateMapInitializations.length)
+    val reducers = new Array[Initialization[AccumulatingBuffer]](argumentStateMapInitializations.length)
     while (j < argumentStateMapInitializations.length) {
       val Initialization(asmId, initialCount) = argumentStateMapInitializations(j)
       val accumulatingBuffer = findRHSAccumulatingStateBuffer(initialIndex, asmId)
-      reducersBuilder += Initialization(accumulatingBuffer, initialCount)
+      reducers(j) = Initialization(accumulatingBuffer, initialCount)
       j += 1
     }
-    new ReadOnlyArray(reducersBuilder.result())
+    new ReadOnlyArray(reducers)
   }
 
   /**
