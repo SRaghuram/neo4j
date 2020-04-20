@@ -238,7 +238,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         boolean investigatedXL = false;
         boolean labelsLoaded = false;
         boolean propertiesLoaded = skipProperties;
-        for ( int i = 0; i < currentSparseNodeCommands.length; i++ )
+        for ( int i = 0; i < currentSparseNodeCommands.length && (!propertiesLoaded || !labelsLoaded); i++ )
         {
             if ( currentSparseNodeCommands[i] != null )
             {
@@ -269,6 +269,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
                             }
                             else if ( !nodeCursor.data.header.hasReferenceMark( Header.OFFSET_PROPERTIES ) )
                             {
+                                propertyCursor.reset();
                                 propertiesLoaded = true;
                             }
                         }
