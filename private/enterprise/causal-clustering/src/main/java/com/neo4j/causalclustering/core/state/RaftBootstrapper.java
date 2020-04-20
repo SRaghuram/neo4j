@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state;
 
+import com.neo4j.causalclustering.core.TempBootstrapDir;
 import com.neo4j.causalclustering.core.consensus.membership.MembershipEntry;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
 import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState;
@@ -47,7 +48,6 @@ import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.storageengine.api.TransactionMetaDataStore;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.TEMP_BOOTSTRAP_DIRECTORY_NAME;
 import static java.lang.System.currentTimeMillis;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
@@ -163,23 +163,16 @@ public class RaftBootstrapper
      */
     private void bootstrapExistingSystemDatabase() throws IOException
     {
-        File bootstrapRootDir = new File( bootstrapContext.databaseLayout().databaseDirectory(), TEMP_BOOTSTRAP_DIRECTORY_NAME );
-
-        fs.deleteRecursively( bootstrapRootDir );
-        try
+        try ( var bootstrapRootDir = TempBootstrapDir.cleanBeforeAndAfter( fs, bootstrapContext.databaseLayout() ) )
         {
-            File tempDefaultDatabaseDir = new File( bootstrapRootDir, SYSTEM_DATABASE_NAME );
+            File tempDefaultDatabaseDir = new File( bootstrapRootDir.get(), SYSTEM_DATABASE_NAME );
 
-            fs.copyRecursively(  bootstrapContext.databaseLayout().databaseDirectory(), tempDefaultDatabaseDir );
-            fs.copyRecursively(  bootstrapContext.databaseLayout().getTransactionLogsDirectory(), tempDefaultDatabaseDir );
+            fs.copyRecursively( bootstrapContext.databaseLayout().databaseDirectory(), tempDefaultDatabaseDir );
+            fs.copyRecursively( bootstrapContext.databaseLayout().getTransactionLogsDirectory(), tempDefaultDatabaseDir );
 
-            DatabaseLayout tempDatabaseLayout = initializeStoreUsingTempDatabase( bootstrapRootDir, true );
+            DatabaseLayout tempDatabaseLayout = initializeStoreUsingTempDatabase( bootstrapRootDir.get(), true );
 
             bootstrapContext.replaceWith( tempDatabaseLayout.databaseDirectory() );
-        }
-        finally
-        {
-            fs.deleteRecursively( bootstrapRootDir );
         }
     }
 
@@ -190,13 +183,11 @@ public class RaftBootstrapper
 
     private void createStore( StoreId storeId, PageCursorTracer cursorTracer, boolean isSystemDatabase ) throws IOException
     {
-        File bootstrapRootDir = new File( bootstrapContext.databaseLayout().databaseDirectory(), TEMP_BOOTSTRAP_DIRECTORY_NAME );
-        fs.deleteRecursively( bootstrapRootDir ); // make sure temp bootstrap directory does not exist
-        try
+        try ( var bootstrapRootDir = TempBootstrapDir.cleanBeforeAndAfter( fs, bootstrapContext.databaseLayout() ) )
         {
             String databaseName = bootstrapContext.databaseId().name();
             log.info( "Initializing the store for database " + databaseName + " using a temporary database in " + bootstrapRootDir );
-            DatabaseLayout bootstrapDatabaseLayout = initializeStoreUsingTempDatabase( bootstrapRootDir, isSystemDatabase );
+            DatabaseLayout bootstrapDatabaseLayout = initializeStoreUsingTempDatabase( bootstrapRootDir.get(), isSystemDatabase );
             if ( storeId != null )
             {
                 log.info( "Changing store ID of bootstrapped database to " + storeId );
@@ -208,10 +199,6 @@ public class RaftBootstrapper
 
             // delete transaction logs so they will be recreated with the new store id, they should be empty so it's fine
             bootstrapContext.removeTransactionLogs();
-        }
-        finally
-        {
-            fs.deleteRecursively( bootstrapRootDir );
         }
     }
 
