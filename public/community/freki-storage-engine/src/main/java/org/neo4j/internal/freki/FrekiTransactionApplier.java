@@ -233,8 +233,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     private long[] findLabelsAndInitializePropertyCursor( FrekiPropertyCursor propertyCursor, Function<FrekiCommand.SparseNode,Record> recordFunction,
             boolean skipProperties )
     {
-        long[] labels = null;
-
+        long[] labels = EMPTY_LONG_ARRAY;
         boolean investigatedX1 = false;
         boolean investigatedXL = false;
         boolean labelsLoaded = false;
@@ -249,15 +248,29 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
                     if ( record.hasFlag( FLAG_IN_USE ) )
                     {
                         nodeCursor.initializeFromRecord( record );
-                        if ( !labelsLoaded && nodeCursor.data.labelOffset != 0 )
+                        if ( !labelsLoaded )
                         {
-                            labels = nodeCursor.labels();
-                            labelsLoaded = true;
+                            if ( nodeCursor.data.header.hasMark( Header.FLAG_LABELS ) )
+                            {
+                                labels = nodeCursor.labels();
+                                labelsLoaded = true;
+                            }
+                            else if ( !nodeCursor.data.header.hasReferenceMark( Header.FLAG_LABELS ) )
+                            {
+                                labelsLoaded = true;
+                            }
                         }
-                        if ( !propertiesLoaded && nodeCursor.data.propertyOffset != 0 )
+                        if ( !propertiesLoaded )
                         {
-                            nodeCursor.properties( propertyCursor );
-                            propertiesLoaded = true;
+                            if ( nodeCursor.data.header.hasMark( Header.OFFSET_PROPERTIES ) )
+                            {
+                                nodeCursor.properties( propertyCursor );
+                                propertiesLoaded = true;
+                            }
+                            else if ( !nodeCursor.data.header.hasReferenceMark( Header.OFFSET_PROPERTIES ) )
+                            {
+                                propertiesLoaded = true;
+                            }
                         }
                     }
 
@@ -282,6 +295,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
                 }
             }
         }
+
         if ( (!propertiesLoaded || !labelsLoaded) && (!investigatedX1 || !investigatedXL) )
         {
             nodeCursor.single( currentNodeId );
@@ -290,7 +304,6 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
                 if ( !labelsLoaded )
                 {
                     labels = nodeCursor.labels();
-                    labelsLoaded = true;
                 }
                 if ( !propertiesLoaded )
                 {
@@ -298,11 +311,6 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
                     propertiesLoaded = true;
                 }
             }
-        }
-
-        if ( !labelsLoaded )
-        {
-            labels = EMPTY_LONG_ARRAY;
         }
 
         if ( !propertiesLoaded )

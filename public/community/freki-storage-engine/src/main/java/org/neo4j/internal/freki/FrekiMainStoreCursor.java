@@ -45,7 +45,6 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     final PageCursorTracer cursorTracer;
     boolean forceLoad;
 
-    private Header header;
     FrekiCursorData data;
     // State from relationship section, it's here because both relationship cursors as well as property cursor makes use of them
     int[] relationshipTypesInNode;
@@ -176,12 +175,12 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         }
     }
 
-    private void ensureLoaded( ToIntFunction<FrekiCursorData> test )
+    private void ensureLoaded( ToIntFunction<FrekiCursorData> test, int headerSlot )
     {
         if ( test.applyAsInt( data ) == 0 )
         {
             ensureX1Loaded();
-            if ( test.applyAsInt( data ) == 0 )
+            if ( test.applyAsInt( data ) == 0 && data.header.hasReferenceMark( headerSlot ) )
             {
                 ensureXLLoaded();
             }
@@ -190,17 +189,17 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
 
     void ensureLabelsLoaded()
     {
-        ensureLoaded( data -> data.labelOffset );
+        ensureLoaded( data -> data.labelOffset, Header.FLAG_LABELS );
     }
 
     void ensureRelationshipsLoaded()
     {
-        ensureLoaded( data -> data.relationshipOffset );
+        ensureLoaded( data -> data.relationshipOffset, Header.OFFSET_RELATIONSHIPS );
     }
 
     void ensurePropertiesLoaded()
     {
-        ensureLoaded( data -> data.propertyOffset );
+        ensureLoaded( data -> data.propertyOffset, Header.OFFSET_PROPERTIES );
     }
 
     private Record loadRecord( int sizeExp, long id )
@@ -213,11 +212,6 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
 
     private boolean ensureFreshDataInstanceForLoadingNewNode()
     {
-        if ( header == null )
-        {
-            header = new Header();
-        }
-
         boolean reused = true;
         if ( data != null )
         {
