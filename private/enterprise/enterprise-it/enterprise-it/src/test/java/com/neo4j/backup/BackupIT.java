@@ -1201,7 +1201,8 @@ class BackupIT
         return OnlineBackupContext.builder()
                 .withAddress( address )
                 .withBackupDirectory( dir )
-                .withReportsDirectory( dir );
+                .withReportsDirectory( dir )
+                .withConsistencyCheckRelationshipTypeScanStore( enable_relationship_type_scan_store.defaultValue() );
     }
 
     private static DbRepresentation addLotsOfData( GraphDatabaseService db )
