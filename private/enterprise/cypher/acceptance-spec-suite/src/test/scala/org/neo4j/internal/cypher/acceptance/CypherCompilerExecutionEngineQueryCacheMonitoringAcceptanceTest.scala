@@ -20,7 +20,7 @@ import org.neo4j.logging.AssertableLogProvider.Level
 import org.neo4j.logging.LogAssertions.assertThat
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 
-class CypherCompilerStringCacheMonitoringAcceptanceTest extends ExecutionEngineFunSuite {
+class CypherCompilerExecutionEngineQueryCacheMonitoringAcceptanceTest extends ExecutionEngineFunSuite {
 
   override def databaseConfig(): Map[Setting[_],Object] = super.databaseConfig() ++
     Map(GraphDatabaseSettings.cypher_min_replan_interval -> Duration.ZERO,
