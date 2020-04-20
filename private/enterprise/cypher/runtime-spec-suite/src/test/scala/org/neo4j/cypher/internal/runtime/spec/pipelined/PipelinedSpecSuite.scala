@@ -415,8 +415,8 @@ class PipelinedProfileMemoryTrackingDisabledTest extends ProfileMemoryTrackingDi
 class PipelinedNestedPlanExpressionTest extends NestedPlanExpressionTestBase(FUSING, PIPELINED, SIZE_HINT)
 class PipelinedNestedPlanExpressionNoFusingTest extends NestedPlanExpressionTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
 
-class PipelinedCompiledExpressionsTest extends CompiledExpressionsTestBase(FUSING, PIPELINED, SIZE_HINT)
-class PipelinedCompiledExpressionsNoFusingTest extends CompiledExpressionsTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+class PipelinedCompiledExpressionsTest extends CompiledExpressionsTestBase(FUSING, PIPELINED)
+class PipelinedCompiledExpressionsNoFusingTest extends CompiledExpressionsTestBase(NO_FUSING, PIPELINED)
 
 /**
  * This test is pipelined only, there is no reason to run in other runtimes

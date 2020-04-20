@@ -10,18 +10,29 @@ import org.neo4j.cypher.internal.cache.LFUCache
 /**
   * Compiles [[IntermediateExpression]] into compiled byte code.
   */
-class CachingExpressionCompilerBack(inner: DefaultExpressionCompilerBack) extends ExpressionCompilerBack {
+class CachingExpressionCompilerBack(inner: DefaultExpressionCompilerBack,
+                                    tracer: CachingExpressionCompilerTracer
+                                   ) extends ExpressionCompilerBack {
 
   override def compileExpression(e: IntermediateExpression): CompiledExpression = {
-    CachingExpressionCompilerBack.EXPRESSIONS.computeIfAbsent(e, inner.compileExpression(e))
+    CachingExpressionCompilerBack.EXPRESSIONS.computeIfAbsent(e, {
+      tracer.onCompileExpression()
+      inner.compileExpression(e)
+    })
   }
 
   override def compileProjection(projection: IntermediateExpression): CompiledProjection = {
-    CachingExpressionCompilerBack.PROJECTIONS.computeIfAbsent(projection, inner.compileProjection(projection))
+    CachingExpressionCompilerBack.PROJECTIONS.computeIfAbsent(projection, {
+      tracer.onCompileProjection()
+      inner.compileProjection(projection)
+    })
   }
 
   override def compileGrouping(grouping: IntermediateGroupingExpression): CompiledGroupingExpression = {
-    CachingExpressionCompilerBack.GROUPINGS.computeIfAbsent(grouping, inner.compileGrouping(grouping))
+    CachingExpressionCompilerBack.GROUPINGS.computeIfAbsent(grouping, {
+      tracer.onCompileGrouping()
+      inner.compileGrouping(grouping)
+    })
   }
 }
 

@@ -136,6 +136,4 @@ object DefaultExpressionCompilerBack {
   private val COUNTER = new AtomicLong(0L)
   private val PACKAGE_NAME = "org.neo4j.codegen"
   private def className(): String = "Expression" + COUNTER.getAndIncrement()
-
-  def numberOfCompilationEvents(): Long = COUNTER.get()
 }

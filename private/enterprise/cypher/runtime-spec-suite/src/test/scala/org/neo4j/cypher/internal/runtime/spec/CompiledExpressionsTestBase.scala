@@ -5,116 +5,92 @@
  */
 package org.neo4j.cypher.internal.runtime.spec
 
+import java.util.concurrent.atomic.AtomicLong
+
 import org.neo4j.configuration.GraphDatabaseSettings.CypherExpressionEngine.COMPILED
 import org.neo4j.configuration.GraphDatabaseSettings.cypher_expression_engine
 import org.neo4j.cypher.internal.CypherRuntime
-import org.neo4j.cypher.internal.RuntimeContext
-import org.neo4j.cypher.internal.runtime.compiled.expressions.DefaultExpressionCompilerBack
+import org.neo4j.cypher.internal.EnterpriseRuntimeContext
+import org.neo4j.cypher.internal.LogicalQuery
+import org.neo4j.cypher.internal.runtime.spec.CompiledExpressionsTestBase.COUNTER
 
-abstract class CompiledExpressionsTestBase[CONTEXT <: RuntimeContext](edition: Edition[CONTEXT],
-                                                                      runtime: CypherRuntime[CONTEXT],
-                                                                      sizeHint: Int
-  ) extends RuntimeTestSuite[CONTEXT](edition.copyWith(cypher_expression_engine -> COMPILED), runtime) {
+object CompiledExpressionsTestBase {
+  // This is necessary to avoid accidental caching of expressions when different implementations
+  // of this test execute in parallel.
+  val COUNTER = new AtomicLong()
+}
 
-  private val filterQuery =
+abstract class CompiledExpressionsTestBase[CONTEXT <: EnterpriseRuntimeContext](edition: Edition[CONTEXT],
+                                                                                runtime: CypherRuntime[CONTEXT]) extends RuntimeTestSuite[CONTEXT](edition.copyWith(cypher_expression_engine -> COMPILED), runtime) {
+
+  private def newFilterQuery() =
     new LogicalQueryBuilder(this)
       .produceResults("x")
-      .filter("3*x+100*33 > 0")
+      .filter(s"3*x+100*${COUNTER.getAndIncrement()} > 0")
       .nonFuseable()
       .projection("1 AS x")
       .argument()
       .build()
 
   test("should compile expression first time") {
-    // given
-    val before = DefaultExpressionCompilerBack.numberOfCompilationEvents()
-
-    // when
-    consume(execute(filterQuery, runtime))
-
-    // then
-    val after = DefaultExpressionCompilerBack.numberOfCompilationEvents()
-    after shouldBe (before + 1)
+    numberOfCompilationEvents(newFilterQuery()) shouldBe 1
   }
 
   test("should not recompile expression") {
     // given
-    consume(execute(filterQuery, runtime))
-    val before = DefaultExpressionCompilerBack.numberOfCompilationEvents()
-
-    // when
-    consume(execute(filterQuery, runtime))
+    val filterQuery = newFilterQuery()
+    execute(filterQuery, runtime)
 
     // then
-    val after = DefaultExpressionCompilerBack.numberOfCompilationEvents()
-    after shouldBe before
+    numberOfCompilationEvents(filterQuery) shouldBe 0
   }
 
-  private val projectionQuery =
+  private def newProjectionQuery() =
     new LogicalQueryBuilder(this)
       .produceResults("y1", "y2")
-      .projection("3*x+100*33 AS y1", "['hi', 'ho'][x] AS y2")
+      .projection(s"3*x+100*${COUNTER.getAndIncrement()} AS y1", "['hi', 'ho'][x] AS y2")
       .nonFuseable()
       .projection("1 AS x")
       .argument()
       .build()
 
   test("should compile projection first time") {
-    // given
-    val before = DefaultExpressionCompilerBack.numberOfCompilationEvents()
-
     // when
-    consume(execute(projectionQuery, runtime))
-
-    // then
-    val after = DefaultExpressionCompilerBack.numberOfCompilationEvents()
-    after shouldBe (before + 1)
+    numberOfCompilationEvents(newProjectionQuery()) shouldBe 1
   }
 
   test("should not recompile projection") {
     // given
-    consume(execute(projectionQuery, runtime))
-    val before = DefaultExpressionCompilerBack.numberOfCompilationEvents()
-
-    // when
-    consume(execute(projectionQuery, runtime))
+    val projectionQuery = newProjectionQuery()
+    execute(projectionQuery, runtime)
 
     // then
-    val after = DefaultExpressionCompilerBack.numberOfCompilationEvents()
-    after shouldBe before
+    numberOfCompilationEvents(projectionQuery) shouldBe 0
   }
 
-  private val aggregationQuery =
+  private def newAggregationQuery() =
     new LogicalQueryBuilder(this)
       .produceResults("y", "count")
-      .aggregation(Seq("3*x+100*33 AS y"), Seq("count(*) AS count"))
+      .aggregation(Seq(s"3*x+100*${COUNTER.getAndIncrement()} AS y"), Seq("count(*) AS count"))
       .nonFuseable()
       .projection("1 AS x")
       .argument()
       .build()
 
   test("should compile aggregation first time") {
-    // given
-    val before = DefaultExpressionCompilerBack.numberOfCompilationEvents()
-
-    // when
-    consume(execute(aggregationQuery, runtime))
-
-    // then
-    val after = DefaultExpressionCompilerBack.numberOfCompilationEvents()
-    after shouldBe (before + 1)
+    numberOfCompilationEvents(newAggregationQuery()) shouldBe 1
   }
 
   test("should not recompile aggregation") {
     // given
-    consume(execute(aggregationQuery, runtime))
-    val before = DefaultExpressionCompilerBack.numberOfCompilationEvents()
-
-    // when
-    consume(execute(aggregationQuery, runtime))
-
+    val aggregationQuery = newAggregationQuery()
+    execute(aggregationQuery, runtime)
     // then
-    val after = DefaultExpressionCompilerBack.numberOfCompilationEvents()
-    after shouldBe before
+    numberOfCompilationEvents(aggregationQuery) shouldBe 0
+  }
+
+  private def numberOfCompilationEvents(query: LogicalQuery): Int = {
+    val (_, context) = buildPlanAndContext(query, runtime)
+    context.cachingExpressionCompilerTracer.asInstanceOf[TestCachingExpressionCompilerTracer].numberOfCompilationEvents
   }
 }

@@ -170,7 +170,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
     val converters: ExpressionConverters = {
       val builder = Seq.newBuilder[ExpressionConverter]
       if (context.compileExpressions)
-        builder += new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly, codeGenerationMode)
+        builder += new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly, codeGenerationMode, context.cachingExpressionCompilerTracer)
       builder += SlottedExpressionConverters(physicalPlan, Some(NoPipe))
       builder += CommunityExpressionConverter(context.tokenContext)
       new ExpressionConverters(builder.result():_*)

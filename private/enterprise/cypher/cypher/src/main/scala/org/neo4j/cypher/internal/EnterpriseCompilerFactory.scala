@@ -21,6 +21,7 @@ import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.planning.CypherPlanner
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerTracer
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.exceptions.SyntaxException
@@ -104,7 +105,8 @@ case class EnterpriseRuntimeContext(tokenContext: TokenContext,
                                     compileExpressions: Boolean,
                                     materializedEntitiesMode: Boolean,
                                     operatorEngine: CypherOperatorEngineOption,
-                                    interpretedPipesFallback: CypherInterpretedPipesFallbackOption) extends RuntimeContext
+                                    interpretedPipesFallback: CypherInterpretedPipesFallbackOption,
+                                    cachingExpressionCompilerTracer: CachingExpressionCompilerTracer) extends RuntimeContext
 
 /**
  * Manager of EnterpriseRuntimeContexts.
@@ -134,7 +136,8 @@ case class EnterpriseRuntimeContextManager(codeStructure: CodeStructure[Generate
       compileExpressions,
       materializedEntitiesMode,
       operatorEngine,
-      interpretedPipesFallback)
+      interpretedPipesFallback,
+      CachingExpressionCompilerTracer.NONE)
 
   override def assertAllReleased(): Unit = {
     // This is for test assertions only, and should run on the parallel executor.
