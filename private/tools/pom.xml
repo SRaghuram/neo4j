@@ -31,6 +31,12 @@
     <dependencies>
         <!-- Community dependencies -->
         <dependency>
+            <groupId>org.neo4j.driver</groupId>
+            <artifactId>neo4j-java-driver</artifactId>
+            <version>4.0.1</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>annotations</artifactId>
             <version>${project.version}</version>
