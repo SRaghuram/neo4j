@@ -816,6 +816,66 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     result.toList should be(List(Map("n" -> Map("name" -> "a"))))
   }
 
+  test("ascending node index seek of multiple values") {
+   //given
+    executeSingle("CREATE CONSTRAINT ON (n:Frame) ASSERT n.tic IS UNIQUE")
+    executeSingle("UNWIND range(1, 500) AS i CREATE (:Frame {tic:i})")
+
+    //when
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      """MATCH (f:Frame) WHERE f.tic IN range(3, 45)
+        |WITH f ORDER BY f.tic ASC
+        |RETURN f.tic""".stripMargin)
+
+    //then
+    result.toList should be((3 to 45).map(i => Map("f.tic" -> i)))
+  }
+
+  test("descending node index seek of multiple values") {
+    //given
+    executeSingle("CREATE CONSTRAINT ON (n:Frame) ASSERT n.tic IS UNIQUE")
+    executeSingle("UNWIND range(1, 500) AS i CREATE (:Frame {tic:i})")
+
+    //when
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      """MATCH (f:Frame) WHERE f.tic IN range(3, 45)
+        |WITH f ORDER BY f.tic DESC
+        |RETURN f.tic""".stripMargin)
+
+    //then
+    result.toList should be((45 to 3).map(i => Map("f.tic" -> i)))
+  }
+
+  test("ascending node index seek on composite index") {
+    //given
+    executeSingle("CREATE INDEX FOR (n:Frame) ON (n.tic1, n.tic2)")
+    executeSingle("UNWIND range(1, 500) AS i CREATE (:Frame {tic1:i, tic2: i})")
+
+    //when
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      """MATCH (f:Frame) WHERE f.tic1 IN range(3,45) AND f.tic2 >= 4
+        |WITH f ORDER BY f.tic ASC
+        |RETURN f.tic1""".stripMargin)
+
+    //then
+    result.toList should be((4 to 45).map(i => Map("f.tic1" -> i)))
+  }
+
+  test("descending node index seek on composite index") {
+    //given
+    executeSingle("CREATE INDEX FOR (n:Frame) ON (n.tic1, n.tic2)")
+    executeSingle("UNWIND range(1, 500) AS i CREATE (:Frame {tic1:i, tic2: i})")
+
+    //when
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      """MATCH (f:Frame) WHERE f.tic1 IN range(3,45) AND f.tic2 >= 4
+        |WITH f ORDER BY f.tic DESC
+        |RETURN f.tic1""".stripMargin)
+
+    //then
+    result.toList should be((45 to 4).map(i => Map("f.tic1" -> i)))
+  }
+
   private def makeJoeAndFriends(friendCount:Int = 10): Unit = {
     val joe = createLabeledNode(Map("name" -> s"Joe", "foo" -> 0, "start" -> true), "Person")
     val joseph = createLabeledNode(Map("name" -> s"Joseph", "foo" -> 1, "start" -> true), "Person")
