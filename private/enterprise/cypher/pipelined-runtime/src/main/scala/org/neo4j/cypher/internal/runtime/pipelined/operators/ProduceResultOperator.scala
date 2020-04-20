@@ -168,7 +168,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
                               resources: QueryResources): Int = {
     val subscriber: QuerySubscriber = state.subscriber
     var served = 0
-    val demand: Long = state.flowControl.getDemand
+    val demand: Long = state.flowControl.getDemandUnlessCancelled
     // Loop over the rows of the morsel and call the visitor for each one
     while (output.onValidRow && served < demand) {
       subscriber.onRecord()

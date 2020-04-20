@@ -176,7 +176,7 @@ object OperatorCodeGenHelperTemplates {
   val SUBSCRIPTION: LocalVariable = variable[FlowControl]("subscription",
     invoke(QUERY_STATE, method[PipelinedQueryState, FlowControl]("flowControl")))
   val DEMAND: LocalVariable = variable[Long]("demand",
-    invoke(load(SUBSCRIPTION), method[FlowControl, Long]("getDemand")))
+    invoke(load(SUBSCRIPTION), method[FlowControl, Long]("getDemandUnlessCancelled")))
 
   val SERVED: LocalVariable = variable[Long]("served", constant(0L))
 

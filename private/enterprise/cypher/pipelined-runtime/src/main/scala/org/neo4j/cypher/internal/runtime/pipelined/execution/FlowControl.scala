@@ -8,7 +8,19 @@ package org.neo4j.cypher.internal.runtime.pipelined.execution
 import org.neo4j.kernel.impl.query.QuerySubscription
 
 trait FlowControl extends QuerySubscription {
-  def getDemand: Long
+  /**
+   * Get the current demand unless this query is cancelled, in which case return 0
+   */
+  def getDemandUnlessCancelled: Long
+
+  /**
+   * Return true if the current query has demand. When cancelled, this method might
+   * return `true` even if `getDemandUnlessCancelled()` returns zero.
+   */
   def hasDemand: Boolean
+
+  /**
+   * Report newly served rows to this flow control.
+   */
   def addServed(newlyServed: Long): Unit
 }

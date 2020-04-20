@@ -175,9 +175,9 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
     }
   }
 
-  override def getDemand: Long = demand
+  override def getDemandUnlessCancelled: Long = demand
 
-  override def hasDemand: Boolean = getDemand > 0
+  override def hasDemand: Boolean = demand > 0
 
   override def addServed(newlyServed: Long): Unit = {
     demand -= newlyServed
@@ -336,12 +336,12 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
 
   // -------- Flow control methods --------
 
+  override def getDemandUnlessCancelled: Long = if (_cancelledOrFailed) 0 else requested.get() - served.get()
+
   // DANGER: Do not zero demand on cancellation, because this might lead to a rare racing hang on exceptions in
   //         the produce results pipeline in runtime=parallel, as long as we are practising soft closing of
   //         queries. If the race happens the query will never finish, so please be very careful around here.
-  override def getDemand: Long = requested.get() - served.get()
-
-  override def hasDemand: Boolean = getDemand > 0
+  override def hasDemand: Boolean = (requested.get() - served.get()) > 0
 
   override def addServed(newlyServed: Long): Unit = {
     debug("Served %d rows", newlyServed)
