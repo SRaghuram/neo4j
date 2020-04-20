@@ -7,8 +7,6 @@ package com.neo4j.dbms;
 
 import com.neo4j.dbms.database.MultiDatabaseManager;
 
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -175,11 +173,6 @@ public class DbmsReconciler implements DatabaseStateService
     protected EnterpriseDatabaseState initialReconcilerEntry( NamedDatabaseId namedDatabaseId )
     {
         return EnterpriseDatabaseState.initial( namedDatabaseId );
-    }
-
-    Collection<EnterpriseDatabaseState> statesSnapshot()
-    {
-        return Collections.unmodifiableCollection( currentStates.values() );
     }
 
     /**

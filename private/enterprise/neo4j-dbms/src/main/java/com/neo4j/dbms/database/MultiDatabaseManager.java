@@ -27,6 +27,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
 {
     private final long maximumNumberOfDatabases;
     private volatile boolean databaseManagerStarted;
+    private DatabaseOperationCounter operationCounter;
 
     public MultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition )
     {
@@ -36,6 +37,8 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
     MultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, boolean manageDatabasesOnStartAndStop )
     {
         super( globalModule, edition, manageDatabasesOnStartAndStop );
+        operationCounter = new DatabaseOperationCounter();
+        globalModule.getGlobalDependencies().satisfyDependency( operationCounter );
         maximumNumberOfDatabases = globalModule.getGlobalConfig().get( maxNumberOfDatabases );
     }
 
@@ -66,6 +69,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
 
         databaseMap.put( namedDatabaseId, databaseContext );
         databaseIdRepository().cache( namedDatabaseId );
+        operationCounter.increaseCreateCount();
 
         return databaseContext;
     }
@@ -84,18 +88,21 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
             throw new DatabaseManagementException( "System database can't be dropped." );
         }
         forSingleDatabase( namedDatabaseId, this::dropDatabase );
+        operationCounter.increaseDropCount();
     }
 
     @Override
     public void stopDatabase( NamedDatabaseId namedDatabaseId ) throws DatabaseNotFoundException
     {
         forSingleDatabase( namedDatabaseId, this::stopDatabase );
+        operationCounter.increaseStopCount();
     }
 
     @Override
     public void startDatabase( NamedDatabaseId namedDatabaseId ) throws DatabaseNotFoundException
     {
         forSingleDatabase( namedDatabaseId, this::startDatabase );
+        operationCounter.increaseStartCount();
     }
 
     protected final void forSingleDatabase( NamedDatabaseId namedDatabaseId, BiConsumer<NamedDatabaseId,DB> consumer )

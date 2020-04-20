@@ -9,13 +9,13 @@ import com.neo4j.dbms.DatabaseStateChangedListener;
 
 import org.neo4j.dbms.DatabaseState;
 
-public class DatabaseOperationFailCountMonitorListener implements DatabaseStateChangedListener
+public class DatabaseOperationCounterListener implements DatabaseStateChangedListener
 {
-    private DatabaseOperationFailCountMonitor monitor;
+    private DatabaseOperationCounter counter;
 
-    public DatabaseOperationFailCountMonitorListener( DatabaseOperationFailCountMonitor monitor )
+    public DatabaseOperationCounterListener( DatabaseOperationCounter counter )
     {
-        this.monitor = monitor;
+        this.counter = counter;
     }
 
     @Override
@@ -26,11 +26,11 @@ public class DatabaseOperationFailCountMonitorListener implements DatabaseStateC
 
         if ( !previousFailed && newFailed )
         {
-            monitor.increaseFailedCount();
+            counter.increaseFailedCount();
         }
         else if ( previousFailed && !newFailed )
         {
-            monitor.increaseRecoveredCount();
+            counter.increaseRecoveredCount();
         }
     }
 }

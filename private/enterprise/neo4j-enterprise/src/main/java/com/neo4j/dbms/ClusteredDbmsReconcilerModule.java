@@ -8,13 +8,11 @@ package com.neo4j.dbms;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.dbms.database.ClusteredMultiDatabaseManager;
-import com.neo4j.dbms.database.DatabaseOperationCountMonitor;
 
 import java.util.stream.Stream;
 
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.graphdb.factory.module.GlobalModule;
-import org.neo4j.logging.LogProvider;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
@@ -28,23 +26,12 @@ public final class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcile
     private final ReplicatedDatabaseEventService databaseEventService;
     private final ClusterInternalDbmsOperator internalOperator;
 
-    public static ClusteredDbmsReconcilerModule create( GlobalModule globalModule, ClusteredMultiDatabaseManager databaseManager,
+    public ClusteredDbmsReconcilerModule( GlobalModule globalModule, ClusteredMultiDatabaseManager databaseManager,
             ReplicatedDatabaseEventService databaseEventService, ClusterStateStorageFactory stateStorageFactory,
             ReconciledTransactionTracker reconciledTxTracker, PanicService panicService, ClusterSystemGraphDbmsModel dbmsModel )
     {
-        var monitor = globalModule.getGlobalMonitors().newMonitor( DatabaseOperationCountMonitor.class, StandaloneDbmsReconcilerModule.class.getName() );
-        var logProvider = globalModule.getLogService().getInternalLogProvider();
-        var transitionsTable = createTransitionsTable( new ClusterReconcilerTransitions( databaseManager, logProvider, monitor ) );
-
-        var reconciler = createReconciler( globalModule, databaseManager, stateStorageFactory, logProvider, panicService, transitionsTable );
-        return new ClusteredDbmsReconcilerModule( globalModule, databaseManager, databaseEventService, reconciledTxTracker, dbmsModel, reconciler, monitor );
-    }
-
-    private ClusteredDbmsReconcilerModule( GlobalModule globalModule, ClusteredMultiDatabaseManager databaseManager,
-            ReplicatedDatabaseEventService databaseEventService, ReconciledTransactionTracker reconciledTxTracker, ClusterSystemGraphDbmsModel dbmsModel,
-            DbmsReconciler reconciler, DatabaseOperationCountMonitor monitor )
-    {
-        super( globalModule, databaseManager, reconciledTxTracker, reconciler, dbmsModel, monitor );
+        super( globalModule, databaseManager, reconciledTxTracker,
+                createReconciler( globalModule, databaseManager, stateStorageFactory, panicService ), dbmsModel );
         this.databaseEventService = databaseEventService;
         this.internalOperator = databaseManager.internalDbmsOperator();
     }
@@ -81,8 +68,12 @@ public final class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcile
     }
 
     private static ClusteredDbmsReconciler createReconciler( GlobalModule globalModule, ClusteredMultiDatabaseManager databaseManager,
-            ClusterStateStorageFactory stateStorageFactory, LogProvider logProvider, PanicService panicService, TransitionsTable transitionsTable )
+            ClusterStateStorageFactory stateStorageFactory, PanicService panicService )
     {
+
+        var logProvider = globalModule.getLogService().getInternalLogProvider();
+        var transitionsTable = createTransitionsTable( new ClusterReconcilerTransitions( databaseManager, logProvider ) );
+
         return new ClusteredDbmsReconciler( databaseManager, globalModule.getGlobalConfig(), logProvider, globalModule.getJobScheduler(),
                 stateStorageFactory, panicService, transitionsTable );
     }

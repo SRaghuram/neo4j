@@ -5,6 +5,8 @@
  */
 package com.neo4j.metrics.global;
 
+import com.neo4j.dbms.database.DatabaseOperationCounter;
+
 import java.util.function.Supplier;
 
 import org.neo4j.annotations.service.ServiceProvider;
@@ -28,6 +30,8 @@ public class GlobalMetricsExtensionFactory extends ExtensionFactory<GlobalMetric
         Monitors monitors();
 
         PageCacheCounters pageCacheCounters();
+
+        DatabaseOperationCounter operationCounter();
 
         Config configuration();
 

@@ -5,9 +5,8 @@
  */
 package com.neo4j.dbms;
 
-import com.neo4j.dbms.database.DatabaseOperationCountMonitor;
-import com.neo4j.dbms.database.DatabaseOperationFailCountMonitor;
-import com.neo4j.dbms.database.DatabaseOperationFailCountMonitorListener;
+import com.neo4j.dbms.database.DatabaseOperationCounter;
+import com.neo4j.dbms.database.DatabaseOperationCounterListener;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 
 import java.util.stream.Stream;
@@ -19,11 +18,8 @@ import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.extension.GlobalExtensions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
-import org.neo4j.kernel.lifecycle.LifecycleListener;
-import org.neo4j.kernel.lifecycle.LifecycleStatus;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
@@ -44,18 +40,14 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
     private final ReconciledTransactionTracker reconciledTxTracker;
     private final DbmsReconciler reconciler;
 
-    public static StandaloneDbmsReconcilerModule create( GlobalModule globalModule, MultiDatabaseManager<?> databaseManager,
-            ReconciledTransactionTracker reconciledTxTracker, EnterpriseSystemGraphDbmsModel dbmsModel )
+    public StandaloneDbmsReconcilerModule( GlobalModule globalModule, MultiDatabaseManager<?> databaseManager, ReconciledTransactionTracker reconciledTxTracker,
+            EnterpriseSystemGraphDbmsModel dbmsModel )
     {
-        var monitor = globalModule.getGlobalMonitors().newMonitor( DatabaseOperationCountMonitor.class, StandaloneDbmsReconcilerModule.class.getName() );
-        var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager, monitor ) );
-        var reconciler = createReconciler( globalModule, databaseManager, transitionsTable );
-        return new StandaloneDbmsReconcilerModule( globalModule, databaseManager, reconciledTxTracker, reconciler, dbmsModel, monitor );
+        this( globalModule, databaseManager, reconciledTxTracker, createReconciler( globalModule, databaseManager ), dbmsModel );
     }
 
     protected StandaloneDbmsReconcilerModule( GlobalModule globalModule, MultiDatabaseManager<?> databaseManager,
-            ReconciledTransactionTracker reconciledTxTracker, DbmsReconciler reconciler, EnterpriseSystemGraphDbmsModel dbmsModel,
-            DatabaseOperationCountMonitor monitor )
+            ReconciledTransactionTracker reconciledTxTracker, DbmsReconciler reconciler, EnterpriseSystemGraphDbmsModel dbmsModel )
     {
         var internalLogProvider = globalModule.getLogService().getInternalLogProvider();
 
@@ -68,12 +60,11 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
         this.shutdownOperator = new ShutdownOperator( databaseManager, globalModule.getGlobalConfig() );
         this.reconciler = reconciler;
 
-        var failMonitor =
-                globalModule.getGlobalMonitors().newMonitor( DatabaseOperationFailCountMonitor.class, StandaloneDbmsReconcilerModule.class.getName() );
-        reconciler.registerListener( new DatabaseOperationFailCountMonitorListener( failMonitor ) );
-        globalModule.getGlobalLife().addLifecycleListener( createReconcilerMonitorResetListener( monitor, failMonitor ) );
         globalModule.getGlobalDependencies().satisfyDependency( reconciler );
         globalModule.getGlobalDependencies().satisfyDependencies( localOperator, systemOperator );
+
+        var operationCounter = globalModule.getGlobalDependencies().resolveDependency( DatabaseOperationCounter.class );
+        reconciler.registerListener( new DatabaseOperationCounterListener( operationCounter ) );
     }
 
     @Override
@@ -166,12 +157,11 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
         return databaseManager.getDatabaseContext( NAMED_SYSTEM_DATABASE_ID ).orElseThrow().databaseFacade();
     }
 
-    private static DbmsReconciler createReconciler( GlobalModule globalModule,
-                                                    MultiDatabaseManager<?> databaseManager,
-                                                    TransitionsTable transitionsTable )
+    private static DbmsReconciler createReconciler( GlobalModule globalModule, MultiDatabaseManager<?> databaseManager )
     {
+        var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
         return new DbmsReconciler( databaseManager, globalModule.getGlobalConfig(), globalModule.getLogService().getInternalLogProvider(),
-                                   globalModule.getJobScheduler(), transitionsTable );
+                globalModule.getJobScheduler(), transitionsTable );
     }
 
     private long getLastClosedTransactionId( GraphDatabaseAPI db )
@@ -180,48 +170,4 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
         var txIdStore = resolver.resolveDependency( TransactionIdStore.class );
         return txIdStore.getLastClosedTransactionId();
     }
-
-    private LifecycleListener createReconcilerMonitorResetListener( DatabaseOperationCountMonitor monitor, DatabaseOperationFailCountMonitor failMonitor )
-    {
-        return ( instance, from, to ) ->
-        {
-            if ( instance instanceof GlobalExtensions && to.equals( LifecycleStatus.STARTED ) )
-            {
-                reset( monitor, failMonitor );
-            }
-        };
-    }
-
-    private void reset( DatabaseOperationCountMonitor monitor, DatabaseOperationFailCountMonitor failMonitor )
-    {
-        monitor.resetCounts();
-        failMonitor.resetCounts();
-        reconciler.statesSnapshot().forEach( state ->
-        {
-            if ( state.hasFailed() )
-            {
-                failMonitor.increaseFailedCount();
-            }
-            switch ( state.operatorState() )
-            {
-            case STOPPED:
-                monitor.increaseCreateCount();
-                break;
-            case STORE_COPYING:
-                // STORE_COPYING is STARTED
-            case STARTED:
-                monitor.increaseCreateCount();
-                monitor.increaseStartCount();
-                break;
-            default:
-                // INITIAL is not tracked
-                // UNKNOWN is not tracked
-                // DROPPED will be reset to zero, drop count cannot be measured exactly:
-                //   if a database 'foo' was dropped and recreated then old stats would show 1
-                //   but after reset it would not count since 'currentStates' contains that 'foo' is started
-                break;
-            }
-        } );
-    }
-
 }

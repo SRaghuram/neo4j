@@ -6,7 +6,6 @@
 package com.neo4j.dbms;
 
 import com.neo4j.dbms.database.ClusteredMultiDatabaseManager;
-import com.neo4j.dbms.database.DatabaseOperationCountMonitor;
 
 import java.util.function.Consumer;
 
@@ -31,9 +30,9 @@ final class ClusterReconcilerTransitions extends ReconcilerTransitions
     private final Transition stopBeforeStoreCopy;
     private final Transition logCleanupAndDrop;
 
-    ClusterReconcilerTransitions( ClusteredMultiDatabaseManager databaseManager, LogProvider logProvider, DatabaseOperationCountMonitor monitor )
+    ClusterReconcilerTransitions( ClusteredMultiDatabaseManager databaseManager, LogProvider logProvider )
     {
-        super( databaseManager, monitor );
+        super( databaseManager );
         this.startAfterStoreCopy = startAfterStoreCopyFactory( databaseManager );
         this.stopBeforeStoreCopy = stopBeforeStoreCopyFactory( databaseManager );
         this.logCleanupAndDrop = logCleanupAndDropFactory( databaseManager, logProvider );

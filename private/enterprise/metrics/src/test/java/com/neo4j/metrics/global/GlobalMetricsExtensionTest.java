@@ -5,6 +5,7 @@
  */
 package com.neo4j.metrics.global;
 
+import com.neo4j.dbms.database.DatabaseOperationCounter;
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -118,6 +119,12 @@ class GlobalMetricsExtensionTest
 
         @Override
         public PageCacheCounters pageCacheCounters()
+        {
+            return null;
+        }
+
+        @Override
+        public DatabaseOperationCounter operationCounter()
         {
             return null;
         }

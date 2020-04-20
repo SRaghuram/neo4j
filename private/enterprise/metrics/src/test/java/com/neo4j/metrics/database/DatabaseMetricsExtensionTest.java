@@ -7,6 +7,7 @@ package com.neo4j.metrics.database;
 
 import com.neo4j.causalclustering.common.ClusterMonitors;
 import com.neo4j.causalclustering.core.consensus.CoreMetaData;
+import com.neo4j.dbms.database.DatabaseOperationCounter;
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.metrics.global.GlobalMetricsExtension;
 import com.neo4j.metrics.global.GlobalMetricsExtensionFactory;
@@ -141,6 +142,12 @@ class DatabaseMetricsExtensionTest
         public PageCacheCounters pageCacheCounters()
         {
             return PageCacheTracer.NULL;
+        }
+
+        @Override
+        public DatabaseOperationCounter operationCounter()
+        {
+            return new DatabaseOperationCounter();
         }
 
         @Override

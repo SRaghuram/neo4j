@@ -6,15 +6,11 @@
 package com.neo4j.metrics.source.db;
 
 import com.codahale.metrics.MetricRegistry;
-import com.neo4j.dbms.database.DatabaseOperationCountMonitor;
-import com.neo4j.dbms.database.DatabaseOperationFailCountMonitor;
+import com.neo4j.dbms.database.DatabaseOperationCounter;
 import com.neo4j.metrics.metric.MetricsCounter;
-
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.annotations.documented.Documented;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
-import org.neo4j.monitoring.Monitors;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
@@ -44,13 +40,12 @@ public class DatabaseOperationCountMetrics extends LifecycleAdapter
     private final String countRecovered;
 
     private final MetricRegistry registry;
-    private final Monitors monitors;
-    private final DatabaseOperationCountMetric databaseCountMetric = new DatabaseOperationCountMetric();
+    private final DatabaseOperationCounter counter;
 
-    public DatabaseOperationCountMetrics( String metricsPrefix, MetricRegistry registry, Monitors monitors )
+    public DatabaseOperationCountMetrics( String metricsPrefix, MetricRegistry registry, DatabaseOperationCounter counter )
     {
         this.registry = registry;
-        this.monitors = monitors;
+        this.counter = counter;
 
         this.countCreate = name( metricsPrefix, DATABASE_CREATE_COUNT );
         this.countStart = name( metricsPrefix, DATABASE_START_COUNT );
@@ -63,14 +58,12 @@ public class DatabaseOperationCountMetrics extends LifecycleAdapter
     @Override
     public void start()
     {
-        monitors.addMonitorListener( databaseCountMetric );
-
-        registry.register( countCreate, new MetricsCounter( databaseCountMetric::createCount ) );
-        registry.register( countStart, new MetricsCounter( databaseCountMetric::startCount ) );
-        registry.register( countStop, new MetricsCounter( databaseCountMetric::stopCount ) );
-        registry.register( countDrop, new MetricsCounter( databaseCountMetric::dropCount ) );
-        registry.register( countFailed, new MetricsCounter( databaseCountMetric::failedCount ) );
-        registry.register( countRecovered, new MetricsCounter( databaseCountMetric::recoveredCount ) );
+        registry.register( countCreate, new MetricsCounter( counter::createCount ) );
+        registry.register( countStart, new MetricsCounter( counter::startCount ) );
+        registry.register( countStop, new MetricsCounter( counter::stopCount ) );
+        registry.register( countDrop, new MetricsCounter( counter::dropCount ) );
+        registry.register( countFailed, new MetricsCounter( counter::failedCount ) );
+        registry.register( countRecovered, new MetricsCounter( counter::recoveredCount ) );
     }
 
     @Override
@@ -82,100 +75,5 @@ public class DatabaseOperationCountMetrics extends LifecycleAdapter
         registry.remove( countDrop );
         registry.remove( countFailed );
         registry.remove( countRecovered );
-
-        monitors.removeMonitorListener( databaseCountMetric );
-    }
-
-    static class DatabaseOperationCountMetric implements DatabaseOperationCountMonitor, DatabaseOperationFailCountMonitor
-    {
-        private AtomicLong createCount = new AtomicLong( 0 );
-        private AtomicLong startCount = new AtomicLong( 0 );
-        private AtomicLong stopCount = new AtomicLong( 0 );
-        private AtomicLong dropCount = new AtomicLong( 0 );
-        private AtomicLong failedCount = new AtomicLong( 0 );
-        private AtomicLong recoveredCount = new AtomicLong( 0 );
-
-        @Override
-        public long startCount()
-        {
-            return startCount.get();
-        }
-
-        @Override
-        public long createCount()
-        {
-            return createCount.get();
-        }
-
-        @Override
-        public long stopCount()
-        {
-            return stopCount.get();
-        }
-
-        @Override
-        public long dropCount()
-        {
-            return dropCount.get();
-        }
-
-        @Override
-        public long failedCount()
-        {
-            return failedCount.get();
-        }
-
-        @Override
-        public long recoveredCount()
-        {
-            return recoveredCount.get();
-        }
-
-        @Override
-        public void increaseCreateCount()
-        {
-            createCount.incrementAndGet();
-        }
-
-        @Override
-        public void increaseStartCount()
-        {
-            startCount.incrementAndGet();
-        }
-
-        @Override
-        public void increaseStopCount()
-        {
-            stopCount.incrementAndGet();
-        }
-
-        @Override
-        public void increaseDropCount()
-        {
-            dropCount.incrementAndGet();
-        }
-
-        @Override
-        public void increaseFailedCount()
-        {
-            failedCount.incrementAndGet();
-        }
-
-        @Override
-        public void increaseRecoveredCount()
-        {
-            recoveredCount.incrementAndGet();
-        }
-
-        @Override
-        public void resetCounts()
-        {
-            createCount.set( 0 );
-            startCount.set( 0 );
-            stopCount.set( 0 );
-            dropCount.set( 0 );
-            failedCount.set( 0 );
-            recoveredCount.set( 0 );
-        }
     }
 }

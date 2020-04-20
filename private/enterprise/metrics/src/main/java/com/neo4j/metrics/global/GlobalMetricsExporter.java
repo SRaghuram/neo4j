@@ -88,7 +88,7 @@ public class GlobalMetricsExporter
 
         if ( config.get( MetricsSettings.databaseOperationCountEnabled ) )
         {
-            life.add( new DatabaseOperationCountMetrics( globalMetricsPrefix, registry, dependencies.monitors() ) );
+            life.add( new DatabaseOperationCountMetrics( globalMetricsPrefix, registry, dependencies.operationCounter() ) );
         }
 
         boolean httpOrHttpsEnabled = config.get( HttpConnector.enabled ) || config.get( HttpsConnector.enabled );

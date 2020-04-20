@@ -189,8 +189,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
                 .orElseThrow()
                 .databaseFacade();
         var dbmsModel = new EnterpriseSystemGraphDbmsModel( systemDbSupplier );
-        StandaloneDbmsReconcilerModule reconcilerModule =
-                StandaloneDbmsReconcilerModule.create( globalModule, databaseManager, reconciledTxTracker, dbmsModel );
+        StandaloneDbmsReconcilerModule reconcilerModule = new StandaloneDbmsReconcilerModule( globalModule, databaseManager, reconciledTxTracker, dbmsModel );
         databaseStateService = reconcilerModule.reconciler();
         databaseStartAborter = new DatabaseStartAborter( globalModule.getGlobalAvailabilityGuard(), dbmsModel, globalModule.getGlobalClock(),
                 Duration.ofSeconds( 5 ) );

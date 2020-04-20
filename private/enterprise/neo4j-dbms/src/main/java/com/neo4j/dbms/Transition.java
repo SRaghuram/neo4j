@@ -8,10 +8,8 @@ package com.neo4j.dbms;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.stream.Stream;
 
 import org.neo4j.kernel.database.NamedDatabaseId;
-import org.neo4j.util.VisibleForTesting;
 
 public class Transition
 {
@@ -19,17 +17,14 @@ public class Transition
     private final EnterpriseOperatorState successfulEndState;
     private final EnterpriseOperatorState failedEndState;
     private final Consumer<NamedDatabaseId> transitionFunction;
-    private final Runnable monitorFunction;
 
     private Transition( Set<EnterpriseOperatorState> validStartStates, EnterpriseOperatorState successfulEndState,
-            EnterpriseOperatorState failedEndState, Consumer<NamedDatabaseId> transitionFunction,
-            Runnable monitorFunction )
+            EnterpriseOperatorState failedEndState, Consumer<NamedDatabaseId> transitionFunction )
     {
         this.validStartStates = validStartStates;
         this.successfulEndState = successfulEndState;
         this.failedEndState = failedEndState;
         this.transitionFunction = transitionFunction;
-        this.monitorFunction = monitorFunction;
     }
 
     static NeedsDo from( EnterpriseOperatorState... validStarts )
@@ -88,36 +83,22 @@ public class Transition
             try
             {
                 transition.transitionFunction.accept( namedDatabaseId );
-                increaseMonitor();
                 return new EnterpriseDatabaseState( namedDatabaseId, transition.successfulEndState );
             }
             catch ( Throwable t )
             {
-                if ( transition.successfulEndState == transition.failedEndState )
-                {
-                    increaseMonitor();
-                }
                 var failedState = new EnterpriseDatabaseState( namedDatabaseId, transition.failedEndState );
                 throw new TransitionFailureException( t, failedState );
-            }
-        }
-
-        private void increaseMonitor()
-        {
-            if ( transition.monitorFunction != null )
-            {
-                transition.monitorFunction.run();
             }
         }
     }
 
     // Builder
-    private static class StepBuilder implements NeedsDo, NeedsEndSuccessAndOptionalMonitor, NeedsEndSuccess, NeedsEndFail
+    private static class StepBuilder implements NeedsDo, NeedsEndSuccess, NeedsEndFail
     {
         private Set<EnterpriseOperatorState> validStarts;
         private EnterpriseOperatorState endSuccess;
         private Consumer<NamedDatabaseId> transitionFunction;
-        private Runnable monitorFunction;
 
         private StepBuilder( EnterpriseOperatorState... validStarts )
         {
@@ -125,16 +106,9 @@ public class Transition
         }
 
         @Override
-        public NeedsEndSuccessAndOptionalMonitor doTransition( Consumer<NamedDatabaseId> transitionFunction )
+        public NeedsEndSuccess doTransition( Consumer<NamedDatabaseId> transitionFunction )
         {
             this.transitionFunction = transitionFunction;
-            return this;
-        }
-
-        @Override
-        public NeedsEndSuccess andMonitorWith( Runnable monitorFunction )
-        {
-            this.monitorFunction = monitorFunction;
             return this;
         }
 
@@ -148,19 +122,14 @@ public class Transition
         @Override
         public Transition ifFailed( EnterpriseOperatorState endFail )
         {
-            return new Transition( validStarts, endSuccess, endFail, transitionFunction, monitorFunction );
+            return new Transition( validStarts, endSuccess, endFail, transitionFunction );
         }
     }
 
     // Build steps
     interface NeedsDo
     {
-        NeedsEndSuccessAndOptionalMonitor doTransition( Consumer<NamedDatabaseId> transitionFunction );
-    }
-
-    interface NeedsEndSuccessAndOptionalMonitor extends NeedsEndSuccess
-    {
-        NeedsEndSuccess andMonitorWith( Runnable monitorFunction );
+        NeedsEndSuccess doTransition( Consumer<NamedDatabaseId> transitionFunction );
     }
 
     interface NeedsEndSuccess
