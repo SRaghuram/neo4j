@@ -70,7 +70,7 @@ class FrekiCursorData
         ByteBuffer buffer = record.data( 0 );
         header.deserialize( buffer );
         assignDataOffsets( buffer );
-        if ( header.hasOffset( OFFSET_RECORD_POINTER ) )
+        if ( header.hasMark( OFFSET_RECORD_POINTER ) )
         {
             forwardPointer = readRecordPointer( buffer );
             // xL can be loaded lazily when/if needed
@@ -87,33 +87,33 @@ class FrekiCursorData
         ByteBuffer buffer = record.data( 0 );
         header.deserialize( buffer );
         assignDataOffsets( buffer );
-        assert header.hasOffset( OFFSET_RECORD_POINTER );
+        assert header.hasMark( OFFSET_RECORD_POINTER );
         backwardPointer = readRecordPointer( buffer );
     }
 
     private void assignDataOffsets( ByteBuffer buffer )
     {
-        if ( header.hasFlag( FLAG_IS_DENSE ) )
+        if ( header.hasMark( FLAG_IS_DENSE ) )
         {
             isDense = true;
         }
-        if ( header.hasFlag( FLAG_LABELS ) )
+        if ( header.hasMark( FLAG_LABELS ) )
         {
             labelOffset = buffer.position();
             labelBuffer = buffer;
         }
-        if ( header.hasOffset( OFFSET_PROPERTIES ) )
+        if ( header.hasMark( OFFSET_PROPERTIES ) )
         {
             propertyOffset = header.getOffset( OFFSET_PROPERTIES );
             propertyBuffer = buffer;
         }
-        if ( header.hasOffset( OFFSET_RELATIONSHIPS ) )
+        if ( header.hasMark( OFFSET_RELATIONSHIPS ) )
         {
             relationshipOffset = header.getOffset( OFFSET_RELATIONSHIPS );
             relationshipBuffer = buffer;
             relationshipTypeOffsetsOffset = header.getOffset( OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
         }
-        if ( header.hasOffset( OFFSET_DEGREES ) )
+        if ( header.hasMark( OFFSET_DEGREES ) )
         {
             relationshipOffset = header.getOffset( OFFSET_DEGREES );
             relationshipBuffer = buffer;
