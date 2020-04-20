@@ -40,7 +40,7 @@ import static org.neo4j.internal.freki.StreamVByte.readLongs;
 class FrekiCursorData
 {
     Record[] records;
-    private Header header = new Header();
+    Header header = new Header();
 
     long nodeId = NULL;
     boolean x1Loaded;

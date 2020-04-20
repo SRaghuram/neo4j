@@ -341,7 +341,7 @@ class GraphUpdates
             if ( x1Header.spaceNeeded() + labelsSize + propsSize + Math.max( relsSize, degreesSize ) + miscSize <= stores.mainStore.recordDataSize() )
             {
                 //WE FIT IN x1
-                serializeParts( smallBuffer, intermediateBuffers, x1Header );
+                serializeParts( smallBuffer, intermediateBuffers, x1Header, null );
                 x1Command( smallBuffer, otherCommands );
                 return;
             }
@@ -370,13 +370,13 @@ class GraphUpdates
             movePartToXL( x1Header, xLHeader, nextInternalRelIdSize, Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
             movePartToXL( x1Header, xLHeader, relsSize, Header.OFFSET_RELATIONSHIPS );
             movePartToXL( x1Header, xLHeader, relsSize, Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
-            serializeParts( maxBuffer, intermediateBuffers, xLHeader );
+            serializeParts( maxBuffer, intermediateBuffers, xLHeader, x1Header );
             SimpleStore xLStore = stores.storeSuitableForRecordSize( maxBuffer.limit(), 1 );
             long forwardPointer = xLargeCommands( maxBuffer, xLStore, otherCommands );
 
             // serialize x1
             prepareRecordPointer( x1Header, intermediateBuffers[RECORD_POINTER], forwardPointer );
-            serializeParts( smallBuffer, intermediateBuffers, x1Header );
+            serializeParts( smallBuffer, intermediateBuffers, x1Header, xLHeader );
             x1Command( smallBuffer, otherCommands );
         }
 
@@ -434,7 +434,7 @@ class GraphUpdates
             return spaceLeftInX1;
         }
 
-        private static void serializeParts( ByteBuffer into, ByteBuffer[] intermediateBuffers, Header header )
+        private static void serializeParts( ByteBuffer into, ByteBuffer[] intermediateBuffers, Header header, Header referenceHeader )
         {
             header.allocateSpace( into );
             if ( header.hasMark( Header.FLAG_LABELS ) )
@@ -448,7 +448,7 @@ class GraphUpdates
             serializePart( into, intermediateBuffers[RECORD_POINTER], header, Header.OFFSET_RECORD_POINTER );
             serializePart( into, intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID], header, Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
             int endPosition = into.position();
-            header.serialize( into.position( 0 ) );
+            header.serialize( into.position( 0 ), referenceHeader );
             into.position( endPosition ).flip();
         }
 
