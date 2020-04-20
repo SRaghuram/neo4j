@@ -74,8 +74,7 @@ public class FabricExecutor
     private final Executor fabricWorkerExecutor;
 
     public FabricExecutor( FabricConfig config, FabricPlanner planner, UseEvaluation useEvaluation, CatalogManager catalogManager,
-                           LogProvider internalLog,
-                           FabricQueryMonitoring queryMonitoring, Executor fabricWorkerExecutor )
+                           LogProvider internalLog, FabricQueryMonitoring queryMonitoring, Executor fabricWorkerExecutor )
     {
         this.dataStreamConfig = config.getDataStream();
         this.planner = planner;
@@ -126,7 +125,7 @@ public class FabricExecutor
                     return execution.run();
                 } );
 
-        var resultWithErrorMapping =  withErrorMapping( statementResult, FabricSecondaryException.class, FabricSecondaryException::getPrimaryException );
+        var resultWithErrorMapping = withErrorMapping( statementResult, FabricSecondaryException.class, FabricSecondaryException::getPrimaryException );
         return new FabricExecutionStatementResultImpl( resultWithErrorMapping, plan, accessMode );
     }
 
@@ -134,7 +133,6 @@ public class FabricExecutor
     {
         return planner.isPeriodicCommit( query );
     }
-
 
     /**
      * This is a hack to be able to get an InternalTransaction for the TestFabricTransaction tx wrapper
@@ -334,7 +332,7 @@ public class FabricExecutor
 
             Mono<ExecutionPlanDescription> planDescription = localStatementResult.summary()
                     .map( Summary::executionPlanDescription )
-                    .map(pd -> new TaggingPlanDescriptionWrapper( pd, location.getDatabaseName() ));
+                    .map( pd -> new TaggingPlanDescriptionWrapper( pd, location.getDatabaseName() ) );
             return new FragmentResult( records, planDescription );
         }
 
@@ -349,7 +347,7 @@ public class FabricExecutor
             // or perform a computationally intensive operation in an upstream operator if the upstream operator is Cypher local execution
             // that produces records directly in 'request' call.
             Flux<Record> recordsWithCompletionDelegation = new CompletionDelegatingOperator( records, fabricWorkerExecutor );
-            Flux<Record> prefetchedRecords =  prefetcher.addPrefetch( recordsWithCompletionDelegation );
+            Flux<Record> prefetchedRecords = prefetcher.addPrefetch( recordsWithCompletionDelegation );
             Mono<ExecutionPlanDescription> planDescription = statementResult
                     .flatMap( StatementResult::summary )
                     .map( Summary::executionPlanDescription )

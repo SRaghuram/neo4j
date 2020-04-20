@@ -6,7 +6,6 @@
 package com.neo4j.test.fabric;
 
 import com.neo4j.fabric.bolt.BoltFabricDatabaseManagementService;
-import com.neo4j.test.fabric.TestFabricGraphDatabaseService;
 
 import java.util.function.Function;
 

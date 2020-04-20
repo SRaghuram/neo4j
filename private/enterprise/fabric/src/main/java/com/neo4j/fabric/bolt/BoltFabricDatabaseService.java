@@ -155,7 +155,8 @@ public class BoltFabricDatabaseService implements BoltGraphDatabaseServiceSPI
          * This is a hack to be able to get an InternalTransaction for the TestFabricTransaction tx wrapper
          */
         @Deprecated
-        public FabricTransaction getFabricTransaction() {
+        public FabricTransaction getFabricTransaction()
+        {
             return fabricTransaction;
         }
     }

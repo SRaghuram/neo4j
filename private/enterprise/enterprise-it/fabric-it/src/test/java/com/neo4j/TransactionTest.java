@@ -373,8 +373,6 @@ class TransactionTest
         verifyDriverReturned( shard1Driver, shard2Driver, shard3Driver );
     }
 
-
-
     @Test
     void testShardRunFailure()
     {

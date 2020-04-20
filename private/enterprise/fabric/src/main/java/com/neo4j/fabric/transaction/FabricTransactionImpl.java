@@ -288,18 +288,18 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
             transactionManager.removeTransaction( this );
         }
 
-        throwIfNonEmpty(allFailures, new FabricException( Status.Transaction.TransactionRollbackFailed, "Failed to rollback composite transaction %d", id ));
+        throwIfNonEmpty( allFailures, new FabricException( Status.Transaction.TransactionRollbackFailed, "Failed to rollback composite transaction %d", id ) );
 
         internalLog.debug( "Transaction %d rolled back", id );
     }
 
-    private void throwIfNonEmpty(List<Throwable> failures, FabricException genericException)
+    private void throwIfNonEmpty( List<Throwable> failures, FabricException genericException )
     {
         if ( !failures.isEmpty() )
         {
             if ( failures.size() == 1 )
             {
-                throw Exceptions.transform(genericException.status(), failures.get( 0 ));
+                throw Exceptions.transform( genericException.status(), failures.get( 0 ) );
             }
             else
             {
@@ -384,7 +384,7 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
 
             if ( writingTransaction != null )
             {
-                throw  multipleWriteError( writingTransaction.getLocation() );
+                throw multipleWriteError( writingTransaction.getLocation() );
             }
 
             var tx = writeTransactionSupplier.get();
