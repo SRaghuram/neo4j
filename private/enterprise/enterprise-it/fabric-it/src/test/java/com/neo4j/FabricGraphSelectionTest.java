@@ -785,6 +785,25 @@ class FabricGraphSelectionTest
                 .isNotNull();
     }
 
+    @Test
+    void standaloneProcedureCall()
+    {
+        var query = joinAsLines( "USE intA",
+                "CALL com.neo4j.utils.reader()" );
+
+        assertThat( run( neo4j, query ) )
+                .extracting( record -> record.get( "foo" ).asString() )
+                .containsExactly( "read" );
+
+        assertThat( run( fabric, query ) )
+                .extracting( record -> record.get( "foo" ).asString() )
+                .containsExactly( "read" );
+
+        assertThat( run( system, query ) )
+                .extracting( record -> record.get( "foo" ).asString() )
+                .containsExactly( "read" );
+    }
+
     private static List<Record> run( DriverUtils context, String query )
     {
         return inTx( mainDriver, context, tx -> tx.run( query ).list() );
