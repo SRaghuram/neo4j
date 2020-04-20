@@ -21,6 +21,7 @@ package org.neo4j.internal.freki;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.function.ToIntFunction;
 
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.pagecache.PageCursor;
@@ -175,31 +176,31 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         }
     }
 
+    private void ensureLoaded( ToIntFunction<FrekiCursorData> test )
+    {
+        if ( test.applyAsInt( data ) == 0 )
+        {
+            ensureX1Loaded();
+            if ( test.applyAsInt( data ) == 0 )
+            {
+                ensureXLLoaded();
+            }
+        }
+    }
+
     void ensureLabelsLoaded()
     {
-        ensureX1Loaded();
-        if ( data.labelOffset == 0 )
-        {
-            ensureXLLoaded();
-        }
+        ensureLoaded( data -> data.labelOffset );
     }
 
     void ensureRelationshipsLoaded()
     {
-        ensureX1Loaded();
-        if ( data.relationshipOffset == 0 )
-        {
-            ensureXLLoaded();
-        }
+        ensureLoaded( data -> data.relationshipOffset );
     }
 
     void ensurePropertiesLoaded()
     {
-        ensureX1Loaded();
-        if ( data.propertyOffset == 0 )
-        {
-            ensureXLLoaded();
-        }
+        ensureLoaded( data -> data.propertyOffset );
     }
 
     private Record loadRecord( int sizeExp, long id )
@@ -258,6 +259,9 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
             data.gatherDataFromXL( record );
             data.nodeId = MutableNodeRecordData.idFromRecordPointer( data.backwardPointer );
         }
+        //When we initialize here, we dont wanna do additional loading, just look at this specific record.
+        data.x1Loaded = true;
+        data.xLLoaded = true;
         return true;
     }
 

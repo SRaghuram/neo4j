@@ -106,7 +106,7 @@ class GraphUpdates
     {
         List<StorageCommand> otherCommands = new ArrayList<>();
         ByteBuffer[] intermediateBuffers = new ByteBuffer[Header.NUM_OFFSETS + 1];
-        final int x8Size = stores.largestMainStore().recordDataSize();
+        int x8Size = stores.largestMainStore().recordDataSize();
         intermediateBuffers[PROPERTIES] = ByteBuffer.wrap( new byte[x8Size] );
         intermediateBuffers[RELATIONSHIPS] = ByteBuffer.wrap( new byte[x8Size] );
         intermediateBuffers[DEGREES] = ByteBuffer.wrap( new byte[x8Size] );
@@ -117,9 +117,11 @@ class GraphUpdates
 
         ByteBuffer smallBuffer = ByteBuffer.wrap( new byte[stores.mainStore.recordDataSize()] );
         ByteBuffer maxBuffer = ByteBuffer.wrap( new byte[x8Size] );
+        Header x1Header = new Header();
+        Header xLHeader = new Header();
         for ( NodeUpdates mutation : mutations )
         {
-            mutation.serialize( smallBuffer, maxBuffer, intermediateBuffers, otherCommands::add );
+            mutation.serialize( smallBuffer, maxBuffer, intermediateBuffers, otherCommands::add, x1Header, xLHeader );
         }
         bigValueCommands.forEach( commands );
         otherCommands.forEach( commands );
@@ -253,7 +255,8 @@ class GraphUpdates
             }
         }
 
-        void serialize( ByteBuffer smallBuffer, ByteBuffer maxBuffer, ByteBuffer[] intermediateBuffers, Consumer<StorageCommand> otherCommands )
+        void serialize( ByteBuffer smallBuffer, ByteBuffer maxBuffer, ByteBuffer[] intermediateBuffers, Consumer<StorageCommand> otherCommands, Header x1Header,
+                Header xLHeader )
                 throws ConstraintViolationTransactionFailureException
         {
             prepareForCommandExtraction();
@@ -281,16 +284,16 @@ class GraphUpdates
             int propsSize = intermediateBuffers[PROPERTIES].limit();
             int relsSize = intermediateBuffers[RELATIONSHIPS].limit() + intermediateBuffers[RELATIONSHIPS_OFFSETS].limit();
             int degreesSize = intermediateBuffers[DEGREES].limit();
-            Header header = new Header();
+            x1Header.clearOffsetMarksAndFlags();
             if ( !isDense )
             {
                 // Then at least see if the combined parts are larger than x8
-                header.setFlag( Header.FLAG_LABELS, labelsSize > 0 );
-                header.markHasOffset( Header.OFFSET_PROPERTIES, propsSize > 0 );
-                header.markHasOffset( Header.OFFSET_RELATIONSHIPS, relsSize > 0 );
-                header.markHasOffset( Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS, relsSize > 0 );
-                header.markHasOffset( Header.OFFSET_RECORD_POINTER );
-                if ( labelsSize + propsSize + relsSize + header.spaceNeeded() + SINGLE_VLONG_MAX_SIZE > stores.largestMainStore().recordDataSize() )
+                x1Header.setFlag( Header.FLAG_LABELS, labelsSize > 0 );
+                x1Header.markHasOffset( Header.OFFSET_PROPERTIES, propsSize > 0 );
+                x1Header.markHasOffset( Header.OFFSET_RELATIONSHIPS, relsSize > 0 );
+                x1Header.markHasOffset( Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS, relsSize > 0 );
+                x1Header.markHasOffset( Header.OFFSET_RECORD_POINTER );
+                if ( labelsSize + propsSize + relsSize + x1Header.spaceNeeded() + SINGLE_VLONG_MAX_SIZE > stores.largestMainStore().recordDataSize() )
                 {
                     // We _flip to dense_ a bit earlier than absolutely optimal, but after that the x8 record can be used for other things
                     isDense = true;
@@ -315,15 +318,15 @@ class GraphUpdates
 
             // X LEGO TIME
             int miscSize = 0;
-            header.clearOffsetMarksAndFlags();
-            header.setFlag( Header.FLAG_LABELS, labelsSize > 0 );
-            header.markHasOffset( Header.OFFSET_PROPERTIES, propsSize > 0 );
+            x1Header.clearOffsetMarksAndFlags();
+            x1Header.setFlag( Header.FLAG_LABELS, labelsSize > 0 );
+            x1Header.markHasOffset( Header.OFFSET_PROPERTIES, propsSize > 0 );
             int nextInternalRelIdSize = 0;
             if ( isDense )
             {
-                header.setFlag( Header.FLAG_IS_DENSE );
-                header.markHasOffset( Header.OFFSET_DEGREES );
-                header.markHasOffset( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
+                x1Header.setFlag( Header.FLAG_IS_DENSE );
+                x1Header.markHasOffset( Header.OFFSET_DEGREES );
+                x1Header.markHasOffset( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
                 sparse.data.serializeNextInternalRelationshipId( intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID] );
                 intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].flip();
                 nextInternalRelIdSize = intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].limit();
@@ -331,14 +334,14 @@ class GraphUpdates
             }
             else if ( relsSize > 0 )
             {
-                header.markHasOffset( Header.OFFSET_RELATIONSHIPS );
-                header.markHasOffset( Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
+                x1Header.markHasOffset( Header.OFFSET_RELATIONSHIPS );
+                x1Header.markHasOffset( Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
             }
 
-            if ( header.spaceNeeded() + labelsSize + propsSize + Math.max( relsSize, degreesSize ) + miscSize <= stores.mainStore.recordDataSize() )
+            if ( x1Header.spaceNeeded() + labelsSize + propsSize + Math.max( relsSize, degreesSize ) + miscSize <= stores.mainStore.recordDataSize() )
             {
                 //WE FIT IN x1
-                serializeParts( smallBuffer, intermediateBuffers, header );
+                serializeParts( smallBuffer, intermediateBuffers, x1Header );
                 x1Command( smallBuffer, otherCommands );
                 return;
             }
@@ -346,34 +349,34 @@ class GraphUpdates
             //we did not fit in x1 only, fit as many things as possible in x1
             int worstCaseMiscSize = miscSize + SINGLE_VLONG_MAX_SIZE;
 
-            header.clearOffsetMarksAndFlags();
+            x1Header.clearOffsetMarksAndFlags();
             // build x1 header
-            header.markHasOffset( Header.OFFSET_RECORD_POINTER );
-            header.setFlag( Header.FLAG_IS_DENSE, isDense );
+            x1Header.markHasOffset( Header.OFFSET_RECORD_POINTER );
+            x1Header.setFlag( Header.FLAG_IS_DENSE, isDense );
             int spaceLeftInX1 = stores.mainStore.recordDataSize() - worstCaseMiscSize;
-            spaceLeftInX1 = tryKeepInX1Flag( header, labelsSize, spaceLeftInX1, Header.FLAG_LABELS );
-            spaceLeftInX1 = tryKeepInX1( header, nextInternalRelIdSize, spaceLeftInX1, Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
-            spaceLeftInX1 = tryKeepInX1( header, propsSize, spaceLeftInX1, Header.OFFSET_PROPERTIES );
-            spaceLeftInX1 = tryKeepInX1( header, degreesSize, spaceLeftInX1, Header.OFFSET_DEGREES );
-            tryKeepInX1( header, relsSize, spaceLeftInX1, Header.OFFSET_RELATIONSHIPS, Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
+            spaceLeftInX1 = tryKeepInX1Flag( x1Header, labelsSize, spaceLeftInX1, Header.FLAG_LABELS );
+            spaceLeftInX1 = tryKeepInX1( x1Header, nextInternalRelIdSize, spaceLeftInX1, Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
+            spaceLeftInX1 = tryKeepInX1( x1Header, propsSize, spaceLeftInX1, Header.OFFSET_PROPERTIES );
+            spaceLeftInX1 = tryKeepInX1( x1Header, degreesSize, spaceLeftInX1, Header.OFFSET_DEGREES );
+            tryKeepInX1( x1Header, relsSize, spaceLeftInX1, Header.OFFSET_RELATIONSHIPS, Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
 
             // build xL header and serialize
-            Header xlHeader = new Header();
-            xlHeader.setFlag( Header.FLAG_IS_DENSE, isDense );
-            prepareRecordPointer( xlHeader, intermediateBuffers[RECORD_POINTER], buildRecordPointer( 0, nodeId ) );
-            movePartToXLFlag( header, xlHeader, labelsSize, Header.FLAG_LABELS );
-            movePartToXL( header, xlHeader, propsSize, Header.OFFSET_PROPERTIES );
-            movePartToXL( header, xlHeader, degreesSize, Header.OFFSET_DEGREES );
-            movePartToXL( header, xlHeader, nextInternalRelIdSize, Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
-            movePartToXL( header, xlHeader, relsSize, Header.OFFSET_RELATIONSHIPS );
-            movePartToXL( header, xlHeader, relsSize, Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
-            serializeParts( maxBuffer, intermediateBuffers, xlHeader );
+            xLHeader.clearOffsetMarksAndFlags();
+            xLHeader.setFlag( Header.FLAG_IS_DENSE, isDense );
+            prepareRecordPointer( xLHeader, intermediateBuffers[RECORD_POINTER], buildRecordPointer( 0, nodeId ) );
+            movePartToXLFlag( x1Header, xLHeader, labelsSize, Header.FLAG_LABELS );
+            movePartToXL( x1Header, xLHeader, propsSize, Header.OFFSET_PROPERTIES );
+            movePartToXL( x1Header, xLHeader, degreesSize, Header.OFFSET_DEGREES );
+            movePartToXL( x1Header, xLHeader, nextInternalRelIdSize, Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
+            movePartToXL( x1Header, xLHeader, relsSize, Header.OFFSET_RELATIONSHIPS );
+            movePartToXL( x1Header, xLHeader, relsSize, Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
+            serializeParts( maxBuffer, intermediateBuffers, xLHeader );
             SimpleStore xLStore = stores.storeSuitableForRecordSize( maxBuffer.limit(), 1 );
             long forwardPointer = xLargeCommands( maxBuffer, xLStore, otherCommands );
 
             // serialize x1
-            prepareRecordPointer( header, intermediateBuffers[RECORD_POINTER], forwardPointer );
-            serializeParts( smallBuffer, intermediateBuffers, header );
+            prepareRecordPointer( x1Header, intermediateBuffers[RECORD_POINTER], forwardPointer );
+            serializeParts( smallBuffer, intermediateBuffers, x1Header );
             x1Command( smallBuffer, otherCommands );
         }
 
