@@ -129,18 +129,18 @@ trait ProfilingInputStreams[CONTEXT <: RuntimeContext] extends InputStreams[CONT
                                             heapDumpLiveObjectsOnly: Boolean = true,
                                             rowSize: Option[Long] = None): Iterator[Array[Any]] = new Iterator[Array[Any]] {
     private val killThreshold: Long = if (rowSize.isDefined) killAfterNRows(rowSize.get) else Long.MaxValue
-    private var i = 0L
-    private var j = 0L
-    override def hasNext: Boolean = limit.fold(true)(i < _)
+    private var nextCallsTotal = 0L
+    private var nextCallsSinceLastHeapDump = 0L
+    override def hasNext: Boolean = limit.fold(true)(nextCallsTotal < _)
 
     override def next(): Array[Any] = {
-      i += 1
-      j += 1
-      if (limit.isEmpty && i > killThreshold) {
+      nextCallsTotal += 1
+      nextCallsSinceLastHeapDump += 1
+      if (limit.isEmpty && nextCallsTotal > killThreshold) {
         fail("The query was not killed even though it consumed too much memory.")
       }
-      if (HEAP_DUMP_ENABLED && (j >= heapDumpInterval || (limit.isDefined && i == limit.get))) {
-        val fileName = s"$heapDumpFileNamePrefix-$i.hprof"
+      if (HEAP_DUMP_ENABLED && (nextCallsSinceLastHeapDump >= heapDumpInterval || (limit.isDefined && nextCallsTotal == limit.get))) {
+        val fileName = s"$heapDumpFileNamePrefix-$nextCallsTotal.hprof"
         val path = Path.of(fileName)
         val alreadyExists = Files.exists(path)
         if (alreadyExists && OVERWRITE_EXISTING_HEAP_DUMPS) {
@@ -153,11 +153,11 @@ trait ProfilingInputStreams[CONTEXT <: RuntimeContext] extends InputStreams[CONT
           if (LOG_HEAP_DUMP_ACTIVITY) println(s"""Creating new heap dump "$fileName"""")
           heapDumper.createHeapDump(fileName, heapDumpLiveObjectsOnly)
         }
-        j = 0
+        nextCallsSinceLastHeapDump = 0
       }
-      val index = ((i - 1) % data.length).toInt
+      val index = ((nextCallsTotal - 1) % data.length).toInt
       val dataElement = data(index)
-      if (limit.isDefined && ((i - 1) >= (limit.get - data.length))) {
+      if (limit.isDefined && ((nextCallsTotal - 1) >= (limit.get - data.length))) {
         data(index) = null // Clear the reference to the data in the last run over it to avoid retaining heap in the test case
       }
       dataElement

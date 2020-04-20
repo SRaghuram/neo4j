@@ -18,6 +18,7 @@ import java.util.List;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel;
 import org.neo4j.driver.internal.value.NullValue;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 import org.neo4j.server.WebContainerTestUtils;
@@ -48,6 +49,7 @@ public class BoltQueryLoggingMemoryIT
     public void shouldLogQueryMemoryUsageAndHeapDumpViaBolt() throws IOException
     {
         int numberOfDumpedQueries = 1; // Heap dumps are time consuming, try to keep it to a minimum
+        long estimatedHeapUsage = Morsel.createInitialRow().estimatedHeapUsage();
 
         try ( var driver = graphDatabaseDriver( neo4j.boltURI() );
               var session = driver.session() )
@@ -85,7 +87,7 @@ public class BoltQueryLoggingMemoryIT
             }
             if ( (lineNumber & 1) == 1 )
             {
-                assertThat( line ).contains( ": 0 B -" ); // Estimated memory usage
+                assertThat( line ).contains( String.format( ": %s B -", estimatedHeapUsage ) ); // Estimated memory usage
                 // Extract the query id
                 int queryIdIndex = line.indexOf( "id:" );
                 assertThat( queryIdIndex >= 0 );
