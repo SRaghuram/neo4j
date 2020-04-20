@@ -83,17 +83,13 @@ object MemoryManagementProfilingBase {
     MetricsSettings.metricsEnabled -> java.lang.Boolean.FALSE
   )
 
-//  def WITH_MORSEL_SIZE(morselSize: Int, edition: Edition[EnterpriseRuntimeContext]): Edition[EnterpriseRuntimeContext] =
-//    edition.copyWith(GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(morselSize),
-//                     GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(morselSize))
-
   val ENTERPRISE_PROFILING: Edition[EnterpriseRuntimeContext] = profilingEdition
-//  val MORSEL_SIZE_BIG: Edition[EnterpriseRuntimeContext] = WITH_MORSEL_SIZE(DEFAULT_MORSEL_SIZE_BIG, profilingEdition)
-//  val MORSEL_SIZE_SMALL: Edition[EnterpriseRuntimeContext] = WITH_MORSEL_SIZE(DEFAULT_MORSEL_SIZE_SMALL, profilingEdition)
 }
 
 trait ProfilingInputStreams[CONTEXT <: RuntimeContext] extends InputStreams[CONTEXT] {
   self: RuntimeTestSuite[CONTEXT] =>
+
+  private val heapDumper = new HeapDumper
 
   /**
    * Finite iterator that creates periodic heap dumps at the given input row interval.
@@ -150,12 +146,12 @@ trait ProfilingInputStreams[CONTEXT <: RuntimeContext] extends InputStreams[CONT
         if (alreadyExists && OVERWRITE_EXISTING_HEAP_DUMPS) {
           if (LOG_HEAP_DUMP_ACTIVITY) println(s"""Overwriting existing heap dump "$fileName"""")
           Files.delete(path)
-          HeapDumper.createHeapDump(fileName, heapDumpLiveObjectsOnly)
+          heapDumper.createHeapDump(fileName, heapDumpLiveObjectsOnly)
         } else if (alreadyExists) {
           if (LOG_HEAP_DUMP_ACTIVITY) println(s"""Skipping already existing heap dump "$fileName"""")
         } else {
           if (LOG_HEAP_DUMP_ACTIVITY) println(s"""Creating new heap dump "$fileName"""")
-          HeapDumper.createHeapDump(fileName, heapDumpLiveObjectsOnly)
+          heapDumper.createHeapDump(fileName, heapDumpLiveObjectsOnly)
         }
         j = 0
       }
