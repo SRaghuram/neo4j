@@ -39,7 +39,7 @@ class MorselApplyBuffer(id: BufferId,
                         override val argumentStateMaps: ArgumentStateMaps,
                         argumentSlotOffset: Int,
                         idAllocator: IdAllocator,
-                        delegates: IndexedSeq[MorselBuffer]
+                        delegates: ReadOnlyArray[MorselBuffer]
                        ) extends ArgumentCountUpdater
                          with Sink[Morsel] {
 
@@ -77,14 +77,22 @@ class MorselApplyBuffer(id: BufferId,
       incrementArgumentCounts(argumentReducersOnTopOfThisApply, morsel)
 
       var i = 0
-      while (i < delegates.size) {
+      while (i < delegates.length) {
         delegates(i).putInDelegate(morsel.shallowCopy())
         i += 1
       }
     }
   }
 
-  override def canPut: Boolean = delegates.forall(_.canPut)
+  override def canPut: Boolean = {
+    var i = 0
+    while (i < delegates.length) {
+      if (!delegates(i).canPut)
+        return false
+      i += 1
+    }
+    true
+  }
 
   override def toString: String = s"MorselApplyBuffer($id, argumentSlotOffset=$argumentSlotOffset)"
 }

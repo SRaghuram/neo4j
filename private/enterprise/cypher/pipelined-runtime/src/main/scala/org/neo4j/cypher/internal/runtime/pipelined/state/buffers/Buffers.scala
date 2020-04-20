@@ -296,14 +296,14 @@ class Buffers(numBuffers: Int,
   }
 
   // Specialization to remove overheads from scala collection `map`
-  private def morselBuffers(bufferIds: ReadOnlyArray[BufferId]): Array[MorselBuffer] = {
+  private def morselBuffers(bufferIds: ReadOnlyArray[BufferId]): ReadOnlyArray[MorselBuffer] = {
     val result = new Array[MorselBuffer](bufferIds.length)
     var i = 0
     while (i < result.length) {
       result(i) = morselBuffer(bufferIds(i))
       i += 1
     }
-    result
+    new ReadOnlyArray[MorselBuffer](result)
   }
 }
 

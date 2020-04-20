@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.cypher.internal.NonFatalCypherError
+import org.neo4j.cypher.internal.macros.AssertMacros
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
 import org.neo4j.cypher.internal.physicalplanning.PipelineId
@@ -203,7 +204,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
     val parallelism = if (pipeline.serial) 1 else state.numberOfWorkers
     val startTasks = startState.nextTasks(state, this, parallelism, resources, executionState.argumentStateMaps)
     if (startTasks != null) {
-      Preconditions.checkArgument(startTasks.nonEmpty, "If no tasks are available, `null` is expected rather than empty collections")
+      AssertMacros.checkOnlyWhenAssertionsAreEnabled(startTasks.nonEmpty, "If no tasks are available, `null` is expected rather than empty collections")
 
       def asPipelineTask(startTask: ContinuableOperatorTask): PipelineTask =
         PipelineTask(startTask,
