@@ -34,7 +34,6 @@ import org.neo4j.internal.freki.FrekiCommand.Mode;
 import org.neo4j.internal.helpers.collection.Visitor;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.IndexDescriptor;
-import org.neo4j.internal.schema.SchemaCache;
 import org.neo4j.internal.schema.SchemaRule;
 import org.neo4j.internal.schema.SchemaState;
 import org.neo4j.io.pagecache.PageCursor;
@@ -48,13 +47,11 @@ import org.neo4j.storageengine.api.TransactionApplicationMode;
 import org.neo4j.storageengine.util.IdGeneratorUpdatesWorkSync;
 import org.neo4j.storageengine.util.IndexUpdatesWorkSync;
 import org.neo4j.storageengine.util.LabelIndexUpdatesWorkSync;
-import org.neo4j.util.Preconditions;
 import org.neo4j.util.concurrent.AsyncApply;
 import org.neo4j.values.storable.Value;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_LONG_ARRAY;
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
-import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromRecordPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.io.IOUtils.closeAll;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.REVERSE_RECOVERY;
@@ -143,12 +140,6 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
             boolean onlyUpdated = node.before.hasFlag( FLAG_IN_USE ) && node.after.hasFlag( FLAG_IN_USE );
             store.write( cursor, node.after, idUpdates == null || onlyUpdated ? IGNORE : idUpdates, cursorTracer );
         }
-        // OK so this logic here is quite specific to the format, it knows that labels are kept in the smallest records only and
-        // reads label information from it and hands off to the label index updates listener.
-        if ( sizeExp == 0 && labelIndexUpdates != null )
-        {
-            labelIndexUpdates.add( EntityTokenUpdate.tokenChanges( node.after.id, parseLabels( node.before ), parseLabels( node.after ) ) );
-        }
 
         if ( indexUpdates != null )
         {
@@ -160,15 +151,23 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     {
         if ( nodeId != currentNodeId )
         {
-            SchemaCache schemaCache = stores.schemaCache;
-            boolean hasIndexes = schemaCache.indexes().iterator().hasNext();
-            if ( currentNodeId != NULL && hasIndexes )
+            if ( currentNodeId != NULL )
             {
-                EntityUpdates entityUpdates = extractIndexUpdates();
-                Set<IndexDescriptor> relatedIndexes = stores.schemaCache.getIndexesRelatedTo( entityUpdates, EntityType.NODE );
-                if ( !relatedIndexes.isEmpty() )
+                boolean hasIndexes = stores.schemaCache.indexes().iterator().hasNext();
+                long[] labelsBefore = findLabelsAndInitializePropertyCursor( propertyCursorBefore, node -> node.before, !hasIndexes );
+                long[] labelsAfter = findLabelsAndInitializePropertyCursor( propertyCursorAfter, node -> node.after, !hasIndexes );
+                if ( hasIndexes )
                 {
-                    indexUpdates.add( entityUpdates.forIndexKeys( relatedIndexes, reader, EntityType.NODE, cursorTracer ) );
+                    EntityUpdates entityUpdates = extractIndexUpdates( labelsBefore, labelsAfter );
+                    Set<IndexDescriptor> relatedIndexes = stores.schemaCache.getIndexesRelatedTo( entityUpdates, EntityType.NODE );
+                    if ( !relatedIndexes.isEmpty() )
+                    {
+                        indexUpdates.add( entityUpdates.forIndexKeys( relatedIndexes, reader, EntityType.NODE, cursorTracer ) );
+                    }
+                }
+                if ( labelIndexUpdates != null )
+                {
+                    labelIndexUpdates.add( EntityTokenUpdate.tokenChanges( currentNodeId, labelsBefore, labelsAfter ) );
                 }
             }
 
@@ -177,50 +176,11 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         }
     }
 
-    public EntityUpdates extractIndexUpdates()
+    public EntityUpdates extractIndexUpdates( long[] labelsBefore, long[] labelsAfter )
     {
-        long[] labelsBefore;
-        long[] labelsAfter;
-        FrekiCommand.SparseNode x1 = currentSparseNodeCommands[0];
-        boolean nodeIsCreatedRightNow = false;
-        if ( x1 != null )
-        {
-            // This is very broken. We may be looking in the XL record FIRST,
-            // it will do ensureX1Loaded() and load that, overwriting stuff (like all offsets/buffers etc)
-            labelsBefore = parseLabels( findRelevantUsedRecord( node -> node.before, data -> data.labelOffset ) );
-            labelsAfter = parseLabels( findRelevantUsedRecord( node -> node.after, data -> data.labelOffset ) );
-            initializePropertyCursorOnRecord( propertyCursorBefore, findRelevantUsedRecord( node -> node.before, data -> data.propertyOffset ) );
-            initializePropertyCursorOnRecord( propertyCursorAfter, findRelevantUsedRecord( node -> node.after, data -> data.propertyOffset ) );
-            nodeIsCreatedRightNow = !x1.before.hasFlag( FLAG_IN_USE );
-        }
-        else
-        {
-            // TODO loading the node like this will also have the cursor load the larger record, can this be avoided?
-            //      this could however be a general cursor issue where we'd typically want to lazy-load that bigger record, no?
-            nodeCursor.single( currentNodeId );
-            Preconditions.checkState( nodeCursor.next(), "Node %d didn't exist", currentNodeId );
-            labelsBefore = nodeCursor.labels();
-            labelsAfter = labelsBefore;
 
-            // So since we loaded this record from store we might as well use it to initialize the after-property cursor,
-            // because they should have the same contents at this point
-            nodeCursor.properties( propertyCursorAfter );
-            // Either this node was just now created, or this node was already large and the large record was updated
-            boolean beforeFound = false;
-            for ( FrekiCommand.SparseNode nodeCommand : currentSparseNodeCommands )
-            {
-                if ( nodeCommand != null && nodeCommand.before.hasFlag( FLAG_IN_USE ) )
-                {
-                    initializePropertyCursorOnRecord( propertyCursorBefore, nodeCommand.before );
-                    beforeFound = true;
-                    break;
-                }
-            }
-            if ( !beforeFound )
-            {
-                propertyCursorBefore.reset();
-            }
-        }
+        FrekiCommand.SparseNode x1 = currentSparseNodeCommands[0];
+        boolean nodeIsCreatedRightNow = x1 != null && !x1.before.hasFlag( FLAG_IN_USE );
 
         EntityUpdates.Builder builder = EntityUpdates.forEntity( currentNodeId, nodeIsCreatedRightNow );
         builder.withTokens( labelsBefore ).withTokensAfter( labelsAfter );
@@ -270,49 +230,86 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         return builder.build();
     }
 
-    private Record findRelevantUsedRecord( Function<FrekiCommand.SparseNode,Record> recordFunction, Function<FrekiCursorData, Integer> test )
+    private long[] findLabelsAndInitializePropertyCursor( FrekiPropertyCursor propertyCursor, Function<FrekiCommand.SparseNode,Record> recordFunction,
+            boolean skipProperties )
     {
-        Record smallRecord = recordFunction.apply( currentSparseNodeCommands[0] );
-        if ( smallRecord.hasFlag( FLAG_IN_USE ) )
+        long[] labels = null;
+
+        boolean investigatedX1 = false;
+        boolean investigatedXL = false;
+        boolean labelsLoaded = false;
+        boolean propertiesLoaded = skipProperties;
+        for ( int i = 0; i < currentSparseNodeCommands.length; i++ )
         {
-            nodeCursor.initializeFromRecord( smallRecord );
-            if ( nodeCursor.data.forwardPointer != NULL )
+            if ( currentSparseNodeCommands[i] != null )
             {
-                if ( test.apply( nodeCursor.data ) == 0 )
+                Record record = recordFunction.apply( currentSparseNodeCommands[i] );
+                if ( record != null )
                 {
-                    Record xlRecord = recordFunction.apply( currentSparseNodeCommands[sizeExponentialFromRecordPointer( nodeCursor.data.forwardPointer )] );
-                    //this is stupid..
-                    nodeCursor.initializeFromRecord( xlRecord );
-                    if ( test.apply( nodeCursor.data ) > 0 )
+                    if ( record.hasFlag( FLAG_IN_USE ) )
                     {
-                        return xlRecord;
+                        nodeCursor.initializeFromRecord( record );
+                        if ( !labelsLoaded && nodeCursor.data.labelOffset != 0 )
+                        {
+                            labels = nodeCursor.labels();
+                            labelsLoaded = true;
+                        }
+                        if ( !propertiesLoaded && nodeCursor.data.propertyOffset != 0 )
+                        {
+                            nodeCursor.properties( propertyCursor );
+                            propertiesLoaded = true;
+                        }
+                    }
+
+                    if ( i == 0 )
+                    {
+                        //in x1
+                        investigatedX1 = true;
+                        if ( !record.hasFlag( FLAG_IN_USE ) || nodeCursor.data.forwardPointer == NULL )
+                        {
+                            investigatedXL = true;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        investigatedXL = true;
+                        if ( record.hasFlag( FLAG_IN_USE ) )
+                        {
+                            break;
+                        }
                     }
                 }
             }
-            return smallRecord;
         }
-        return null;
-    }
-
-    private void initializePropertyCursorOnRecord( FrekiPropertyCursor propertyCursor, Record record )
-    {
-        if ( record != null && nodeCursor.initializeFromRecord( record ) )
+        if ( (!propertiesLoaded || !labelsLoaded) && (!investigatedX1 || !investigatedXL) )
         {
-            nodeCursor.properties( propertyCursor );
+            nodeCursor.single( currentNodeId );
+            if ( nodeCursor.next() )
+            {
+                if ( !labelsLoaded )
+                {
+                    labels = nodeCursor.labels();
+                    labelsLoaded = true;
+                }
+                if ( !propertiesLoaded )
+                {
+                    nodeCursor.properties( propertyCursor );
+                    propertiesLoaded = true;
+                }
+            }
         }
-        else
+
+        if ( !labelsLoaded )
+        {
+            labels = EMPTY_LONG_ARRAY;
+        }
+
+        if ( !propertiesLoaded )
         {
             propertyCursor.reset();
         }
-    }
-
-    private long[] parseLabels( Record record )
-    {
-        if ( record != null )
-        {
-            return nodeCursor.initializeFromRecord( record ) ? nodeCursor.labels() : EMPTY_LONG_ARRAY;
-        }
-        return EMPTY_LONG_ARRAY;
+        return labels;
     }
 
     @Override
