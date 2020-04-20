@@ -36,7 +36,7 @@ class ExpressionEngineConfigurationTest
     }
 
     @Test
-    void shouldBeJitCompileOnSecondAccessByDefault()
+    void shouldUseCompiledExpressionsOnSecondAccessByDefault()
     {
         // Given
         String query = "RETURN sin(cos(sin(cos(rand()))))";
@@ -48,7 +48,7 @@ class ExpressionEngineConfigurationTest
     }
 
     @Test
-    void shouldNotUseCompiledExpressionsFirstTimeWithJitEnabled()
+    void shouldNotUseCompiledExpressionsFirstTimeWith_ONLY_WHEN_HOT()
     {
         assertNotUsingCompiled( withEngineAndLimit( CypherExpressionEngine.ONLY_WHEN_HOT, 1 ), "RETURN sin(cos(sin(cos(rand()))))" );
     }
@@ -60,7 +60,7 @@ class ExpressionEngineConfigurationTest
     }
 
     @Test
-    void shouldUseCompiledExpressionsWhenQueryIsHotWithJitEnabled()
+    void shouldUseCompiledExpressionsWhenQueryIsHotWith_ONLY_WHEN_HOT()
     {
         // Given
         String query = "RETURN sin(cos(sin(cos(rand()))))";

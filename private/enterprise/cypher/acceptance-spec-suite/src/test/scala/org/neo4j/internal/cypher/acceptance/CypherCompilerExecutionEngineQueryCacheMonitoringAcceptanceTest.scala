@@ -52,7 +52,7 @@ class CypherCompilerExecutionEngineQueryCacheMonitoringAcceptanceTest extends Ex
     counter.counts should equal(CacheCounts(hits = 1, misses = 1, flushes = 1, compilations = 1))
   }
 
-  test("should monitor jit compilations") {
+  test("should monitor compilations with expression code generation") {
     // given
     val counter = new ExecutionEngineCacheCounter()
     kernelMonitors.addMonitorListener(counter)
@@ -64,7 +64,7 @@ class CypherCompilerExecutionEngineQueryCacheMonitoringAcceptanceTest extends Ex
     execute("return 42").toList
 
     // then
-    counter.counts should equal(CacheCounts(hits = 3, misses = 1, flushes = 1, compilations = 1, jitCompilations = 1))
+    counter.counts should equal(CacheCounts(hits = 3, misses = 1, flushes = 1, compilations = 1, compilationsWithExpressionCodeGen = 1))
   }
 
   test("should monitor cache flushes") {
