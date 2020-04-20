@@ -219,9 +219,9 @@ public class Outcome implements ConsensusOutcome
         return preVotesForMe;
     }
 
-    public RaftMessages.LeadershipTransfer.Rejection getLeaderTransferRejection()
+    public Optional<RaftMessages.LeadershipTransfer.Rejection> getLeaderTransferRejection()
     {
-        return leadershipTransferRejection;
+        return Optional.ofNullable(leadershipTransferRejection);
     }
 
     public Optional<MemberId> transferringLeadershipTo()

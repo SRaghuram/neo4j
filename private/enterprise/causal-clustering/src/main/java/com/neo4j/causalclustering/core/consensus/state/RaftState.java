@@ -250,9 +250,9 @@ public class RaftState implements ReadableRaftState
         {
             leadershipTransfers.add( transfer.get() );
         }
-        else if ( transferRejection != null )
+        else if ( transferRejection.isPresent() )
         {
-            leadershipTransfers.remove( transferRejection.from() );
+            leadershipTransfers.remove( transferRejection.get().from() );
         }
         else if ( outcome.getRole() != Role.LEADER )
         {

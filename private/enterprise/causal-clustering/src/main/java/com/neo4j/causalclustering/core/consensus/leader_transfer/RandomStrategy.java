@@ -23,7 +23,7 @@ class RandomStrategy implements SelectionStrategy
             shuffle( members );
             if ( !members.isEmpty() )
             {
-                return new LeaderTransferContext( validTopology.raftId(), members.get( 0 ) );
+                return new LeaderTransferContext( validTopology.databaseId(), validTopology.raftId(), members.get( 0 ) );
             }
         }
         return LeaderTransferContext.NO_TARGET;

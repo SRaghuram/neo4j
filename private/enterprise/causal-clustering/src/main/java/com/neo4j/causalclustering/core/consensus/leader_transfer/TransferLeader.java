@@ -13,8 +13,10 @@ import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.Inbound;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -23,12 +25,15 @@ import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferContext.NO_TARGET;
+import static com.neo4j.causalclustering.core.consensus.leader_transfer.LeadershipPriorityGroupSetting.READER;
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
 class TransferLeader implements Runnable
 {
-    public static final RandomStrategy PRIORITISED_SELECTION_STRATEGY = new RandomStrategy();
+    private static final RandomStrategy PRIORITISED_SELECTION_STRATEGY = new RandomStrategy();
     private final Config config;
     private Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler;
     private MemberId myself;
@@ -55,11 +60,12 @@ class TransferLeader implements Runnable
     {
         databasePenalties.clean();
 
-        var leaderTransferContext = createContext( notPrioritisedLeadership(), PRIORITISED_SELECTION_STRATEGY );
+        var prioritizedGroups = notPrioritisedLeadership();
+        var leaderTransferContext = createContext( prioritizedGroups.keySet(), PRIORITISED_SELECTION_STRATEGY );
 
         if ( leaderTransferContext != NO_TARGET )
         {
-            handleProposal( leaderTransferContext, getPrioritisedGroups( config ) );
+            handleProposal( leaderTransferContext, Set.of( notPrioritisedLeadership().get( leaderTransferContext.databaseId() ) ) );
         }
         else
         {
@@ -74,7 +80,7 @@ class TransferLeader implements Runnable
         }
     }
 
-    private LeaderTransferContext createContext( List<NamedDatabaseId> databaseIds, SelectionStrategy selectionStrategy )
+    private LeaderTransferContext createContext( Collection<NamedDatabaseId> databaseIds, SelectionStrategy selectionStrategy )
     {
         if ( !databaseIds.isEmpty() )
         {
@@ -102,7 +108,7 @@ class TransferLeader implements Runnable
 
         var raftId = RaftId.from( namedDatabaseId.databaseId() );
 
-        return Stream.of( new TransferCandidates( namedDatabaseId.databaseId(), raftId, validMembers ) );
+        return Stream.of( new TransferCandidates( namedDatabaseId, raftId, validMembers ) );
     }
 
     private void handleProposal( LeaderTransferContext transferContext, Set<String> prioritisedGroups )
@@ -112,21 +118,33 @@ class TransferLeader implements Runnable
         messageHandler.handle( message );
     }
 
-    private List<NamedDatabaseId> notPrioritisedLeadership()
+    private Map<NamedDatabaseId,String> notPrioritisedLeadership()
     {
-        // TODO:  Prioritized should be per database
         Set<String> myGroups = getMyGroups( config );
-        var prioritisedGroups = getPrioritisedGroups( config );
+        var namedDatabaseIds = leadershipsResolver.get();
+        var prioritisedGroups = getPrioritisedGroups( config, namedDatabaseIds );
         if ( prioritisedGroups.isEmpty() )
         {
-            return List.of();
+            return Map.of();
         }
-        prioritisedGroups.retainAll( myGroups );
-        if ( !prioritisedGroups.isEmpty() )
+        if ( myGroups.isEmpty() )
         {
-            return List.of();
+            return prioritisedGroups;
         }
-        return leadershipsResolver.get();
+        var inPriorityLeadership = prioritisedGroups.entrySet()
+                .stream()
+                .filter( entry -> myGroups.contains( entry.getValue() ) )
+                .map( Map.Entry::getKey )
+                .collect( toList() );
+        prioritisedGroups.keySet().removeAll( inPriorityLeadership );
+        for ( NamedDatabaseId namedDatabaseId : prioritisedGroups.keySet() )
+        {
+            if ( myGroups.contains( prioritisedGroups.get( namedDatabaseId ) ) )
+            {
+                prioritisedGroups.remove( namedDatabaseId );
+            }
+        }
+        return prioritisedGroups;
     }
 
     private Set<String> getMyGroups( Config config )
@@ -134,8 +152,11 @@ class TransferLeader implements Runnable
         return new HashSet<>( config.get( CausalClusteringSettings.server_groups ) );
     }
 
-    private Set<String> getPrioritisedGroups( Config config )
+    private Map<NamedDatabaseId,String> getPrioritisedGroups( Config config, List<NamedDatabaseId> existingDatabases )
     {
-        return new HashSet<>( config.get( CausalClusteringSettings.leadership_priority_groups ) );
+        var prioritisedGroupsPerDatabase = READER.read( config );
+        return existingDatabases.stream()
+                .filter( db -> prioritisedGroupsPerDatabase.containsKey( db.name() ) )
+                .collect( toMap( identity(), db -> prioritisedGroupsPerDatabase.get( db.name() ) ) );
     }
 }

@@ -10,17 +10,17 @@ import com.neo4j.causalclustering.identity.RaftId;
 
 import java.util.Set;
 
-import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.kernel.database.NamedDatabaseId;
 
 class TransferCandidates
 {
-    private final DatabaseId databaseId;
+    private final NamedDatabaseId namedDatabaseId;
     private RaftId raftId;
     private final Set<MemberId> members;
 
-    TransferCandidates( DatabaseId databaseId, RaftId raftId, Set<MemberId> members )
+    TransferCandidates( NamedDatabaseId namedDatabaseId, RaftId raftId, Set<MemberId> members )
     {
-        this.databaseId = databaseId;
+        this.namedDatabaseId = namedDatabaseId;
         this.raftId = raftId;
         this.members = members;
     }
@@ -30,9 +30,9 @@ class TransferCandidates
         return members;
     }
 
-    public DatabaseId databaseId()
+    public NamedDatabaseId databaseId()
     {
-        return databaseId;
+        return namedDatabaseId;
     }
 
     public RaftId raftId()

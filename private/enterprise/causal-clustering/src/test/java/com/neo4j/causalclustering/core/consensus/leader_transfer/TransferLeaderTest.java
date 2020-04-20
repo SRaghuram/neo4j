@@ -15,11 +15,13 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.time.Clocks;
 
@@ -35,21 +37,20 @@ class TransferLeaderTest
     private final MemberId core1 = new MemberId( randomUUID() );
     private final Set<NamedDatabaseId> databaseIds = Set.of( randomNamedDatabaseId() );
     private final RaftMembershipResolver raftMembershipResolver = new StubRaftMembershipResolver( myself, core1 );
-    private final Config config = Config.defaults();
     private final TrackingMessageHandler messageHandler = new TrackingMessageHandler();
     private final DatabasePenalties databasePenalties = new DatabasePenalties( 1, TimeUnit.MILLISECONDS, Clocks.fakeClock() );
 
     @Test
     void shouldChooseToTransferIfIAmNotInPriority()
     {
+        var databaseId = databaseIds.iterator().next();
+        // Priority group exist and I am not in it
+        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId.name() ).setting().name(), "prio" ) ).build();
         var myLeaderships = new ArrayList<NamedDatabaseId>();
         TransferLeader transferLeader = new TransferLeader( config, messageHandler, myself, databasePenalties, new RandomStrategy(),
-                                                           raftMembershipResolver, () -> myLeaderships );
-        var databaseId = databaseIds.iterator().next();
+                raftMembershipResolver, () -> myLeaderships );
         // I am leader
         myLeaderships.add( databaseId );
-        // Priority group exist and I am not in it
-        config.set( CausalClusteringSettings.leadership_priority_groups, List.of( "prio" ) );
 
         // when
         transferLeader.run();
@@ -65,16 +66,16 @@ class TransferLeaderTest
     @Test
     void shouldChooseToNotTransferLeaderIfIamNotLeader()
     {
+        var databaseId = databaseIds.iterator().next();
+        // Priority group exist and I am not in it
+        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId.name() ).setting().name(), "prio" ) ).build();
+
         var myLeaderships = new ArrayList<>( databaseIds );
         TransferLeader transferLeader =
                 new TransferLeader( config, messageHandler, myself, databasePenalties,
-                                    SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships );
-        var databaseId = databaseIds.iterator().next();
+                        SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships );
         // I am not leader
         myLeaderships.remove( databaseId );
-
-        // Priority group exist and I am not in it
-        config.set( CausalClusteringSettings.leadership_priority_groups, List.of( "prio" ) );
 
         // when
         transferLeader.run();
@@ -86,17 +87,17 @@ class TransferLeaderTest
     @Test
     void shouldChooseToNotTransferLeaderIfIamLeaderAndInPrioritisedGroup()
     {
+        var databaseId = databaseIds.iterator().next();
+        // Priority group exist and I am in it
+        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId.name() ).setting().name(), "prio" ) )
+                .set( CausalClusteringSettings.server_groups, List.of( "prio" ) ).build();
+
         var myLeaderships = new ArrayList<NamedDatabaseId>();
         TransferLeader transferLeader =
                 new TransferLeader( config, messageHandler, myself, databasePenalties,
                         SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships );
-        var databaseId = databaseIds.iterator().next();
         // I am leader
         myLeaderships.add( databaseId );
-        // Priority group exist and I am not in it
-        config.set( CausalClusteringSettings.leadership_priority_groups, List.of( "prio" ) );
-        // I am of group prio
-        config.set( CausalClusteringSettings.server_groups, List.of( "prio" ) );
 
         // when
         transferLeader.run();
@@ -108,15 +109,16 @@ class TransferLeaderTest
     @Test
     void shouldNotTransferIfPriorityGroupsIsEmpty()
     {
+        var databaseId = databaseIds.iterator().next();
+        // Priority group does not exist
+        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId.name() ).setting().name(), "" ) ).build();
+
         var myLeaderships = new ArrayList<NamedDatabaseId>();
         TransferLeader transferLeader =
                 new TransferLeader( config, messageHandler, myself, databasePenalties,
                         SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships );
-        var databaseId = databaseIds.iterator().next();
         // I am leader
         myLeaderships.add( databaseId );
-        // Priority group does not exist
-        config.set( CausalClusteringSettings.leadership_priority_groups, List.of() );
 
         // when
         transferLeader.run();
@@ -128,18 +130,18 @@ class TransferLeaderTest
     @Test
     void shouldFallBackToNormalLoadBalancingWithNoGroupsIfNoTarget()
     {
-        var loadaBalancerLTC = new LeaderTransferContext( RaftId.from( databaseIds.iterator().next().databaseId() ), new MemberId( UUID.randomUUID() ) );
+        var databaseId = databaseIds.iterator().next();
+        // Priority group exist and I am in it
+        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId.name() ).setting().name(), "prio" ) )
+                .set( CausalClusteringSettings.server_groups, List.of( "prio" ) ).build();
+
+        var loadaBalancerLTC = new LeaderTransferContext( databaseId, RaftId.from( databaseId.databaseId() ), new MemberId( UUID.randomUUID() ) );
         var myLeaderships = new ArrayList<NamedDatabaseId>();
         TransferLeader transferLeader =
                 new TransferLeader( config, messageHandler, myself, databasePenalties,
                         validTopologies -> loadaBalancerLTC, raftMembershipResolver, () -> myLeaderships );
-        var databaseId = databaseIds.iterator().next();
         // I am leader
         myLeaderships.add( databaseId );
-        // Priority group exist and I am not in it
-        config.set( CausalClusteringSettings.leadership_priority_groups, List.of( "prio" ) );
-        // I am of group prio
-        config.set( CausalClusteringSettings.server_groups, List.of( "prio" ) );
         // when
         transferLeader.run();
 
@@ -148,7 +150,33 @@ class TransferLeaderTest
                 new RaftMessages.LeadershipTransfer.Proposal( myself, loadaBalancerLTC.to(), Set.of() ) );
     }
 
-    // TODO add more tests!
+    @Test
+    void shouldHandleMoreThanOneDatbaseInPro()
+    {
+        var databaseOne = DatabaseIdFactory.from( "one", randomUUID() );
+        var databaseIds = Set.of( databaseOne, DatabaseIdFactory.from( "two", randomUUID() ) );
+        // Priority groups exist ...
+        var builder = Config.newBuilder();
+        databaseIds.forEach( dbid -> builder.setRaw( Map.of( new LeadershipPriorityGroupSetting( dbid.name() ).setting().name(), dbid.name() ) ).build() );
+        // ...and I am in one of them
+        builder.set( CausalClusteringSettings.server_groups, List.of( "two" ) );
+        var config = builder.build();
+
+        var myLeaderships = new ArrayList<>( databaseIds );
+        TransferLeader transferLeader =
+                new TransferLeader( config, messageHandler, myself, databasePenalties,
+                        SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships );
+
+        // when
+        transferLeader.run();
+
+        // then we should propose new leader for 'one'
+        assertEquals( messageHandler.proposals.size(), 1 );
+        var propose = messageHandler.proposals.get( 0 );
+        assertEquals( propose.raftId().uuid(), databaseOne.databaseId().uuid() );
+        assertEquals( propose.message().proposed(), core1 );
+        assertEquals( propose.message().priorityGroups(), Set.of( "one" ) );
+    }
 
     private static class StubRaftMembershipResolver implements RaftMembershipResolver
     {
@@ -160,7 +188,7 @@ class TransferLeaderTest
         }
 
         @Override
-        public RaftMembership membersFor( NamedDatabaseId namedDatabaseId )
+        public RaftMembership membersFor( NamedDatabaseId databaseId )
         {
             return new StubRaftMembership( votingMembers );
         }
