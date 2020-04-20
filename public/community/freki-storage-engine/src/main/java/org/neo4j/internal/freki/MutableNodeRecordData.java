@@ -570,32 +570,32 @@ class MutableNodeRecordData
         relationships.clear();
         degrees.clear();
 
-        if ( headerBuilder.hasFlag( Header.FLAG_LABELS ) )
+        if ( headerBuilder.hasMark( Header.FLAG_LABELS ) )
         {
             readLabels( buffer );
         }
-        isDense = headerBuilder.hasFlag( Header.FLAG_IS_DENSE );
-        if ( headerBuilder.hasOffset( Header.OFFSET_PROPERTIES ) )
+        isDense = headerBuilder.hasMark( Header.FLAG_IS_DENSE );
+        if ( headerBuilder.hasMark( Header.OFFSET_PROPERTIES ) )
         {
             buffer.position( headerBuilder.getOffset( Header.OFFSET_PROPERTIES ) );
             readProperties( properties, buffer, bigPropertyValueStore, tracer );
         }
-        if ( headerBuilder.hasOffset( Header.OFFSET_DEGREES ) )
+        if ( headerBuilder.hasMark( Header.OFFSET_DEGREES ) )
         {
             buffer.position( headerBuilder.getOffset( Header.OFFSET_DEGREES ) );
             readDegrees( buffer );
         }
-        if ( headerBuilder.hasOffset( Header.OFFSET_RELATIONSHIPS ) )
+        if ( headerBuilder.hasMark( Header.OFFSET_RELATIONSHIPS ) )
         {
             buffer.position( headerBuilder.getOffset( Header.OFFSET_RELATIONSHIPS ) );
             readRelationships( buffer, bigPropertyValueStore, tracer );
         }
-        if ( headerBuilder.hasOffset( Header.OFFSET_RECORD_POINTER ) )
+        if ( headerBuilder.hasMark( Header.OFFSET_RECORD_POINTER ) )
         {
             buffer.position( headerBuilder.getOffset( Header.OFFSET_RECORD_POINTER ) );
             readRecordPointer( buffer );
         }
-        if ( headerBuilder.hasOffset( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID ) )
+        if ( headerBuilder.hasMark( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID ) )
         {
             buffer.position( headerBuilder.getOffset( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID ) );
             readNextInternalRelationshipId( buffer );

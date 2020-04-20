@@ -40,12 +40,12 @@ class HeaderTest
     private RandomRule random;
 
     @Test
-    void shouldReadAndWriteFlagsAndOffsets()
+    void shouldReadAndWriteMarksAndOffsets()
     {
         // given
         Header header = new Header();
-        header.setFlag( Header.FLAG_LABELS );
-        header.setFlag( Header.FLAG_IS_DENSE );
+        header.mark( Header.FLAG_LABELS, true );
+        header.mark( Header.FLAG_IS_DENSE, true );
 
         // when/then
         assertReadAndWrite( header, 1 );
@@ -72,23 +72,23 @@ class HeaderTest
         Header readHeader = new Header();
         readHeader.deserialize( buffer );
         assertThat( buffer.position() ).isEqualTo( expectedSize );
-        assertThat( readHeader.hasFlag( Header.FLAG_LABELS ) ).isEqualTo( header.hasFlag( Header.FLAG_LABELS ) );
-        assertThat( readHeader.hasFlag( Header.FLAG_IS_DENSE ) ).isEqualTo( header.hasFlag( Header.FLAG_IS_DENSE ) );
+        assertThat( readHeader.hasMark( Header.FLAG_LABELS ) ).isEqualTo( header.hasMark( Header.FLAG_LABELS ) );
+        assertThat( readHeader.hasMark( Header.FLAG_IS_DENSE ) ).isEqualTo( header.hasMark( Header.FLAG_IS_DENSE ) );
         for ( int offsetSlot = 0; offsetSlot < Header.NUM_OFFSETS; offsetSlot++ )
         {
-            assertThat( readHeader.hasOffset( offsetSlot ) ).isEqualTo( header.hasOffset( offsetSlot ) );
-            if ( readHeader.hasOffset( offsetSlot ) )
+            assertThat( readHeader.hasMark( offsetSlot ) ).isEqualTo( header.hasMark( offsetSlot ) );
+            if ( readHeader.hasMark( offsetSlot ) )
             {
                 assertThat( readHeader.getOffset( offsetSlot ) ).isEqualTo( header.getOffset( offsetSlot ) );
             }
         }
     }
 
-    private void assertAddOffsetAndReadAndWrite( Header header, int offsetSlot, int expectedSize )
+    private void assertAddOffsetAndReadAndWrite( Header header, int slot, int expectedSize )
     {
         int offset = random.nextInt( 0x3FF );
-        header.markHasOffset( offsetSlot );
-        header.setOffset( offsetSlot, offset );
+        header.mark( slot, true );
+        header.setOffset( slot, offset );
         assertReadAndWrite( header, expectedSize );
     }
 }

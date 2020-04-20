@@ -284,15 +284,15 @@ class GraphUpdates
             int propsSize = intermediateBuffers[PROPERTIES].limit();
             int relsSize = intermediateBuffers[RELATIONSHIPS].limit() + intermediateBuffers[RELATIONSHIPS_OFFSETS].limit();
             int degreesSize = intermediateBuffers[DEGREES].limit();
-            x1Header.clearOffsetMarksAndFlags();
+            x1Header.clearMarks();
             if ( !isDense )
             {
                 // Then at least see if the combined parts are larger than x8
-                x1Header.setFlag( Header.FLAG_LABELS, labelsSize > 0 );
-                x1Header.markHasOffset( Header.OFFSET_PROPERTIES, propsSize > 0 );
-                x1Header.markHasOffset( Header.OFFSET_RELATIONSHIPS, relsSize > 0 );
-                x1Header.markHasOffset( Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS, relsSize > 0 );
-                x1Header.markHasOffset( Header.OFFSET_RECORD_POINTER );
+                x1Header.mark( Header.FLAG_LABELS, labelsSize > 0 );
+                x1Header.mark( Header.OFFSET_PROPERTIES, propsSize > 0 );
+                x1Header.mark( Header.OFFSET_RELATIONSHIPS, relsSize > 0 );
+                x1Header.mark( Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS, relsSize > 0 );
+                x1Header.mark( Header.OFFSET_RECORD_POINTER, true );
                 if ( labelsSize + propsSize + relsSize + x1Header.spaceNeeded() + SINGLE_VLONG_MAX_SIZE > stores.largestMainStore().recordDataSize() )
                 {
                     // We _flip to dense_ a bit earlier than absolutely optimal, but after that the x8 record can be used for other things
@@ -318,15 +318,15 @@ class GraphUpdates
 
             // X LEGO TIME
             int miscSize = 0;
-            x1Header.clearOffsetMarksAndFlags();
-            x1Header.setFlag( Header.FLAG_LABELS, labelsSize > 0 );
-            x1Header.markHasOffset( Header.OFFSET_PROPERTIES, propsSize > 0 );
+            x1Header.clearMarks();
+            x1Header.mark( Header.FLAG_LABELS, labelsSize > 0 );
+            x1Header.mark( Header.OFFSET_PROPERTIES, propsSize > 0 );
             int nextInternalRelIdSize = 0;
             if ( isDense )
             {
-                x1Header.setFlag( Header.FLAG_IS_DENSE );
-                x1Header.markHasOffset( Header.OFFSET_DEGREES );
-                x1Header.markHasOffset( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
+                x1Header.mark( Header.FLAG_IS_DENSE, true );
+                x1Header.mark( Header.OFFSET_DEGREES, true );
+                x1Header.mark( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID, true );
                 sparse.data.serializeNextInternalRelationshipId( intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID] );
                 intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].flip();
                 nextInternalRelIdSize = intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].limit();
@@ -334,8 +334,8 @@ class GraphUpdates
             }
             else if ( relsSize > 0 )
             {
-                x1Header.markHasOffset( Header.OFFSET_RELATIONSHIPS );
-                x1Header.markHasOffset( Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
+                x1Header.mark( Header.OFFSET_RELATIONSHIPS, true );
+                x1Header.mark( Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS, true );
             }
 
             if ( x1Header.spaceNeeded() + labelsSize + propsSize + Math.max( relsSize, degreesSize ) + miscSize <= stores.mainStore.recordDataSize() )
@@ -349,22 +349,22 @@ class GraphUpdates
             //we did not fit in x1 only, fit as many things as possible in x1
             int worstCaseMiscSize = miscSize + SINGLE_VLONG_MAX_SIZE;
 
-            x1Header.clearOffsetMarksAndFlags();
+            x1Header.clearMarks();
             // build x1 header
-            x1Header.markHasOffset( Header.OFFSET_RECORD_POINTER );
-            x1Header.setFlag( Header.FLAG_IS_DENSE, isDense );
+            x1Header.mark( Header.OFFSET_RECORD_POINTER, true );
+            x1Header.mark( Header.FLAG_IS_DENSE, isDense );
             int spaceLeftInX1 = stores.mainStore.recordDataSize() - worstCaseMiscSize;
-            spaceLeftInX1 = tryKeepInX1Flag( x1Header, labelsSize, spaceLeftInX1, Header.FLAG_LABELS );
+            spaceLeftInX1 = tryKeepInX1( x1Header, labelsSize, spaceLeftInX1, Header.FLAG_LABELS );
             spaceLeftInX1 = tryKeepInX1( x1Header, nextInternalRelIdSize, spaceLeftInX1, Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
             spaceLeftInX1 = tryKeepInX1( x1Header, propsSize, spaceLeftInX1, Header.OFFSET_PROPERTIES );
             spaceLeftInX1 = tryKeepInX1( x1Header, degreesSize, spaceLeftInX1, Header.OFFSET_DEGREES );
             tryKeepInX1( x1Header, relsSize, spaceLeftInX1, Header.OFFSET_RELATIONSHIPS, Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
 
             // build xL header and serialize
-            xLHeader.clearOffsetMarksAndFlags();
-            xLHeader.setFlag( Header.FLAG_IS_DENSE, isDense );
+            xLHeader.clearMarks();
+            xLHeader.mark( Header.FLAG_IS_DENSE, isDense );
             prepareRecordPointer( xLHeader, intermediateBuffers[RECORD_POINTER], buildRecordPointer( 0, nodeId ) );
-            movePartToXLFlag( x1Header, xLHeader, labelsSize, Header.FLAG_LABELS );
+            movePartToXL( x1Header, xLHeader, labelsSize, Header.FLAG_LABELS );
             movePartToXL( x1Header, xLHeader, propsSize, Header.OFFSET_PROPERTIES );
             movePartToXL( x1Header, xLHeader, degreesSize, Header.OFFSET_DEGREES );
             movePartToXL( x1Header, xLHeader, nextInternalRelIdSize, Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
@@ -399,47 +399,24 @@ class GraphUpdates
         private void prepareRecordPointer( Header header, ByteBuffer intermediateBuffer, long recordPointer )
         {
             intermediateBuffer.clear();
-            header.markHasOffset( Header.OFFSET_RECORD_POINTER );
+            header.mark( Header.OFFSET_RECORD_POINTER, true );
             sparse.data.setRecordPointer( recordPointer );
             sparse.data.serializeRecordPointer( intermediateBuffer );
             intermediateBuffer.flip();
         }
 
-        private void movePartToXLFlag( Header header, Header xlHeader, int partSize, int flag )
-        {
-            xlHeader.setFlag( flag, partSize > 0 && !header.hasFlag( flag ) );
-        }
-
         private void movePartToXL( Header header, Header xlHeader, int partSize, int offset )
         {
-            xlHeader.markHasOffset( offset, partSize > 0 && !header.hasOffset( offset ) );
+            xlHeader.mark( offset, partSize > 0 && !header.hasMark( offset ) );
         }
 
-        private int tryKeepInX1Flag( Header header, int labelsSize, int spaceLeft, int flag )
-        {
-            if ( labelsSize > 0 )
-            {
-                header.setFlag( flag );
-                if ( labelsSize <= spaceLeft - header.spaceNeeded() )
-                {
-                    // ok properties can live in x1
-                    spaceLeft -= labelsSize;
-                }
-                else
-                {
-                    header.removeFlag( flag );
-                }
-            }
-            return spaceLeft;
-        }
-
-        private int tryKeepInX1( Header header, int partSize, int spaceLeftInX1, int... headerOffsets )
+        private int tryKeepInX1( Header header, int partSize, int spaceLeftInX1, int... slots )
         {
             if ( partSize > 0 )
             {
-                for ( int headerOffset : headerOffsets )
+                for ( int slot : slots )
                 {
-                    header.markHasOffset( headerOffset );
+                    header.mark( slot, true );
                 }
                 if ( partSize <= spaceLeftInX1 - header.spaceNeeded() )
                 {
@@ -448,9 +425,9 @@ class GraphUpdates
                 }
                 else
                 {
-                    for ( int headerOffset : headerOffsets )
+                    for ( int slot : slots )
                     {
-                        header.unmarkHasOffset( headerOffset );
+                        header.mark( slot, false );
                     }
                 }
             }
@@ -460,7 +437,7 @@ class GraphUpdates
         private static void serializeParts( ByteBuffer into, ByteBuffer[] intermediateBuffers, Header header )
         {
             header.allocateSpace( into );
-            if ( header.hasFlag( Header.FLAG_LABELS ) )
+            if ( header.hasMark( Header.FLAG_LABELS ) )
             {
                 into.put( intermediateBuffers[LABELS] );
             }
@@ -475,11 +452,11 @@ class GraphUpdates
             into.position( endPosition ).flip();
         }
 
-        private static void serializePart( ByteBuffer into, ByteBuffer part, Header header, int headerOffsetSlot )
+        private static void serializePart( ByteBuffer into, ByteBuffer part, Header header, int slot )
         {
-            if ( header.hasOffset( headerOffsetSlot ) )
+            if ( header.hasMark( slot ) )
             {
-                header.setOffset( headerOffsetSlot, into.position() );
+                header.setOffset( slot, into.position() );
                 into.put( part );
             }
         }
