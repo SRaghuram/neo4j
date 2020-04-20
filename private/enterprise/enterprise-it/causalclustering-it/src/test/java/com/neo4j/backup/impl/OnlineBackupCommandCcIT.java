@@ -431,7 +431,7 @@ class OnlineBackupCommandCcIT
         Config config = Config.defaults();
         ProgressMonitorFactory progressMonitorFactory = ProgressMonitorFactory.textual( System.out );
         LogProvider logProvider = FormattedLogProvider.toOutputStream( System.out );
-        Boolean checkRelationshipTypeScanStore = config.get( RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store );
+        boolean checkRelationshipTypeScanStore = config.get( RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store );
         ConsistencyFlags flags = new ConsistencyFlags( true, true, true, true, checkRelationshipTypeScanStore, true );
         ConsistencyCheckService service = new ConsistencyCheckService();
         ConsistencyCheckService.Result result = service.runFullConsistencyCheck( backupLayout, config, progressMonitorFactory, logProvider, true, flags );
