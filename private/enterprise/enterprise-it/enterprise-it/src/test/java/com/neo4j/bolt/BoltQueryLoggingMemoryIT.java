@@ -63,8 +63,8 @@ public class BoltQueryLoggingMemoryIT
             // We should _not_ heap dump on these kind of queries that we get from internal client tools
             session.run( "CALL dbms.routing.getRoutingTable($context)", params );
             session.run( "CALL db.ping()" );
-
         }
+
         int numberOfQueries = numberOfDumpedQueries + 2;
 
         Path queriesLog = neo4j.config().get( log_queries_filename );

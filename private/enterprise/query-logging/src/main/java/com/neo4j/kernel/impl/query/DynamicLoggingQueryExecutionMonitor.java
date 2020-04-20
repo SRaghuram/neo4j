@@ -111,6 +111,10 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
                 heapDumper = new HeapDumper();
                 heapDumpPath = config.get( GraphDatabaseSettings.log_queries_filename ).getParent();
             }
+            else
+            {
+                heapDumper = null;
+            }
             currentLog = new ConfiguredQueryLogger( log, config );
         }
         else
