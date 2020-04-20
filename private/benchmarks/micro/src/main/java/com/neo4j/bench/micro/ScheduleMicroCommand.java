@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.infra.scheduler;
+package com.neo4j.bench.micro;
 
 import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
@@ -12,21 +12,15 @@ import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.common.tool.micro.BaseRunWorkloadCommand;
 import com.neo4j.bench.common.tool.micro.RunMicroWorkloadParams;
-import com.neo4j.bench.common.util.JsonUtil;
+import com.neo4j.bench.infra.AWSCredentials;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.BenchmarkingEnvironment;
 import com.neo4j.bench.infra.BenchmarkingTool;
 import com.neo4j.bench.infra.InfraParams;
-import com.neo4j.bench.infra.JobId;
 import com.neo4j.bench.infra.JobParams;
-import com.neo4j.bench.infra.JobScheduler;
-import com.neo4j.bench.infra.JobStatus;
 import com.neo4j.bench.infra.Workspace;
-import com.neo4j.bench.infra.aws.AWSBatchJobScheduler;
-import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
 import com.neo4j.bench.infra.micro.MicroToolRunner;
-import net.jodah.failsafe.Failsafe;
-import net.jodah.failsafe.RetryPolicy;
+import com.neo4j.bench.infra.scheduler.BenchmarkJobScheduler;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,14 +29,11 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
-import java.time.Duration;
-import java.util.List;
 
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_ERROR_POLICY;
 import static java.lang.String.format;
-import static java.util.stream.Collectors.joining;
 
-@Command( name = "schedule-micro" )
+@Command( name = "schedule" )
 public class ScheduleMicroCommand extends BaseRunWorkloadCommand
 {
     private static final Logger LOG = LoggerFactory.getLogger( ScheduleMicroCommand.class );
@@ -128,10 +119,7 @@ public class ScheduleMicroCommand extends BaseRunWorkloadCommand
 
     private static String getJobName( String tool, String version, String triggered )
     {
-        String jobName = format( "%s-%s-%s", tool, version, triggered );
-        // job name should follow these restrictions, https://docs.aws.amazon.com/cli/latest/reference/batch/submit-job.html
-        // The first character must be alphanumeric, and up to 128 letters (uppercase and lowercase), numbers, hyphens, and underscores are allowed.
-        return StringUtils.substring( jobName.replaceAll( "[^\\p{Alnum}|^_|^-]", "_" ), 0, 127 );
+        return format( "%s-%s-%s", tool, version, triggered );
     }
 
     @Override
@@ -139,16 +127,14 @@ public class ScheduleMicroCommand extends BaseRunWorkloadCommand
     {
         try
         {
-
             Path workspacePath = workspaceDir.toPath().toAbsolutePath();
             File jobParameterJson = workspacePath.resolve( Workspace.JOB_PARAMETERS_JSON ).toFile();
             jobParameterJson.createNewFile();
             Workspace workspace = Workspace.defaultMicroWorkspace( workspacePath );
             workspace.assertArtifactsExist();
             // first store job params as JSON
-            InfraParams infraParams = new InfraParams( awsSecret,
-                                                       awsKey,
-                                                       awsRegion,
+            AWSCredentials awsCredentials = new AWSCredentials( awsSecret, awsKey, awsRegion );
+            InfraParams infraParams = new InfraParams( awsCredentials,
                                                        resultsStoreUsername,
                                                        resultsStorePasswordSecretName,
                                                        resultsStoreUri,
@@ -159,41 +145,15 @@ public class ScheduleMicroCommand extends BaseRunWorkloadCommand
                                                  new BenchmarkingEnvironment(
                                                          new BenchmarkingTool<>( MicroToolRunner.class, runMicroWorkloadParams ) ) );
 
-            JsonUtil.serializeJson( jobParameterJson.toPath(), jobParams );
-
-            AWSS3ArtifactStorage artifactStorage = AWSS3ArtifactStorage.getAWSS3ArtifactStorage( awsRegion, awsKey, awsSecret );
-
-            URI artifactBaseURI = infraParams.artifactBaseUri();
-            artifactStorage.uploadBuildArtifacts( artifactBaseURI, workspace );
-            LOG.info( "upload build artifacts into {}", artifactBaseURI );
-
-            JobScheduler jobScheduler = AWSBatchJobScheduler.getJobScheduler( awsRegion, awsKey, awsSecret, jobQueue, jobDefinition, batchStack );
-
             String jobName = getJobName( "micro",
                                          runMicroWorkloadParams.neo4jVersion().toString(),
                                          runMicroWorkloadParams.triggeredBy() );
 
-            JobId jobId = jobScheduler.schedule( artifactWorkerUri, artifactBaseURI, jobName );
-            LOG.info( "job scheduled, with id {}", jobId.id() );
+            BenchmarkJobScheduler benchmarkJobScheduler = BenchmarkJobScheduler.create( jobQueue, jobDefinition, batchStack, awsCredentials );
 
-            // wait until they are done, or fail
-            RetryPolicy<List<JobStatus>> retries = new RetryPolicy<List<JobStatus>>()
-                    .handleResultIf( jobsStatuses -> jobsStatuses.stream().anyMatch( JobStatus::isWaiting ) )
-                    .withDelay( Duration.ofMinutes( 5 ) )
-                    .withMaxAttempts( -1 );
+            benchmarkJobScheduler.scheduleBenchmarkJob( jobName, jobParams, workspace, artifactWorkerUri, jobParameterJson );
 
-            List<JobStatus> jobsStatuses = Failsafe.with( retries ).get( () -> AWSBatchJobScheduler.jobStatuses( jobScheduler, infraParams, jobId ) );
-            LOG.info( "jobs are done with following statuses\n{}", jobsStatuses.stream().map( Object::toString ).collect( joining( "\n" ) ) );
-
-            // if any of the jobs failed, fail whole run
-            if ( jobsStatuses.stream().anyMatch( JobStatus::isFailed ) )
-            {
-                throw new RuntimeException( "there are failed jobs:\n" +
-                                            jobsStatuses.stream()
-                                                        .filter( JobStatus::isFailed )
-                                                        .map( Object::toString )
-                                                        .collect( joining( "\n" ) ) );
-            }
+            benchmarkJobScheduler.awaitFinished();
         }
         catch ( ArtifactStoreException | IOException e )
         {

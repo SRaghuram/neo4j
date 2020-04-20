@@ -19,9 +19,11 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.amazonaws.services.s3.transfer.Upload;
+import com.neo4j.bench.infra.AWSCredentials;
 import com.neo4j.bench.infra.ArtifactStorage;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.Dataset;
+import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.Workspace;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,15 +69,18 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
         return new AWSS3ArtifactStorage( s3ClientBuilder( credentialsProvider ).withRegion( awsRegion ).build() );
     }
 
-    public static AWSS3ArtifactStorage getAWSS3ArtifactStorage( String awsRegion, String awsKey, String awsSecret )
+    public static AWSS3ArtifactStorage getAWSS3ArtifactStorage( InfraParams infraParams )
     {
-        if ( hasAwsCredentials( awsKey, awsSecret ) )
+        AWSCredentials awsCredentials = infraParams.awsCredentials();
+        if ( awsCredentials.hasAwsCredentials() )
         {
-            return create( awsRegion, awsKey, awsSecret );
+            return create( awsCredentials.awsRegion(),
+                           awsCredentials.awsAccessKeyId(),
+                           awsCredentials.awsSecretAccessKey() );
         }
         else
         {
-            return create( awsRegion );
+            return create( awsCredentials.awsRegion() );
         }
     }
 

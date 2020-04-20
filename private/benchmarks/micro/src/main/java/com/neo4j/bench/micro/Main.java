@@ -35,6 +35,7 @@ public class Main
                 .withCommands(
                         ListCommand.class,
                         RunExportCommand.class,
+                        ScheduleMicroCommand.class,
                         Help.class );
 
         builder.withGroup( "config" )

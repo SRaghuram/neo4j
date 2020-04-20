@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.common.tool.macro;
+package com.neo4j.bench.macro.cli;
 
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
@@ -14,6 +14,9 @@ import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
+import com.neo4j.bench.common.tool.macro.Deployment;
+import com.neo4j.bench.common.tool.macro.ExecutionMode;
+import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;

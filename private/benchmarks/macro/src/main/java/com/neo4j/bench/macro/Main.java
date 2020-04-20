@@ -20,6 +20,7 @@ import com.neo4j.bench.macro.cli.ExportPlanCommand;
 import com.neo4j.bench.macro.cli.RunSingleEmbeddedCommand;
 import com.neo4j.bench.macro.cli.RunSingleServerCommand;
 import com.neo4j.bench.macro.cli.RunMacroWorkloadCommand;
+import com.neo4j.bench.macro.cli.ScheduleMacroCommand;
 import com.neo4j.bench.macro.cli.UpgradeStoreCommand;
 import com.neo4j.bench.macro.execution.Options;
 import com.neo4j.bench.macro.execution.measurement.Results;
@@ -41,6 +42,7 @@ public class Main
                         RunSingleServerCommand.class,
                         ExportPlanCommand.class,
                         UpgradeStoreCommand.class,
+                        ScheduleMacroCommand.class,
                         Help.class );
 
         builder.build()

@@ -70,7 +70,7 @@ fi
 
 java_cmd="$JAVA_HOME/bin/java"
 
-benchmark_infra_scheduler_jar="target/benchmark-infra-scheduler.jar"
+benchmark_infra_scheduler_jar="target/micro-benchmarks.jar"
 if [[ ! -f "$benchmark_infra_scheduler_jar" ]]; then
   echo "$benchmark_infra_scheduler_jar doesn't exists run mvn package -PfullBenchmarks"
   exit 1
@@ -84,7 +84,7 @@ artifact_base_uri=s3://benchmarking.neo4j.com/artifacts/micro/$triggered_by/$tea
 worker_artifact_uri="$artifact_base_uri"benchmark-infra-worker.jar
 
 $java_cmd -jar $benchmark_infra_scheduler_jar \
-    schedule-micro \
+    schedule \
     --workspace-dir \
     "$workspace_dir" \
     --worker-artifact-uri \
@@ -128,11 +128,11 @@ $java_cmd -jar $benchmark_infra_scheduler_jar \
      --triggered-by \
      "$triggered_by" \
     --results-store-user \
-    client \
+    neo4j \
     --results-store-pass-secret-name \
     "$results_store_pass_secret_name" \
     --results-store-uri \
-    bolt+routing://e605d648.databases.neo4j.io:7687 \
+    neo4j://1a20c636.databases.neo4j.io \
     --job-queue \
     "$job_queue" \
     --job-definition \

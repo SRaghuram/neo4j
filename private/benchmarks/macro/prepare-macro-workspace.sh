@@ -33,14 +33,14 @@ if [[ ! -d "$workspace_dir" ]]; then
 fi
 
 echo -e "make sure you have build product and benchmark, from repository root"
-echo -e " mvn -Dcheckstyle.skip -Drevapi.skip -DskipTests -Dlicensing.skip -Dlicense.skip -TC2 clean install -PfullBenchmarks -pl :macro,:benchmark-infra-scheduler,:benchmark-infra-worker -am"
+echo -e " mvn -Dcheckstyle.skip -Drevapi.skip -DskipTests -Dlicensing.skip -Dlicense.skip -TC2 clean install -PfullBenchmarks -pl :macro,:benchmark-infra-worker -am"
 echo -e "and product archive, from private/packaging directory"
 echo -e " mvn -Dcheckstyle.skip -Drevapi.skip -DskipTests -Dlicensing.skip -Dlicense.skip clean install"
 
-cp ../benchmark-infra-worker/target/benchmark-infra-worker.jar "$workspace_dir"
+cp "../benchmark-infra/benchmark-infra-worker/target/benchmark-infra-worker.jar" "$workspace_dir"
 mkdir -p "$workspace_dir/macro/target"
-cp ../../macro/run-report-benchmarks.sh "$workspace_dir/macro"
-cp ../../macro/target/macro.jar "$workspace_dir/macro/target"
+cp run-report-benchmarks.sh "$workspace_dir/macro"
+cp target/macro.jar "$workspace_dir/macro/target"
 
-cp "../../../packaging/standalone/target/neo4j-$neo4j_edition-$neo4j_version-unix.tar.gz" "$workspace_dir"
+cp "../../packaging/standalone/target/neo4j-$neo4j_edition-$neo4j_version-unix.tar.gz" "$workspace_dir"
 tar -xz -f "$workspace_dir/neo4j-$neo4j_edition-$neo4j_version-unix.tar.gz" --strip-components=2 -C "$workspace_dir" "neo4j-$neo4j_edition-$neo4j_version/conf/neo4j.conf"

@@ -21,7 +21,6 @@ import com.neo4j.bench.common.model.TestRun;
 import com.neo4j.bench.common.model.TestRunReport;
 import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
-import com.neo4j.bench.common.tool.micro.BaseRunExportCommand;
 import com.neo4j.bench.common.tool.micro.RunExportParams;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.ErrorReporter;

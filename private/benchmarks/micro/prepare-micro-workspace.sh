@@ -53,9 +53,9 @@ echo -e "and product archive, from private/packaging directory"
 echo -e " mvn -Dcheckstyle.skip -Drevapi.skip -DskipTests -Dlicensing.skip -Dlicense.skip clean install"
 
 cp "$config" "$workspace_dir"
-cp ../benchmark-infra-worker/target/benchmark-infra-worker.jar "$workspace_dir"
+cp "../benchmark-infra/benchmark-infra-worker/target/benchmark-infra-worker.jar" "$workspace_dir"
 mkdir -p "$workspace_dir/micro/target"
-cp ../../micro/run-report-benchmarks.sh "$workspace_dir/micro"
-cp ../../micro/target/micro-benchmarks.jar "$workspace_dir/micro/target"
+cp run-report-benchmarks.sh "$workspace_dir/micro"
+cp target/micro-benchmarks.jar "$workspace_dir/micro/target"
 
-tar -xz -f "../../../packaging/standalone/target/neo4j-$neo4j_edition-$neo4j_version-unix.tar.gz" --strip-components=2 -C "$workspace_dir" "neo4j-$neo4j_edition-$neo4j_version/conf/neo4j.conf"
+tar -xz -f "../../packaging/standalone/target/neo4j-$neo4j_edition-$neo4j_version-unix.tar.gz" --strip-components=2 -C "$workspace_dir" "neo4j-$neo4j_edition-$neo4j_version/conf/neo4j.conf"

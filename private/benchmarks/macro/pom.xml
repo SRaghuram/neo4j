@@ -63,7 +63,12 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j.bench</groupId>
-            <artifactId>benchmark-neo4j-common-test</artifactId>
+            <artifactId>benchmark-infra-scheduler</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.neo4j.bench</groupId>
+			<artifactId>benchmark-neo4j-common-test</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
@@ -145,7 +150,12 @@
                                             </excludes>
                                         </filter>
                                     </filters>
-                                </configuration>
+                                <artifactSet>
+										<excludes>
+											<exclude>org.slf4j:slf4j-nop</exclude>
+										</excludes>
+									</artifactSet>
+								</configuration>
                             </execution>
                         </executions>
                     </plugin>

@@ -43,9 +43,9 @@ public class JobParamsTest
         // given
         JobParams jobParams = new JobParams(
                 new InfraParams(
-                        "awsSecret",
-                        "awsKey",
-                        "awsRegion",
+                        new AWSCredentials( "awsSecret",
+                                            "awsKey",
+                                            "awsRegion" ),
                         "resultsStoreUsername",
                         "resultsStorePassword",
                         URI.create( "bolt://localhost/" ),
@@ -97,9 +97,9 @@ public class JobParamsTest
         // given
         JobParams jobParams = new JobParams(
                 new InfraParams(
-                        "awsSecret",
-                        "awsKey",
-                        "awsRegion",
+                        new AWSCredentials( "awsSecret",
+                                            "awsKey",
+                                            "awsRegion" ),
                         "resultsStoreUsername",
                         "resultsStorePassword",
                         URI.create( "bolt://localhost/" ),

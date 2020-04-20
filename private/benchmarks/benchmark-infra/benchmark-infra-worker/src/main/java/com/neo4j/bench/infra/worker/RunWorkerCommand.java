@@ -80,7 +80,7 @@ public class RunWorkerCommand implements Runnable
             Workspace.assertWorkspaceAreEqual( artifactsWorkspace, deserializeWorkspace );
 
             // fetch result db password
-            PasswordManager awsSecretsManager = AWSPasswordManager.create( infraParams.awsRegion() );
+            PasswordManager awsSecretsManager = AWSPasswordManager.create( infraParams.awsCredentials().awsRegion() );
             String resultsStorePassword = awsSecretsManager.getSecret( infraParams.resultsStorePasswordSecretName() );
 
             BenchmarkingTool benchmarkingTool = jobParams.benchmarkingEnvironment().benchmarkingTool();
