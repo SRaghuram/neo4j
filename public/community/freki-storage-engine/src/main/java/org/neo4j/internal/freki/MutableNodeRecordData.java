@@ -34,6 +34,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 
+import org.neo4j.graphdb.Direction;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.Degrees;
 import org.neo4j.storageengine.api.StorageCommand;
@@ -42,6 +43,9 @@ import org.neo4j.util.Preconditions;
 import org.neo4j.values.storable.Value;
 
 import static java.lang.Long.max;
+import static org.neo4j.graphdb.Direction.BOTH;
+import static org.neo4j.graphdb.Direction.INCOMING;
+import static org.neo4j.graphdb.Direction.OUTGOING;
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
 import static org.neo4j.internal.freki.Record.recordXFactor;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
@@ -648,18 +652,23 @@ class MutableNodeRecordData
         int[] degreesArray = readInts( buffer );
         for ( int t = 0, i = 0; t < relationshipTypes.length; t++ )
         {
-            i = readDegreesForNextType( degrees, relationshipTypes[t], degreesArray, i );
+            i = readDegreesForNextType( degrees, relationshipTypes[t], BOTH, degreesArray, i );
         }
     }
 
-    static int readDegreesForNextType( Degrees.Mutator degrees, int relationshipType, int[] degreesArray, int degreesArrayIndex )
+    static int readDegreesForNextType( Degrees.Mutator degrees, int relationshipType, Direction dir, int[] degreesArray, int degreesArrayIndex )
     {
         int outgoingRaw = degreesArray[degreesArrayIndex++];
         int outgoing = outgoingRaw >>> 1;
         int incoming = degreesArray[degreesArrayIndex++];
         boolean hasLoop = (outgoingRaw & 0x1) == 1;
         int loop = hasLoop ? degreesArray[degreesArrayIndex++] : 0;
-        degrees.add( relationshipType, outgoing, incoming, loop );
+        degrees.add( relationshipType,
+                !INCOMING.equals( dir ) ? outgoing : 0,
+                !OUTGOING.equals( dir ) ? incoming : 0,
+                loop
+        );
+
         return degreesArrayIndex;
     }
 
