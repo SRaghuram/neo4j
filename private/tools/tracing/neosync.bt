@@ -21,9 +21,9 @@ t:syscalls:sys_exit_fsync
 /@time[tid]/
 {
     time("%H:%M:%S   ");
-  	printf("%-16s %-4d %-12d %s\n", @name[tid], @fds[tid], (nsecs - @time[tid]) / 1000, @probes[tid] );
-	delete(@time[tid]);
-	delete(@name[tid]);
+    printf("%-16s %-4d %-12d %s\n", @name[tid], @fds[tid], (nsecs - @time[tid]) / 1000, @probes[tid] );
+    delete(@time[tid]);
+    delete(@name[tid]);
     delete(@probes[tid]);
     delete(@fds[tid]);
 }
