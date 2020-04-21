@@ -43,6 +43,7 @@ import static java.util.Collections.emptyMap;
 import static org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel.VERBOSE;
 import static org.neo4j.configuration.GraphDatabaseSettings.log_queries;
 import static org.neo4j.configuration.GraphDatabaseSettings.log_queries_parameter_logging_enabled;
+import static org.neo4j.configuration.GraphDatabaseSettings.log_queries_runtime_logging_enabled;
 import static org.neo4j.configuration.GraphDatabaseSettings.log_queries_threshold;
 import static org.neo4j.graphdb.QueryExecutionType.QueryType.READ_ONLY;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
@@ -543,6 +544,7 @@ class ConfiguredQueryLoggerTest
                 .set( log_queries, VERBOSE )
                 .set( log_queries_parameter_logging_enabled, false )
                 .set( log_queries_threshold, Duration.ofMillis( thresholdInMillis ) )
+                .set( log_queries_runtime_logging_enabled, false )
                 .build();
         ConfiguredQueryLogger queryLogger = new ConfiguredQueryLogger( logProvider.getLog( getClass() ), config );
         ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
@@ -567,6 +569,7 @@ class ConfiguredQueryLoggerTest
                 .set( log_queries, VERBOSE )
                 .set( log_queries_parameter_logging_enabled, false )
                 .set( log_queries_threshold, Duration.ofMillis( thresholdInMillis ) )
+                .set( log_queries_runtime_logging_enabled, false )
                 .build();
         ConfiguredQueryLogger queryLogger = new ConfiguredQueryLogger( logProvider.getLog( getClass() ), config );
         ExecutingQuery query1 = query( SESSION_1, "TestUser", QUERY_1 );
@@ -603,6 +606,10 @@ class ConfiguredQueryLoggerTest
     {
         config.set( log_queries_threshold, Duration.ofMillis( thresholdInMillis ) );
         config.set( log_queries, GraphDatabaseSettings.LogQueryLevel.INFO );
+        if ( !config.isExplicitlySet( log_queries_runtime_logging_enabled ) )
+        {
+            config.set( log_queries_runtime_logging_enabled, false );
+        }
         return new ConfiguredQueryLogger( logProvider.getLog( getClass() ), config );
     }
 
