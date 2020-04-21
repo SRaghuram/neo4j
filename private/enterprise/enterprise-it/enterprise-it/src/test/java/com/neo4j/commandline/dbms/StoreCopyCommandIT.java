@@ -455,7 +455,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
             assertThat( single( properties.values() ) ).isEqualTo( 2 );
         }
         String output = suppressOutput.getOutputVoice().toString();
-        assertTrue( output.contains( "tokens had to be invented" ) );
+        assertTrue( output.contains( "tokens were recreated" ) );
         // One occurrence reporting the broken token. Then another reporting its invented replacement:
         assertThat( countOccurrences( output, "PropertyKey(" + idB + ")" ) ).isEqualTo( 2 );
     }
