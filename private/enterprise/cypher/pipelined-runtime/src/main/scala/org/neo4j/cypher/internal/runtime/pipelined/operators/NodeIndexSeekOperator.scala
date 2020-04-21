@@ -122,6 +122,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
     override def workIdentity: WorkIdentity = NodeIndexSeekOperator.this.workIdentity
 
     private var nodeCursor: NodeValueIndexCursor = _
+    private var cursorsToClose: Array[NodeValueIndexCursor] = _
     private var exactSeekValues: Array[Value] = _
 
     // INPUT LOOP TASK
@@ -134,13 +135,15 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
       val read = state.query.transactionalContext.transaction.dataRead
       if (indexQueries.size == 1) {
         nodeCursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
+        cursorsToClose = Array(nodeCursor)
         seek(state.queryIndexes(queryIndexId), nodeCursor, read, indexQueries.head)
       } else {
-        nodeCursor = orderedCursor(indexOrder, indexQueries.filterNot(impossiblePredicates).map(query => {
+        cursorsToClose = indexQueries.filterNot(impossiblePredicates).map(query => {
           val cursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
           read.nodeIndexSeek(state.queryIndexes(queryIndexId), cursor, IndexQueryConstraints.constrained(indexOrder, true), query: _*)
           cursor
-        }).toArray)
+        }).toArray
+        nodeCursor = orderedCursor(indexOrder, cursorsToClose)
       }
 
       true
@@ -180,7 +183,10 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
     }
 
     override protected def closeInnerLoop(resources: QueryResources): Unit = {
-      resources.cursorPools.nodeValueIndexCursorPool.free(nodeCursor)
+      if (cursorsToClose != null) {
+        cursorsToClose.foreach(resources.cursorPools.nodeValueIndexCursorPool.free)
+        cursorsToClose = null
+      }
       nodeCursor = null
     }
 
