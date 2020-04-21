@@ -369,9 +369,15 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     {
         cursorAccessTracer.registerNodeToRelationshipsDirect();
         initInternal( nodeCursor.entityReference(), NULL, selection );
-        ((FrekiMainStoreCursor) nodeCursor).initializeOtherCursorFromStateOfThisCursor( this );
-        startIterationAfterLoad();
-        readRelationshipTypesAndOffsets();
+        if ( ((FrekiMainStoreCursor) nodeCursor).initializeOtherCursorFromStateOfThisCursor( this ) )
+        {
+            startIterationAfterLoad();
+            readRelationshipTypesAndOffsets();
+        }
+        else
+        {
+            reset();
+        }
     }
 
     void init( StorageNodeCursor nodeCursor, RelationshipSelection selection, long neighbourNodeReference )
