@@ -76,6 +76,11 @@ public class SchemaCache
         return schemaCacheState.indexes();
     }
 
+    public boolean isEmpty()
+    {
+        return schemaCacheState.isEmpty();
+    }
+
     public Iterable<ConstraintDescriptor> constraints()
     {
         return schemaCacheState.constraints();
@@ -552,6 +557,11 @@ public class SchemaCache
                 indexesByName.remove( index.getName(), index );
                 selectIndexSetByEntityType( schema.entityType() ).remove( index );
             }
+        }
+
+        boolean isEmpty()
+        {
+            return indexesById.isEmpty() && constraintsById.isEmpty();
         }
     }
 
