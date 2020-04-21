@@ -6,7 +6,6 @@
 package com.neo4j.fabric.pipeline
 
 import com.neo4j.fabric.planning.FabricPlan
-import com.neo4j.fabric.planning.QueryRenderer
 import com.neo4j.fabric.util.Errors
 import org.neo4j.cypher.CypherExecutionMode
 import org.neo4j.cypher.CypherVersion
@@ -43,6 +42,7 @@ import org.neo4j.cypher.internal.rewriting.rewriters.Never
 import org.neo4j.cypher.internal.tracing.CompilationTracer
 import org.neo4j.cypher.internal.tracing.TimingCompilationTracer
 import org.neo4j.cypher.internal.util.CypherExceptionFactory
+import org.neo4j.cypher.rendering.QueryRenderer
 import org.neo4j.graphdb.Notification
 import org.neo4j.monitoring
 import org.neo4j.values.virtual.MapValue

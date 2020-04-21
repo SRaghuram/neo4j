@@ -14,6 +14,8 @@ import org.neo4j.cypher.internal.ast
 import org.neo4j.cypher.internal.ast.Clause
 import org.neo4j.cypher.internal.ast.GraphSelection
 import org.neo4j.cypher.internal.ast.Statement
+import org.neo4j.cypher.internal.frontend.phases.BaseState
+import org.neo4j.cypher.rendering.QueryRenderer
 import org.neo4j.graphdb.ExecutionPlanDescription
 
 import scala.collection.JavaConverters.mapAsJavaMapConverter

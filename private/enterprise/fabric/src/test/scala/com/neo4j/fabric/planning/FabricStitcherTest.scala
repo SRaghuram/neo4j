@@ -53,6 +53,14 @@ class FabricStitcherTest
       )
     }
 
+    "single fragment standalone call" in {
+      stitching(
+        init(defaultUse).leaf(Seq(call(Seq("my"), "proc")), Seq())
+      ).shouldEqual(
+        init(defaultUse).exec(query(call(Seq("my"), "proc")), Seq())
+      )
+    }
+
     "nested fragment" in {
       stitching(
         init(defaultUse)

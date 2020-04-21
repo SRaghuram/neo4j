@@ -12,7 +12,6 @@ import org.neo4j.cypher.internal.ast.AliasedReturnItem
 import org.neo4j.cypher.internal.ast.Clause
 import org.neo4j.cypher.internal.ast.GraphSelection
 import org.neo4j.cypher.internal.ast.InputDataStream
-import org.neo4j.cypher.internal.ast.ProcedureResult
 import org.neo4j.cypher.internal.ast.Query
 import org.neo4j.cypher.internal.ast.QueryPart
 import org.neo4j.cypher.internal.ast.Return
@@ -21,17 +20,11 @@ import org.neo4j.cypher.internal.ast.SingleQuery
 import org.neo4j.cypher.internal.ast.SubQuery
 import org.neo4j.cypher.internal.ast.UnionAll
 import org.neo4j.cypher.internal.ast.UnionDistinct
-import org.neo4j.cypher.internal.ast.UnresolvedCall
 import org.neo4j.cypher.internal.ast.With
-import org.neo4j.cypher.internal.expressions.FunctionInvocation
-import org.neo4j.cypher.internal.expressions.FunctionName
-import org.neo4j.cypher.internal.expressions.Namespace
 import org.neo4j.cypher.internal.expressions.Parameter
-import org.neo4j.cypher.internal.expressions.ProcedureName
-import org.neo4j.cypher.internal.logical.plans.ResolvedCall
-import org.neo4j.cypher.internal.logical.plans.ResolvedFunctionInvocation
 import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.util.symbols.CTAny
+import org.neo4j.cypher.rendering.QueryRenderer
 import org.neo4j.exceptions.SyntaxException
 
 /**
@@ -304,36 +297,6 @@ private object Ast {
         variable = variable(name, pos),
       )(pos)
     )(pos))(pos)
-
-  def unresolveCallables[T <: AnyRef](tree: T): T = {
-    tree.rewritten.bottomUp {
-      case rc: ResolvedCall               => unresolvedCall(rc)
-      case rf: ResolvedFunctionInvocation => unresolvedFunction(rf)
-
-    }
-  }
-
-  def unresolvedCall(rc: ResolvedCall): UnresolvedCall = {
-    val pos = rc.position
-    val name = rc.signature.name
-    UnresolvedCall(
-      procedureNamespace = Namespace(name.namespace.toList)(pos),
-      procedureName = ProcedureName(name.name)(pos),
-      declaredArguments = if (rc.declaredArguments) Some(rc.callArguments) else None,
-      declaredResult = if (rc.declaredResults) Some(ProcedureResult(rc.callResults)(pos)) else None,
-    )(pos)
-  }
-
-  def unresolvedFunction(rf: ResolvedFunctionInvocation): FunctionInvocation = {
-    val pos = rf.position
-    val name = rf.qualifiedName
-    FunctionInvocation(
-      namespace = Namespace(name.namespace.toList)(pos),
-      functionName = FunctionName(name.name)(pos),
-      distinct = false,
-      args = rf.arguments.toIndexedSeq,
-    )(pos)
-  }
 
   def withoutGraphSelection(clauses: Seq[Clause]): Seq[Clause] =
     clauses.filter {

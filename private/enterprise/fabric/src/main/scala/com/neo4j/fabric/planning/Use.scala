@@ -7,6 +7,7 @@ package com.neo4j.fabric.planning
 
 import org.neo4j.cypher.internal.ast.GraphSelection
 import org.neo4j.cypher.internal.util.InputPosition
+import org.neo4j.cypher.rendering.QueryRenderer
 
 sealed trait Use {
   def graphSelection: GraphSelection

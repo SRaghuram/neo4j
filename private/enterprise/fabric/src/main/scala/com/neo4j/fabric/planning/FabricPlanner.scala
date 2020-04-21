@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.FullyParsedQuery
 import org.neo4j.cypher.internal.PreParsedQuery
 import org.neo4j.cypher.internal.QueryOptions
 import org.neo4j.cypher.internal.planner.spi.ProcedureSignatureResolver
+import org.neo4j.cypher.rendering.QueryRenderer
 import org.neo4j.graphdb.Notification
 import org.neo4j.monitoring.Monitors
 import org.neo4j.values.virtual.MapValue

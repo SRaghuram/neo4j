@@ -619,6 +619,28 @@ class FabricGraphSelectionTest
     }
 
     @Test
+    void systemProcedureCall()
+    {
+        var query = joinAsLines( "USE system",
+                                 "CALL dbms.procedures" );
+
+        assertThat( run( neo4j, query ) ).isNotNull();
+        assertThat( run( fabric, query ) ).isNotNull();
+        assertThat( run( system, query ) ).isNotNull();
+    }
+
+    @Test
+    void systemProcedureCallVoid()
+    {
+        var query = joinAsLines( "USE system",
+                                 "CALL db.awaitIndexes" );
+
+        assertThat( run( neo4j, query ) ).isNotNull();
+        assertThat( run( fabric, query ) ).isNotNull();
+        assertThat( run( system, query ) ).isNotNull();
+    }
+
+    @Test
     void fabricPure()
     {
         var query = joinAsLines( "USE fabric",
