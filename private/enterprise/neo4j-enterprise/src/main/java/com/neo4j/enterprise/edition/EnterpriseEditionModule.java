@@ -20,10 +20,9 @@ import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.fabric.auth.FabricAuthManagerWrapper;
 import com.neo4j.fabric.bootstrap.EnterpriseFabricServicesBootstrap;
 import com.neo4j.fabric.config.FabricEnterpriseConfig;
-import com.neo4j.fabric.localdb.FabricSystemGraphInitializer;
+import com.neo4j.fabric.localdb.FabricSystemGraphComponent;
 import com.neo4j.fabric.routing.FabricRoutingProcedureInstaller;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
-import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
 import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
@@ -32,7 +31,6 @@ import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.procedure.enterprise.builtin.SettingsWhitelist;
 import com.neo4j.server.enterprise.EnterpriseNeoWebServer;
-import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -46,12 +44,12 @@ import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.cypher.internal.javacompat.EnterpriseCypherEngineProvider;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.DefaultSystemGraphInitializer;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
@@ -64,7 +62,6 @@ import org.neo4j.kernel.api.Kernel;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.AuthManager;
-import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
@@ -209,35 +206,21 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     {
         var fabricDatabaseManager = dependencies.resolveDependency( FabricDatabaseManager.class );
 
-        SystemGraphInitializer initializer = tryResolveOrCreate( SystemGraphInitializer.class, globalModule.getExternalDependencyResolver(),
-                () -> new FabricSystemGraphInitializer( databaseManager, globalModule.getGlobalConfig(), fabricDatabaseManager ) );
-        return globalModule.getGlobalDependencies().satisfyDependency( globalModule.getGlobalLife().add( initializer ) );
+        DependencyResolver globalDependencies = globalModule.getGlobalDependencies();
+        Supplier<GraphDatabaseService> systemSupplier = systemSupplier( globalDependencies );
+        var systemGraphComponents = globalModule.getSystemGraphComponents();
+        var systemGraphComponent = new FabricSystemGraphComponent( globalModule.getGlobalConfig(), fabricDatabaseManager );
+        systemGraphComponents.register( systemGraphComponent );
+        SystemGraphInitializer initializer =
+                CommunityEditionModule.tryResolveOrCreate( SystemGraphInitializer.class, globalModule.getExternalDependencyResolver(),
+                        () -> new DefaultSystemGraphInitializer( systemSupplier, systemGraphComponents ) );
+        return globalModule.getGlobalDependencies().satisfyDependency( initializer );
     }
 
     @Override
     public void createSecurityModule( GlobalModule globalModule )
     {
-        SecurityProvider securityProvider;
-        if ( globalModule.getGlobalConfig().get( GraphDatabaseSettings.auth_enabled ) )
-        {
-            EnterpriseSecurityModule securityModule = new EnterpriseSecurityModule(
-                    globalModule.getLogService().getUserLogProvider(),
-                    globalModule.getGlobalConfig(),
-                    globalProcedures,
-                    globalModule.getJobScheduler(),
-                    globalModule.getFileSystem(),
-                    globalModule.getGlobalDependencies(),
-                    globalModule.getTransactionEventListeners()
-            );
-            securityModule.setup();
-            globalModule.getGlobalLife().add( securityModule );
-            securityProvider = securityModule;
-        }
-        else
-        {
-            securityProvider = EnterpriseNoAuthSecurityProvider.INSTANCE;
-        }
-        setSecurityProvider( securityProvider );
+        setSecurityProvider( makeEnterpriseSecurityModule( globalModule, globalProcedures ) );
     }
 
     @Override

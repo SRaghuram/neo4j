@@ -12,12 +12,12 @@ import java.util
 import java.util.Collections
 
 import com.neo4j.cypher.EnterpriseGraphDatabaseTestSupport
-import com.neo4j.dbms.EnterpriseSystemGraphInitializer
+import com.neo4j.dbms.EnterpriseSystemGraphComponent
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager
 import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
-import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphInitializer
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
@@ -26,9 +26,10 @@ import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.DatabaseStatus
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.plandescription.PlanDescriptionImpl
-import org.neo4j.cypher.internal.security.SecureHasher
 import org.neo4j.dbms.database.DatabaseContext
 import org.neo4j.dbms.database.DatabaseManager
+import org.neo4j.dbms.database.DefaultSystemGraphInitializer
+import org.neo4j.dbms.database.SystemGraphComponents
 import org.neo4j.fabric.executor.TaggingPlanDescriptionWrapper
 import org.neo4j.graphdb.ExecutionPlanDescription
 import org.neo4j.graphdb.Result
@@ -39,12 +40,14 @@ import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.logging.Log
 import org.neo4j.server.security.auth.InMemoryUserRepository
 import org.neo4j.server.security.auth.SecurityTestUtils
+import org.neo4j.server.security.systemgraph.SystemGraphRealmHelper
+import org.neo4j.server.security.systemgraph.UserSecurityGraphComponent
 
 abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFunSuite with EnterpriseGraphDatabaseTestSupport {
   val DEFAULT: String = "DEFAULT"
 
-  val neo4jUser: Map[String, Any] = user("neo4j", Seq(PredefinedRoles.ADMIN))
-  val neo4jUserActive: Map[String, Any] = user("neo4j", Seq(PredefinedRoles.ADMIN), passwordChangeRequired = false)
+  val neo4jUser: Map[String, Any] = adminUser("neo4j")
+  val neo4jUserActive: Map[String, Any] = adminUser("neo4j", passwordChangeRequired = false)
   val onlineStatus: String = DatabaseStatus.Online.stringValue()
   val offlineStatus: String = DatabaseStatus.Offline.stringValue()
 
@@ -156,6 +159,11 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     Map("user" -> username, "roles" -> rolesWithPublic, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired)
   }
 
+  def adminUser(username: String, passwordChangeRequired: Boolean = true): Map[String, Any] = {
+    val rolesWithPublic = Seq(PredefinedRoles.ADMIN, PredefinedRoles.PUBLIC)
+    Map("user" -> username, "roles" -> rolesWithPublic, "suspended" -> false, "passwordChangeRequired" -> passwordChangeRequired)
+  }
+
   def db(name: String, status: String = onlineStatus, default: Boolean = false): Map[String, Any] =
     Map("name" -> name,
       "address" -> "localhost:7687",
@@ -190,30 +198,32 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
 
 
   case class RoleMapBuilder(map: Map[String, Any]) {
-    def member(user: String) = RoleMapBuilder(map + ("member" -> user))
+    def member(user: String): RoleMapBuilder = RoleMapBuilder(map + ("member" -> user))
 
-    def noMember() = RoleMapBuilder(map + ("member" -> null))
+    def noMember(): RoleMapBuilder = RoleMapBuilder(map + ("member" -> null))
   }
 
   def role(roleName: String): RoleMapBuilder = RoleMapBuilder(Map("role" -> roleName))
+
+  def role(predefinedRole: PredefinedRoles): RoleMapBuilder = RoleMapBuilder(Map("role" -> predefinedRole))
 
   def publicRole(users: String*): Set[Map[String, Any]] =
     users.map(u => role(PredefinedRoles.PUBLIC).member(u).map).toSet
 
   case class PrivilegeMapBuilder(map: Map[String, AnyRef]) {
-    def action(action: String) = PrivilegeMapBuilder(map + ("action" -> action))
+    def action(action: String): PrivilegeMapBuilder = PrivilegeMapBuilder(map + ("action" -> action))
 
-    def role(role: String) = PrivilegeMapBuilder(map + ("role" -> role))
+    def role(role: String): PrivilegeMapBuilder = PrivilegeMapBuilder(map + ("role" -> role))
 
-    def node(label: String) = PrivilegeMapBuilder(map + ("segment" -> s"NODE($label)"))
+    def node(label: String): PrivilegeMapBuilder = PrivilegeMapBuilder(map + ("segment" -> s"NODE($label)"))
 
-    def relationship(relType: String) = PrivilegeMapBuilder(map + ("segment" -> s"RELATIONSHIP($relType)"))
+    def relationship(relType: String): PrivilegeMapBuilder = PrivilegeMapBuilder(map + ("segment" -> s"RELATIONSHIP($relType)"))
 
-    def database(database: String) = PrivilegeMapBuilder(map + ("graph" -> database))
+    def database(database: String): PrivilegeMapBuilder = PrivilegeMapBuilder(map + ("graph" -> database))
 
-    def user(user: String) = PrivilegeMapBuilder(map + ("user" -> user))
+    def user(user: String): PrivilegeMapBuilder = PrivilegeMapBuilder(map + ("user" -> user))
 
-    def property(property: String) = PrivilegeMapBuilder(map + ("resource" -> s"property($property)"))
+    def property(property: String): PrivilegeMapBuilder = PrivilegeMapBuilder(map + ("resource" -> s"property($property)"))
 
     def label(label: String) = {
       val labelResource = if (label.equals("*"))  "all_labels" else s"label($label)"
@@ -463,17 +473,20 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
 
   def initSystemGraph(config: Config): Unit = {
     val databaseManager = graph.getDependencyResolver.resolveDependency(classOf[DatabaseManager[DatabaseContext]])
-    val systemGraphInitializer = new EnterpriseSystemGraphInitializer(databaseManager, config)
-    val securityGraphInitializer = new EnterpriseSecurityGraphInitializer(databaseManager,
-      systemGraphInitializer,
-      mock[Log],
-      new InMemoryUserRepository,
-      new InMemoryRoleRepository,
-      new InMemoryUserRepository,
-      new InMemoryUserRepository,
-      new SecureHasher,
-      config)
-    securityGraphInitializer.initializeSecurityGraph()
+    val systemGraphSupplier = SystemGraphRealmHelper.makeSystemSupplier(databaseManager)
+
+    val userRepository = new InMemoryUserRepository
+    val roleRepository = new InMemoryRoleRepository
+    val userSecurityGraphComponent = new UserSecurityGraphComponent(mock[Log], userRepository, userRepository, config)
+    val enterpriseSecurityGraphComponent = new EnterpriseSecurityGraphComponent(mock[Log], roleRepository, userRepository, config)
+
+    val systemGraphComponents = new SystemGraphComponents()
+    systemGraphComponents.register(new EnterpriseSystemGraphComponent(config))
+    systemGraphComponents.register(userSecurityGraphComponent)
+    systemGraphComponents.register(enterpriseSecurityGraphComponent)
+    val systemGraphInitializer = new DefaultSystemGraphInitializer(systemGraphSupplier, systemGraphComponents)
+    systemGraphInitializer.start()
+
     selectDatabase(SYSTEM_DATABASE_NAME)
   }
 

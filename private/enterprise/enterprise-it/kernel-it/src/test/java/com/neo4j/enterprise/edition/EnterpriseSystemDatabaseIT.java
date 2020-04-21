@@ -38,6 +38,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.valueOf;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -102,7 +103,7 @@ class EnterpriseSystemDatabaseIT
         try ( Transaction transaction = systemDb.beginTx() )
         {
             assertEquals( 1, count( transaction.findNodes( systemLabel ) ) );
-            assertEquals( 2, count( transaction.getAllLabels() ) );
+            assertThat( count( transaction.getAllLabels() ) ).isGreaterThan( 1 );
         }
     }
 

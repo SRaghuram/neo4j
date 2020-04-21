@@ -84,8 +84,7 @@ class SecurityAdministrationCommandLoggingIT
         execute( adminContext, "CALL dbms.security.createUser('bar', 'abc')" );
 
         // THEN
-        List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 3 ) );
+        List<String> logLines = readLinesInSecurityLog( 3 );
         assertThat( logLines.get( 0 ), containsString( withSubject( adminContext, "CREATE USER foo SET PASSWORD '******' CHANGE NOT REQUIRED" ) ) );
         assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "CREATE USER baz SET PASSWORD $password CHANGE REQUIRED" ) ) );
         assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "CREATE USER bar SET PASSWORD '******' CHANGE REQUIRED" ) ) );
@@ -103,8 +102,7 @@ class SecurityAdministrationCommandLoggingIT
         execute( adminContext, "CALL dbms.security.deleteUser('bar')" );
 
         // THEN
-        List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 4 ) ); // First two lines are from setting up the users to delete later
+        List<String> logLines = readLinesInSecurityLog( 4 );
         assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "DROP USER foo" ) ) );
         assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "DROP USER bar" ) ) );
     }
@@ -123,8 +121,7 @@ class SecurityAdministrationCommandLoggingIT
         execute( adminContext, "CALL dbms.security.suspendUser('foo')" );
 
         // THEN
-        List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 6 ) ); // First line is from setting up the user to alter later
+        List<String> logLines = readLinesInSecurityLog( 6 );
         assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "ALTER USER foo SET PASSWORD '******' CHANGE REQUIRED" ) ) );
         assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "ALTER USER foo SET STATUS SUSPENDED" ) ) );
         assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "ALTER USER foo SET PASSWORD '******' CHANGE REQUIRED" ) ) );
@@ -144,8 +141,7 @@ class SecurityAdministrationCommandLoggingIT
         execute( adminContext, "ALTER CURRENT USER SET PASSWORD FROM 'bar' TO 'baz'" );
 
         // THEN
-        List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 2 ) );
+        List<String> logLines = readLinesInSecurityLog( 2 );
         assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "ALTER CURRENT USER SET PASSWORD FROM '******' TO '******'" ) ) );
     }
 
@@ -157,8 +153,7 @@ class SecurityAdministrationCommandLoggingIT
         execute( adminContext, "CALL dbms.security.createRole('bar')" );
 
         // THEN
-        List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 2 ) );
+        List<String> logLines = readLinesInSecurityLog( 2 );
         assertThat( logLines.get( 0 ), containsString( withSubject( adminContext, "CREATE ROLE foo" ) ) );
         assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "CREATE ROLE bar" ) ) );
     }
@@ -170,8 +165,7 @@ class SecurityAdministrationCommandLoggingIT
         execute( adminContext, "CREATE ROLE foo AS COPY OF admin" );
 
         // THEN
-        List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 1 ) );
+        List<String> logLines = readLinesInSecurityLog( 1 );
         assertThat( logLines.get( 0 ), containsString( withSubject( adminContext, "CREATE ROLE foo AS COPY OF admin" ) ) );
     }
 
@@ -187,8 +181,7 @@ class SecurityAdministrationCommandLoggingIT
         execute( adminContext, "CALL dbms.security.deleteRole('bar')" );
 
         // THEN
-        List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 4 ) );
+        List<String> logLines = readLinesInSecurityLog( 4 );
         assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "DROP ROLE foo" ) ) );
         assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "DROP ROLE bar" ) ) );
     }
@@ -209,8 +202,7 @@ class SecurityAdministrationCommandLoggingIT
         execute( adminContext, "CALL dbms.security.addRoleToUser('baz', 'alice')" );
 
         // THEN
-        List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 8 ) );
+        List<String> logLines = readLinesInSecurityLog( 8 );
         assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "GRANT ROLE foo TO alice" ) ) );
         assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "GRANT ROLES foo, bar TO alice, bob" ) ) );
         assertThat( logLines.get( 7 ), containsString( withSubject( adminContext, "GRANT ROLE baz TO alice" ) ) );
@@ -234,8 +226,7 @@ class SecurityAdministrationCommandLoggingIT
         execute( adminContext, "CALL dbms.security.removeRoleFromUser('baz', 'bob')" );
 
         // THEN
-        List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 10 ) );
+        List<String> logLines = readLinesInSecurityLog( 10 );
         assertThat( logLines.get( 7 ), containsString( withSubject( adminContext, "REVOKE ROLE foo FROM alice" ) ) );
         assertThat( logLines.get( 8 ), containsString( withSubject( adminContext, "REVOKE ROLES foo, bar FROM bob" ) ) );
         assertThat( logLines.get( 9 ), containsString( withSubject( adminContext, "REVOKE ROLE baz FROM bob" ) ) );
@@ -253,8 +244,7 @@ class SecurityAdministrationCommandLoggingIT
         execute( adminContext, "GRANT TRAVERSE ON GRAPH * RELATIONSHIPS C,D TO foo" );
 
         // THEN
-        List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 4 ) );
+        List<String> logLines = readLinesInSecurityLog( 4 );
         assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "GRANT TRAVERSE ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
         assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "GRANT TRAVERSE ON GRAPH * NODES A, B (*) TO foo" ) ) );
         assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "GRANT TRAVERSE ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
@@ -275,8 +265,7 @@ class SecurityAdministrationCommandLoggingIT
         execute( adminContext, "GRANT READ {bar,baz} ON GRAPH * RELATIONSHIPS C,D TO foo" );
 
         // THEN
-        List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 7 ) );
+        List<String> logLines = readLinesInSecurityLog( 7 );
         assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "GRANT MATCH {*} ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
         assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "GRANT MATCH {bar, baz} ON GRAPH * NODES A, B (*) TO foo" ) ) );
         assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "GRANT MATCH {bar, baz} ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
@@ -295,8 +284,7 @@ class SecurityAdministrationCommandLoggingIT
         execute( adminContext, "GRANT WRITE ON GRAPH * TO foo" );
 
         // THEN
-        List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 2 ) );
+        List<String> logLines = readLinesInSecurityLog( 2 );
         assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "GRANT WRITE ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
     }
 
@@ -312,8 +300,7 @@ class SecurityAdministrationCommandLoggingIT
         execute( adminContext, "DENY TRAVERSE ON GRAPH * RELATIONSHIPS C,D TO foo" );
 
         // THEN
-        List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 4 ) );
+        List<String> logLines = readLinesInSecurityLog( 4 );
         assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "DENY TRAVERSE ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
         assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "DENY TRAVERSE ON GRAPH * NODES A, B (*) TO foo" ) ) );
         assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "DENY TRAVERSE ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
@@ -334,8 +321,7 @@ class SecurityAdministrationCommandLoggingIT
         execute( adminContext, "DENY READ {bar,baz} ON GRAPH * RELATIONSHIPS C,D TO foo" );
 
         // THEN
-        List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 7 ) );
+        List<String> logLines = readLinesInSecurityLog( 7 );
         assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "DENY MATCH {*} ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
         assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "DENY MATCH {bar, baz} ON GRAPH * NODES A, B (*) TO foo" ) ) );
         assertThat( logLines.get( 3 ), containsString( withSubject( adminContext, "DENY MATCH {bar, baz} ON GRAPH * RELATIONSHIPS C, D (*) TO foo" ) ) );
@@ -354,8 +340,7 @@ class SecurityAdministrationCommandLoggingIT
         execute( adminContext, "DENY WRITE ON GRAPH * TO foo" );
 
         // THEN
-        List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 2 ) );
+        List<String> logLines = readLinesInSecurityLog( 2 );
         assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "DENY WRITE ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
     }
 
@@ -374,8 +359,7 @@ class SecurityAdministrationCommandLoggingIT
         execute( adminContext, "REVOKE TRAVERSE ON GRAPH * FROM foo" );
 
         // THEN
-        List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 7 ) );
+        List<String> logLines = readLinesInSecurityLog( 7 );
         assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "REVOKE TRAVERSE ON GRAPH * RELATIONSHIPS C, D (*) FROM foo" ) ) );
         assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "REVOKE TRAVERSE ON GRAPH * NODES A, B (*) FROM foo" ) ) );
         assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "REVOKE TRAVERSE ON GRAPH * ELEMENTS * (*) FROM foo" ) ) );
@@ -396,8 +380,7 @@ class SecurityAdministrationCommandLoggingIT
         execute( adminContext, "REVOKE READ {*} ON GRAPH * FROM foo" );
 
         // THEN
-        List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 7 ) );
+        List<String> logLines = readLinesInSecurityLog( 7 );
         assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "REVOKE READ {bar, baz} ON GRAPH * RELATIONSHIPS A, B (*) FROM foo" ) ) );
         assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "REVOKE READ {bar, baz} ON GRAPH * NODES A, B (*) FROM foo" ) ) );
         assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "REVOKE READ {*} ON GRAPH * ELEMENTS * (*) FROM foo" ) ) );
@@ -418,8 +401,7 @@ class SecurityAdministrationCommandLoggingIT
         execute( adminContext, "REVOKE MATCH {*} ON GRAPH * FROM foo" );
 
         // THEN
-        List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 7 ) );
+        List<String> logLines = readLinesInSecurityLog( 7 );
         assertThat( logLines.get( 4 ), containsString( withSubject( adminContext, "REVOKE MATCH {bar, baz} ON GRAPH * RELATIONSHIPS A, B (*) FROM foo" ) ) );
         assertThat( logLines.get( 5 ), containsString( withSubject( adminContext, "REVOKE MATCH {bar, baz} ON GRAPH * NODES A, B (*) FROM foo" ) ) );
         assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "REVOKE MATCH {*} ON GRAPH * ELEMENTS * (*) FROM foo" ) ) );
@@ -436,12 +418,14 @@ class SecurityAdministrationCommandLoggingIT
         execute( adminContext, "REVOKE WRITE ON GRAPH * FROM foo" );
 
         // THEN
-        List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines, hasSize( 3 ) );
+        List<String> logLines = readLinesInSecurityLog( 3 );
         assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "REVOKE WRITE ON GRAPH * ELEMENTS * (*) FROM foo" ) ) );
     }
 
-    private List<String> readAllLines( File logFilename ) throws IOException
+    /**
+     * Get all lines from the security log file, ignoring system setup lines
+     */
+    private List<String> readLinesInSecurityLog( int expected ) throws IOException
     {
         FileSystemAbstraction fs = testDirectory.getFileSystem();
         List<String> logLines = new ArrayList<>();
@@ -457,12 +441,13 @@ class SecurityAdministrationCommandLoggingIT
         {
             for ( String line; (line = reader.readLine()) != null; )
             {
-                if ( !line.contains( "Assigned admin role to user 'neo4j'" ) )
+                if ( !line.contains( "Assigned admin role to user 'neo4j'" ) && !line.contains( "Setting version for" ) )
                 {
                     logLines.add( line );
                 }
             }
         }
+        assertThat( String.join( "\n\t", logLines ), logLines, hasSize( expected ) );
         return logLines;
     }
 

@@ -61,7 +61,6 @@ import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.driver.SessionConfig.forDatabase;
 
-@SuppressWarnings( "deprecation" )
 @RunWith( Parameterized.class )
 @CreateDS(
         name = "TestAuthIT",
@@ -317,7 +316,7 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
         LdapServer ldapServer = ldapServerRule.getLdapServer();
         ldapServer.setConfidentialityRequired( confidentialityRequired );
 
-        createRole( "role1", true );
+        createRole( "role1" );
         if ( createUsers )
         {
             executeOnSystem( String.format( "CREATE USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED", NONE_USER, password ) );

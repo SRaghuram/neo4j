@@ -28,18 +28,17 @@ import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
 import com.neo4j.dbms.DatabaseStartAborter;
+import com.neo4j.dbms.EnterpriseSystemGraphComponent;
 import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.dbms.procedures.ClusteredDatabaseStateProcedure;
 import com.neo4j.enterprise.edition.AbstractEnterpriseEditionModule;
 import com.neo4j.fabric.bootstrap.EnterpriseFabricServicesBootstrap;
-import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.procedure.enterprise.builtin.SettingsWhitelist;
 import com.neo4j.server.enterprise.EnterpriseNeoWebServer;
-import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
 
 import java.io.File;
 import java.time.Duration;
@@ -64,7 +63,6 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.AuthManager;
-import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
@@ -267,35 +265,16 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     @Override
     public SystemGraphInitializer createSystemGraphInitializer( GlobalModule globalModule, DatabaseManager<?> databaseManager )
     {
+        var systemGraphComponents = globalModule.getSystemGraphComponents();
+        var systemGraphComponent = new EnterpriseSystemGraphComponent( globalModule.getGlobalConfig() );
+        systemGraphComponents.register( systemGraphComponent );
         return globalModule.getGlobalDependencies().satisfyDependency( SystemGraphInitializer.NO_OP );
     }
 
     @Override
     public void createSecurityModule( GlobalModule globalModule )
     {
-        SecurityProvider securityProvider;
-        if ( globalConfig.get( GraphDatabaseSettings.auth_enabled ) )
-        {
-            EnterpriseSecurityModule securityModule = new EnterpriseSecurityModule(
-                    globalModule.getLogService().getUserLogProvider(),
-                    globalConfig,
-                    globalProcedures,
-                    jobScheduler,
-                    globalModule.getFileSystem(),
-                    globalModule.getGlobalDependencies(),
-                    globalModule.getTransactionEventListeners()
-            );
-            securityModule.setup();
-            globalModule.getGlobalLife().add( securityModule );
-            securityProvider = securityModule;
-            inClusterAuthManager = securityModule.getInClusterAuthManager();
-        }
-        else
-        {
-            securityProvider = EnterpriseNoAuthSecurityProvider.INSTANCE;
-            inClusterAuthManager = EnterpriseNoAuthSecurityProvider.INSTANCE.authManager();
-        }
-        setSecurityProvider( securityProvider );
+        setSecurityProvider( makeEnterpriseSecurityModule( globalModule, globalProcedures ) );
     }
 
     @Override
@@ -343,11 +322,5 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     {
         var kernelDatabaseManagementService = super.createBoltDatabaseManagementServiceProvider(dependencies, managementService, monitors, clock, logService);
         return fabricServicesBootstrap.createBoltDatabaseManagementServiceProvider( kernelDatabaseManagementService, managementService, monitors, clock );
-    }
-
-    @Override
-    public AuthManager getBoltInClusterAuthManager()
-    {
-        return inClusterAuthManager;
     }
 }

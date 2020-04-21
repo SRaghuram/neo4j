@@ -42,6 +42,7 @@ class EnterpriseSecurityContextDescriptionTest
     private PrincipalCollection principals;
 
     private final LoginContext.IdLookup token = LoginContext.IdLookup.EMPTY;
+    private final SimpleAuthorizationInfo testAuthInfo = new SimpleAuthorizationInfo( Set.of( PUBLISHER, "role1" ) );
 
     @BeforeEach
     void setUp() throws Throwable
@@ -65,14 +66,14 @@ class EnterpriseSecurityContextDescriptionTest
     @Test
     void shouldMakeNiceDescriptionWithRoles() throws Exception
     {
-        when( realm.getAuthorizationInfoSnapshot( principals ) ).thenReturn( new SimpleAuthorizationInfo( Set.of( PUBLISHER, "role1" ) ) );
+        when( realm.getAuthorizationInfoSnapshot( principals ) ).thenReturn( testAuthInfo );
         assertThat( context().description() ).isEqualTo( "user 'mats' with roles [PUBLIC, publisher, role1]" );
     }
 
     @Test
     void shouldMakeNiceDescriptionWithMode() throws Exception
     {
-        when( realm.getAuthorizationInfoSnapshot( principals ) ).thenReturn( new SimpleAuthorizationInfo( Set.of( PUBLISHER, "role1" ) ) );
+        when( realm.getAuthorizationInfoSnapshot( principals ) ).thenReturn( testAuthInfo );
         EnterpriseSecurityContext modified = context().withMode( AccessMode.Static.CREDENTIALS_EXPIRED );
         assertThat( modified.description() ).isEqualTo( "user 'mats' with CREDENTIALS_EXPIRED" );
     }
@@ -80,7 +81,7 @@ class EnterpriseSecurityContextDescriptionTest
     @Test
     void shouldMakeNiceDescriptionRestricted() throws Exception
     {
-        when( realm.getAuthorizationInfoSnapshot( principals ) ).thenReturn( new SimpleAuthorizationInfo( Set.of( PUBLISHER, "role1" ) ) );
+        when( realm.getAuthorizationInfoSnapshot( principals ) ).thenReturn( testAuthInfo );
         EnterpriseSecurityContext context = context();
         EnterpriseSecurityContext restricted =
                 context.withMode( new RestrictedAccessMode( context.mode(), AccessMode.Static.READ ) );
@@ -90,7 +91,7 @@ class EnterpriseSecurityContextDescriptionTest
     @Test
     void shouldMakeNiceDescriptionOverridden() throws Exception
     {
-        when( realm.getAuthorizationInfoSnapshot( principals ) ).thenReturn( new SimpleAuthorizationInfo( Set.of( PUBLISHER, "role1" ) ) );
+        when( realm.getAuthorizationInfoSnapshot( principals ) ).thenReturn( testAuthInfo );
         EnterpriseSecurityContext context = context();
         EnterpriseSecurityContext overridden =
                 context.withMode( new OverriddenAccessMode( context.mode(), AccessMode.Static.READ ) );

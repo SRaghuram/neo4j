@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
-import com.neo4j.dbms.EnterpriseSystemGraphInitializer;
+import com.neo4j.dbms.EnterpriseSystemGraphComponent;
 import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
@@ -24,12 +24,15 @@ import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.DefaultSystemGraphInitializer;
+import org.neo4j.dbms.database.SystemGraphComponents;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.security.auth.InMemoryUserRepository;
 import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
 import org.neo4j.server.security.systemgraph.SystemGraphRealmHelper;
+import org.neo4j.server.security.systemgraph.UserSecurityGraphComponent;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -47,6 +50,7 @@ class SystemGraphCachingTest
     private SystemGraphRealm realm;
     private TestCachingRealmHelper cachingRealmHelper;
 
+    @SuppressWarnings( "unused" )
     @Inject
     private TestDirectory testDirectory;
 
@@ -62,19 +66,26 @@ class SystemGraphCachingTest
         database = managementService.database( DEFAULT_DATABASE_NAME );
         DependencyResolver dependencyResolver = ((GraphDatabaseAPI) database).getDependencyResolver();
         DatabaseManager<?> databaseManager = dependencyResolver.resolveDependency( DatabaseManager.class );
+        SystemGraphComponents systemGraphComponents = dependencyResolver.resolveDependency( SystemGraphComponents.class );
         SecurityLog securityLog = new SecurityLog( new AssertableLogProvider().getLog( getClass() ) );
 
-        SecureHasher secureHasher = new SecureHasher();
+        Config config = Config.defaults();
+        UserSecurityGraphComponent userSecurityGraphComponent =
+                new UserSecurityGraphComponent( securityLog, new InMemoryUserRepository(), new InMemoryUserRepository(), config );
+        EnterpriseSecurityGraphComponent enterpriseSecurityGraphComponent =
+                new EnterpriseSecurityGraphComponent( securityLog, new InMemoryRoleRepository(), new InMemoryUserRepository(),
+                        config );
 
-        EnterpriseSystemGraphInitializer systemGraphInitializer = new EnterpriseSystemGraphInitializer( databaseManager, Config.defaults() );
-        EnterpriseSecurityGraphInitializer securityGraphInitializer =
-                new EnterpriseSecurityGraphInitializer( databaseManager, systemGraphInitializer, securityLog, new InMemoryUserRepository(),
-                                                        new InMemoryRoleRepository(), new InMemoryUserRepository(), new InMemoryUserRepository(),
-                                                        secureHasher, Config.emptyBuilder().build() );
+        var systemGraphComponent = new EnterpriseSystemGraphComponent( config );
+        systemGraphComponents.register( systemGraphComponent );
+        systemGraphComponents.register( userSecurityGraphComponent );
+        systemGraphComponents.register( enterpriseSecurityGraphComponent );
+        var systemGraphInitializer = new DefaultSystemGraphInitializer( SystemGraphRealmHelper.makeSystemSupplier( databaseManager ), systemGraphComponents );
+        systemGraphInitializer.start();
 
         cachingRealmHelper = new TestCachingRealmHelper( databaseManager );
-        realm = new SystemGraphRealm( securityGraphInitializer, cachingRealmHelper,
-                new RateLimitedAuthenticationStrategy( Clock.systemUTC(), Config.defaults() ), true, true );
+        realm = new SystemGraphRealm( cachingRealmHelper, new RateLimitedAuthenticationStrategy( Clock.systemUTC(), Config.defaults() ), true, true,
+                enterpriseSecurityGraphComponent );
 
         realm.initialize();
         realm.start();
@@ -137,7 +148,7 @@ class SystemGraphCachingTest
 
         TestCachingRealmHelper( DatabaseManager<?> databaseManager )
         {
-            super( databaseManager, new SecureHasher() );
+            super( makeSystemSupplier( databaseManager ), new SecureHasher() );
         }
 
         boolean takeAccessFlag()

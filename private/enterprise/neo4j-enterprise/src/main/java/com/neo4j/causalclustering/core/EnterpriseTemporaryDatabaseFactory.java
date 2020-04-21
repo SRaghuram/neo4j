@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
 import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 
 import java.io.File;
 
@@ -62,5 +63,15 @@ public class EnterpriseTemporaryDatabaseFactory implements TemporaryDatabaseFact
 
         managementServiceBuilder.setConfig( MetricsSettings.metricsEnabled, false );
         managementServiceBuilder.setConfig( MetricsSettings.csvEnabled, false );
+
+        // We start the temp database in single instance mode but don't want the cluster-incompatible upgrade to happen
+        managementServiceBuilder.setConfig( GraphDatabaseSettings.allow_single_automatic_upgrade, false );
+        if ( originalConfig.isExplicitlySet( GraphDatabaseSettings.system_init_file ) )
+        {
+            // Read custom initialization file from outer dbms
+            managementServiceBuilder.setConfig( GraphDatabaseSettings.system_init_file, originalConfig.get( GraphDatabaseSettings.system_init_file ) );
+        }
+        // Log security initialization to outer dbms log file
+        managementServiceBuilder.setConfig( SecuritySettings.security_log_filename, originalConfig.get( SecuritySettings.security_log_filename ) );
     }
 }

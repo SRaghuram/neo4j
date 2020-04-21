@@ -168,7 +168,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     public void shouldShowCurrentUser()
     {
         startDatabase();
-        createRole( "agent", true );
+        createRole( "agent" );
         try ( Driver driver = connectDriver( boltUri, "smith", "abc123" );
                 Session session = driver.session() )
         {
@@ -253,7 +253,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
     {
         startDatabaseWithSettings( Map.of( SecuritySettings.ldap_authorization_group_to_role_mapping, "503=admin;504=role1" ) );
         dbRule.resolveDependency( GlobalProcedures.class ).registerProcedure( ProcedureInteractionTestBase.ClassWithProcedures.class );
-        createRole( "role1", true );
+        createRole( "role1" );
         assertKeepAuthorizationForLifetimeOfTransaction( "smith",
                 tx -> assertThat( tx.run( "CALL test.staticReadProcedure()" ).single().get( 0 ).asString(), equalTo( "static" ) ) );
     }

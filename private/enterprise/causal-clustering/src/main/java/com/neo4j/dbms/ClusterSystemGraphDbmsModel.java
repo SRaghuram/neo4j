@@ -14,6 +14,7 @@ import java.util.function.Supplier;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.NotFoundException;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.store.MetaDataStore;
@@ -71,5 +72,24 @@ public class ClusterSystemGraphDbmsModel extends EnterpriseSystemGraphDbmsModel
         return Optional.ofNullable( tx.findNode( DATABASE_LABEL, DATABASE_UUID_PROPERTY, databaseId.databaseId().uuid().toString() ) )
                 .or( () -> Optional.ofNullable( tx.findNode( DELETED_DATABASE_LABEL, DATABASE_UUID_PROPERTY, databaseId.databaseId().uuid().toString() ) ) )
                 .orElseThrow( () -> new IllegalStateException( "System database must contain a node for database " + databaseId.name() ) );
+    }
+
+    public static void clearClusterProperties( GraphDatabaseService system )
+    {
+        try ( Transaction tx = system.beginTx() )
+        {
+            try ( ResourceIterator<Node> databaseItr = tx.findNodes( DATABASE_LABEL ) )
+            {
+                while ( databaseItr.hasNext() )
+                {
+                    Node database = databaseItr.next();
+                    database.removeProperty( INITIAL_MEMBERS );
+                    database.removeProperty( STORE_CREATION_TIME );
+                    database.removeProperty( STORE_RANDOM_ID );
+                    database.removeProperty( STORE_VERSION );
+                }
+            }
+            tx.commit();
+        }
     }
 }

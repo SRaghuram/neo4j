@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
-import com.neo4j.dbms.EnterpriseSystemGraphInitializer;
+import com.neo4j.dbms.EnterpriseSystemGraphComponent;
 import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository;
 import com.neo4j.server.security.enterprise.auth.LabelSegment;
 import com.neo4j.server.security.enterprise.auth.RelTypeSegment;
@@ -32,15 +32,18 @@ import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.cypher.security.BasicSystemGraphRealmTestHelper;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.dbms.database.DefaultSystemGraphInitializer;
+import org.neo4j.dbms.database.SystemGraphComponents;
+import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.Segment;
-import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.security.auth.InMemoryUserRepository;
 import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
 import org.neo4j.server.security.systemgraph.SystemGraphRealmHelper;
+import org.neo4j.server.security.systemgraph.UserSecurityGraphComponent;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -48,8 +51,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.startsWith;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -63,8 +65,8 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ACCESS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CONSTRAINT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.INDEX;
-import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.MATCH;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.WRITE;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_PASSWORD;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
@@ -80,8 +82,8 @@ class SystemGraphRealmIT
     private AssertableLogProvider logProvider;
     private SecurityLog securityLog;
     private Config defaultConfig;
-    private SecureHasher secureHasher;
 
+    @SuppressWarnings( "unused" )
     @Inject
     private TestDirectory testDirectory;
 
@@ -89,13 +91,15 @@ class SystemGraphRealmIT
     private InMemoryRoleRepository oldRoles;
     private InMemoryUserRepository initialPassword;
     private InMemoryUserRepository defaultAdmin;
+    private SystemGraphRealm realm;
+    private SystemGraphInitializer systemGraphInitializer;
 
     @BeforeEach
     void setUp()
     {
-        secureHasher = new SecureHasher();
+        SecureHasher secureHasher = new SecureHasher();
         dbManager = new TestDatabaseManager( testDirectory );
-        realmHelper = new SystemGraphRealmHelper( dbManager, secureHasher );
+        realmHelper = new SystemGraphRealmHelper( SystemGraphRealmHelper.makeSystemSupplier( dbManager ), secureHasher );
         logProvider = new AssertableLogProvider();
         securityLog = new SecurityLog( logProvider.getLog( getClass() ) );
         defaultConfig = Config.defaults();
@@ -140,9 +144,9 @@ class SystemGraphRealmIT
         oldRoles.create( new RoleRecord( PredefinedRoles.ADMIN, "alice" ) );
         oldRoles.create( new RoleRecord( "PUBLIC", "bob" ) );
 
-        Exception exception = assertThrows( InvalidArgumentsException.class, this::startSystemGraphRealm );
-        assertThat( exception.getMessage(), startsWith( "Automatic migration of users and roles into system graph failed because 'PUBLIC' role exists." +
-                                                        " Please remove or rename that role and start again." ) );
+        Exception exception = assertThrows( IllegalStateException.class, this::startSystemGraphRealm );
+        assertThat( exception.getMessage(), containsString( "Automatic migration of users and roles into system graph failed because 'PUBLIC' role exists." +
+                                                            " Please remove or rename that role and start again." ) );
 
         assertThat( logProvider )
                 .forLevel( ERROR )
@@ -189,15 +193,13 @@ class SystemGraphRealmIT
     void shouldLoadInitialUserWithInitialPasswordOnRestart() throws Throwable
     {
         // Given
-        SystemGraphRealm realm = startSystemGraphRealm();
+        startSystemGraphRealm();
         assertAuthenticationSucceeds( realmHelper, INITIAL_USER_NAME, INITIAL_PASSWORD, true );
-
-        realm.stop();
 
         initialPassword.create( createUser( INITIAL_USER_NAME, "abc123", false ) );
 
         // When
-        realm.start();
+        systemGraphInitializer.start();
 
         // Then
         assertAuthenticationFails( realmHelper, INITIAL_USER_NAME, INITIAL_PASSWORD );
@@ -208,18 +210,16 @@ class SystemGraphRealmIT
     void shouldNotLoadInitialUserWithInitialPasswordOnRestartWhenAlreadyChanged() throws Throwable
     {
         // Given
-        SystemGraphRealm realm = startSystemGraphRealm();
-        realm.stop();
+        startSystemGraphRealm();
 
         initialPassword.create( createUser( INITIAL_USER_NAME, "foo", false ) );
 
-        realm.start();
-        realm.stop();
+        systemGraphInitializer.start();
 
         // When
         initialPassword.clear();
         initialPassword.create( createUser( INITIAL_USER_NAME, "bar", false ) );
-        realm.start();
+        systemGraphInitializer.start();
 
         // Then
         assertAuthenticationFails( realmHelper, INITIAL_USER_NAME, INITIAL_PASSWORD );
@@ -236,7 +236,7 @@ class SystemGraphRealmIT
         // Then
         IllegalStateException wrongUsernameException = assertThrows( IllegalStateException.class, this::startSystemGraphRealm );
         String wrongUsernameErrorMessage = "Invalid `auth.ini` file: the user in the file is not named " + INITIAL_USER_NAME;
-        assertThat( wrongUsernameException.getMessage(), equalTo( wrongUsernameErrorMessage ) );
+        assertThat( wrongUsernameException.getMessage(), containsString( wrongUsernameErrorMessage ) );
         assertThat( logProvider ).forClass( getClass() ).forLevel( ERROR ).containsMessages( wrongUsernameErrorMessage );
 
         // Given
@@ -250,7 +250,7 @@ class SystemGraphRealmIT
         // Then
         IllegalStateException multipleUsersErrorException = assertThrows( IllegalStateException.class, this::startSystemGraphRealm );
         String multipleUsersErrorMessage = "Invalid `auth.ini` file: the file contains more than one user";
-        assertThat( multipleUsersErrorException.getMessage(), equalTo(  multipleUsersErrorMessage) );
+        assertThat( multipleUsersErrorException.getMessage(), containsString(  multipleUsersErrorMessage) );
         assertThat( logProvider ).forClass( getClass() ).forLevel( ERROR ).containsMessages( multipleUsersErrorMessage );
     }
 
@@ -265,7 +265,6 @@ class SystemGraphRealmIT
         assertAuthenticationSucceeds( realmHelper, "jane", "doe" );
         assertThat( logProvider ).forLevel( INFO )
                 .containsMessageWithArguments( "Completed migration of %s %s into system graph.", "1", "user" )
-                .containsMessageWithArguments(  "Completed migration of %s %s into system graph.", "0", "roles" )
                 .containsMessageWithArguments( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, "jane" );
     }
 
@@ -282,7 +281,6 @@ class SystemGraphRealmIT
         assertAuthenticationSucceeds( realmHelper, "jane", "doe" );
         assertThat( logProvider ).forLevel( INFO )
                 .containsMessageWithArguments( "Completed migration of %s %s into system graph.", "3", "users" )
-                .containsMessageWithArguments( "Completed migration of %s %s into system graph.", "0", "roles" )
                 .containsMessageWithArguments( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, "neo4j" );
     }
 
@@ -292,8 +290,8 @@ class SystemGraphRealmIT
         oldUsers.create( createUser( "jane", "doe", false ) );
         oldUsers.create( createUser( "alice", "foo", false ) );
 
-        InvalidArgumentsException exception = assertThrows( InvalidArgumentsException.class, this::startSystemGraphRealm );
-        assertThat( exception.getMessage(), startsWith( "No roles defined, and cannot determine which user should be admin" ) );
+        IllegalStateException exception = assertThrows( IllegalStateException.class, this::startSystemGraphRealm );
+        assertThat( exception.getMessage(), containsString( "No roles defined, and cannot determine which user should be admin" ) );
     }
 
     @Test
@@ -304,11 +302,10 @@ class SystemGraphRealmIT
         oldUsers.create( createUser( "trinity", "abc", false ) );
 
         // Given existing users but no admin
-        InvalidArgumentsException exception = assertThrows( InvalidArgumentsException.class, this::startSystemGraphRealm );
-        assertThat( exception.getMessage(), startsWith( "No roles defined, and cannot determine which user should be admin" ) );
+        IllegalStateException exception = assertThrows( IllegalStateException.class, this::startSystemGraphRealm );
+        assertThat( exception.getMessage(), containsString( "No roles defined, and cannot determine which user should be admin" ) );
         assertThat( logProvider ).forLevel( INFO )
-                                 .containsMessageWithArguments( "Completed migration of %s %s into system graph.", "3", "users" )
-                                 .containsMessageWithArguments( "Completed migration of %s %s into system graph.", "0", "roles" );
+                                 .containsMessageWithArguments( "Completed migration of %s %s into system graph.", "3", "users" );
         assertThat( logProvider ).forLevel( ERROR )
                                  .containsMessages( "No roles defined, and cannot determine which user should be admin" );
 
@@ -322,15 +319,13 @@ class SystemGraphRealmIT
         assertAuthenticationSucceeds( realmHelper, "trinity", "abc" );
         assertTrue( dbManager.userHasRole( "trinity", PredefinedRoles.ADMIN ) );
         assertThat( logProvider ).forLevel( INFO )
-                .containsMessageWithArguments( "Completed migration of %s %s into system graph.", "3", "users" )
-                .containsMessageWithArguments( "Completed migration of %s %s into system graph.", "0", "roles" )
                 .containsMessageWithArguments( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, "trinity" );
     }
 
     @Test
     void shouldGetDefaultPrivilegesForDefaultRoles() throws Throwable
     {
-        SystemGraphRealm realm = startSystemGraphRealm();
+        startSystemGraphRealm();
 
         ResourcePrivilege defaultAccessPrivilege =
                 new ResourcePrivilege( GRANT, ACCESS, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.DEFAULT );
@@ -353,52 +348,35 @@ class SystemGraphRealmIT
         ResourcePrivilege adminNodePrivilege =
                 new ResourcePrivilege( GRANT, ADMIN, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
 
-        // When
-        Set<ResourcePrivilege> privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.READER ) );
+        assertThat( privilegesFor( realm, PredefinedRoles.READER ),
+                containsInAnyOrder( accessPrivilege, matchNodePrivilege, matchRelPrivilege ) );
 
-        // Then
-        assertThat( privileges, containsInAnyOrder( accessPrivilege, matchNodePrivilege, matchRelPrivilege ) );
+        assertThat( privilegesFor( realm, PredefinedRoles.PUBLIC ),
+                containsInAnyOrder( defaultAccessPrivilege ) );
 
-        // When
-        privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.PUBLIC ) );
+        assertThat( privilegesFor( realm, PredefinedRoles.EDITOR ),
+                containsInAnyOrder( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege ) );
 
-        // Then
-        assertThat( privileges, containsInAnyOrder( defaultAccessPrivilege ) );
-
-        // When
-        privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.EDITOR ) );
-
-        // Then
-        assertThat( privileges, containsInAnyOrder( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege ) );
-
-        // When
-        privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.PUBLISHER ) );
-
-        // Then
-        assertThat( privileges,
+        assertThat( privilegesFor( realm, PredefinedRoles.PUBLISHER ),
                 containsInAnyOrder( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenNodePrivilege ) );
 
-        // When
-        privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.ARCHITECT ) );
-
-        // Then
-        assertThat( privileges,
+        assertThat( privilegesFor( realm, PredefinedRoles.ARCHITECT ),
                 containsInAnyOrder( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenNodePrivilege,
                         indexNodePrivilege, constraintNodePrivilege ) );
 
-        // When
-        privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.ADMIN ) );
-
-        // Then
-        assertThat( privileges,
+        assertThat( privilegesFor( realm, PredefinedRoles.ADMIN ),
                 containsInAnyOrder( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenNodePrivilege,
                         indexNodePrivilege, constraintNodePrivilege, adminNodePrivilege ) );
+    }
+
+    private Set<ResourcePrivilege> privilegesFor( SystemGraphRealm realm, String role )
+    {
+        return realm.getPrivilegesForRoles( Collections.singleton( role ) );
     }
 
     @Test
     void shouldHandleCustomDefaultDatabase() throws Throwable
     {
-        dbManager.getManagementService().createDatabase( "foo" );
         defaultConfig.set( default_database, "foo" );
 
         startSystemGraphRealm();
@@ -415,7 +393,7 @@ class SystemGraphRealmIT
         oldUsers.create( createUser( "alice", "bar", false ) );
         oldRoles.create( new RoleRecord( "custom", "alice" ) );
 
-        SystemGraphRealm realm = startSystemGraphRealm();
+        startSystemGraphRealm();
 
         // Give Alice match privileges in 'neo4j'
         ResourcePrivilege matchPrivilege = new ResourcePrivilege( GRANT, MATCH, new Resource.AllPropertiesResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
@@ -430,13 +408,11 @@ class SystemGraphRealmIT
         Set<ResourcePrivilege> privileges = realm.getPrivilegesForRoles( Collections.singleton( "custom" ) );
         assertThat( privileges, containsInAnyOrder( matchPrivilege ) );
 
-        realm.stop();
-
         // Create a new database 'foo' and set it to default db in config
         dbManager.getManagementService().createDatabase( "foo" );
         defaultConfig.set( default_database, "foo" );
 
-        realm.start();
+        systemGraphInitializer.start();
 
         // Alice should still be able to authenticate
         assertAuthenticationSucceeds( realmHelper, "alice", "bar" );
@@ -448,12 +424,10 @@ class SystemGraphRealmIT
         // Alice should NOT have read privileges in 'foo'
         assertFalse( privileges.contains( new ResourcePrivilege( GRANT, MATCH, new Resource.AllPropertiesResource(), LabelSegment.ALL, "foo" ) ) );
 
-        realm.stop();
-
         // Switch back default db to 'neo4j'
         defaultConfig.set( default_database, DEFAULT_DATABASE_NAME );
 
-        realm.start();
+        systemGraphInitializer.start();
 
         // Alice should still be able to authenticate
         assertAuthenticationSucceeds( realmHelper, "alice", "bar" );
@@ -463,19 +437,23 @@ class SystemGraphRealmIT
         assertThat( privileges, containsInAnyOrder( matchPrivilege ) );
     }
 
-    private SystemGraphRealm startSystemGraphRealm() throws Exception
+    private void startSystemGraphRealm() throws Exception
     {
         Config config = Config.defaults( DatabaseManagementSystemSettings.auth_store_directory, testDirectory.directory( "data/dbms" ).toPath() );
-        EnterpriseSystemGraphInitializer systemGraphInitializer = new EnterpriseSystemGraphInitializer( dbManager, config );
-        EnterpriseSecurityGraphInitializer securityGraphInitializer =
-                new EnterpriseSecurityGraphInitializer( dbManager, systemGraphInitializer, securityLog, oldUsers, oldRoles, initialPassword, defaultAdmin,
-                        secureHasher, config );
+
+        UserSecurityGraphComponent userSecurityGraphComponent = new UserSecurityGraphComponent( securityLog, oldUsers, initialPassword, config );
+        EnterpriseSecurityGraphComponent enterpriseSecurityGraphComponent =
+                new EnterpriseSecurityGraphComponent( securityLog, oldRoles, defaultAdmin, config );
+
+        var systemGraphComponents = new SystemGraphComponents();
+        systemGraphComponents.register( new EnterpriseSystemGraphComponent( config ) );
+        systemGraphComponents.register( userSecurityGraphComponent );
+        systemGraphComponents.register( enterpriseSecurityGraphComponent );
+        systemGraphInitializer = new DefaultSystemGraphInitializer( SystemGraphRealmHelper.makeSystemSupplier( dbManager ), systemGraphComponents );
+        systemGraphInitializer.start();
 
         RateLimitedAuthenticationStrategy authenticationStrategy = new RateLimitedAuthenticationStrategy( Clock.systemUTC(), config );
-        SystemGraphRealm realm = new SystemGraphRealm( securityGraphInitializer, realmHelper, authenticationStrategy, true, true );
-        realm.initialize();
-        realm.start();
-        return realm;
+        realm = new SystemGraphRealm( realmHelper, authenticationStrategy, true, true, enterpriseSecurityGraphComponent );
     }
 
     private static class TestDatabaseManager extends BasicSystemGraphRealmTestHelper.TestDatabaseManager
@@ -488,7 +466,7 @@ class SystemGraphRealmIT
         @Override
         protected DatabaseManagementService createManagementService( TestDirectory testDir )
         {
-            return new TestEnterpriseDatabaseManagementServiceBuilder( testDir.homeDir() ).impermanent()
+            return new TestEnterpriseDatabaseManagementServiceBuilder( testDir.homeDir() ).impermanent().noOpSystemGraphInitializer()
                                                                                 .setConfig( GraphDatabaseSettings.auth_enabled, false ).build();
         }
 
@@ -498,6 +476,7 @@ class SystemGraphRealmIT
             try ( Transaction tx = testSystemDb.beginTx() )
             {
                 Result result = tx.execute( "SHOW USERS" );
+                //noinspection rawtypes
                 result.stream().filter( u -> ((List) u.get( "roles" )).contains( role ) ).map( u -> u.get( "user" ) ).forEach( usersWithRole::add );
                 tx.commit();
                 result.close();

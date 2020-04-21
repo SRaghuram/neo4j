@@ -20,6 +20,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.common.DependencyResolver;
@@ -28,6 +29,8 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.SettingImpl;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.SystemGraphComponent;
+import org.neo4j.dbms.database.SystemGraphComponents;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.helpers.TimeUtil;
@@ -74,6 +77,8 @@ import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.neo4j.dbms.database.SystemGraphComponent.Status.REQUIRES_UPGRADE;
+import static org.neo4j.dbms.database.SystemGraphComponent.Status.UNSUPPORTED_BUT_CAN_UPGRADE;
 import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 import static org.neo4j.io.ByteUnit.bytesToString;
 import static org.neo4j.procedure.Mode.DBMS;
@@ -95,6 +100,9 @@ public class EnterpriseBuiltInDbmsProcedures
 
     @Context
     public KernelTransaction kernelTransaction;
+
+    @Context
+    public SystemGraphComponents systemGraphComponents;
 
     @SystemProcedure
     @Description( "List all accepted network connections at this instance that are visible to the user." )
@@ -647,6 +655,67 @@ public class EnterpriseBuiltInDbmsProcedures
         return Stream.of( transactionId == -1 ? CheckpointResult.TERMINATED : CheckpointResult.SUCCESS );
     }
 
+    @Admin
+    @SystemProcedure
+    @Description( "Report the current status of the system database sub-graph schema." )
+    @Procedure( name = "dbms.upgradeStatus", mode = DBMS )
+    public Stream<SystemGraphComponentStatusResult> systemSchemaVersions()
+    {
+        SystemGraphComponents versions = systemGraphComponents;
+        ArrayList<SystemGraphComponentStatusResult> results = new ArrayList<>();
+        versions.forEach( version -> results.add( new SystemGraphComponentStatusResult( version.component(), version.detect( transaction ) ) ) );
+        return Stream.concat( Stream.of( new SystemGraphComponentStatusResult( versions.component(), versions.detect( transaction ) ) ),
+                results.stream() );
+    }
+
+    @Admin
+    @SystemProcedure
+    @Description( "Upgrade the system database schema if it is not the current schema." )
+    @Procedure( name = "dbms.upgrade", mode = DBMS )
+    public Stream<SystemGraphComponentUpgradeResult> upgradeSystemSchema()
+    {
+        SystemGraphComponents versions = systemGraphComponents;
+        SystemGraphComponent.Status status = versions.detect( transaction );
+        ArrayList<SystemGraphComponentUpgradeResult> results = new ArrayList<>();
+        if ( status == REQUIRES_UPGRADE )
+        {
+            ArrayList<SystemGraphComponent> failed = new ArrayList<>();
+            versions.forEach( component ->
+            {
+                SystemGraphComponent.Status initialStatus = component.detect( transaction );
+                if ( initialStatus == REQUIRES_UPGRADE )
+                {
+                    Optional<Exception> error = component.upgradeToCurrent( transaction );
+                    if ( error.isPresent() )
+                    {
+                        failed.add( component );
+                        results.add( new SystemGraphComponentUpgradeResult( component.component(), initialStatus.name(), error.get().toString() ) );
+                    }
+                    else
+                    {
+                        results.add( new SystemGraphComponentUpgradeResult( component.component(), component.detect( transaction ).name(), "Upgraded" ) );
+                    }
+                }
+                else
+                {
+                    results.add( new SystemGraphComponentUpgradeResult( component.component(), initialStatus.name(), "" ) );
+                }
+            } );
+            String upgradeResult =
+                    failed.isEmpty() ? "Success" : "Failed: " + failed.stream().map( SystemGraphComponent::component ).collect( Collectors.joining( ", " ) );
+            return Stream.concat(
+                    Stream.of( new SystemGraphComponentUpgradeResult( versions.component(), versions.detect( transaction ).name(), upgradeResult ) ),
+                    results.stream() );
+        }
+        else
+        {
+            versions.forEach(
+                    version -> results.add( new SystemGraphComponentUpgradeResult( version.component(), version.detect( transaction ).name(), "" ) ) );
+            return Stream.concat( Stream.of( new SystemGraphComponentUpgradeResult( versions.component(), versions.detect( transaction ).name(), "" ) ),
+                    results.stream() );
+        }
+    }
+
     public enum CheckpointResult
     {
         SUCCESS( true, "Checkpoint completed." ),
@@ -741,6 +810,36 @@ public class EnterpriseBuiltInDbmsProcedures
         {
             this.group = activeGroup.group.groupName();
             this.threads = activeGroup.threads;
+        }
+    }
+
+    public static class SystemGraphComponentStatusResult
+    {
+        public final String component;
+        public final String status;
+        public final String description;
+        public final String resolution;
+
+        SystemGraphComponentStatusResult( String component, SystemGraphComponent.Status status )
+        {
+            this.component = component;
+            this.status = status.name();
+            this.description = status.description();
+            this.resolution = status.resolution();
+        }
+    }
+
+    public static class SystemGraphComponentUpgradeResult
+    {
+        public final String component;
+        public final String status;
+        public final String upgradeResult;
+
+        SystemGraphComponentUpgradeResult( String component, String status, String upgradeResult )
+        {
+            this.component = component;
+            this.status = status;
+            this.upgradeResult = upgradeResult;
         }
     }
 

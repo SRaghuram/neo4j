@@ -27,7 +27,6 @@ import java.util.function.Function;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.internal.recordstorage.ReadOnlyTransactionIdStore;
 import org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -77,12 +76,16 @@ import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 @Neo4jLayoutExtension
 class RaftBootstrapperIT
 {
+    @SuppressWarnings( "unused" )
     @Inject
     private TestDirectory testDirectory;
+    @SuppressWarnings( "unused" )
     @Inject
     private PageCache pageCache;
+    @SuppressWarnings( "unused" )
     @Inject
     private DefaultFileSystemAbstraction fileSystem;
+    @SuppressWarnings( "unused" )
     @Inject
     private DatabaseLayout databaseLayout;
 
@@ -90,7 +93,6 @@ class RaftBootstrapperIT
     private static final NamedDatabaseId SYSTEM_DATABASE_ID = new TestDatabaseIdRepository().getByName( SYSTEM_DATABASE_NAME ).orElseThrow();
     private final StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
 
-    private final DatabaseInitializer databaseInitializer = DatabaseInitializer.NO_INITIALIZATION;
     private final Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
     private final StoreId storeId = new StoreId( MetaDataStore.versionStringToLong( LATEST_STORE_VERSION ) );
 
@@ -123,7 +125,7 @@ class RaftBootstrapperIT
         LogFiles transactionLogs = buildLogFiles( databaseLayout );
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, databaseLayout, storeFiles, transactionLogs );
 
-        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
+        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory,
                 pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         CoreSnapshot snapshot = bootstrapper.bootstrap( membership, storeId );
@@ -143,7 +145,7 @@ class RaftBootstrapperIT
         LogFiles transactionLogs = buildLogFiles( databaseLayout );
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, databaseLayout, storeFiles, transactionLogs );
 
-        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
+        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory,
                 pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when
@@ -162,7 +164,7 @@ class RaftBootstrapperIT
         LogFiles transactionLogs = buildLogFiles( databaseLayout );
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, databaseLayout, storeFiles, transactionLogs );
 
-        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
+        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory,
                 pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when
@@ -187,7 +189,7 @@ class RaftBootstrapperIT
         LogFiles transactionLogs = buildLogFiles( database.layout() );
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
 
-        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
+        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory,
                 pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when
@@ -214,7 +216,7 @@ class RaftBootstrapperIT
         LogFiles transactionLogs = buildLogFiles( databaseLayout );
         BootstrapContext bootstrapContext = new BootstrapContext( SYSTEM_DATABASE_ID, databaseLayout, storeFiles, transactionLogs );
 
-        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
+        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory,
                 pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when
@@ -247,7 +249,7 @@ class RaftBootstrapperIT
         LogFiles transactionLogs = buildLogFiles( database.layout() );
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
 
-        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
+        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory,
                 pageCache, fileSystem, logProvider, storageEngineFactory, config, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when
@@ -277,7 +279,7 @@ class RaftBootstrapperIT
         LogFiles transactionLogs = buildLogFiles( database.layout() );
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
 
-        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
+        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory,
                 pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when
@@ -305,7 +307,7 @@ class RaftBootstrapperIT
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
 
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
-        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer, pageCache,
+        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, pageCache,
                 fileSystem, assertableLogProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when
@@ -340,7 +342,7 @@ class RaftBootstrapperIT
                 .build();
 
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
-        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
+        RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory,
                 pageCache, fileSystem, assertableLogProvider, storageEngineFactory, config, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when

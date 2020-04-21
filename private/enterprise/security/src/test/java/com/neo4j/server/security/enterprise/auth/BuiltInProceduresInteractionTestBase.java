@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -39,6 +40,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.database.SystemGraphComponent;
+import org.neo4j.dbms.database.SystemGraphComponents;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
@@ -55,6 +58,8 @@ import org.neo4j.procedure.Procedure;
 import org.neo4j.test.Barrier;
 import org.neo4j.test.DoubleLatch;
 import org.neo4j.test.rule.concurrent.ThreadingRule;
+import org.neo4j.values.storable.TextValue;
+import org.neo4j.values.storable.Value;
 
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
@@ -2066,6 +2071,187 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         // any answer is okay, as long as it isn't denied. That is why we don't care about the actual result here
     }
 
+    //---------- system graph initialization/migration -----------
+
+    @Test
+    void shouldNotListDBMSComponentsIfNotAdmin()
+    {
+        setupFakeSystemComponents();
+        assertFail( noneSubject, "CALL dbms.upgradeStatus()", ACCESS_DENIED );
+        assertFail( readSubject, "CALL dbms.upgradeStatus()", PERMISSION_DENIED );
+        assertFail( writeSubject, "CALL dbms.upgradeStatus()", PERMISSION_DENIED );
+        assertFail( schemaSubject, "CALL dbms.upgradeStatus()", PERMISSION_DENIED );
+    }
+
+    @Test
+    void shouldListDBMSComponentsIfAdmin()
+    {
+        setupFakeSystemComponents();
+        assertSuccess( adminSubject, "CALL dbms.upgradeStatus()", r ->
+        {
+            HashMap<String, String> statuses = new HashMap<>();
+            while ( r.hasNext() )
+            {
+                Map<String,Object> row = r.next();
+                statuses.put( resultAsString( row, "component" ), resultAsString( row, "status" ) );
+            }
+            r.close();
+            assertThat( "Expected all test components to be found", statuses.size(), equalTo( 8 ) );
+            assertThat(statuses.get("system-graph"), containsString( SystemGraphComponent.Status.REQUIRES_UPGRADE.name()));
+            assertThat(statuses.get("component_A"), containsString( SystemGraphComponent.Status.CURRENT.name()));
+            assertThat(statuses.get("component_B"), containsString( SystemGraphComponent.Status.CURRENT.name()));
+            assertThat(statuses.get("component_C"), containsString( SystemGraphComponent.Status.REQUIRES_UPGRADE.name()));
+            assertThat(statuses.get("component_D"), containsString( SystemGraphComponent.Status.REQUIRES_UPGRADE.name()));
+        } );
+    }
+
+    @Test
+    void shouldNotUpgradeDBMSIfNotAdmin()
+    {
+        setupFakeSystemComponents();
+        assertFail( noneSubject, "CALL dbms.upgrade()", ACCESS_DENIED );
+        assertFail( readSubject, "CALL dbms.upgrade()", PERMISSION_DENIED );
+        assertFail( writeSubject, "CALL dbms.upgrade()", PERMISSION_DENIED );
+        assertFail( schemaSubject, "CALL dbms.upgrade()", PERMISSION_DENIED );
+    }
+
+    @Test
+    void shouldUpgradeDBMSIfAdmin()
+    {
+        setupFakeSystemComponents();
+        assertSuccess( adminSubject,"CALL dbms.upgrade()", r ->
+        {
+            assertThat( "Expected at least one result", r.hasNext(), equalTo( true ) );
+            HashMap<String,String> statuses = new HashMap<>();
+            HashMap<String,String> results = new HashMap<>();
+            while ( r.hasNext() )
+            {
+                Map<String,Object> row = r.next();
+                statuses.put( resultAsString( row, "component" ), resultAsString( row, "status" ) );
+                results.put( resultAsString( row, "component" ), resultAsString( row, "upgradeResult" ) );
+            }
+            r.close();
+            assertThat( "Expected all test components to be found", statuses.size(), equalTo( 8 ) );
+            assertThat( statuses.get( "system-graph" ), containsString( SystemGraphComponent.Status.REQUIRES_UPGRADE.name() ) );
+            assertThat( statuses.get( "component_A" ), containsString( SystemGraphComponent.Status.CURRENT.name() ) );
+            assertThat( statuses.get( "component_B" ), containsString( SystemGraphComponent.Status.CURRENT.name() ) );
+            assertThat( statuses.get( "component_C" ), containsString( SystemGraphComponent.Status.CURRENT.name() ) );
+            assertThat( statuses.get( "component_D" ), containsString( SystemGraphComponent.Status.REQUIRES_UPGRADE.name() ) );
+            assertThat( results.get( "system-graph" ), containsString( "Failed: component_D" ) );
+            assertThat( results.get( "component_C" ), containsString( "Upgraded" ) );
+            assertThat( results.get( "component_D" ), containsString( "Upgrade failed" ) );
+            r.close();
+        }  );
+    }
+
+    /*
+    ==================================================================================
+     */
+
+    private static class TestSystemGraphComponent implements SystemGraphComponent
+    {
+        final String component;
+        SystemGraphComponent.Status status;
+        Optional<Exception> onInit;
+        Optional<Exception> onMigrate;
+
+        TestSystemGraphComponent( String component, SystemGraphComponent.Status status, Optional<Exception> onInit, Optional<Exception> onMigrate )
+        {
+            this.component = component;
+            this.status = status;
+            this.onInit = onInit;
+            this.onMigrate = onMigrate;
+        }
+
+        @Override
+        public String component()
+        {
+            return component;
+        }
+
+        @Override
+        public Status detect( Transaction tx )
+        {
+            return status;
+        }
+
+        @Override
+        public Optional<Exception> initializeSystemGraph( GraphDatabaseService system )
+        {
+            if ( status == Status.UNINITIALIZED )
+            {
+                if ( onInit.isEmpty() )
+                {
+                    status = Status.CURRENT;
+                }
+                return onInit;
+            }
+            else
+            {
+                return Optional.empty();
+            }
+        }
+
+        @Override
+        public Optional<Exception> upgradeToCurrent( Transaction tx )
+        {
+            if ( status == Status.REQUIRES_UPGRADE )
+            {
+                if ( onMigrate.isEmpty() )
+                {
+                    status = Status.CURRENT;
+                }
+                return onMigrate;
+            }
+            else
+            {
+                return Optional.empty();
+            }
+        }
+    }
+
+    private SystemGraphComponent makeSystemComponentCurrent( String component )
+    {
+        return new TestSystemGraphComponent( component, SystemGraphComponent.Status.CURRENT, Optional.empty(), Optional.empty() );
+    }
+
+    private SystemGraphComponent makeSystemComponentUpgradeSucceeds( String component )
+    {
+        return new TestSystemGraphComponent( component, SystemGraphComponent.Status.REQUIRES_UPGRADE, Optional.empty(), Optional.empty() );
+    }
+
+    private SystemGraphComponent makeSystemComponentUpgradeFails( String component )
+    {
+        return new TestSystemGraphComponent( component, SystemGraphComponent.Status.REQUIRES_UPGRADE, Optional.empty(),
+                Optional.of( new RuntimeException( "Upgrade failed because this is a test" ) ) );
+    }
+
+    private void setupFakeSystemComponents()
+    {
+        SystemGraphComponents initializers = neo.getSystemGraph().getDependencyResolver().resolveDependency( SystemGraphComponents.class );
+        initializers.register( makeSystemComponentCurrent( "component_A" ) );
+        initializers.register( makeSystemComponentCurrent( "component_B" ) );
+        initializers.register( makeSystemComponentUpgradeSucceeds( "component_C" ) );
+        initializers.register( makeSystemComponentUpgradeFails( "component_D" ) );
+    }
+
+    private String resultAsString( Map<String,Object> row, String key )
+    {
+        Object result = row.get( key );
+        if ( result instanceof TextValue )
+        {
+            return ((TextValue) result).stringValue();
+        }
+        else if ( result instanceof Value )
+        {
+            return ((Value) result).asObjectCopy().toString();
+        }
+        else
+        {
+            return result.toString();
+        }
+    }
+
     private void setupTestSubject()
     {
         assertDDLCommandSuccess( adminSubject, String.format( "CREATE USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED", SUBJECT, PASSWORD  ));
@@ -2084,10 +2270,6 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         neo.executeQuery( adminSubject, DEFAULT_DATABASE_NAME, query, emptyMap(), itr -> resultIsNotEmpty.setValue( itr.hasNext() ) );
         return resultIsNotEmpty.booleanValue();
     }
-
-    /*
-    ==================================================================================
-     */
 
     @SuppressWarnings( "unchecked" )
     private static Map<String,Object> getResultRowForMetadataQuery( Transaction tx )

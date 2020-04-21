@@ -97,13 +97,4 @@ public interface RoleRepository extends Lifecycle
      * @throws IOException
      */
     void markAsMigrated() throws IOException;
-
-    static boolean validate( List<User> users, List<RoleRecord> roles )
-    {
-        Set<String> usernamesInRoles = roles.stream()
-                .flatMap( rr -> rr.users().stream() )
-                .collect( Collectors.toSet() );
-        Set<String> usernameInUsers = users.stream().map( User::name ).collect( Collectors.toSet() );
-        return usernameInUsers.containsAll( usernamesInRoles );
-    }
 }

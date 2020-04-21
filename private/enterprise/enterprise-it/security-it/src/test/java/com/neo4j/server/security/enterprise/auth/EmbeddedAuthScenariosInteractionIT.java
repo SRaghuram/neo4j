@@ -29,7 +29,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     private static final String PASSWORD = "foo";
 
     @Override
-    protected NeoInteractionLevel<EnterpriseLoginContext> setUpNeoServer( Map<Setting<?>, String> config ) throws Throwable
+    protected NeoInteractionLevel<EnterpriseLoginContext> setUpNeoServer( Map<Setting<?>, String> config )
     {
         return new EmbeddedInteraction( config, testDirectory );
     }

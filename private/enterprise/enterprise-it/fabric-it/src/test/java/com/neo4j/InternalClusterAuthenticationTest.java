@@ -6,7 +6,6 @@
 package com.neo4j;
 
 import com.neo4j.enterprise.edition.EnterpriseEditionModule;
-import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -41,7 +40,6 @@ import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.io.fs.FileUtils;
-import org.neo4j.kernel.api.security.AuthManager;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
@@ -222,34 +220,8 @@ class InternalClusterAuthenticationTest
             return globalModule ->
             {
                 dependencies = globalModule.getGlobalDependencies();
-                return new TestEditionModule( globalModule );
+                return new EnterpriseEditionModule( globalModule );
             };
-        }
-    }
-
-    private static class TestEditionModule extends EnterpriseEditionModule
-    {
-
-        final Dependencies dependencies;
-
-        TestEditionModule( GlobalModule globalModule )
-        {
-            super( globalModule );
-
-            dependencies = globalModule.getGlobalDependencies();
-        }
-
-        @Override
-        public AuthManager getBoltInClusterAuthManager()
-        {
-            var externalAuthManger = getBoltAuthManager( dependencies );
-
-            if ( externalAuthManger == AuthManager.NO_AUTH )
-            {
-                return AuthManager.NO_AUTH;
-            }
-
-            return ((EnterpriseSecurityModule) securityProvider).getInClusterAuthManager();
         }
     }
 

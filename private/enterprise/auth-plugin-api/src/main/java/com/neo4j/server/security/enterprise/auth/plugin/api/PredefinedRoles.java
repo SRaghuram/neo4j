@@ -5,6 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.auth.plugin.api;
 
+import java.util.List;
+
 /**
  * The role names of the built-in predefined roles of Neo4j.
  */
@@ -17,7 +19,10 @@ public final class PredefinedRoles
     public static final String READER = "reader";
     public static final String PUBLIC = "PUBLIC";
 
+    public static final List<String> roles = List.of( ADMIN, ARCHITECT, PUBLISHER, EDITOR, READER, PUBLIC );
+
     private PredefinedRoles()
     {
+
     }
 }

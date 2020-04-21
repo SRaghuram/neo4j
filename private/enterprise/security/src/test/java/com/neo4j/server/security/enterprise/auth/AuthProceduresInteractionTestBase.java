@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -530,7 +531,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         assertSystemCommandSuccess( adminSubject, format( "CALL dbms.security.deleteRole('%s')", READER ) );
         assertSystemCommandSuccess( adminSubject, format( "CALL dbms.security.deleteRole('%s')", ARCHITECT ) );
 
-        testSuccessfulListRoles( adminSubject, new String[]{ ADMIN, EDITOR, PUBLISHER, EMPTY_ROLE, PUBLIC } );
+        testSuccessfulListRoles( adminSubject, new String[]{ADMIN, EDITOR, PUBLISHER, EMPTY_ROLE, PUBLIC } );
     }
 
     @Test
@@ -589,6 +590,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldListUsers()
     {
+        //noinspection ConfusingArgumentToVarargsMethod
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.listUsers() YIELD username",
                 r -> assertKeyIs( r, "username", initialUsers ) );
     }
@@ -616,13 +618,13 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     void shouldReturnUsersWithFlags()
     {
         Map<String,Object> expected = map(
-                "adminSubject", listOf(),
-                "readSubject", listOf(),
-                "schemaSubject", listOf(),
-                "editorSubject", listOf(),
+                "adminSubject", Collections.emptyList(),
+                "readSubject", Collections.emptyList(),
+                "schemaSubject", Collections.emptyList(),
+                "editorSubject", Collections.emptyList(),
                 "writeSubject", listOf( IS_SUSPENDED ),
                 "pwdSubject", listOf( PWD_CHANGE, IS_SUSPENDED ),
-                "noneSubject", listOf(),
+                "noneSubject", Collections.emptyList(),
                 "neo4j", listOf( PWD_CHANGE.toLowerCase() )
         );
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.suspendUser('writeSubject')" );
@@ -661,6 +663,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldListRoles()
     {
+        //noinspection ConfusingArgumentToVarargsMethod
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.listRoles() YIELD role",
                 r -> assertKeyIs( r, "role", initialRoles ) );
     }
@@ -675,7 +678,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
                 ARCHITECT, listOf( "schemaSubject" ),
                 PUBLISHER, listOf( "writeSubject" ),
                 EDITOR, listOf( "editorSubject" ),
-                "empty", listOf()
+                "empty", Collections.emptyList()
         );
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.listRoles()",
                 r -> assertKeyIsMap( r, "role", "users", valueOf( expected ) ) );

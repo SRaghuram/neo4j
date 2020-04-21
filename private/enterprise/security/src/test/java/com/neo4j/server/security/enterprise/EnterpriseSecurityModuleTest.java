@@ -8,6 +8,7 @@ package com.neo4j.server.security.enterprise;
 import com.neo4j.server.security.enterprise.auth.SecurityProcedures;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.RepeatedTest;
@@ -19,21 +20,21 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
-import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.internal.event.GlobalTransactionEventListeners;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.scheduler.JobScheduler;
 
 import static com.neo4j.server.security.enterprise.EnterpriseSecurityModule.mergeAuthenticationAndAuthorization;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,21 +52,23 @@ class EnterpriseSecurityModuleTest
 {
     private Config config;
     private LogProvider mockLogProvider;
-    private FileSystemAbstraction mockFileSystem;
+    private SecurityLog mockSecurityLog;
+    private Supplier<GraphDatabaseService> mockSystemSupplier;
     private GlobalProcedures mockProcedures;
-    private JobScheduler mockJobScheduler;
     private GlobalTransactionEventListeners mockEventListeners;
     private Dependencies mockDependencies;
+    private EnterpriseSecurityGraphComponent mockSecurityComponent;
 
     @BeforeEach
     void setup()
     {
         config = mock( Config.class );
         mockLogProvider = mock( LogProvider.class );
+        mockSecurityLog = mock( SecurityLog.class );
+        mockSystemSupplier = () -> mock( GraphDatabaseService.class );
+        mockSecurityComponent = mock( EnterpriseSecurityGraphComponent.class );
         Log mockLog = mock( Log.class );
-        mockFileSystem = mock( FileSystemAbstraction.class );
         mockProcedures = mock( GlobalProcedures.class );
-        mockJobScheduler = mock( JobScheduler.class );
         mockEventListeners = mock( GlobalTransactionEventListeners.class );
         mockDependencies = mock( Dependencies.class );
         when( mockLogProvider.getLog( anyString() ) ).thenReturn( mockLog );
@@ -79,7 +82,6 @@ class EnterpriseSecurityModuleTest
         when( config.get( GraphDatabaseSettings.auth_lock_time ) ).thenReturn( Duration.ofSeconds( 5 ) );
         when( config.get( GraphDatabaseSettings.auth_store ) ).thenReturn( Path.of( "mock", "dir" ) );
         when( config.get( DatabaseManagementSystemSettings.auth_store_directory ) ).thenReturn( Path.of( "mock", "dir" ) );
-        when( mockFileSystem.fileExists( any() ) ).thenReturn( false );
     }
 
     @Test
@@ -303,19 +305,19 @@ class EnterpriseSecurityModuleTest
 
     private void assertSuccess()
     {
-        createModule( mockLogProvider, config ).newAuthManager( mock( SecurityLog.class ) );
+        createModule( mockLogProvider, config ).newAuthManager( mock( SecurityLog.class ), mockSystemSupplier );
     }
 
     private void assertIllegalArgumentException( String errorMsg )
     {
         IllegalArgumentException e = assertThrows( IllegalArgumentException.class,
-                () -> createModule( mockLogProvider, config ).newAuthManager( mock( SecurityLog.class ) ) );
+                () -> createModule( mockLogProvider, config ).newAuthManager( mock( SecurityLog.class ), mockSystemSupplier ) );
         assertEquals( e.getMessage(), errorMsg );
     }
 
     private EnterpriseSecurityModule createModule( LogProvider logProvider, Config config )
     {
-        return new EnterpriseSecurityModule( logProvider, config, mockProcedures, mockJobScheduler, mockFileSystem,
-                mockDependencies, mockEventListeners );
+        return new EnterpriseSecurityModule( logProvider, mockSecurityLog, config, mockProcedures, mockDependencies, mockEventListeners,
+                mockSecurityComponent );
     }
 }

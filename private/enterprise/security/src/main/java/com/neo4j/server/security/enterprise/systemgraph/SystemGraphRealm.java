@@ -26,10 +26,8 @@ import org.apache.shiro.subject.PrincipalCollection;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ForkJoinPool;
@@ -49,7 +47,6 @@ import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.auth.ShiroAuthToken;
-import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
 import org.neo4j.server.security.systemgraph.SystemGraphRealmHelper;
 
 import static org.neo4j.internal.helpers.collection.Iterables.single;
@@ -60,21 +57,21 @@ import static org.neo4j.server.security.systemgraph.SystemGraphRealmHelper.IS_SU
  */
 public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, ShiroAuthorizationInfoProvider, CredentialsMatcher
 {
-    private final SecurityGraphInitializer systemGraphInitializer;
     private SystemGraphRealmHelper systemGraphRealmHelper;
     private final AuthenticationStrategy authenticationStrategy;
     private final boolean authenticationEnabled;
+    private final EnterpriseSecurityGraphComponent enterpriseSecurityGraphComponent;
     private final boolean authorizationEnabled;
 
     private com.github.benmanes.caffeine.cache.Cache<String,Set<ResourcePrivilege>> privilegeCache;
 
-    public SystemGraphRealm( SecurityGraphInitializer systemGraphInitializer, SystemGraphRealmHelper systemGraphRealmHelper,
-            AuthenticationStrategy authenticationStrategy, boolean authenticationEnabled, boolean authorizationEnabled )
+    public SystemGraphRealm( SystemGraphRealmHelper systemGraphRealmHelper, AuthenticationStrategy authenticationStrategy, boolean authenticationEnabled,
+                             boolean authorizationEnabled, EnterpriseSecurityGraphComponent enterpriseSecurityGraphComponent )
     {
-        this.systemGraphInitializer = systemGraphInitializer;
         this.systemGraphRealmHelper = systemGraphRealmHelper;
         this.authenticationStrategy = authenticationStrategy;
         this.authenticationEnabled = authenticationEnabled;
+        this.enterpriseSecurityGraphComponent = enterpriseSecurityGraphComponent;
 
         setAuthenticationCachingEnabled( true );
         setName( SecuritySettings.NATIVE_REALM_NAME );
@@ -94,9 +91,8 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
     }
 
     @Override
-    public void start() throws Exception
+    public void start()
     {
-        systemGraphInitializer.initializeSecurityGraph();
     }
 
     @Override
@@ -154,7 +150,6 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
         switch ( result )
         {
         case SUCCESS:
-            break;
         case PASSWORD_CHANGE_REQUIRED:
             break;
         case FAILURE:
@@ -248,7 +243,6 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
         }
 
         boolean existingUser = false;
-        boolean passwordChangeRequired = false;
         boolean suspended = false;
         Set<String> roleNames = new TreeSet<>();
 
@@ -259,7 +253,6 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
             if ( userNode != null )
             {
                 existingUser = true;
-                passwordChangeRequired = (boolean) userNode.getProperty( "passwordChangeRequired" );
                 suspended = (boolean) userNode.getProperty( "suspended" );
 
                 final Iterable<Relationship> rels = userNode.getRelationships( Direction.OUTGOING, RelationshipType.withName( "HAS_ROLE" ) );
@@ -302,7 +295,6 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
     public Set<ResourcePrivilege> getPrivilegesForRoles( Set<String> roles )
     {
         Set<ResourcePrivilege> privileges = new HashSet<>();
-        Map<String,Set<ResourcePrivilege>> resultsPerRole = new HashMap<>();
         // check which roles need to be looked up
         List<String> rolesToLookup = new ArrayList<>();
         for ( String role : roles )
@@ -321,81 +313,9 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
 
         if ( !rolesToLookup.isEmpty() )
         {
-
             try ( Transaction tx = systemGraphRealmHelper.getSystemDb().beginTx() )
             {
-                for ( String roleName : rolesToLookup )
-                {
-                    try
-                    {
-                        Node roleNode = tx.findNode( Label.label( "Role" ), "name", roleName );
-                        if ( roleNode != null )
-                        {
-                            Set<ResourcePrivilege> rolePrivileges = new HashSet<>();
-                            roleNode.getRelationships( Direction.OUTGOING ).forEach( relToPriv ->
-                            {
-                                try
-                                {
-                                    final Node privilegeNode = relToPriv.getEndNode();
-                                    String grantOrDeny = relToPriv.getType().name();
-                                    String action = (String) privilegeNode.getProperty( "action" );
-
-                                    Node resourceNode = single(
-                                            privilegeNode.getRelationships( Direction.OUTGOING, RelationshipType.withName( "APPLIES_TO" ) ) ).getEndNode();
-
-                                    Node segmentNode = single(
-                                            privilegeNode.getRelationships( Direction.OUTGOING, RelationshipType.withName( "SCOPE" ) ) ).getEndNode();
-
-                                    Node dbNode = single( segmentNode.getRelationships( Direction.OUTGOING, RelationshipType.withName( "FOR" ) ) ).getEndNode();
-                                    String dbName = (String) dbNode.getProperty( "name" );
-
-                                    Node qualifierNode =
-                                            single( segmentNode.getRelationships( Direction.OUTGOING, RelationshipType.withName( "QUALIFIED" ) ) ).getEndNode();
-
-                                    ResourcePrivilege.GrantOrDeny privilegeType = ResourcePrivilege.GrantOrDeny.fromRelType( grantOrDeny );
-                                    PrivilegeBuilder privilegeBuilder = new PrivilegeBuilder( privilegeType, action );
-
-                                    privilegeBuilder.withinScope( qualifierNode ).onResource( resourceNode );
-
-                                    String dbLabel = single( dbNode.getLabels() ).name();
-                                    switch ( dbLabel )
-                                    {
-                                    case "Database":
-                                        privilegeBuilder.forDatabase( dbName );
-                                        break;
-                                    case "DatabaseAll":
-                                        privilegeBuilder.forAllDatabases();
-                                        break;
-                                    case "DatabaseDefault":
-                                        privilegeBuilder.forDefaultDatabase();
-                                        break;
-                                    case "DeletedDatabase":
-                                        //give up
-                                        return;
-                                    default:
-                                        throw new IllegalStateException(
-                                                "Cannot have database node without either 'Database', 'DatabaseDefault' or 'DatabaseAll' labels: " + dbLabel );
-                                    }
-
-                                    ResourcePrivilege privilege = privilegeBuilder.build();
-                                    rolePrivileges.add( privilege );
-                                    privileges.add( privilege );
-                                }
-                                catch ( InvalidArgumentsException ie )
-                                {
-                                    throw new IllegalStateException( "Failed to authorize", ie );
-                                }
-                            } );
-                            privilegeCache.put( roleName, rolePrivileges );
-                        }
-                    }
-                    catch ( NotFoundException n )
-                    {
-                        // Can occur if the role was dropped by another thread during the privilege lookup.
-                        // The behaviour should be the same as if the user did not have the role,
-                        // i.e. the role should not be added to the privilege map.
-                    }
-                }
+                privileges.addAll( enterpriseSecurityGraphComponent.getPrivilegeForRoles( tx, rolesToLookup, privilegeCache ) );
                 tx.commit();
             }
         }

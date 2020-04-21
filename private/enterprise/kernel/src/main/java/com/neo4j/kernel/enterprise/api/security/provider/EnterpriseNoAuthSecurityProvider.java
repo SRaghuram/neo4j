@@ -25,4 +25,9 @@ public final class EnterpriseNoAuthSecurityProvider extends LifecycleAdapter imp
         return EnterpriseAuthManager.NO_AUTH;
     }
 
+    @Override
+    public AuthManager inClusterAuthManager()
+    {
+        return EnterpriseAuthManager.NO_AUTH;
+    }
 }

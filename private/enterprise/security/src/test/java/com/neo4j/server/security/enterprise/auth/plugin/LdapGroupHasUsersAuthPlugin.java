@@ -84,19 +84,19 @@ public class LdapGroupHasUsersAuthPlugin extends AuthPlugin.Adapter
         Object[] searchArguments = new Object[]{username};
 
         // Search for groups that has the user as a member
-        NamingEnumeration result = ctx.search( GROUP_SEARCH_BASE, GROUP_SEARCH_FILTER, searchArguments, searchCtls );
+        NamingEnumeration<SearchResult> result = ctx.search( GROUP_SEARCH_BASE, GROUP_SEARCH_FILTER, searchArguments, searchCtls );
 
         if ( result.hasMoreElements() )
         {
-            SearchResult searchResult = (SearchResult) result.next();
+            SearchResult searchResult = result.next();
 
             Attributes attributes = searchResult.getAttributes();
             if ( attributes != null )
             {
-                NamingEnumeration attributeEnumeration = attributes.getAll();
+                NamingEnumeration<? extends Attribute> attributeEnumeration = attributes.getAll();
                 while ( attributeEnumeration.hasMore() )
                 {
-                    Attribute attribute = (Attribute) attributeEnumeration.next();
+                    Attribute attribute = attributeEnumeration.next();
                     String attributeId = attribute.getID();
                     if ( attributeId.equalsIgnoreCase( GROUP_ID ) )
                     {

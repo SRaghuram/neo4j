@@ -146,13 +146,10 @@ public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
         }
     }
 
-    void createRole( String roleName, boolean withAccess )
+    @SuppressWarnings( "SameParameterValue" )
+    void createRole( String roleName )
     {
         executeOnSystem( String.format( "CREATE ROLE %s", roleName ) );
-        if ( withAccess )
-        {
-            executeOnSystem( String.format( "GRANT ACCESS ON DATABASE * TO %s", roleName ) );
-        }
     }
 
     void createNativeUser( String username, String password, String... roles )

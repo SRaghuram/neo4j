@@ -110,6 +110,12 @@ class FabricGraphSelectionTest
     @BeforeEach
     void beforeEach()
     {
+        doInTx( mainDriver, system, tx ->
+        {
+            tx.run( "DROP USER myUser IF EXISTS" ).consume();
+            tx.commit();
+        } );
+
         doInTx( mainDriver, neo4j, tx ->
         {
             tx.run( "MATCH (n) DETACH DELETE n" ).consume();

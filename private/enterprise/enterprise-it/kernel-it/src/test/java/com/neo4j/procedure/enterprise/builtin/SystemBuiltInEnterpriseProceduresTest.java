@@ -86,7 +86,9 @@ class SystemBuiltInEnterpriseProceduresTest implements ProcedureITBase
 
             for ( int i = 1; i < actualArray.length; i++ )
             {
+                @SuppressWarnings( "rawtypes" )
                 Matcher matcher = (expectedArray[i] instanceof Matcher) ? (Matcher) expectedArray[i] : equalTo( expectedArray[i] );
+                //noinspection unchecked
                 assertThat( "Column " + i + " for " + procSignature + " does not match", actualArray[i], matcher );
             }
         }
@@ -95,12 +97,12 @@ class SystemBuiltInEnterpriseProceduresTest implements ProcedureITBase
 
     private String printElementsOfArray( AnyValue[] array )
     {
-        String result = "";
+        StringBuilder result = new StringBuilder();
         for ( AnyValue anyValue : array )
         {
-            result += anyValue.toString() + "\n";
+            result.append( anyValue.toString() ).append( "\n" );
         }
-        return result;
+        return result.toString();
     }
 
     @Test

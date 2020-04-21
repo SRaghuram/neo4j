@@ -63,6 +63,7 @@ class SystemGraphRealmUpgradeIT
 {
     private static final String DEFAULT_PASSWORD = "bar";
 
+    @SuppressWarnings( "unused" )
     @Inject
     private FileSystemAbstraction fileSystem;
     private File confDir;
@@ -95,7 +96,7 @@ class SystemGraphRealmUpgradeIT
     void shouldCreateDefaultRoles()
     {
         // GIVEN
-        createCommunityWithUsers();
+        createCommunityWithUsers( INITIAL_USER_NAME );
 
         // WHEN
         enterpriseDbms = getEnterpriseManagementService();
@@ -163,10 +164,10 @@ class SystemGraphRealmUpgradeIT
     @Test
     void shouldChangeInitialPasswordAndSetAdmin() throws InvalidAuthTokenException
     {
+        setInitialPassword( "abc123" );
         createCommunityWithUsers( INITIAL_USER_NAME );
 
         // WHEN
-        setInitialPassword( "abc123" );
         enterpriseDbms = getEnterpriseManagementService();
 
         // THEN
@@ -298,6 +299,7 @@ class SystemGraphRealmUpgradeIT
             while ( result.hasNext() )
             {
                 Map<String,Object> user = result.next();
+                //noinspection unchecked
                 users.add( new UserResult( (String) user.get( "user" ), (List<String>) user.get( "roles" ) ) );
             }
             tx.commit();

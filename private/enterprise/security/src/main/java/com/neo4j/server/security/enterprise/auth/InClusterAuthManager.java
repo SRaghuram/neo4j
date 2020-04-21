@@ -21,7 +21,7 @@ import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 
 import static org.neo4j.kernel.api.security.AuthToken.invalidToken;
 
-public class InClusterAuthManager implements EnterpriseAuthManager
+public class InClusterAuthManager extends EnterpriseAuthManager
 {
     private static final String SCHEME = "in-cluster-token";
     private static final String ROLES_KEY = "roles";
@@ -76,30 +76,6 @@ public class InClusterAuthManager implements EnterpriseAuthManager
     public void log( String message, SecurityContext securityContext )
     {
         securityLog.info( securityContext.subject(), message );
-    }
-
-    @Override
-    public void init()
-    {
-        // System Graph Realm is managed by the 'real' auth manger
-    }
-
-    @Override
-    public void start()
-    {
-
-    }
-
-    @Override
-    public void stop()
-    {
-
-    }
-
-    @Override
-    public void shutdown()
-    {
-
     }
 
     private void assertValidScheme( Map<String,Object> token ) throws InvalidAuthTokenException

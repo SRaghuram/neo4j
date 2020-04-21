@@ -6,6 +6,7 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.server.security.enterprise.log.SecurityLog;
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import org.apache.shiro.cache.MemoryConstrainedCacheManager;
 import org.junit.jupiter.api.AfterEach;
@@ -24,7 +25,6 @@ import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogAssert;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
-import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
 import org.neo4j.server.security.systemgraph.SystemGraphRealmHelper;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -64,7 +64,7 @@ class MultiRealmAuthManagerTest
     private MultiRealmAuthManager createAuthManager( boolean logSuccessfulAuthentications ) throws Throwable
     {
         realmHelper = spy( new SystemGraphRealmHelper( null, new SecureHasher() ) );
-        SystemGraphRealm realm = new SystemGraphRealm( SecurityGraphInitializer.NO_OP, realmHelper, authStrategy, true, true );
+        SystemGraphRealm realm = new SystemGraphRealm( realmHelper, authStrategy, true, true, mock( EnterpriseSecurityGraphComponent.class ) );
 
         manager = new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(),
                 new SecurityLog( logProvider.getLog( this.getClass() ) ), logSuccessfulAuthentications, DEFAULT_DATABASE_NAME );

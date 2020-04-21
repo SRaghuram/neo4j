@@ -45,7 +45,7 @@ import org.neo4j.server.security.auth.ShiroAuthToken;
 import static org.neo4j.internal.helpers.Strings.escape;
 import static org.neo4j.kernel.api.security.AuthToken.invalidToken;
 
-public class MultiRealmAuthManager implements EnterpriseAuthManager
+public class MultiRealmAuthManager extends EnterpriseAuthManager
 {
     private final SystemGraphRealm systemGraphRealm;
     private final Collection<Realm> realms;

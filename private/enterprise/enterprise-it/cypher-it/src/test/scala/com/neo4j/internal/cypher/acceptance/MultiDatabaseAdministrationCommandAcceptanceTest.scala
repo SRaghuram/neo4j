@@ -1495,13 +1495,19 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   test("should pass through deadlock exception") {
     val secondNodeLocked = new CountDownLatch(1)
+    var exception2then1: Exception = null
+    var exception1then2: Exception = null
 
     class StopDb2AndThenDb1 extends Runnable {
       override def run(): Unit = {
         val tx = graph.beginTransaction(KernelTransaction.Type.EXPLICIT, LoginContext.AUTH_DISABLED)
         tx.execute("STOP DATABASE db2")
         secondNodeLocked.countDown()
-        tx.execute("STOP DATABASE db1")
+        try {
+          tx.execute("STOP DATABASE db1")
+        } catch {
+          case e: Exception => exception2then1 = e
+        }
       }
     }
 
@@ -1514,15 +1520,24 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     tx.execute("STOP DATABASE db1")
 
     // take lock on db2 and wait for a lock on db1 in other transaction
-    new Thread(new StopDb2AndThenDb1).start()
+    val other = new Thread(new StopDb2AndThenDb1)
+    other.start()
 
     // and wait for those locks to be pending
     secondNodeLocked.await(10, TimeUnit.SECONDS)
-    Thread.sleep(1000)
 
     // try to take lock on db2
-    assertThrows[DeadlockDetectedException] {
+    try {
       tx.execute("STOP DATABASE db2")
+    } catch {
+      case e: Exception => exception1then2 = e
+    }
+
+    other.join(10000)
+
+    assertThrows[DeadlockDetectedException] {
+      if (exception2then1 != null) throw exception2then1
+      if (exception1then2 != null) throw exception1then2
     }
   }
 

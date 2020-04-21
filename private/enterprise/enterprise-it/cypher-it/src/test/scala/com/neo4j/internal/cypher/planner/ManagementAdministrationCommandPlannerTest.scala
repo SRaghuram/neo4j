@@ -794,7 +794,7 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
 
   test("Show role privileges with parameter") {
     // When
-    val plan = execute("EXPLAIN SHOW ROLE $role PRIVILEGES", Map("role" -> "PUBLIC")).executionPlanString()
+    val plan = execute("EXPLAIN SHOW ROLE $role PRIVILEGES", Map("role" -> PUBLIC)).executionPlanString()
 
     // Then
     plan should include(

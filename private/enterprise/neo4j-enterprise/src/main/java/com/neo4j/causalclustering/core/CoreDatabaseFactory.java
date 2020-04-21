@@ -82,7 +82,6 @@ import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
 import java.time.Clock;
 import java.time.Duration;
-import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -93,7 +92,6 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.DatabasePageCache;
 import org.neo4j.graphdb.factory.EditionLocksFactories;
-import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
 import org.neo4j.graphdb.factory.module.id.IdContextFactory;
@@ -135,7 +133,6 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.state_mac
 import static java.lang.Thread.sleep;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.neo4j.graphdb.factory.EditionLocksFactories.createLockFactory;
-import static org.neo4j.graphdb.factory.module.DatabaseInitializer.NO_INITIALIZATION;
 import static org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder.defaultIdGeneratorFactoryProvider;
 
 class CoreDatabaseFactory
@@ -157,7 +154,6 @@ class CoreDatabaseFactory
     private final ClusterStateStorageFactory storageFactory;
 
     private final TemporaryDatabaseFactory temporaryDatabaseFactory;
-    private final Map<NamedDatabaseId,DatabaseInitializer> databaseInitializers;
 
     private final MemberId myIdentity;
     private final RaftGroupFactory raftGroupFactory;
@@ -174,7 +170,7 @@ class CoreDatabaseFactory
 
     CoreDatabaseFactory( GlobalModule globalModule, PanicService panicService, DatabaseManager<ClusteredDatabaseContext> databaseManager,
             CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, TemporaryDatabaseFactory temporaryDatabaseFactory,
-            Map<NamedDatabaseId,DatabaseInitializer> databaseInitializers, MemberId myIdentity, RaftGroupFactory raftGroupFactory,
+            MemberId myIdentity, RaftGroupFactory raftGroupFactory,
             RaftMessageDispatcher raftMessageDispatcher, CatchupComponentsProvider catchupComponentsProvider, RecoveryFacade recoveryFacade,
             RaftMessageLogger<MemberId> raftLogger, Outbound<SocketAddress,RaftMessages.OutboundRaftMessageContainer<?>> raftSender,
             ReplicatedDatabaseEventService databaseEventService,
@@ -194,7 +190,6 @@ class CoreDatabaseFactory
         this.topologyService = topologyService;
         this.storageFactory = storageFactory;
         this.temporaryDatabaseFactory = temporaryDatabaseFactory;
-        this.databaseInitializers = databaseInitializers;
 
         this.myIdentity = myIdentity;
         this.raftGroupFactory = raftGroupFactory;
@@ -216,11 +211,9 @@ class CoreDatabaseFactory
     {
         DatabaseLogProvider debugLog = logService.getInternalLogProvider();
 
-        DatabaseInitializer databaseInitializer = databaseInitializers.getOrDefault( namedDatabaseId, NO_INITIALIZATION );
-
         SimpleStorage<RaftId> raftIdStorage = storageFactory.createRaftIdStorage( namedDatabaseId.name(), debugLog );
         RaftBinder raftBinder = createRaftBinder( namedDatabaseId, config, monitors, raftIdStorage, bootstrapContext,
-                temporaryDatabaseFactory, databaseInitializer, debugLog, dbmsModel, memoryTracker );
+                temporaryDatabaseFactory, debugLog, dbmsModel, memoryTracker );
 
         CommandIndexTracker commandIndexTracker = dependencies.satisfyDependency( new CommandIndexTracker() );
         initialiseStatusDescriptionEndpoint( dependencies, commandIndexTracker, life );
@@ -359,11 +352,11 @@ class CoreDatabaseFactory
     }
 
     private RaftBinder createRaftBinder( NamedDatabaseId namedDatabaseId, Config config, Monitors monitors, SimpleStorage<RaftId> raftIdStorage,
-            BootstrapContext bootstrapContext, TemporaryDatabaseFactory temporaryDatabaseFactory, DatabaseInitializer databaseInitializer,
+            BootstrapContext bootstrapContext, TemporaryDatabaseFactory temporaryDatabaseFactory,
             DatabaseLogProvider debugLog, ClusterSystemGraphDbmsModel systemGraph, MemoryTracker memoryTracker )
     {
         DatabasePageCache pageCache = new DatabasePageCache( this.pageCache, EmptyVersionContextSupplier.EMPTY );
-        var raftBootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer, pageCache, fileSystem, debugLog,
+        var raftBootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, pageCache, fileSystem, debugLog,
                 storageEngineFactory, config, bootstrapSaver, pageCacheTracer, memoryTracker );
 
         int minimumCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );

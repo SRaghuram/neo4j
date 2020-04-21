@@ -24,20 +24,19 @@ import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationPlugin
 import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationPlugin;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
-import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphInitializer;
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import org.apache.shiro.cache.CacheManager;
 import org.apache.shiro.realm.Realm;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
@@ -47,8 +46,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.dbms.database.SystemGraphInitializer;
-import org.neo4j.graphdb.factory.module.DatabaseInitializer;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
@@ -57,11 +55,9 @@ import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.internal.event.GlobalTransactionEventListeners;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
 import org.neo4j.server.security.auth.FileUserRepository;
 import org.neo4j.server.security.auth.UserRepository;
-import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
 import org.neo4j.server.security.systemgraph.SystemGraphRealmHelper;
 import org.neo4j.service.Services;
 import org.neo4j.time.Clocks;
@@ -75,39 +71,33 @@ public class EnterpriseSecurityModule extends SecurityModule
     private static final String ROLE_STORE_FILENAME = "roles";
     private static final String DEFAULT_ADMIN_STORE_FILENAME = SetDefaultAdminCommand.ADMIN_INI;
 
-    private DatabaseManager<?> databaseManager;
-    private boolean isClustered;
     private final Config config;
     private final GlobalProcedures globalProcedures;
-    private final JobScheduler scheduler;
-    private final LogProvider logProvider;
     private final Log log;
-    private final FileSystemAbstraction fileSystem;
+    private final EnterpriseSecurityGraphComponent enterpriseSecurityGraphComponent;
     private final DependencySatisfier dependencySatisfier;
     private final GlobalTransactionEventListeners transactionEventListeners;
-    private SystemGraphInitializer systemGraphInitializer;
     private EnterpriseAuthManager authManager;
     private SecurityConfig securityConfig;
-    private SystemGraphRealm internalRealm;
     private SecureHasher secureHasher;
-    private SecurityLog securityLog;
+    private final SecurityLog securityLog;
+    private AuthManager inClusterAuthManager;
 
     public EnterpriseSecurityModule( LogProvider logProvider,
-            Config config,
-            GlobalProcedures procedures,
-            JobScheduler scheduler,
-            FileSystemAbstraction fileSystem,
-            DependencySatisfier dependencySatisfier,
-            GlobalTransactionEventListeners transactionEventListeners )
+                                     SecurityLog securityLog,
+                                     Config config,
+                                     GlobalProcedures procedures,
+                                     DependencySatisfier dependencySatisfier,
+                                     GlobalTransactionEventListeners transactionEventListeners,
+                                     EnterpriseSecurityGraphComponent enterpriseSecurityGraphComponent )
     {
-        this.logProvider = logProvider;
+        this.securityLog = securityLog;
         this.config = config;
         this.globalProcedures = procedures;
-        this.scheduler = scheduler;
-        this.fileSystem = fileSystem;
         this.dependencySatisfier = dependencySatisfier;
         this.transactionEventListeners = transactionEventListeners;
         this.log = logProvider.getLog( getClass() );
+        this.enterpriseSecurityGraphComponent = enterpriseSecurityGraphComponent;
     }
 
     @Override
@@ -115,17 +105,18 @@ public class EnterpriseSecurityModule extends SecurityModule
     {
         this.secureHasher = new SecureHasher();
         org.neo4j.collection.Dependencies platformDependencies = (org.neo4j.collection.Dependencies) dependencySatisfier;
-        this.databaseManager = platformDependencies.resolveDependency( DatabaseManager.class );
-        this.systemGraphInitializer = platformDependencies.resolveDependency( SystemGraphInitializer.class );
+        Supplier<GraphDatabaseService> systemSupplier = () ->
+        {
+            DatabaseManager<?> databaseManager = platformDependencies.resolveDependency( DatabaseManager.class );
+            return databaseManager.getDatabaseContext( NAMED_SYSTEM_DATABASE_ID ).orElseThrow(
+                    () -> new RuntimeException( "No database called `" + SYSTEM_DATABASE_NAME + "` was found." ) ).databaseFacade();
+        };
 
-        isClustered = config.get( EnterpriseEditionSettings.mode ) == EnterpriseEditionSettings.Mode.CORE ||
-                      config.get( EnterpriseEditionSettings.mode ) == EnterpriseEditionSettings.Mode.READ_REPLICA;
+        boolean isClustered = config.get( EnterpriseEditionSettings.mode ) == EnterpriseEditionSettings.Mode.CORE ||
+                              config.get( EnterpriseEditionSettings.mode ) == EnterpriseEditionSettings.Mode.READ_REPLICA;
 
-        securityLog = createSecurityLog();
-        life.add( securityLog );
-
-        authManager = newAuthManager( securityLog );
-        life.add( dependencySatisfier.satisfyDependency( authManager ) );
+        authManager = newAuthManager( securityLog, systemSupplier );
+        dependencySatisfier.satisfyDependency( authManager );
 
         AuthCacheClearingDatabaseEventListener databaseEventListener = new AuthCacheClearingDatabaseEventListener( authManager );
 
@@ -158,53 +149,16 @@ public class EnterpriseSecurityModule extends SecurityModule
         registerProcedure( globalProcedures, log, SecurityProcedures.class, null );
     }
 
-    private SecurityLog createSecurityLog()
-    {
-        try
-        {
-            return SecurityLog.create( config, fileSystem, scheduler );
-        }
-        catch ( SecurityException | IOException e )
-        {
-            String message = "Unable to create security log.";
-            log.error( message, e );
-            throw new RuntimeException( message, e );
-        }
-    }
-
     @Override
     public AuthManager authManager()
     {
         return authManager;
     }
 
-    public AuthManager getInClusterAuthManager()
+    @Override
+    public AuthManager inClusterAuthManager()
     {
-        var logAuthSuccess = config.get( SecuritySettings.security_log_successful_authentication );
-        var defaultDatabase = config.get( GraphDatabaseSettings.default_database );
-
-        return new InClusterAuthManager( internalRealm, securityLog, logAuthSuccess, defaultDatabase );
-    }
-
-    public Optional<DatabaseInitializer> getDatabaseInitializer()
-    {
-        if ( !securityConfig.hasNativeProvider )
-        {
-            return Optional.empty();
-        }
-
-        return Optional.of( database ->
-        {
-            SecurityGraphInitializer initializer = createSecurityInitializer();
-            try
-            {
-                initializer.initializeSecurityGraph( database );
-            }
-            catch ( Throwable e )
-            {
-                throw new RuntimeException( e );
-            }
-        } );
+        return inClusterAuthManager;
     }
 
     private EnterpriseSecurityContext asEnterpriseEdition( SecurityContext securityContext )
@@ -217,14 +171,14 @@ public class EnterpriseSecurityModule extends SecurityModule
         throw new RuntimeException( "Expected " + EnterpriseSecurityContext.class.getName() + ", got " + securityContext.getClass().getName() );
     }
 
-    EnterpriseAuthManager newAuthManager( SecurityLog securityLog )
+    EnterpriseAuthManager newAuthManager( SecurityLog securityLog, Supplier<GraphDatabaseService> systemSupplier )
     {
         securityConfig = getValidatedSecurityConfig( config );
 
         List<Realm> realms = new ArrayList<>( securityConfig.authProviders.size() + 1 );
         SecureHasher secureHasher = new SecureHasher();
 
-        internalRealm = createSystemGraphRealm( config );
+        SystemGraphRealm internalRealm = createSystemGraphRealm( config, systemSupplier );
         realms.add( internalRealm );
 
         if ( securityConfig.hasLdapProvider )
@@ -244,6 +198,12 @@ public class EnterpriseSecurityModule extends SecurityModule
         {
             throw illegalConfiguration( "No valid auth provider is active." );
         }
+
+        // create inCluster auth manager
+        var logAuthSuccess = config.get( SecuritySettings.security_log_successful_authentication );
+        var defaultDatabase = config.get( GraphDatabaseSettings.default_database );
+
+        inClusterAuthManager = new InClusterAuthManager( internalRealm, securityLog, logAuthSuccess, defaultDatabase );
 
         return new MultiRealmAuthManager( internalRealm, orderedActiveRealms, createCacheManager( config ),
                 securityLog, config.get( SecuritySettings.security_log_successful_authentication ), config.get( GraphDatabaseSettings.default_database ) );
@@ -273,34 +233,23 @@ public class EnterpriseSecurityModule extends SecurityModule
         return orderedActiveRealms;
     }
 
-    private EnterpriseSecurityGraphInitializer createSecurityInitializer()
+    public static EnterpriseSecurityGraphComponent createSecurityComponent( SecurityLog securityLog, Config config, FileSystemAbstraction fileSystem,
+                                                                            LogProvider logProvider )
     {
-        UserRepository migrationUserRepository = CommunitySecurityModule.getUserRepository( config, logProvider, fileSystem );
         RoleRepository migrationRoleRepository = EnterpriseSecurityModule.getRoleRepository( config, logProvider, fileSystem );
-        UserRepository initialUserRepository = CommunitySecurityModule.getInitialUserRepository( config, logProvider, fileSystem );
-        UserRepository defaultAdminRepository = getDefaultAdminRepository( config, logProvider, fileSystem );
+        UserRepository defaultAdminRepository = EnterpriseSecurityModule.getDefaultAdminRepository( config, logProvider, fileSystem );
 
-        return new EnterpriseSecurityGraphInitializer( databaseManager,
-                                                       systemGraphInitializer,
-                                                       securityLog,
-                                                       migrationUserRepository,
-                                                       migrationRoleRepository,
-                                                       initialUserRepository,
-                                                       defaultAdminRepository,
-                                                       secureHasher,
-                                                       config );
+        return new EnterpriseSecurityGraphComponent( securityLog, migrationRoleRepository, defaultAdminRepository, config );
     }
 
-    private SystemGraphRealm createSystemGraphRealm( Config config )
+    private SystemGraphRealm createSystemGraphRealm( Config config, Supplier<GraphDatabaseService> systemSupplier )
     {
-        SecurityGraphInitializer securityGraphInitializer = isClustered ? SecurityGraphInitializer.NO_OP : createSecurityInitializer();
-
         return new SystemGraphRealm(
-                securityGraphInitializer,
-                new SystemGraphRealmHelper( databaseManager, secureHasher ),
+                new SystemGraphRealmHelper( systemSupplier, secureHasher ),
                 CommunitySecurityModule.createAuthenticationStrategy( config ),
                 securityConfig.nativeAuthentication,
-                securityConfig.nativeAuthorization
+                securityConfig.nativeAuthorization,
+                enterpriseSecurityGraphComponent
         );
     }
 

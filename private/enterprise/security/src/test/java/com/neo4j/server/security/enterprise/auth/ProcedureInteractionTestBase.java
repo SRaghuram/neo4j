@@ -136,7 +136,6 @@ public abstract class ProcedureInteractionTestBase<S>
     {
         Path homeDir = testDirectory.directory( "logs" ).toPath();
         securityLog = new File( homeDir.toFile(), "security.log" );
-        //noinspection deprecation
         return Map.of(
                 GraphDatabaseSettings.logs_directory, homeDir.toAbsolutePath().toString(),
                 GraphDatabaseSettings.procedure_roles,
@@ -144,6 +143,7 @@ public abstract class ProcedureInteractionTestBase<S>
         );
     }
 
+    @SuppressWarnings( "rawtypes" )
     Set<Class> defaultProcedures()
     {
         Set<Class> procedureClasses = new HashSet<>();
@@ -432,18 +432,18 @@ public abstract class ProcedureInteractionTestBase<S>
 
     // List users for specific role
 
-    void testFailListRoleUsers( S subject, String roleName, String errMsg )
+    void testFailListRoleUsers( S subject, String role, String errMsg )
     {
         assertSystemCommandFail( subject,
-                "CALL dbms.security.listUsersForRole('" + roleName + "') YIELD value AS users RETURN count(users)",
+                "CALL dbms.security.listUsersForRole('" + role + "') YIELD value AS users RETURN count(users)",
                 errMsg );
     }
 
     @SuppressWarnings( "SameParameterValue" )
-    void testListRoleUsersNotContains( S subject, String roleName, String username )
+    void testListRoleUsersNotContains( S subject, String role, String username )
     {
         assertSystemCommandSuccess( subject,
-                "CALL dbms.security.listUsersForRole('" + roleName + "') YIELD value AS users",
+                "CALL dbms.security.listUsersForRole('" + role + "') YIELD value AS users",
                 r -> assertKeyNotContains( r, "users", username ));
     }
 
@@ -488,6 +488,7 @@ public abstract class ProcedureInteractionTestBase<S>
         assertFail( DEFAULT_DATABASE_NAME, subject, call, partOfErrorMsg );
     }
 
+    @SuppressWarnings( "SameParameterValue" )
     void assertFail( String database, S subject, String call, String partOfErrorMsg )
     {
         String err = assertCallEmpty( subject, database, call, null );
@@ -813,6 +814,7 @@ public abstract class ProcedureInteractionTestBase<S>
                 {
                     try
                     {
+                        //noinspection BusyWait
                         Thread.sleep( 250 );
                     }
                     catch ( InterruptedException e )
@@ -843,7 +845,6 @@ public abstract class ProcedureInteractionTestBase<S>
             }
         }
 
-        @SuppressWarnings( "AccessStaticViaInstance" )
         @Procedure( name = "test.numNodes" )
         public Stream<CountResult> numNodes()
         {

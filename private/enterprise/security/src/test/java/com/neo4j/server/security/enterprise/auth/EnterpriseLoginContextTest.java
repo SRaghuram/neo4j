@@ -93,7 +93,7 @@ class EnterpriseLoginContextTest
     void userWithAdminRoleShouldHaveCorrectPermissions() throws Throwable
     {
         // Given
-        when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Collections.singleton( PredefinedRoles.ADMIN ) ) );
+        when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Set.of( PredefinedRoles.ADMIN ) ) );
         when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN ) ) ).thenReturn(
                 Set.of( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenPrivilege, indexPrivilege,
                         constraintPrivilege, adminPrivilege ) );
@@ -112,7 +112,7 @@ class EnterpriseLoginContextTest
     void userWithArchitectRoleShouldHaveCorrectPermissions() throws Throwable
     {
         // Given
-        when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Collections.singleton( PredefinedRoles.ARCHITECT ) ) );
+        when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Set.of( PredefinedRoles.ARCHITECT ) ) );
         when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.ARCHITECT ) ) ).thenReturn(
                 Set.of( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenPrivilege, indexPrivilege,
                         constraintPrivilege ) );
@@ -130,7 +130,7 @@ class EnterpriseLoginContextTest
     void userWithPublisherRoleShouldHaveCorrectPermissions() throws Throwable
     {
         // Given
-        when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Collections.singleton( PredefinedRoles.PUBLISHER ) ) );
+        when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Set.of( PredefinedRoles.PUBLISHER ) ) );
         when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.PUBLISHER ) ) ).thenReturn(
                 Set.of( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenPrivilege ) );
         EnterpriseLoginContext loginContext = login();
@@ -147,7 +147,7 @@ class EnterpriseLoginContextTest
     void userWithReaderRoleShouldHaveCorrectPermissions() throws Throwable
     {
         // Given
-        when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Collections.singleton( PredefinedRoles.READER ) ) );
+        when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Set.of( PredefinedRoles.READER ) ) );
         when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.READER ) ) ).thenReturn(
                 Set.of( accessPrivilege, matchNodePrivilege, matchRelPrivilege ) );
         EnterpriseLoginContext loginContext = login();
@@ -167,7 +167,7 @@ class EnterpriseLoginContextTest
         when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Collections.emptySet() ) );
         EnterpriseLoginContext loginContext = login();
 
-        assertThat( loginContext.roles() ).isEqualTo( Collections.singleton( PredefinedRoles.PUBLIC ) );
+        assertThat( loginContext.roles() ).isEqualTo( Set.of( PredefinedRoles.PUBLIC ) );
         // When
     }
 
@@ -185,7 +185,7 @@ class EnterpriseLoginContextTest
     void shouldHaveNoPermissionsAfterLogout() throws Throwable
     {
         // Given
-        when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Collections.singleton( PredefinedRoles.ARCHITECT ) ) );
+        when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Set.of( PredefinedRoles.ARCHITECT ) ) );
         when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.ARCHITECT ) ) ).thenReturn(
                 Set.of( accessPrivilege, matchNodePrivilege, matchRelPrivilege, writeNodePrivilege, writeRelPrivilege, tokenPrivilege, indexPrivilege,
                         constraintPrivilege ) );

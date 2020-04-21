@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.server.security.enterprise.systemgraph;
+package com.neo4j.server.security.enterprise.systemgraph.versions;
 
 import com.neo4j.server.security.enterprise.auth.LabelSegment;
 import com.neo4j.server.security.enterprise.auth.RelTypeSegment;
@@ -11,7 +11,11 @@ import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.NoSuchElementException;
+import java.util.Set;
+import java.util.function.Function;
 
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -24,17 +28,22 @@ import static org.neo4j.internal.helpers.collection.Iterables.single;
 
 class PrivilegeBuilder
 {
-    private final ResourcePrivilege.GrantOrDeny privilegeType;
-    private Segment segment;
-    private PrivilegeAction action;
-    private Resource resource;
-    private String dbName = "";
-    private SpecialDatabase specialDatabase;
+    final ResourcePrivilege.GrantOrDeny privilegeType;
+    Segment segment;
+    Set<PrivilegeAction> actions;
+    Resource resource;
+    String dbName = "";
+    SpecialDatabase specialDatabase;
 
     PrivilegeBuilder( ResourcePrivilege.GrantOrDeny privilegeType, String action )
     {
+        this( privilegeType, action, a -> Collections.singleton( PrivilegeAction.valueOf( a ) ) );
+    }
+
+    PrivilegeBuilder( ResourcePrivilege.GrantOrDeny privilegeType, String action, Function<String, Set<PrivilegeAction>> actionMapper )
+    {
         this.privilegeType = privilegeType;
-        this.action = PrivilegeAction.valueOf( action.toUpperCase() );
+        this.actions = actionMapper.apply( action.toUpperCase() );
     }
 
     PrivilegeBuilder forAllDatabases()
@@ -147,15 +156,20 @@ class PrivilegeBuilder
         }
     }
 
-    ResourcePrivilege build() throws InvalidArgumentsException
+    Set<ResourcePrivilege> build() throws InvalidArgumentsException
     {
-        if ( specialDatabase != null )
+        Set<ResourcePrivilege> privileges = new HashSet<>();
+        for ( PrivilegeAction action : actions )
         {
-            return new ResourcePrivilege( privilegeType, action, resource, segment, specialDatabase );
+            if ( specialDatabase != null )
+            {
+                privileges.add( new ResourcePrivilege( privilegeType, action, resource, segment, specialDatabase ) );
+            }
+            else
+            {
+                privileges.add( new ResourcePrivilege( privilegeType, action, resource, segment, dbName ) );
+            }
         }
-        else
-        {
-            return new ResourcePrivilege( privilegeType, action, resource, segment, dbName );
-        }
+        return privileges;
     }
 }

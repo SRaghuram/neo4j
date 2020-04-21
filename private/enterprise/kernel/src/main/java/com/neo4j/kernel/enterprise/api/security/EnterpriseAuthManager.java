@@ -12,43 +12,23 @@ import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 
-public interface EnterpriseAuthManager extends AuthManager
+public abstract class EnterpriseAuthManager extends AuthManager
 {
-    void clearAuthCache();
+    public abstract void clearAuthCache();
 
     @Override
-    EnterpriseLoginContext login( Map<String,Object> authToken ) throws InvalidAuthTokenException;
+    public abstract EnterpriseLoginContext login( Map<String,Object> authToken ) throws InvalidAuthTokenException;
 
     /**
      * Implementation that does no authentication.
      */
-    EnterpriseAuthManager NO_AUTH = new EnterpriseAuthManager()
+    public static final EnterpriseAuthManager NO_AUTH = new EnterpriseAuthManager()
     {
         @Override
         public EnterpriseLoginContext login( Map<String,Object> authToken )
         {
             AuthToken.clearCredentials( authToken );
             return EnterpriseLoginContext.AUTH_DISABLED;
-        }
-
-        @Override
-        public void init()
-        {
-        }
-
-        @Override
-        public void start()
-        {
-        }
-
-        @Override
-        public void stop()
-        {
-        }
-
-        @Override
-        public void shutdown()
-        {
         }
 
         @Override

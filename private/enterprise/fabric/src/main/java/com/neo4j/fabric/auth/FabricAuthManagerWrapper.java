@@ -16,7 +16,7 @@ import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 
-public class FabricAuthManagerWrapper implements EnterpriseAuthManager
+public class FabricAuthManagerWrapper extends EnterpriseAuthManager
 {
     private final EnterpriseAuthManager wrappedAuthManager;
 
@@ -69,27 +69,4 @@ public class FabricAuthManagerWrapper implements EnterpriseAuthManager
         wrappedAuthManager.log( message, securityContext );
     }
 
-    @Override
-    public void init()
-    {
-        // the wrapped auth manger will take care of its lifecycle
-    }
-
-    @Override
-    public void start()
-    {
-        // the wrapped auth manger will take care of its lifecycle
-    }
-
-    @Override
-    public void stop()
-    {
-        // the wrapped auth manger will take care of its lifecycle
-    }
-
-    @Override
-    public void shutdown()
-    {
-        // the wrapped auth manger will take care of its lifecycle
-    }
 }

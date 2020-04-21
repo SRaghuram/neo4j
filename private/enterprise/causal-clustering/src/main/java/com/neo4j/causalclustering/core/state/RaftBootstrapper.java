@@ -15,7 +15,7 @@ import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import com.neo4j.causalclustering.helper.TemporaryDatabase;
 import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.dbms.ClusterSystemGraphInitializer;
+import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,7 +24,7 @@ import java.util.Set;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabasePageCache;
-import org.neo4j.graphdb.factory.module.DatabaseInitializer;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -80,7 +80,6 @@ public class RaftBootstrapper
 
     private final BootstrapContext bootstrapContext;
     private final TemporaryDatabaseFactory tempDatabaseFactory;
-    private final DatabaseInitializer databaseInitializer;
     private final PageCache pageCache;
     private final FileSystemAbstraction fs;
     private final Log log;
@@ -90,13 +89,12 @@ public class RaftBootstrapper
     private final PageCacheTracer pageCacheTracer;
     private final MemoryTracker memoryTracker;
 
-    public RaftBootstrapper( BootstrapContext bootstrapContext, TemporaryDatabaseFactory tempDatabaseFactory, DatabaseInitializer databaseInitializer,
+    public RaftBootstrapper( BootstrapContext bootstrapContext, TemporaryDatabaseFactory tempDatabaseFactory,
             PageCache pageCache, FileSystemAbstraction fs, LogProvider logProvider, StorageEngineFactory storageEngineFactory, Config config,
             BootstrapSaver bootstrapSaver, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
     {
         this.bootstrapContext = bootstrapContext;
         this.tempDatabaseFactory = tempDatabaseFactory;
-        this.databaseInitializer = databaseInitializer;
         this.pageCache = pageCache;
         this.fs = fs;
         this.log = logProvider.getLog( getClass() );
@@ -152,7 +150,7 @@ public class RaftBootstrapper
      *   $NEO4J_HOME/data/databases/system/temp-bootstrap/system
      *
      * upon which a temporary DBMS will be started, so that the seed database
-     * can be modified using the initializer, see {@link ClusterSystemGraphInitializer}.
+     * can be modified using {@link ClusterSystemGraphDbmsModel#clearClusterProperties(GraphDatabaseService)}.
      *
      * After the database has been updated, the store ID is changed on this instance
      * because the seed is now different from that of other instances. Other instances
@@ -210,7 +208,10 @@ public class RaftBootstrapper
         DatabaseLayout databaseLayout;
         try ( TemporaryDatabase tempDatabase = tempDatabaseFactory.startTemporaryDatabase( bootstrapRootDir, config, isSystem ) )
         {
-            databaseInitializer.initialize( tempDatabase.graphDatabaseService() );
+            if ( isSystem )
+            {
+                ClusterSystemGraphDbmsModel.clearClusterProperties( tempDatabase.graphDatabaseService() );
+            }
             databaseLayout = tempDatabase.databaseDirectory();
         }
         return databaseLayout;
