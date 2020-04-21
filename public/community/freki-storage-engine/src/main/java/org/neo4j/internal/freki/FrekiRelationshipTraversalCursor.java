@@ -132,6 +132,12 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     @Override
     public boolean next()
     {
+        if ( selection == null )
+        {
+            // TODO this is a clear sign that this cursor hasn't been initialized. Ideally we should not get here ever, but as long as kernel cursors
+            //      do the wrong thing now and then we can play nice and return false here.
+            return false;
+        }
         if ( !loadedCorrectNode )
         {
             if ( !load( nodeId ) )
