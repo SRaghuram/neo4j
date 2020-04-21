@@ -584,9 +584,10 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         assertSuccess( adminSubject, "CALL dbms.listPools()", r ->
         {
             List<Map<String,Object>> maps = collectResults( r );
-            assertEquals( 2, maps.size() );
+            assertEquals( 3, maps.size() );
             assertTrue( maps.stream().anyMatch( map -> "Transaction".equals( map.get( "group" ) ) ) );
             assertTrue( maps.stream().anyMatch( map -> "Page Cache".equals( map.get( "group" ) ) ) );
+            assertTrue( maps.stream().anyMatch( map -> "Netty".equals( map.get( "group" ) ) ) );
         } );
     }
 
@@ -596,10 +597,11 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         assertSuccess( adminSubject, "CALL dbms.listPoolsExt()", r ->
         {
             List<Map<String,Object>> maps = collectResults( r );
-            assertEquals( 4, maps.size() );
+            assertEquals( 5, maps.size() );
             assertTrue( maps.stream().anyMatch( map -> "Transaction".equals( map.get( "group" ) ) ) );
             assertTrue( maps.stream().anyMatch( map -> "Transaction".equals( map.get( "group" ) ) && "system".equals( map.get( "poolName" ) ) ) );
             assertTrue( maps.stream().anyMatch( map -> "Transaction".equals( map.get( "group" ) ) && "neo4j".equals( map.get( "poolName" ) ) ) );
+            assertTrue( maps.stream().anyMatch( map -> "Netty".equals( map.get( "group" ) ) && "Bolt Memory Pool".equals( map.get( "poolName" ) ) ) );
             assertTrue( maps.stream().anyMatch( map -> "Page Cache".equals( map.get( "group" ) ) ) );
         } );
     }
