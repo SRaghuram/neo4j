@@ -47,7 +47,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     // either the properties are in the record data, where these fields come into play...
     private FrekiReference referenceToLoad;
     private int[] propertyKeyArray;
-    private int propertyKeyIndex;
+    private int propertyKeyIndex = (int) NULL;
     private int nextValuePosition;
     private Value readValue;
     private ByteBuffer buffer;
