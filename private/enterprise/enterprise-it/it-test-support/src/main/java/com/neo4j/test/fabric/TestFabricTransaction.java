@@ -5,12 +5,15 @@
  */
 package com.neo4j.test.fabric;
 
+import com.neo4j.fabric.executor.FabricException;
+
 import java.util.Map;
 import java.util.Optional;
 
 import org.neo4j.bolt.dbapi.BoltQueryExecution;
 import org.neo4j.bolt.dbapi.BoltTransaction;
 import org.neo4j.cypher.internal.javacompat.ResultSubscriber;
+import org.neo4j.exceptions.Neo4jException;
 import org.neo4j.graphdb.Entity;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Lock;
@@ -67,9 +70,9 @@ public class TestFabricTransaction implements InternalTransaction
             BoltQueryExecution boltQueryExecution = fabricTransaction.executeQuery( query, params, false, result );
             result.materialize( boltQueryExecution.getQueryExecution() );
         }
-        catch ( QueryExecutionKernelException e )
+        catch ( QueryExecutionKernelException | Neo4jException | FabricException e )
         {
-            throw new QueryExecutionException( "Query execution failed", e, e.status().code().serialize() );
+            throw new QueryExecutionException( e.getMessage(), e, e.status().code().serialize() );
         }
 
         return result;
