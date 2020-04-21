@@ -68,8 +68,8 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
     private SingleDbTransaction writingTransaction;
 
     FabricTransactionImpl( FabricTransactionInfo transactionInfo, TransactionBookmarkManager bookmarkManager, FabricRemoteExecutor remoteExecutor,
-            FabricLocalExecutor localExecutor, LogService logService, TransactionManager transactionManager, JobScheduler jobScheduler,
-            FabricConfig fabricConfig )
+                           FabricLocalExecutor localExecutor, LogService logService, TransactionManager transactionManager, JobScheduler jobScheduler,
+                           FabricConfig fabricConfig )
     {
         this.transactionInfo = transactionInfo;
         this.userLog = logService.getUserLog( FabricTransactionImpl.class );
@@ -151,18 +151,19 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
             {
                 cancelTimeout();
 
-                List<Throwable> readFailures =
-                        Flux.fromIterable( readingTransactions )
-                            .map( txWrapper -> txWrapper.singleDbTransaction )
-                            .flatMap( tx -> Mono.from( tx.commit() )
-                                                .flatMap( v -> Mono.<Throwable>empty() )
-                                                .onErrorResume( t ->
-                                                                {
-                                                                    userLog.error( "Failed to commit a child read transaction", t );
-                                                                    return Mono.just( t );
-                                                                } ) )
-                            .collectList()
-                            .block();
+                List<Throwable> readFailures = Flux
+                        .fromIterable( readingTransactions )
+                        .map( txWrapper -> txWrapper.singleDbTransaction )
+                        .flatMap( tx -> Mono
+                                .from( tx.commit() )
+                                .flatMap( v -> Mono.<Throwable>empty() )
+                                .onErrorResume( t ->
+                                                {
+                                                    userLog.error( "Failed to commit a child read transaction", t );
+                                                    return Mono.just( t );
+                                                } ) )
+                        .collectList()
+                        .block();
 
                 if ( readFailures != null )
                 {
@@ -202,7 +203,7 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
             }
             catch ( Exception e )
             {
-                allFailures.add( new FabricException( Status.Transaction.TransactionCommitFailed, "Failed to commit composite transaction %d", id ) );
+                allFailures.add( commitFailedError() );
             }
             finally
             {
@@ -211,7 +212,7 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
                 transactionManager.removeTransaction( this );
             }
 
-            throwIfNonEmpty( allFailures, () -> new FabricException( Status.Transaction.TransactionCommitFailed, "Failed to commit composite transaction %d", id ) );
+            throwIfNonEmpty( allFailures, this::commitFailedError );
 
             internalLog.debug( "Transaction %d committed", id );
         }
@@ -258,18 +259,20 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
         {
             cancelTimeout();
 
-            var failures = Flux.fromIterable( readingTransactions )
-                .map( txWrapper -> txWrapper.singleDbTransaction )
-                .concatWith( Mono.justOrEmpty( writingTransaction ) )
-                .flatMap( tx -> Mono.from( tx.rollback() )
-                                    .flatMap( v -> Mono.<Throwable>empty() )
-                                    .onErrorResume( t ->
-                                                    {
-                                                        userLog.error( "Failed to rollback a child transaction", t );
-                                                        return Mono.just( t );
-                                                    } ) )
-                .collectList()
-                .block();
+            var failures = Flux
+                    .fromIterable( readingTransactions )
+                    .map( txWrapper -> txWrapper.singleDbTransaction )
+                    .concatWith( Mono.justOrEmpty( writingTransaction ) )
+                    .flatMap( tx -> Mono
+                            .from( tx.rollback() )
+                            .flatMap( v -> Mono.<Throwable>empty() )
+                            .onErrorResume( t ->
+                                            {
+                                                userLog.error( "Failed to rollback a child transaction", t );
+                                                return Mono.just( t );
+                                            } ) )
+                    .collectList()
+                    .block();
 
             if ( failures != null )
             {
@@ -278,17 +281,16 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
         }
         catch ( Exception e )
         {
-            allFailures.add( new FabricException( Status.Transaction.TransactionRollbackFailed, "Failed to rollback composite transaction %d", id ) );
+            allFailures.add( rollbackFailedError() );
         }
         finally
-
         {
             remoteTransactionContext.close();
             localTransactionContext.close();
             transactionManager.removeTransaction( this );
         }
 
-        throwIfNonEmpty( allFailures, () -> new FabricException( Status.Transaction.TransactionRollbackFailed, "Failed to rollback composite transaction %d", id ) );
+        throwIfNonEmpty( allFailures, this::rollbackFailedError );
 
         internalLog.debug( "Transaction %d rolled back", id );
     }
@@ -452,10 +454,12 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
                 throw multipleWriteError( writingTransaction.getLocation() );
             }
 
-            ReadingTransaction readingTransaction = readingTransactions.stream()
+            ReadingTransaction readingTransaction = readingTransactions
+                    .stream()
                     .filter( readingTx -> readingTx.singleDbTransaction == writingTransaction )
                     .findAny()
-                    .orElseThrow( () -> new IllegalArgumentException( "The supplied transaction has not been registered" ) );
+                    .orElseThrow( () -> new IllegalArgumentException(
+                            "The supplied transaction has not been registered" ) );
 
             if ( readingTransaction.readingOnly )
             {
@@ -473,14 +477,34 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
 
     private FabricException multipleWriteError( Location attempt )
     {
-        return new FabricException( Status.Fabric.AccessMode,
-                "Multi-shard writes not allowed. Attempted write to %s, currently writing to %s", attempt, writingTransaction.getLocation() );
+        return new FabricException(
+                Status.Fabric.AccessMode,
+                "Multi-shard writes not allowed. Attempted write to %s, currently writing to %s",
+                attempt, writingTransaction.getLocation() );
     }
 
     private FabricException parentTransactionTerminatedError( Location location )
     {
-        return new FabricException( Status.Transaction.TransactionStartFailed,
-                "Could not start a transaction at %s, because the parent composite transaction has terminated", location );
+        return new FabricException(
+                Status.Transaction.TransactionStartFailed,
+                "Could not start a transaction at %s, because the parent composite transaction has terminated",
+                location );
+    }
+
+    private FabricException commitFailedError()
+    {
+        return new FabricException(
+                Status.Transaction.TransactionCommitFailed,
+                "Failed to commit composite transaction %d",
+                id );
+    }
+
+    private FabricException rollbackFailedError()
+    {
+        return new FabricException(
+                Status.Transaction.TransactionRollbackFailed,
+                "Failed to rollback composite transaction %d",
+                id );
     }
 
     private void scheduleTimeout( FabricTransactionInfo transactionInfo )
