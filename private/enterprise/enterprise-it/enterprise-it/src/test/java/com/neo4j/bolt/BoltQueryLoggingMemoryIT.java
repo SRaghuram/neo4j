@@ -6,6 +6,7 @@
 package com.neo4j.bolt;
 
 import com.neo4j.harness.junit.rule.EnterpriseNeo4jRule;
+import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -21,6 +22,7 @@ import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel;
 import org.neo4j.driver.internal.value.NullValue;
 import org.neo4j.harness.junit.rule.Neo4jRule;
+import org.neo4j.io.fs.FileUtils;
 import org.neo4j.server.WebContainerTestUtils;
 
 import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
@@ -32,9 +34,11 @@ public class BoltQueryLoggingMemoryIT
     @Rule
     public final Neo4jRule neo4j;
 
+    private Path tmpDir;
+
     public BoltQueryLoggingMemoryIT() throws IOException
     {
-        Path tmpDir = WebContainerTestUtils.createTempDir().toPath().toAbsolutePath();
+        tmpDir = WebContainerTestUtils.createTempDir().toPath().toAbsolutePath();
         this.neo4j = new EnterpriseNeo4jRule()
                 .withConfig( GraphDatabaseSettings.auth_enabled, false )
                 .withConfig( GraphDatabaseSettings.track_query_allocation, true )
@@ -43,6 +47,12 @@ public class BoltQueryLoggingMemoryIT
                 .withConfig( GraphDatabaseSettings.log_queries_allocation_logging_enabled, true )
                 .withConfig( GraphDatabaseSettings.log_queries_runtime_logging_enabled, true )
                 .withConfig( GraphDatabaseSettings.log_queries_heap_dump_enabled, true );
+    }
+
+    @After
+    public void cleanUp() throws IOException
+    {
+        FileUtils.deleteRecursively( tmpDir.toFile() );
     }
 
     @Test

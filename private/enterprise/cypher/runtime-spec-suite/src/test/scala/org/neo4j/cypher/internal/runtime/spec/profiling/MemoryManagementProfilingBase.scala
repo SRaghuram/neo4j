@@ -54,7 +54,7 @@ object MemoryManagementProfilingBase {
 
   // Global heap dump settings
   val HEAP_DUMP_ENABLED: Boolean = true
-  val HEAP_DUMP_PATH: String = "/home/henym/debug/memory/dumps/runtime"
+  val HEAP_DUMP_PATH: String = "target/heapdumps"
   val DEFAULT_INPUT_LIMIT: Long = 1000000L
   val DEFAULT_HEAP_DUMP_INTERVAL: Long = 250000L
   val OVERWRITE_EXISTING_HEAP_DUMPS: Boolean = false
@@ -90,6 +90,12 @@ trait ProfilingInputStreams[CONTEXT <: RuntimeContext] extends InputStreams[CONT
   self: RuntimeTestSuite[CONTEXT] =>
 
   private val heapDumper = new HeapDumper
+
+  if (HEAP_DUMP_ENABLED) {
+    if (Files.notExists(Path.of(HEAP_DUMP_PATH))) {
+      Files.createDirectory(Path.of(HEAP_DUMP_PATH))
+    }
+  }
 
   /**
    * Finite iterator that creates periodic heap dumps at the given input row interval.
