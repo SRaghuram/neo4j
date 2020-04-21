@@ -7,7 +7,6 @@ package com.neo4j.metrics.database;
 
 import com.neo4j.causalclustering.common.ClusterMonitors;
 import com.neo4j.causalclustering.core.consensus.CoreMetaData;
-import com.neo4j.dbms.database.DatabaseOperationCounter;
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.metrics.global.GlobalMetricsExtension;
 import com.neo4j.metrics.global.GlobalMetricsExtensionFactory;
@@ -20,6 +19,7 @@ import java.util.function.Supplier;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.dbms.database.DatabaseOperationCounts;
 import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -145,9 +145,9 @@ class DatabaseMetricsExtensionTest
         }
 
         @Override
-        public DatabaseOperationCounter operationCounter()
+        public DatabaseOperationCounts databaseOperationCounts()
         {
-            return new DatabaseOperationCounter();
+            return new DatabaseOperationCounts.Counter();
         }
 
         @Override

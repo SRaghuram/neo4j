@@ -5,7 +5,6 @@
  */
 package com.neo4j.metrics.global;
 
-import com.neo4j.dbms.database.DatabaseOperationCounter;
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +14,7 @@ import java.util.function.Supplier;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.dbms.database.DatabaseOperationCounts;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
@@ -124,7 +124,7 @@ class GlobalMetricsExtensionTest
         }
 
         @Override
-        public DatabaseOperationCounter operationCounter()
+        public DatabaseOperationCounts databaseOperationCounts()
         {
             return null;
         }

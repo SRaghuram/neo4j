@@ -8,6 +8,7 @@ package com.neo4j.dbms.database;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseOperationCounts;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.database.Database;
@@ -69,6 +70,7 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseConte
         when( module.getExternalDependencyResolver() ).thenReturn( new Dependencies() );
         when( module.getJobScheduler() ).thenReturn( jobScheduler );
         when( module.getTransactionEventListeners() ).thenReturn( new GlobalTransactionEventListeners() );
+        dependencies.satisfyDependency( new DatabaseOperationCounts.Counter() );
         return module;
     }
 }

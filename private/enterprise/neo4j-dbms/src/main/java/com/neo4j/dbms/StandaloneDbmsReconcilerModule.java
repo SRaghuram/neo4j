@@ -5,14 +5,14 @@
  */
 package com.neo4j.dbms;
 
-import com.neo4j.dbms.database.DatabaseOperationCounter;
-import com.neo4j.dbms.database.DatabaseOperationCounterListener;
+import com.neo4j.dbms.database.DatabaseOperationCountsListener;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 
 import java.util.stream.Stream;
 
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.dbms.api.DatabaseManagementException;
+import org.neo4j.dbms.database.DatabaseOperationCounts;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
@@ -63,8 +63,8 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
         globalModule.getGlobalDependencies().satisfyDependency( reconciler );
         globalModule.getGlobalDependencies().satisfyDependencies( localOperator, systemOperator );
 
-        var operationCounter = globalModule.getGlobalDependencies().resolveDependency( DatabaseOperationCounter.class );
-        reconciler.registerListener( new DatabaseOperationCounterListener( operationCounter ) );
+        var operationCounts = globalModule.getGlobalDependencies().resolveDependency( DatabaseOperationCounts.Counter.class );
+        reconciler.registerListener( new DatabaseOperationCountsListener( operationCounts ) );
     }
 
     @Override

@@ -9,6 +9,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.metrics.global.GlobalMetricsExtensionFactory.Dependencies;
 import com.neo4j.metrics.source.db.BoltMetrics;
+import com.neo4j.metrics.source.db.DatabaseOperationCountMetrics;
 import com.neo4j.metrics.source.db.PageCacheMetrics;
 import com.neo4j.metrics.source.jvm.FileDescriptorMetrics;
 import com.neo4j.metrics.source.jvm.GCMetrics;
@@ -16,7 +17,6 @@ import com.neo4j.metrics.source.jvm.HeapMetrics;
 import com.neo4j.metrics.source.jvm.MemoryBuffersMetrics;
 import com.neo4j.metrics.source.jvm.MemoryPoolMetrics;
 import com.neo4j.metrics.source.jvm.ThreadMetrics;
-import com.neo4j.metrics.source.db.DatabaseOperationCountMetrics;
 import com.neo4j.metrics.source.server.ServerMetrics;
 
 import org.neo4j.configuration.Config;
@@ -88,7 +88,7 @@ public class GlobalMetricsExporter
 
         if ( config.get( MetricsSettings.databaseOperationCountEnabled ) )
         {
-            life.add( new DatabaseOperationCountMetrics( globalMetricsPrefix, registry, dependencies.operationCounter() ) );
+            life.add( new DatabaseOperationCountMetrics( globalMetricsPrefix, registry, dependencies.databaseOperationCounts() ) );
         }
 
         boolean httpOrHttpsEnabled = config.get( HttpConnector.enabled ) || config.get( HttpsConnector.enabled );

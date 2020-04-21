@@ -8,12 +8,13 @@ package com.neo4j.dbms.database;
 import com.neo4j.dbms.DatabaseStateChangedListener;
 
 import org.neo4j.dbms.DatabaseState;
+import org.neo4j.dbms.database.DatabaseOperationCounts;
 
-public class DatabaseOperationCounterListener implements DatabaseStateChangedListener
+public class DatabaseOperationCountsListener implements DatabaseStateChangedListener
 {
-    private DatabaseOperationCounter counter;
+    private DatabaseOperationCounts.Counter counter;
 
-    public DatabaseOperationCounterListener( DatabaseOperationCounter counter )
+    public DatabaseOperationCountsListener( DatabaseOperationCounts.Counter counter )
     {
         this.counter = counter;
     }

@@ -5,13 +5,12 @@
  */
 package com.neo4j.metrics.global;
 
-import com.neo4j.dbms.database.DatabaseOperationCounter;
-
 import java.util.function.Supplier;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.dbms.database.DatabaseOperationCounts;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.kernel.extension.ExtensionFactory;
@@ -31,7 +30,7 @@ public class GlobalMetricsExtensionFactory extends ExtensionFactory<GlobalMetric
 
         PageCacheCounters pageCacheCounters();
 
-        DatabaseOperationCounter operationCounter();
+        DatabaseOperationCounts databaseOperationCounts();
 
         Config configuration();
 

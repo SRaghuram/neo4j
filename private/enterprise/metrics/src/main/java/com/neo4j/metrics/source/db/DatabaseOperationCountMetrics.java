@@ -6,10 +6,10 @@
 package com.neo4j.metrics.source.db;
 
 import com.codahale.metrics.MetricRegistry;
-import com.neo4j.dbms.database.DatabaseOperationCounter;
 import com.neo4j.metrics.metric.MetricsCounter;
 
 import org.neo4j.annotations.documented.Documented;
+import org.neo4j.dbms.database.DatabaseOperationCounts;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 import static com.codahale.metrics.MetricRegistry.name;
@@ -40,9 +40,9 @@ public class DatabaseOperationCountMetrics extends LifecycleAdapter
     private final String countRecovered;
 
     private final MetricRegistry registry;
-    private final DatabaseOperationCounter counter;
+    private final DatabaseOperationCounts counter;
 
-    public DatabaseOperationCountMetrics( String metricsPrefix, MetricRegistry registry, DatabaseOperationCounter counter )
+    public DatabaseOperationCountMetrics( String metricsPrefix, MetricRegistry registry, DatabaseOperationCounts counter )
     {
         this.registry = registry;
         this.counter = counter;
