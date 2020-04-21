@@ -111,15 +111,15 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
             {
                 // Read degrees where relationship data would be if this would have been a sparse node
                 int[] degreesArray = readInts( buffer );
-                int degreesIndex = 0;
                 for ( int i = 0; i < selection.numberOfCriteria(); i++ )
                 {
+                    int degreesIndex = 0;
                     RelationshipSelection.Criterion criterion = selection.criterion( i );
                     if ( criterion.type() == ANY_RELATIONSHIP_TYPE ) // all types
                     {
                         for ( int type : relationshipTypesInNode )
                         {
-                            degreesIndex = readDegreesForNextType( degrees, type, degreesArray, degreesIndex );
+                            degreesIndex = readDegreesForNextType( degrees, type, criterion.direction(), degreesArray, degreesIndex );
                         }
                     }
                     else // a single type
@@ -127,7 +127,11 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
                         int typeIndex = Arrays.binarySearch( relationshipTypesInNode, criterion.type() );
                         if ( typeIndex >= 0 )
                         {
-                            degreesIndex = readDegreesForNextType( degrees, relationshipTypesInNode[typeIndex], degreesArray, degreesIndex );
+                            for ( int j = 0; j < typeIndex; j++ ) //fastforward to correct index
+                            {
+                                degreesIndex += (degreesArray[degreesIndex] & 0x1) != 0 ? 3 : 2; //loop or not
+                            }
+                            readDegreesForNextType( degrees, relationshipTypesInNode[typeIndex], criterion.direction(), degreesArray, degreesIndex );
                         }
                     }
                 }
