@@ -13,6 +13,7 @@ import java.util.Collections
 
 import com.neo4j.cypher.EnterpriseGraphDatabaseTestSupport
 import com.neo4j.dbms.EnterpriseSystemGraphInitializer
+import com.neo4j.fabric.executor.TaggingPlanDescriptionWrapper
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager
 import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
@@ -407,7 +408,11 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
 
   def mustHaveOperator(plan: ExecutionPlanDescription, operator: String): Unit = {
     withClue(s"The plan did not contain any $operator : ") {
-      plan.asInstanceOf[PlanDescriptionImpl].find(operator).nonEmpty should be(true)
+      val unwrapped = plan match {
+        case wrapper: TaggingPlanDescriptionWrapper => wrapper.getInnerPlanDescription
+        case desc                                   => desc
+      }
+      unwrapped.asInstanceOf[PlanDescriptionImpl].find(operator).nonEmpty should be(true)
     }
   }
 

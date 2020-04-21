@@ -60,4 +60,9 @@ public class TaggingPlanDescriptionWrapper implements ExecutionPlanDescription
     {
         return innerPlanDescription.getProfilerStatistics();
     }
+
+    public ExecutionPlanDescription getInnerPlanDescription()
+    {
+        return innerPlanDescription;
+    }
 }
