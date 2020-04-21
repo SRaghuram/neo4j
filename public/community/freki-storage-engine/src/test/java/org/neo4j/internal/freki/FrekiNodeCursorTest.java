@@ -27,6 +27,7 @@ import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.factory.Multimaps;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
 import org.eclipse.collections.impl.factory.primitive.IntSets;
+import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 import org.eclipse.collections.impl.factory.primitive.LongSets;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
@@ -130,6 +131,92 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         long[] expectedLabelIds = toLongArray( unsortedLabelIds );
         Arrays.sort( expectedLabelIds );
         assertArrayEquals( expectedLabelIds, cursor.labels() );
+    }
+
+    @Test
+    void shouldSeeAllNodesInNodeScan()
+    {
+        // given
+        var createdNodeIds = LongSets.mutable.empty();
+        for ( var i = 0; i < 20; i++ )
+        {
+            createdNodeIds.add( node().store().id );
+        }
+
+        // when
+        var cursor = cursorFactory.allocateNodeCursor( NULL );
+        cursor.scan();
+        var scannedNodeIds = LongSets.mutable.empty();
+        while ( cursor.next() )
+        {
+            scannedNodeIds.add( cursor.entityReference() );
+        }
+
+        // then
+        assertThat( scannedNodeIds ).isEqualTo( createdNodeIds );
+    }
+
+    @Test
+    void shouldReadPropertiesFromNodesOfAllNodesScan()
+    {
+        // given
+        var expectedProperties = LongObjectMaps.mutable.empty();
+        for ( int i = 0; i < 20; i++ )
+        {
+            MutableIntObjectMap<Value> properties = IntObjectMaps.mutable.empty();
+            properties.put( 0, intValue( i ) );
+            properties.put( 1, stringValue( "name_" + i ) );
+            Record nodeRecord = node().properties( properties ).store();
+            expectedProperties.put( nodeRecord.id, properties );
+        }
+
+        // when
+        var cursor = cursorFactory.allocateNodeCursor( NULL );
+        var propertyCursor = cursorFactory.allocatePropertyCursor( NULL );
+        cursor.scan();
+        while ( cursor.next() )
+        {
+            cursor.properties( propertyCursor );
+            var readProperties = readProperties( propertyCursor );
+
+            // then
+            assertThat( readProperties ).isEqualTo( expectedProperties.get( cursor.entityReference() ) );
+        }
+    }
+
+    @Test
+    void shouldReadRelationshipsFromNodesOfAllNodesScan()
+    {
+        // given
+        Node previousNode = null;
+        for ( int i = 0; i < 20; i++ )
+        {
+            Node node = node();
+            if ( previousNode != null )
+            {
+                node.relationship( 0, previousNode );
+            }
+            node.store();
+            previousNode = node;
+        }
+
+        // when
+        var cursor = cursorFactory.allocateNodeCursor( NULL );
+        var relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( NULL );
+        cursor.scan();
+        long previousNodeReference = -1;
+        while ( cursor.next() )
+        {
+            if ( previousNodeReference != -1 )
+            {
+                cursor.relationships( relationshipCursor, selection( Direction.OUTGOING ) );
+
+                // then
+                assertThat( relationshipCursor.next() ).isTrue();
+                assertThat( relationshipCursor.neighbourNodeReference() ).isEqualTo( previousNodeReference );
+            }
+            previousNodeReference = cursor.entityReference();
+        }
     }
 
     // **** PROPERTIES ****
