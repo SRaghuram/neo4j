@@ -6,10 +6,10 @@
 package com.neo4j.fabric.transaction;
 
 import com.neo4j.fabric.bookmark.TransactionBookmarkManager;
-import com.neo4j.fabric.executor.Exceptions;
-import com.neo4j.fabric.executor.FabricLocalExecutor;
 import com.neo4j.fabric.config.FabricConfig;
+import com.neo4j.fabric.executor.Exceptions;
 import com.neo4j.fabric.executor.FabricException;
+import com.neo4j.fabric.executor.FabricLocalExecutor;
 import com.neo4j.fabric.executor.FabricRemoteExecutor;
 import com.neo4j.fabric.executor.Location;
 import com.neo4j.fabric.executor.SingleDbTransaction;
@@ -211,7 +211,7 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
                 transactionManager.removeTransaction( this );
             }
 
-            throwIfNonEmpty( allFailures, new FabricException( Status.Transaction.TransactionCommitFailed, "Failed to commit composite transaction %d", id ) );
+            throwIfNonEmpty( allFailures, () -> new FabricException( Status.Transaction.TransactionCommitFailed, "Failed to commit composite transaction %d", id ) );
 
             internalLog.debug( "Transaction %d committed", id );
         }
@@ -288,23 +288,24 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
             transactionManager.removeTransaction( this );
         }
 
-        throwIfNonEmpty( allFailures, new FabricException( Status.Transaction.TransactionRollbackFailed, "Failed to rollback composite transaction %d", id ) );
+        throwIfNonEmpty( allFailures, () -> new FabricException( Status.Transaction.TransactionRollbackFailed, "Failed to rollback composite transaction %d", id ) );
 
         internalLog.debug( "Transaction %d rolled back", id );
     }
 
-    private void throwIfNonEmpty( List<Throwable> failures, FabricException genericException )
+    private void throwIfNonEmpty( List<Throwable> failures, Supplier<FabricException> genericException )
     {
         if ( !failures.isEmpty() )
         {
+            var exception = genericException.get();
             if ( failures.size() == 1 )
             {
-                throw Exceptions.transform( genericException.status(), failures.get( 0 ) );
+                throw Exceptions.transform( exception.status(), failures.get( 0 ) );
             }
             else
             {
-                failures.forEach( genericException::addSuppressed );
-                throw genericException;
+                failures.forEach( exception::addSuppressed );
+                throw exception;
             }
         }
     }
