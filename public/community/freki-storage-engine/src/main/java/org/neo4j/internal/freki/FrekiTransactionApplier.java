@@ -79,6 +79,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     // State used for generating index updates
     private long currentNodeId = NULL;
     private final FrekiCommand.SparseNode[] currentSparseNodeCommands = new FrekiCommand.SparseNode[4];
+    private boolean hasAnySchema;
 
     FrekiTransactionApplier( Stores stores, FrekiStorageReader reader, SchemaState schemaState, IndexUpdateListener indexUpdateListener,
             TransactionApplicationMode mode, IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync, LabelIndexUpdatesWorkSync labelIndexUpdatesWorkSync,
@@ -103,6 +104,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     void beginTx( long transactionId )
     {
         countsApplier = stores.countsStore.apply( transactionId, cursorTracer );
+        hasAnySchema = !stores.schemaCache.isEmpty();
     }
 
     void endTx()
@@ -153,10 +155,9 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         {
             if ( currentNodeId != NULL )
             {
-                boolean hasIndexes = stores.schemaCache.indexes().iterator().hasNext();
-                long[] labelsBefore = findLabelsAndInitializePropertyCursor( propertyCursorBefore, node -> node.before, !hasIndexes );
-                long[] labelsAfter = findLabelsAndInitializePropertyCursor( propertyCursorAfter, node -> node.after, !hasIndexes );
-                if ( hasIndexes )
+                long[] labelsBefore = findLabelsAndInitializePropertyCursor( propertyCursorBefore, node -> node.before, !hasAnySchema );
+                long[] labelsAfter = findLabelsAndInitializePropertyCursor( propertyCursorAfter, node -> node.after, !hasAnySchema );
+                if ( hasAnySchema )
                 {
                     EntityUpdates entityUpdates = extractIndexUpdates( labelsBefore, labelsAfter );
                     Set<IndexDescriptor> relatedIndexes = stores.schemaCache.getIndexesRelatedTo( entityUpdates, EntityType.NODE );
@@ -178,7 +179,6 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
 
     public EntityUpdates extractIndexUpdates( long[] labelsBefore, long[] labelsAfter )
     {
-
         FrekiCommand.SparseNode x1 = currentSparseNodeCommands[0];
         boolean nodeIsCreatedRightNow = x1 != null && !x1.before.hasFlag( FLAG_IN_USE );
 
