@@ -138,7 +138,11 @@ class Worker(val workerId: Int,
       }
     }
     // This just puts the output in a buffer, which is not part of the workUnit
-    preparedOutput.produce()
+    try {
+      preparedOutput.produce()
+    } finally {
+      preparedOutput.close()
+    }
   }
 
   // protected to allow unit-testing

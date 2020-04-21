@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import org.neo4j.memory.MemoryTracker
+import org.neo4j.memory.ScopedMemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.ListValue
@@ -18,21 +19,21 @@ import org.neo4j.values.virtual.VirtualValues
  * Aggregator for collect(...).
  */
 case object CollectAggregator extends Aggregator {
-  override def newUpdater: Updater = new CollectUpdater(preserveNulls = false)
+  override def newUpdater(memoryTracker: MemoryTracker): Updater = new CollectUpdater(preserveNulls = false)
   override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new CollectStandardReducer(memoryTracker)
   override def newConcurrentReducer: Reducer = new CollectConcurrentReducer()
 }
 
 case object CollectAllAggregator extends Aggregator {
-  override def newUpdater: Updater = new CollectUpdater(preserveNulls = true)
+  override def newUpdater(memoryTracker: MemoryTracker): Updater = new CollectUpdater(preserveNulls = true)
   override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new CollectStandardReducer(memoryTracker)
   override def newConcurrentReducer: Reducer = new CollectConcurrentReducer()
 }
 
 case object CollectDistinctAggregator extends Aggregator {
-  override def newUpdater: Updater = new DistinctInOrderUpdater
-  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new DistinctInOrderStandardReducer(new MemoryTrackingReducer(memoryTracker)) with CollectDistinctReducer
-  override def newConcurrentReducer: Reducer = new DistinctConcurrentReducer(new DummyReducer) with CollectDistinctReducer
+  override def newUpdater(memoryTracker: MemoryTracker): Updater = new OrderedDistinctUpdater(memoryTracker)
+  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new OrderedDistinctStandardReducer(DummyReducer, memoryTracker)
+  override def newConcurrentReducer: Reducer = new DistinctConcurrentReducer(DummyReducer)
 }
 
 class CollectUpdater(preserveNulls: Boolean) extends Updater {
@@ -70,30 +71,31 @@ class CollectConcurrentReducer() extends Reducer {
   override def result: AnyValue = VirtualValues.concat(collections.toArray(new Array[ListValue](0)):_*)
 }
 
-class MemoryTrackingReducer(memoryTracker: MemoryTracker) extends DistinctInnerReducer {
-  override def update(value: AnyValue): Unit = memoryTracker.allocateHeap(value.estimatedHeapUsage)
-  override def result: AnyValue = throw new IllegalStateException("Must be used inside of CollectDistinctReducer")
-}
-
-class DummyReducer extends DistinctInnerReducer {
+object DummyReducer extends DistinctInnerReducer {
   override def update(value: AnyValue): Unit = ()
   override def result: AnyValue = throw new IllegalStateException("Must be used inside of CollectDistinctReducer")
 }
 
-trait CollectDistinctReducer {
-  self: DistinctReducer =>
+class OrderedDistinctStandardReducer(inner: DistinctInnerReducer, memoryTracker: MemoryTracker) extends DistinctReducer(inner) {
+  private val seenSet = new java.util.LinkedHashSet[AnyValue]() // TODO: Use a heap tracking ordered distinct set
+  private val scopedMemoryTracker = new ScopedMemoryTracker(memoryTracker)
+
+  override protected def seen(e: AnyValue): Boolean = {
+    val added = seenSet.add(e)
+    if (added) {
+      scopedMemoryTracker.allocateHeap(e.estimatedHeapUsage())
+    }
+    added
+  }
 
   override def result: AnyValue = {
     val collection = ListValueBuilder.newListBuilder()
-    seen.forEach(value => collection.add(value))
+    seenSet.forEach(value => collection.add(value))
     collection.build()
   }
-}
 
-class DistinctInOrderStandardReducer(inner: DistinctInnerReducer) extends DistinctReducer(inner) {
-  override protected val seen: java.util.Set[AnyValue] = new java.util.LinkedHashSet[AnyValue]()
-}
-
-class DistinctInOrderUpdater() extends DistinctUpdater {
-  override val seen: java.util.Set[AnyValue] = new java.util.LinkedHashSet[AnyValue]()
+  override def close(): Unit = {
+    scopedMemoryTracker.close()
+    super.close()
+  }
 }

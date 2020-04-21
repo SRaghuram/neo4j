@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import java.util.concurrent.ConcurrentHashMap
+import java.util.function
 
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
@@ -27,6 +28,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
+import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
@@ -37,7 +39,6 @@ import org.neo4j.cypher.internal.macros.AssertMacros
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
@@ -70,6 +71,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate.createAggregators
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate.createUpdaters
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.EXECUTION_STATE
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.setMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
@@ -80,6 +82,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.memory.MemoryTracker
+import org.neo4j.memory.ScopedMemoryTracker
 import org.neo4j.values.AnyValue
 
 import scala.collection.mutable.ArrayBuffer
@@ -99,13 +102,14 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
   type AggPreMap = java.util.LinkedHashMap[groupings.KeyType, Array[Updater]]
 
-  private val newUpdaters: java.util.function.Function[ groupings.KeyType, Array[Updater]] =
-    (_: groupings.KeyType) => aggregations.map(_.newUpdater)
+  private val newUpdaters: MemoryTracker => java.util.function.Function[ groupings.KeyType, Array[Updater]] =
+    (memoryTracker: MemoryTracker) => (_: groupings.KeyType) => aggregations.map(_.newUpdater(memoryTracker))
 
   def mapper(argumentSlotOffset: Int,
              outputBufferId: BufferId,
-             expressionValues: Array[Expression]) =
-    new AggregationMapperOperator(argumentSlotOffset, outputBufferId, expressionValues)
+             expressionValues: Array[Expression],
+             operatorId: Id) =
+    new AggregationMapperOperator(argumentSlotOffset, outputBufferId, expressionValues)(operatorId)
 
   def reducer(argumentStateMapId: ArgumentStateMapId,
               reducerOutputSlots: Array[Int],
@@ -119,16 +123,21 @@ case class AggregationOperator(workIdentity: WorkIdentity,
    */
   class AggregationMapperOperator(argumentSlotOffset: Int,
                                   outputBufferId: BufferId,
-                                  expressionValues: Array[Expression]) extends OutputOperator {
+                                  expressionValues: Array[Expression])
+                                 (val id: Id = Id.INVALID_ID)
+    extends OutputOperator {
 
     override def workIdentity: WorkIdentity = AggregationOperator.this.workIdentity
 
     override def outputBuffer: Option[BufferId] = Some(outputBufferId)
 
-    override def createState(executionState: ExecutionState, stateFactory: StateFactory): OutputOperatorState =
-      new State(executionState.getSink[IndexedSeq[PerArgument[AggPreMap]]](outputBufferId))
+    override def createState(executionState: ExecutionState, stateFactory: StateFactory): OutputOperatorState = {
+      val memoryTracker = stateFactory.newMemoryTracker(id.x)
+      new State(executionState.getSink[IndexedSeq[PerArgument[AggPreMap]]](outputBufferId), memoryTracker)
+    }
 
-    class State(sink: Sink[IndexedSeq[PerArgument[AggPreMap]]]) extends OutputOperatorState {
+    class State(sink: Sink[IndexedSeq[PerArgument[AggPreMap]]], memoryTracker: MemoryTracker) extends OutputOperatorState {
+      private val newUpdatersWithMemoryTracker: function.Function[groupings.KeyType, Array[Updater]] = newUpdaters(memoryTracker)
 
       override def trackTime: Boolean = true
 
@@ -138,6 +147,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
                                  state: PipelinedQueryState,
                                  resources: QueryResources,
                                  operatorExecutionEvent: OperatorProfileEvent): PreAggregatedOutput = {
+        // TODO: TBD Is it really necessary to have individually tracking and closeable updaters or is it enough to have a scoped memory tracker here (and in AggregationMapperOperatorNoGrouping)?
 
         val queryState = state.queryStateForExpressionEvaluation(resources)
 
@@ -157,7 +167,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
         val readCursor = morsel.readCursor()
         while (readCursor.next()) {
           val groupingValue = groupings.computeGroupingKey(readCursor, queryState)
-          val updaters = result.computeIfAbsent(groupingValue, newUpdaters)
+          val updaters = result.computeIfAbsent(groupingValue, newUpdatersWithMemoryTracker)
           var i = 0
           while (i < aggregations.length) {
             val value = expressionValues(i)(readCursor, queryState)
@@ -172,6 +182,22 @@ case class AggregationOperator(workIdentity: WorkIdentity,
     class PreAggregatedOutput(preAggregated: IndexedSeq[PerArgument[AggPreMap]],
                               sink: Sink[IndexedSeq[PerArgument[AggPreMap]]]) extends PreparedOutput {
       override def produce(): Unit = sink.put(preAggregated)
+
+      override def close(): Unit = {
+        var i = 0
+        while (i < preAggregated.size) {
+          val perArgument = preAggregated(i)
+          perArgument.value.forEach((_, updaters) => {
+            var j = 0
+            while (j < updaters.length) {
+              updaters(j).close()
+              j += 1
+            }
+          })
+          i += 1
+        }
+        super.close()
+      }
     }
   }
 
@@ -193,7 +219,8 @@ case class AggregationOperator(workIdentity: WorkIdentity,
                                        override val argumentRow: MorselRow,
                                        memoryTracker: MemoryTracker) extends AggregatingAccumulator {
 
-    val reducerMap = new java.util.LinkedHashMap[groupings.KeyType, Array[Reducer]]
+    val reducerMap = new java.util.LinkedHashMap[groupings.KeyType, Array[Reducer]] // TODO: Use a heap tracking ordered map
+    val scopedMemoryTracker = new ScopedMemoryTracker(memoryTracker)
 
     override def update(data: AggPreMap): Unit = {
       val iterator = data.entrySet().iterator()
@@ -201,7 +228,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
         val entry = iterator.next()
         val reducers = reducerMap.computeIfAbsent(entry.getKey, _ => {
           // Note: this allocation is currently never de-allocated
-          memoryTracker.allocateHeap(entry.getKey.estimatedHeapUsage())
+          scopedMemoryTracker.allocateHeap(entry.getKey.estimatedHeapUsage())
           aggregators.map(_.newStandardReducer(memoryTracker))
         })
 
@@ -214,6 +241,18 @@ case class AggregationOperator(workIdentity: WorkIdentity,
     }
 
     def result(): java.util.Iterator[java.util.Map.Entry[groupings.KeyType, Array[Reducer]]] = reducerMap.entrySet().iterator()
+
+    override def close(): Unit = {
+      reducerMap.forEach((_, reducers) => {
+        var i = 0
+        while(i < reducers.length) {
+          reducers(i).close()
+          i += 1
+        }
+      })
+      scopedMemoryTracker.close()
+      super.close()
+    }
   }
 
   class ConcurrentAggregatingAccumulator(override val argumentRowId: Long,
@@ -334,9 +373,9 @@ object AggregationMapperOperatorTaskTemplate {
     arrayOf[Aggregator](newAggregators: _ *)
   }
 
-  def createUpdaters(aggregators: Array[Aggregator], aggregatorsVar: IntermediateRepresentation): IntermediateRepresentation = {
+  def createUpdaters(aggregators: Array[Aggregator], aggregatorsVar: IntermediateRepresentation, memoryTracker: IntermediateRepresentation): IntermediateRepresentation = {
     val newUpdaters = aggregators.indices.map(i =>
-      invoke(arrayLoad(aggregatorsVar, i), method[Aggregator, Updater]("newUpdater"))
+      invoke(arrayLoad(aggregatorsVar, i), method[Aggregator, Updater, MemoryTracker]("newUpdater"), memoryTracker)
     )
     arrayOf[Updater](newUpdaters: _ *)
   }
@@ -358,6 +397,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
   private val perArgsField: Field = field[AggOut](codeGen.namer.nextVariableName())
   private val sinkField: Field = field[Sink[IndexedSeq[PerArgument[AggMap]]]](codeGen.namer.nextVariableName())
   private val bufferIdField: Field = field[Int](codeGen.namer.nextVariableName())
+  private val memoryTrackerField = field[MemoryTracker](codeGen.namer.nextVariableName("memoryTracker"))
 
   private val aggregatorsVar = variable[Array[Aggregator]](codeGen.namer.nextVariableName(), createAggregators(aggregators))
   private val argVar = variable[Long](codeGen.namer.nextVariableName(), constant(-1L))
@@ -473,7 +513,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
         invoke(load(aggPreMapVar), method[AggMap, Any, Any]("get"), load(groupingValue))),
       condition(isNull(load(updaters)))(
         block(
-          assign(updaters, createUpdaters(aggregators, load(aggregatorsVar))),
+          assign(updaters, createUpdaters(aggregators, load(aggregatorsVar), loadField(memoryTrackerField))),
           invokeSideEffect(load(aggPreMapVar),
             method[AggMap, Any, Any, Any]("put"),
             load(groupingValue),
@@ -500,6 +540,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
 
   override def genCreateState: IntermediateRepresentation = {
     block(
+      setMemoryTracker(memoryTrackerField, id.x),
       setField(sinkField,
         invoke(EXECUTION_STATE,
           method[ExecutionState, Sink[_], Int]("getSinkInt"),
@@ -517,9 +558,14 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
     )
   }
 
+  override def genCloseOutput: IntermediateRepresentation = {
+    // TODO: Close updaters!
+    noop()
+  }
+
   override def genOutputBuffer: Option[IntermediateRepresentation] = Some(loadField(bufferIdField))
 
-  override def genFields: Seq[Field] = Seq(perArgsField, sinkField, bufferIdField)
+  override def genFields: Seq[Field] = Seq(perArgsField, sinkField, bufferIdField, memoryTrackerField)
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(argVar, aggregatorsVar, aggPreMapVar)
 

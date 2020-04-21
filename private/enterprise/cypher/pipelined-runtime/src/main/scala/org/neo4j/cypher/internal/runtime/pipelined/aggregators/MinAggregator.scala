@@ -17,7 +17,7 @@ import org.neo4j.values.storable.Values
  */
 case object MinAggregator extends Aggregator {
 
-  override def newUpdater: Updater = new MinUpdater
+  override def newUpdater(memoryTracker: MemoryTracker): Updater = new MinUpdater
   override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new MinStandardReducer
   override def newConcurrentReducer: Reducer = new MinConcurrentReducer
 

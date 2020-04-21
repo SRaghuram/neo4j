@@ -752,7 +752,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
               aggregators.result())
               .mapper(argumentSlotOffset,
                 bufferId,
-                expressions.result())
+                expressions.result(),
+                id)
 
           case plans.Aggregation(_, groupingExpressions, aggregationExpression) =>
             val groupings = converters.toGroupingExpression(id, groupingExpressions, Seq.empty)
@@ -767,7 +768,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             }
 
             AggregationOperator(WorkIdentity.fromPlan(plan, "Pre"), aggregators.result(), groupings)
-              .mapper(argumentSlotOffset, bufferId, expressions.result())
+              .mapper(argumentSlotOffset, bufferId, expressions.result(), id)
 
         }
     }

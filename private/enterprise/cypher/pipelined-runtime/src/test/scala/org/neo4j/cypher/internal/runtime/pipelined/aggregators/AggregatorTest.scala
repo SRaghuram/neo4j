@@ -23,7 +23,7 @@ trait AggregatorTest {
     val upperBound = Math.max(2, values.size / 10)
     val groups = values.grouped(random.nextInt(1, upperBound))
     val updaters = groups.map { group =>
-      val updater = aggregator.newUpdater
+      val updater = aggregator.newUpdater(EmptyMemoryTracker.INSTANCE)
       group.foreach(updater.update)
       updater
     }

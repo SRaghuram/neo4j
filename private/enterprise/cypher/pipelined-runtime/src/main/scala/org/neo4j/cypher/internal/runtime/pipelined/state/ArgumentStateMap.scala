@@ -192,7 +192,7 @@ object ArgumentStateMap {
   /**
    * State that belongs to one argumentRowId and is kept in the [[ArgumentStateMap]]
    */
-  trait ArgumentState {
+  trait ArgumentState extends AutoCloseable {
     /**
      * The ID of the argument row for this state.
      */
@@ -206,6 +206,8 @@ object ArgumentStateMap {
      * reducers.
      */
     def argumentRowIdsForReducers: Array[Long]
+
+    override def close(): Unit = {}
   }
 
   /**
@@ -226,14 +228,12 @@ object ArgumentStateMap {
   /**
    * Accumulator of data. Has internal state which it updates using provided data.
    */
-  trait MorselAccumulator[DATA <: AnyRef] extends ArgumentState with AutoCloseable {
+  trait MorselAccumulator[DATA <: AnyRef] extends ArgumentState {
 
     /**
      * Update internal state using the provided data.
      */
     def update(data: DATA): Unit
-
-    override def close(): Unit = {}
   }
 
   /**

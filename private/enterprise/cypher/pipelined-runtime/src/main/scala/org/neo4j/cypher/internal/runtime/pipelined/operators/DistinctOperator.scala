@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import java.util.concurrent.ConcurrentHashMap
 
-import org.eclipse.collections.impl.factory.Sets
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.block
@@ -48,6 +47,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
+import org.neo4j.kernel.impl.util.collection.DistinctSet
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 
@@ -99,38 +99,57 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
 
   class DistinctStateFactory(memoryTracker: MemoryTracker) extends ArgumentStateFactory[DistinctState] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): DistinctState = {
-      // TODO: Use HeapTrackingCollections.newSet()
-      val seenSet = Sets.mutable.empty[groupings.KeyType]()
-      val seen = (key: groupings.KeyType) => seenSet.add(key)
-      new DistinctState(argumentRowId, seen, argumentRowIdsForReducers, memoryTracker)
+      new StandardDistinctState(argumentRowId, argumentRowIdsForReducers, memoryTracker)
     }
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): DistinctState = {
-      val seenSet = ConcurrentHashMap.newKeySet[groupings.KeyType]()
-      val seen = (key: groupings.KeyType) => seenSet.add(key)
-      new DistinctState(argumentRowId, seen, argumentRowIdsForReducers, memoryTracker)
+      new ConcurrentDistinctState(argumentRowId, argumentRowIdsForReducers, memoryTracker)
     }
 
     override def completeOnConstruction: Boolean = true
   }
 
-  class DistinctState(override val argumentRowId: Long,
-                      seen: groupings.KeyType => Boolean,
-                      override val argumentRowIdsForReducers: Array[Long],
-                      memoryTracker: MemoryTracker) extends DistinctOperatorState {
+  abstract class DistinctState(override val argumentRowId: Long,
+                               override val argumentRowIdsForReducers: Array[Long],
+                               memoryTracker: MemoryTracker) extends DistinctOperatorState {
+    def seen(key: groupings.KeyType): Boolean
 
     override def filterOrProject(row: ReadWriteRow, queryState: QueryState): Boolean = {
       val groupingKey = groupings.computeGroupingKey(row, queryState)
       if (seen(groupingKey)) {
-        // Note: this allocation is currently never de-allocated
-        memoryTracker.allocateHeap(groupingKey.estimatedHeapUsage())
         groupings.project(row, groupingKey)
         true
       } else {
         false
       }
     }
-    override def toString: String = s"DistinctState($argumentRowId, concurrent=${seen.getClass.getPackageName.contains("concurrent")})"
+  }
+
+  class StandardDistinctState(argumentRowId: Long, argumentRowIdsForReducers: Array[Long], memoryTracker: MemoryTracker)
+    extends DistinctState(argumentRowId, argumentRowIdsForReducers, memoryTracker) {
+
+    private val seenSet = DistinctSet.createDistinctSet[groupings.KeyType](memoryTracker)
+
+    override def seen(key: groupings.KeyType): Boolean =
+      seenSet.add(key)
+
+    override def close(): Unit = {
+      seenSet.close()
+      super.close()
+    }
+
+    override def toString: String = s"StandardDistinctState($argumentRowId)"
+  }
+
+  class ConcurrentDistinctState(argumentRowId: Long, argumentRowIdsForReducers: Array[Long], memoryTracker: MemoryTracker)
+    extends DistinctState(argumentRowId, argumentRowIdsForReducers, memoryTracker) {
+
+    private val seenSet = ConcurrentHashMap.newKeySet[groupings.KeyType]()
+
+    override def seen(key: groupings.KeyType): Boolean =
+      seenSet.add(key)
+
+    override def toString: String = s"ConcurrentDistinctState($argumentRowId)"
   }
 }
 
@@ -204,38 +223,57 @@ object SerialTopLevelDistinctOperatorTaskTemplate {
     override def newStandardArgumentState(argumentRowId: Long,
                                           argumentMorsel: MorselReadCursor,
                                           argumentRowIdsForReducers: Array[Long]): SerialTopLevelDistinctState = {
-      // TODO: Use HeapTrackingCollections.newSet()
-      val seenSet = Sets.mutable.empty[AnyValue]()
-      val seen = (key: AnyValue) => seenSet.add(key)
-      new SerialTopLevelDistinctState(argumentRowId,
-                                      argumentRowIdsForReducers,
-                                      seen, id)
+      new StandardSerialTopLevelDistinctState(argumentRowId, argumentRowIdsForReducers, id)
     }
 
     override def newConcurrentArgumentState(argumentRowId: Long,
                                             argumentMorsel: MorselReadCursor,
                                             argumentRowIdsForReducers: Array[Long]): SerialTopLevelDistinctState = {
-      val seenSet = ConcurrentHashMap.newKeySet[AnyValue]()
-      val seen = (key: AnyValue) => seenSet.add(key)
-      new SerialTopLevelDistinctState(argumentRowId, argumentRowIdsForReducers, seen, id)
+      new ConcurrentSerialTopLevelDistinctState(argumentRowId, argumentRowIdsForReducers, id)
     }
   }
 
-  class SerialTopLevelDistinctState(override val argumentRowId: Long,
-                                    override val argumentRowIdsForReducers: Array[Long],
-                                    seen: AnyValue => Boolean,
-                                    id: Id) extends ArgumentState {
-    private var memoryTracker: MemoryTracker = _
+  abstract class SerialTopLevelDistinctState(override val argumentRowId: Long,
+                                             override val argumentRowIdsForReducers: Array[Long],
+                                             id: Id) extends ArgumentState {
+    // This is always called from generated code by genCreateState
+    def setMemoryTracker(memoryTracker: MemoryTracker): Unit
 
-    def setMemoryTracker(memoryTracker: MemoryTracker): Unit =
-      this.memoryTracker = memoryTracker
+    def distinct(groupingKey: AnyValue): Boolean
+  }
 
-    def distinct(groupingKey: AnyValue): Boolean = {
-      if (seen(groupingKey)) {
-        memoryTracker.allocateHeap(groupingKey.estimatedHeapUsage())
-        true
-      } else false
+  class StandardSerialTopLevelDistinctState(argumentRowId: Long,
+                                            argumentRowIdsForReducers: Array[Long],
+                                            id: Id) extends SerialTopLevelDistinctState(argumentRowId, argumentRowIdsForReducers, id) {
+    private var seenSet: DistinctSet[AnyValue] = _
+
+    // This is always called from generated code by genCreateState
+    override def setMemoryTracker(memoryTracker: MemoryTracker): Unit = {
+      seenSet = DistinctSet.createDistinctSet[AnyValue](memoryTracker)
     }
-    override def toString: String = s"SerialTopLevelDistinctState($argumentRowId, concurrent=${seen.getClass.getPackageName.contains("concurrent")})"
+
+    override def distinct(groupingKey: AnyValue): Boolean =
+      seenSet.add(groupingKey)
+
+    override def close(): Unit = {
+      seenSet.close()
+      super.close()
+    }
+
+    override def toString: String = s"StandardSerialTopLevelDistinctState($argumentRowId)"
+  }
+
+  class ConcurrentSerialTopLevelDistinctState(argumentRowId: Long,
+                                              argumentRowIdsForReducers: Array[Long],
+                                              id: Id) extends SerialTopLevelDistinctState(argumentRowId, argumentRowIdsForReducers, id) {
+    private val seenSet = ConcurrentHashMap.newKeySet[AnyValue]()
+
+    // This is always called from generated code by genCreateState
+    override def setMemoryTracker(memoryTracker: MemoryTracker): Unit = {}
+
+    override def distinct(groupingKey: AnyValue): Boolean =
+      seenSet.add(groupingKey)
+
+    override def toString: String = s"ConcurrentSerialTopLevelDistinctState($argumentRowId)"
   }
 }

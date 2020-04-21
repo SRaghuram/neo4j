@@ -54,7 +54,7 @@ object AggregatingAccumulator {
  * aggregations. In the reducer synchronization is required.
  */
 trait Aggregator {
-  def newUpdater: Updater
+  def newUpdater(memoryTracker: MemoryTracker): Updater
   def newStandardReducer(memoryTracker: MemoryTracker): Reducer
   def newConcurrentReducer: Reducer
 }
@@ -63,15 +63,17 @@ trait Aggregator {
  * Performs the initial parts of an aggregation that can be done
  * without synchronization.
  */
-trait Updater {
+trait Updater extends AutoCloseable {
   def update(value: AnyValue): Unit
+  override def close(): Unit = {}
 }
 
 /**
  * Performs the final parts of an aggregation that migth require
  * synchronization.
  */
-trait Reducer {
+trait Reducer extends AutoCloseable {
   def update(updater: Updater): Unit
   def result: AnyValue
+  override def close(): Unit = {}
 }

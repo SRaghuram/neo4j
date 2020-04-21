@@ -15,7 +15,7 @@ import org.neo4j.values.storable.Values
  * Aggregator for count(...).
  */
 case object CountAggregator extends Aggregator {
-  override def newUpdater: Updater = new CountUpdater
+  override def newUpdater(memoryTracker: MemoryTracker): Updater = new CountUpdater
   override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new CountStandardReducer
   override def newConcurrentReducer: Reducer = new CountConcurrentReducer
 }
@@ -24,8 +24,8 @@ case object CountAggregator extends Aggregator {
  * Aggregator for count(DISTINCT..).
  */
 case object CountDistinctAggregator extends Aggregator {
-  override def newUpdater: Updater = new DistinctUpdater
-  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new DistinctStandardReducer(new CountDistinctStandardReducer())
+  override def newUpdater(memoryTracker: MemoryTracker): Updater = new UnorderedDistinctUpdater(memoryTracker)
+  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new DistinctStandardReducer(new CountDistinctStandardReducer(), memoryTracker)
   override def newConcurrentReducer: Reducer = new DistinctConcurrentReducer(new CountDistinctConcurrentReducer())
 }
 
@@ -33,7 +33,7 @@ case object CountDistinctAggregator extends Aggregator {
  * Aggregator for count(*).
  */
 case object CountStarAggregator extends Aggregator {
-  override def newUpdater: Updater = new CountStarUpdater
+  override def newUpdater(memoryTracker: MemoryTracker): Updater = new CountStarUpdater
   override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new CountStandardReducer
   override def newConcurrentReducer: Reducer = new CountConcurrentReducer
 }

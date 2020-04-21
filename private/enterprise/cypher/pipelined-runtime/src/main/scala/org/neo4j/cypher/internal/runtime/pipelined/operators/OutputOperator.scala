@@ -74,8 +74,9 @@ trait OutputOperatorState extends HasWorkIdentity {
   def canContinueOutput: Boolean = false
 }
 
-trait PreparedOutput {
+trait PreparedOutput extends AutoCloseable {
   def produce(): Unit
+  override def close(): Unit = {}
 }
 
 // NO OUTPUT

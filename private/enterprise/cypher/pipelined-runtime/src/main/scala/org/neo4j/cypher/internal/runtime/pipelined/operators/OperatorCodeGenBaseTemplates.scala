@@ -282,6 +282,8 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
    */
   override final def produce(): Unit = compiledProduce()
 
+  override final def close(): Unit = compiledCloseOutput()
+
   /**
    * Generated code that initializes the profile events.
    */
@@ -302,6 +304,12 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
    */
   @throws[Exception]
   def compiledProduce(): Unit
+
+  /**
+   * Generated code that closes the produced output.
+   */
+  @throws[Exception]
+  def compiledCloseOutput(): Unit
 
   /**
     * Generated code that performs the initialization necessary for performing [[PreparedOutput.produce()]].
@@ -451,6 +459,14 @@ trait OperatorTaskTemplate {
   protected def genProduce: IntermediateRepresentation = inner.genProduce
 
   /**
+   * Responsible for generating [[PreparedOutput]] method:
+   * {{{
+   *     def close(): Unit
+   * }}}
+   */
+  protected def genCloseOutput: IntermediateRepresentation = inner.genCloseOutput
+
+  /**
    * Responsible for generating the body of [[OutputOperator]] method (but is not expected to return anything):
    * {{{
    *     def createState(executionState: ExecutionState): OutputOperatorState
@@ -511,6 +527,7 @@ object OperatorTaskTemplate {
     override def id: Id = withId
     override def genOperate: IntermediateRepresentation = noop()
     override def genProduce: IntermediateRepresentation = noop()
+    override def genCloseOutput: IntermediateRepresentation = noop()
     override def genCreateState: IntermediateRepresentation = noop()
     override def genFields: Seq[Field] = Seq.empty
     override def genLocalVariables: Seq[LocalVariable] = Seq.empty
@@ -643,6 +660,12 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
           returnType = typeRefOf[Unit],
           parameters = Seq.empty,
           body = genProduce,
+          genLocalVariables = () => Seq.empty,
+          throws = Some(typeRefOf[Exception])),
+        MethodDeclaration("compiledCloseOutput",
+          returnType = typeRefOf[Unit],
+          parameters = Seq.empty,
+          body = genCloseOutput,
           genLocalVariables = () => Seq.empty,
           throws = Some(typeRefOf[Exception])),
         MethodDeclaration("compiledCreateState",
