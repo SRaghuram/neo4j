@@ -6,6 +6,7 @@
 package com.neo4j.storeupgrade;
 
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
+import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
@@ -35,6 +36,7 @@ import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -52,6 +54,9 @@ import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.api.Kernel;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.security.AnonymousContext;
+import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
+import org.neo4j.kernel.availability.UnavailableException;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.storemigration.StoreUpgrader;
@@ -61,12 +66,14 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.server.CommunityBootstrapper;
 import org.neo4j.server.NeoBootstrapper;
 import org.neo4j.storageengine.api.TransactionIdStore;
+import org.neo4j.storageengine.migration.UpgradeNotAllowedException;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.Unzip;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.util.Arrays.stream;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.io.FileUtils.moveToDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -188,6 +195,58 @@ public class StoreUpgradeIT
             }
             finally
             {
+                managementService.shutdown();
+            }
+
+            assertConsistentStore( databaseLayout );
+            assertFalse( new File( layout.countStore().getAbsolutePath() + ".a" ).exists() );
+            assertFalse( new File( layout.countStore().getAbsolutePath() + ".b" ).exists() );
+        }
+
+        @Test
+        public void embeddedDatabaseShouldStartOnOlderStoreWhenUpgradeIsEnabledDynamically() throws Throwable
+        {
+            assumeFalse( STORES40.stream().flatMap( Stream::of ).anyMatch( s -> s == store ) );
+            var layout = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            store.prepareDirectory( layout.databaseDirectory() );
+
+            DatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder( layout );
+            builder.setConfig( allow_upgrade, false );
+            builder.setConfig( fail_on_missing_files, false );
+            builder.setConfig( logs_directory, testDir.directory( "logs" ).toPath().toAbsolutePath());
+            DatabaseManagementService managementService = builder.build();
+            var defaultDatabase = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
+            var db = defaultDatabase.getDependencyResolver().resolveDependency( Database.class );
+
+            var tempDatabaseName = "tempdatabase";
+            managementService.createDatabase( tempDatabaseName );
+            var tempDb = managementService.database( tempDatabaseName );
+
+            // not migrated and failed
+            assertFalse( defaultDatabase.isAvailable( 0 ) );
+            var availabilityGuard = defaultDatabase.getDependencyResolver().resolveDependency( DatabaseAvailabilityGuard.class );
+            var availabilityException = getUnavailableException( availabilityGuard );
+            assertThat( availabilityException ).hasRootCauseInstanceOf( UpgradeNotAllowedException.class );
+
+            // now upgrade should be allowed
+            tempDb.executeTransactionally( "call dbms.setConfigValue('" + allow_upgrade.name() + "', 'true')" );
+
+            // restart database
+            db.stop();
+            db.start();
+
+            // now it should be upgraded and available
+            defaultDatabase = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
+            assertTrue( defaultDatabase.isAvailable( MINUTES.toMillis( 1 ) ) );
+
+            DatabaseLayout databaseLayout = defaultDatabase.databaseLayout();
+            try
+            {
+                checkInstance( store, defaultDatabase );
+            }
+            finally
+            {
+                db.stop();
                 managementService.shutdown();
             }
 
@@ -781,5 +840,18 @@ public class StoreUpgradeIT
             }
         }
         throw new IllegalStateException( "Index did not become ONLINE within reasonable time" );
+    }
+
+    private static DatabaseShutdownException getUnavailableException( DatabaseAvailabilityGuard availabilityGuard ) throws UnavailableException
+    {
+        try
+        {
+            availabilityGuard.assertDatabaseAvailable();
+        }
+        catch ( DatabaseShutdownException expected )
+        {
+            return expected;
+        }
+        throw new AssertionError( "Expected to get availability exceptions above" );
     }
 }
