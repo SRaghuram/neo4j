@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
-import org.eclipse.collections.impl.factory.Sets
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.PrefetchingIterator
@@ -14,6 +13,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.kernel.impl.util.collection.DistinctSet
 import org.neo4j.values.AnyValue
 
 case class DistinctSlottedPipe(source: Pipe,
@@ -25,7 +25,7 @@ case class DistinctSlottedPipe(source: Pipe,
   protected def internalCreateResults(input: Iterator[CypherRow],
                                       state: QueryState): Iterator[CypherRow] = {
     new PrefetchingIterator[CypherRow] {
-      private val seen = Sets.mutable.empty[AnyValue]()
+      private var seen = DistinctSet.createDistinctSet[AnyValue](state.memoryTracker.memoryTrackerForOperator(id.x))
 
       override def produceNext(): Option[CypherRow] = {
         while (input.hasNext) {
@@ -33,12 +33,13 @@ case class DistinctSlottedPipe(source: Pipe,
 
           val key = groupingExpression.computeGroupingKey(next, state)
           if (seen.add(key)) {
-            state.memoryTracker.allocated(key, id.x)
             // Found unseen key! Set it as the next element to yield, and exit
             groupingExpression.project(next, key)
             return Some(next)
           }
         }
+        seen.close()
+        seen = null
         None
       }
     }
