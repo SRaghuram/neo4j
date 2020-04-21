@@ -62,16 +62,12 @@ public abstract class FabricDatabaseManager
 
     public GraphDatabaseFacade getDatabase( String databaseNameRaw ) throws UnavailableException
     {
-        var graphDatabaseFacade = databaseIdRepository.getByName( databaseNameRaw )
+        var databaseContext = databaseIdRepository.getByName( databaseNameRaw )
                 .flatMap( databaseManager::getDatabaseContext )
-                .orElseThrow( () -> new DatabaseNotFoundException( "Database " + databaseNameRaw + " not found" ) )
-                .databaseFacade();
-        if ( !graphDatabaseFacade.isAvailable( 0 ) )
-        {
-            throw new UnavailableException( "Database %s not available " + databaseNameRaw );
-        }
+                .orElseThrow( () -> new DatabaseNotFoundException( "Database " + databaseNameRaw + " not found" ) );
 
-        return graphDatabaseFacade;
+        databaseContext.database().getDatabaseAvailabilityGuard().assertDatabaseAvailable();
+        return databaseContext.databaseFacade();
     }
 
     public abstract boolean isFabricDatabasePresent();
