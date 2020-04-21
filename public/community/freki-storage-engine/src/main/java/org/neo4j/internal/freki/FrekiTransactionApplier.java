@@ -215,11 +215,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
                 // a property has been changed or is unchanged
                 Value beforeValue = propertyCursorBefore.propertyValue();
                 Value afterValue = propertyCursorAfter.propertyValue();
-                if ( beforeValue.equals( afterValue ) )
-                {
-                    builder.existing( afterKey, afterValue );
-                }
-                else
+                if ( !beforeValue.equals( afterValue ) )
                 {
                     builder.changed( afterKey, beforeValue, afterValue );
                 }
