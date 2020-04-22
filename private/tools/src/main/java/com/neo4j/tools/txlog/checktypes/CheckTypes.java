@@ -5,19 +5,20 @@
  */
 package com.neo4j.tools.txlog.checktypes;
 
+import java.util.List;
+
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 
-public class CheckTypes
+public final class CheckTypes
 {
     public static final NodeCheckType NODE = new NodeCheckType();
     public static final PropertyCheckType PROPERTY = new PropertyCheckType();
     public static final RelationshipCheckType RELATIONSHIP = new RelationshipCheckType();
     public static final RelationshipGroupCheckType RELATIONSHIP_GROUP = new RelationshipGroupCheckType();
 
-    @SuppressWarnings( "unchecked" )
-    public static final CheckType<? extends Command,? extends AbstractBaseRecord>[] CHECK_TYPES =
-            new CheckType[]{NODE, PROPERTY, RELATIONSHIP, RELATIONSHIP_GROUP};
+    public static final List<CheckType<?,?>> CHECK_TYPES =
+            List.of( NODE, PROPERTY, RELATIONSHIP, RELATIONSHIP_GROUP );
 
     private CheckTypes()
     {

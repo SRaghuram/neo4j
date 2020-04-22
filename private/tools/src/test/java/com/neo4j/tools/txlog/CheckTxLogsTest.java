@@ -108,7 +108,7 @@ class CheckTxLogsTest
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
-        boolean success = checker.scan( getLogFiles(), handler, NODE );
+        boolean success = checker.scan( getLogFiles(), handler, List.of( NODE ) );
 
         // Then
         assertTrue( success );
@@ -159,7 +159,7 @@ class CheckTxLogsTest
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
-        boolean success = checker.scan( getLogFiles(), handler, NODE );
+        boolean success = checker.scan( getLogFiles(), handler, List.of( NODE ) );
 
         // Then
         assertFalse( success );
@@ -223,7 +223,7 @@ class CheckTxLogsTest
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
-        checker.scan( getLogFiles(), handler, NODE );
+        checker.scan( getLogFiles(), handler, List.of( NODE ) );
 
         // Then
         assertEquals( 2, handler.recordInconsistencies.size() );
@@ -280,7 +280,7 @@ class CheckTxLogsTest
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
-        boolean success = checker.scan( getLogFiles(), handler, NODE );
+        boolean success = checker.scan( getLogFiles(), handler, List.of( NODE ) );
 
         // Then
         assertFalse( success );
@@ -335,7 +335,7 @@ class CheckTxLogsTest
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
-        boolean success = checker.scan( getLogFiles(), handler, PROPERTY );
+        boolean success = checker.scan( getLogFiles(), handler, List.of( PROPERTY ) );
 
         // Then
         assertFalse( success );
@@ -399,7 +399,7 @@ class CheckTxLogsTest
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
-        boolean success = checker.scan( getLogFiles(), handler, PROPERTY );
+        boolean success = checker.scan( getLogFiles(), handler, List.of( PROPERTY ) );
 
         // Then
         assertFalse( success );
@@ -465,7 +465,7 @@ class CheckTxLogsTest
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
-        checker.scan( getLogFiles(), handler, RELATIONSHIP );
+        checker.scan( getLogFiles(), handler, List.of( RELATIONSHIP ) );
 
         // Then
         assertEquals( 1, handler.recordInconsistencies.size() );
@@ -524,7 +524,7 @@ class CheckTxLogsTest
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
-        checker.scan( getLogFiles(), handler, RELATIONSHIP );
+        checker.scan( getLogFiles(), handler, List.of( RELATIONSHIP ) );
 
         // Then
         assertEquals( 2, handler.recordInconsistencies.size() );
@@ -584,7 +584,7 @@ class CheckTxLogsTest
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
-        checker.scan( getLogFiles(), handler, RELATIONSHIP_GROUP );
+        checker.scan( getLogFiles(), handler, List.of( RELATIONSHIP_GROUP ) );
 
         // Then
         assertEquals( 1, handler.recordInconsistencies.size() );
@@ -645,7 +645,7 @@ class CheckTxLogsTest
         CheckTxLogs checker = new CheckTxLogs( System.out, fs );
 
         // When
-        checker.scan( getLogFiles(), handler, RELATIONSHIP_GROUP );
+        checker.scan( getLogFiles(), handler, List.of( RELATIONSHIP_GROUP ) );
 
         // Then
         assertEquals( 2, handler.recordInconsistencies.size() );

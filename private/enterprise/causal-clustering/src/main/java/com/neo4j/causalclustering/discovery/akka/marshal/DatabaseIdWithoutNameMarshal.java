@@ -18,7 +18,7 @@ import org.neo4j.kernel.database.DatabaseIdFactory;
 
 public class DatabaseIdWithoutNameMarshal extends SafeChannelMarshal<DatabaseId>
 {
-    public static DatabaseIdWithoutNameMarshal INSTANCE = new DatabaseIdWithoutNameMarshal();
+    public static final DatabaseIdWithoutNameMarshal INSTANCE = new DatabaseIdWithoutNameMarshal();
 
     @Override
     protected DatabaseId unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
