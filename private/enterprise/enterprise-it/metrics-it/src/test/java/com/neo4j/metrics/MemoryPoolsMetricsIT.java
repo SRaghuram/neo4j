@@ -86,7 +86,6 @@ public class MemoryPoolsMetricsIT
     void writeDatabasePoolsMetrics()
     {
         var dbPools = pools.getPools().stream()
-                            .flatMap( p -> p.getSubPools().stream() )
                             .filter( pool -> db.databaseName().equals( pool.databaseName() ) ).collect( toList() );
         assertThat( dbPools ).isNotEmpty();
         dbPools.forEach( pool ->

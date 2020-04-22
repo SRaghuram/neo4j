@@ -9,7 +9,6 @@ import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 
 import java.util.function.Predicate;
-import java.util.stream.Stream;
 
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.memory.MemoryPools;
@@ -41,7 +40,6 @@ public abstract class AbstractMemoryPoolMetrics extends LifecycleAdapter
     public void start()
     {
         memoryPools.getPools().stream()
-                .flatMap( p -> p.getSubPools().isEmpty() ? Stream.of( p ) : p.getSubPools().stream() )
                 .filter( poolsFilter() )
                 .forEach( pool ->
                 {

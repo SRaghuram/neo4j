@@ -57,6 +57,7 @@ import org.neo4j.kernel.impl.query.QueryExecutionEngine;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.logging.Log;
+import org.neo4j.memory.GlobalMemoryGroupTracker;
 import org.neo4j.memory.MemoryPools;
 import org.neo4j.memory.NamedMemoryPool;
 import org.neo4j.procedure.Admin;
@@ -359,9 +360,12 @@ public class EnterpriseBuiltInDbmsProcedures
         var memoryPools = resolver.resolveDependency( MemoryPools.class );
         var registeredPools = memoryPools.getPools();
         var allPools = new ArrayList<>( registeredPools );
-        for ( NamedMemoryPool registeredPool : registeredPools )
+        for ( var pool : registeredPools )
         {
-            allPools.addAll( registeredPool.getSubPools() );
+            if ( pool instanceof GlobalMemoryGroupTracker )
+            {
+                allPools.addAll( ((GlobalMemoryGroupTracker) pool).getDatabasePools() );
+            }
         }
         allPools.sort( Comparator.comparing( NamedMemoryPool::group )
                 .thenComparing( NamedMemoryPool::name ) );
