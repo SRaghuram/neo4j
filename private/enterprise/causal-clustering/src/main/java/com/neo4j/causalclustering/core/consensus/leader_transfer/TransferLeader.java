@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.LeadershipTransfer.Proposal;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -17,14 +18,18 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
-import static com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferContext.NO_TARGET;
+import static com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferTarget.NO_TARGET;
 import static com.neo4j.causalclustering.core.consensus.leader_transfer.LeadershipPriorityGroupSetting.READER;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
@@ -35,17 +40,19 @@ class TransferLeader implements Runnable
 {
     private static final RandomStrategy PRIORITISED_SELECTION_STRATEGY = new RandomStrategy();
     private final Config config;
-    private Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler;
-    private MemberId myself;
-    private DatabasePenalties databasePenalties;
-    private SelectionStrategy selectionStrategy;
+    private final Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler;
+    private final MemberId myself;
+    private final DatabasePenalties databasePenalties;
+    private final SelectionStrategy selectionStrategy;
     private final RaftMembershipResolver membershipResolver;
+    private final Set<ServerGroupName> myGroups;
     private final Supplier<List<NamedDatabaseId>> leadershipsResolver;
 
     TransferLeader( Config config, Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler, MemberId myself,
-            DatabasePenalties databasePenalties, SelectionStrategy leaderLoadBalancing, RaftMembershipResolver membershipResolver,
-            Supplier<List<NamedDatabaseId>> leadershipsResolver )
+                    DatabasePenalties databasePenalties, SelectionStrategy leaderLoadBalancing, RaftMembershipResolver membershipResolver,
+                    Supplier<List<NamedDatabaseId>> leadershipsResolver )
     {
+        this.myGroups = myGroups( config );
         this.config = config;
         this.messageHandler = messageHandler;
         this.myself = myself;
@@ -58,71 +65,88 @@ class TransferLeader implements Runnable
     @Override
     public void run()
     {
-        databasePenalties.clean();
+        var myLeaderships = leadershipsResolver.get();
 
-        var prioritizedGroups = notPrioritisedLeadership();
-        var leaderTransferContext = createContext( prioritizedGroups.keySet(), PRIORITISED_SELECTION_STRATEGY );
-
-        if ( leaderTransferContext != NO_TARGET )
+        // We only balance leadership for one database at a time,
+        //   and we give priority to balancing according to prioritised groups over other strategies
+        if ( doPrioritisedBalancing( myLeaderships ) )
         {
-            handleProposal( leaderTransferContext, Set.of( notPrioritisedLeadership().get( leaderTransferContext.databaseId() ) ) );
+            return;
         }
-        else
-        {
-            // This instance is high priority for all its leaderships, so just do normal load balancing
-            leaderTransferContext = createContext( leadershipsResolver.get(), selectionStrategy );
 
-            // If leaderTransferContext is still no target, there is no need to transfer leadership
-            if ( leaderTransferContext != NO_TARGET )
-            {
-                handleProposal( leaderTransferContext, Set.of() );
-            }
+        // This instance is high priority for all its leaderships, so just do normal load balancing for all other databases
+        doBalancing( myLeaderships );
+    }
+
+    private boolean doPrioritisedBalancing( List<NamedDatabaseId> leaderships )
+    {
+        var undesiredLeaderships = undesiredLeaderships( leaderships );
+        var leaderTransferTarget = createTarget( undesiredLeaderships.keySet(), PRIORITISED_SELECTION_STRATEGY );
+
+        if ( leaderTransferTarget == NO_TARGET )
+        {
+            return false;
+        }
+
+        handleProposal( leaderTransferTarget, Set.of( undesiredLeaderships.get( leaderTransferTarget.databaseId() ) ) );
+        return true;
+    }
+
+    private void doBalancing( List<NamedDatabaseId> leaderships )
+    {
+        var unPrioritisedLeaderships = unPrioritisedLeaderships( config, leaderships );
+        var leaderTransferTarget = createTarget( unPrioritisedLeaderships, selectionStrategy );
+
+        if ( leaderTransferTarget != NO_TARGET )
+        {
+            handleProposal( leaderTransferTarget, Set.of() );
         }
     }
 
-    private LeaderTransferContext createContext( Collection<NamedDatabaseId> databaseIds, SelectionStrategy selectionStrategy )
+    private LeaderTransferTarget createTarget( Collection<NamedDatabaseId> databaseIds, SelectionStrategy selectionStrategy )
     {
         if ( !databaseIds.isEmpty() )
         {
-            var validTopologies = databaseIds.stream()
-                    .flatMap( this::filterValidMembers )
-                    .collect( toList() );
-            return selectionStrategy.select( validTopologies );
+            var validTransferCandidatesPerDb = databaseIds.stream()
+                                                          .flatMap( this::findValidTransferCandidatesForDb )
+                                                          .collect( toList() );
+            return selectionStrategy.select( validTransferCandidatesPerDb );
         }
         return NO_TARGET;
     }
 
-    private Stream<TransferCandidates> filterValidMembers( NamedDatabaseId namedDatabaseId )
+    private Stream<TransferCandidates> findValidTransferCandidatesForDb( NamedDatabaseId namedDatabaseId )
     {
         var raftMembership = membershipResolver.membersFor( namedDatabaseId );
         var votingMembers = raftMembership.votingMembers();
+        Predicate<MemberId> notSuspendedOrMe = member ->
+                databasePenalties.notSuspended( namedDatabaseId.databaseId(), member ) &&
+                !Objects.equals( member, myself );
 
         var validMembers = votingMembers.stream()
-                .filter( member -> databasePenalties.notSuspended( namedDatabaseId.databaseId(), member ) && !member.equals( myself ) )
-                .collect( toSet() );
+                                        .filter( notSuspendedOrMe )
+                                        .collect( toSet() );
 
         if ( validMembers.isEmpty() )
         {
             return Stream.empty();
         }
 
-        var raftId = RaftId.from( namedDatabaseId.databaseId() );
-
-        return Stream.of( new TransferCandidates( namedDatabaseId, raftId, validMembers ) );
+        return Stream.of( new TransferCandidates( namedDatabaseId, validMembers ) );
     }
 
-    private void handleProposal( LeaderTransferContext transferContext, Set<String> prioritisedGroups )
+    private void handleProposal( LeaderTransferTarget transferTarget, Set<ServerGroupName> prioritisedGroups )
     {
-        var proposal = new Proposal( myself, transferContext.to(), prioritisedGroups );
-        var message = RaftMessages.InboundRaftMessageContainer.of( Instant.now(), transferContext.raftId(), proposal );
+        var raftId = RaftId.from( transferTarget.databaseId().databaseId() );
+        var proposal = new Proposal( myself, transferTarget.to(), prioritisedGroups );
+        var message = RaftMessages.InboundRaftMessageContainer.of( Instant.now(), raftId, proposal );
         messageHandler.handle( message );
     }
 
-    private Map<NamedDatabaseId,String> notPrioritisedLeadership()
+    private Map<NamedDatabaseId,ServerGroupName> undesiredLeaderships( List<NamedDatabaseId> myLeaderships )
     {
-        Set<String> myGroups = getMyGroups( config );
-        var namedDatabaseIds = leadershipsResolver.get();
-        var prioritisedGroups = getPrioritisedGroups( config, namedDatabaseIds );
+        var prioritisedGroups = prioritisedGroups( config, myLeaderships );
+
         if ( prioritisedGroups.isEmpty() )
         {
             return Map.of();
@@ -131,32 +155,30 @@ class TransferLeader implements Runnable
         {
             return prioritisedGroups;
         }
-        var inPriorityLeadership = prioritisedGroups.entrySet()
-                .stream()
-                .filter( entry -> myGroups.contains( entry.getValue() ) )
-                .map( Map.Entry::getKey )
-                .collect( toList() );
-        prioritisedGroups.keySet().removeAll( inPriorityLeadership );
-        for ( NamedDatabaseId namedDatabaseId : prioritisedGroups.keySet() )
-        {
-            if ( myGroups.contains( prioritisedGroups.get( namedDatabaseId ) ) )
-            {
-                prioritisedGroups.remove( namedDatabaseId );
-            }
-        }
+
+        prioritisedGroups.entrySet().removeIf( entry -> myGroups.contains( entry.getValue() ) );
+
         return prioritisedGroups;
     }
 
-    private Set<String> getMyGroups( Config config )
+    private static List<NamedDatabaseId> unPrioritisedLeaderships( Config config, List<NamedDatabaseId> myLeaderships )
+    {
+        Set<NamedDatabaseId> leadershipsWithPriorityGroups = prioritisedGroups( config, myLeaderships ).keySet();
+        return myLeaderships.stream()
+                            .filter( db -> !leadershipsWithPriorityGroups.contains( db ) )
+                            .collect( Collectors.toList() );
+    }
+
+    private static Set<ServerGroupName> myGroups( Config config )
     {
         return new HashSet<>( config.get( CausalClusteringSettings.server_groups ) );
     }
 
-    private Map<NamedDatabaseId,String> getPrioritisedGroups( Config config, List<NamedDatabaseId> existingDatabases )
+    private static Map<NamedDatabaseId,ServerGroupName> prioritisedGroups( Config config, List<NamedDatabaseId> existingDatabases )
     {
         var prioritisedGroupsPerDatabase = READER.read( config );
         return existingDatabases.stream()
-                .filter( db -> prioritisedGroupsPerDatabase.containsKey( db.name() ) )
-                .collect( toMap( identity(), db -> prioritisedGroupsPerDatabase.get( db.name() ) ) );
+                                .filter( db -> prioritisedGroupsPerDatabase.containsKey( db.name() ) )
+                                .collect( toMap( identity(), db -> prioritisedGroupsPerDatabase.get( db.name() ) ) );
     }
 }

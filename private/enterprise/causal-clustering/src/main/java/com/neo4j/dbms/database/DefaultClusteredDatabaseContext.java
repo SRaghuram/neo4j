@@ -47,7 +47,7 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
     private final GraphDatabaseFacade facade;
     private volatile Throwable failureCause;
     private final CatchupComponents catchupComponents;
-    private LeaderLocator leaderLocator;
+    private final LeaderLocator leaderLocator;
     private final PageCacheTracer cacheTracer;
     private final ClusteredDatabase clusterDatabase;
     private final Monitors clusterDatabaseMonitors;

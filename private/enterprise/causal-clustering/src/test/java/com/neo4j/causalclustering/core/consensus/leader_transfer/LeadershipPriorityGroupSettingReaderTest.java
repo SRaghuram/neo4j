@@ -5,6 +5,8 @@
  */
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -12,7 +14,8 @@ import java.util.Map;
 import org.neo4j.configuration.Config;
 
 import static com.neo4j.causalclustering.core.consensus.leader_transfer.LeadershipPriorityGroupSetting.READER;
-import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class LeadershipPriorityGroupSettingReaderTest
 {
@@ -34,8 +37,8 @@ class LeadershipPriorityGroupSettingReaderTest
 
         var read = READER.read( config );
         assertThat( read ).hasSize( 3 );
-        assertThat( read.get( "one" ) ).isEqualTo( "1" );
-        assertThat( read.get( "two" ) ).isEqualTo( "2" );
-        assertThat( read.get( "three" ) ).isEqualTo( "3" );
+        assertEquals( read.get( "one" ), new ServerGroupName( "1" ) );
+        assertEquals( read.get( "two" ), new ServerGroupName( "2" ) );
+        assertEquals( read.get( "three" ), new ServerGroupName( "3" ) );
     }
 }

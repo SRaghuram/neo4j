@@ -14,7 +14,7 @@ import java.util.List;
 
 public class SupportedMessageHandler extends MessageToMessageEncoder<RaftMessages.OutboundRaftMessageContainer<?>>
 {
-    private RaftMessages.Handler<Boolean,?> isSupportedHandler;
+    private final RaftMessages.Handler<Boolean,?> isSupportedHandler;
 
     public SupportedMessageHandler( SupportedMessages isSupportedHandler )
     {

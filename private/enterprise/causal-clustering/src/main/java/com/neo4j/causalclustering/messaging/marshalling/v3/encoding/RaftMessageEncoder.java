@@ -168,7 +168,14 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
         @Override
         public Void handle( RaftMessages.LeadershipTransfer.Request leadershipTransferRequest ) throws Exception
         {
-            encodeLeadershipTransferMessage( leadershipTransferRequest.previousIndex(), leadershipTransferRequest.term(), leadershipTransferRequest.groups() );
+            channel.putLong( leadershipTransferRequest.previousIndex() );
+            channel.putLong( leadershipTransferRequest.term() );
+            var groups = leadershipTransferRequest.groups();
+            channel.putInt( groups.size() );
+            for ( var group : groups )
+            {
+                StringMarshal.marshal( channel, group.toString() );
+            }
             return null;
         }
 
@@ -181,20 +188,9 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
         @Override
         public Void handle( RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection ) throws Exception
         {
-            encodeLeadershipTransferMessage( leadershipTransferRejection.previousIndex(), leadershipTransferRejection.term(),
-                                             leadershipTransferRejection.groups() );
+            channel.putLong( leadershipTransferRejection.previousIndex() );
+            channel.putLong( leadershipTransferRejection.term() );
             return null;
-        }
-
-        private void encodeLeadershipTransferMessage( long previousIndex, long term, Set<String> groups ) throws IOException
-        {
-            channel.putLong( previousIndex );
-            channel.putLong( term );
-            channel.putInt( groups.size() );
-            for ( var group : groups )
-            {
-                StringMarshal.marshal( channel, group );
-            }
         }
     }
 }

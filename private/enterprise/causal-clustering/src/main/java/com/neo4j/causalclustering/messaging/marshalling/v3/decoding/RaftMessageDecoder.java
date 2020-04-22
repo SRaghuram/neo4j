@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.messaging.marshalling.v3.decoding;
 
 import com.neo4j.causalclustering.catchup.Protocol;
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
@@ -132,11 +133,12 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
             long previousIndex = channel.getLong();
             long term = channel.getLong();
             int groupSize = channel.getInt();
-            var groups = new HashSet<String>();
+            var groupStrings = new HashSet<String>();
             for ( var i = 0; i < groupSize; i++ )
             {
-                groups.add( StringMarshal.unmarshal( channel ) );
+                groupStrings.add( StringMarshal.unmarshal( channel ) );
             }
+            var groups = ServerGroupName.setOf( groupStrings );
 
             composer = new SimpleMessageComposer( new RaftMessages.LeadershipTransfer.Request( from, previousIndex, term, groups ) );
         }
@@ -144,14 +146,8 @@ public class RaftMessageDecoder extends ByteToMessageDecoder
         {
             long previousIndex = channel.getLong();
             long term = channel.getLong();
-            int groupSize = channel.getInt();
-            var groups = new HashSet<String>();
-            for ( var i = 0; i < groupSize; i++ )
-            {
-                groups.add( StringMarshal.unmarshal( channel ) );
-            }
 
-            composer = new SimpleMessageComposer( new RaftMessages.LeadershipTransfer.Rejection( from, previousIndex, term, groups ) );
+            composer = new SimpleMessageComposer( new RaftMessages.LeadershipTransfer.Rejection( from, previousIndex, term ) );
         }
         else
         {

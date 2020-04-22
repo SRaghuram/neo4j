@@ -13,8 +13,6 @@ import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
 import java.time.Clock;
 import java.time.Duration;
-import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
@@ -37,7 +35,7 @@ public class LeaderTransferService extends LifecycleAdapter implements RejectedL
             DatabaseManager<ClusteredDatabaseContext> databaseManager, Inbound.MessageHandler<RaftMessages.InboundRaftMessageContainer<?>> messageHandler,
             MemberId myself, Duration leaderMemberBackoff, Clock clock )
     {
-        this.databasePenalties = new DatabasePenalties( leaderMemberBackoff.toMillis(), TimeUnit.MILLISECONDS, clock );
+        this.databasePenalties = new DatabasePenalties( leaderMemberBackoff, clock );
         this.jobScheduler = jobScheduler;
         this.leaderTransferInterval = leaderTransferInterval;
 

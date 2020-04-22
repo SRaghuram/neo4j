@@ -312,7 +312,7 @@ public class Leader implements RaftMessageHandler
                 log.info( "Moving to FOLLOWER state after receiving leadership transfer request from %s at term %d (I am at %d)",
                           request.from(), request.term(), ctx.term() );
             }
-            var rejection = new RaftMessages.LeadershipTransfer.Rejection( request.from(), ctx.commitIndex(), ctx.term(), ctx.serverGroups() );
+            var rejection = new RaftMessages.LeadershipTransfer.Rejection( request.from(), ctx.commitIndex(), ctx.term() );
             outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( request.from(), rejection ) );
             return outcomeBuilder;
         }
@@ -329,7 +329,7 @@ public class Leader implements RaftMessageHandler
 
             if ( !proposedKnown )
             {
-                handle( new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), commitIndex, commitIndexTerm, ctx.serverGroups() ) );
+                return handle( new RaftMessages.LeadershipTransfer.Rejection( proposed, commitIndex, commitIndexTerm ) );
             }
 
             var request = new RaftMessages.LeadershipTransfer.Request( ctx.myself(), commitIndex, commitIndexTerm, proposal.priorityGroups() );

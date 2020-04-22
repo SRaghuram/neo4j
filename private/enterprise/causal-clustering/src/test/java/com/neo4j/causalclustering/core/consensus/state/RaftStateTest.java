@@ -62,7 +62,7 @@ class RaftStateTest
         RaftState raftState = new RaftState( member( 0 ),
                 new InMemoryStateStorage<>( new TermState() ), new FakeMembership(), new InMemoryRaftLog(),
                 new InMemoryStateStorage<>( new VoteState() ), cache, NullLogProvider.getInstance(), false, false,
-                Set::of, new ExpiringSet<>( 1000L, new FakeClock() ) );
+                Set::of, new ExpiringSet<>( Duration.ofSeconds( 1 ), new FakeClock() ) );
 
         List<RaftLogCommand> logCommands = new LinkedList<>()
         {{
@@ -102,7 +102,7 @@ class RaftStateTest
                 new InMemoryStateStorage<>( new VoteState() ),
                 new ConsecutiveInFlightCache(), NullLogProvider.getInstance(),
                 false, false, Set::of,
-                new ExpiringSet<>( 1000L, new FakeClock() ) );
+                new ExpiringSet<>( Duration.ofSeconds( 1 ), new FakeClock() ) );
 
         raftState.update( builder().setRole( CANDIDATE ).replaceFollowerStates( initialFollowerStates() ).renewElectionTimer( ACTIVE_ELECTION ).build() );
 
@@ -118,7 +118,7 @@ class RaftStateTest
     {
         // given
         var clock = new FakeClock();
-        var leadershipTransfers = new ExpiringSet<MemberId>( 2000L, clock );
+        var leadershipTransfers = new ExpiringSet<MemberId>( Duration.ofSeconds( 2 ), clock );
 
         var raftState = new RaftState( member( 0 ),
                 new InMemoryStateStorage<>( new TermState() ),
@@ -144,7 +144,7 @@ class RaftStateTest
     void shouldActivateDeactivateLeadershipTransferTimer() throws IOException
     {
         // given
-        var timer = new ExpiringSet<MemberId>( 2000L, new FakeClock() );
+        var timer = new ExpiringSet<MemberId>( Duration.ofSeconds( 2 ), new FakeClock() );
 
         var raftState = new RaftState( member( 0 ),
                 new InMemoryStateStorage<>( new TermState() ),
@@ -166,7 +166,7 @@ class RaftStateTest
 
         // when
         var outcomeB = OutcomeBuilder.builder( LEADER, raftState );
-        var rejection = new RaftMessages.LeadershipTransfer.Rejection( member( 1 ), 2, 1, Set.of( "EU" ) );
+        var rejection = new RaftMessages.LeadershipTransfer.Rejection( member( 1 ), 2, 1 );
         outcomeB.addLeaderTransferRejection( rejection );
         raftState.update( outcomeB.build() );
 
@@ -177,7 +177,7 @@ class RaftStateTest
     void shouldDeactivateLeadershipTransferTimerIfNoLongerLeader() throws IOException
     {
         // given
-        var timer = new ExpiringSet<MemberId>( 2000L, new FakeClock() );
+        var timer = new ExpiringSet<MemberId>( Duration.ofSeconds( 2 ), new FakeClock() );
 
         var raftState = new RaftState( member( 0 ),
                 new InMemoryStateStorage<>( new TermState() ),

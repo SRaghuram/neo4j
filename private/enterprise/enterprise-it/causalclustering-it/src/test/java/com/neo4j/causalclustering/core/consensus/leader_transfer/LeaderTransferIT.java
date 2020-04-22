@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.core.consensus.leader_transfer;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeAll;
@@ -75,7 +76,7 @@ class LeaderTransferIT
     {
         cluster.awaitLeader();
         var additionalCore = cluster.addCoreMemberWithId( 3 );
-        additionalCore.config().set( CausalClusteringSettings.server_groups, List.of( "prio" ) );
+        additionalCore.config().set( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "prio" ) );
 
         additionalCore.start();
 

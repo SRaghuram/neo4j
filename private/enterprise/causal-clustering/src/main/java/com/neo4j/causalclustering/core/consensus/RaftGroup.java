@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.core.consensus;
 import com.neo4j.causalclustering.common.RaftLogImplementation;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferService;
 import com.neo4j.causalclustering.core.consensus.leader_transfer.ExpiringSet;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
@@ -110,9 +111,9 @@ public class RaftGroup
 
         boolean supportsPreVoting = config.get( CausalClusteringSettings.enable_pre_voting );
 
-        Supplier<Set<String>> serverGroupsSupplier = () -> copyOf( config.get( CausalClusteringSettings.server_groups ) );
+        Supplier<Set<ServerGroupName>> serverGroupsSupplier = () -> copyOf( config.get( CausalClusteringSettings.server_groups ) );
 
-        var leaderTransfers = new ExpiringSet<MemberId>( config.get( CausalClusteringSettings.leader_transfer_timeout ).toMillis(), clock );
+        var leaderTransfers = new ExpiringSet<MemberId>( config.get( CausalClusteringSettings.leader_transfer_timeout ), clock );
 
         var state = new RaftState( myself, termState, raftMembershipManager, raftLog, voteState, inFlightCache,
                                    logProvider, supportsPreVoting, config.get( refuse_to_be_leader ), serverGroupsSupplier, leaderTransfers );

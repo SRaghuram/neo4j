@@ -98,7 +98,6 @@ class CandidateTest
                 .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( 1 ).build() )
                 .myself( myself )
                 .votingMembers( member1, member2 )
-                .replicationMembers( member1, member2 )
                 .build();
 
         // when

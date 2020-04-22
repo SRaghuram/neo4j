@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.roles;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.RaftMessageHandler;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
@@ -84,9 +85,8 @@ class Follower implements RaftMessageHandler
         }
         else
         {
-            outcomeBuilder.addOutgoingMessage(
-                    new RaftMessages.Directed( request.from(),
-                            new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), ctx.commitIndex(), ctx.term(), myGroups ) ) );
+            outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( request.from(),
+                            new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), ctx.commitIndex(), ctx.term() ) ) );
         }
     }
 
@@ -95,9 +95,9 @@ class Follower implements RaftMessageHandler
         return request.groups().isEmpty();
     }
 
-    private static boolean iAmInPriority( Set<String> myGroups, RaftMessages.LeadershipTransfer.Request request )
+    private static boolean iAmInPriority( Set<ServerGroupName> myGroups, RaftMessages.LeadershipTransfer.Request request )
     {
-        for ( String priorityGroup : request.groups() )
+        for ( var priorityGroup : request.groups() )
         {
             if ( myGroups.contains( priorityGroup ) )
             {
@@ -237,9 +237,7 @@ class Follower implements RaftMessageHandler
         @Override
         public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Proposal leadershipTransferProposal ) throws IOException
         {
-            // TODO: I don't think we need to add our own groups here, since this is a local response
-            Set<String> groups = Set.of();
-            return handle( new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), ctx.commitIndex(), ctx.term(), groups ) );
+            return handle( new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), ctx.commitIndex(), ctx.term() ) );
         }
 
         @Override

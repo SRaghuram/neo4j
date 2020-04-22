@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.state;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.leader_transfer.ExpiringSet;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
@@ -54,7 +55,7 @@ public class RaftState implements ReadableRaftState
     private long lastLogIndexBeforeWeBecameLeader = -1;
     private boolean isPreElection;
     private final boolean refuseToBeLeader;
-    private Supplier<Set<String>> serverGroupsSupplier;
+    private final Supplier<Set<ServerGroupName>> serverGroupsSupplier;
 
     public RaftState( MemberId myself,
                       StateStorage<TermState> termStorage,
@@ -63,7 +64,7 @@ public class RaftState implements ReadableRaftState
                       StateStorage<VoteState> voteStorage,
                       InFlightCache inFlightCache, LogProvider logProvider, boolean supportPreVoting,
                       boolean refuseToBeLeader,
-                      Supplier<Set<String>> serverGroupsSupplier,
+                      Supplier<Set<ServerGroupName>> serverGroupsSupplier,
                       ExpiringSet<MemberId> leadershipTransfers )
     {
         this.myself = myself;
@@ -209,7 +210,7 @@ public class RaftState implements ReadableRaftState
     }
 
     @Override
-    public Set<String> serverGroups()
+    public Set<ServerGroupName> serverGroups()
     {
         return serverGroupsSupplier.get();
     }
@@ -243,20 +244,14 @@ public class RaftState implements ReadableRaftState
         followerStates = outcome.getFollowerStates();
         isPreElection = outcome.isPreElection();
 
-        var transfer = outcome.transferringLeadershipTo();
-        var transferRejection = outcome.getLeaderTransferRejection();
-
-        if ( transfer.isPresent() )
-        {
-            leadershipTransfers.add( transfer.get() );
-        }
-        else if ( transferRejection.isPresent() )
-        {
-            leadershipTransfers.remove( transferRejection.get().from() );
-        }
-        else if ( outcome.getRole() != Role.LEADER )
+        if ( outcome.getRole() != Role.LEADER )
         {
             leadershipTransfers.clear();
+        }
+        else
+        {
+            outcome.transferringLeadershipTo().ifPresent( leadershipTransfers::add );
+            outcome.getLeaderTransferRejection().ifPresent( rejection -> leadershipTransfers.remove( rejection.from() ) );
         }
 
         for ( RaftLogCommand logCommand : outcome.getLogCommands() )

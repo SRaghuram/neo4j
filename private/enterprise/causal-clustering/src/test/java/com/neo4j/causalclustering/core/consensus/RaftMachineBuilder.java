@@ -29,6 +29,7 @@ import com.neo4j.causalclustering.messaging.Outbound;
 
 import java.io.IOException;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
@@ -102,7 +103,7 @@ public class RaftMachineBuilder
                         retryTimeMillis, catchupBatchSize, maxAllowedShippingLag, inFlightCache );
 
         var raftState = new RaftState( member, termStateStorage, membershipManager, raftLog, voteStateStorage, inFlightCache, logProvider, false, false,
-                Set::of, new ExpiringSet<>( 100L, clock ) );
+                Set::of, new ExpiringSet<>( Duration.ofMillis( 100 ), clock ) );
         var raftMessageTimerResetMonitor = monitors.newMonitor( RaftMessageTimerResetMonitor.class );
         var outcomeApplier = new RaftOutcomeApplier( raftState, outbound, leaderAvailabilityTimers, raftMessageTimerResetMonitor, logShipping,
                 membershipManager, logProvider, rejection -> {} );

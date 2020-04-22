@@ -201,6 +201,8 @@ public class OutcomeBuilder
                ", shipCommands=" + shipCommands +
                ", electedLeader=" + electedLeader +
                ", steppingDownInTerm=" + steppingDownInTerm +
+               ", leadershipTransferRejection=" + leadershipTransferRejection +
+               ", transferringTo=" + transferringTo +
                '}';
     }
 

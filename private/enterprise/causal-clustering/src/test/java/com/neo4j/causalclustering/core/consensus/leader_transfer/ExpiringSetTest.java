@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.time.Clocks;
@@ -17,9 +18,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ExpiringSetTest
 {
-    private static final long TIMEOUT_MS = 1_000;
     private final FakeClock fakeClock = Clocks.fakeClock();
-    private final ExpiringSet<Object> expiringSet = new ExpiringSet<>( TIMEOUT_MS, fakeClock );
+    private final Duration expiryPeriod = Duration.ofSeconds( 1 );
+    private final ExpiringSet<Object> expiringSet = new ExpiringSet<>( expiryPeriod, fakeClock );
     private Object ob1 = new Object();
     private Object ob2 = new Object();
 
@@ -42,7 +43,7 @@ class ExpiringSetTest
         expiringSet.add( ob1 );
 
         // when
-        fakeClock.forward( TIMEOUT_MS + 1, TimeUnit.MILLISECONDS );
+        fakeClock.forward( expiryPeriod.plusMillis( 1 ) );
 
         // then
         doesNotHaveObject( expiringSet, ob1 );
@@ -51,7 +52,7 @@ class ExpiringSetTest
     }
 
     @Test
-    void shouldRemoveMember()
+    void shouldRemoveObject()
     {
         // given
         expiringSet.add( ob1 );
@@ -66,11 +67,11 @@ class ExpiringSetTest
     }
 
     @Test
-    void shouldExpireCorrectMember()
+    void shouldExpireCorrectObject()
     {
         // given
         expiringSet.add( ob1 );
-        fakeClock.forward( TIMEOUT_MS, TimeUnit.MILLISECONDS );
+        fakeClock.forward( expiryPeriod.minusMillis( 1 ) );
         expiringSet.add( ob2 );
 
         // then
@@ -78,14 +79,14 @@ class ExpiringSetTest
         hasObject( expiringSet, ob2 );
 
         // when
-        fakeClock.forward( 1, TimeUnit.MILLISECONDS );
+        fakeClock.forward( Duration.ofMillis( 1 ) );
 
         // then
         doesNotHaveObject( expiringSet, ob1 );
         hasObject( expiringSet, ob2 );
 
         // when
-        fakeClock.forward( TIMEOUT_MS, TimeUnit.MILLISECONDS );
+        fakeClock.forward( expiryPeriod );
 
         // then
         doesNotHaveObject( expiringSet, ob1 );

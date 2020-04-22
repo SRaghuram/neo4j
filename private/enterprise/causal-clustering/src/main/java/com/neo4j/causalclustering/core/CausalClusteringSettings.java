@@ -87,8 +87,8 @@ public class CausalClusteringSettings implements SettingsDeclaration
             newBuilder( "causal_clustering.leader_transfer_interval", DURATION, ofSeconds( 15 ) ).build();
 
     @Internal
-    @Description( "The amount of time we should wait before transferring the leadership of a given database to a member after that member rejects a " +
-                  "previous transfer." )
+    @Description( "The amount of time we should wait before repeating an attempt to transfer the leadership of a given database to a member after" +
+            " that member rejects a previous transfer." )
     public static final Setting<Duration> leader_transfer_member_backoff =
             newBuilder( "causal_clustering.leader_transfer_member_backoff", DURATION, ofSeconds( 30 ) ).build();
 

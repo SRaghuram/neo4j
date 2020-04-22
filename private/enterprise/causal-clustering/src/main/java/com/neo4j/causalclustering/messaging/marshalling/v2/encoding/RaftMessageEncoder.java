@@ -168,7 +168,7 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
         @Override
         public Void handle( RaftMessages.LeadershipTransfer.Request leadershipTransferRequest ) throws Exception
         {
-            return null;
+            throw new UnsupportedOperationException( "Leadership Transfer extension is not supported with Raft protocol v2!" );
         }
 
         @Override
@@ -180,7 +180,7 @@ public class RaftMessageEncoder extends MessageToByteEncoder<RaftMessages.Outbou
         @Override
         public Void handle( RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection ) throws Exception
         {
-            return null;
+            throw new UnsupportedOperationException( "Leadership Transfer extension is not supported with Raft protocol v2!" );
         }
     }
 }

@@ -491,7 +491,7 @@ class LeaderTest
         // given
         RaftState state = builder()
                 .votingMembers( myself, member1, member2 )
-                .replicationMembers( myself, member1, member2 )
+                .additionalReplicationMembers( myself, member1, member2 )
                 .build();
 
         Leader leader = new Leader();

@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.messaging.marshalling;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
@@ -106,9 +107,9 @@ class RaftMessageEncoderDecoderTest
                 new RaftMessages.PreVote.Response( MEMBER_ID, 1, true ),
                 new RaftMessages.LogCompactionInfo( MEMBER_ID, Long.MAX_VALUE, Long.MIN_VALUE ),
                 new RaftMessages.LeadershipTransfer.Request( MEMBER_ID, 2, 1, Set.of() ),
-                new RaftMessages.LeadershipTransfer.Request( MEMBER_ID, 2, 1, Set.of( "EU", "US" ) ),
-                new RaftMessages.LeadershipTransfer.Rejection( MEMBER_ID, 2, 1, Set.of( "EU" ) ),
-                new RaftMessages.LeadershipTransfer.Rejection( MEMBER_ID, 2, 1, Set.of() )} );
+                new RaftMessages.LeadershipTransfer.Request( MEMBER_ID, 2, 1, ServerGroupName.setOf( "EU", "US" ) ),
+                new RaftMessages.LeadershipTransfer.Rejection( MEMBER_ID, 2, 1 ),
+                new RaftMessages.LeadershipTransfer.Rejection( MEMBER_ID, 2, 1 )} );
     }
 
     private static Stream<Arguments> setUpParams( RaftMessage[] messages )

@@ -226,7 +226,7 @@ class Candidate implements RaftMessageHandler
         @Override
         public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Request leadershipTransferRequest )
         {
-            var rejection = new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), ctx.commitIndex(), ctx.term(), Set.of() );
+            var rejection = new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), ctx.commitIndex(), ctx.term() );
             outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( leadershipTransferRequest.from(), rejection ) );
             return outcomeBuilder;
         }
@@ -234,9 +234,7 @@ class Candidate implements RaftMessageHandler
         @Override
         public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Proposal leadershipTransferProposal )
         {
-            // TODO: I don't think we need to add groups here because this is a local response
-            Set<String> groups = Set.of();
-            return handle( new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), ctx.commitIndex(), ctx.term(), groups ) );
+            return handle( new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), ctx.commitIndex(), ctx.term() ) );
         }
 
         @Override

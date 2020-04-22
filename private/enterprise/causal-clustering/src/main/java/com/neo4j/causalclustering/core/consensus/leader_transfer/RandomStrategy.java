@@ -5,27 +5,41 @@
  */
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
+import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static java.util.Collections.shuffle;
 
 class RandomStrategy implements SelectionStrategy
 {
     @Override
-    public LeaderTransferContext select( List<TransferCandidates> validTopologies )
+    public LeaderTransferTarget select( List<TransferCandidates> validTopologies )
     {
-        var databaseCoreTopologies = new ArrayList<>( validTopologies );
-        shuffle( databaseCoreTopologies );
-        for ( TransferCandidates validTopology : databaseCoreTopologies )
+        if ( validTopologies.isEmpty() )
         {
-            var members = new ArrayList<>( validTopology.members() );
-            shuffle( members );
-            if ( !members.isEmpty() )
-            {
-                return new LeaderTransferContext( validTopology.databaseId(), validTopology.raftId(), members.get( 0 ) );
-            }
+            return LeaderTransferTarget.NO_TARGET;
         }
-        return LeaderTransferContext.NO_TARGET;
+
+        var transferCandidates = randomTransferCandidates( validTopologies );
+        var member = randomMember( transferCandidates.members() );
+        return new LeaderTransferTarget( transferCandidates.databaseId(), member );
+    }
+
+    private TransferCandidates randomTransferCandidates( List<TransferCandidates> validTopologies )
+    {
+        var randomTopologyIdx = ThreadLocalRandom.current().nextInt( validTopologies.size() );
+        return validTopologies.get( randomTopologyIdx );
+    }
+
+    private MemberId randomMember( Set<MemberId> members )
+    {
+        var membersList = new ArrayList<>( members );
+        var randomMemberIdx = ThreadLocalRandom.current().nextInt( membersList.size() );
+        return membersList.get( randomMemberIdx );
     }
 }

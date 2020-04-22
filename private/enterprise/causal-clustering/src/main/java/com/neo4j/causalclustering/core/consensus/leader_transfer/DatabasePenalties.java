@@ -8,9 +8,9 @@ package com.neo4j.causalclustering.core.consensus.leader_transfer;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -18,45 +18,37 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 class DatabasePenalties
 {
     private final Map<MemberId,ExpiringSet<DatabaseId>> memberSuspensions = new ConcurrentHashMap<>();
-    private final long suspensionTime;
-    private Clock clock;
+    private final Duration suspensionTime;
+    private final Clock clock;
 
-    DatabasePenalties( long suspensionTime, TimeUnit timeUnit, Clock clock )
+    DatabasePenalties( Duration suspensionTime, Clock clock )
     {
         this.clock = clock;
-        this.suspensionTime = timeUnit.toMillis( suspensionTime );
+        this.suspensionTime = suspensionTime;
     }
 
     void issuePenalty( MemberId member, NamedDatabaseId namedDatabaseId )
     {
         memberSuspensions.compute( member, ( memberId, suspendedDatabases ) ->
         {
-            if ( suspendedDatabases == null )
-            {
-                suspendedDatabases = new ExpiringSet<>( suspensionTime, clock );
-            }
+            suspendedDatabases = suspendedDatabases == null ? new ExpiringSet<>( suspensionTime, clock ) : suspendedDatabases;
             suspendedDatabases.add( namedDatabaseId.databaseId() );
             return suspendedDatabases;
         } );
+        dropEmptyMembers();
     }
 
-    void clean()
+    private void dropEmptyMembers()
     {
         for ( MemberId member : memberSuspensions.keySet() )
         {
-            memberSuspensions.computeIfPresent( member, ( memberId, suspendedDatabases ) ->
-            {
-                if ( !suspendedDatabases.nonEmpty() )
-                {
-                    return null;
-                }
-                return suspendedDatabases;
-            } );
+            memberSuspensions.computeIfPresent( member, ( memberId, suspendedDatabases ) -> suspendedDatabases.isEmpty() ? null : suspendedDatabases );
         }
     }
 
     public boolean notSuspended( DatabaseId databaseId, MemberId member )
     {
-        return !( memberSuspensions.containsKey( member ) && memberSuspensions.get( member ).contains( databaseId ) );
+        var suspendedDatabases = memberSuspensions.get( member );
+        return !(suspendedDatabases != null && suspendedDatabases.contains( databaseId ));
     }
 }

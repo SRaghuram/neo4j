@@ -40,7 +40,7 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
     private final Monitors monitors;
     private final StoreFiles storeFiles;
     private final LogFiles logFiles;
-    private LeaderLocator leaderLocator;
+    private final LeaderLocator leaderLocator;
 
     StubClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles logFiles,
             StoreFiles storeFiles, LogProvider logProvider, CatchupComponentsFactory catchupComponentsFactory,

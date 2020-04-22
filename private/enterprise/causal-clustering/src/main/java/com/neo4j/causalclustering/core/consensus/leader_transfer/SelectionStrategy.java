@@ -9,7 +9,7 @@ import java.util.List;
 
 public interface SelectionStrategy
 {
-    SelectionStrategy NO_OP = validTopologies -> LeaderTransferContext.NO_TARGET;
+    SelectionStrategy NO_OP = validTopologies -> LeaderTransferTarget.NO_TARGET;
 
-    LeaderTransferContext select( List<TransferCandidates> validTopologies );
+    LeaderTransferTarget select( List<TransferCandidates> transferCandidates );
 }

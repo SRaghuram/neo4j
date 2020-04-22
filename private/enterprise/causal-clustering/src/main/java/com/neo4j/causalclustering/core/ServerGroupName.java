@@ -20,6 +20,7 @@ import static org.neo4j.configuration.SettingValueParsers.STRING;
 
 public class ServerGroupName implements CharSequence, Comparable<ServerGroupName>
 {
+    public static final ServerGroupName EMPTY = new ServerGroupName( "" );
     private final String value;
 
     public ServerGroupName( @Nonnull String name )
@@ -111,7 +112,7 @@ public class ServerGroupName implements CharSequence, Comparable<ServerGroupName
     @Override
     public String toString()
     {
-        return value.toString();
+        return value;
     }
 
     @Override

@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -26,21 +27,37 @@ public interface RaftMessages
     interface Handler<T, E extends Exception>
     {
         T handle( Vote.Request request ) throws E;
+
         T handle( Vote.Response response ) throws E;
+
         T handle( PreVote.Request request ) throws E;
+
         T handle( PreVote.Response response ) throws E;
+
         T handle( AppendEntries.Request request ) throws E;
+
         T handle( AppendEntries.Response response ) throws E;
+
         T handle( Heartbeat heartbeat ) throws E;
+
         T handle( HeartbeatResponse heartbeatResponse ) throws E;
+
         T handle( LogCompactionInfo logCompactionInfo ) throws E;
+
         T handle( Timeout.Election election ) throws E;
+
         T handle( Timeout.Heartbeat heartbeat ) throws E;
+
         T handle( NewEntry.Request request ) throws E;
+
         T handle( NewEntry.BatchRequest batchRequest ) throws E;
+
         T handle( PruneRequest pruneRequest ) throws E;
+
         T handle( LeadershipTransfer.Proposal leadershipTransferProposal ) throws E;
+
         T handle( LeadershipTransfer.Request leadershipTransferRequest ) throws E;
+
         T handle( LeadershipTransfer.Rejection leadershipTransferRejection ) throws E;
     }
 
@@ -254,7 +271,7 @@ public interface RaftMessages
             }
 
             @Override
-            public <T,E extends Exception> T dispatch( Handler<T,E> handler ) throws E
+            public <T, E extends Exception> T dispatch( Handler<T,E> handler ) throws E
             {
                 return handler.handle( this );
             }
@@ -272,9 +289,9 @@ public interface RaftMessages
                 }
                 Request request = (Request) o;
                 return lastLogIndex == request.lastLogIndex &&
-                        lastLogTerm == request.lastLogTerm &&
-                        term == request.term &&
-                        candidate.equals( request.candidate );
+                       lastLogTerm == request.lastLogTerm &&
+                       term == request.term &&
+                       candidate.equals( request.candidate );
             }
 
             @Override
@@ -291,7 +308,7 @@ public interface RaftMessages
             public String toString()
             {
                 return format( "Vote.Request from %s {term=%d, candidate=%s, lastAppended=%d, lastLogTerm=%d}",
-                        from, term, candidate, lastLogIndex, lastLogTerm );
+                               from, term, candidate, lastLogIndex, lastLogTerm );
             }
 
             public long lastLogTerm()
@@ -323,7 +340,7 @@ public interface RaftMessages
             }
 
             @Override
-            public <T,E extends Exception> T dispatch( Handler<T,E> handler ) throws E
+            public <T, E extends Exception> T dispatch( Handler<T,E> handler ) throws E
             {
                 return handler.handle( this );
             }
@@ -343,7 +360,6 @@ public interface RaftMessages
                 Response response = (Response) o;
 
                 return term == response.term && voteGranted == response.voteGranted;
-
             }
 
             @Override
@@ -396,7 +412,7 @@ public interface RaftMessages
             }
 
             @Override
-            public <T,E extends Exception> T dispatch( Handler<T,E> handler ) throws E
+            public <T, E extends Exception> T dispatch( Handler<T,E> handler ) throws E
             {
                 return handler.handle( this );
             }
@@ -414,9 +430,9 @@ public interface RaftMessages
                 }
                 Request request = (Request) o;
                 return lastLogIndex == request.lastLogIndex &&
-                        lastLogTerm == request.lastLogTerm &&
-                        term == request.term &&
-                        candidate.equals( request.candidate );
+                       lastLogTerm == request.lastLogTerm &&
+                       term == request.term &&
+                       candidate.equals( request.candidate );
             }
 
             @Override
@@ -433,7 +449,7 @@ public interface RaftMessages
             public String toString()
             {
                 return format( "PreVote.Request from %s {term=%d, candidate=%s, lastAppended=%d, lastLogTerm=%d}",
-                        from, term, candidate, lastLogIndex, lastLogTerm );
+                               from, term, candidate, lastLogIndex, lastLogTerm );
             }
 
             public long lastLogTerm()
@@ -465,7 +481,7 @@ public interface RaftMessages
             }
 
             @Override
-            public <T,E extends Exception> T dispatch( Handler<T,E> handler ) throws E
+            public <T, E extends Exception> T dispatch( Handler<T,E> handler ) throws E
             {
                 return handler.handle( this );
             }
@@ -485,7 +501,6 @@ public interface RaftMessages
                 Response response = (Response) o;
 
                 return term == response.term && voteGranted == response.voteGranted;
-
             }
 
             @Override
@@ -563,7 +578,7 @@ public interface RaftMessages
             }
 
             @Override
-            public <T,E extends Exception> T dispatch( Handler<T,E> handler ) throws E
+            public <T, E extends Exception> T dispatch( Handler<T,E> handler ) throws E
             {
                 return handler.handle( this );
             }
@@ -581,10 +596,10 @@ public interface RaftMessages
                 }
                 Request request = (Request) o;
                 return Objects.equals( leaderTerm, request.leaderTerm ) &&
-                        Objects.equals( prevLogIndex, request.prevLogIndex ) &&
-                        Objects.equals( prevLogTerm, request.prevLogTerm ) &&
-                        Objects.equals( leaderCommit, request.leaderCommit ) &&
-                        Arrays.equals( entries, request.entries );
+                       Objects.equals( prevLogIndex, request.prevLogIndex ) &&
+                       Objects.equals( prevLogTerm, request.prevLogTerm ) &&
+                       Objects.equals( leaderCommit, request.leaderCommit ) &&
+                       Arrays.equals( entries, request.entries );
             }
 
             @Override
@@ -597,8 +612,8 @@ public interface RaftMessages
             public String toString()
             {
                 return format( "AppendEntries.Request from %s {leaderTerm=%d, prevLogIndex=%d, " +
-                                "prevLogTerm=%d, entry=%s, leaderCommit=%d}",
-                        from, leaderTerm, prevLogIndex, prevLogTerm, Arrays.toString( entries ), leaderCommit );
+                               "prevLogTerm=%d, entry=%s, leaderCommit=%d}",
+                               from, leaderTerm, prevLogIndex, prevLogTerm, Arrays.toString( entries ), leaderCommit );
             }
         }
 
@@ -639,7 +654,7 @@ public interface RaftMessages
             }
 
             @Override
-            public <T,E extends Exception> T dispatch( Handler<T,E> handler ) throws E
+            public <T, E extends Exception> T dispatch( Handler<T,E> handler ) throws E
             {
                 return handler.handle( this );
             }
@@ -661,9 +676,9 @@ public interface RaftMessages
                 }
                 Response response = (Response) o;
                 return term == response.term &&
-                        success == response.success &&
-                        matchIndex == response.matchIndex &&
-                        appendIndex == response.appendIndex;
+                       success == response.success &&
+                       matchIndex == response.matchIndex &&
+                       appendIndex == response.appendIndex;
             }
 
             @Override
@@ -676,7 +691,7 @@ public interface RaftMessages
             public String toString()
             {
                 return format( "AppendEntries.Response from %s {term=%d, success=%s, matchIndex=%d, appendIndex=%d}",
-                        from, term, success, matchIndex, appendIndex );
+                               from, term, success, matchIndex, appendIndex );
             }
         }
     }
@@ -711,7 +726,7 @@ public interface RaftMessages
         }
 
         @Override
-        public <T,E extends Exception> T dispatch( Handler<T,E> handler ) throws E
+        public <T, E extends Exception> T dispatch( Handler<T,E> handler ) throws E
         {
             return handler.handle( this );
         }
@@ -753,7 +768,7 @@ public interface RaftMessages
         public String toString()
         {
             return format( "Heartbeat from %s {leaderTerm=%d, commitIndex=%d, commitIndexTerm=%d}", from, leaderTerm,
-                    commitIndex, commitIndexTerm );
+                           commitIndex, commitIndexTerm );
         }
     }
 
@@ -766,7 +781,7 @@ public interface RaftMessages
         }
 
         @Override
-        public <T,E extends Exception> T dispatch( Handler<T,E> handler ) throws E
+        public <T, E extends Exception> T dispatch( Handler<T,E> handler ) throws E
         {
             return handler.handle( this );
         }
@@ -801,7 +816,7 @@ public interface RaftMessages
         }
 
         @Override
-        public <T,E extends Exception> T dispatch( Handler<T,E> handler ) throws E
+        public <T, E extends Exception> T dispatch( Handler<T,E> handler ) throws E
         {
             return handler.handle( this );
         }
@@ -854,7 +869,7 @@ public interface RaftMessages
             }
 
             @Override
-            public <T,E extends Exception> T dispatch( Handler<T,E> handler ) throws E
+            public <T, E extends Exception> T dispatch( Handler<T,E> handler ) throws E
             {
                 return handler.handle( this );
             }
@@ -874,7 +889,7 @@ public interface RaftMessages
             }
 
             @Override
-            public <T,E extends Exception> T dispatch( Handler<T,E> handler ) throws E
+            public <T, E extends Exception> T dispatch( Handler<T,E> handler ) throws E
             {
                 return handler.handle( this );
             }
@@ -900,7 +915,7 @@ public interface RaftMessages
             }
 
             @Override
-            public <T,E extends Exception> T dispatch( Handler<T,E> handler ) throws E
+            public <T, E extends Exception> T dispatch( Handler<T,E> handler ) throws E
             {
                 return handler.handle( this );
             }
@@ -951,7 +966,7 @@ public interface RaftMessages
             }
 
             @Override
-            public <T,E extends Exception> T dispatch( Handler<T,E> handler ) throws E
+            public <T, E extends Exception> T dispatch( Handler<T,E> handler ) throws E
             {
                 return handler.handle( this );
             }
@@ -1141,14 +1156,14 @@ public interface RaftMessages
         {
             private final long previousIndex;
             private final long term;
-            private final Set<String> groups;
+            private final Set<ServerGroupName> groups;
 
-            public Request( MemberId from, long previousIndex, long term, Set<String> groups )
+            public Request( MemberId from, long previousIndex, long term, Set<ServerGroupName> groups )
             {
                 super( from, Type.LEADERSHIP_TRANSFER_REQUEST );
                 this.previousIndex = previousIndex;
                 this.term = term;
-                this.groups = groups;
+                this.groups = Set.copyOf( groups );
             }
 
             @Override
@@ -1194,7 +1209,7 @@ public interface RaftMessages
                 return previousIndex;
             }
 
-            public Set<String> groups()
+            public Set<ServerGroupName> groups()
             {
                 return groups;
             }
@@ -1214,14 +1229,12 @@ public interface RaftMessages
         {
             private final long previousIndex;
             private final long term;
-            private final Set<String> groups;
 
-            public Rejection( MemberId from, long previousIndex, long term, Set<String> groups )
+            public Rejection( MemberId from, long previousIndex, long term )
             {
                 super( from, Type.LEADERSHIP_TRANSFER_REJECTION );
                 this.previousIndex = previousIndex;
                 this.term = term;
-                this.groups = groups;
             }
 
             @Override
@@ -1247,14 +1260,13 @@ public interface RaftMessages
                 }
                 Rejection rejection = (Rejection) object;
                 return previousIndex == rejection.previousIndex &&
-                       term == rejection.term &&
-                       Objects.equals( groups, rejection.groups );
+                       term == rejection.term;
             }
 
             @Override
             public int hashCode()
             {
-                return Objects.hash( super.hashCode(), previousIndex, term, groups );
+                return Objects.hash( super.hashCode(), previousIndex, term );
             }
 
             @Override
@@ -1263,13 +1275,7 @@ public interface RaftMessages
                 return "LeadershipTransferRejection{" +
                        "previousIndex=" + previousIndex +
                        ", term=" + term +
-                       ", groups=" + groups +
                        '}';
-            }
-
-            public Set<String> groups()
-            {
-                return groups;
             }
 
             public long term()
@@ -1286,13 +1292,13 @@ public interface RaftMessages
         class Proposal extends RaftMessage
         {
             private final MemberId proposed;
-            private final Set<String> priorityGroups;
+            private final Set<ServerGroupName> priorityGroups;
 
-            public Proposal( MemberId from, MemberId proposed, Set<String> priorityGroups )
+            public Proposal( MemberId from, MemberId proposed, Set<ServerGroupName> priorityGroups )
             {
                 super( from, Type.LEADERSHIP_TRANSFER_PROPOSAL );
                 this.proposed = proposed;
-                this.priorityGroups = priorityGroups;
+                this.priorityGroups = Set.copyOf( priorityGroups );
             }
 
             public MemberId proposed()
@@ -1300,7 +1306,7 @@ public interface RaftMessages
                 return proposed;
             }
 
-            public Set<String> priorityGroups()
+            public Set<ServerGroupName> priorityGroups()
             {
                 return priorityGroups;
             }
@@ -1346,7 +1352,6 @@ public interface RaftMessages
                 return Objects.hash( super.hashCode(), proposed, priorityGroups );
             }
         }
-
     }
 
     abstract class RaftMessage
@@ -1370,7 +1375,7 @@ public interface RaftMessages
             return type;
         }
 
-        public abstract <T, E extends Exception> T dispatch( Handler<T, E> handler ) throws E;
+        public abstract <T, E extends Exception> T dispatch( Handler<T,E> handler ) throws E;
 
         @Override
         public boolean equals( Object o )

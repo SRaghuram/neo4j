@@ -6,8 +6,8 @@
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.identity.RaftId;
 
+import java.util.Objects;
 import java.util.Set;
 
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -15,13 +15,11 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 class TransferCandidates
 {
     private final NamedDatabaseId namedDatabaseId;
-    private RaftId raftId;
     private final Set<MemberId> members;
 
-    TransferCandidates( NamedDatabaseId namedDatabaseId, RaftId raftId, Set<MemberId> members )
+    TransferCandidates( NamedDatabaseId namedDatabaseId, Set<MemberId> members )
     {
         this.namedDatabaseId = namedDatabaseId;
-        this.raftId = raftId;
         this.members = members;
     }
 
@@ -35,8 +33,34 @@ class TransferCandidates
         return namedDatabaseId;
     }
 
-    public RaftId raftId()
+    @Override
+    public boolean equals( Object o )
     {
-        return raftId;
+        if ( this == o )
+        {
+            return true;
+        }
+        if ( o == null || getClass() != o.getClass() )
+        {
+            return false;
+        }
+        TransferCandidates that = (TransferCandidates) o;
+        return Objects.equals( namedDatabaseId, that.namedDatabaseId ) &&
+               Objects.equals( members, that.members );
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash( namedDatabaseId, members );
+    }
+
+    @Override
+    public String toString()
+    {
+        return "TransferCandidates{" +
+               "namedDatabaseId=" + namedDatabaseId +
+               ", members=" + members +
+               '}';
     }
 }

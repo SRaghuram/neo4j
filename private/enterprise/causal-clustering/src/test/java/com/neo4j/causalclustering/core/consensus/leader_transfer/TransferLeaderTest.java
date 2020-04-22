@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembership;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -13,12 +14,12 @@ import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.Inbound;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.database.DatabaseIdFactory;
@@ -35,22 +36,22 @@ class TransferLeaderTest
 {
     private final MemberId myself = new MemberId( randomUUID() );
     private final MemberId core1 = new MemberId( randomUUID() );
-    private final Set<NamedDatabaseId> databaseIds = Set.of( randomNamedDatabaseId() );
+    private final NamedDatabaseId databaseId1 = randomNamedDatabaseId();
+    private final NamedDatabaseId databaseId2 = randomNamedDatabaseId();
     private final RaftMembershipResolver raftMembershipResolver = new StubRaftMembershipResolver( myself, core1 );
     private final TrackingMessageHandler messageHandler = new TrackingMessageHandler();
-    private final DatabasePenalties databasePenalties = new DatabasePenalties( 1, TimeUnit.MILLISECONDS, Clocks.fakeClock() );
+    private final DatabasePenalties databasePenalties = new DatabasePenalties( Duration.ofMillis( 1 ), Clocks.fakeClock() );
 
     @Test
     void shouldChooseToTransferIfIAmNotInPriority()
     {
-        var databaseId = databaseIds.iterator().next();
         // Priority group exist and I am not in it
-        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId.name() ).setting().name(), "prio" ) ).build();
+        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).setting().name(), "prio" ) ).build();
         var myLeaderships = new ArrayList<NamedDatabaseId>();
         TransferLeader transferLeader = new TransferLeader( config, messageHandler, myself, databasePenalties, new RandomStrategy(),
                 raftMembershipResolver, () -> myLeaderships );
         // I am leader
-        myLeaderships.add( databaseId );
+        myLeaderships.add( databaseId1 );
 
         // when
         transferLeader.run();
@@ -58,24 +59,22 @@ class TransferLeaderTest
         // then
         assertEquals( messageHandler.proposals.size(), 1 );
         var propose = messageHandler.proposals.get( 0 );
-        assertEquals( propose.raftId().uuid(), databaseId.databaseId().uuid() );
+        assertEquals( propose.raftId().uuid(), databaseId1.databaseId().uuid() );
         assertEquals( propose.message().proposed(), core1 );
-        assertEquals( propose.message().priorityGroups(), Set.of( "prio" ) );
+        assertEquals( propose.message().priorityGroups(), Set.of( new ServerGroupName( "prio" ) ) );
     }
 
     @Test
     void shouldChooseToNotTransferLeaderIfIamNotLeader()
     {
-        var databaseId = databaseIds.iterator().next();
         // Priority group exist and I am not in it
-        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId.name() ).setting().name(), "prio" ) ).build();
+        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).setting().name(), "prio" ) ).build();
 
-        var myLeaderships = new ArrayList<>( databaseIds );
+        // I am not leader for any database
+        List<NamedDatabaseId> myLeaderships = List.of();
         TransferLeader transferLeader =
                 new TransferLeader( config, messageHandler, myself, databasePenalties,
                         SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships );
-        // I am not leader
-        myLeaderships.remove( databaseId );
 
         // when
         transferLeader.run();
@@ -87,17 +86,16 @@ class TransferLeaderTest
     @Test
     void shouldChooseToNotTransferLeaderIfIamLeaderAndInPrioritisedGroup()
     {
-        var databaseId = databaseIds.iterator().next();
         // Priority group exist and I am in it
-        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId.name() ).setting().name(), "prio" ) )
-                .set( CausalClusteringSettings.server_groups, List.of( "prio" ) ).build();
+        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).setting().name(), "prio" ) )
+                .set( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "prio" ) ).build();
 
         var myLeaderships = new ArrayList<NamedDatabaseId>();
         TransferLeader transferLeader =
                 new TransferLeader( config, messageHandler, myself, databasePenalties,
                         SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships );
         // I am leader
-        myLeaderships.add( databaseId );
+        myLeaderships.add( databaseId1 );
 
         // when
         transferLeader.run();
@@ -109,16 +107,15 @@ class TransferLeaderTest
     @Test
     void shouldNotTransferIfPriorityGroupsIsEmpty()
     {
-        var databaseId = databaseIds.iterator().next();
         // Priority group does not exist
-        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId.name() ).setting().name(), "" ) ).build();
+        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).setting().name(), "" ) ).build();
 
         var myLeaderships = new ArrayList<NamedDatabaseId>();
         TransferLeader transferLeader =
                 new TransferLeader( config, messageHandler, myself, databasePenalties,
                         SelectionStrategy.NO_OP, raftMembershipResolver, () -> myLeaderships );
         // I am leader
-        myLeaderships.add( databaseId );
+        myLeaderships.add( databaseId1 );
 
         // when
         transferLeader.run();
@@ -130,24 +127,28 @@ class TransferLeaderTest
     @Test
     void shouldFallBackToNormalLoadBalancingWithNoGroupsIfNoTarget()
     {
-        var databaseId = databaseIds.iterator().next();
-        // Priority group exist and I am in it
-        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId.name() ).setting().name(), "prio" ) )
-                .set( CausalClusteringSettings.server_groups, List.of( "prio" ) ).build();
+        // Priority group exist for one db and I am in it
+        var config = Config.newBuilder().setRaw( Map.of( new LeadershipPriorityGroupSetting( databaseId1.name() ).setting().name(), "prio" ) )
+                .set( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "prio" ) ).build();
 
-        var loadaBalancerLTC = new LeaderTransferContext( databaseId, RaftId.from( databaseId.databaseId() ), new MemberId( UUID.randomUUID() ) );
-        var myLeaderships = new ArrayList<NamedDatabaseId>();
+        var transferee = core1;
+        var selectionStrategyInputs = new ArrayList<TransferCandidates>();
+        SelectionStrategy mockSelectionStrategy = validTopologies ->
+        {
+            selectionStrategyInputs.addAll( validTopologies );
+            var transferCandidates = validTopologies.get(0);
+            return new LeaderTransferTarget( transferCandidates.databaseId(), transferee );
+        };
+
+        var myLeaderships = List.of( databaseId1, databaseId2 );
         TransferLeader transferLeader =
-                new TransferLeader( config, messageHandler, myself, databasePenalties,
-                        validTopologies -> loadaBalancerLTC, raftMembershipResolver, () -> myLeaderships );
-        // I am leader
-        myLeaderships.add( databaseId );
+                new TransferLeader( config, messageHandler, myself, databasePenalties, mockSelectionStrategy, raftMembershipResolver, () -> myLeaderships );
         // when
         transferLeader.run();
 
         // then
-        assertThat( messageHandler.proposals.get( 0 ).message() ).isEqualTo(
-                new RaftMessages.LeadershipTransfer.Proposal( myself, loadaBalancerLTC.to(), Set.of() ) );
+        assertThat( selectionStrategyInputs ).contains( new TransferCandidates( databaseId2, Set.of( transferee ) ) );
+        assertThat( messageHandler.proposals.get( 0 ).message() ).isEqualTo( new RaftMessages.LeadershipTransfer.Proposal( myself, transferee, Set.of() ) );
     }
 
     @Test
@@ -159,7 +160,7 @@ class TransferLeaderTest
         var builder = Config.newBuilder();
         databaseIds.forEach( dbid -> builder.setRaw( Map.of( new LeadershipPriorityGroupSetting( dbid.name() ).setting().name(), dbid.name() ) ).build() );
         // ...and I am in one of them
-        builder.set( CausalClusteringSettings.server_groups, List.of( "two" ) );
+        builder.set( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "two" ) );
         var config = builder.build();
 
         var myLeaderships = new ArrayList<>( databaseIds );
@@ -175,7 +176,7 @@ class TransferLeaderTest
         var propose = messageHandler.proposals.get( 0 );
         assertEquals( propose.raftId().uuid(), databaseOne.databaseId().uuid() );
         assertEquals( propose.message().proposed(), core1 );
-        assertEquals( propose.message().priorityGroups(), Set.of( "one" ) );
+        assertEquals( propose.message().priorityGroups(), ServerGroupName.setOf( "one" ) );
     }
 
     private static class StubRaftMembershipResolver implements RaftMembershipResolver
@@ -196,7 +197,7 @@ class TransferLeaderTest
 
     private static class StubRaftMembership implements RaftMembership
     {
-        private Set<MemberId> memberIds;
+        private final Set<MemberId> memberIds;
 
         StubRaftMembership( Set<MemberId> memberIds )
         {

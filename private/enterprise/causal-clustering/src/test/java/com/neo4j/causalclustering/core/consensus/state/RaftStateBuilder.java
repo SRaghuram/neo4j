@@ -19,6 +19,8 @@ import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.util.HashSet;
 import java.util.Set;
 
 import org.neo4j.logging.NullLogProvider;
@@ -45,7 +47,7 @@ public class RaftStateBuilder
     private RaftLog entryLog = new InMemoryRaftLog();
     private boolean supportPreVoting;
     private boolean refusesToBeLeader;
-    private ExpiringSet<MemberId> leadershipTransfers = new ExpiringSet<>( 1000L, new FakeClock() );
+    private ExpiringSet<MemberId> leadershipTransfers = new ExpiringSet<>( Duration.ofSeconds( 1 ), new FakeClock() );
 
     public RaftStateBuilder myself( MemberId myself )
     {
@@ -71,7 +73,7 @@ public class RaftStateBuilder
         return this;
     }
 
-    private RaftStateBuilder replicationMembers( Set<MemberId> replicationMembers )
+    private RaftStateBuilder additionalReplicationMembers( Set<MemberId> replicationMembers )
     {
         this.replicationMembers = replicationMembers;
         return this;
@@ -86,12 +88,6 @@ public class RaftStateBuilder
     public RaftStateBuilder setRefusesToBeLeader( boolean refusesToBeLeader )
     {
         this.refusesToBeLeader = refusesToBeLeader;
-        return this;
-    }
-
-    public RaftStateBuilder setLeadershipTransferRequests( ExpiringSet<MemberId> ongoingRequests )
-    {
-        this.leadershipTransfers = ongoingRequests;
         return this;
     }
 
@@ -115,9 +111,9 @@ public class RaftStateBuilder
         return votingMembers( asSet( members ) );
     }
 
-    public RaftStateBuilder replicationMembers( MemberId... members )
+    public RaftStateBuilder additionalReplicationMembers( MemberId... members )
     {
-        return replicationMembers( asSet( members ) );
+        return additionalReplicationMembers( asSet( members ) );
     }
 
     public RaftStateBuilder messagesSentToFollower( MemberId member, long nextIndex )
@@ -130,10 +126,11 @@ public class RaftStateBuilder
         private Set<MemberId> votingMembers;
         private final Set<MemberId> replicationMembers;
 
-        private StubMembership( Set<MemberId> votingMembers, Set<MemberId> replicationMembers )
+        private StubMembership( Set<MemberId> votingMembers, Set<MemberId> additionalReplicationMembers )
         {
             this.votingMembers = votingMembers;
-            this.replicationMembers = replicationMembers;
+            this.replicationMembers = new HashSet<>( votingMembers );
+            this.replicationMembers.addAll( additionalReplicationMembers );
         }
 
         @Override

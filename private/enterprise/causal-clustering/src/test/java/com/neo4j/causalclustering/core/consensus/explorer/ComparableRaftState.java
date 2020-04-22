@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.explorer;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.ReadableRaftLog;
@@ -176,7 +177,7 @@ public class ComparableRaftState implements ReadableRaftState
     }
 
     @Override
-    public Set<String> serverGroups()
+    public Set<ServerGroupName> serverGroups()
     {
         return Set.of();
     }
