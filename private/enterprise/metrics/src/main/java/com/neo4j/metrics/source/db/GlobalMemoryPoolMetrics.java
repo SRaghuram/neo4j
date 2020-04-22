@@ -20,7 +20,7 @@ import static java.lang.String.format;
 public class GlobalMemoryPoolMetrics extends AbstractMemoryPoolMetrics
 {
     private static final String NEO_GLOBAL_POOL_PREFIX = "dbms.pool";
-    private static final String NEO_POOL_USAGE_TEMPLATE = name( NEO_GLOBAL_POOL_PREFIX, "%s", "%s", "%s" );
+    private static final String NEO_POOL_USAGE_TEMPLATE = name( NEO_GLOBAL_POOL_PREFIX, "%s", "%s" );
 
     private final String poolTemplate;
 
@@ -39,6 +39,6 @@ public class GlobalMemoryPoolMetrics extends AbstractMemoryPoolMetrics
     @Override
     protected String namePoolMetric( NamedMemoryPool pool, String metricName )
     {
-        return format( poolTemplate, pool.group().getName().toLowerCase(), pool.name().toLowerCase(), metricName.toLowerCase() );
+        return format( poolTemplate, pool.group().getName().toLowerCase(), metricName.toLowerCase() );
     }
 }

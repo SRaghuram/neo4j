@@ -116,7 +116,7 @@ public class MemoryPoolsMetricsIT
 
     private String buildGlobalMetricFileName( NamedMemoryPool pool, String metrics )
     {
-        var fileName = "neo4j.dbms.pool." + pool.group() + "." + pool.name() + metrics;
+        var fileName = "neo4j.dbms.pool." + pool.group() + metrics;
         return fileName.toLowerCase().replace( ' ', '_' );
     }
 
