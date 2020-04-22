@@ -245,16 +245,24 @@ public class FabricLocalExecutor
         @Override
         public Mono<Void> commit()
         {
-            fabricKernelTransaction.commit();
-            bookmarkManager.localTransactionCommitted( location );
-            return Mono.empty();
+            return Mono.fromRunnable( this::doCommit );
         }
 
         @Override
         public Mono<Void> rollback()
         {
+            return Mono.fromRunnable( this::doRollback );
+        }
+
+        private void doCommit()
+        {
+            fabricKernelTransaction.commit();
+            bookmarkManager.localTransactionCommitted( location );
+        }
+
+        private void doRollback()
+        {
             fabricKernelTransaction.rollback();
-            return Mono.empty();
         }
 
         @Override

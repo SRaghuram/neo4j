@@ -154,14 +154,8 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
                 List<Throwable> readFailures = Flux
                         .fromIterable( readingTransactions )
                         .map( txWrapper -> txWrapper.singleDbTransaction )
-                        .flatMap( tx -> Mono
-                                .from( tx.commit() )
-                                .flatMap( v -> Mono.<Throwable>empty() )
-                                .onErrorResume( t ->
-                                                {
-                                                    userLog.error( "Failed to commit a child read transaction", t );
-                                                    return Mono.just( t );
-                                                } ) )
+                        .flatMap( tx -> catchErrors( tx.commit() ) )
+                        .doOnNext( err -> userLog.error( "Failed to commit a child read transaction", err ) )
                         .collectList()
                         .block();
 
@@ -263,14 +257,8 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
                     .fromIterable( readingTransactions )
                     .map( txWrapper -> txWrapper.singleDbTransaction )
                     .concatWith( Mono.justOrEmpty( writingTransaction ) )
-                    .flatMap( tx -> Mono
-                            .from( tx.rollback() )
-                            .flatMap( v -> Mono.<Throwable>empty() )
-                            .onErrorResume( t ->
-                                            {
-                                                userLog.error( "Failed to rollback a child transaction", t );
-                                                return Mono.just( t );
-                                            } ) )
+                    .flatMap( tx -> catchErrors( tx.rollback() ) )
+                    .doOnNext( err -> userLog.error( "Failed to rollback a child read transaction", err ) )
                     .collectList()
                     .block();
 
@@ -293,6 +281,13 @@ public class FabricTransactionImpl implements FabricTransaction, CompositeTransa
         throwIfNonEmpty( allFailures, this::rollbackFailedError );
 
         internalLog.debug( "Transaction %d rolled back", id );
+    }
+
+    private Mono<Throwable> catchErrors( Mono<Void> action )
+    {
+        return action
+                .flatMap( v -> Mono.<Throwable>empty() )
+                .onErrorResume( Mono::just );
     }
 
     private void throwIfNonEmpty( List<Throwable> failures, Supplier<FabricException> genericException )
