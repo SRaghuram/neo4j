@@ -343,6 +343,10 @@ class GraphUpdates
                 //WE FIT IN x1
                 serializeParts( smallBuffer, intermediateBuffers, x1Header, null );
                 x1Command( smallBuffer, otherCommands );
+                if ( xLBefore != null )
+                {
+                    otherCommands.accept( new FrekiCommand.SparseNode( nodeId, xLBefore, deletedVersionOf( xLBefore ) ) );
+                }
                 return;
             }
 
