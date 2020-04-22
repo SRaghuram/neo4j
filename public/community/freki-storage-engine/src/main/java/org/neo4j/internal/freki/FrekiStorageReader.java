@@ -124,7 +124,7 @@ class FrekiStorageReader extends FrekiCursorFactory implements StorageReader
     @Override
     public Collection<IndexBackedConstraintDescriptor> uniquenessConstraintsGetRelated( long[] labels, int propertyKeyId, EntityType entityType )
     {
-        return schemaCache.getUniquenessConstraintsRelatedTo( PrimitiveLongCollections.EMPTY_LONG_ARRAY, labels, new int[] {propertyKeyId}, false, entityType );
+        return schemaCache.getUniquenessConstraintsRelatedTo( PrimitiveLongCollections.EMPTY_LONG_ARRAY, labels, new int[]{propertyKeyId}, false, entityType );
     }
 
     @Override
@@ -268,7 +268,7 @@ class FrekiStorageReader extends FrekiCursorFactory implements StorageReader
     @Override
     public AllNodeScan allNodeScan()
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+        return new FrekiNodeScan();
     }
 
     @Override
