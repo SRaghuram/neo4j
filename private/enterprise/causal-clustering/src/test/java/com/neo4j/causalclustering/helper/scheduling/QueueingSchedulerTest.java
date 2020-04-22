@@ -14,16 +14,16 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.logging.NullLog;
 import org.neo4j.scheduler.Group;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
+import static java.util.concurrent.CompletableFuture.runAsync;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.TRUE;
 
@@ -32,12 +32,12 @@ class QueueingSchedulerTest
     private final ThreadPoolJobScheduler executorService = new ThreadPoolJobScheduler( Executors.newSingleThreadExecutor() );
     private final UnboundedJobsQueue jobsQueue = new UnboundedJobsQueue();
     private final QueueingScheduler scheduler =
-            new QueueingScheduler( executorService, Group.CORE_STATE_APPLIER,
-                                   NullLog.getInstance(), jobsQueue );
+            new QueueingScheduler( executorService, Group.CORE_STATE_APPLIER, NullLog.getInstance(), jobsQueue );
 
     @AfterEach
     void shutdown()
     {
+        scheduler.disable();
         executorService.shutdown();
     }
 
@@ -54,95 +54,57 @@ class QueueingSchedulerTest
         assertEquals( 1, future.get() );
     }
 
-    //@Test // TODO: Tests needs to be redone.
-    void shouldClearQueueOnAbort()
+    @Test
+    void shouldClearQueueOnDisable()
     {
         // given
         AtomicInteger integer = new AtomicInteger();
         CountDownLatch countDownLatch = new CountDownLatch( 1 );
 
         // when
-        scheduler.offerJob( () ->
-        {
-            try
-            {
-                countDownLatch.await();
-            }
-            catch ( InterruptedException e )
-            {
-                throw new RuntimeException( e );
-            }
-        } );
+        scheduler.offerJob( () -> waitOnLatch( countDownLatch ) );
         scheduler.offerJob( () -> integer.set( 1 ) );
 
         // then
         assertEquals( 1, jobsQueue.queue.size() );
 
         // when
-        scheduler.abort();
+        runAsync( scheduler::disable );
 
         // then
-        assertTrue( jobsQueue.queue.isEmpty() );
+        assertEventually( jobsQueue.queue::isEmpty, TRUE, 1, MINUTES );
 
         // and
         countDownLatch.countDown();
-        scheduler.abort();
         assertEquals( 0, integer.get() );
     }
 
     @Test
-    void shouldNotScheduleMoreJobsWhenStopping() throws ExecutionException, InterruptedException
+    void shouldNotAllowSchedulingOfJobsAfterBeingDisabled()
     {
         // given
         AtomicInteger integer = new AtomicInteger();
         CountDownLatch countDownLatch = new CountDownLatch( 1 );
-        var future = new CompletableFuture<>();
-        var stopThread = new Thread( () ->
-                                     {
-                                         scheduler.abort();
-                                         future.complete( new Object() );
-                                     } );
 
         // when
-        scheduler.offerJob( () ->
-        {
-            try
-            {
-                countDownLatch.await();
-            }
-            catch ( InterruptedException e )
-            {
-                throw new RuntimeException( e );
-            }
-        } );
+        scheduler.offerJob( () -> waitOnLatch( countDownLatch ) );
         scheduler.offerJob( () -> integer.set( 1 ) );
 
         // and
-        stopThread.start();
+        runAsync( scheduler::disable );
 
-        try
-        {
+        // when queue has been cleared we know that we are disabled
+        assertEventually( jobsQueue.queue::isEmpty, TRUE, 1, MINUTES );
 
-            // when queue has been cleared we know that we have stopped.
-            assertEventually( jobsQueue.queue::isEmpty, TRUE, 5, TimeUnit.SECONDS );
+        // then any offered should throw exception
+        assertThrows( IllegalStateException.class, () -> scheduler.offerJob( () -> integer.set( 2 ) ) );
 
-            // then any offered should be ignored
-            scheduler.offerJob( () -> integer.set( 2 ) );
-            // still stopped
-            assertFalse( future.isDone() );
-        }
-        finally
-        {
-            countDownLatch.countDown();
-            stopThread.join();
-            future.get();
-        }
-
+        countDownLatch.countDown();
         assertEquals( 0, integer.get() );
     }
 
-    //@Test // TODO: Rename test? What does expected mean? Re-do.
-    void shouldScheduleJobsAsExpected() throws ExecutionException, InterruptedException
+    @Test
+    void shouldScheduleJobsInOrder() throws ExecutionException, InterruptedException
     {
         var integer = new AtomicInteger();
         var futureOne = new CompletableFuture<>();
@@ -159,32 +121,33 @@ class QueueingSchedulerTest
             // when
             scheduler.offerJob( incrementingJob( integer, firstLatch ) );
             scheduler.offerJob( incrementingJob( integer, firstLatch ) );
-            scheduler.offerJob( incrementingJob( integer, secondLatch ) );
             scheduler.offerJob( integer::incrementAndGet );
             scheduler.offerJob( integer::incrementAndGet );
             scheduler.offerJob( () -> futureOne.complete( new Object() ) );
 
-            // then
-            assertEquals( 4, jobsQueue.queue.size() );
+            scheduler.offerJob( incrementingJob( integer, secondLatch ) );
+            scheduler.offerJob( integer::incrementAndGet );
+
+            // then: nothing should have run, because we are waiting for first latch
+            assertEquals( 0, integer.get() );
 
             // when
             firstLatch.countDown();
             futureOne.get();
 
-            // then
-            assertEquals( 0, jobsQueue.queue.size() );
+            // then: we should have run up to those jobs waiting for the second latch
+            assertEquals( 4, integer.get() );
 
             // when
-            scheduler.offerJob( integer::incrementAndGet );
+            secondLatch.countDown();
             scheduler.offerJob( () -> futureTwo.complete( new Object() ) );
 
             // then
             futureTwo.get();
-            assertEquals( 5, integer.get() );
+            assertEquals( 6, integer.get() );
         }
         finally
         {
-            secondLatch.countDown();
             threadPoolJobScheduler.shutdown();
         }
     }
@@ -206,6 +169,18 @@ class QueueingSchedulerTest
 
         // then
         assertEquals( 3, integer.get() );
+    }
+
+    private void waitOnLatch( CountDownLatch countDownLatch )
+    {
+        try
+        {
+            countDownLatch.await();
+        }
+        catch ( InterruptedException e )
+        {
+            throw new RuntimeException( e );
+        }
     }
 
     private Runnable incrementingJob( AtomicInteger integer, CountDownLatch latch )

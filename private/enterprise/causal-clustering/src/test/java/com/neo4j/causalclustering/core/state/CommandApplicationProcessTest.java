@@ -93,9 +93,10 @@ class CommandApplicationProcessTest
     }
 
     @AfterEach
-    void tearDown() throws IOException
+    void tearDown() throws Exception
     {
         applicationProcess.stop();
+        jobScheduler.shutdown();
     }
 
     @Test

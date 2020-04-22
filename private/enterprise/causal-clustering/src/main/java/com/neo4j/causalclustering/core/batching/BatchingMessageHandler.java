@@ -78,7 +78,7 @@ public class BatchingMessageHandler implements Runnable, LifecycleMessageHandler
     {
         stopped = true;
         handler.stop();
-        scheduler.abort();
+        scheduler.disable();
     }
 
     @Override

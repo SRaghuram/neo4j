@@ -391,7 +391,7 @@ class BatchingMessageHandlerTest
         batchHandler.handle( wrap( message ) );
 
         // then
-        inOrder.verify( jobScheduler ).abort();
+        inOrder.verify( jobScheduler ).disable();
         // and - not offered because we are stopped
         inOrder.verifyNoMoreInteractions();
     }
@@ -436,7 +436,7 @@ class BatchingMessageHandlerTest
         batchHandler.stop();
 
         // then
-        Mockito.verify( jobScheduler ).abort();
+        Mockito.verify( jobScheduler ).disable();
     }
 
     private InboundRaftMessageContainer<?> wrap( RaftMessage message )

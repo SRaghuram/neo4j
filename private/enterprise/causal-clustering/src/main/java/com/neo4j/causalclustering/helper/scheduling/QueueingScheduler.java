@@ -5,8 +5,6 @@
  */
 package com.neo4j.causalclustering.helper.scheduling;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.neo4j.logging.Log;
 import org.neo4j.scheduler.CancelListener;
 import org.neo4j.scheduler.Group;
@@ -18,14 +16,14 @@ public class QueueingScheduler
     private final JobScheduler executor;
     private final Group group;
     private final JobsQueue<Runnable> jobsQueue;
-    private final AtomicInteger stopCount = new AtomicInteger();
     private final Log log;
 
-    private volatile AbortableJob job;
+    private volatile boolean enabled = true;
+    private volatile ReschedulingJob job;
     private volatile JobHandle<?> jobHandle;
 
     /**
-     * Schedule {@link AbortableJob} on the provided {@link JobScheduler}.
+     * Schedule {@link ReschedulingJob} on the provided {@link JobScheduler}.
      *
      * All calls to the provided {@link JobsQueue} is performed under a lock so it is not
      * required for {@link JobsQueue} to be thread-safe.
@@ -43,69 +41,71 @@ public class QueueingScheduler
     }
 
     /**
-     * If the job cannot be scheduled right away it will be offered to the jobsQueue. If {@link #abort()} is currently being called,
-     * then no jobs are accepted and all jobs currently in the queue will be removed.
+     * Offers a job to the queue.
+     *
+     * @throws IllegalStateException if the scheduler is disabled.
      */
     public synchronized void offerJob( Runnable runnable )
     {
-        if ( stopCount.get() > 0 )
+        if ( !enabled )
         {
-            return;
+            throw new IllegalStateException( "Not allowing jobs to be scheduled when disabled" );
         }
         jobsQueue.offer( runnable );
         trySchedule();
     }
 
-    private void trySchedule()
+    private synchronized void trySchedule()
     {
-        if ( stopCount.get() > 0 )
+        if ( !enabled )
         {
             return;
         }
-        synchronized ( this )
+        if ( job != null )
         {
-            if ( job != null )
-            {
-                return;
-            }
-
-            var nextJob = jobsQueue.poll();
-            if ( nextJob == null )
-            {
-                return;
-            }
-
-            this.job = new AbortableJob( nextJob );
-            this.jobHandle = executor.schedule( group, job );
+            return;
         }
+
+        var nextJob = jobsQueue.poll();
+        if ( nextJob == null )
+        {
+            return;
+        }
+
+        this.job = new ReschedulingJob( nextJob );
+        this.jobHandle = executor.schedule( group, job );
     }
 
     /**
-     * TODO: Remake this to a stop() and make sure no jobs will be processed afterwards?
      * Aborts any offered jobs that are not running and waits for currently running jobs to complete.
      */
-    public void abort()
+    public void disable()
     {
-        // TODO: Why this reference counting thing?
-        stopCount.incrementAndGet();
-        try
+        enabled = false;
+        abortJob();
+        waitTermination( jobHandle );
+    }
+
+    public void enable()
+    {
+        enabled = true;
+    }
+
+    private synchronized void abortJob()
+    {
+        jobsQueue.clear();
+        if ( job != null )
         {
-            jobsQueue.clear(); // TODO: Should this also be under synchronized?
             job.abort();
-            waitTermination( jobHandle );
-        }
-        finally
-        {
-            stopCount.decrementAndGet();
         }
     }
 
-    private class AbortableJob implements Runnable, CancelListener
+    private class ReschedulingJob implements Runnable, CancelListener
     {
         private Runnable runnable;
         private volatile boolean aborted;
 
-        private AbortableJob( Runnable runnable )
+        private ReschedulingJob( Runnable runnable )
         {
             this.runnable = runnable;
         }
