@@ -31,8 +31,11 @@ import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 import org.eclipse.collections.impl.factory.primitive.LongSets;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -128,12 +131,14 @@ import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromRecordPointer;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.lock.LockService.NO_LOCK_SERVICE;
@@ -1214,6 +1219,237 @@ class FrekiStorageEngineGraphWritesIT
             assertProperties( relationshipProperties, propertyCursor );
             nodeCursor.properties( propertyCursor );
             assertProperties( nodeProperties, propertyCursor );
+        }
+    }
+
+    @TestFactory
+    Collection<DynamicTest> shouldSeeAllLabelPropertiesPermutations()
+    {
+        List<DynamicTest> tests = new ArrayList<>();
+        /*
+            -       ->  x1
+            -       ->  x1 + XL
+            x1      ->  -
+            x1 + XL ->  -
+            x1      ->  x1 + XL
+            x1 + XL ->  x1
+            x1 + x4 ->  x1 + x8
+            x1 + x8 ->  x1 + x4
+         */
+        tests.add( createIndexPermutationTest( 0, 1, false, false ) );
+        tests.add( createIndexPermutationTest( 1, 0, false, false ) );
+        for ( boolean labelsInXL : Set.of( true, false ) )
+        {
+            for ( boolean propsInXL : Set.of( true, false ) )
+            {
+                //avoid using x2 to make the code cleaner when ensuring both labels and props in XL
+                tests.add( createIndexPermutationTest( 0, 4, labelsInXL, propsInXL ) );
+                tests.add( createIndexPermutationTest( 4, 0, labelsInXL, propsInXL ) );
+                tests.add( createIndexPermutationTest( 1, 4, labelsInXL, propsInXL ) );
+                tests.add( createIndexPermutationTest( 4, 1, labelsInXL, propsInXL ) );
+                tests.add( createIndexPermutationTest( 4, 8, labelsInXL, propsInXL ) );
+                tests.add( createIndexPermutationTest( 8, 4, labelsInXL, propsInXL ) );
+            }
+        }
+
+        return tests;
+    }
+
+    private DynamicTest createIndexPermutationTest( int beforeX, int afterX, boolean labelsInXL, boolean propsInXL )
+    {
+        Executable test = new Executable()
+        {
+            @Override
+            public void execute() throws Throwable
+            {
+                int beforeSize = beforeX == 0 ? 0 : Record.recordSize( Record.sizeExpFromXFactor( beforeX ) );
+                int afterSize = afterX == 0 ? 0 : Record.recordSize( Record.sizeExpFromXFactor( afterX ) );
+                assertNotEquals( beforeSize, afterSize );
+
+                MutableLongSet labels = LongSets.mutable.empty();
+                Set<StorageProperty> properties = new HashSet<>();
+
+                IntValue value = Values.intValue( 80 );
+                IntValue changedValue = Values.intValue( 90 );
+
+                int labelsSize = 2;
+                int propsSize = 3;
+                if ( labelsInXL )
+                {
+                    for ( int i = 0; i < Record.SIZE_BASE; i++ )
+                    {
+                        labels.add( SCHEMA_DESCRIPTOR.getLabelId() + i + 1 );
+                        labelsSize += 1;
+                    }
+                }
+                if ( propsInXL )
+                {
+                    Value prop = Values.byteArray( new byte[]{0, 1, 2, 3, 4, 5, 6} ); //this will generate 10B data (header + length + data + key)
+                    int sizePerProp = 10;
+                    for ( int i = 0; i < Record.SIZE_BASE / sizePerProp; i++ )
+                    {
+                        properties.add( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId() + i + 1, prop ) );
+                        propsSize += sizePerProp;
+                    }
+                }
+                int labelsSizeBefore = beforeX > 1 ? labelsSize : 0;
+                int propsSizeBefore = beforeX > 1 ? propsSize : 0;
+                int labelsSizeAfter = afterX > 1 ? labelsSize : 0;
+                int propsSizeAfter = afterX > 1 ? propsSize : 0;
+
+                long nodeId = commandCreationContext.reserveNode();
+                long otherNodeId = commandCreationContext.reserveNode();
+
+                int beforeFillSize = beforeSize * 4 / 5; //should ensure correct record
+                int afterFillSize = afterSize * 4 / 5; //should ensure correct record
+
+                int relSize = 4;
+                int relsToAddBefore = beforeX > 1 ? (beforeFillSize - labelsSizeBefore - propsSizeBefore) / relSize : 0;
+                int relsToRemoveAfter = afterX == 1
+                                        ? relsToAddBefore
+                                        : ( afterX < beforeX
+                                            ? relsToAddBefore - ((afterFillSize - labelsSizeAfter - propsSizeAfter) / relSize)
+                                            : 0);
+                int relsToAddAfter = afterX != 1 && afterX > beforeX
+                                     ? ((afterFillSize - labelsSizeAfter - propsSizeAfter) / relSize) - relsToAddBefore
+                                     : 0;
+
+                shouldGenerateIndexUpdates( target ->
+                {
+                    //Setup (before state)
+                    target.visitCreatedNode( otherNodeId );
+                    if ( beforeX != 0 )
+                    {
+                        target.visitCreatedNode( nodeId );
+                        target.visitNodeLabelChanges( nodeId, LongSets.immutable.of( SCHEMA_DESCRIPTOR.getLabelId() ), LongSets.immutable.empty() );
+                        target.visitNodePropertyChanges( nodeId, List.of( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), value ) ), emptyList(),
+                                IntSets.immutable.empty() );
+
+                        //padding to get correct before record size
+                        if ( beforeX > 1 )
+                        {
+                            //padding
+                            for ( int i = 0; i < relsToAddBefore; i++ )
+                            {
+                                target.visitCreatedRelationship( i, 0, nodeId, otherNodeId, emptyList());
+                            }
+                            target.visitNodeLabelChanges( nodeId, labels, LongSets.immutable.empty() );
+                            target.visitNodePropertyChanges( nodeId, properties, emptyList(), IntSets.immutable.empty() );
+                        }
+                    }
+
+                }, target ->
+                {
+                    assertCorrectSizeXWithLabelPropertyLocation( nodeId, beforeX, labelsInXL, propsInXL );
+                    //Changes (after state)
+                    if ( afterX != 0 )
+                    {
+                        if ( beforeX == 0 )
+                        {
+                            target.visitCreatedNode( nodeId );
+                            target.visitNodeLabelChanges( nodeId, LongSets.immutable.of( SCHEMA_DESCRIPTOR.getLabelId() ), LongSets.immutable.empty() );
+                            target.visitNodePropertyChanges( nodeId, List.of( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), value ) ), emptyList(),
+                                    IntSets.immutable.empty() );
+                        }
+                        else
+                        {
+                            if ( beforeX > 1 && afterX <= 1 )
+                            {
+                                target.visitNodeLabelChanges( nodeId,  LongSets.immutable.empty(), labels );
+                                var toRemove =
+                                        IntSets.immutable.ofAll( properties.stream().map( StorageProperty::propertyKeyId ).collect( Collectors.toList() ) );
+                                target.visitNodePropertyChanges( nodeId, emptyList(), emptyList(), toRemove );
+                            }
+                            target.visitNodePropertyChanges( nodeId, emptyList(),
+                                    List.of( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), changedValue ) ), IntSets.immutable.empty() );
+                        }
+
+                        //padding to get labels/props in correct record
+                        if ( beforeX <= 1 && afterX > 1 )
+                        {
+                            target.visitNodeLabelChanges( nodeId, labels, LongSets.immutable.empty() );
+                            target.visitNodePropertyChanges( nodeId, properties, emptyList(), IntSets.immutable.empty() );
+                        }
+
+                        if ( afterX > 1 )
+                        {
+                            for ( int i = 0; i < relsToAddAfter; i++ )
+                            {
+                                target.visitCreatedRelationship( i + relsToAddBefore, 0, nodeId, otherNodeId, emptyList());
+                            }
+                        }
+                        if ( beforeX > 1 )
+                        {
+                            for ( int i = 0; i < relsToRemoveAfter; i++ )
+                            {
+                                target.visitDeletedRelationship( i, 0, nodeId, otherNodeId );
+                            }
+                        }
+                    }
+                    else
+                    {
+                        for ( int i = 0; i < relsToAddBefore; i++ )
+                        {
+                            target.visitDeletedRelationship( i, 0, nodeId, otherNodeId );
+                        }
+                        target.visitDeletedNode( nodeId );
+                    }
+                }, index -> {
+                    assertCorrectSizeXWithLabelPropertyLocation( nodeId, afterX, labelsInXL, propsInXL );
+                    //Expected index updates
+                    Set<IndexEntryUpdate<IndexDescriptor>> updates = new HashSet<>();
+                    if ( afterX == 0 )
+                    {
+                        updates.add( IndexEntryUpdate.remove( nodeId, index, value ) );
+                    }
+                    else
+                    {
+                        if ( beforeX == 0 )
+                        {
+                            updates.add( IndexEntryUpdate.add( nodeId, index, value ) );
+                        }
+                        else
+                        {
+                            updates.add( IndexEntryUpdate.change( nodeId, index, value, changedValue ) );
+                        }
+                    }
+                    return updates;
+                }  );
+            }
+
+            @Override
+            public String toString()
+            {
+                return String.format( "IndexUpdatesTest:%s %s %s to %s",
+                        propsInXL ? " PropertiesInXL " : " ",
+                        labelsInXL ? " LabelsInXL " : " ",
+                        beforeX == 0 ? "created" : "x" + beforeX,
+                        afterX == 0 ? "deleted" : "x" + afterX
+                );
+            }
+        };
+        return DynamicTest.dynamicTest( test.toString(), test );
+    }
+
+    private void assertCorrectSizeXWithLabelPropertyLocation( long nodeId, int sizeX, boolean labelsInXL, boolean propsInXL )
+    {
+        try ( var storageReader = storageEngine.newReader();
+              var nodeCursor = storageReader.allocateNodeCursor( NULL ) )
+        {
+            nodeCursor.single( nodeId );
+            assertThat( nodeCursor.next() ).isEqualTo( sizeX > 0 );
+            if ( sizeX > 1 )
+            {
+                assertThat( nodeCursor.data.forwardPointer ).isNotEqualTo( FrekiMainStoreCursor.NULL );
+                assertThat( nodeCursor.data.header.hasReferenceMark( Header.FLAG_LABELS ) ).isEqualTo( labelsInXL );
+                assertThat( nodeCursor.data.header.hasReferenceMark( Header.OFFSET_PROPERTIES ) ).isEqualTo( propsInXL );
+                int sizeExp = sizeExponentialFromRecordPointer( nodeCursor.data.forwardPointer );
+                assertThat( sizeX ).isEqualTo( Record.recordXFactor( sizeExp ) );
+            }
+            else if ( sizeX == 1 )
+            {
+                assertThat( nodeCursor.data.forwardPointer ).isEqualTo( FrekiMainStoreCursor.NULL );
+            }
         }
     }
 
