@@ -759,6 +759,14 @@ public class SchemaCache
             }
             return Arrays.equals( properties, that.properties );
         }
+
+        @Override
+        public String toString()
+        {
+            return "IndexesRelatedToKey{" + "entityType=" + entityType + ", changedEntityTokens=" + Arrays.toString( changedEntityTokens ) +
+                    ", unchangedEntityTokens=" + Arrays.toString( unchangedEntityTokens ) + ", properties=" + Arrays.toString( properties ) +
+                    ", propertyListIsComplete=" + propertyListIsComplete + '}';
+        }
     }
 
     private static class UniqueIndexesRelatedToKey extends IndexesRelatedToKey
