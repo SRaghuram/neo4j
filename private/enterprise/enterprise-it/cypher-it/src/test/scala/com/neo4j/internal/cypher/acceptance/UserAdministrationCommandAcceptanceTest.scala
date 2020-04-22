@@ -165,7 +165,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     }
 
     // THEN
-    counter.counts should equal(CacheCounts(misses = misses, hits = hits), compilations = commandCount)
+    counter.counts should equal(CacheCounts(misses = misses, hits = hits, compilations = misses))
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
   }
 
@@ -175,7 +175,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val commandCount = 5
 
     // WHEN
-    val counter = new CacheCounter()
+    val counter = new ExecutionEngineCacheCounter()
     kernelMonitors.addMonitorListener(counter)
     counter.counts should equal(CacheCounts())
     Range(0, commandCount).foreach { index =>
@@ -183,7 +183,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     }
 
     // THEN
-    counter.counts should equal(CacheCounts(misses = 2, hits = (commandCount - 1) * 2))
+    counter.counts should equal(CacheCounts(misses = 2, hits = (commandCount - 1) * 2, compilations = 2))
     execute("SHOW ROLES").toList.size should be(defaultRoles.size + commandCount)
   }
 
