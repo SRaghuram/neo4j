@@ -9,9 +9,11 @@ import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.util.stream.Collectors;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.memory.GlobalMemoryGroupTracker;
 import org.neo4j.memory.MemoryPools;
 import org.neo4j.memory.NamedMemoryPool;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
@@ -25,7 +27,6 @@ import static com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.met
 import static com.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static com.neo4j.metrics.MetricsTestHelper.readLongGaugeValue;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -56,7 +57,7 @@ public class MemoryPoolsMetricsIT
     @Test
     void writeGlobalPoolsMetrics()
     {
-        var globalPools = pools.getPools().stream().filter( pool -> pool.group().isGlobal() ).collect( toList() );
+        var globalPools = pools.getPools();
         assertThat( globalPools ).isNotEmpty();
         globalPools.forEach( pool ->
         {
@@ -73,7 +74,7 @@ public class MemoryPoolsMetricsIT
                 assertEventually( "Used native memory should be reported.",
                         () -> readLongGaugeValue( usedNativeReports ), condition( value -> value >= 0L ), 1, MINUTES );
                 assertEventually( "Total used memory should be reported.",
-                        () -> readLongGaugeValue( totalUsedReports ), condition( value -> value > 0L ), 1, MINUTES );
+                        () -> readLongGaugeValue( totalUsedReports ), condition( value -> value >= 0L ), 1, MINUTES );
                 assertEventually( "Total pool size should be reported.",
                         () -> readLongGaugeValue( totalSizeReports ), condition( value -> value >= 0L ), 1, MINUTES );
                 assertEventually( "Free memory should be reported.",
@@ -85,8 +86,9 @@ public class MemoryPoolsMetricsIT
     @Test
     void writeDatabasePoolsMetrics()
     {
-        var dbPools = pools.getPools().stream()
-                            .filter( pool -> db.databaseName().equals( pool.databaseName() ) ).collect( toList() );
+        var dbPools = pools.getPools().stream().filter( pool -> pool instanceof GlobalMemoryGroupTracker )
+                .flatMap( pool -> ((GlobalMemoryGroupTracker) pool).getDatabasePools().stream() )
+                .filter( pool -> db.databaseName().equals( pool.databaseName() ) ).collect( Collectors.toList() );
         assertThat( dbPools ).isNotEmpty();
         dbPools.forEach( pool ->
         {

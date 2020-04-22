@@ -7,9 +7,11 @@ package com.neo4j.metrics.source.db;
 
 import com.codahale.metrics.MetricRegistry;
 
-import java.util.function.Predicate;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.neo4j.annotations.documented.Documented;
+import org.neo4j.memory.GlobalMemoryGroupTracker;
 import org.neo4j.memory.MemoryPools;
 import org.neo4j.memory.NamedMemoryPool;
 
@@ -34,14 +36,18 @@ public class DatabaseMemoryPoolMetrics extends AbstractMemoryPoolMetrics
     }
 
     @Override
-    protected Predicate<NamedMemoryPool> poolsFilter()
+    protected List<NamedMemoryPool> pools()
     {
-        return pool -> databaseName.equals( pool.databaseName() );
+        return memoryPools.getPools().stream()
+                .filter( pool -> pool instanceof GlobalMemoryGroupTracker )
+                .flatMap( pool -> ((GlobalMemoryGroupTracker) pool).getDatabasePools().stream() )
+                .filter( pool -> databaseName.equals( pool.databaseName() ) )
+                .collect( Collectors.toList() );
     }
 
     @Override
     protected String namePoolMetric( NamedMemoryPool pool, String metricName )
     {
-        return format( poolTemplate, pool.group().getName(), pool.name(), metricName );
+        return format( poolTemplate, pool.group().getName().toLowerCase(), pool.name().toLowerCase(), metricName.toLowerCase() );
     }
 }

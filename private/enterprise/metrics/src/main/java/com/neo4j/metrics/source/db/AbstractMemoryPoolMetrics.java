@@ -8,7 +8,7 @@ package com.neo4j.metrics.source.db;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 
-import java.util.function.Predicate;
+import java.util.List;
 
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.memory.MemoryPools;
@@ -23,7 +23,7 @@ public abstract class AbstractMemoryPoolMetrics extends LifecycleAdapter
     private static final String FREE = "free";
     private final MetricRegistry registry;
     private final String metricsPoolPrefix;
-    private final MemoryPools memoryPools;
+    protected final MemoryPools memoryPools;
 
     public AbstractMemoryPoolMetrics( String metricsPoolPrefix, MetricRegistry registry, MemoryPools memoryPools )
     {
@@ -34,21 +34,19 @@ public abstract class AbstractMemoryPoolMetrics extends LifecycleAdapter
 
     protected abstract String namePoolMetric( NamedMemoryPool pool, String metricName );
 
-    protected abstract Predicate<NamedMemoryPool> poolsFilter();
+    protected abstract List<NamedMemoryPool> pools();
 
     @Override
     public void start()
     {
-        memoryPools.getPools().stream()
-                .filter( poolsFilter() )
-                .forEach( pool ->
-                {
-                    registry.register( prettifyName( namePoolMetric( pool, USED_HEAP ) ), (Gauge<Long>) pool::usedHeap );
-                    registry.register( prettifyName( namePoolMetric( pool, USED_NATIVE ) ), (Gauge<Long>) pool::usedNative );
-                    registry.register( prettifyName( namePoolMetric( pool, TOTAL_USED ) ), (Gauge<Long>) pool::totalUsed );
-                    registry.register( prettifyName( namePoolMetric( pool, TOTAL_SIZE ) ), (Gauge<Long>) pool::totalSize );
-                    registry.register( prettifyName( namePoolMetric( pool, FREE ) ), (Gauge<Long>) pool::free );
-                } );
+        pools().forEach( pool ->
+        {
+            registry.register( prettifyName( namePoolMetric( pool, USED_HEAP ) ), (Gauge<Long>) pool::usedHeap );
+            registry.register( prettifyName( namePoolMetric( pool, USED_NATIVE ) ), (Gauge<Long>) pool::usedNative );
+            registry.register( prettifyName( namePoolMetric( pool, TOTAL_USED ) ), (Gauge<Long>) pool::totalUsed );
+            registry.register( prettifyName( namePoolMetric( pool, TOTAL_SIZE ) ), (Gauge<Long>) pool::totalSize );
+            registry.register( prettifyName( namePoolMetric( pool, FREE ) ), (Gauge<Long>) pool::free );
+        } );
     }
 
     @Override
@@ -59,6 +57,6 @@ public abstract class AbstractMemoryPoolMetrics extends LifecycleAdapter
 
     static String prettifyName( String name )
     {
-        return name.toLowerCase().replace( ' ', '_' );
+        return name.replace( ' ', '_' );
     }
 }

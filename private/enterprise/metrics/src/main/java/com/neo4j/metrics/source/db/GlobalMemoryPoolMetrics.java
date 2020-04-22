@@ -7,7 +7,7 @@ package com.neo4j.metrics.source.db;
 
 import com.codahale.metrics.MetricRegistry;
 
-import java.util.function.Predicate;
+import java.util.List;
 
 import org.neo4j.annotations.documented.Documented;
 import org.neo4j.memory.MemoryPools;
@@ -31,14 +31,14 @@ public class GlobalMemoryPoolMetrics extends AbstractMemoryPoolMetrics
     }
 
     @Override
-    protected Predicate<NamedMemoryPool> poolsFilter()
+    protected List<NamedMemoryPool> pools()
     {
-        return pool -> pool.group().isGlobal();
+        return memoryPools.getPools();
     }
 
     @Override
     protected String namePoolMetric( NamedMemoryPool pool, String metricName )
     {
-        return format( poolTemplate, pool.group().getName(), pool.name(), metricName );
+        return format( poolTemplate, pool.group().getName().toLowerCase(), pool.name().toLowerCase(), metricName.toLowerCase() );
     }
 }
