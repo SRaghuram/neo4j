@@ -140,7 +140,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
       } else {
         cursorsToClose = indexQueries.filterNot(impossiblePredicates).map(query => {
           val cursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
-          read.nodeIndexSeek(state.queryIndexes(queryIndexId), cursor, IndexQueryConstraints.constrained(indexOrder, true), query: _*)
+          read.nodeIndexSeek(state.queryIndexes(queryIndexId), cursor, IndexQueryConstraints.constrained(indexOrder, needsValues || indexOrder != IndexOrder.NONE), query: _*)
           cursor
         }).toArray
         nodeCursor = orderedCursor(indexOrder, cursorsToClose)
