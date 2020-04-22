@@ -843,37 +843,67 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |RETURN f.tic""".stripMargin)
 
     //then
-    result.toList should be((45 to 3).map(i => Map("f.tic" -> i)))
+    result.toList should be((45 to 3 by -1).map(i => Map("f.tic" -> i)))
   }
 
-  test("ascending node index seek on composite index") {
+  test("ascending node index seek on composite index, sort on first value") {
     //given
     executeSingle("CREATE INDEX FOR (n:Frame) ON (n.tic1, n.tic2)")
-    executeSingle("UNWIND range(1, 500) AS i CREATE (:Frame {tic1:i, tic2: i})")
+    executeSingle("UNWIND range(1, 500) AS i CREATE (:Frame {tic1:i, tic2: 500 - i})")
 
     //when
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       """MATCH (f:Frame) WHERE f.tic1 IN range(3,45) AND f.tic2 >= 4
-        |WITH f ORDER BY f.tic ASC
+        |WITH f ORDER BY f.tic1 ASC
         |RETURN f.tic1""".stripMargin)
 
     //then
-    result.toList should be((4 to 45).map(i => Map("f.tic1" -> i)))
+    result.toList should be((3 to 45).map(i => Map("f.tic1" -> i)))
   }
 
-  test("descending node index seek on composite index") {
+  test("ascending node index seek on composite index, sort on second value") {
     //given
     executeSingle("CREATE INDEX FOR (n:Frame) ON (n.tic1, n.tic2)")
-    executeSingle("UNWIND range(1, 500) AS i CREATE (:Frame {tic1:i, tic2: i})")
+    executeSingle("UNWIND range(1, 500) AS i CREATE (:Frame {tic1:i, tic2: 500 - i})")
 
     //when
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       """MATCH (f:Frame) WHERE f.tic1 IN range(3,45) AND f.tic2 >= 4
-        |WITH f ORDER BY f.tic DESC
+        |WITH f ORDER BY f.tic2 ASC
         |RETURN f.tic1""".stripMargin)
 
     //then
-    result.toList should be((45 to 4).map(i => Map("f.tic1" -> i)))
+    result.toList should be((45 to 3 by -1).map(i => Map("f.tic1" -> i)))
+  }
+
+  test("descending node index seek on composite index, sort on first value") {
+    //given
+    executeSingle("CREATE INDEX FOR (n:Frame) ON (n.tic1, n.tic2)")
+    executeSingle("UNWIND range(1, 500) AS i CREATE (:Frame {tic1:i, tic2: 500 - i})")
+
+    //when
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      """MATCH (f:Frame) WHERE f.tic1 IN range(3,45) AND f.tic2 >= 4
+        |WITH f ORDER BY f.tic1 DESC
+        |RETURN f.tic1""".stripMargin)
+
+    //then
+    result.toList should be((45 to 3 by -1).map(i => Map("f.tic1" -> i)))
+  }
+
+  test("descending node index seek on composite index, sort on second value") {
+    //given
+    executeSingle("CREATE INDEX FOR (n:Frame) ON (n.tic1, n.tic2)")
+    executeSingle("UNWIND range(1, 500) AS i CREATE (:Frame {tic1:i, tic2: 500 - i})")
+
+    //when
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      """MATCH (f:Frame) WHERE f.tic1 IN range(3,45) AND f.tic2 >= 4
+        |WITH f ORDER BY f.tic2 DESC
+        |RETURN f.tic1""".stripMargin)
+
+    //then
+    result.toList should be((3 to 45).map(i => Map("f.tic1" -> i)))
   }
 
   private def makeJoeAndFriends(friendCount:Int = 10): Unit = {
