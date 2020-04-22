@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import org.neo4j.codegen.api.CodeGeneration
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.and
@@ -21,7 +20,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.getStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
-import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
 import org.neo4j.codegen.api.IntermediateRepresentation.isNull
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
@@ -29,7 +27,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.loop
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
 import org.neo4j.codegen.api.IntermediateRepresentation.noValue
-import org.neo4j.codegen.api.IntermediateRepresentation.not
+import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
 import org.neo4j.codegen.api.IntermediateRepresentation.or
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
@@ -233,10 +231,7 @@ class UnionOperatorTemplate(val inner: OperatorTaskTemplate,
           fail(newInstance(constructor[IllegalStateException, String], constant("Unknown slot configuration in UnionOperator.")))
         }
       },
-      //if we are starting on a cancelled row, move forward
-      condition(not(INPUT_ROW_IS_VALID)) {
-          invokeSideEffect(INPUT_CURSOR, NEXT)
-      },
+      genAdvanceOnCancelledRow,
       setField(canContinue, INPUT_ROW_IS_VALID),
       genLoop
     )
@@ -319,4 +314,6 @@ class UnionOperatorTemplate(val inner: OperatorTaskTemplate,
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
 
   override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
+
+  override def genClearStateOnCancelledRow: IntermediateRepresentation = noop()
 }

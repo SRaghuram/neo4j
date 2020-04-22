@@ -9,12 +9,11 @@ import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.and
 import org.neo4j.codegen.api.IntermediateRepresentation.block
-import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
 import org.neo4j.codegen.api.IntermediateRepresentation.loop
 import org.neo4j.codegen.api.IntermediateRepresentation.method
-import org.neo4j.codegen.api.IntermediateRepresentation.not
+import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.or
 import org.neo4j.codegen.api.IntermediateRepresentation.self
 import org.neo4j.codegen.api.LocalVariable
@@ -89,10 +88,7 @@ class ArgumentOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
 
   override protected def genOperateHead: IntermediateRepresentation = {
     block(
-      //if we are starting on a cancelled row, move forward
-      condition(not(INPUT_ROW_IS_VALID)) {
-          invokeSideEffect(INPUT_CURSOR, NEXT)
-      },
+      genAdvanceOnCancelledRow,
       loop(and(invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue")), innermost.predicate))(
         block(
           innermost.resetBelowLimitAndAdvanceToNextArgument,
@@ -122,4 +118,5 @@ class ArgumentOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
 
   override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
 
+  override def genClearStateOnCancelledRow: IntermediateRepresentation = noop()
 }

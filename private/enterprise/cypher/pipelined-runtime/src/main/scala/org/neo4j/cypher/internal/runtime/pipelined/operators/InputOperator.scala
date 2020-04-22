@@ -21,6 +21,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.loop
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
+import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.not
 import org.neo4j.codegen.api.IntermediateRepresentation.or
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
@@ -250,4 +251,6 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
   override def genExpressions: Seq[IntermediateExpression] = Seq.empty
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
+
+  override def genClearStateOnCancelledRow: IntermediateRepresentation = noop()
 }

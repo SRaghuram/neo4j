@@ -68,6 +68,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR_FIELD
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_MORSEL_CONSTRUCTOR_PARAMETER
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_ROW_IS_VALID
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NEXT
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NO_KERNEL_TRACER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NO_OPERATOR_PROFILE_EVENT
@@ -562,6 +563,29 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
     val body = genBody
     val localsState = codeGen.endScope()
     block(localsState.declarations ++ localsState.assignments :+ body: _*)
+  }
+
+  /**
+   * Clear operator state assuming input row has been cancelled.
+   *
+   * Should NOT recurse into inner operator templates.
+   */
+  protected def genClearStateOnCancelledRow: IntermediateRepresentation
+
+  def genAdvanceOnCancelledRow: IntermediateRepresentation =
+    condition(not(INPUT_ROW_IS_VALID)) {
+      block(
+        clearStateForEachOperator,
+        invokeSideEffect(INPUT_CURSOR, NEXT)
+      )
+    }
+
+  private def clearStateForEachOperator: IntermediateRepresentation = {
+    val clearStateCalls = map {
+      case x: ContinuableOperatorTaskWithMorselTemplate => x.genClearStateOnCancelledRow
+      case _ => noop()
+    }
+    block(clearStateCalls.reverse:_*)
   }
 
   // We let the generated class extend the abstract class CompiledContinuableOperatorTaskWithMorsel(which extends ContinuableOperatorTaskWithMorsel),
