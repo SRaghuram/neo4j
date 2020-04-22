@@ -91,6 +91,10 @@ public class TestFabricTransaction implements InternalTransaction
         {
             fabricTransaction.commit();
         }
+        catch ( FabricException e )
+        {
+            throw unwrapFabricException( e );
+        }
         catch ( TransactionFailureException e )
         {
             throw new org.neo4j.graphdb.TransactionFailureException( "Unable to complete transaction.", e );
@@ -104,9 +108,25 @@ public class TestFabricTransaction implements InternalTransaction
         {
             fabricTransaction.rollback();
         }
+        catch ( FabricException e )
+        {
+            throw unwrapFabricException( e );
+        }
         catch ( TransactionFailureException e )
         {
             throw new org.neo4j.graphdb.TransactionFailureException( "Unable to complete transaction.", e );
+        }
+    }
+
+    private RuntimeException unwrapFabricException( FabricException e )
+    {
+        if ( e.getCause() instanceof RuntimeException )
+        {
+            return (RuntimeException) e.getCause();
+        }
+        else
+        {
+            return e;
         }
     }
 
