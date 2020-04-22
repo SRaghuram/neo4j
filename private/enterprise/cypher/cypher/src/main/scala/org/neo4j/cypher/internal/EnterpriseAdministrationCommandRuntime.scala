@@ -780,8 +780,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
   private def escapeName(name: Either[String, AnyRef]): String = name match {
     case Left(s) => Prettifier.escapeName(s)
-    case Right(p) if p.isInstanceOf[ParameterFromSlot]=> s"$$`${p.asInstanceOf[ParameterFromSlot].name}``"
-    case Right(p) if p.isInstanceOf[Parameter]=> s"$$`${p.asInstanceOf[Parameter].name}``"
+    case Right(p) if p.isInstanceOf[ParameterFromSlot]=> s"$$`${p.asInstanceOf[ParameterFromSlot].name}`"
+    case Right(p) if p.isInstanceOf[Parameter]=> s"$$`${p.asInstanceOf[Parameter].name}`"
   }
 
   private val privilegeKeys = Seq("action", "property", "resource", "label").foldLeft(Map.empty[String, String])((a, k) => a + (k -> internalKey(k)))
@@ -807,7 +807,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         (key, value, converter, s"MATCH (d:Database {name: $$`$key`})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
       case AllGraphsScope() => ("*", Values.utf8Value("*"), IdentityConverter, "MERGE (d:DatabaseAll {name: '*'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
       case DefaultDatabaseScope() => ("DEFAULT_DATABASE", Values.utf8Value("DEFAULT DATABASE"), IdentityConverter, "MERGE (d:DatabaseDefault {name: 'DEFAULT'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
-      case _ => throw new IllegalStateException(s"${startOfErrorMessage(roleMap)}: Invalid privilege ${grant.name} scope database $database")
     }
     UpdatingSystemCommandExecutionPlan(commandName, normalExecutionEngine,
       s"""
@@ -870,7 +869,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         (key, value, converter, s"MATCH (d:Database {name: $$`$key`})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
       case AllGraphsScope() => ("", Values.NO_VALUE, IdentityConverter, "MATCH (d:DatabaseAll {name: '*'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
       case DefaultDatabaseScope() => ("", Values.NO_VALUE, IdentityConverter, "MATCH (d:DatabaseDefault {name: 'DEFAULT'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
-      case _ => throw new IllegalStateException(s"${startOfErrorMessage(roleMap)}: Invalid privilege revoke scope database $database")
     }
     UpdatingSystemCommandExecutionPlan("RevokePrivilege", normalExecutionEngine,
       s"""
