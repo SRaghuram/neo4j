@@ -8,34 +8,34 @@ package com.neo4j.bench.micro.benchmarks.cluster.catchup;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.cluster.TxFactory;
-import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
-import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
-import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
 
+import org.neo4j.kernel.database.NamedDatabaseId;
+import org.neo4j.storageengine.api.StoreId;
+
 import static com.neo4j.bench.micro.Main.run;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
 @BenchmarkEnabled( true )
 @OutputTimeUnit( MICROSECONDS )
-public class StoreCopyWithInfrastructure extends AbstractWithInfrastructureBenchmark
+public class TxPullWithInfrastructure extends AbstractWithInfrastructureBenchmark
 {
-    private static final int TX_COUNT = 16;
+    private static final int TX_COUNT = 2;
 
     @ParamValues(
-            allowed = {"64MB", "256MB", "1GB"},
-            base = {"64MB", "256MB", "1GB"} )
+            allowed = {"1KB", "1MB", "100MB", "1GB"},
+            base = {"1KB", "1MB", "100MB", "1GB"} )
     @Param( {} )
-    public String prefilledDatabaseSize;
+    public String txSize;
 
     @Override
     public String description()
     {
-        return "Complete store copy with catchup protocol using catchup infrastructure";
+        return "Pulling transactions with catchup protocol using catchup infrastructure";
     }
 
     @Override
@@ -45,25 +45,26 @@ public class StoreCopyWithInfrastructure extends AbstractWithInfrastructureBench
     }
 
     @Override
-    void prepare() throws Throwable
+    public void prepare() throws Throwable
     {
-        var txTotalSize = nbrOfBytes( prefilledDatabaseSize );
+        catchupClientsWrapper.storeCopy();
+        forceSnapshot();
+        var txTotalSize = nbrOfBytes( txSize );
         for ( var i = 0; i < TX_COUNT; i++ )
         {
             TxFactory.commitOneNodeTx( txTotalSize / TX_COUNT, db() );
         }
-        forceSnapshot();
     }
 
     @Benchmark
     @BenchmarkMode( Mode.SampleTime )
-    public void copyStore() throws StoreIdDownloadFailedException, StoreCopyFailedException, CatchupAddressResolutionException
+    public void pullTransactions() throws Exception
     {
-        catchupClientsWrapper.storeCopy();
+        catchupClientsWrapper.pullTransactions();
     }
 
     public static void main( String... methods )
     {
-        run( StoreCopyWithInfrastructure.class, methods );
+        run( TxPullWithInfrastructure.class, methods );
     }
 }

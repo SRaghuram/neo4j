@@ -97,7 +97,7 @@ class BareClient implements CatchupResponseHandler
     @Override
     public void onTxStreamFinishedResponse( TxStreamFinishedResponse response )
     {
-        log.info( "Received StoreCopyFinishedResponse with %s, %d", response.status(), response.lastTxId() );
+        log.info( "Received TxStreamFinishedResponse with %s, %d", response.status(), response.lastTxId() );
         callback();
     }
 

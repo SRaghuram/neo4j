@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.catchup.storecopy;
 
 import static org.neo4j.internal.helpers.collection.LongRange.assertIsRange;
 
-class RequiredTransactions
+public class RequiredTransactions
 {
     private static final long NO_REQUIRED_TX_ID = -1;
     private final long startTxId;
@@ -34,7 +34,7 @@ class RequiredTransactions
         this.requiredTx = requiredTx;
     }
 
-    long startTxId()
+    public long startTxId()
     {
         return startTxId;
     }

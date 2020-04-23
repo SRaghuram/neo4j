@@ -13,6 +13,8 @@ import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
 
+import java.util.function.Function;
+
 import org.neo4j.logging.LogProvider;
 
 import static com.neo4j.bench.micro.Main.run;
@@ -20,41 +22,21 @@ import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
 @BenchmarkEnabled( true )
 @OutputTimeUnit( MICROSECONDS )
-public class StoreCopyBare extends AbstractBareBenchmark
+public class TxPullBare extends AbstractBareBenchmark
 {
-    private static final int FILE_COUNT = 8;
-
+    private static final int TX_COUNT = 2;
     private ClientSequence sequence;
 
     @ParamValues(
-            allowed = {"64MB", "256MB", "1GB"},
-            base = {"64MB", "256MB", "1GB"} )
+            allowed = {"1KB", "1MB", "100MB", "1GB"},
+            base = {"1KB", "1MB", "100MB", "1GB"} )
     @Param( {} )
-    public String filesSize;
-
-    @Override
-    public String benchmarkGroup()
-    {
-        return "Catchup";
-    }
-
-    @Override
-    void prepare( BareClient clientHandler ) throws Throwable
-    {
-        log.info( "Starting preparing files" );
-        var size = nbrOfBytes( filesSize );
-        for ( var i = 0; i < FILE_COUNT; i++ )
-        {
-            filesHolder.prepareFile( "nonatomic" + i + ".bin", size / FILE_COUNT );
-        }
-        log.info( "Files prepared, preparing other stuff" );
-        sequence = new StoreCopyClientSequence( logProvider(), clientHandler );
-    }
+    public String txSize;
 
     @Override
     public String description()
     {
-        return "Complete store copy with catchup protocol using only network components";
+        return "Pulling transactions with catchup protocol using only network components";
     }
 
     @Override
@@ -63,17 +45,24 @@ public class StoreCopyBare extends AbstractBareBenchmark
         return false;
     }
 
+    void prepare( BareClient clientHandler ) throws InterruptedException
+    {
+        var txTotalSize = nbrOfBytes( txSize );
+        transactionProvider.set( txTotalSize / TX_COUNT, TX_COUNT );
+        new TxPullPrepareClientSequence( logProvider(), clientHandler ).perform( "foo" );
+        sequence = new TxPullClientSequence( logProvider(), clientHandler );
+    }
+
     @Benchmark
     @BenchmarkMode( Mode.SampleTime )
-    public void copyStore() throws Exception
+    public void pullTransactions() throws Exception
     {
         sequence.perform( "foo" );
     }
 
-    private static class StoreCopyClientSequence extends ClientSequence
+    private static class TxPullPrepareClientSequence extends ClientSequence
     {
-
-        StoreCopyClientSequence( LogProvider logProvider, BareClient clientHandler )
+        TxPullPrepareClientSequence( LogProvider logProvider, BareClient clientHandler )
         {
             super( logProvider, clientHandler );
         }
@@ -91,24 +80,26 @@ public class StoreCopyBare extends AbstractBareBenchmark
 
         private void stepPrepareStoreCopy()
         {
-            clientHandler.prepareStoreCopy( this::stepGetFile );
+            clientHandler.prepareStoreCopy( this::finish );
+        }
+    }
+
+    private static class TxPullClientSequence extends ClientSequence
+    {
+        TxPullClientSequence( LogProvider logProvider, BareClient clientHandler )
+        {
+            super( logProvider, clientHandler );
         }
 
-        private void stepGetFile()
+        @Override
+        protected void firstStep( String databaseName )
         {
-            if ( clientHandler.hasNextFile() )
-            {
-                clientHandler.getNextFile( this::stepGetFile );
-            }
-            else
-            {
-                clientHandler.pullTransactions( this::finish );
-            }
+            clientHandler.pullTransactions( this::finish );
         }
     }
 
     public static void main( String... methods )
     {
-        run( StoreCopyBare.class, methods);
+        run( TxPullBare.class, methods );
     }
 }

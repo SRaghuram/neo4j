@@ -8,6 +8,7 @@ package com.neo4j.bench.micro.benchmarks.cluster.catchup;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
+import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreFileRequest;
@@ -29,6 +30,8 @@ import java.util.stream.Stream;
 
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdFactory;
+import org.neo4j.logging.Log;
+import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StoreId;
 
 import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
@@ -37,19 +40,24 @@ import static com.neo4j.causalclustering.catchup.ResponseMessageType.CORE_SNAPSH
 import static com.neo4j.causalclustering.catchup.ResponseMessageType.DATABASE_ID_RESPONSE;
 import static com.neo4j.causalclustering.catchup.ResponseMessageType.PREPARE_STORE_COPY_RESPONSE;
 import static com.neo4j.causalclustering.catchup.ResponseMessageType.STORE_ID;
+import static com.neo4j.causalclustering.catchup.ResponseMessageType.TX;
 import static com.neo4j.causalclustering.catchup.ResponseMessageType.TX_STREAM_FINISHED;
 
 class BareServer implements CatchupServerHandler
 {
+    private final Log log;
     private final BareFilesHolder fileHolder;
+    private final BareTransactionProvider transactionProvider;
     private DatabaseId databaseId;
     private StoreId storeId;
-    private List<File> nonAtomics;
+    private File[] nonAtomics;
     private long lastTxId;
 
-    BareServer( BareFilesHolder fileHolder ) throws IOException
+    BareServer( LogProvider logProvider, BareFilesHolder fileHolder, BareTransactionProvider transactionProvider ) throws IOException
     {
+        this.log = logProvider.getLog( getClass() );
         this.fileHolder = fileHolder;
+        this.transactionProvider = transactionProvider;
 
         var rnd = new Random();
         databaseId = DatabaseIdFactory.from( UUID.randomUUID() );
@@ -95,7 +103,7 @@ class BareServer implements CatchupServerHandler
             protected void channelRead0( ChannelHandlerContext ctx, PrepareStoreCopyRequest msg )
             {
                 fileHolder.sendFile( ctx, "atomic.bin" );
-                respond( ctx, protocol, PREPARE_STORE_COPY_RESPONSE, PrepareStoreCopyResponse.success( nonAtomics.toArray( new File[0] ), lastTxId ) );
+                respond( ctx, protocol, PREPARE_STORE_COPY_RESPONSE, PrepareStoreCopyResponse.success( nonAtomics, lastTxId ) );
             }
         };
     }
@@ -122,6 +130,15 @@ class BareServer implements CatchupServerHandler
             @Override
             protected void channelRead0( ChannelHandlerContext ctx, TxPullRequest msg )
             {
+                if ( transactionProvider.reset() )
+                {
+                    ctx.write( TX );
+                    while ( transactionProvider.hasNext() )
+                    {
+                        ctx.write( new TxPullResponse( storeId, transactionProvider.next() ) );
+                    }
+                    ctx.write( TxPullResponse.EMPTY );
+                }
                 respond( ctx, protocol, TX_STREAM_FINISHED, new TxStreamFinishedResponse( SUCCESS_END_OF_STREAM, lastTxId ) );
             }
         };

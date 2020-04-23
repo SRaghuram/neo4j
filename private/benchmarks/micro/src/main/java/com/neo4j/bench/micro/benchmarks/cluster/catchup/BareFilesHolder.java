@@ -13,10 +13,7 @@ import io.netty.channel.ChannelHandlerContext;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.List;
 import java.util.Random;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -79,8 +76,8 @@ class BareFilesHolder
         storeFileStreamingProtocol.end( ctx, SUCCESS, lastTxId );
     }
 
-    List<File> getFiles()
+    File[] getFiles()
     {
-        return Stream.of( fs.listFiles( new File( "." ) ) ).collect( Collectors.toList() );
+        return fs.listFiles( new File( "." ) );
     }
 }

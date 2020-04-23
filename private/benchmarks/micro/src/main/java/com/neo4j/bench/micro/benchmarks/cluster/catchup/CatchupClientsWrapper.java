@@ -13,64 +13,76 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFileStream;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFileStreamProvider;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
+import com.neo4j.causalclustering.catchup.tx.TxPullClient;
+import com.neo4j.causalclustering.catchup.tx.TxPullResponseListener;
 import com.neo4j.causalclustering.common.ClusterMonitors;
 import io.netty.buffer.ByteBuf;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import org.neo4j.kernel.database.NamedDatabaseId;
+import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.storageengine.api.StoreId;
 
 import static com.neo4j.causalclustering.catchup.storecopy.TerminationCondition.CONTINUE_INDEFINITELY;
 
-class StoreCopyClientWrapper
+class CatchupClientsWrapper
 {
     private final File ignoredDestDir = new File( "." );
     private final StoreCopyClient storeCopyClient;
+    private final TxPullClient txPullClient;
     private final CatchupAddressProvider catchupAddressProvider;
 
     private static final StoreFileStream NOOP_STREAM = new StoreFileStream()
     {
         @Override
-        public void write( ByteBuf byteBuf ) throws IOException
+        public void write( ByteBuf byteBuf )
         {
             // no-op
         }
 
         @Override
-        public void close() throws Exception
+        public void close()
         {
             // no-op
         }
     };
 
-    private static final StoreFileStreamProvider NOOP_STREAM_PROVIDER = new StoreFileStreamProvider()
-    {
-        @Override
-        public StoreFileStream acquire( String destination, int requiredAlignment ) throws IOException
-        {
-            return NOOP_STREAM;
-        }
-    };
+    private static final StoreFileStreamProvider NOOP_STREAM_PROVIDER = ( destination, requiredAlignment ) -> NOOP_STREAM;
+    private final TxPullResponseListener doNothing;
 
-    StoreCopyClientWrapper( GlobalModule module, CatchupClientFactory catchupClientFactory, NamedDatabaseId databaseId, LogProvider logProvider,
+    private StoreId storeId;
+    private long previousTxId;
+
+    CatchupClientsWrapper( GlobalModule module, CatchupClientFactory catchupClientFactory, NamedDatabaseId databaseId, LogProvider logProvider,
             SocketAddress socketAddress )
     {
-
         var monitors = ClusterMonitors.create( module.getGlobalMonitors(), module.getGlobalDependencies() );
         var backupStrategy = new ConstantTimeTimeoutStrategy( 5, TimeUnit.SECONDS );
         this.storeCopyClient = new StoreCopyClient( catchupClientFactory, databaseId, () -> monitors, logProvider, backupStrategy );
+        this.txPullClient = new TxPullClient( catchupClientFactory, databaseId, () -> monitors, logProvider );
         this.catchupAddressProvider = new CatchupAddressProvider.SingleAddressProvider( socketAddress );
+        var log = logProvider.getLog( getClass() );
+        this.doNothing = tx ->
+        {
+            log.info( "Tx received: " + tx );
+        };
     }
 
     void storeCopy() throws CatchupAddressResolutionException, StoreCopyFailedException, StoreIdDownloadFailedException
     {
-        var storeId = storeCopyClient.fetchStoreId( catchupAddressProvider.primary( null ) );
-        storeCopyClient.copyStoreFiles( catchupAddressProvider, storeId, NOOP_STREAM_PROVIDER, () -> CONTINUE_INDEFINITELY, ignoredDestDir );
+        storeId = storeCopyClient.fetchStoreId( catchupAddressProvider.primary( null ) );
+        var copyResult = storeCopyClient.copyStoreFiles( catchupAddressProvider, storeId, NOOP_STREAM_PROVIDER, () -> CONTINUE_INDEFINITELY, ignoredDestDir );
+        previousTxId = copyResult.startTxId() - 1;
+    }
+
+    void pullTransactions() throws Exception
+    {
+        txPullClient.pullTransactions( catchupAddressProvider.primary( null ), storeId, previousTxId, doNothing );
     }
 }

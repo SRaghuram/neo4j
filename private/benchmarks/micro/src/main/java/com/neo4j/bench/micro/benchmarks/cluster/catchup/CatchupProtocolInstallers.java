@@ -6,14 +6,10 @@
 package com.neo4j.bench.micro.benchmarks.cluster.catchup;
 
 import com.neo4j.bench.micro.benchmarks.cluster.ProtocolInstallers;
-import com.neo4j.bench.micro.benchmarks.cluster.ProtocolVersion;
 import com.neo4j.causalclustering.catchup.CatchupResponseHandler;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.v3.CatchupProtocolClientInstaller;
 import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstaller;
-import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
-import com.neo4j.causalclustering.messaging.Inbound;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 
@@ -22,7 +18,7 @@ import org.neo4j.storageengine.api.CommandReaderFactory;
 
 import static java.util.Collections.emptyList;
 
-public class CatchupProtocolInstallers implements ProtocolInstallers
+class CatchupProtocolInstallers implements ProtocolInstallers
 {
     private final LogProvider logProvider;
     private final NettyPipelineBuilderFactory pipelineBuilderFactory;

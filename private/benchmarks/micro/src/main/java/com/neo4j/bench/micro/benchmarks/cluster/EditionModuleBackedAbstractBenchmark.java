@@ -6,7 +6,6 @@
 package com.neo4j.bench.micro.benchmarks.cluster;
 
 import com.neo4j.bench.common.results.ForkDirectory;
-import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.micro.benchmarks.BaseRegularBenchmark;
 import com.neo4j.bench.model.model.Benchmark;
 import com.neo4j.bench.model.model.BenchmarkGroup;

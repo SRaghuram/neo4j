@@ -22,16 +22,11 @@ abstract class ClientSequence
         this.clientHandler = clientHandler;
     }
 
-    ClientSequence start( String databaseName )
+    void perform( String databaseName ) throws InterruptedException
     {
         semaphore = new Semaphore( 0 );
         clientHandler.registerErrorCallback( this::finishWithError );
         firstStep( databaseName );
-        return this;
-    }
-
-    void waitForFinish() throws InterruptedException
-    {
         semaphore.acquire();
     }
 
@@ -45,6 +40,7 @@ abstract class ClientSequence
 
     private void finishWithError( Throwable t )
     {
+        clientHandler.registerErrorCallback( null );
         log.error( "Exception occurred during send", t );
         semaphore.release();
     }
