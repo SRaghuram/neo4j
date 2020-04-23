@@ -15,24 +15,44 @@ class CachingExpressionCompilerBack(inner: DefaultExpressionCompilerBack,
                                    ) extends ExpressionCompilerBack {
 
   override def compileExpression(e: IntermediateExpression): CompiledExpression = {
-    CachingExpressionCompilerBack.EXPRESSIONS.computeIfAbsent(e, {
-      tracer.onCompileExpression()
-      inner.compileExpression(e)
-    })
+    if (e.fields.isEmpty) {
+      CachingExpressionCompilerBack.EXPRESSIONS.computeIfAbsent(e, innerCompileExpression(e))
+    } else {
+      innerCompileExpression(e)
+    }
+  }
+
+  private def innerCompileExpression(e: IntermediateExpression) = {
+    tracer.onCompileExpression()
+    inner.compileExpression(e)
   }
 
   override def compileProjection(projection: IntermediateExpression): CompiledProjection = {
-    CachingExpressionCompilerBack.PROJECTIONS.computeIfAbsent(projection, {
-      tracer.onCompileProjection()
-      inner.compileProjection(projection)
-    })
+    if (projection.fields.isEmpty) {
+      CachingExpressionCompilerBack.PROJECTIONS.computeIfAbsent(projection, innerCompilerProjection(projection))
+    } else {
+      innerCompilerProjection(projection)
+    }
+  }
+
+  private def innerCompilerProjection(projection: IntermediateExpression) = {
+    tracer.onCompileProjection()
+    inner.compileProjection(projection)
   }
 
   override def compileGrouping(grouping: IntermediateGroupingExpression): CompiledGroupingExpression = {
-    CachingExpressionCompilerBack.GROUPINGS.computeIfAbsent(grouping, {
-      tracer.onCompileGrouping()
-      inner.compileGrouping(grouping)
-    })
+    if (grouping.computeKey.fields.isEmpty &&
+        grouping.getKey.fields.isEmpty &&
+        grouping.projectKey.fields.isEmpty) {
+      CachingExpressionCompilerBack.GROUPINGS.computeIfAbsent(grouping, innerCompileGrouping(grouping))
+    } else {
+      innerCompileGrouping(grouping)
+    }
+  }
+
+  private def innerCompileGrouping(grouping: IntermediateGroupingExpression) = {
+    tracer.onCompileGrouping()
+    inner.compileGrouping(grouping)
   }
 }
 

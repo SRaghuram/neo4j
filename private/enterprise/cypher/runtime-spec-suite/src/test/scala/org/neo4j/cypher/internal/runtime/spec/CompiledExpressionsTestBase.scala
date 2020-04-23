@@ -21,7 +21,8 @@ object CompiledExpressionsTestBase {
 }
 
 abstract class CompiledExpressionsTestBase[CONTEXT <: EnterpriseRuntimeContext](edition: Edition[CONTEXT],
-                                                                                runtime: CypherRuntime[CONTEXT]) extends RuntimeTestSuite[CONTEXT](edition.copyWith(cypher_expression_engine -> COMPILED), runtime) {
+                                                                                runtime: CypherRuntime[CONTEXT]
+                                                                               ) extends RuntimeTestSuite[CONTEXT](edition.copyWith(cypher_expression_engine -> COMPILED), runtime) {
 
   private def newFilterQuery() =
     new LogicalQueryBuilder(this)
@@ -92,5 +93,64 @@ abstract class CompiledExpressionsTestBase[CONTEXT <: EnterpriseRuntimeContext](
   private def numberOfCompilationEvents(query: LogicalQuery): Int = {
     val (_, context) = buildPlanAndContext(query, runtime)
     context.cachingExpressionCompilerTracer.asInstanceOf[TestCachingExpressionCompilerTracer].numberOfCompilationEvents
+  }
+
+  test("should never cache expression/projection/grouping which has late properties") {
+    // given
+    val propName = "unheardOfProperty"
+    val someNumber = COUNTER.getAndIncrement() * 6841
+
+    val query = new LogicalQueryBuilder(this)
+      .produceResults("prop", "sum")
+      .aggregation(Seq(s"n.$propName AS prop", "id(n) AS n", "id(x) AS x"), Seq("sum(x) AS sum"))
+      .projection(s"n.$propName * $someNumber AS x")
+      .filter(s"n.$propName > $someNumber")
+      .nonFuseable()
+      .allNodeScan("n")
+      .build()
+
+    numberOfCompilationEvents(query) shouldBe 3
+
+    // when recompile then
+    numberOfCompilationEvents(query) shouldBe 3
+  }
+
+  test("should never cache expression/projection/grouping which has late labels") {
+    // given
+    val labelName = "UnheardLabel" + COUNTER.getAndIncrement()
+
+    val query = new LogicalQueryBuilder(this)
+      .produceResults("hasLabel", "count")
+      .aggregation(Seq(s"n:$labelName AS hasLabel", "id(n) AS n", "id(x) AS x"), Seq("count(*) AS count"))
+      .projection(s"n:$labelName IN [true, false] AS x")
+      .filter(s"n:$labelName IN [true, false]")
+      .nonFuseable()
+      .allNodeScan("n")
+      .build()
+
+    numberOfCompilationEvents(query) shouldBe 3
+
+    // when recompile then
+    numberOfCompilationEvents(query) shouldBe 3
+  }
+
+  test("should never cache expression/projection/grouping which has late relationship types") {
+    // given
+    val typeName = "UnheardType" + COUNTER.getAndIncrement()
+
+    val query = new LogicalQueryBuilder(this)
+      .produceResults("hasType", "count")
+      .aggregation(Seq(s"r:$typeName AS hasType", "id(r) AS r", "id(x) AS x"), Seq("count(*) AS count"))
+      .projection(s"r:$typeName IN [true, false] AS x")
+      .filter(s"r:$typeName IN [true, false]")
+      .nonFuseable()
+      .expand("(n)-[r]->()")
+      .allNodeScan("n")
+      .build()
+
+    numberOfCompilationEvents(query) shouldBe 3
+
+    // when recompile then
+    numberOfCompilationEvents(query) shouldBe 3
   }
 }
