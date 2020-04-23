@@ -11,6 +11,8 @@ import org.eclipse.collections.api.map.primitive.MutableLongLongMap;
 import org.eclipse.collections.impl.factory.primitive.LongLongMaps;
 
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -28,6 +30,8 @@ import org.neo4j.graphdb.schema.IndexCreator;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
+import org.neo4j.values.storable.Value;
+import org.neo4j.values.storable.Values;
 
 import static java.lang.Math.toIntExact;
 import static org.neo4j.configuration.GraphDatabaseSettings.CheckpointPolicy.CONTINUOUS;
@@ -40,10 +44,10 @@ public class MigrateDataIntoOtherDatabase
     {
         Path fromHome = Path.of( args[0] );
         Path toHome = Path.of( args[1] );
-        migrate( fromHome, toHome );
+        migrate( fromHome, toHome, true );
     }
 
-    public static void migrate( Path fromHome, Path toHome )
+    public static void migrate( Path fromHome, Path toHome, boolean validate )
     {
         assert !(fromHome.equals( toHome ));
         System.out.println( String.format( "Migrating %s to Freki store: %s", fromHome, toHome ) );
@@ -64,7 +68,7 @@ public class MigrateDataIntoOtherDatabase
                 .build();
         try
         {
-            copyDatabase( fromDbms.database( DEFAULT_DATABASE_NAME ), toDbms.database( DEFAULT_DATABASE_NAME ) );
+            copyDatabase( fromDbms.database( DEFAULT_DATABASE_NAME ), toDbms.database( DEFAULT_DATABASE_NAME ), validate );
         }
         finally
         {
@@ -73,18 +77,18 @@ public class MigrateDataIntoOtherDatabase
         }
     }
 
-    private static void copyDatabase( GraphDatabaseService from, GraphDatabaseService to )
+    private static void copyDatabase( GraphDatabaseService from, GraphDatabaseService to, boolean validate )
     {
         try ( Transaction fromTx = from.beginTx() )
         {
-            copyData( to, fromTx );
+            copyData( to, fromTx, validate );
             copySchema( to, fromTx );
             fromTx.commit();
         }
         System.out.println( "Database copied" );
     }
 
-    private static void copyData( GraphDatabaseService to, Transaction fromTx )
+    private static void copyData( GraphDatabaseService to, Transaction fromTx, boolean validate )
     {
         InternalTransaction tx = (InternalTransaction) fromTx;
         long numNodes = tx.kernelTransaction().dataRead().nodesGetCount();
@@ -106,12 +110,26 @@ public class MigrateDataIntoOtherDatabase
                     {
                         Node fromNode = nodes.next();
                         Node toNode = copyNodeData( fromNode, toTx );
-                        fromToNodeIdTable[ toIntExact( fromNode.getId() % numMaps ) ].put( fromNode.getId(), toNode.getId() );
+                        fromToNodeIdTable[toIntExact( fromNode.getId() % numMaps )].put( fromNode.getId(), toNode.getId() );
                     }
                     toTx.commit();
                     System.out.println( "node batch " + batch + " completed" );
                 }
             }
+        }
+        if ( validate )
+        {
+            System.out.println( "Validating Nodes ");
+            try ( Transaction toTx = to.beginTx() )
+            {
+                for ( Node fromNode : fromTx.getAllNodes() )
+                {
+                    long toNodeId =  fromToNodeIdTable[toIntExact( fromNode.getId() % numMaps )].get( fromNode.getId() );
+                    Node toNode = toTx.getNodeById( toNodeId );
+                    compareNodes( fromNode, toNode, true, true, false );
+                }
+            }
+            System.out.println( "Store looks fine");
         }
         try ( ResourceIterator<Relationship> relationships = fromTx.getAllRelationships().iterator() )
         {
@@ -135,6 +153,58 @@ public class MigrateDataIntoOtherDatabase
                 }
             }
         }
+
+        if ( validate )
+        {
+            System.out.println( "Validating store");
+            try ( Transaction toTx = to.beginTx() )
+            {
+                for ( Node fromNode : fromTx.getAllNodes() )
+                {
+                    long toNodeId =  fromToNodeIdTable[toIntExact( fromNode.getId() % numMaps )].get( fromNode.getId() );
+                    Node toNode = toTx.getNodeById( toNodeId );
+                    compareNodes( fromNode, toNode, true, true, true );
+                }
+            }
+            System.out.println( "Store looks fine");
+        }
+    }
+
+    private static void compareNodes( Node fromNode, Node toNode, boolean checkLabels, boolean checkProps, boolean checkDegrees )
+    {
+        if ( checkLabels )
+        {
+            HashSet<String> fromLabels = new HashSet<>();
+            HashSet<String> toLabels = new HashSet<>();
+            fromNode.getLabels().forEach( l -> fromLabels.add( l.name() ) );
+            toNode.getLabels().forEach( l -> toLabels.add( l.name() ) );
+            if ( !fromLabels.equals( toLabels ) )
+            {
+                throw new RuntimeException( "Broken labels " + toNode + toLabels + " should be " + fromNode + fromLabels );
+            }
+        }
+
+        if ( checkProps )
+        {
+            HashMap<String,Value> fromProps = new HashMap<>();
+            HashMap<String,Value> toProps = new HashMap<>();
+            fromNode.getAllProperties().forEach( ( s, o ) -> fromProps.put( s, Values.of( o ) ) );
+            toNode.getAllProperties().forEach( ( s, o ) -> toProps.put( s, Values.of( o ) ) );
+            if ( !fromProps.equals( toProps ) )
+            {
+                throw new RuntimeException( "Broken properties " + toNode + toProps + " should be " + fromNode + fromProps );
+            }
+        }
+
+        if ( checkDegrees )
+        {
+            if ( fromNode.getDegree() != toNode.getDegree() )
+            {
+                throw new RuntimeException(
+                        "Broken relationships " + toNode + ", " + toNode.getDegree() + " should be " + fromNode + ", " + fromNode.getDegree() );
+            }
+        }
+
     }
 
     private static void copySchema( GraphDatabaseService to, Transaction fromTx )
