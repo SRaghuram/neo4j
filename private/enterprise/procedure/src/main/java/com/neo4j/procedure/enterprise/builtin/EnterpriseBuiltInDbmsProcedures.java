@@ -59,7 +59,7 @@ import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.logging.Log;
 import org.neo4j.memory.GlobalMemoryGroupTracker;
 import org.neo4j.memory.MemoryPools;
-import org.neo4j.memory.NamedMemoryPool;
+import org.neo4j.memory.ScopedMemoryPool;
 import org.neo4j.procedure.Admin;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
@@ -347,8 +347,8 @@ public class EnterpriseBuiltInDbmsProcedures
     {
         var memoryPools = resolver.resolveDependency( MemoryPools.class );
         var registeredPools = memoryPools.getPools();
-        registeredPools.sort( Comparator.comparing( NamedMemoryPool::group )
-                .thenComparing( NamedMemoryPool::name ) );
+        registeredPools.sort( Comparator.comparing( ScopedMemoryPool::group )
+                .thenComparing( ScopedMemoryPool::databaseName ) );
         return registeredPools.stream().map( MemoryPoolResult::new );
     }
 
@@ -367,8 +367,8 @@ public class EnterpriseBuiltInDbmsProcedures
                 allPools.addAll( ((GlobalMemoryGroupTracker) pool).getDatabasePools() );
             }
         }
-        allPools.sort( Comparator.comparing( NamedMemoryPool::group )
-                .thenComparing( NamedMemoryPool::name ) );
+        allPools.sort( Comparator.comparing( ScopedMemoryPool::group )
+                .thenComparing( ScopedMemoryPool::databaseName ) );
         return allPools.stream().map( MemoryPoolResult::new );
     }
 
@@ -774,7 +774,7 @@ public class EnterpriseBuiltInDbmsProcedures
     {
         private static final String UNBOUNDED = "Unbounded";
         public final String group;
-        public final String poolName;
+        public final String databaseName;
         public final String heapMemoryUsed;
         public final String heapMemoryUsedBytes;
         public final String nativeMemoryUsed;
@@ -784,10 +784,10 @@ public class EnterpriseBuiltInDbmsProcedures
         public final String totalPoolMemory;
         public final String totalPoolMemoryBytes;
 
-        public MemoryPoolResult( NamedMemoryPool memoryPool )
+        public MemoryPoolResult( ScopedMemoryPool memoryPool )
         {
             this.group = memoryPool.group().getName();
-            this.poolName = memoryPool.name();
+            this.databaseName = memoryPool.databaseName();
             this.heapMemoryUsed = bytesToString( memoryPool.usedHeap() );
             this.heapMemoryUsedBytes = valueOf( memoryPool.usedHeap() );
             this.nativeMemoryUsed = bytesToString( memoryPool.usedNative() );

@@ -12,7 +12,7 @@ import java.util.List;
 
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.memory.MemoryPools;
-import org.neo4j.memory.NamedMemoryPool;
+import org.neo4j.memory.ScopedMemoryPool;
 
 public abstract class AbstractMemoryPoolMetrics extends LifecycleAdapter
 {
@@ -32,9 +32,9 @@ public abstract class AbstractMemoryPoolMetrics extends LifecycleAdapter
         this.metricsPoolPrefix = metricsPoolPrefix;
     }
 
-    protected abstract String namePoolMetric( NamedMemoryPool pool, String metricName );
+    protected abstract String namePoolMetric( ScopedMemoryPool pool, String metricName );
 
-    protected abstract List<NamedMemoryPool> pools();
+    protected abstract List<ScopedMemoryPool> pools();
 
     @Override
     public void start()

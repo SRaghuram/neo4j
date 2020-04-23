@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 import org.neo4j.annotations.documented.Documented;
 import org.neo4j.memory.GlobalMemoryGroupTracker;
 import org.neo4j.memory.MemoryPools;
-import org.neo4j.memory.NamedMemoryPool;
+import org.neo4j.memory.ScopedMemoryPool;
 
 import static com.codahale.metrics.MetricRegistry.name;
 import static java.lang.String.format;
@@ -36,7 +36,7 @@ public class DatabaseMemoryPoolMetrics extends AbstractMemoryPoolMetrics
     }
 
     @Override
-    protected List<NamedMemoryPool> pools()
+    protected List<ScopedMemoryPool> pools()
     {
         return memoryPools.getPools().stream()
                 .filter( pool -> pool instanceof GlobalMemoryGroupTracker )
@@ -46,8 +46,8 @@ public class DatabaseMemoryPoolMetrics extends AbstractMemoryPoolMetrics
     }
 
     @Override
-    protected String namePoolMetric( NamedMemoryPool pool, String metricName )
+    protected String namePoolMetric( ScopedMemoryPool pool, String metricName )
     {
-        return format( poolTemplate, pool.group().getName().toLowerCase(), pool.name().toLowerCase(), metricName.toLowerCase() );
+        return format( poolTemplate, pool.group().getName().toLowerCase(), pool.databaseName().toLowerCase(), metricName.toLowerCase() );
     }
 }

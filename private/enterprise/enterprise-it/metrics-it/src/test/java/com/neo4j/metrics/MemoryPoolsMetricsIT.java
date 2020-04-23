@@ -15,7 +15,7 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.memory.GlobalMemoryGroupTracker;
 import org.neo4j.memory.MemoryPools;
-import org.neo4j.memory.NamedMemoryPool;
+import org.neo4j.memory.ScopedMemoryPool;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.ExtensionCallback;
 import org.neo4j.test.extension.Inject;
@@ -59,28 +59,25 @@ public class MemoryPoolsMetricsIT
     {
         var globalPools = pools.getPools();
         assertThat( globalPools ).isNotEmpty();
-        globalPools.forEach( pool ->
+        globalPools.forEach( pool -> assertDoesNotThrow( () ->
         {
-            assertDoesNotThrow( () ->
-            {
-                var usedHeapReports = metricsCsv( outputPath, buildGlobalMetricFileName( pool, ".used_heap" ) );
-                var usedNativeReports = metricsCsv( outputPath, buildGlobalMetricFileName( pool, ".used_native" ) );
-                var totalUsedReports = metricsCsv( outputPath, buildGlobalMetricFileName( pool, ".total_used" ) );
-                var totalSizeReports = metricsCsv( outputPath, buildGlobalMetricFileName( pool, ".total_size" ) );
-                var freeReports = metricsCsv( outputPath, buildGlobalMetricFileName( pool, ".free" ) );
+            var usedHeapReports = metricsCsv( outputPath, buildGlobalMetricFileName( pool, ".used_heap" ) );
+            var usedNativeReports = metricsCsv( outputPath, buildGlobalMetricFileName( pool, ".used_native" ) );
+            var totalUsedReports = metricsCsv( outputPath, buildGlobalMetricFileName( pool, ".total_used" ) );
+            var totalSizeReports = metricsCsv( outputPath, buildGlobalMetricFileName( pool, ".total_size" ) );
+            var freeReports = metricsCsv( outputPath, buildGlobalMetricFileName( pool, ".free" ) );
 
-                assertEventually( "Used heap should be reported.",
-                        () -> readLongGaugeValue( usedHeapReports ), condition( value -> value >= 0L ), 1, MINUTES );
-                assertEventually( "Used native memory should be reported.",
-                        () -> readLongGaugeValue( usedNativeReports ), condition( value -> value >= 0L ), 1, MINUTES );
-                assertEventually( "Total used memory should be reported.",
-                        () -> readLongGaugeValue( totalUsedReports ), condition( value -> value >= 0L ), 1, MINUTES );
-                assertEventually( "Total pool size should be reported.",
-                        () -> readLongGaugeValue( totalSizeReports ), condition( value -> value >= 0L ), 1, MINUTES );
-                assertEventually( "Free memory should be reported.",
-                        () -> readLongGaugeValue( freeReports ), condition( value -> value >= 0L ), 1, MINUTES );
-            }, "Metrics for pool " + pool.name() + " should be reported." );
-        } );
+            assertEventually( "Used heap should be reported.",
+                    () -> readLongGaugeValue( usedHeapReports ), condition( value -> value >= 0L ), 1, MINUTES );
+            assertEventually( "Used native memory should be reported.",
+                    () -> readLongGaugeValue( usedNativeReports ), condition( value -> value >= 0L ), 1, MINUTES );
+            assertEventually( "Total used memory should be reported.",
+                    () -> readLongGaugeValue( totalUsedReports ), condition( value -> value >= 0L ), 1, MINUTES );
+            assertEventually( "Total pool size should be reported.",
+                    () -> readLongGaugeValue( totalSizeReports ), condition( value -> value >= 0L ), 1, MINUTES );
+            assertEventually( "Free memory should be reported.",
+                    () -> readLongGaugeValue( freeReports ), condition( value -> value >= 0L ), 1, MINUTES );
+        }, "Metrics for pool " + pool.databaseName() + " should be reported." ) );
     }
 
     @Test
@@ -90,39 +87,36 @@ public class MemoryPoolsMetricsIT
                 .flatMap( pool -> ((GlobalMemoryGroupTracker) pool).getDatabasePools().stream() )
                 .filter( pool -> db.databaseName().equals( pool.databaseName() ) ).collect( Collectors.toList() );
         assertThat( dbPools ).isNotEmpty();
-        dbPools.forEach( pool ->
+        dbPools.forEach( pool -> assertDoesNotThrow( () ->
         {
-            assertDoesNotThrow( () ->
-            {
-                var usedHeapReports = metricsCsv( outputPath, buildDatabaseMetricFileName( pool, db.databaseName(), ".used_heap" ) );
-                var usedNativeReports = metricsCsv( outputPath, buildDatabaseMetricFileName( pool, db.databaseName(), ".used_native" ) );
-                var totalUsedReports = metricsCsv( outputPath, buildDatabaseMetricFileName( pool, db.databaseName(), ".total_used" ) );
-                var totalSizeReports = metricsCsv( outputPath, buildDatabaseMetricFileName( pool, db.databaseName(), ".total_size" ) );
-                var freeReports = metricsCsv( outputPath, buildDatabaseMetricFileName( pool, db.databaseName(), ".free" ) );
+            var usedHeapReports = metricsCsv( outputPath, buildDatabaseMetricFileName( pool, db.databaseName(), ".used_heap" ) );
+            var usedNativeReports = metricsCsv( outputPath, buildDatabaseMetricFileName( pool, db.databaseName(), ".used_native" ) );
+            var totalUsedReports = metricsCsv( outputPath, buildDatabaseMetricFileName( pool, db.databaseName(), ".total_used" ) );
+            var totalSizeReports = metricsCsv( outputPath, buildDatabaseMetricFileName( pool, db.databaseName(), ".total_size" ) );
+            var freeReports = metricsCsv( outputPath, buildDatabaseMetricFileName( pool, db.databaseName(), ".free" ) );
 
-                assertEventually( "Used heap should be reported.",
-                        () -> readLongGaugeValue( usedHeapReports ), condition( value -> value >= 0L ), 1, MINUTES );
-                assertEventually( "Used native memory should be reported.",
-                        () -> readLongGaugeValue( usedNativeReports ), condition( value -> value >= 0L ), 1, MINUTES );
-                assertEventually( "Total used memory should be reported.",
-                        () -> readLongGaugeValue( totalUsedReports ), condition( value -> value >= 0L ), 1, MINUTES );
-                assertEventually( "Total pool size should be reported.",
-                        () -> readLongGaugeValue( totalSizeReports ), condition( value -> value >= 0L ), 1, MINUTES );
-                assertEventually( "Free memory should be reported.",
-                        () -> readLongGaugeValue( freeReports ), condition( value -> value >= 0L ), 1, MINUTES );
-            }, "Metrics for pool " + pool.name() + " should be reported." );
-        } );
+            assertEventually( "Used heap should be reported.",
+                    () -> readLongGaugeValue( usedHeapReports ), condition( value -> value >= 0L ), 1, MINUTES );
+            assertEventually( "Used native memory should be reported.",
+                    () -> readLongGaugeValue( usedNativeReports ), condition( value -> value >= 0L ), 1, MINUTES );
+            assertEventually( "Total used memory should be reported.",
+                    () -> readLongGaugeValue( totalUsedReports ), condition( value -> value >= 0L ), 1, MINUTES );
+            assertEventually( "Total pool size should be reported.",
+                    () -> readLongGaugeValue( totalSizeReports ), condition( value -> value >= 0L ), 1, MINUTES );
+            assertEventually( "Free memory should be reported.",
+                    () -> readLongGaugeValue( freeReports ), condition( value -> value >= 0L ), 1, MINUTES );
+        }, "Metrics for pool " + pool.databaseName() + " should be reported." ) );
     }
 
-    private String buildGlobalMetricFileName( NamedMemoryPool pool, String metrics )
+    private String buildGlobalMetricFileName( ScopedMemoryPool pool, String metrics )
     {
         var fileName = "neo4j.dbms.pool." + pool.group() + metrics;
         return fileName.toLowerCase().replace( ' ', '_' );
     }
 
-    private String buildDatabaseMetricFileName( NamedMemoryPool pool, String databaseName, String metrics )
+    private String buildDatabaseMetricFileName( ScopedMemoryPool pool, String databaseName, String metrics )
     {
-        var fileName = "neo4j." + databaseName + ".pool." + pool.group() + "." + pool.name() + metrics;
+        var fileName = "neo4j." + databaseName + ".pool." + pool.group() + "." + pool.databaseName() + metrics;
         return fileName.toLowerCase().replace( ' ', '_' );
     }
 }

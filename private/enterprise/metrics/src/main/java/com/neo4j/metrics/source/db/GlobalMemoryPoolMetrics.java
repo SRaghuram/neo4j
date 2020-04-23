@@ -11,7 +11,7 @@ import java.util.List;
 
 import org.neo4j.annotations.documented.Documented;
 import org.neo4j.memory.MemoryPools;
-import org.neo4j.memory.NamedMemoryPool;
+import org.neo4j.memory.ScopedMemoryPool;
 
 import static com.codahale.metrics.MetricRegistry.name;
 import static java.lang.String.format;
@@ -31,13 +31,13 @@ public class GlobalMemoryPoolMetrics extends AbstractMemoryPoolMetrics
     }
 
     @Override
-    protected List<NamedMemoryPool> pools()
+    protected List<ScopedMemoryPool> pools()
     {
         return memoryPools.getPools();
     }
 
     @Override
-    protected String namePoolMetric( NamedMemoryPool pool, String metricName )
+    protected String namePoolMetric( ScopedMemoryPool pool, String metricName )
     {
         return format( poolTemplate, pool.group().getName().toLowerCase(), metricName.toLowerCase() );
     }
