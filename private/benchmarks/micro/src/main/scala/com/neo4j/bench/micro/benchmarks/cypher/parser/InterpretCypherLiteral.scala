@@ -26,6 +26,9 @@ import org.openjdk.jmh.annotations.Setup
 import org.openjdk.jmh.annotations.State
 import org.openjdk.jmh.annotations.TearDown
 
+import scala.collection.immutable
+import scala.util.Random
+
 @BenchmarkEnabled(true)
 class InterpretCypherLiteral extends BaseDatabaseBenchmark {
 
@@ -43,53 +46,68 @@ class InterpretCypherLiteral extends BaseDatabaseBenchmark {
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
-  def interpretNumber(threadState: InterpretCypherLiteralState): Unit = {
-    val random = java.util.concurrent.ThreadLocalRandom.current()
-    threadState.parseLiteral(random.nextDouble().toString)
+  def interpretNumber(threadState: InterpretCypherLiteralState): Object = {
+    threadState.parseLiteral(threadState.nextNumber())
   }
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
-  def interpretList(threadState: InterpretCypherLiteralState): Unit = {
-    val random = java.util.concurrent.ThreadLocalRandom.current()
-    val n = random.nextInt(5, 20)
-    val sb = new StringBuilder
-    sb ++= "["
-    sb ++= random.nextDouble().toString
-    var i = 1
-    while (i < n) {
-      sb += ','
-      sb ++= random.nextDouble().toString
-      i += 1
-    }
-    sb ++= "]"
-    threadState.parseLiteral(sb.result())
+  def interpretList(threadState: InterpretCypherLiteralState): Object = {
+    threadState.parseLiteral(threadState.nextList())
   }
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
-  def interpretMap(threadState: InterpretCypherLiteralState): Unit = {
-    val random = java.util.concurrent.ThreadLocalRandom.current()
-    val n = random.nextInt(5, 20)
-    val sb = new StringBuilder
-    sb ++= "{"
-    sb ++= "v0: "
-    sb ++= random.nextDouble().toString
-    var i = 1
-    while (i < n) {
-      sb += ','
-      sb += 'v'
-      sb ++= i.toString
-      sb += ':'
-      sb ++= random.nextDouble().toString
-      i += 1
-    }
-    sb ++= "}"
-    threadState.parseLiteral(sb.result())
+  def interpretMap(threadState: InterpretCypherLiteralState): Object = {
+    threadState.parseLiteral(threadState.nextMap())
   }
 }
 
 object InterpretCypherLiteral {
+
+  val randomNumbers: Array[String] =
+    (0 until 1000).map(i => {
+      val random = new Random(12345)
+      random.nextDouble().toString
+    }).toArray
+
+  val randomLists: Array[String] =
+    (0 until 1000).map(i => {
+      val random = new Random(12345)
+      val n = 5 + random.nextInt(15)
+      val sb = new StringBuilder
+      sb ++= "["
+      sb ++= random.nextDouble().toString
+      var i = 1
+      while (i < n) {
+        sb += ','
+        sb ++= random.nextDouble().toString
+        i += 1
+      }
+      sb ++= "]"
+      sb.result()
+    }).toArray
+
+  val randomMaps: Array[String] =
+    (0 until 1000).map(i => {
+      val random = new Random(12345)
+      val n = 5 + random.nextInt(15)
+      val sb = new StringBuilder
+      sb ++= "{"
+      sb ++= "v0: "
+      sb ++= random.nextDouble().toString
+      var i = 1
+      while (i < n) {
+        sb += ','
+        sb += 'v'
+        sb ++= i.toString
+        sb += ':'
+        sb ++= random.nextDouble().toString
+        i += 1
+      }
+      sb ++= "}"
+      sb.result()
+    }).toArray
 
   def main(args: Array[String]): Unit = {
     Main.run(classOf[InterpretCypherLiteral], args:_*)
@@ -98,7 +116,8 @@ object InterpretCypherLiteral {
 
 @State(Scope.Thread)
 class InterpretCypherLiteralState {
-  var parser: String => Unit = _
+  var parser: String => Object = _
+  var index: Int = 0
 
   @Setup
   def setUp(benchmarkState: InterpretCypherLiteral, rngState: RNGState): Unit = {
@@ -113,15 +132,36 @@ class InterpretCypherLiteralState {
             val x = new javacc.Cypher(new LiteralInterpreter(), exceptionFactory, new StringReader(literal))
             x.Literal()
           }
+        case str => throw new IllegalStateException(s"Unknown benchmark impl `$str`")
       }
   }
 
-  def parseLiteral(query: String): Unit = {
+  def parseLiteral(query: String): Object = {
     try {
       parser(query)
     } catch {
-      case _: Throwable => // ignore, some queries are meant to fail
+      case _: Throwable => null // ignore, some queries are meant to fail
     }
+  }
+
+  def nextNumber(): String = {
+    next(InterpretCypherLiteral.randomNumbers)
+  }
+
+  def nextList(): String = {
+    next(InterpretCypherLiteral.randomLists)
+  }
+
+  def nextMap(): String = {
+    next(InterpretCypherLiteral.randomMaps)
+  }
+
+  private def next(values: Array[String]): String = {
+    index = index + 1
+    if (index >= values.length) {
+      index = 0
+    }
+    values(index)
   }
 
   @TearDown
