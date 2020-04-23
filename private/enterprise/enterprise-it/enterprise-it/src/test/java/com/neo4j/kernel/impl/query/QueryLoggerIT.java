@@ -142,7 +142,8 @@ class QueryLoggerIT
         assertThat( logLines.size(), equalTo( 10 ) );
         String connectionDetails = connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME );
         assertThat( logLines, contains(
-                endsWith( String.format( " ms: %s - %s - {} - runtime=system - {}", connectionDetails, "CREATE USER foo SET PASSWORD '******' CHANGE NOT REQUIRED" ) ),
+                endsWith( String.format( " ms: %s - %s - {} - runtime=system - {}", connectionDetails,
+                        "CREATE USER foo SET PASSWORD '******' CHANGE NOT REQUIRED" ) ),
                 endsWith( String.format( " ms: %s - %s - {} - runtime=system - {}", connectionDetails,
                         "CREATE OR REPLACE USER foo SET PASSWORD '******' CHANGE NOT REQUIRED" ) ),
                 endsWith( String.format( " ms: %s - %s - {} - runtime=system - {}", connectionDetails,
@@ -576,7 +577,8 @@ class QueryLoggerIT
         var lastEntry = logLines.size() - 1;
         var obfuscatedQuery = "ALTER CURRENT USER SET PASSWORD FROM '******' TO '******'";
         assertThat( logLines.get( lastEntry ),
-                endsWith( String.format( " ms: %s%s - %s - {} - runtime=system - {}", connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
+                endsWith( String.format( " ms: %s%s - %s - {} - runtime=system - {}",
+                        connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
     }
 
     @Test
@@ -598,7 +600,8 @@ class QueryLoggerIT
         var lastEntry = logLines.size() - 1;
         var obfuscatedQuery = "ALTER USER foo SET PASSWORD '******'";
         assertThat( logLines.get( lastEntry ),
-                endsWith( String.format( " ms: %s%s - %s - {} - runtime=system - {}", connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
+                endsWith( String.format( " ms: %s%s - %s - {} - runtime=system - {}",
+                        connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
     }
 
     @Test
@@ -620,7 +623,8 @@ class QueryLoggerIT
         var lastEntry = logLines.size() - 1;
         var obfuscatedQuery = "CALL dbms.security.changeUserPassword('foo', '******')";
         assertThat( logLines.get( lastEntry ),
-                endsWith( String.format( " ms: %s%s - %s - {} - runtime=system - {}", connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
+                endsWith( String.format( " ms: %s%s - %s - {} - runtime=system - {}",
+                        connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
     }
 
     @Test
@@ -641,7 +645,8 @@ class QueryLoggerIT
         var lastEntry = logLines.size() - 1;
         var obfuscatedQuery = "CREATE USER foo SET PASSWORD '******'";
         assertThat( logLines.get( lastEntry ),
-                endsWith( String.format( " ms: %s%s - %s - {} - runtime=system - {}", connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
+                endsWith( String.format( " ms: %s%s - %s - {} - runtime=system - {}",
+                        connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
     }
 
     @Test
@@ -663,7 +668,8 @@ class QueryLoggerIT
         var lastEntry = logLines.size() - 1;
         var obfuscatedQuery = "CALL dbms.security.createUser('foo', '******')";
         assertThat( logLines.get( lastEntry ),
-                endsWith( String.format( " ms: %s%s - %s - {} - runtime=system - {}", connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
+                endsWith( String.format( " ms: %s%s - %s - {} - runtime=system - {}",
+                        connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
     }
 
     @Test
