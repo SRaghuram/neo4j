@@ -63,8 +63,10 @@ public class TestFabricTransaction implements InternalTransaction
     @Override
     public Result execute( String query, Map<String,Object> parameters ) throws QueryExecutionException
     {
+
+        var ctx = new TestFabricTransactionalContext( kernelInternalTransaction );
         var params = ValueUtils.asParameterMapValue( parameters );
-        var result = new ResultSubscriber( null, new TestFabricValueMapper() );
+        var result = new ResultSubscriber( ctx, ctx.valueMapper() );
         try
         {
             BoltQueryExecution boltQueryExecution = fabricTransaction.executeQuery( query, params, false, result );
