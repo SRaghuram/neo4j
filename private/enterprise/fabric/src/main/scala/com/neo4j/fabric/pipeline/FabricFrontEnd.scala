@@ -7,41 +7,20 @@ package com.neo4j.fabric.pipeline
 
 import com.neo4j.fabric.planning.FabricPlan
 import com.neo4j.fabric.util.Errors
-import org.neo4j.cypher.CypherExecutionMode
-import org.neo4j.cypher.CypherVersion
-import org.neo4j.cypher.internal.Assertion
-import org.neo4j.cypher.internal.CypherConfiguration
-import org.neo4j.cypher.internal.NotificationWrapping
-import org.neo4j.cypher.internal.PreParsedQuery
-import org.neo4j.cypher.internal.PreParser
-import org.neo4j.cypher.internal.QueryOptions
+import org.neo4j.cypher.{CypherExecutionMode, CypherVersion}
+import org.neo4j.cypher.internal._
 import org.neo4j.cypher.internal.ast.Statement
 import org.neo4j.cypher.internal.ast.semantics.SemanticErrorDef
-import org.neo4j.cypher.internal.ast.semantics.SemanticFeature.ExpressionsInViewInvocations
-import org.neo4j.cypher.internal.ast.semantics.SemanticFeature.MultipleGraphs
-import org.neo4j.cypher.internal.ast.semantics.SemanticFeature.UseGraphSelector
+import org.neo4j.cypher.internal.ast.semantics.SemanticFeature.{ExpressionsInViewInvocations, MultipleGraphs, UseGraphSelector}
 import org.neo4j.cypher.internal.compiler.Neo4jCypherExceptionFactory
 import org.neo4j.cypher.internal.compiler.helpers.ParameterValueTypeHelper
-import org.neo4j.cypher.internal.compiler.phases.Compatibility3_5
-import org.neo4j.cypher.internal.compiler.phases.Compatibility4_0
-import org.neo4j.cypher.internal.compiler.phases.Compatibility4_1
-import org.neo4j.cypher.internal.compiler.phases.CompilationPhases
-import org.neo4j.cypher.internal.frontend.phases.BaseContext
-import org.neo4j.cypher.internal.frontend.phases.BaseState
-import org.neo4j.cypher.internal.frontend.phases.CompilationPhaseTracer
-import org.neo4j.cypher.internal.frontend.phases.InitialState
-import org.neo4j.cypher.internal.frontend.phases.InternalNotificationLogger
-import org.neo4j.cypher.internal.frontend.phases.Monitors
-import org.neo4j.cypher.internal.frontend.phases.RecordingNotificationLogger
-import org.neo4j.cypher.internal.frontend.phases.Transformer
-import org.neo4j.cypher.internal.planner.spi.CostBasedPlannerName
-import org.neo4j.cypher.internal.planner.spi.ProcedureSignatureResolver
+import org.neo4j.cypher.internal.compiler.phases.{Compatibility3_5, Compatibility4_0, Compatibility4_1, CompilationPhases}
+import org.neo4j.cypher.internal.frontend.phases._
+import org.neo4j.cypher.internal.planner.spi.{PlannerNameFor, ProcedureSignatureResolver}
 import org.neo4j.cypher.internal.planning.WrappedMonitors
 import org.neo4j.cypher.internal.rewriting.RewriterStepSequencer
 import org.neo4j.cypher.internal.rewriting.rewriters.GeneratingNamer
-import org.neo4j.cypher.internal.rewriting.rewriters.Never
-import org.neo4j.cypher.internal.tracing.CompilationTracer
-import org.neo4j.cypher.internal.tracing.TimingCompilationTracer
+import org.neo4j.cypher.internal.tracing.{CompilationTracer, TimingCompilationTracer}
 import org.neo4j.cypher.internal.util.CypherExceptionFactory
 import org.neo4j.cypher.rendering.QueryRenderer
 import org.neo4j.graphdb.Notification
@@ -141,9 +120,10 @@ case class FabricFrontEnd(
       private val transformer =
         CompilationPhases.fabricFinalize(parsingConfig)
 
-      def process(query: Statement): BaseState = {
-        val localQueryString = QueryRenderer.pretty(query)
-        transformer.transform(InitialState(localQueryString, None, CostBasedPlannerName.default).withStatement(query), context)
+      def process(statement: Statement): BaseState = {
+        val localQueryString = QueryRenderer.pretty(statement)
+        val plannerName = PlannerNameFor(query.options.planner.name)
+        transformer.transform(InitialState(localQueryString, None, plannerName).withStatement(statement), context)
       }
     }
 
