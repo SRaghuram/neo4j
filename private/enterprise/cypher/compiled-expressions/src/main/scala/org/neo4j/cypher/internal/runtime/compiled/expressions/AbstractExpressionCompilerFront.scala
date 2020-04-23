@@ -853,7 +853,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           loadExpressionVariable(accVar)
         )
         IntermediateExpression(block(ops: _*), collection.fields ++ inner.fields ++ init.fields, collection.variables ++
-          inner.variables ++ init.variables, collection.nullChecks ++ init.nullChecks)
+          inner.variables ++ init.variables, collection.nullChecks)
       }
 
     //boolean operators
