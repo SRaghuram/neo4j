@@ -18,7 +18,10 @@ import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
 import org.neo4j.bolt.dbapi.BoltGraphDatabaseServiceSPI;
 import org.neo4j.bolt.dbapi.CustomBookmarkFormatParser;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
+import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.kernel.availability.UnavailableException;
+
+import static java.lang.String.format;
 
 public class BoltFabricDatabaseManagementService implements BoltGraphDatabaseManagementServiceSPI
 {
@@ -45,9 +48,17 @@ public class BoltFabricDatabaseManagementService implements BoltGraphDatabaseMan
     @Override
     public BoltGraphDatabaseServiceSPI database( String databaseName ) throws UnavailableException, DatabaseNotFoundException
     {
-        var database = fabricDatabaseManager.getDatabase( databaseName );
-        return new BoltFabricDatabaseService( database.databaseId(), fabricExecutor, config, transactionManager, transactionIdTracker,
-                transactionBookmarkManagerFactory );
+        try
+        {
+            var database = fabricDatabaseManager.getDatabase( databaseName );
+            return new BoltFabricDatabaseService( database.databaseId(), fabricExecutor, config, transactionManager, transactionIdTracker,
+                    transactionBookmarkManagerFactory );
+        }
+        catch ( DatabaseShutdownException | UnavailableException e )
+        {
+            throw new UnavailableException( format( "Database '%s' is unavailable.", databaseName ) );
+        }
+
     }
 
     @Override
