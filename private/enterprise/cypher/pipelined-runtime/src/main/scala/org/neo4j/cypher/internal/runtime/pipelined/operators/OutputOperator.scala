@@ -97,12 +97,12 @@ case object NoOutputOperator extends OutputOperator with OutputOperatorState wit
 
 // we need the the id of the head plan of the next pipeline because that is where er attribute time spent
 // during prepare output in profiling.
-case class MorselBufferOutputOperator(bufferId: BufferId, nextPipelineHeadPlanId: Id, nextPipelineFused: Boolean) extends OutputOperator {
+case class MorselBufferOutputOperator(bufferId: BufferId, nextPipelineHeadPlanId: Id, nextPipelineCanTrackTime: Boolean) extends OutputOperator {
   override def outputBuffer: Option[BufferId] = Some(bufferId)
   override val workIdentity: WorkIdentity = WorkIdentityImpl(nextPipelineHeadPlanId, s"Output morsel to $bufferId")
   override def createState(executionState: ExecutionState, stateFactory: StateFactory): OutputOperatorState =
-    //if nextPipeLineFused is true we shouldn't attribute time to nextPipelineHeadPlanId
-    MorselBufferOutputState(workIdentity, !nextPipelineFused, bufferId, executionState)
+    //if nextPipelineCanTrackTime is false we shouldn't attribute time to nextPipelineHeadPlanId
+    MorselBufferOutputState(workIdentity, nextPipelineCanTrackTime, bufferId, executionState)
 }
 case class MorselBufferOutputState(override val workIdentity: WorkIdentity,
                                    override val trackTime: Boolean,
@@ -125,14 +125,14 @@ case class MorselBufferPreparedOutput(bufferId: BufferId,
 
 // we need the the id of the head plan of the next pipeline because that is where er attribute time spent
 // during prepare output in profiling.
-case class MorselArgumentStateBufferOutputOperator(bufferId: BufferId, argumentSlotOffset: Int, nextPipelineHeadPlanId: Id, nextPipelineFused: Boolean) extends OutputOperator {
+case class MorselArgumentStateBufferOutputOperator(bufferId: BufferId, argumentSlotOffset: Int, nextPipelineHeadPlanId: Id, nextPipelineCanTrackTime: Boolean) extends OutputOperator {
   override def outputBuffer: Option[BufferId] = Some(bufferId)
   override val workIdentity: WorkIdentity = WorkIdentityImpl(nextPipelineHeadPlanId, s"Output morsel grouped by argumentSlot $argumentSlotOffset to $bufferId")
   override def createState(executionState: ExecutionState, stateFactory: StateFactory): OutputOperatorState =
-  //if nextPipeLineFused is true we shouldn't attribute time to nextPipelineHeadPlanId
+  //if nextPipelineCanTrackTime is false we shouldn't attribute time to nextPipelineHeadPlanId
     MorselArgumentStateBufferOutputState(workIdentity,
       executionState.getSink[IndexedSeq[PerArgument[Morsel]]](bufferId),
-      argumentSlotOffset, !nextPipelineFused)
+      argumentSlotOffset, nextPipelineCanTrackTime)
 }
 case class MorselArgumentStateBufferOutputState(override val workIdentity: WorkIdentity,
                                                 sink: Sink[IndexedSeq[PerArgument[Morsel]]],

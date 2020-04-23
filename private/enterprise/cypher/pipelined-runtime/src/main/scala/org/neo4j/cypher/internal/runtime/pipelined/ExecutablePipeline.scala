@@ -29,9 +29,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorTask
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperatorState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeHeadOperator
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
@@ -55,9 +55,10 @@ case class ExecutablePipeline(id: PipelineId,
                               needsMorsel: Boolean = true,
                               needsFilteringMorsel: Boolean = false) extends WorkIdentity {
 
-  def isFused: Boolean = start match {
-    case _: CompiledStreamingOperator => true
-    case _ => false
+  def startOperatorCanTrackTime: Boolean = start match {
+    case _: CompiledStreamingOperator => false
+    case _: SlottedPipeHeadOperator => false
+    case _ => true
   }
 
   def createState(executionState: ExecutionState,

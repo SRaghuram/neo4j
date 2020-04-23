@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.profiling.QueryProfiler
+import org.neo4j.cypher.internal.profiling.QueryProfiler.NONE
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.InputDataStream
@@ -30,7 +31,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeOperator.createFeedPipeQueryState
-import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeOperator.updateProfileEvent
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -39,6 +39,8 @@ import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
+
+import scala.collection.mutable
 
 // We have two types of pipes to specialize for
 // 1) Head operator pipes, that may be cardinality increasing, only reads from the input row (which is already expected to have different (subset) slot configuration,
@@ -51,27 +53,55 @@ import org.neo4j.values.AnyValue
 abstract class SlottedPipeOperator(val workIdentity: WorkIdentityMutableDescription, initialPipe: Pipe) {
   private var _pipe: Pipe = initialPipe
   def pipe: Pipe = _pipe
-  def setPipe(newPipe: Pipe): Unit = _pipe = newPipe
+  def setPipe(newPipe: Pipe): Unit = {
+    _pipe = newPipe
+    _pipeIDs += newPipe.id
+  }
+
+  private val _pipeIDs = mutable.ArrayBuffer(initialPipe.id)
+  def pipeIDs: Seq[Id] = _pipeIDs
 }
 
-trait OperatorWithInterpretedDBHitsProfiling extends OperatorTask {
+abstract class OperatorWithInterpretedDBHitsProfiling(pipeIDs: Seq[Id], feedPipeQueryState: FeedPipeQueryState) extends OperatorTask {
   // Overridden to not set the tracer on the operatorExecutionEvent. Otherwise we would count dbHits twice,
   // once from the morsel Tracer and once from the interpreted Profiler.
-  override def operateWithProfile(output: Morsel,
-                                  state: PipelinedQueryState,
-                                  resources: QueryResources,
-                                  queryProfiler: QueryProfiler): Unit = {
-    val operatorExecutionEvent = queryProfiler.executeOperator(workIdentity.workId)
-    setExecutionEvent(operatorExecutionEvent)
+  override final def operateWithProfile(output: Morsel,
+                                        state: PipelinedQueryState,
+                                        resources: QueryResources,
+                                        queryProfiler: QueryProfiler): Unit = {
+    // We don't track time for slotted fallback operators, since we cannot attribute time spent to individual pipes in the chain.
+    val operatorExecutionEvents = if (queryProfiler != NONE) pipeIDs.map(queryProfiler.executeOperator(_, false)) else null
     try {
+      val (currentDbHits, currentRows) = currentProfileInformation
       operate(output, state, resources)
-      if (operatorExecutionEvent != null) {
-        operatorExecutionEvent.rows(output.numberOfRows)
-      }
+      profileSlottedPipes(operatorExecutionEvents, currentDbHits, currentRows)
     } finally {
-      setExecutionEvent(null)
-      if (operatorExecutionEvent != null) {
-        operatorExecutionEvent.close()
+      if (operatorExecutionEvents != null) {
+        operatorExecutionEvents.foreach(_.close())
+      }
+    }
+  }
+
+  override final def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
+
+  private def currentProfileInformation: (collection.Map[Id, Long], collection.Map[Id, Long]) = {
+    if (feedPipeQueryState.profileInformation != null) {
+      val currentDbHitsMap: collection.Map[Id, Long] = feedPipeQueryState.profileInformation.dbHitsMap.map { case (k, v) => (k, v.count) }.withDefaultValue(0)
+      val currentRowsMap: collection.Map[Id, Long] = feedPipeQueryState.profileInformation.rowMap.map { case (k, v) => (k, v.count) }.withDefaultValue(0)
+      (currentDbHitsMap, currentRowsMap)
+    } else (null, null)
+  }
+
+  private def profileSlottedPipes(operatorExecutionEvents: Seq[OperatorProfileEvent], previousDbHits: collection.Map[Id, Long], previousRows: collection.Map[Id, Long]): Unit = {
+    if (feedPipeQueryState.profileInformation != null) {
+      var i = 0
+      while (i < pipeIDs.length) {
+        val dbHits = feedPipeQueryState.profileInformation.dbHitsMap(pipeIDs(i)).count - previousDbHits(pipeIDs(i))
+        val rows = feedPipeQueryState.profileInformation.rowMap(pipeIDs(i)).count - previousRows(pipeIDs(i))
+        // TODO what about page cache stats?
+        operatorExecutionEvents(i).dbHits(dbHits)
+        operatorExecutionEvents(i).rows(rows)
+        i += 1
       }
     }
   }
@@ -104,10 +134,9 @@ class SlottedPipeHeadOperator(workIdentity: WorkIdentityMutableDescription,
     }
   }
 
-  class OTask(val inputMorsel: Morsel, val feedPipeQueryState: FeedPipeQueryState) extends ContinuableOperatorTaskWithMorsel with OperatorWithInterpretedDBHitsProfiling {
+  class OTask(val inputMorsel: Morsel, val feedPipeQueryState: FeedPipeQueryState) extends OperatorWithInterpretedDBHitsProfiling(pipeIDs, feedPipeQueryState) with ContinuableOperatorTaskWithMorsel {
 
     private var resultIterator: Iterator[CypherRow] = _
-    private var profileEvent: OperatorProfileEvent = _
 
     override def workIdentity: WorkIdentity = SlottedPipeHeadOperator.this.workIdentity
 
@@ -126,17 +155,10 @@ class SlottedPipeHeadOperator(workIdentity: WorkIdentityMutableDescription,
         val resultRow = resultIterator.next()
         outputCursor.copyFrom(resultRow, outputMorsel.longsPerRow, outputMorsel.refsPerRow)
       }
-      if (profileEvent != null && feedPipeQueryState.profileInformation != null) {
-        updateProfileEvent(profileEvent, feedPipeQueryState.profileInformation)
-      }
       outputCursor.truncate()
     }
 
     override def canContinue: Boolean = resultIterator.hasNext
-
-    override def setExecutionEvent(event: OperatorProfileEvent): Unit = {
-      profileEvent = event
-    }
 
     override protected def closeCursors(resources: QueryResources): Unit = {}
   }
@@ -155,10 +177,9 @@ class SlottedPipeMiddleOperator(workIdentity: WorkIdentityMutableDescription,
     new OMiddleTask(inputQueryState)
   }
 
-  class OMiddleTask(val feedPipeQueryState: FeedPipeQueryState) extends OperatorTask with OperatorWithInterpretedDBHitsProfiling {
+  class OMiddleTask(val feedPipeQueryState: FeedPipeQueryState) extends OperatorWithInterpretedDBHitsProfiling(pipeIDs, feedPipeQueryState) with OperatorTask {
 
     private var resultIterator: Iterator[CypherRow] = _
-    private var profileEvent: OperatorProfileEvent = _
     private var _canContinue: Boolean = false
 
     override def workIdentity: WorkIdentity = SlottedPipeMiddleOperator.this.workIdentity
@@ -187,17 +208,10 @@ class SlottedPipeMiddleOperator(workIdentity: WorkIdentityMutableDescription,
         outputCursor.next()
         _canContinue = resultIterator.hasNext
       }
-      if (profileEvent != null && feedPipeQueryState.profileInformation != null) {
-        updateProfileEvent(profileEvent, feedPipeQueryState.profileInformation)
-      }
       if (!_canContinue) {
         resultIterator = null
       }
       outputCursor.truncate()
-    }
-
-    override def setExecutionEvent(event: OperatorProfileEvent): Unit = {
-      profileEvent = event
     }
   }
 }

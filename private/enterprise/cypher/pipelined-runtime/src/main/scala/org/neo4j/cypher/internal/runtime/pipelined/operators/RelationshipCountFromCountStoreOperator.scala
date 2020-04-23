@@ -254,7 +254,7 @@ class RelationshipCountFromCountStoreOperatorTemplate(override val inner: Operat
 
     val dbHitsRepresentation =
       if (relationshipTypes.size <= 1) dbHit(loadField(executionEventField))
-      else dbHits(loadField(executionEventField), constant(relationshipTypes.size))
+      else dbHits(loadField(executionEventField), constant(relationshipTypes.size.toLong))
 
     block(
       codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),

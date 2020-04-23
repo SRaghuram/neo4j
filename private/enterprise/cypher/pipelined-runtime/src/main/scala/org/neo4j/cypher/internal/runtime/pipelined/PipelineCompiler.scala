@@ -32,12 +32,12 @@ class PipelineCompiler(operatorFactory: OperatorFactory,
     // Compile pipelines from the end backwards/upstream, to track needsFilteringMorsel
     // (the previous pipelines will need a filtering morsel if its downstream pipeline has a work canceller
     val (executablePipelines, _, _) =
-      executionGraphDefinition.pipelines.foldRight (IndexedSeq.empty[ExecutablePipeline], false, false) {
-        case (p, (pipelines, needsFilteringMorsel, nextPipelineFused)) =>
+      executionGraphDefinition.pipelines.foldRight (IndexedSeq.empty[ExecutablePipeline], false, true) {
+        case (p, (pipelines, needsFilteringMorsel, nextPipelineCanTrackTime)) =>
           val (executablePipeline, upstreamNeedsFilteringMorsel) =
-            compilePipeline(executionGraphDefinition, p, needsFilteringMorsel, nextPipelineFused)
+            compilePipeline(executionGraphDefinition, p, needsFilteringMorsel, nextPipelineCanTrackTime)
 
-          (executablePipeline +: pipelines, needsFilteringMorsel || upstreamNeedsFilteringMorsel, executablePipeline.isFused)
+          (executablePipeline +: pipelines, needsFilteringMorsel || upstreamNeedsFilteringMorsel, executablePipeline.startOperatorCanTrackTime)
       }
     executablePipelines
   }
@@ -62,7 +62,7 @@ class PipelineCompiler(operatorFactory: OperatorFactory,
   def compilePipeline(executionGraphDefinition: ExecutionGraphDefinition,
                       p: PipelineDefinition,
                       needsFilteringMorsel: Boolean,
-                      nextPipelineFused: Boolean): (ExecutablePipeline, Boolean) = {
+                      nextPipelineCanTrackTime: Boolean): (ExecutablePipeline, Boolean) = {
 
     // See if we need filtering morsels in upstream pipelines
     val upstreamsNeedsFilteringMorsel =
@@ -97,7 +97,7 @@ class PipelineCompiler(operatorFactory: OperatorFactory,
                         p.serial,
                         physicalPlan.slotConfigurations(p.headPlan.id),
                         p.inputBuffer,
-                        operatorFactory.createOutput(p.outputDefinition, nextPipelineFused),
+                        operatorFactory.createOutput(p.outputDefinition, nextPipelineCanTrackTime),
                         p.workLimiter,
                         needsMorsel,
                         thisNeedsFilteringMorsel),

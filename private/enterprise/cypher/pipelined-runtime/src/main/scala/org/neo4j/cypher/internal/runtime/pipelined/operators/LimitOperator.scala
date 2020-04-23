@@ -170,7 +170,7 @@ class SerialTopLevelLimitOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genOperateExit: IntermediateRepresentation = {
     block(
-      profileRows(id, subtract(load(reservedVar), load(countLeftVar))),
+      profileRows(id, cast[Long](subtract(load(reservedVar), load(countLeftVar)))),
       super.genOperateExit
     )
   }

@@ -214,7 +214,7 @@ class NodeCountFromCountStoreOperatorTemplate(override val inner: OperatorTaskTe
     //takes care of the labels we do know at compile time
     val knownLabelOps = block(knownLabels.map(token =>
       assign(countVar, multiply(load(countVar), invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), constant(token))))) :+
-      dbHits(loadField(executionEventField), constant(knownLabels.size)) :_*)
+      dbHits(loadField(executionEventField), constant(knownLabels.size.toLong)) :_*)
 
     //take care of all wildcard labels
     val wildCardOps = if (wildCards > 0) {

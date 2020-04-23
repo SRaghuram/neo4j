@@ -220,7 +220,7 @@ object OperatorCodeGenHelperTemplates {
   val NO_OPERATOR_PROFILE_EVENT: IntermediateRepresentation = constant(null)
   private val TRACE_ON_NODE: Method = method[KernelReadTracer, Unit, Long]("onNode")
   private val TRACE_DB_HIT: Method = method[OperatorProfileEvent, Unit]("dbHit")
-  private val TRACE_DB_HITS: Method = method[OperatorProfileEvent, Unit, Int]("dbHits")
+  private val TRACE_DB_HITS: Method = method[OperatorProfileEvent, Unit, Long]("dbHits")
   val CALL_CAN_CONTINUE: IntermediateRepresentation = invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue"))
 
   def setMemoryTracker(memoryTrackerField: InstanceField, operatorId: Int): IntermediateRepresentation =
@@ -492,13 +492,8 @@ object OperatorCodeGenHelperTemplates {
     condition(isNotNull(event(id)))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit, Boolean]("row"), hasRow))
   }
 
-  def profileRows(id: Id, nRows: Int): IntermediateRepresentation = {
-    condition(isNotNull(event(id)))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit, Int]("rows"),
-      constant(nRows)))
-  }
-
   def profileRows(id: Id, nRows: IntermediateRepresentation): IntermediateRepresentation = {
-    condition(isNotNull(event(id)))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit, Int]("rows"),
+    condition(isNotNull(event(id)))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit, Long]("rows"),
       nRows))
   }
   def closeEvent(id: Id): IntermediateRepresentation =

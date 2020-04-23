@@ -692,12 +692,12 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       runtimeColumns)
   }
 
-  def createOutput(outputDefinition: OutputDefinition, nextPipelineFused: Boolean): OutputOperator = {
+  def createOutput(outputDefinition: OutputDefinition, nextPipelineCanTrackTime: Boolean): OutputOperator = {
 
     outputDefinition match {
       case NoOutput => NoOutputOperator
-      case MorselBufferOutput(bufferId, planId) => MorselBufferOutputOperator(bufferId, planId, nextPipelineFused)
-      case MorselArgumentStateBufferOutput(bufferId, argumentSlotOffset, planId) => MorselArgumentStateBufferOutputOperator(bufferId, argumentSlotOffset, planId, nextPipelineFused)
+      case MorselBufferOutput(bufferId, planId) => MorselBufferOutputOperator(bufferId, planId, nextPipelineCanTrackTime)
+      case MorselArgumentStateBufferOutput(bufferId, argumentSlotOffset, planId) => MorselArgumentStateBufferOutputOperator(bufferId, argumentSlotOffset, planId, nextPipelineCanTrackTime)
       case ProduceResultOutput(p) => createProduceResults(p)
       case ReduceOutput(bufferId, plan) =>
         val id = plan.id
