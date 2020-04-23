@@ -30,6 +30,7 @@ import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -282,7 +283,7 @@ class MutableNodeData
         return isDense;
     }
 
-    static class Relationship
+    static class Relationship implements Comparable<Relationship>
     {
         // These two combined makes up the actual external relationship ID
         long internalId;
@@ -312,6 +313,31 @@ class MutableNodeData
             added.forEach( property -> properties.put( property.propertyKeyId(), property.value() ) );
             changed.forEach( property -> removedValuesBin.accept( properties.put( property.propertyKeyId(), property.value() ) ) );
             removed.each( key -> removedValuesBin.accept( properties.remove( key ) ) );
+        }
+
+        /**
+         * Will order relationships (for this type) by direction: OUTGOING,LOOP,INCOMING
+         */
+        @Override
+        public int compareTo( Relationship o )
+        {
+            int directionComparison = Integer.compare( directionIndex(), o.directionIndex() );
+            if ( directionComparison != 0 )
+            {
+                return directionComparison;
+            }
+            int otherNodeComparison = Long.compare( otherNode, o.otherNode );
+            if ( otherNodeComparison != 0 )
+            {
+                return otherNodeComparison;
+            }
+            return Long.compare( internalId, o.internalId );
+        }
+
+        int directionIndex()
+        {
+            // We want the order of: outgoing, loop, incoming
+            return outgoing ? sourceNodeId == otherNode ? 1 : 0 : 2;
         }
 
         @Override
@@ -399,6 +425,7 @@ class MutableNodeData
 
         long[] packIntoLongArray()
         {
+            Collections.sort( relationships );
             int numRelationships = relationships.size();
             long[] array = new long[numRelationships * ARRAY_ENTRIES_PER_RELATIONSHIP];
             for ( int i = 0; i < numRelationships; i++ )
