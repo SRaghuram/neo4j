@@ -414,13 +414,7 @@ public class SchemaCache
                 return result;
             }
             return indexCache.computeIfAbsent( key,
-                    k ->
-                    {
-                        Set<IndexDescriptor> schemaRelatedTo =
-                                getSchemaRelatedTo( set, changedEntityTokens, unchangedEntityTokens, properties, propertyListIsComplete );
-                        System.out.println( "Putting in indexCache(now at size " + indexCache.size() + "):" + k + " " + schemaRelatedTo );
-                        return schemaRelatedTo;
-                    } );
+                    k -> getSchemaRelatedTo( set, changedEntityTokens, unchangedEntityTokens, properties, propertyListIsComplete ) );
         }
 
         Set<IndexBackedConstraintDescriptor> getUniquenessConstraintsRelatedTo( EntityType entityType, long[] changedEntityTokens,
