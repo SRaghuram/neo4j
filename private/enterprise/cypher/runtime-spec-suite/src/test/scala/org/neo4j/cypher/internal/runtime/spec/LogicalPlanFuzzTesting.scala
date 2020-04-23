@@ -26,6 +26,9 @@ import org.neo4j.values.storable.RandomValues
 import org.scalacheck.Gen
 import org.scalacheck.rng.Seed
 import org.scalatest.BeforeAndAfterAll
+import org.scalatest.concurrent.TimeLimits
+import org.scalatest.time.Seconds
+import org.scalatest.time.Span
 
 import scala.util.Failure
 import scala.util.Success
@@ -37,7 +40,7 @@ import scala.util.Try
 // Also it only generates very few plans right now.
 
 // Class name not ending in `Test` to make sure `mvn test` won't run it
-class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll {
+class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with TimeLimits {
 
   private val managementService = ENTERPRISE.DEFAULT.newGraphManagementService()
   private val graphDb = managementService.database(DEFAULT_DATABASE_NAME)
@@ -70,10 +73,14 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll {
     managementService.shutdown()
   }
 
-  private val generator = LogicalQueryGenerator.logicalQuery(txContext, Cost(10000))
-
   private val initialSeed = Seed.random() // use `Seed.fromBase64` to reproduce test failures
+  private val maxCost = Cost(sys.env.getOrElse("LOGICAL_PLAN_FUZZ_MAX_COST", "10000").toInt)
   private val iterationCount = sys.env.getOrElse("LOGICAL_PLAN_FUZZ_ITERATIONS", "100").toInt
+  private val maxIterationTimeSpan = Span(
+    sys.env.getOrElse("LOGICAL_PLAN_FUZZ_MAX_ITERATION_TIME_SECONDS", "60").toInt,
+    Seconds)
+
+  private val generator = LogicalQueryGenerator.logicalQuery(txContext, maxCost)
 
   Range(0, iterationCount).foldLeft(initialSeed) {
     (seed: Seed, iter: Int) =>
@@ -90,11 +97,11 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll {
 
     val cost = CardinalityCostModel(logicalQuery.logicalPlan, QueryGraphSolverInput.empty, logicalQuery.cardinalities)
 
-    withClue(Seq(
+    withCluesFailAfter(maxIterationTimeSpan,
       s"plan = ${logicalQuery.logicalPlan}",
       s"parameters = $parameters",
-      s"cost = $cost"
-    ).mkString("", "\n", "\n")) {
+      s"cost = $cost",
+      s"seed = $seed") {
 
       runtimeTestSupport.startTx()
 
@@ -121,7 +128,7 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll {
               result should (contain theSameElementsAs referenceResult.get)
             }
           case (Success(_), runtime) if referenceResult.isFailure =>
-            fail(s"Failed in ${runtimes.head.name}, but succeded in ${runtime.name}", referenceResult.failed.get)
+            fail(s"Failed in ${runtimes.head.name}, but succeeded in ${runtime.name}", referenceResult.failed.get)
           case (Failure(_), _) => // already checked
         }
       } finally {
@@ -129,4 +136,11 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll {
       }
     }
   }
+
+  private def withCluesFailAfter[T](span: Span, clues: Any*)(f: => T): T =
+    withClue(clues.mkString("", "\n","\n")) {
+      failAfter(span) {
+        f
+      }
+    }
 }
