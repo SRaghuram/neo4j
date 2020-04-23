@@ -10,6 +10,7 @@ import java.util.function
 
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.add
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayLoad
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayOf
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
@@ -18,17 +19,19 @@ import org.neo4j.codegen.api.IntermediateRepresentation.cast
 import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.constructor
+import org.neo4j.codegen.api.IntermediateRepresentation.declare
 import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
 import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.getStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
 import org.neo4j.codegen.api.IntermediateRepresentation.isNull
+import org.neo4j.codegen.api.IntermediateRepresentation.lessThan
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
+import org.neo4j.codegen.api.IntermediateRepresentation.loop
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
-import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
@@ -389,19 +392,20 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
                                             groupingKeyExpressionCreator: () => IntermediateExpression,
                                             aggregationExpressions: Array[expressions.Expression])
                                            (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
-  type AggMap = java.util.LinkedHashMap[AnyValue, Array[Any]]
+  type Agg = Array[Any]
+  type AggMap = java.util.LinkedHashMap[AnyValue, Agg]
   type AggOut = scala.collection.mutable.ArrayBuffer[PerArgument[AggMap]]
 
   override def toString: String = "AggregationMapperOperatorTaskTemplate"
 
-  private val perArgsField: Field = field[AggOut](codeGen.namer.nextVariableName())
-  private val sinkField: Field = field[Sink[IndexedSeq[PerArgument[AggMap]]]](codeGen.namer.nextVariableName())
-  private val bufferIdField: Field = field[Int](codeGen.namer.nextVariableName())
+  private val perArgsField: Field = field[AggOut](codeGen.namer.nextVariableName("perArgs"))
+  private val sinkField: Field = field[Sink[IndexedSeq[PerArgument[AggMap]]]](codeGen.namer.nextVariableName("sink"))
+  private val bufferIdField: Field = field[Int](codeGen.namer.nextVariableName("bufferId"))
   private val memoryTrackerField = field[MemoryTracker](codeGen.namer.nextVariableName("memoryTracker"))
 
-  private val aggregatorsVar = variable[Array[Aggregator]](codeGen.namer.nextVariableName(), createAggregators(aggregators))
-  private val argVar = variable[Long](codeGen.namer.nextVariableName(), constant(-1L))
-  private val aggPreMapVar = variable[AggMap](codeGen.namer.nextVariableName(), constant(null))
+  private val aggregatorsVar = variable[Array[Aggregator]](codeGen.namer.nextVariableName("aggregators"), createAggregators(aggregators))
+  private val argVar = variable[Long](codeGen.namer.nextVariableName("arg"), constant(-1L))
+  private val aggPreMapVar = variable[AggMap](codeGen.namer.nextVariableName("aggPreMap"), constant(null))
 
   private var compiledAggregationExpressions: Array[IntermediateExpression] = _
   private var compiledGroupingExpression: IntermediateExpression = _
@@ -559,8 +563,56 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
   }
 
   override def genCloseOutput: IntermediateRepresentation = {
-    // TODO: Close updaters!
-    noop()
+    /*
+     * Close updaters and reset prepared output (perArgsField) for the next output batch
+     * {
+     *   var i = 0
+     *   while (i < preAggregated.size) {
+     *     val aggMap = preAggregated(i).value
+     *     val aggMapIter = aggMap.value().iterator()
+     *     while (aggMapIter.hasNext) {
+     *       val updaters = aggMapIter.next()
+     *       updaters[0].close()
+     *       updaters[1].close()
+     *       ...
+     *       updaters[n-1].close()
+     *     }
+     *     i += 1
+     *   }
+     *   perArgs = new AggOut()
+     * }
+     */
+    val i = codeGen.namer.nextVariableName()
+    val iSize = codeGen.namer.nextVariableName()
+    val aggMap = codeGen.namer.nextVariableName("aggMap")
+    val aggMapIter = codeGen.namer.nextVariableName("aggMapIter")
+    val updaters = codeGen.namer.nextVariableName("updaters")
+
+    block(
+      block(
+        declareAndAssign(typeRefOf[Int], i, constant(0)),
+        declareAndAssign(typeRefOf[Int], iSize, invoke(loadField(perArgsField), method[AggOut, Int]("size"))),
+        declare(typeRefOf[AggMap], aggMap),
+        declare(typeRefOf[java.util.Iterator[Agg]], aggMapIter),
+        loop(lessThan(load(i), load(iSize)))(block(
+          assign(aggMap, invoke(cast[PerArgument[AggMap]](invoke(loadField(perArgsField), method[AggOut, PerArgument[AggMap], Int]("apply"), load(i))),
+                                method[PerArgument[AggMap], AggMap]("value"))),
+          assign(aggMapIter, invoke(invoke(load(aggMap), method[AggMap, java.util.Collection[Agg]]("values")),
+                                    method[java.util.Collection[Agg], Iterator[Array[Any]]]("iterator"))),
+          loop(invoke(load(aggMapIter), method[Iterator[Array[Any]], Boolean]("hasNext")))(block(
+            declareAndAssign(typeRefOf[Array[Updater]], updaters, cast[Array[Updater]](invoke(load(aggMapIter), method[Iterator[Agg], Agg]("next")))),
+            block(
+              compiledAggregationExpressions.indices.map(i => {
+                invokeSideEffect(arrayLoad(load(updaters), i), method[Updater, Unit]("close"))
+              }): _ *
+            )
+          )),
+          assign(i, add(load(i), constant(1)))
+        ))
+      ),
+      setField(perArgsField, newInstance(constructor[AggOut])),
+      inner.genCloseOutput
+    )
   }
 
   override def genOutputBuffer: Option[IntermediateRepresentation] = Some(loadField(bufferIdField))

@@ -464,7 +464,7 @@ trait OperatorTaskTemplate {
    *     def close(): Unit
    * }}}
    */
-  protected def genCloseOutput: IntermediateRepresentation = inner.genCloseOutput
+  def genCloseOutput: IntermediateRepresentation = inner.genCloseOutput
 
   /**
    * Responsible for generating the body of [[OutputOperator]] method (but is not expected to return anything):
@@ -870,6 +870,8 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
   override def genCloseCursors: IntermediateRepresentation = block()
 
   override protected def genProduce: IntermediateRepresentation = noop()
+
+  override def genCloseOutput: IntermediateRepresentation = noop()
 
   override def genCreateState: IntermediateRepresentation = noop()
 
