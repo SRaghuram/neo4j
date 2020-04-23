@@ -219,6 +219,63 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         }
     }
 
+    @Test
+    void shouldSeeAllNodesInBatchNodeScan()
+    {
+        // given
+        var createdNodeIdsBatch0 = LongSets.mutable.empty();
+        var createdNodeIdsBatch1 = LongSets.mutable.empty();
+        var createdNodeIdsBatch2 = LongSets.mutable.empty();
+        for ( var i = 0; i < 7; i++ )
+        {
+            createdNodeIdsBatch0.add( node().store().id );
+        }
+        for ( var i = 7; i < 14; i++ )
+        {
+            createdNodeIdsBatch1.add( node().store().id );
+        }
+        for ( var i = 14; i < 20; i++ )
+        {
+            createdNodeIdsBatch2.add( node().store().id );
+        }
+
+        // when
+        var cursor = cursorFactory.allocateNodeCursor( NULL );
+        var scan = new FrekiNodeScan();
+        var scannedNodeIdBatches = new ArrayList<MutableLongSet>();
+        while ( scan.scanBatch( 7, cursor ) )
+        {
+            var scannedNodeIds = LongSets.mutable.empty();
+            scannedNodeIdBatches.add( scannedNodeIds );
+            while ( cursor.next() )
+            {
+                scannedNodeIds.add( cursor.entityReference() );
+            }
+        }
+
+        // then
+        assertThat( scannedNodeIdBatches.size() ).isEqualTo( 3 );
+        assertThat( scannedNodeIdBatches.get( 0 ) ).isEqualTo( createdNodeIdsBatch0 );
+        assertThat( scannedNodeIdBatches.get( 1 ) ).isEqualTo( createdNodeIdsBatch1 );
+        assertThat( scannedNodeIdBatches.get( 2 ) ).isEqualTo( createdNodeIdsBatch2 );
+    }
+
+    @Test
+    void shouldNOtBatchScanOutOfRange()
+    {
+        // given
+        long id = node().store().id;
+        FrekiNodeCursor cursor = cursorFactory.allocateNodeCursor( NULL );
+        FrekiNodeScan scan = new FrekiNodeScan();
+
+        // then
+        assertFalse( scan.scanRange( cursor, id + 1, id + 2 ) ); // start out of bounds
+        assertTrue( scan.scanRange( cursor, id, id - 1 ) ); // start > stop
+        assertFalse( cursor.next() );
+        assertTrue( scan.scanBatch( 0, cursor ) ); // empty range
+        assertFalse( cursor.next() );
+    }
+
     // **** PROPERTIES ****
 
     @ParameterizedTest

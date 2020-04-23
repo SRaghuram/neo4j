@@ -32,6 +32,7 @@ import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 
+import static java.lang.Math.min;
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_LONG_ARRAY;
 import static org.neo4j.internal.freki.MutableNodeRecordData.readDegreesForNextType;
 import static org.neo4j.internal.freki.StreamVByte.LONG_CONSUMER;
@@ -44,6 +45,7 @@ import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
 {
     private long singleId;
+    private long highMark = NULL;
     private boolean inScan;
     private FrekiRelationshipTraversalCursor relationshipsCursor;
 
@@ -182,12 +184,39 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     {
         inScan = true;
         singleId = 0;
+        highMark = NULL;
     }
 
     @Override
     public boolean scanBatch( AllNodeScan scan, int sizeHint )
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+        if ( singleId != NULL )
+        {
+            reset();
+        }
+        inScan = true;
+        singleId = NULL;
+        highMark = NULL;
+        return ((FrekiNodeScan) scan).scanBatch( sizeHint, this );
+    }
+
+    boolean scanRange( long start, long stop )
+    {
+        long max = highMark();
+        if ( start >= max )
+        {
+            reset();
+            return false;
+        }
+        if ( start >= stop )
+        {
+            reset();
+            return true;
+        }
+        inScan = true;
+        singleId = start;
+        highMark = min( stop, max );
+        return true;
     }
 
     @Override
@@ -228,7 +257,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     {
         if ( inScan )
         {
-            while ( singleId < stores.mainStore.getHighId() )
+            while ( singleId < highMark() )
             {
                 if ( loadSuperLight( singleId++ ) )
                 {
@@ -237,6 +266,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
             }
             inScan = false;
             singleId = NULL;
+            highMark = NULL;
         }
         else if ( singleId != NULL )
         {
@@ -252,6 +282,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     {
         super.reset();
         singleId = NULL;
+        highMark = NULL;
         inScan = false;
         if ( relationshipsCursor != null )
         {
@@ -268,5 +299,10 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
             relationshipsCursor = null;
         }
         super.close();
+    }
+
+    private long highMark()
+    {
+        return highMark != NULL ? highMark : stores.mainStore.getHighId();
     }
 }
