@@ -133,4 +133,47 @@ public class MergedQueryStatistics implements QueryStatistics
     {
         return containsSystemUpdates;
     }
+
+    @Override
+    public String toString()
+    {
+        var builder = new StringBuilder();
+
+        if ( containsSystemUpdates )
+        {
+            includeIfNonZero( builder, "System updates: ", systemUpdates.get() );
+        }
+        else
+        {
+            includeIfNonZero( builder, "Nodes created: ", nodesCreated.get() );
+            includeIfNonZero( builder, "Relationships created: ", relationshipsCreated.get() );
+            includeIfNonZero( builder, "Properties set: ", propertiesSet.get() );
+            includeIfNonZero( builder, "Nodes deleted: ", nodesDeleted.get() );
+            includeIfNonZero( builder, "Relationships deleted: ", relationshipsDeleted.get() );
+            includeIfNonZero( builder, "Labels added: ", labelsAdded.get() );
+            includeIfNonZero( builder, "Labels removed: ", labelsRemoved.get() );
+            includeIfNonZero( builder, "Indexes added: ", indexesAdded.get() );
+            includeIfNonZero( builder, "Indexes removed: ", indexesRemoved.get() );
+            includeIfNonZero( builder, "Constraints added: ", constraintsAdded.get() );
+            includeIfNonZero( builder, "Constraints removed: ", constraintsRemoved.get() );
+        }
+        var result = builder.toString();
+
+        if ( result.isEmpty() )
+        {
+            return "<Nothing happened>";
+        }
+        else
+        {
+            return result;
+        }
+    }
+
+    private void includeIfNonZero( StringBuilder builder, String message, long count )
+    {
+        if ( count > 0 )
+        {
+            builder.append( message ).append( count ).append( "\n" );
+        }
+    }
 }
