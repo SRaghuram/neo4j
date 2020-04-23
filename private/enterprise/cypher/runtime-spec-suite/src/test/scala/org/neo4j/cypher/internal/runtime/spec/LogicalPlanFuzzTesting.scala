@@ -25,13 +25,19 @@ import org.neo4j.logging.AssertableLogProvider
 import org.neo4j.values.storable.RandomValues
 import org.scalacheck.Gen
 import org.scalacheck.rng.Seed
+import org.scalatest.BeforeAndAfterAll
 
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 
+// This is still an early prototype, and there are a number of unsolved problems
+// * How to generate the graph
+// * How to  generate valid plans (or at x % of valid plans) where the invalid ones could be a result of other erros, not system errors
+// Also it only generates very few plans right now.
+
 // Class name not ending in `Test` to make sure `mvn test` won't run it
-class LogicalPlanFuzzTesting extends CypherFunSuite {
+class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll {
 
   private val managementService = ENTERPRISE.DEFAULT.newGraphManagementService()
   private val graphDb = managementService.database(DEFAULT_DATABASE_NAME)
@@ -42,12 +48,7 @@ class LogicalPlanFuzzTesting extends CypherFunSuite {
 
   private val runtimes = Seq(InterpretedRuntime, SlottedRuntime, PIPELINED/*, PARALLEL*/)
 
-  // This is still an early prototype, and there are a number of unsolved problems
-  // * How to generate the graph
-  // * How to  generate valid plans (or at x % of valid plans) where the invalid ones could be a result of other erros, not system errors
-  // Also it only generates very few plans right now.
-
-  test("all sorts of queries") {
+  private val (tx, txContext) = {
     // Create the data (all executors use the same database instance)
     runtimeTestSupport.start()
     runtimeTestSupport.startTx()
@@ -59,28 +60,27 @@ class LogicalPlanFuzzTesting extends CypherFunSuite {
     runtimeTestSupport.stopTx()
 
     runtimeTestSupport.startTx()
-    val tx = runtimeTestSupport.tx
-    val txContext = runtimeTestSupport.txContext
+    (runtimeTestSupport.tx, runtimeTestSupport.txContext)
+  }
 
-    val generator = LogicalQueryGenerator.logicalQuery(txContext, Cost(10000))
+  override protected def afterAll(): Unit = {
+    txContext.close()
+    tx.close()
+    runtimeTestSupport.stop()
+    managementService.shutdown()
+  }
 
-    val initialSeed = Seed.random() // use `Seed.fromBase64` to reproduce test failures
-    val iterationCount = sys.env.getOrElse("LOGICAL_PLAN_FUZZ_ITERATIONS", "100").toInt
+  private val generator = LogicalQueryGenerator.logicalQuery(txContext, Cost(10000))
 
-    try {
-      Range(0, iterationCount).foldLeft(initialSeed) {
-        (seed: Seed, iter: Int) =>
-          println()
-          println(s"[${iter + 1}/$iterationCount] seed = ${seed.toBase64}")
-          runTest(seed, generator)
-          Seed.random()
+  private val initialSeed = Seed.random() // use `Seed.fromBase64` to reproduce test failures
+  private val iterationCount = sys.env.getOrElse("LOGICAL_PLAN_FUZZ_ITERATIONS", "100").toInt
+
+  Range(0, iterationCount).foldLeft(initialSeed) {
+    (seed: Seed, iter: Int) =>
+      test(s"[${iter + 1}/$iterationCount] seed = ${seed.toBase64}") {
+        runTest(seed, generator)
       }
-    } finally {
-      txContext.close()
-      tx.close()
-      runtimeTestSupport.stop()
-      managementService.shutdown()
-    }
+      Seed.random()
   }
 
   private def runTest(seed: Seed, generator: Gen[WithState[LogicalQuery]]): Unit = {
