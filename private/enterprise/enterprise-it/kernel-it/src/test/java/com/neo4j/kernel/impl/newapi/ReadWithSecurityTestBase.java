@@ -31,6 +31,7 @@ import org.neo4j.internal.kernel.api.Token;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.schema.IndexDescriptor;
+import org.neo4j.internal.schema.IndexOrder;
 import org.neo4j.kernel.api.Kernel;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.security.AuthManager;
@@ -207,7 +208,7 @@ public abstract class ReadWithSecurityTestBase<G extends KernelAPIReadTestSuppor
         try ( NodeLabelIndexCursor nodes = cursors.allocateNodeLabelIndexCursor( NULL ) )
         {
             // when
-            read.nodeLabelScan( barLabel, nodes );
+            read.nodeLabelScan( barLabel, nodes, IndexOrder.NONE );
             while ( nodes.next() )
             {
                 ids.add( nodes.nodeReference() );
