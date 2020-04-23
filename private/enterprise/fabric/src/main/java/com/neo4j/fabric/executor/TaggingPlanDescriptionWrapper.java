@@ -65,4 +65,10 @@ public class TaggingPlanDescriptionWrapper implements ExecutionPlanDescription
     {
         return innerPlanDescription;
     }
+
+    @Override
+    public String toString()
+    {
+        return innerPlanDescription.toString();
+    }
 }
