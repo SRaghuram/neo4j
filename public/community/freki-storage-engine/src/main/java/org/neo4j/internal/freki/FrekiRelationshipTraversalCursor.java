@@ -216,6 +216,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
             }
         }
         dereferenceData();
+        selection = null;
         return false;
     }
 
