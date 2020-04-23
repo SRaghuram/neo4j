@@ -29,7 +29,7 @@ public class TestFabricTransactionalContext implements TransactionalContext
 
     private UnsupportedOperationException failure()
     {
-        return new UnsupportedOperationException("Not implemented");
+        return new UnsupportedOperationException( "Not implemented" );
     }
 
     @Override
