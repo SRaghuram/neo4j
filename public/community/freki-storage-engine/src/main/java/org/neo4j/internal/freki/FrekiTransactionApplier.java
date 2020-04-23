@@ -168,7 +168,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
                 }
                 if ( labelIndexUpdates != null )
                 {
-                    labelIndexUpdates.add( EntityTokenUpdate.tokenChanges( currentNodeId, labelsBefore, labelsAfter ) );
+                    labelIndexUpdates.add( EntityTokenUpdate.tokenChanges( currentNodeId, labelsBefore.clone(), labelsAfter.clone() ) );
                 }
             }
 
