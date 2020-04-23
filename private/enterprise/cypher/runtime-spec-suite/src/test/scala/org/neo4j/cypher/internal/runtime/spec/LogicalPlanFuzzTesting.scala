@@ -90,44 +90,43 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll {
 
     val cost = CardinalityCostModel(logicalQuery.logicalPlan, QueryGraphSolverInput.empty, logicalQuery.cardinalities)
 
-    println(logicalQuery.logicalPlan)
-    println(parameters)
-    println(cost)
+    withClue(Seq(
+      s"plan = ${logicalQuery.logicalPlan}",
+      s"parameters = $parameters",
+      s"cost = $cost"
+    ).mkString("", "\n", "\n")) {
 
-    runtimeTestSupport.startTx()
+      runtimeTestSupport.startTx()
 
-    try {
-      val results = runtimes.map {
-        runtime => Try(runtimeTestSupport.executeAndConsumeTransactionally(logicalQuery, runtime, parameters))
-      }
+      try {
+        val results = runtimes.map {
+          runtime => Try(runtimeTestSupport.executeAndConsumeTransactionally(logicalQuery, runtime, parameters))
+        }
 
-      results.zip(runtimes).foreach {
-        case (Failure(_: CantCompileQueryException), _) => // OK
-        case (Failure(_: CypherTypeException | _: ParameterWrongTypeException), _) => // Ignore these for now, need to generate parameters of appropriate types first
-        case (Failure(e), runtime) =>
-          withClue(s"Error in ${runtime.name}") {
-            fail(e)
-          }
-        case (Success(_), _) => // checking `Failure`s first
-      }
+        results.zip(runtimes).foreach {
+          case (Failure(_: CantCompileQueryException), _) => // OK
+          case (Failure(_: CypherTypeException | _: ParameterWrongTypeException), _) => // Ignore these for now, need to generate parameters of appropriate types first
+          case (Failure(e), runtime) =>
+            withClue(s"Error in ${runtime.name}") {
+              fail(e)
+            }
+          case (Success(_), _) => // checking `Failure`s first
+        }
 
-      val referenceResult = results.head
+        val referenceResult = results.head
 
-      results.zip(runtimes).tail.foreach {
-        case (Success(result), runtime) if referenceResult.isSuccess =>
-          withClue(s"Comparing ${runtime.name} against ${runtimes.head.name}") {
-            println(s"result.size = ${result.size}")
-            if (result.size <= 1000)
+        results.zip(runtimes).tail.foreach {
+          case (Success(result), runtime) if referenceResult.isSuccess =>
+            withClue(s"Comparing ${runtime.name} against ${runtimes.head.name}, result.size = ${result.size}") {
               result should (contain theSameElementsAs referenceResult.get)
-            else
-              println(s"skipping check")
-          }
-        case (Success(_), runtime) if referenceResult.isFailure =>
-          fail(s"Failed in ${runtimes.head.name}, but succeded in ${runtime.name}", referenceResult.failed.get)
-        case (Failure(_), _) => // already checked
+            }
+          case (Success(_), runtime) if referenceResult.isFailure =>
+            fail(s"Failed in ${runtimes.head.name}, but succeded in ${runtime.name}", referenceResult.failed.get)
+          case (Failure(_), _) => // already checked
+        }
+      } finally {
+        runtimeTestSupport.stopTx()
       }
-    } finally {
-      runtimeTestSupport.stopTx()
     }
   }
 }
