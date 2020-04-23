@@ -5,12 +5,13 @@
  */
 package com.neo4j.causalclustering.core.state.storage;
 
+import com.neo4j.causalclustering.core.state.CoreStateFiles;
+import com.neo4j.causalclustering.core.state.StateRecoveryManager;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import com.neo4j.causalclustering.core.state.CoreStateFiles;
-import com.neo4j.causalclustering.core.state.StateRecoveryManager;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FlushableChannel;
@@ -18,6 +19,7 @@ import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.memory.MemoryTracker;
 
 import static java.lang.Math.toIntExact;
 
@@ -39,14 +41,14 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
     private PhysicalFlushableChannel currentStoreChannel;
 
     public DurableStateStorage( FileSystemAbstraction fsa, File baseDir, CoreStateFiles<STATE> fileType,
-            int numberOfEntriesBeforeRotation, LogProvider logProvider )
+            int numberOfEntriesBeforeRotation, LogProvider logProvider, MemoryTracker memoryTracker )
     {
         this.fsa = fsa;
         this.fileType = fileType;
         this.marshal = fileType.marshal();
         this.numberOfEntriesBeforeRotation = numberOfEntriesBeforeRotation;
         this.log = logProvider.getLog( getClass() );
-        this.recoveryManager = new StateRecoveryManager<>( fsa, this.marshal );
+        this.recoveryManager = new StateRecoveryManager<>( fsa, this.marshal, memoryTracker );
         this.fileA = new File( baseDir, fileType.name() + ".a" );
         this.fileB = new File( baseDir, fileType.name() + ".b" );
     }

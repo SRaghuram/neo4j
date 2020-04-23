@@ -27,6 +27,7 @@ import static java.util.Objects.requireNonNull;
 import static org.neo4j.io.memory.ByteBuffers.allocate;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeaderReader.readLogHeader;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 public class TransactionLogUtils
 {
@@ -54,7 +55,7 @@ public class TransactionLogUtils
             LogVersionBridge readerLogVersionBridge, ChannelNativeAccessor nativeAccessor, CommandReaderFactory commandReaderFactory ) throws IOException
     {
         LogVersionedStoreChannel channel = openVersionedChannel( fileSystem, file, nativeAccessor );
-        ReadableLogChannel logChannel = new ReadAheadLogChannel( channel, readerLogVersionBridge );
+        ReadableLogChannel logChannel = new ReadAheadLogChannel( channel, readerLogVersionBridge, INSTANCE );
         return new LogEntryCursor( new VersionAwareLogEntryReader( commandReaderFactory ), logChannel );
     }
 

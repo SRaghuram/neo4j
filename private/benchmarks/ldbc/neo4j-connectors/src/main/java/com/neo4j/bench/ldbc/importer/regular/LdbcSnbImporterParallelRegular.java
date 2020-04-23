@@ -82,6 +82,7 @@ import static com.neo4j.bench.ldbc.connection.ImportDateUtil.createFor;
 import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
 {
@@ -740,7 +741,8 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                 NO_MONITOR,
                 jobScheduler,
                 badCollector,
-                TransactionLogsInitializer.INSTANCE
+                TransactionLogsInitializer.INSTANCE,
+                INSTANCE
         );
 
         System.out.println( "Loading CSV files" );

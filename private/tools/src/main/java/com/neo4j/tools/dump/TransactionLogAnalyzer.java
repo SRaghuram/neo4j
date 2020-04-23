@@ -28,6 +28,7 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 
 import static java.lang.String.format;
@@ -143,7 +144,8 @@ public class TransactionLogAnalyzer
             bridge = NO_MORE_CHANNELS;
         }
 
-        channel = new ReadAheadLogChannel( TransactionLogUtils.openVersionedChannel( fileSystem, firstFile, logFiles.getChannelNativeAccessor() ), bridge );
+        channel = new ReadAheadLogChannel( TransactionLogUtils.openVersionedChannel( fileSystem, firstFile, logFiles.getChannelNativeAccessor() ), bridge,
+                EmptyMemoryTracker.INSTANCE );
         StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine();
         entryReader = new VersionAwareLogEntryReader( storageEngineFactory.commandReaderFactory() );
         positionMarker = new LogPositionMarker();

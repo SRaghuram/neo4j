@@ -82,8 +82,9 @@ public final class CatchupComponentsProvider
         this.catchupClientFactory = createCatchupClientFactory();
         this.portRegister = globalModule.getConnectorPortRegister();
         this.databaseTracers = new DatabaseTracers( globalModule.getTracers() );
+        var otherMemoryGlobalTracker = globalModule.getOtherMemoryPool().getPoolMemoryTracker();
         this.copiedStoreRecovery = globalLife.add(
-                new CopiedStoreRecovery( pageCache, databaseTracers, fileSystem, globalModule.getStorageEngineFactory() ) );
+                new CopiedStoreRecovery( pageCache, databaseTracers, fileSystem, globalModule.getStorageEngineFactory(), otherMemoryGlobalTracker ) );
         this.storeCopyBackoffStrategy = new ExponentialBackoffStrategy( 1,
                 config.get( CausalClusteringSettings.store_copy_backoff_max_wait ).toMillis(), TimeUnit.MILLISECONDS );
     }

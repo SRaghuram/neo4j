@@ -20,6 +20,7 @@ import org.neo4j.internal.helpers.collection.Visitor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.memory.MemoryTracker;
 
 import static java.lang.String.format;
 
@@ -38,9 +39,10 @@ class Segments implements AutoCloseable
     private final LogProvider logProvider;
     private long currentVersion;
     private final ReaderPool readerPool;
+    private final MemoryTracker memoryTracker;
 
     Segments( FileSystemAbstraction fileSystem, FileNames fileNames, ReaderPool readerPool, List<SegmentFile> allSegments,
-            Function<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector, LogProvider logProvider, long currentVersion )
+            Function<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector, LogProvider logProvider, long currentVersion, MemoryTracker memoryTracker )
     {
         this.fileSystem = fileSystem;
         this.fileNames = fileNames;
@@ -50,6 +52,7 @@ class Segments implements AutoCloseable
         this.log = logProvider.getLog( getClass() );
         this.currentVersion = currentVersion;
         this.readerPool = readerPool;
+        this.memoryTracker = memoryTracker;
 
         populateRangeMap();
     }
@@ -124,7 +127,7 @@ class Segments implements AutoCloseable
 
         File file = fileNames.getForSegment( currentVersion );
         ChannelMarshal<ReplicatedContent> contentMarshal = marshalSelector.apply( header.formatVersion() );
-        SegmentFile segment = SegmentFile.create( fileSystem, file, readerPool, currentVersion, contentMarshal, logProvider, header );
+        SegmentFile segment = SegmentFile.create( fileSystem, file, readerPool, currentVersion, contentMarshal, logProvider, header, memoryTracker );
         // TODO: Force base directory... probably not possible using fsa.
         segment.flush();
 

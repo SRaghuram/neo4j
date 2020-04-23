@@ -25,6 +25,7 @@ import org.neo4j.test.extension.testdirectory.EphemeralTestDirectoryExtension;
 import org.neo4j.time.Clocks;
 
 import static org.neo4j.logging.NullLogProvider.getInstance;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @EphemeralTestDirectoryExtension
 class RecoveryProtocolTest
@@ -49,7 +50,7 @@ class RecoveryProtocolTest
     void shouldReturnEmptyStateOnEmptyDirectory() throws Exception
     {
         // given
-        RecoveryProtocol protocol = new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal, NullLogProvider.getInstance() );
+        RecoveryProtocol protocol = new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal, NullLogProvider.getInstance(), INSTANCE );
 
         // when
         State state = protocol.run();
@@ -69,7 +70,7 @@ class RecoveryProtocolTest
         createLogFile( fsa, -1, 0, 0, -1, -1 );
         createLogFile( fsa, 5, 2, 2, 5, 0 );
 
-        RecoveryProtocol protocol = new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal, NullLogProvider.getInstance() );
+        RecoveryProtocol protocol = new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal, NullLogProvider.getInstance(), INSTANCE );
 
         try
         {
@@ -89,7 +90,7 @@ class RecoveryProtocolTest
         // given
         createLogFile( fsa, -1, 0, 1, -1, -1 );
 
-        RecoveryProtocol protocol = new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal, NullLogProvider.getInstance() );
+        RecoveryProtocol protocol = new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal, NullLogProvider.getInstance(), INSTANCE );
 
         try
         {
@@ -111,7 +112,7 @@ class RecoveryProtocolTest
         createEmptyLogFile( fsa, 1 );
         createLogFile( fsa, -1, 2, 2, -1, -1 );
 
-        RecoveryProtocol protocol = new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal, NullLogProvider.getInstance() );
+        RecoveryProtocol protocol = new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal, NullLogProvider.getInstance(), INSTANCE );
 
         try
         {
@@ -132,7 +133,7 @@ class RecoveryProtocolTest
         createLogFile( fsa, -1, 0, 0, -1, -1 );
         createEmptyLogFile( fsa, 1 );
 
-        RecoveryProtocol protocol = new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal, NullLogProvider.getInstance() );
+        RecoveryProtocol protocol = new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal, NullLogProvider.getInstance(), INSTANCE );
 
         // when
         protocol.run();
@@ -149,7 +150,7 @@ class RecoveryProtocolTest
         createLogFile( fsa, 10, 1, 1, 10, 0 );
         createLogFile( fsa, 20, 2, 2, 20, 1 );
 
-        RecoveryProtocol protocol = new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal, NullLogProvider.getInstance() );
+        RecoveryProtocol protocol = new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal, NullLogProvider.getInstance(), INSTANCE );
 
         // when
         State state = protocol.run();
@@ -170,7 +171,7 @@ class RecoveryProtocolTest
         createLogFile( fsa, 10, 1, 1, 10, 0 );
         createLogFile( fsa, 20, 2, 2, 20, 1 );
 
-        RecoveryProtocol protocol = new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal, NullLogProvider.getInstance() );
+        RecoveryProtocol protocol = new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal, NullLogProvider.getInstance(), INSTANCE );
 
         // when
         State state = protocol.run();
@@ -191,7 +192,7 @@ class RecoveryProtocolTest
         createLogFile( fsa, 10, 1, 1, 10, 0 );
         createLogFile( fsa, 20, 2, 2, 20, 1 );
 
-        RecoveryProtocol protocol = new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal, NullLogProvider.getInstance() );
+        RecoveryProtocol protocol = new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal, NullLogProvider.getInstance(), INSTANCE );
 
         // when
         State state = protocol.run();
@@ -224,7 +225,7 @@ class RecoveryProtocolTest
         createLogFile( fsa, -1, 1, 1, bootstrapIndex, bootstrapTerm );
 
         RecoveryProtocol protocol =
-                new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal, NullLogProvider.getInstance() );
+                new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal, NullLogProvider.getInstance(), INSTANCE );
 
         // when
         State state = protocol.run();
@@ -249,8 +250,7 @@ class RecoveryProtocolTest
         createLogFile( fsa, 100, 2, 2, 200, 99 );
         createLogFile( fsa, 1000, 3, 3, 2000, 999 );
 
-        RecoveryProtocol protocol = new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal,
-                NullLogProvider.getInstance() );
+        RecoveryProtocol protocol = new RecoveryProtocol( fsa, fileNames, readerPool, contentMarshal, NullLogProvider.getInstance(), INSTANCE );
 
         // when
         State state = protocol.run();

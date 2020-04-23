@@ -15,6 +15,8 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.logging.NullLogProvider;
 
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
+
 final class ConsistencyHelper
 {
     private static final ConsistencyFlags CONSISTENCY_FLAGS = new ConsistencyFlags( true, true, true, true, true, true );
@@ -27,7 +29,7 @@ final class ConsistencyHelper
     {
         ConsistencyCheckService.Result result =
                 new ConsistencyCheckService().runFullConsistencyCheck( databaseLayout, Config.defaults(), ProgressMonitorFactory.NONE,
-                        NullLogProvider.getInstance(), fs, pageCache, false, CONSISTENCY_FLAGS, PageCacheTracer.NULL );
+                        NullLogProvider.getInstance(), fs, pageCache, false, CONSISTENCY_FLAGS, PageCacheTracer.NULL, INSTANCE );
 
         if ( !result.isSuccessful() )
         {

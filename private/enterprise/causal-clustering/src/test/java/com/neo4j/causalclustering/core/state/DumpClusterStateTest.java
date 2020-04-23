@@ -36,6 +36,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @TestDirectoryExtension
 @ExtendWith( LifeExtension.class )
@@ -54,7 +55,7 @@ class DumpClusterStateTest
     {
         dataDir = testDirectory.directory( "data" );
         storageFactory = new ClusterStateStorageFactory( testDirectory.getFileSystem(), ClusterStateLayout.of( dataDir ),
-                NullLogProvider.getInstance(), Config.defaults() );
+                NullLogProvider.getInstance(), Config.defaults(), INSTANCE );
     }
 
     @Test

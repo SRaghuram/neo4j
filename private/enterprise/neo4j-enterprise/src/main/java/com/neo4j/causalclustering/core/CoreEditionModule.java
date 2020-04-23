@@ -174,7 +174,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         final File dataDir = globalConfig.get( GraphDatabaseSettings.data_directory ).toFile();
         clusterStateLayout = ClusterStateLayout.of( dataDir );
         globalDependencies.satisfyDependency( clusterStateLayout );
-        storageFactory = new ClusterStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig );
+        storageFactory = new ClusterStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig,
+                globalModule.getOtherMemoryPool().getPoolMemoryTracker() );
 
         // migration needs to happen as early as possible in the lifecycle
         var clusterStateMigrator = createClusterStateMigrator( globalModule, clusterStateLayout, storageFactory );
@@ -318,11 +319,13 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
         RaftMessageDispatcher raftMessageDispatcher = new RaftMessageDispatcher( logProvider, globalModule.getGlobalClock() );
 
+        var globalOtherTracker = globalModule.getOtherMemoryPool().getPoolMemoryTracker();
         RaftGroupFactory raftGroupFactory = new RaftGroupFactory( myIdentity, globalModule, clusterStateLayout, topologyService, storageFactory,
-                namedDatabaseId -> ((DefaultLeaderService) leaderService).createListener( namedDatabaseId ) );
+                namedDatabaseId -> ((DefaultLeaderService) leaderService).createListener( namedDatabaseId ),
+                globalOtherTracker );
 
         RecoveryFacade recoveryFacade = recoveryFacade( globalModule.getFileSystem(), globalModule.getPageCache(), globalModule.getTracers(), globalConfig,
-                globalModule.getStorageEngineFactory() );
+                globalModule.getStorageEngineFactory(), globalOtherTracker );
 
         addThroughputMonitorService();
 

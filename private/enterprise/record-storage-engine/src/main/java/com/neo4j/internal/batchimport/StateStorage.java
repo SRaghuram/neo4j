@@ -17,6 +17,7 @@ import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.ReadPastEndException;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.memory.BufferScope;
+import org.neo4j.memory.MemoryTracker;
 
 import static com.neo4j.internal.batchimport.ChannelUtils.readString;
 import static com.neo4j.internal.batchimport.ChannelUtils.writeString;
@@ -31,12 +32,14 @@ public class StateStorage
     private final FileSystemAbstraction fs;
     private final File stateFile;
     private final File tempFile;
+    private final MemoryTracker memoryTracker;
 
-    StateStorage( FileSystemAbstraction fs, File stateFile )
+    StateStorage( FileSystemAbstraction fs, File stateFile, MemoryTracker memoryTracker )
     {
         this.fs = fs;
         this.stateFile = stateFile;
         this.tempFile = new File( stateFile.getAbsolutePath() + ".tmp" );
+        this.memoryTracker = memoryTracker;
     }
 
     public Pair<String,byte[]> get() throws IOException
@@ -45,7 +48,7 @@ public class StateStorage
         {
             return Pair.of( NO_STATE, EMPTY_BYTE_ARRAY );
         }
-        try ( BufferScope bufferScope = new BufferScope( ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE );
+        try ( BufferScope bufferScope = new BufferScope( ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE, memoryTracker );
               ReadableChannel channel = new ReadAheadChannel<>( fs.read( stateFile ), bufferScope.buffer ) )
         {
             String name = readString( channel );

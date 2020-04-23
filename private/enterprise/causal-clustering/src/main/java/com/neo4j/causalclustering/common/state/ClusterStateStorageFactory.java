@@ -32,6 +32,7 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLog;
 import org.neo4j.logging.internal.DatabaseLogProvider;
+import org.neo4j.memory.MemoryTracker;
 
 import static java.lang.String.format;
 
@@ -41,13 +42,16 @@ public class ClusterStateStorageFactory
     private final LogProvider globalLogProvider;
     private final ClusterStateLayout layout;
     private final Config config;
+    private final MemoryTracker memoryTracker;
 
-    public ClusterStateStorageFactory( FileSystemAbstraction fs, ClusterStateLayout layout, LogProvider globalLogProvider, Config config )
+    public ClusterStateStorageFactory( FileSystemAbstraction fs, ClusterStateLayout layout, LogProvider globalLogProvider, Config config,
+            MemoryTracker memoryTracker )
     {
         this.fs = fs;
         this.globalLogProvider = globalLogProvider;
         this.layout = layout;
         this.config = config;
+        this.memoryTracker = memoryTracker;
     }
 
     public SimpleStorage<ClusterStateVersion> createClusterStateVersionStorage()
@@ -97,12 +101,12 @@ public class ClusterStateStorageFactory
 
     private <T> SimpleStorage<T> createSimpleStorage( File file, CoreStateFiles<T> type, LogProvider logProvider )
     {
-        return new SimpleFileStorage<>( fs, file, type.marshal(), logProvider );
+        return new SimpleFileStorage<>( fs, file, type.marshal(), logProvider, memoryTracker );
     }
 
     private <T> StateStorage<T> createDurableStorage( File directory, CoreStateFiles<T> type, LifeSupport life, LogProvider logProvider )
     {
-        DurableStateStorage<T> storage = new DurableStateStorage<>( fs, directory, type, type.rotationSize( config ), logProvider );
+        DurableStateStorage<T> storage = new DurableStateStorage<>( fs, directory, type, type.rotationSize( config ), logProvider, memoryTracker );
         life.add( storage );
         return storage;
     }

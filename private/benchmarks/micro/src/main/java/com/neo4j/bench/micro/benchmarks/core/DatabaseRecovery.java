@@ -49,6 +49,7 @@ import org.neo4j.storageengine.api.TransactionIdStore;
 import static com.neo4j.bench.micro.data.DataGenerator.GraphWriter.TRANSACTIONAL;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 import static org.neo4j.kernel.recovery.Recovery.isRecoveryRequired;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 public class DatabaseRecovery extends AbstractCoreBenchmark
 {
@@ -119,7 +120,7 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
         StorageEngineFactory storageEngineFactory = db.getDependencyResolver().resolveDependency( StorageEngineFactory.class );
         ManagedStore.getManagementService().shutdown();
         removeLastCheckpointsRecordFromLastLogFile( databaseLayout, storageEngineFactory );
-        if ( !isRecoveryRequired( databaseLayout, Config.defaults() ) )
+        if ( !isRecoveryRequired( databaseLayout, Config.defaults(), INSTANCE ) )
         {
             throw new IllegalStateException( "Store should require recovery." );
         }
@@ -171,7 +172,7 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
             {
                 storeChannel.truncate( checkPoint.getLogPosition().getByteOffset() );
             }
-            if ( isRecoveryRequired( fileSystem, databaseLayout, Config.defaults() ) )
+            if ( isRecoveryRequired( fileSystem, databaseLayout, Config.defaults(), INSTANCE ) )
             {
                 return;
             }

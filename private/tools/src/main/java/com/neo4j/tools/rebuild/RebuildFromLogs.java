@@ -67,6 +67,7 @@ import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.monitoring.tracing.Tracers;
 import org.neo4j.logging.FormattedLog;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.token.TokenHolders;
@@ -220,7 +221,7 @@ class RebuildFromLogs
             int startVersion = 0;
             ReaderLogVersionBridge versionBridge = new ReaderLogVersionBridge( logFiles );
             PhysicalLogVersionedStoreChannel startingChannel = logFiles.openForVersion( startVersion );
-            ReadableLogChannel channel = new ReadAheadLogChannel( startingChannel, versionBridge );
+            ReadableLogChannel channel = new ReadAheadLogChannel( startingChannel, versionBridge, EmptyMemoryTracker.INSTANCE );
             long txId = BASE_TX_ID;
             TransactionQueue queue = new TransactionQueue( 10_000,
                     ( tx, last ) -> commitProcess.commit( tx, CommitEvent.NULL, EXTERNAL ) );
@@ -287,7 +288,7 @@ class RebuildFromLogs
                     NodeBasedMemoryLimiter.DEFAULT );
 
             ConsistencySummaryStatistics summaryStatistics = fullCheck.execute( pageCache, stores, () -> (CountsStore) storageEngine.countsAccessor(),
-                    pageCacheTracer, FormattedLog.toOutputStream( System.err ) );
+                    pageCacheTracer, EmptyMemoryTracker.INSTANCE, FormattedLog.toOutputStream( System.err ) );
             if ( !summaryStatistics.isConsistent() )
             {
                 throw new InconsistentStoreException( summaryStatistics );

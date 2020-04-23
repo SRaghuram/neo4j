@@ -23,6 +23,7 @@ import org.neo4j.time.Clocks;
 import static com.neo4j.causalclustering.core.consensus.ReplicatedInteger.valueOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.logging.NullLogProvider.getInstance;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @TestDirectoryExtension
 class SegmentedRaftLogRotationTruncationPruneTest
@@ -124,7 +125,7 @@ class SegmentedRaftLogRotationTruncationPruneTest
 
         SegmentedRaftLog newRaftLog = new SegmentedRaftLog( testDirectory.getFileSystem(), directory, 1,
                 ignored -> new DummyRaftableContentSerializer(), logProvider, 8, Clocks.fakeClock(), new OnDemandJobScheduler(),
-                pruningStrategy );
+                pruningStrategy, INSTANCE );
 
         newRaftLog.start();
         return newRaftLog;

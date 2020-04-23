@@ -48,6 +48,7 @@ import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.internal.batchimport.Configuration.DEFAULT;
 import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
 import static org.neo4j.io.compress.ZipUtils.zip;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.test.proc.ProcessUtil.getClassPath;
 import static org.neo4j.test.proc.ProcessUtil.getJavaExecutable;
 
@@ -160,7 +161,7 @@ class RestartableImportIT
             File databaseDirectory = new File( args[0] );
             BatchImporterFactory.withHighestPriority().instantiate( DatabaseLayout.ofFlat( databaseDirectory ), new DefaultFileSystemAbstraction(),
                     null, PageCacheTracer.NULL, DEFAULT, NullLogService.getInstance(), ExecutionMonitors.invisible(), EMPTY, Config.defaults(),
-                    RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogsInitializer.INSTANCE )
+                    RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogsInitializer.INSTANCE, INSTANCE )
                     .doImport( input( Long.parseLong( args[1] ) ) );
             // Create this file to communicate completion for realz
             new File( databaseDirectory, COMPLETED ).createNewFile();

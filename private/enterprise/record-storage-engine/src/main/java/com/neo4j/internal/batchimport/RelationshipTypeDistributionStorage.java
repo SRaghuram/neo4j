@@ -16,16 +16,19 @@ import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.memory.BufferScope;
+import org.neo4j.memory.MemoryTracker;
 
 class RelationshipTypeDistributionStorage
 {
     private final FileSystemAbstraction fs;
     private final File file;
+    private final MemoryTracker memoryTracker;
 
-    RelationshipTypeDistributionStorage( FileSystemAbstraction fs, File file )
+    RelationshipTypeDistributionStorage( FileSystemAbstraction fs, File file, MemoryTracker memoryTracker )
     {
         this.fs = fs;
         this.file = file;
+        this.memoryTracker = memoryTracker;
     }
 
     void store( DataStatistics distribution ) throws IOException
@@ -47,7 +50,7 @@ class RelationshipTypeDistributionStorage
 
     DataStatistics load() throws IOException
     {
-        try ( BufferScope bufferScope = new BufferScope( ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE );
+        try ( BufferScope bufferScope = new BufferScope( ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE, memoryTracker );
               ReadableChannel channel = new ReadAheadChannel<>( fs.read( file ), bufferScope.buffer ) )
         {
             long nodeCount = channel.getLong();

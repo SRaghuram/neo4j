@@ -18,6 +18,7 @@ import org.neo4j.kernel.database.DatabaseTracers;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.internal.NullLogService;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.StoreVersion;
 import org.neo4j.storageengine.api.StoreVersionCheck;
@@ -35,15 +36,18 @@ public class CopiedStoreRecovery extends LifecycleAdapter
     private final DatabaseTracers databaseTracers;
     private final FileSystemAbstraction fs;
     private final StorageEngineFactory storageEngineFactory;
+    private final MemoryTracker memoryTracker;
 
     private boolean shutdown;
 
-    public CopiedStoreRecovery( PageCache pageCache, DatabaseTracers databaseTracers, FileSystemAbstraction fs, StorageEngineFactory storageEngineFactory )
+    public CopiedStoreRecovery( PageCache pageCache, DatabaseTracers databaseTracers, FileSystemAbstraction fs, StorageEngineFactory storageEngineFactory,
+            MemoryTracker memoryTracker )
     {
         this.pageCache = pageCache;
         this.databaseTracers = databaseTracers;
         this.fs = fs;
         this.storageEngineFactory = storageEngineFactory;
+        this.memoryTracker = memoryTracker;
     }
 
     @Override
@@ -81,7 +85,7 @@ public class CopiedStoreRecovery extends LifecycleAdapter
 
         try
         {
-            performRecovery( fs, pageCache, databaseTracers, config, databaseLayout, storageEngineFactory );
+            performRecovery( fs, pageCache, databaseTracers, config, databaseLayout, storageEngineFactory, memoryTracker );
         }
         catch ( Exception e )
         {

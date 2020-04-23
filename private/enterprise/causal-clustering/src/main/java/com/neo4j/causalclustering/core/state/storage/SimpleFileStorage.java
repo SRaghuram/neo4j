@@ -5,11 +5,12 @@
  */
 package com.neo4j.causalclustering.core.state.storage;
 
+import com.neo4j.causalclustering.messaging.EndOfStreamException;
+import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
+
 import java.io.File;
 import java.io.IOException;
 
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FlushableChannel;
@@ -19,6 +20,7 @@ import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.memory.BufferScope;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.memory.MemoryTracker;
 
 import static java.lang.Math.toIntExact;
 
@@ -26,15 +28,17 @@ public class SimpleFileStorage<T> implements SimpleStorage<T>
 {
     private final FileSystemAbstraction fileSystem;
     private final ChannelMarshal<T> marshal;
+    private final MemoryTracker memoryTracker;
     private final File file;
     private final Log log;
 
-    public SimpleFileStorage( FileSystemAbstraction fileSystem, File file, ChannelMarshal<T> marshal, LogProvider logProvider )
+    public SimpleFileStorage( FileSystemAbstraction fileSystem, File file, ChannelMarshal<T> marshal, LogProvider logProvider, MemoryTracker memoryTracker )
     {
         this.fileSystem = fileSystem;
         this.log = logProvider.getLog( getClass() );
         this.file = file;
         this.marshal = marshal;
+        this.memoryTracker = memoryTracker;
     }
 
     @Override
@@ -46,7 +50,7 @@ public class SimpleFileStorage<T> implements SimpleStorage<T>
     @Override
     public T readState() throws IOException
     {
-        try ( BufferScope bufferScope = new BufferScope( ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE );
+        try ( BufferScope bufferScope = new BufferScope( ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE, memoryTracker );
               ReadableChannel channel = new ReadAheadChannel<>( fileSystem.read( file ), bufferScope.buffer ) )
         {
             return marshal.unmarshal( channel );
@@ -67,7 +71,7 @@ public class SimpleFileStorage<T> implements SimpleStorage<T>
         }
         fileSystem.deleteFile( file );
 
-        try ( BufferScope bufferScope = new BufferScope( toIntExact( ByteUnit.kibiBytes( 512 ) ) );
+        try ( BufferScope bufferScope = new BufferScope( toIntExact( ByteUnit.kibiBytes( 512 ) ), memoryTracker );
               FlushableChannel channel = new PhysicalFlushableChannel( fileSystem.write( file ), bufferScope.buffer ) )
         {
             marshal.marshal( state, channel );

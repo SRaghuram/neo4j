@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.logging.NullLogProvider.getInstance;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 /**
  * This class tests that partially written entries at the end of the last raft log file (also known as Segment)
@@ -60,14 +61,14 @@ class SegmentedRaftLogPartialEntryRecoveryTest
         CoreLogPruningStrategy pruningStrategy =
                 new CoreLogPruningStrategyFactory( "100 entries", logProvider ).newInstance();
         return new SegmentedRaftLog( fs, logDirectory, rotateAtSize, ignored -> new CoreReplicatedContentMarshalV2(),
-                logProvider, 8, Clocks.fakeClock(), new OnDemandJobScheduler(), pruningStrategy );
+                logProvider, 8, Clocks.fakeClock(), new OnDemandJobScheduler(), pruningStrategy, INSTANCE );
     }
 
     private RecoveryProtocol createRecoveryProtocol()
     {
         FileNames fileNames = new FileNames( logDirectory );
         return new RecoveryProtocol( fs, fileNames, new ReaderPool( 8, getInstance(), fileNames, fs, Clocks.fakeClock() ),
-                ignored -> new CoreReplicatedContentMarshalV2(), getInstance() );
+                ignored -> new CoreReplicatedContentMarshalV2(), getInstance(), INSTANCE );
     }
 
     @Test

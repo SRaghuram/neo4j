@@ -21,6 +21,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.logging.internal.LogService;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
 
 @ServiceProvider
@@ -41,9 +42,10 @@ public class RestartableBatchImporterFactory extends BatchImporterFactory
     public BatchImporter instantiate( DatabaseLayout databaseLayout, FileSystemAbstraction fileSystem, PageCache externalPageCache,
             PageCacheTracer pageCacheTracer, Configuration config,
             LogService logService, ExecutionMonitor executionMonitor, AdditionalInitialIds additionalInitialIds, Config dbConfig, RecordFormats recordFormats,
-            ImportLogic.Monitor monitor, JobScheduler jobScheduler, Collector badCollector, LogFilesInitializer logFilesInitializer )
+            ImportLogic.Monitor monitor, JobScheduler jobScheduler, Collector badCollector, LogFilesInitializer logFilesInitializer,
+            MemoryTracker memoryTracker )
     {
         return new RestartableParallelBatchImporter( databaseLayout, fileSystem, externalPageCache, pageCacheTracer, config, logService, executionMonitor,
-                additionalInitialIds, dbConfig, recordFormats, monitor, jobScheduler, badCollector, logFilesInitializer );
+                additionalInitialIds, dbConfig, recordFormats, monitor, jobScheduler, badCollector, logFilesInitializer, memoryTracker );
     }
 }

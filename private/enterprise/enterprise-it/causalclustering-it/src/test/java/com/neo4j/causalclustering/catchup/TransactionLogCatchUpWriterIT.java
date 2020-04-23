@@ -72,6 +72,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_roo
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
@@ -262,7 +263,7 @@ class TransactionLogCatchUpWriterIT
 
     private void verifyCheckpointInLog( LogFiles logFiles, boolean shouldExist )
     {
-        final LogTailScanner logTailScanner = new LogTailScanner( logFiles, logEntryReader(), new Monitors() );
+        final LogTailScanner logTailScanner = new LogTailScanner( logFiles, logEntryReader(), new Monitors(), INSTANCE );
 
         LogTailInformation tailInformation = logTailScanner.getTailInformation();
 
@@ -283,7 +284,7 @@ class TransactionLogCatchUpWriterIT
     {
         long expectedTxId = fromTxId;
         LogVersionedStoreChannel versionedStoreChannel = logFiles.openForVersion( 0 );
-        try ( ReadableLogChannel channel = new ReadAheadLogChannel( versionedStoreChannel ) )
+        try ( ReadableLogChannel channel = new ReadAheadLogChannel( versionedStoreChannel, INSTANCE ) )
         {
             try ( PhysicalTransactionCursor txCursor = new PhysicalTransactionCursor( channel, logEntryReader() ) )
             {

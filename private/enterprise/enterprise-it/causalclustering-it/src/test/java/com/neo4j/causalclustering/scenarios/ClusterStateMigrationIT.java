@@ -37,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @ClusterExtension
 @TestInstance( PER_METHOD )
@@ -122,7 +123,7 @@ class ClusterStateMigrationIT
     {
         var clusterStateLayout = clusterStateLayout( member );
         var fs = member.defaultDatabase().getDependencyResolver().resolveDependency( FileSystemAbstraction.class );
-        return new ClusterStateStorageFactory( fs, clusterStateLayout, nullLogProvider(), Config.defaults() );
+        return new ClusterStateStorageFactory( fs, clusterStateLayout, nullLogProvider(), Config.defaults(), INSTANCE );
     }
 
     private static ClusterStateLayout clusterStateLayout( ClusterMember member )

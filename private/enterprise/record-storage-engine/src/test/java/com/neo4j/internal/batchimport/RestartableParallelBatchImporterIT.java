@@ -52,6 +52,7 @@ import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.internal.batchimport.Configuration.DEFAULT;
 import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
 import static org.neo4j.internal.batchimport.staging.ExecutionMonitors.invisible;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @Neo4jLayoutExtension
 @ExtendWith( RandomExtension.class )
@@ -273,6 +274,6 @@ class RestartableParallelBatchImporterIT
         return BatchImporterFactory.withHighestPriority().instantiate( databaseLayout, fs, null, PageCacheTracer.NULL,
                 DEFAULT, NullLogService.getInstance(), monitor, EMPTY,
                 Config.defaults( preallocate_logical_logs, false ), RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY,
-                TransactionLogsInitializer.INSTANCE );
+                TransactionLogsInitializer.INSTANCE, INSTANCE );
     }
 }

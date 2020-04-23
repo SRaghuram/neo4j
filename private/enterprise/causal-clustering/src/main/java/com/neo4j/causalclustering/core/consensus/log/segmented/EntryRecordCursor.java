@@ -5,19 +5,21 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
 import com.neo4j.causalclustering.core.consensus.log.EntryRecord;
 import com.neo4j.causalclustering.core.consensus.log.LogPosition;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
 import org.neo4j.cursor.CursorValue;
 import org.neo4j.cursor.IOCursor;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.memory.ByteBuffers;
+import org.neo4j.memory.MemoryTracker;
 
 import static org.neo4j.io.fs.ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE;
 
@@ -33,20 +35,22 @@ class EntryRecordCursor implements IOCursor<EntryRecord>
     private final LogPosition position;
     private final CursorValue<EntryRecord> currentRecord = new CursorValue<>();
     private final Reader reader;
-    private ChannelMarshal<ReplicatedContent> contentMarshal;
+    private final ChannelMarshal<ReplicatedContent> contentMarshal;
     private final SegmentFile segment;
+    private final MemoryTracker memoryTracker;
 
     private boolean hadError;
     private boolean closed;
 
     EntryRecordCursor( Reader reader, ChannelMarshal<ReplicatedContent> contentMarshal,
-            long currentIndex, long wantedIndex, SegmentFile segment ) throws IOException, EndOfStreamException
+            long currentIndex, long wantedIndex, SegmentFile segment, MemoryTracker memoryTracker ) throws IOException, EndOfStreamException
     {
-        this.buffer = ByteBuffers.allocateDirect( DEFAULT_READ_AHEAD_SIZE );
+        this.buffer = ByteBuffers.allocateDirect( DEFAULT_READ_AHEAD_SIZE, memoryTracker );
         this.bufferedReader = new ReadAheadChannel<>( reader.channel(), buffer );
         this.reader = reader;
         this.contentMarshal = contentMarshal;
         this.segment = segment;
+        this.memoryTracker = memoryTracker;
 
         /* The cache lookup might have given us an earlier position, scan forward to the exact position. */
         while ( currentIndex < wantedIndex )
@@ -93,7 +97,7 @@ class EntryRecordCursor implements IOCursor<EntryRecord>
         }
 
         bufferedReader = null;
-        ByteBuffers.releaseBuffer( buffer );
+        ByteBuffers.releaseBuffer( buffer, memoryTracker );
         closed = true;
         segment.refCount().decrease();
 

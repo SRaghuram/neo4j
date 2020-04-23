@@ -30,6 +30,8 @@ import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.kernel.impl.util.Validators;
 import org.neo4j.kernel.internal.locker.FileLockException;
+import org.neo4j.memory.EmptyMemoryTracker;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.util.VisibleForTesting;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
@@ -140,6 +142,7 @@ public class StoreCopyCommand extends AbstractCommand
         validateSource( fromDatabaseLayout );
 
         DatabaseLayout toDatabaseLayout = Neo4jLayout.of( config ).databaseLayout( database.name() );
+        var memoryTracker = EmptyMemoryTracker.INSTANCE;
 
         validateTarget( toDatabaseLayout );
 
@@ -147,7 +150,7 @@ public class StoreCopyCommand extends AbstractCommand
         {
             if ( !force )
             {
-                checkDbState( fromDatabaseLayout, config );
+                checkDbState( fromDatabaseLayout, config, memoryTracker );
             }
             try ( Closeable ignored2 = LockChecker.checkDatabaseLock( toDatabaseLayout )  )
             {
@@ -260,9 +263,9 @@ public class StoreCopyCommand extends AbstractCommand
         }
     }
 
-    private static void checkDbState( DatabaseLayout databaseLayout, Config additionalConfiguration )
+    private static void checkDbState( DatabaseLayout databaseLayout, Config additionalConfiguration, MemoryTracker memoryTracker )
     {
-        if ( checkRecoveryState( databaseLayout, additionalConfiguration ) )
+        if ( checkRecoveryState( databaseLayout, additionalConfiguration, memoryTracker ) )
         {
             throw new CommandFailedException( joinAsLines( "The database " + databaseLayout.getDatabaseName() + "  was not shut down properly.",
                     "Please perform a recovery by starting and stopping the database.",
@@ -270,11 +273,11 @@ public class StoreCopyCommand extends AbstractCommand
         }
     }
 
-    private static boolean checkRecoveryState( DatabaseLayout databaseLayout, Config additionalConfiguration )
+    private static boolean checkRecoveryState( DatabaseLayout databaseLayout, Config additionalConfiguration, MemoryTracker memoryTracker )
     {
         try
         {
-            return isRecoveryRequired( databaseLayout, additionalConfiguration );
+            return isRecoveryRequired( databaseLayout, additionalConfiguration, memoryTracker );
         }
         catch ( Exception e )
         {

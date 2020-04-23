@@ -27,6 +27,7 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.logging.NullLogProvider.getInstance;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @TestDirectoryExtension
 @ExtendWith( LifeExtension.class )
@@ -109,7 +110,7 @@ class SegmentedRaftLogCursorIT
                 new CoreLogPruningStrategyFactory( pruneStrategy, logProvider ).newInstance();
         SegmentedRaftLog newRaftLog = new SegmentedRaftLog( testDirectory.getFileSystem(), directory, rotateAtSize,
                 ignored -> new DummyRaftableContentSerializer(), logProvider, 8, Clocks.systemClock(),
-                new OnDemandJobScheduler(), pruningStrategy );
+                new OnDemandJobScheduler(), pruningStrategy, INSTANCE );
 
         life.add( newRaftLog );
 

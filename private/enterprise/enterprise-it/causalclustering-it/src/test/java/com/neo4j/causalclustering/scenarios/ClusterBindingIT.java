@@ -49,6 +49,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.RANDOM_NUMBER;
 import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @ExtendWith( DefaultFileSystemExtension.class )
 @ClusterExtension
@@ -212,7 +213,7 @@ class ClusterBindingIT
     private void changeRaftId( CoreClusterMember coreMember, String databaseName ) throws IOException
     {
         var layout = coreMember.clusterStateLayout();
-        var storageFactory = new ClusterStateStorageFactory( fs, layout, NullLogProvider.getInstance(), coreMember.config() );
+        var storageFactory = new ClusterStateStorageFactory( fs, layout, NullLogProvider.getInstance(), coreMember.config(), INSTANCE );
         var raftIdStorage = storageFactory.createRaftIdStorage( databaseName, nullDatabaseLogProvider() );
         raftIdStorage.writeState( RaftIdFactory.random() );
     }

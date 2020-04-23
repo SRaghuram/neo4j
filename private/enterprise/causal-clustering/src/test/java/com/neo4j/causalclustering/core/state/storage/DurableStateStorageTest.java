@@ -30,6 +30,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @EphemeralTestDirectoryExtension
 @ExtendWith( LifeExtension.class )
@@ -47,7 +48,7 @@ class DurableStateStorageTest
     {
         // given
         DurableStateStorage<AtomicInteger> storage = life.add( new DurableStateStorage<>( fileSystem, testDirectory.homeDir(),
-                CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ), 100, NullLogProvider.getInstance() ) );
+                CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ), 100, NullLogProvider.getInstance(), INSTANCE ) );
 
         // when
         storage.writeState( new AtomicInteger( 99 ) );
@@ -62,7 +63,7 @@ class DurableStateStorageTest
         // given
         final int numberOfEntriesBeforeRotation = 100;
         DurableStateStorage<AtomicInteger> storage = life.add( new DurableStateStorage<>( fileSystem, testDirectory.homeDir(),
-                CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ), numberOfEntriesBeforeRotation, NullLogProvider.getInstance() ) );
+                CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ), numberOfEntriesBeforeRotation, NullLogProvider.getInstance(), INSTANCE ) );
 
         // when
         for ( int i = 0; i < numberOfEntriesBeforeRotation; i++ )
@@ -84,7 +85,7 @@ class DurableStateStorageTest
         // given
         final int numberOfEntriesBeforeRotation = 100;
         DurableStateStorage<AtomicInteger> storage = life.add( new DurableStateStorage<>( fileSystem, testDirectory.homeDir(),
-                CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ), numberOfEntriesBeforeRotation, NullLogProvider.getInstance() ) );
+                CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ), numberOfEntriesBeforeRotation, NullLogProvider.getInstance(), INSTANCE ) );
 
         // when
         for ( int i = 0; i < numberOfEntriesBeforeRotation * 2; i++ )
@@ -107,7 +108,7 @@ class DurableStateStorageTest
         int rotationCount = 10;
 
         DurableStateStorage<AtomicInteger> storage = new DurableStateStorage<>( fileSystem, testDirectory.homeDir(),
-                CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ), rotationCount, NullLogProvider.getInstance() );
+                CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ), rotationCount, NullLogProvider.getInstance(), INSTANCE );
         int largestValueWritten = 0;
         try ( Lifespan lifespan = new Lifespan( storage ) )
         {
@@ -119,7 +120,7 @@ class DurableStateStorageTest
 
         // now both files are full. We reopen, then write some more.
         storage = life.add( new DurableStateStorage<>( fileSystem, testDirectory.homeDir(),
-                CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ), rotationCount, NullLogProvider.getInstance() ) );
+                CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ), rotationCount, NullLogProvider.getInstance(), INSTANCE ) );
 
         storage.writeState( new AtomicInteger( largestValueWritten++ ) );
         storage.writeState( new AtomicInteger( largestValueWritten++ ) );

@@ -43,6 +43,7 @@ import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.kernel.recovery.Recovery;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.storageengine.api.TransactionIdStore;
@@ -87,10 +88,11 @@ public class RaftBootstrapper
     private final Config config;
     private final BootstrapSaver bootstrapSaver;
     private final PageCacheTracer pageCacheTracer;
+    private final MemoryTracker memoryTracker;
 
     public RaftBootstrapper( BootstrapContext bootstrapContext, TemporaryDatabaseFactory tempDatabaseFactory, DatabaseInitializer databaseInitializer,
             PageCache pageCache, FileSystemAbstraction fs, LogProvider logProvider, StorageEngineFactory storageEngineFactory, Config config,
-            BootstrapSaver bootstrapSaver, PageCacheTracer pageCacheTracer )
+            BootstrapSaver bootstrapSaver, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
     {
         this.bootstrapContext = bootstrapContext;
         this.tempDatabaseFactory = tempDatabaseFactory;
@@ -102,6 +104,7 @@ public class RaftBootstrapper
         this.config = config;
         this.bootstrapSaver = bootstrapSaver;
         this.pageCacheTracer = pageCacheTracer;
+        this.memoryTracker = memoryTracker;
     }
 
     public CoreSnapshot bootstrap( Set<MemberId> members )
@@ -116,7 +119,7 @@ public class RaftBootstrapper
             log.info( "Bootstrapping database " + bootstrapContext.databaseId().name() + " for members " + members );
             if ( isStorePresent() )
             {
-                ensureRecoveredOrThrow( bootstrapContext, config );
+                ensureRecoveredOrThrow( bootstrapContext, config, memoryTracker );
 
                 if ( bootstrapContext.databaseId().isSystemDatabase() )
                 {
@@ -213,9 +216,9 @@ public class RaftBootstrapper
         return databaseLayout;
     }
 
-    private void ensureRecoveredOrThrow( BootstrapContext bootstrapContext, Config config ) throws Exception
+    private void ensureRecoveredOrThrow( BootstrapContext bootstrapContext, Config config, MemoryTracker memoryTracker ) throws Exception
     {
-        if ( Recovery.isRecoveryRequired( fs, bootstrapContext.databaseLayout(), config ) )
+        if ( Recovery.isRecoveryRequired( fs, bootstrapContext.databaseLayout(), config, memoryTracker ) )
         {
             String message = "Cannot bootstrap database " + bootstrapContext.databaseId().name() + ". " +
                              "Recovery is required. " +

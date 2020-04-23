@@ -22,6 +22,7 @@ import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_strategy;
 import static org.neo4j.logging.NullLogProvider.getInstance;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @ExtendWith( LifeExtension.class )
 public class SegmentedRaftLogVerificationIT extends RaftLogVerificationIT
@@ -43,8 +44,7 @@ public class SegmentedRaftLogVerificationIT extends RaftLogVerificationIT
                         .newInstance();
         SegmentedRaftLog newRaftLog = new SegmentedRaftLog( testDirectory.getFileSystem(), directory, rotateAtSizeBytes,
                 ignored -> new DummyRaftableContentSerializer(), logProvider, readerPoolSize, Clocks.systemClock(),
-                new OnDemandJobScheduler(),
-                pruningStrategy );
+                new OnDemandJobScheduler(), pruningStrategy, INSTANCE );
 
         life.add( newRaftLog );
 

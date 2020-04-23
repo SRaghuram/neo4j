@@ -40,6 +40,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.internal.batchimport.Configuration.DEFAULT;
 import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @Neo4jLayoutExtension
 @ExtendWith( RandomExtension.class )
@@ -104,7 +105,8 @@ class RestartImportFromSpecificStatesTest
     {
         return BatchImporterFactory.withHighestPriority().instantiate( databaseLayout, fs, null, PageCacheTracer.NULL,
                 DEFAULT, NullLogService.getInstance(), monitor,
-              EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogsInitializer.INSTANCE );
+              EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogsInitializer.INSTANCE,
+                INSTANCE );
     }
 
     private void verifyDb( SimpleRandomizedInput input ) throws IOException

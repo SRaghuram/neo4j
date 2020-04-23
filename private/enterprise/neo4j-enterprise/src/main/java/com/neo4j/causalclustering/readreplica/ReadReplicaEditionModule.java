@@ -142,7 +142,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
 
         final File dataDir = globalConfig.get( GraphDatabaseSettings.data_directory ).toFile();
         clusterStateLayout = ClusterStateLayout.of( dataDir );
-        storageFactory = new ClusterStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig );
+        storageFactory = new ClusterStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig,
+                globalModule.getOtherMemoryPool().getPoolMemoryTracker() );
 
         addThroughputMonitorService();
 

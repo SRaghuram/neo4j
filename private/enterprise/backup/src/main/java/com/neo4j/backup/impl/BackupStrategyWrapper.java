@@ -18,6 +18,7 @@ import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.kernel.recovery.Recovery;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.util.VisibleForTesting;
 
 /**
@@ -63,6 +64,7 @@ class BackupStrategyWrapper
         Path backupLocation = onlineBackupContext.getDatabaseBackupDir();
         SocketAddress address = onlineBackupContext.getAddress();
         Config config = onlineBackupContext.getConfig();
+        var memoryTracker = onlineBackupContext.getMemoryTracker();
         DatabaseLayout backupLayout = DatabaseLayout.ofFlat( backupLocation.toFile() );
 
         boolean previousBackupExists = backupCopyService.backupExists( backupLayout );
@@ -71,7 +73,7 @@ class BackupStrategyWrapper
         if ( previousBackupExists )
         {
             debugLog.info( "Previous backup found, trying incremental backup." );
-            if ( tryIncrementalBackup( backupLayout, config, address, fallbackToFull, onlineBackupContext.getDatabaseName() ) )
+            if ( tryIncrementalBackup( backupLayout, config, address, fallbackToFull, onlineBackupContext.getDatabaseName(), memoryTracker ) )
             {
                 return;
             }
@@ -94,13 +96,12 @@ class BackupStrategyWrapper
     }
 
     private boolean tryIncrementalBackup( DatabaseLayout backupLayout, Config config, SocketAddress address, boolean fallbackToFullAllowed,
-            String databaseName )
-            throws BackupExecutionException
+            String databaseName, MemoryTracker memoryTracker ) throws BackupExecutionException
     {
         try
         {
             backupStrategy.performIncrementalBackup( backupLayout, address, databaseName );
-            performRecovery( config, backupLayout );
+            performRecovery( config, backupLayout, memoryTracker );
             return true;
         }
         catch ( Exception e )
@@ -131,6 +132,7 @@ class BackupStrategyWrapper
     private void fullBackupWithTemporaryFolderResolutions( OnlineBackupContext onlineBackupContext, String databaseName ) throws BackupExecutionException
     {
         Path userSpecifiedBackupLocation = onlineBackupContext.getDatabaseBackupDir();
+        var memoryTracker = onlineBackupContext.getMemoryTracker();
         Path temporaryFullBackupLocation = backupCopyService.findAnAvailableLocationForNewFullBackup( userSpecifiedBackupLocation );
         boolean backupToATemporaryLocation = !userSpecifiedBackupLocation.equals( temporaryFullBackupLocation );
 
@@ -145,7 +147,7 @@ class BackupStrategyWrapper
         DatabaseLayout backupLayout = DatabaseLayout.ofFlat( temporaryFullBackupLocation.toFile() );
         backupStrategy.performFullBackup( backupLayout, address, databaseName );
 
-        performRecovery( onlineBackupContext.getConfig(), backupLayout );
+        performRecovery( onlineBackupContext.getConfig(), backupLayout, memoryTracker );
 
         if ( backupToATemporaryLocation )
         {
@@ -154,11 +156,11 @@ class BackupStrategyWrapper
     }
 
     @VisibleForTesting
-    void performRecovery( Config config, DatabaseLayout backupLayout ) throws BackupExecutionException
+    void performRecovery( Config config, DatabaseLayout backupLayout, MemoryTracker memoryTracker ) throws BackupExecutionException
     {
         try
         {
-            Recovery.performRecovery( fs, pageCache, DatabaseTracers.EMPTY, config, backupLayout );
+            Recovery.performRecovery( fs, pageCache, DatabaseTracers.EMPTY, config, backupLayout, memoryTracker );
         }
         catch ( IOException e )
         {

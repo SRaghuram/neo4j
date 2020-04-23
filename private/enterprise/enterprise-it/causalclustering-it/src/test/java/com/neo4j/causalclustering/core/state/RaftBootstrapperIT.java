@@ -71,6 +71,7 @@ import static org.neo4j.kernel.impl.store.format.standard.Standard.LATEST_STORE_
 import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
 import static org.neo4j.logging.LogAssertions.assertThat;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @PageCacheExtension
 @Neo4jLayoutExtension
@@ -123,7 +124,7 @@ class RaftBootstrapperIT
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, databaseLayout, storeFiles, transactionLogs );
 
         RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
-                pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer );
+                pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         CoreSnapshot snapshot = bootstrapper.bootstrap( membership, storeId );
         verifySnapshot( snapshot, membership, defaultConfig );
@@ -143,7 +144,7 @@ class RaftBootstrapperIT
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, databaseLayout, storeFiles, transactionLogs );
 
         RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
-                pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer );
+                pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when
         CoreSnapshot snapshot = bootstrapper.bootstrap( membership, storeId );
@@ -162,7 +163,7 @@ class RaftBootstrapperIT
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, databaseLayout, storeFiles, transactionLogs );
 
         RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
-                pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer );
+                pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when
         CoreSnapshot snapshot = bootstrapper.bootstrap( membership, storeId );
@@ -187,7 +188,7 @@ class RaftBootstrapperIT
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
 
         RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
-                pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer );
+                pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when
         CoreSnapshot snapshot = bootstrapper.bootstrap( membership, storeId );
@@ -214,7 +215,7 @@ class RaftBootstrapperIT
         BootstrapContext bootstrapContext = new BootstrapContext( SYSTEM_DATABASE_ID, databaseLayout, storeFiles, transactionLogs );
 
         RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
-                pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer );
+                pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when
         CoreSnapshot snapshot = bootstrapper.bootstrap( membership, storeId );
@@ -247,7 +248,7 @@ class RaftBootstrapperIT
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
 
         RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
-                pageCache, fileSystem, logProvider, storageEngineFactory, config, bootstrapSaver, pageCacheTracer );
+                pageCache, fileSystem, logProvider, storageEngineFactory, config, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when
         CoreSnapshot snapshot = bootstrapper.bootstrap( membership, storeId );
@@ -277,7 +278,7 @@ class RaftBootstrapperIT
         BootstrapContext bootstrapContext = new BootstrapContext( DATABASE_ID, database.layout(), storeFiles, transactionLogs );
 
         RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
-                pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer );
+                pageCache, fileSystem, logProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when
         BootstrapException exception = assertThrows( BootstrapException.class, () -> bootstrapper.bootstrap( membership, storeId ) );
@@ -305,7 +306,7 @@ class RaftBootstrapperIT
 
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
         RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer, pageCache,
-                fileSystem, assertableLogProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer );
+                fileSystem, assertableLogProvider, storageEngineFactory, defaultConfig, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when
         Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
@@ -340,7 +341,7 @@ class RaftBootstrapperIT
 
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
         RaftBootstrapper bootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer,
-                pageCache, fileSystem, assertableLogProvider, storageEngineFactory, config, bootstrapSaver, pageCacheTracer );
+                pageCache, fileSystem, assertableLogProvider, storageEngineFactory, config, bootstrapSaver, pageCacheTracer, INSTANCE );
 
         // when
         Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );

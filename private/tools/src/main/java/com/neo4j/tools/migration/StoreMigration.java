@@ -41,6 +41,7 @@ import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.StoreLogService;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngineFactory;
@@ -100,6 +101,7 @@ public final class StoreMigration
         Log log = userLogProvider.getLog( StoreMigration.class );
         JobScheduler jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
         var pageCacheTracer = PageCacheTracer.NULL;
+        var memoryTracker = EmptyMemoryTracker.INSTANCE;
         try ( PageCache pageCache = createPageCache( fs, config, jobScheduler, pageCacheTracer ) )
         {
             Dependencies deps = new Dependencies();
@@ -117,7 +119,7 @@ public final class StoreMigration
             final LogFiles logFiles = LogFilesBuilder.activeFilesBuilder( databaseLayout, fs, pageCache )
                     .withConfig( config ).build();
             LogTailScanner tailScanner =
-                    new LogTailScanner( logFiles, new VersionAwareLogEntryReader( storageEngineFactory.commandReaderFactory() ), monitors );
+                    new LogTailScanner( logFiles, new VersionAwareLogEntryReader( storageEngineFactory.commandReaderFactory() ), monitors, memoryTracker );
 
             DefaultIndexProviderMap indexProviderMap = life.add( new DefaultIndexProviderMap( databaseExtensions, config ) );
 
@@ -125,8 +127,8 @@ public final class StoreMigration
             life.start();
 
             Stopwatch startTime = Stopwatch.start();
-            DatabaseMigrator migrator = new DatabaseMigrator( fs, config, logService,
-                    indexProviderMap, pageCache, tailScanner, jobScheduler, databaseLayout, legacyLogsLocator, storageEngineFactory, pageCacheTracer );
+            DatabaseMigrator migrator = new DatabaseMigrator( fs, config, logService, indexProviderMap, pageCache, tailScanner, jobScheduler, databaseLayout,
+                    legacyLogsLocator, storageEngineFactory, pageCacheTracer, memoryTracker );
             migrator.migrate();
 
             // Append checkpoint so the last log entry will have the latest version

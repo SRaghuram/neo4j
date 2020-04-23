@@ -68,6 +68,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.graphdb.Label.label;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @TestDirectoryExtension
 @ExtendWith( SuppressOutputExtension.class )
@@ -477,7 +478,7 @@ class OnlineBackupCommandCcIT
 
     private boolean isRecoveryRequired( DatabaseLayout layout ) throws Exception
     {
-        return Recovery.isRecoveryRequired( testDirectory.getFileSystem(), layout, Config.defaults() );
+        return Recovery.isRecoveryRequired( testDirectory.getFileSystem(), layout, Config.defaults(), INSTANCE );
     }
 
     private static String leaderBackupAddress( Cluster cluster ) throws TimeoutException

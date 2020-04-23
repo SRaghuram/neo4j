@@ -47,6 +47,7 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogProvider;
 import org.neo4j.logging.internal.DatabaseLogService;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.SystemNanoClock;
@@ -68,13 +69,13 @@ public class RaftGroup
     RaftGroup( Config config, DatabaseLogService logService, FileSystemAbstraction fileSystem, JobScheduler jobScheduler, SystemNanoClock clock,
             MemberId myself, LifeSupport life, Monitors monitors, Dependencies dependencies, Outbound<MemberId,RaftMessages.RaftMessage> outbound,
             ClusterStateLayout clusterState, CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, NamedDatabaseId namedDatabaseId,
-            LeaderListener leaderListener )
+            LeaderListener leaderListener, MemoryTracker memoryTracker )
     {
         DatabaseLogProvider logProvider = logService.getInternalLogProvider();
         TimerService timerService = new TimerService( jobScheduler, logProvider );
 
         Map<Integer,ChannelMarshal<ReplicatedContent>> marshals = Map.of( 2, new CoreReplicatedContentMarshalV2() );
-        RaftLog underlyingLog = createRaftLog( config, life, fileSystem, clusterState, marshals, logProvider, jobScheduler, namedDatabaseId );
+        RaftLog underlyingLog = createRaftLog( config, life, fileSystem, clusterState, marshals, logProvider, jobScheduler, namedDatabaseId, memoryTracker );
         raftLog = new MonitoredRaftLog( underlyingLog, monitors );
 
         StateStorage<TermState> durableTermState = storageFactory.createRaftTermStorage( namedDatabaseId.name(), life, logProvider );
@@ -123,7 +124,8 @@ public class RaftGroup
     }
 
     private static RaftLog createRaftLog( Config config, LifeSupport life, FileSystemAbstraction fileSystem, ClusterStateLayout layout,
-            Map<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector, LogProvider logProvider, JobScheduler scheduler, NamedDatabaseId namedDatabaseId )
+            Map<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector, LogProvider logProvider, JobScheduler scheduler,
+            NamedDatabaseId namedDatabaseId, MemoryTracker memoryTracker )
     {
         RaftLogImplementation raftLogImplementation = RaftLogImplementation.valueOf( config.get( CausalClusteringSettings.raft_log_implementation ) );
         switch ( raftLogImplementation )
@@ -145,7 +147,7 @@ public class RaftGroup
 
             return life.add(
                     new SegmentedRaftLog( fileSystem, directory, rotateAtSize, marshalSelector::get, logProvider, readerPoolSize, systemClock(), scheduler,
-                            pruningStrategy ) );
+                            pruningStrategy, memoryTracker ) );
         }
         default:
             throw new IllegalStateException( "Unknown raft log implementation: " + raftLogImplementation );

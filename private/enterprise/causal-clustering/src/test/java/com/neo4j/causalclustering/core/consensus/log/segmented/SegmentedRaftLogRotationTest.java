@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.core.consensus.ReplicatedInteger;
 import com.neo4j.causalclustering.core.consensus.ReplicatedString;
 import com.neo4j.causalclustering.core.consensus.log.DummyRaftableContentSerializer;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
-import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -29,6 +28,7 @@ import org.neo4j.time.Clocks;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_strategy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.logging.NullLogProvider.getInstance;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @TestDirectoryExtension
 @ExtendWith( LifeExtension.class )
@@ -89,6 +89,6 @@ class SegmentedRaftLogRotationTest
                         .newInstance();
         return new SegmentedRaftLog( fileSystem, testDirectory.homeDir(), rotateAtSize,
                 ignored -> new DummyRaftableContentSerializer(), logProvider, 0, Clocks.fakeClock(), new OnDemandJobScheduler(),
-                pruningStrategy );
+                pruningStrategy, INSTANCE );
     }
 }

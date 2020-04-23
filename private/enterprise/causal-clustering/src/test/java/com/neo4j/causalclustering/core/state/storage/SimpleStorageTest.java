@@ -18,6 +18,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @TestDirectoryExtension
 class SimpleStorageTest
@@ -31,7 +32,7 @@ class SimpleStorageTest
         // given
         File dir = testDirectory.homeDir();
         FileSystemAbstraction fs = testDirectory.getFileSystem();
-        SimpleStorage<MemberId> storage = new SimpleFileStorage<>( fs, dir, new MemberId.Marshal(), NullLogProvider.getInstance() );
+        SimpleStorage<MemberId> storage = new SimpleFileStorage<>( fs, dir, new MemberId.Marshal(), NullLogProvider.getInstance(), INSTANCE );
 
         // when
         MemberId idA = new MemberId( UUID.randomUUID() );

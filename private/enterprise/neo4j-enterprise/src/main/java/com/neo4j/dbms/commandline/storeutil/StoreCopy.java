@@ -5,6 +5,9 @@
  */
 package com.neo4j.dbms.commandline.storeutil;
 
+import org.eclipse.collections.api.factory.Maps;
+import org.eclipse.collections.api.map.MutableMap;
+
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -22,8 +25,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.collections.api.factory.Maps;
-import org.eclipse.collections.api.map.MutableMap;
 import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -178,7 +179,7 @@ public class StoreCopy
                 BatchImporter batchImporter = BatchImporterFactory.withHighestPriority().instantiate( toDatabaseLayout, fs, toPageCache, PageCacheTracer.NULL,
                         Configuration.DEFAULT,
                         new SimpleLogService( logProvider ), executionMonitor, AdditionalInitialIds.EMPTY, config, recordFormats, NO_MONITOR, null,
-                        Collector.EMPTY, TransactionLogsInitializer.INSTANCE );
+                        Collector.EMPTY, TransactionLogsInitializer.INSTANCE, EmptyMemoryTracker.INSTANCE );
 
                 batchImporter.doImport( Input.input( () -> nodeIterator( pageCacheTracer ), () -> relationshipIterator( pageCacheTracer ), IdType.INTEGER,
                         getEstimates(), new Groups() ) );
@@ -396,8 +397,9 @@ public class StoreCopy
     {
         VersionContextSupplier versionContextSupplier = EmptyVersionContextSupplier.EMPTY;
         SingleFilePageSwapperFactory factory = new SingleFilePageSwapperFactory( fileSystem );
-        MemoryAllocator memoryAllocator = MemoryAllocator.createAllocator( ByteUnit.parse( memory ), EmptyMemoryTracker.INSTANCE );
-        return new MuninnPageCache( factory, memoryAllocator, PageCacheTracer.NULL, versionContextSupplier, jobScheduler, Clocks.nanoClock() );
+        var memoryTracker = EmptyMemoryTracker.INSTANCE;
+        MemoryAllocator memoryAllocator = MemoryAllocator.createAllocator( ByteUnit.parse( memory ), memoryTracker );
+        return new MuninnPageCache( factory, memoryAllocator, PageCacheTracer.NULL, versionContextSupplier, jobScheduler, Clocks.nanoClock(), memoryTracker );
     }
 
     private LogProvider getLog( OutputStream out )
