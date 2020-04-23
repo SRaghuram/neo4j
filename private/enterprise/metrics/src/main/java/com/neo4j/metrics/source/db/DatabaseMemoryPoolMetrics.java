@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.neo4j.annotations.documented.Documented;
-import org.neo4j.memory.GlobalMemoryGroupTracker;
 import org.neo4j.memory.MemoryPools;
 import org.neo4j.memory.ScopedMemoryPool;
 
@@ -39,8 +38,7 @@ public class DatabaseMemoryPoolMetrics extends AbstractMemoryPoolMetrics
     protected List<ScopedMemoryPool> pools()
     {
         return memoryPools.getPools().stream()
-                .filter( pool -> pool instanceof GlobalMemoryGroupTracker )
-                .flatMap( pool -> ((GlobalMemoryGroupTracker) pool).getDatabasePools().stream() )
+                .flatMap( pool -> pool.getDatabasePools().stream() )
                 .filter( pool -> databaseName.equals( pool.databaseName() ) )
                 .collect( Collectors.toList() );
     }

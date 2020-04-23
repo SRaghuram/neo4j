@@ -34,7 +34,7 @@ public abstract class AbstractMemoryPoolMetrics extends LifecycleAdapter
 
     protected abstract String namePoolMetric( ScopedMemoryPool pool, String metricName );
 
-    protected abstract List<ScopedMemoryPool> pools();
+    protected abstract List<? extends ScopedMemoryPool> pools();
 
     @Override
     public void start()

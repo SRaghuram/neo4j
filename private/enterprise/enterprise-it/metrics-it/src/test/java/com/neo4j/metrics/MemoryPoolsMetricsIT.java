@@ -13,7 +13,6 @@ import java.util.stream.Collectors;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.memory.GlobalMemoryGroupTracker;
 import org.neo4j.memory.MemoryPools;
 import org.neo4j.memory.ScopedMemoryPool;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
@@ -83,8 +82,8 @@ public class MemoryPoolsMetricsIT
     @Test
     void writeDatabasePoolsMetrics()
     {
-        var dbPools = pools.getPools().stream().filter( pool -> pool instanceof GlobalMemoryGroupTracker )
-                .flatMap( pool -> ((GlobalMemoryGroupTracker) pool).getDatabasePools().stream() )
+        var dbPools = pools.getPools().stream()
+                .flatMap( pool -> pool.getDatabasePools().stream() )
                 .filter( pool -> db.databaseName().equals( pool.databaseName() ) ).collect( Collectors.toList() );
         assertThat( dbPools ).isNotEmpty();
         dbPools.forEach( pool -> assertDoesNotThrow( () ->

@@ -10,6 +10,7 @@ import com.codahale.metrics.MetricRegistry;
 import java.util.List;
 
 import org.neo4j.annotations.documented.Documented;
+import org.neo4j.memory.GlobalMemoryGroupTracker;
 import org.neo4j.memory.MemoryPools;
 import org.neo4j.memory.ScopedMemoryPool;
 
@@ -31,7 +32,7 @@ public class GlobalMemoryPoolMetrics extends AbstractMemoryPoolMetrics
     }
 
     @Override
-    protected List<ScopedMemoryPool> pools()
+    protected List<GlobalMemoryGroupTracker> pools()
     {
         return memoryPools.getPools();
     }
