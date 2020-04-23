@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
-import org.eclipse.collections.impl.factory.primitive.LongSets
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeSetValueInSlotFunctionFor
@@ -16,6 +15,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.kernel.impl.util.collection.HeapTrackingCollections
 import org.neo4j.values.AnyValue
 
 case class DistinctSlottedSinglePrimitivePipe(source: Pipe,
@@ -38,21 +38,21 @@ case class DistinctSlottedSinglePrimitivePipe(source: Pipe,
                                       state: QueryState): Iterator[CypherRow] = {
 
     new PrefetchingIterator[CypherRow] {
-      private val seen = LongSets.mutable.empty()
+      private var seen = HeapTrackingCollections.newLongSet(state.memoryTracker.memoryTrackerForOperator(id.x))
 
       override def produceNext(): Option[CypherRow] = {
         while (input.hasNext) { // Let's pull data until we find something not already seen
           val next = input.next()
           val key = next.getLongAt(offset)
           if (seen.add(key)) {
-            state.memoryTracker.allocated(java.lang.Long.BYTES, id.x)
             // Found something! Set it as the next element to yield, and exit
             val outputValue = expression(next, state)
             setInSlot(next, outputValue)
             return Some(next)
           }
         }
-
+        seen.close()
+        seen = null
         None
       }
     }

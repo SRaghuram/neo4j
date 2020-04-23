@@ -43,7 +43,7 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
 
   override def toString: String = "PartialSortOperator"
 
-  private class PartialSortState(val memoryTracker: QueryMemoryTracker,
+  private class PartialSortState(val memoryTracker: QueryMemoryTracker, // TODO: Use operator MemoryTracker directly
                                  var lastSeen: MorselRow,
                                  var resultsBuffer: ResultsBuffer,
                                  var remainingResults: ResultsBufferAndIndex) extends OperatorState {

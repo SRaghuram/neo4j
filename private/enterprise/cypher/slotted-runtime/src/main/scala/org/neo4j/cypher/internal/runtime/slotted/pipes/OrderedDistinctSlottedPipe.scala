@@ -5,9 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
-import java.util.function.Consumer
-
-import org.eclipse.collections.impl.factory.Sets
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.PrefetchingIterator
@@ -16,6 +13,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.kernel.impl.util.collection.DistinctSet
 import org.neo4j.values.AnyValue
 
 case class OrderedDistinctSlottedPipe(source: Pipe,
@@ -28,7 +26,8 @@ case class OrderedDistinctSlottedPipe(source: Pipe,
   protected def internalCreateResults(input: Iterator[CypherRow],
                                       state: QueryState): Iterator[CypherRow] = {
     new PrefetchingIterator[CypherRow] {
-      private var seen = Sets.mutable.empty[AnyValue]()
+      private val memoryTracker = state.memoryTracker.memoryTrackerForOperator(id.x)
+      private var seen: DistinctSet[AnyValue] = DistinctSet.createDistinctSet[AnyValue](memoryTracker)
       private var currentOrderedGroupingValue: AnyValue = _
 
       override def produceNext(): Option[CypherRow] = {
@@ -40,18 +39,19 @@ case class OrderedDistinctSlottedPipe(source: Pipe,
 
           if (currentOrderedGroupingValue == null || currentOrderedGroupingValue != orderedGroupingValue) {
             currentOrderedGroupingValue = orderedGroupingValue
-            seen.forEach((x => state.memoryTracker.deallocated(x, id.x)): Consumer[AnyValue])
-            seen = Sets.mutable.empty[AnyValue]()
+            seen.close()
+            seen = DistinctSet.createDistinctSet[AnyValue](memoryTracker)
           }
 
           if (seen.add(unorderedGroupingValue)) {
-            state.memoryTracker.allocated(unorderedGroupingValue, id.x)
             // Found unseen key! Set it as the next element to yield, and exit
             orderedGroupingExpression.project(next, orderedGroupingValue)
             unorderedGroupingExpression.project(next, unorderedGroupingValue)
             return Some(next)
           }
         }
+        seen.close()
+        seen = null
         None
       }
     }
