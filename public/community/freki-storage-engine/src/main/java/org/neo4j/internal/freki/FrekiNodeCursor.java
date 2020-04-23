@@ -242,7 +242,6 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public void properties( StoragePropertyCursor propertyCursor )
     {
-        ensurePropertiesLoaded();
         propertyCursor.initNodeProperties( this );
     }
 
