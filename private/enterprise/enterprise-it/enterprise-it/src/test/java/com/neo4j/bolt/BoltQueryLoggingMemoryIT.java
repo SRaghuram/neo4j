@@ -50,9 +50,16 @@ public class BoltQueryLoggingMemoryIT
     }
 
     @After
-    public void cleanUp() throws IOException
+    public void cleanUp()
     {
-        FileUtils.deleteRecursively( tmpDir.toFile() );
+        try
+        {
+            FileUtils.deleteRecursively( tmpDir.toFile() );
+        }
+        catch ( IOException e )
+        {
+            // Too bad, but let us not fail the test over it
+        }
     }
 
     @Test
