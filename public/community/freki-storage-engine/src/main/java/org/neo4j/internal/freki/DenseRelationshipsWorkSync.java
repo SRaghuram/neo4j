@@ -88,7 +88,7 @@ class DenseRelationshipsWorkSync
                         {
                             typedRelationships.deleted.forEach( relationship ->
                                     updater.deleteRelationship( relationship.internalId, node.nodeId, type, relationship.otherNodeId, relationship.outgoing ) );
-                            typedRelationships.created.forEach( relationship -> updater.createRelationship( relationship.internalId, node.nodeId, type,
+                            typedRelationships.inserted.forEach( relationship -> updater.insertRelationship( relationship.internalId, node.nodeId, type,
                                     relationship.otherNodeId, relationship.outgoing, relationship.propertyUpdates, u -> u.after ) );
                         } );
                     }

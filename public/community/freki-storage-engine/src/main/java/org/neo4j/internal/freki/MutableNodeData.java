@@ -19,6 +19,7 @@
  */
 package org.neo4j.internal.freki;
 
+import org.eclipse.collections.api.IntIterable;
 import org.eclipse.collections.api.block.procedure.primitive.IntObjectProcedure;
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
 import org.eclipse.collections.api.set.primitive.MutableIntSet;
@@ -40,11 +41,13 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.Degrees;
 import org.neo4j.storageengine.api.RelationshipDirection;
 import org.neo4j.storageengine.api.StorageCommand;
+import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.util.EagerDegrees;
 import org.neo4j.util.Preconditions;
 import org.neo4j.values.storable.Value;
 
 import static java.lang.Long.max;
+import static java.lang.String.format;
 import static org.neo4j.graphdb.Direction.BOTH;
 import static org.neo4j.graphdb.Direction.INCOMING;
 import static org.neo4j.graphdb.Direction.OUTGOING;
@@ -124,7 +127,7 @@ class MutableNodeData
     @Override
     public String toString()
     {
-        return String.format( "ID:%s, labels:%s, properties:%s, relationships:%s, degrees:%s, pointer:%s, dense:%b, nextRelId:%d", nodeId, labels, properties,
+        return format( "ID:%s, labels:%s, properties:%s, relationships:%s, degrees:%s, pointer:%s, dense:%b, nextRelId:%d", nodeId, labels, properties,
                 relationships, degrees, recordPointerToString( recordPointer ), isDense(), nextInternalRelationshipId );
     }
 
@@ -263,9 +266,11 @@ class MutableNodeData
         return header.hasReferenceMark( headerMark );
     }
 
-    void setHeaderMark( int headerMark )
+    void updateRelationshipProperties( long internalId, int type, long sourceNode, long otherNode, boolean outgoing, Iterable<StorageProperty> added,
+            Iterable<StorageProperty> changed, IntIterable removed )
     {
-        header.mark( headerMark, true );
+        ensureRelationshipsDeserialized();
+        relationships.get( type ).update( internalId, sourceNode, otherNode, outgoing, added, changed, removed );
     }
 
     static class Relationship
@@ -291,6 +296,13 @@ class MutableNodeData
         void addProperty( int propertyKeyId, Value value )
         {
             properties.put( propertyKeyId, value );
+        }
+
+        void updateProperties( Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
+        {
+            added.forEach( property -> properties.put( property.propertyKeyId(), property.value() ) );
+            changed.forEach( property -> properties.put( property.propertyKeyId(), property.value() ) );
+            removed.each( properties::remove );
         }
 
         @Override
@@ -319,7 +331,7 @@ class MutableNodeData
         public String toString()
         {
             long id = externalRelationshipId( sourceNodeId, internalId, otherNode, outgoing );
-            return String.format( "ID:%s (%s), %s%s, properties: %s", id, internalId, outgoing ? "->" : " <-", otherNode, properties );
+            return format( "ID:%s (%s), %s%s, properties: %s", id, internalId, outgoing ? "->" : " <-", otherNode, properties );
         }
     }
 
@@ -345,20 +357,23 @@ class MutableNodeData
          */
         boolean remove( long internalId, long sourceNode, long otherNode, boolean outgoing )
         {
-            int foundIndex = -1;
+            int foundIndex = findRelationship( internalId, sourceNode, otherNode, outgoing );
+            relationships.remove( foundIndex );
+            return relationships.isEmpty();
+        }
+
+        private int findRelationship( long internalId, long sourceNode, long otherNode, boolean outgoing )
+        {
             for ( int i = 0, size = relationships.size(); i < size; i++ )
             {
                 Relationship relationship = relationships.get( i );
                 if ( relationship.internalId == internalId && relationship.sourceNodeId == sourceNode && relationship.otherNode == otherNode &&
                         relationship.outgoing == outgoing )
                 {
-                    foundIndex = i;
-                    break;
+                    return i;
                 }
             }
-            checkState( foundIndex != -1, "No such relationship of type:%d internalId:%d", type, internalId );
-            relationships.remove( foundIndex );
-            return relationships.isEmpty();
+            throw new IllegalStateException( format( "No such relationship of type:%d internalId:%d", type, internalId ) );
         }
 
         @Nonnull
@@ -417,7 +432,15 @@ class MutableNodeData
         @Override
         public String toString()
         {
-            return String.format( "Type:%s, %s", type, relationships );
+            return format( "Type:%s, %s", type, relationships );
+        }
+
+        void update( long internalId, long sourceNode, long otherNode, boolean outgoing, Iterable<StorageProperty> added, Iterable<StorageProperty> changed,
+                IntIterable removed )
+        {
+            int foundIndex = findRelationship( internalId, sourceNode, otherNode, outgoing );
+            Relationship relationship = relationships.get( foundIndex );
+            relationship.updateProperties( added, changed, removed );
         }
     }
 
@@ -837,6 +860,6 @@ class MutableNodeData
         {
             return "NULL";
         }
-        return String.format( "->[x%d]%d", recordXFactor( sizeExponentialFromRecordPointer( recordPointer ) ), idFromRecordPointer( recordPointer ) );
+        return format( "->[x%d]%d", recordXFactor( sizeExponentialFromRecordPointer( recordPointer ) ), idFromRecordPointer( recordPointer ) );
     }
 }

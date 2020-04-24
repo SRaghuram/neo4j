@@ -31,6 +31,7 @@ import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -92,8 +93,8 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
                 tracer, Sets.immutable.empty() );
     }
 
-    MutableIntObjectMap<PropertyUpdate> loadRelationshipPropertiesForRemoval( long nodeId, long internalId, int type, long otherNodeId, boolean outgoing,
-            PageCursorTracer cursorTracer )
+    MutableIntObjectMap<PropertyUpdate> loadRelationshipProperties( long nodeId, long internalId, int type, long otherNodeId, boolean outgoing,
+            BiFunction<Integer,ByteBuffer,PropertyUpdate> update, PageCursorTracer cursorTracer )
     {
         try
         {
@@ -112,7 +113,7 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
                 {
                     relationshipProperties.next();
                     int key = relationshipProperties.propertyKeyId();
-                    properties.put( key, PropertyUpdate.remove( key, relationshipProperties.serializedValue() ) );
+                    properties.put( key, update.apply( key, relationshipProperties.serializedValue() ) );
                 }
                 return properties;
             }
@@ -201,7 +202,6 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
     private static RelationshipPropertyIterator relationshipPropertiesIterator( ByteBuffer relationshipData, SimpleBigValueStore bigPropertyValueStore,
             PageCursorTracer tracer )
     {
-
         if ( relationshipData.remaining() == 0 )
         {
             return NO_PROPERTIES;
@@ -271,7 +271,7 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
             private final DenseValue value = new DenseValue();
 
             @Override
-            public void createRelationship( long internalId, long sourceNodeId, int type, long targetNodeId, boolean outgoing,
+            public void insertRelationship( long internalId, long sourceNodeId, int type, long targetNodeId, boolean outgoing,
                     IntObjectMap<PropertyUpdate> properties, Function<PropertyUpdate,ByteBuffer> version )
             {
                 key.initialize( sourceNodeId, type, outgoing ? Direction.OUTGOING : Direction.INCOMING, targetNodeId, internalId );
@@ -354,7 +354,7 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
 
     interface Updater extends Closeable
     {
-        void createRelationship( long internalId, long sourceNodeId, int type, long targetNodeId, boolean outgoing, IntObjectMap<PropertyUpdate> properties,
+        void insertRelationship( long internalId, long sourceNodeId, int type, long targetNodeId, boolean outgoing, IntObjectMap<PropertyUpdate> properties,
                 Function<PropertyUpdate,ByteBuffer> version );
 
         void deleteRelationship( long internalId, long sourceNodeId, int type, long targetNodeId, boolean outgoing );
@@ -565,7 +565,20 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
             if ( !properties.isEmpty() )
             {
                 properties.keySet().toSortedArray();
-                int[] sortedKeys = properties.keySet().toSortedArray();
+                int[] sortedKeys = new int[properties.size()];
+                Iterator<PropertyUpdate> updates = properties.iterator();
+                int cursor = 0;
+                while ( updates.hasNext() )
+                {
+                    PropertyUpdate update = updates.next();
+                    if ( update.after != null )
+                    {
+                        sortedKeys[cursor++] = update.propertyKeyId;
+                    }
+                    // serializedValue is null for property update where property is removed
+                }
+                sortedKeys = cursor == properties.size() ? sortedKeys : Arrays.copyOf( sortedKeys, cursor );
+                Arrays.sort( sortedKeys );
                 writeIntDeltas( sortedKeys, data );
                 for ( int key : sortedKeys )
                 {
