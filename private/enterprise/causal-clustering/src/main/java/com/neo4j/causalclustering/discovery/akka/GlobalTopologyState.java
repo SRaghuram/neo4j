@@ -170,10 +170,6 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         var allDatabaseIds = new HashSet<>( leaderInfoMap.keySet() );
         allDatabaseIds.addAll( oldDbLeaderMap.keySet() );
 
-        if ( allDatabaseIds.isEmpty() )
-        {
-            return "No leader information was detected for any database";
-        }
         return allDatabaseIds.stream().map( dbId ->
         {
             var oldLeader = oldDbLeaderMap.get( dbId );
@@ -184,23 +180,22 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
                 {
                     return format( "No leader for database %s", dbId );
                 }
-                else
-                {
-                    return format( "Discovered leader %s in term %d for database %s", newLeader.memberId(), newLeader.term(), dbId );
-                }
+                return format( "Discovered leader %s in term %d for database %s", newLeader.memberId(), newLeader.term(), dbId );
             }
-            else
+            if ( newLeader == null )
             {
-                if ( newLeader == null )
-                {
-                    return format( "Database %s lost its leader. Previous leader was %s", dbId, oldLeader.memberId() );
-                }
-                else
-                {
-                    return format( "Database %s switch leader from %s to %s in term %d", dbId, oldLeader.memberId(), newLeader.memberId(), newLeader.term() );
-                }
+                return format( "Database %s lost its leader. Previous leader was %s", dbId, oldLeader.memberId() );
             }
-        } ).collect( Collectors.joining( newPaddedLine() ) );
+            if ( !Objects.equals( newLeader.memberId(), oldLeader.memberId() ) )
+            {
+                return format( "Database %s switch leader from %s to %s in term %d", dbId, oldLeader.memberId(), newLeader.memberId(), newLeader.term() );
+            }
+            if ( newLeader.term() != oldLeader.term() )
+            {
+                return format( "Database %s leader remains %s but term changed to %d", dbId, newLeader.memberId(), newLeader.term() );
+            }
+            return null;
+        } ).filter( Objects::nonNull ).collect( Collectors.joining( newPaddedLine() ) );
     }
 
     private static String newPaddedLine()
