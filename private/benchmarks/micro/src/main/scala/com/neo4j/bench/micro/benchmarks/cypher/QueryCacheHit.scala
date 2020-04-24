@@ -135,14 +135,14 @@ object QueryCacheHitThreadState {
     val profilers = ParameterizedProfiler.defaultProfilers();
     val errorPolicy = ErrorReporter.ErrorPolicy.FAIL;
     val jvmFile = null;
-    Main.run( classOf[QueryCacheHit],
-      forkCount,
-      2,
-      TimeValue.seconds(3),
-      profilers,
-      storesDir,
-      profilerRecordingsOutputDir,
-      errorPolicy,
-      jvmFile );
+    Main.run(classOf[QueryCacheHit],
+             forkCount,
+             3,
+             TimeValue.seconds(3),
+             profilers,
+             storesDir,
+             profilerRecordingsOutputDir,
+             errorPolicy,
+             jvmFile );
   }
 }
