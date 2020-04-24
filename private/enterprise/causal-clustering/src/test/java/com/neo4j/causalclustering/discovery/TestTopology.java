@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.ArrayList;
@@ -52,7 +53,7 @@ public class TestTopology
         var boltServerAddress = new SocketAddress( "localhost", 5000 + id );
 
         return new CoreServerInfo( raftServerAddress, catchupServerAddress, wrapAsClientConnectorAddresses( boltServerAddress ),
-                Set.of( "core", "core" + id ), databaseIds, refuseToBeLeader );
+                ServerGroupName.setOf( "core", "core" + id ), databaseIds, refuseToBeLeader );
     }
 
     public static Config configFor( CoreServerInfo coreServerInfo )
@@ -90,7 +91,7 @@ public class TestTopology
         var clientConnectorAddresses = new ClientConnectorAddresses( List.of( new ConnectorUri( bolt, clientConnectorSocketAddress ) ) );
         var catchupSocketAddress = new SocketAddress( "localhost", 4000 + id );
 
-        return new ReadReplicaInfo( clientConnectorAddresses, catchupSocketAddress, Set.of( "replica", "replica" + id ), databaseIds );
+        return new ReadReplicaInfo( clientConnectorAddresses, catchupSocketAddress, ServerGroupName.setOf( "replica", "replica" + id ), databaseIds );
     }
 
     public static Map<MemberId,ReadReplicaInfo> readReplicaInfoMap( int... ids )

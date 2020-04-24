@@ -6,11 +6,10 @@
 package com.neo4j.causalclustering.upstream.strategies;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.discovery.TopologyService;
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -38,11 +37,12 @@ class ConnectRandomlyToServerGroupStrategyTest
     void shouldConnectToGroupDefinedInStrategySpecificConfig()
     {
         // given
-        var targetServerGroup = List.of( "target_server_group" );
+        var targetServerGroup = ServerGroupName.listOf( "target_server_group" );
         Config configWithTargetServerGroup = Config.defaults( CausalClusteringSettings.connect_randomly_to_server_group_strategy, targetServerGroup );
         Set<MemberId> targetGroupMemberIds = memberIds( 0, 10 );
-        TopologyService topologyService = ConnectRandomlyToServerGroupStrategyImplTest.getTopologyService( targetServerGroup, targetGroupMemberIds,
-                        List.of( "your_server_group" ), Set.of( DATABASE_ID ) );
+        var topologyService =
+                ConnectRandomlyToServerGroupStrategyImplTest.getTopologyService( Set.copyOf( targetServerGroup ), targetGroupMemberIds,
+                        ServerGroupName.setOf( "your_server_group" ), Set.of( DATABASE_ID ) );
 
         ConnectRandomlyToServerGroupStrategy strategy = new ConnectRandomlyToServerGroupStrategy();
         strategy.inject( topologyService, configWithTargetServerGroup, NullLogProvider.getInstance(), memberId( 0 ) );
@@ -63,8 +63,8 @@ class ConnectRandomlyToServerGroupStrategyTest
 
         // and
         LogProvider logProvider = NullLogProvider.getInstance();
-        Config config = Config.defaults( CausalClusteringSettings.connect_randomly_to_server_group_strategy, List.of( "firstGroup" ) );
-        TopologyService topologyService = new TopologyServiceThatPrioritisesItself( myself, "firstGroup" );
+        var config = Config.defaults( CausalClusteringSettings.connect_randomly_to_server_group_strategy, ServerGroupName.listOf( "firstGroup" ) );
+        var topologyService = new TopologyServiceThatPrioritisesItself( myself, new ServerGroupName( "firstGroup" ) );
         connectRandomlyToServerGroupStrategy.inject( topologyService, config, logProvider, myself );
 
         // when

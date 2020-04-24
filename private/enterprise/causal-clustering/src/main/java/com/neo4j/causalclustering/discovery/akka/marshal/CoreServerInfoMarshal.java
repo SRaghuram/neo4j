@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
@@ -30,7 +31,7 @@ public class CoreServerInfoMarshal extends DiscoveryServerInfoMarshal<CoreServer
         SocketAddress raftServer = advertisedSocketAddressMarshal.unmarshal( channel );
         SocketAddress catchupServer = advertisedSocketAddressMarshal.unmarshal( channel );
         ClientConnectorAddresses clientConnectorAddresses = clientConnectorAddressesMarshal.unmarshal( channel );
-        Set<String> groups = unmarshalGroups( channel );
+        Set<ServerGroupName> groups = unmarshalGroups( channel );
         Set<DatabaseId> databaseIds = unmarshalDatabaseIds( channel );
         boolean refuseToBeLeader = BooleanMarshal.unmarshal( channel );
 

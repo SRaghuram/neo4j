@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseToMember;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
@@ -109,7 +110,7 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
                 .findAny();
     }
 
-    public void setGroups( Set<MemberId> members, final Set<String> groups )
+    public void setGroups( Set<MemberId> members, final Set<ServerGroupName> groups )
     {
         Function<CoreServerInfo,CoreServerInfo> coreInfoTransform = serverInfo ->
                 new CoreServerInfo( serverInfo.getRaftServer(), serverInfo.catchupServer(),

@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.upstream.strategies;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses.ConnectorUri;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
@@ -50,7 +51,7 @@ class UserDefinedConfigurationStrategyTest
     private final String southGroup = "south";
     private final String westGroup = "west";
     private final String eastGroup = "east";
-    private final List<String> noEastGroup = List.of( northGroup, southGroup, westGroup );
+    private final List<ServerGroupName> noEastGroup = ServerGroupName.listOf( northGroup, southGroup, westGroup );
 
     @Test
     void shouldPickTheFirstMatchingServerIfCore()
@@ -84,7 +85,7 @@ class UserDefinedConfigurationStrategyTest
         randomlyAssignGroupsNoEast( topologyService, replicaIds );
 
         UserDefinedConfigurationStrategy strategy = new UserDefinedConfigurationStrategy();
-        String wantedGroup = noEastGroup.get( 1 );
+        var wantedGroup = noEastGroup.get( 1 );
         Config config = configWithFilter( "groups(" + wantedGroup + "); halt()" );
 
         strategy.inject( topologyService, config, NullLogProvider.getInstance(), null );
@@ -143,7 +144,7 @@ class UserDefinedConfigurationStrategyTest
     void shouldNotReturnSelf()
     {
         // given
-        String wantedGroup = eastGroup;
+        var wantedGroup = new ServerGroupName( eastGroup );
         MemberId coreId = memberId( 0 );
         MemberId replicaId = memberId( 1 );
         FakeTopologyService topologyService = new FakeTopologyService( Set.of( coreId ), Set.of( replicaId ), replicaId, Set.of( DATABASE_ID ) );
@@ -172,7 +173,7 @@ class UserDefinedConfigurationStrategyTest
         return fakeReadReplicaTopology( readReplicaIds, ignored -> Collections.emptySet() );
     }
 
-    static DatabaseReadReplicaTopology fakeReadReplicaTopology( MemberId[] readReplicaIds, Function<MemberId,Set<String>> groupGenerator )
+    static DatabaseReadReplicaTopology fakeReadReplicaTopology( MemberId[] readReplicaIds, Function<MemberId,Set<ServerGroupName>> groupGenerator )
     {
         assert readReplicaIds.length > 0;
 
@@ -185,12 +186,12 @@ class UserDefinedConfigurationStrategyTest
         return new DatabaseReadReplicaTopology( randomNamedDatabaseId().databaseId(), readReplicas );
     }
 
-    private static ReadReplicaInfo readReplicaInfo( MemberId memberId, AtomicInteger offset, Function<MemberId,Set<String>> groupGenerator )
+    private static ReadReplicaInfo readReplicaInfo( MemberId memberId, AtomicInteger offset, Function<MemberId,Set<ServerGroupName>> groupGenerator )
     {
         ClientConnectorAddresses connectorAddresses = new ClientConnectorAddresses( List.of(
                 new ConnectorUri( bolt, new SocketAddress( "localhost", offset.getAndIncrement() ) ) ) );
         SocketAddress catchupAddress = new SocketAddress( "localhost", offset.getAndIncrement() );
-        Set<String> groups = groupGenerator.apply( memberId );
+        var groups = groupGenerator.apply( memberId );
         Set<DatabaseId> databaseIds = Set.of( randomNamedDatabaseId().databaseId() );
         return new ReadReplicaInfo( connectorAddresses, catchupAddress, groups, databaseIds );
     }
@@ -209,7 +210,7 @@ class UserDefinedConfigurationStrategyTest
         return Stream.concat( l.stream(), r.stream() ).collect( Collectors.toList() );
     }
 
-    private String noEastGroupGenerator( MemberId memberId )
+    private ServerGroupName noEastGroupGenerator( MemberId memberId )
     {
         int index = Math.abs( memberId.hashCode() % noEastGroup.size() );
         return noEastGroup.get( index );

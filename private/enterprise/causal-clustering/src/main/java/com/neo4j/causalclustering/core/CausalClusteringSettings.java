@@ -27,6 +27,7 @@ import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.logging.Level;
 
+import static com.neo4j.causalclustering.core.ServerGroupName.SERVER_GROUP_NAME;
 import static java.time.Duration.ofMinutes;
 import static java.time.Duration.ofSeconds;
 import static java.util.Collections.emptyList;
@@ -483,12 +484,12 @@ public class CausalClusteringSettings implements SettingsDeclaration
     @Description( "Comma separated list of groups to be used by the connect-randomly-to-server-group selection strategy. " +
             "The connect-randomly-to-server-group strategy is used if the list of strategies (`causal_clustering.upstream_selection_strategy`) " +
             "includes the value `connect-randomly-to-server-group`. " )
-    public static final Setting<List<String>> connect_randomly_to_server_group_strategy =
-            newBuilder( "causal_clustering.connect-randomly-to-server-group", listOf( STRING ), emptyList() ).build();
+    public static final Setting<List<ServerGroupName>> connect_randomly_to_server_group_strategy =
+            newBuilder( "causal_clustering.connect-randomly-to-server-group", listOf( SERVER_GROUP_NAME ), emptyList() ).build();
 
     @Description( "A list of group names for the server used when configuring load balancing and replication policies." )
-    public static final Setting<List<String>> server_groups =
-            newBuilder( "causal_clustering.server_groups", listOf( STRING ), emptyList() ).build();
+    public static final Setting<List<ServerGroupName>> server_groups =
+            newBuilder( "causal_clustering.server_groups", listOf( SERVER_GROUP_NAME ), emptyList() ).build();
 
     @Description( "The load balancing plugin to use." )
     public static final Setting<String> load_balancing_plugin =

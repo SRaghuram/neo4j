@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
@@ -28,7 +29,7 @@ public class ReadReplicaInfoMarshal extends DiscoveryServerInfoMarshal<ReadRepli
     {
         ClientConnectorAddresses clientConnectorAddresses = clientConnectorAddressesMarshal.unmarshal( channel );
         SocketAddress catchupServer = advertisedSocketAddressMarshal.unmarshal( channel );
-        Set<String> groups = unmarshalGroups( channel );
+        Set<ServerGroupName> groups = unmarshalGroups( channel );
         Set<DatabaseId> databaseIds = unmarshalDatabaseIds( channel );
         return new ReadReplicaInfo( clientConnectorAddresses, catchupServer, groups, databaseIds );
     }

@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.akka;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses.ConnectorUri;
@@ -368,7 +369,7 @@ class GlobalTopologyStateTest
         var boltUri = new ConnectorUri( bolt, new SocketAddress( "bolt-" + memberId.getUuid(), 3 ) );
         var httpUri = new ConnectorUri( http, new SocketAddress( "http-" + memberId.getUuid(), 4 ) );
         var connectorUris = new ClientConnectorAddresses( List.of( boltUri, httpUri ) );
-        var groups = Set.of( "group-1-" + memberId.getUuid(), "group-2-" + memberId.getUuid() );
+        var groups = ServerGroupName.setOf( "group-1-" + memberId.getUuid(), "group-2-" + memberId.getUuid() );
         var refuseToBeLeader = memberId.getUuid().getLeastSignificantBits() % 2 == 0;
         return new CoreServerInfo( raftAddress, catchupAddress, connectorUris, groups, databaseIds, refuseToBeLeader );
     }
@@ -379,7 +380,7 @@ class GlobalTopologyStateTest
         var boltUri = new ConnectorUri( bolt, new SocketAddress( "bolt-" + memberId.getUuid(), 2 ) );
         var httpUri = new ConnectorUri( http, new SocketAddress( "http-" + memberId.getUuid(), 3 ) );
         var connectorUris = new ClientConnectorAddresses( List.of( boltUri, httpUri ) );
-        var groups = Set.of( "group-1-" + memberId.getUuid(), "group-2-" + memberId.getUuid() );
+        var groups = ServerGroupName.setOf( "group-1-" + memberId.getUuid(), "group-2-" + memberId.getUuid() );
         return new ReadReplicaInfo( connectorUris, catchupAddress, groups, databaseIds );
     }
 }

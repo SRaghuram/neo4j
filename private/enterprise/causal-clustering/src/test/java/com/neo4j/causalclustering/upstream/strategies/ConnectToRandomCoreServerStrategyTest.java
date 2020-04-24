@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.upstream.strategies;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.TestTopology;
@@ -67,7 +68,7 @@ class ConnectToRandomCoreServerStrategyTest
         // given
         MemberId myself = new MemberId( new UUID( 1234, 5678 ) );
         Config config = Config.defaults();
-        String groupName = "groupName";
+        var groupName = new ServerGroupName( "groupName" );
 
         // and
         ConnectToRandomCoreServerStrategy connectToRandomCoreServerStrategy = new ConnectToRandomCoreServerStrategy();

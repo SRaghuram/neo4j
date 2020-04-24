@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.upstream.strategies;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -20,12 +22,12 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 
 public class ConnectRandomlyToServerGroupImpl
 {
-    private final List<String> groups;
+    private final Set<ServerGroupName> groups;
     private final TopologyService topologyService;
     private final MemberId myself;
     private final Random random = new Random();
 
-    ConnectRandomlyToServerGroupImpl( List<String> groups, TopologyService topologyService, MemberId myself )
+    ConnectRandomlyToServerGroupImpl( Set<ServerGroupName> groups, TopologyService topologyService, MemberId myself )
     {
         this.groups = groups;
         this.topologyService = topologyService;
@@ -50,7 +52,7 @@ public class ConnectRandomlyToServerGroupImpl
         }
     }
 
-    private Predicate<Map.Entry<MemberId,ReadReplicaInfo>> isMyGroupAndNotMe( String group )
+    private Predicate<Map.Entry<MemberId,ReadReplicaInfo>> isMyGroupAndNotMe( ServerGroupName group )
     {
         return entry -> entry.getValue().groups().contains( group ) && !entry.getKey().equals( myself );
     }

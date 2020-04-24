@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.upstream.strategies;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.discovery.FakeTopologyService;
-import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
@@ -40,7 +40,8 @@ class TypicallyConnectToRandomReadReplicaStrategyTest
     {
         // given
         MemberId theCoreMemberId = memberId( 1 );
-        TopologyService topologyService = new FakeTopologyService( Set.of( theCoreMemberId ), memberIds( 2, 102 ), myself, Set.of( namedDatabaseId ) );
+        var topologyService = new FakeTopologyService( Set.of( theCoreMemberId ), memberIds( 2, 102 ),
+                myself, Set.of( namedDatabaseId ) );
 
         TypicallyConnectToRandomReadReplicaStrategy connectionStrategy = new TypicallyConnectToRandomReadReplicaStrategy( 2 );
         connectionStrategy.inject( topologyService, Config.defaults(), NullLogProvider.getInstance(), myself );
@@ -65,10 +66,10 @@ class TypicallyConnectToRandomReadReplicaStrategyTest
     void filtersSelf()
     {
         // given
-        String groupName = "groupName";
+        var groupName = new ServerGroupName( "groupName" );
         Config config = Config.defaults();
 
-        TypicallyConnectToRandomReadReplicaStrategy typicallyConnectToRandomReadReplicaStrategy = new TypicallyConnectToRandomReadReplicaStrategy();
+        var typicallyConnectToRandomReadReplicaStrategy = new TypicallyConnectToRandomReadReplicaStrategy();
         typicallyConnectToRandomReadReplicaStrategy.inject( new TopologyServiceThatPrioritisesItself( myself, groupName ), config,
                 NullLogProvider.getInstance(), myself );
 
@@ -88,7 +89,7 @@ class TypicallyConnectToRandomReadReplicaStrategyTest
 
         // and requesting core member will return self and another member
         MemberId otherCoreMember = memberId( 1 );
-        TopologyService topologyService = new FakeTopologyService( Set.of( myself, otherCoreMember ), memberIds( 2, 4 ),
+        var topologyService = new FakeTopologyService( Set.of( myself, otherCoreMember ), memberIds( 2, 4 ),
                 myself, Set.of( namedDatabaseId ) );
         connectionStrategy.inject( topologyService, Config.defaults(), NullLogProvider.getInstance(), myself );
 
@@ -109,7 +110,7 @@ class TypicallyConnectToRandomReadReplicaStrategyTest
         // and
         MemberId firstOther = memberId( 1 );
         MemberId secondOther = memberId( 2 );
-        TopologyService topologyService = new FakeTopologyService(  Set.of( myself, firstOther, secondOther ),
+        var topologyService = new FakeTopologyService( Set.of( myself, firstOther, secondOther ),
                 memberIds( 3, 5 ), myself, Set.of( namedDatabaseId ) );
         connectionStrategy.inject( topologyService, Config.defaults(), NullLogProvider.getInstance(), myself );
 

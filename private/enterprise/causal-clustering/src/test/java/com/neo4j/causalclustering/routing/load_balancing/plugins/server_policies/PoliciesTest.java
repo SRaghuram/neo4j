@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.Test;
 
@@ -39,8 +40,8 @@ public class PoliciesTest
         // when
         Policy policy = policies.selectFor( EMPTY_MAP );
         Set<ServerInfo> input = asSet(
-                new ServerInfo( new SocketAddress( "bolt", 1 ), new MemberId( UUID.randomUUID() ), asSet( "groupA" ) ),
-                new ServerInfo( new SocketAddress( "bolt", 2 ), new MemberId( UUID.randomUUID() ), asSet( "groupB" ) )
+                new ServerInfo( new SocketAddress( "bolt", 1 ), new MemberId( UUID.randomUUID() ), ServerGroupName.setOf( "groupA" ) ),
+                new ServerInfo( new SocketAddress( "bolt", 2 ), new MemberId( UUID.randomUUID() ), ServerGroupName.setOf( "groupB" ) )
         );
 
         Set<ServerInfo> output = policy.apply( input );
@@ -93,7 +94,7 @@ public class PoliciesTest
         Policies policies = new Policies( log );
 
         String defaultPolicyName = Policies.DEFAULT_POLICY_NAME;
-        Policy defaultPolicy = new FilteringPolicy( new AnyGroupFilter( "groupA", "groupB" ) );
+        Policy defaultPolicy = new FilteringPolicy( new AnyGroupFilter( ServerGroupName.setOf( "groupA", "groupB" ) ) );
 
         // when
         policies.addPolicy( defaultPolicyName, defaultPolicy );
@@ -121,7 +122,7 @@ public class PoliciesTest
         assertEquals( myPolicy, selectedPolicy );
     }
 
-    private MapValue stringMapValue( String...keyValues )
+    private MapValue stringMapValue( String... keyValues )
     {
         MapValueBuilder builder = new MapValueBuilder();
         for ( int i = 0; i < keyValues.length; i += 2 )

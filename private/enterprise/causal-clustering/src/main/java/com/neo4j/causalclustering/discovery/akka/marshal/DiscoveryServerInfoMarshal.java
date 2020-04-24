@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
@@ -20,15 +21,15 @@ import org.neo4j.kernel.database.DatabaseId;
 
 abstract class DiscoveryServerInfoMarshal<T extends DiscoveryServerInfo> extends SafeChannelMarshal<T>
 {
-    static Set<String> unmarshalGroups( ReadableChannel channel ) throws IOException
+    static Set<ServerGroupName> unmarshalGroups( ReadableChannel channel ) throws IOException
     {
         var size = channel.getInt();
-        var groups = new HashSet<String>( size );
+        var groups = new String[size];
         for ( int i = 0; i < size; i++ )
         {
-            groups.add( StringMarshal.unmarshal( channel ) );
+            groups[i] = StringMarshal.unmarshal( channel );
         }
-        return groups;
+        return ServerGroupName.setOf( groups );
     }
 
     static void marshalGroups( DiscoveryServerInfo info, WritableChannel channel ) throws IOException
@@ -37,7 +38,7 @@ abstract class DiscoveryServerInfoMarshal<T extends DiscoveryServerInfo> extends
         channel.putInt( groups.size() );
         for ( var group : groups )
         {
-            StringMarshal.marshal( channel, group );
+            StringMarshal.marshal( channel, group.getRaw() );
         }
     }
 
