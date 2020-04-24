@@ -22,14 +22,14 @@ package org.neo4j.internal.freki;
 import java.nio.ByteBuffer;
 
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
-import static org.neo4j.internal.freki.Header.FLAG_IS_DENSE;
+import static org.neo4j.internal.freki.Header.FLAG_HAS_DENSE_RELATIONSHIPS;
 import static org.neo4j.internal.freki.Header.FLAG_LABELS;
 import static org.neo4j.internal.freki.Header.OFFSET_DEGREES;
 import static org.neo4j.internal.freki.Header.OFFSET_PROPERTIES;
 import static org.neo4j.internal.freki.Header.OFFSET_RECORD_POINTER;
 import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIPS;
 import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS;
-import static org.neo4j.internal.freki.MutableNodeRecordData.recordPointerToString;
+import static org.neo4j.internal.freki.MutableNodeData.recordPointerToString;
 import static org.neo4j.internal.freki.StreamVByte.readLongs;
 
 /**
@@ -93,7 +93,7 @@ class FrekiCursorData
 
     private void assignDataOffsets( ByteBuffer buffer )
     {
-        if ( header.hasMark( FLAG_IS_DENSE ) )
+        if ( header.hasMark( FLAG_HAS_DENSE_RELATIONSHIPS ) )
         {
             isDense = true;
         }

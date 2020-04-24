@@ -56,7 +56,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singleton;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.internal.freki.InMemoryBigValueTestStore.applyToStoreImmediately;
-import static org.neo4j.internal.freki.MutableNodeRecordData.externalRelationshipId;
+import static org.neo4j.internal.freki.MutableNodeData.externalRelationshipId;
 
 @ExtendWith( {RandomExtension.class, EphemeralFileSystemExtension.class} )
 abstract class FrekiCursorsTest

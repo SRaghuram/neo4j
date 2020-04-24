@@ -47,7 +47,7 @@ import static java.util.stream.Stream.of;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.internal.freki.CursorAccessPatternTracer.NO_TRACING;
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
-import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromRecordPointer;
+import static org.neo4j.internal.freki.MutableNodeData.sizeExponentialFromRecordPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.internal.freki.Record.recordSize;
 import static org.neo4j.internal.freki.Record.recordXFactor;
@@ -199,9 +199,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
     private void printRawRecordContents( Record record, long nodeId )
     {
         System.out.println( record );
-        MutableNodeRecordData data = new MutableNodeRecordData( nodeId );
-        data.deserialize( record.data( 0 ), stores.bigPropertyValueStore, PageCursorTracer.NULL );
-        System.out.println( "  " + data );
+        System.out.println( "  " + new MutableNodeData( nodeId, stores.bigPropertyValueStore, PageCursorTracer.NULL, record.data( 0 ) ) );
     }
 
     public void dumpLogicalRepresentation( FrekiNodeCursor nodeCursor, FrekiPropertyCursor propertyCursor,
@@ -383,11 +381,11 @@ public class FrekiAnalysis extends Life implements AutoCloseable
                             if ( store.read( cursor, record, id ) && record.hasFlag( FLAG_IN_USE ) )
                             {
                                 stats.usedRecords++;
-                                var data = new MutableNodeRecordData( id );
+                                var data = new MutableNodeData( id, stores.bigPropertyValueStore, PageCursorTracer.NULL );
                                 var buffer = record.data();
                                 try
                                 {
-                                    data.deserialize( buffer, stores.bigPropertyValueStore, PageCursorTracer.NULL );
+                                    data.deserialize( buffer );
                                 }
                                 catch ( Exception e )
                                 {
@@ -413,18 +411,6 @@ public class FrekiAnalysis extends Life implements AutoCloseable
             }
         }
         return runTasksInParallel( storeDistributionTasks ).stream().toArray( StoreStats[]::new );
-    }
-
-    public boolean nodeIsDense( long nodeId )
-    {
-        var record = loadRecord( nodeId, 0 );
-        if ( record.hasFlag( FLAG_IN_USE ) )
-        {
-            var data = new MutableNodeRecordData( nodeId );
-            data.deserialize( record.data(), stores.bigPropertyValueStore, PageCursorTracer.NULL );
-            return data.isDense();
-        }
-        return false;
     }
 
     private <T> List<T> runTasksInParallel( Collection<Callable<T>> storeDistributionTasks )

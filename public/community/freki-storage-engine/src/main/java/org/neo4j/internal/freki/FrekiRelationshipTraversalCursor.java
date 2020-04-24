@@ -32,11 +32,11 @@ import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 
-import static org.neo4j.internal.freki.MutableNodeRecordData.ARRAY_ENTRIES_PER_RELATIONSHIP;
-import static org.neo4j.internal.freki.MutableNodeRecordData.externalRelationshipId;
-import static org.neo4j.internal.freki.MutableNodeRecordData.otherNodeOf;
-import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipHasProperties;
-import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipIsOutgoing;
+import static org.neo4j.internal.freki.MutableNodeData.ARRAY_ENTRIES_PER_RELATIONSHIP;
+import static org.neo4j.internal.freki.MutableNodeData.externalRelationshipId;
+import static org.neo4j.internal.freki.MutableNodeData.otherNodeOf;
+import static org.neo4j.internal.freki.MutableNodeData.relationshipHasProperties;
+import static org.neo4j.internal.freki.MutableNodeData.relationshipIsOutgoing;
 import static org.neo4j.internal.freki.StreamVByte.readLongs;
 import static org.neo4j.storageengine.api.RelationshipDirection.INCOMING;
 import static org.neo4j.storageengine.api.RelationshipDirection.LOOP;

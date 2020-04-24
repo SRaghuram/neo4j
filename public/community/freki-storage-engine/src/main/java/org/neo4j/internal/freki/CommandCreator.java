@@ -40,7 +40,7 @@ import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 import org.neo4j.token.api.NamedToken;
 
 import static java.lang.Math.toIntExact;
-import static org.neo4j.internal.freki.MutableNodeRecordData.internalRelationshipIdFromRelationshipId;
+import static org.neo4j.internal.freki.MutableNodeData.internalRelationshipIdFromRelationshipId;
 import static org.neo4j.internal.helpers.collection.Iterators.loop;
 
 class CommandCreator implements TxStateVisitor

@@ -57,7 +57,7 @@ import org.neo4j.util.Preconditions;
 import org.neo4j.values.storable.Value;
 
 import static java.lang.String.format;
-import static org.neo4j.internal.freki.MutableNodeRecordData.externalRelationshipId;
+import static org.neo4j.internal.freki.MutableNodeData.externalRelationshipId;
 import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValueSizeIncludingTypeHeader;
 import static org.neo4j.internal.freki.StreamVByte.calculateLongSizeIndex;
 import static org.neo4j.internal.freki.StreamVByte.decodeLongValue;
