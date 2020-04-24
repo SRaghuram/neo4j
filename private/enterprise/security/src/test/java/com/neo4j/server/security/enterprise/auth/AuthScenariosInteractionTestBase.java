@@ -580,7 +580,7 @@ public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInter
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.removeRoleFromUser('" + PUBLISHER + "', 'Henrik')" );
 
         assertFail( henrik, "CALL test.createNode()",
-                "Write operations are not allowed for user 'Henrik' with roles [PUBLIC, reader] restricted to TOKEN_WRITE." );
+                "Create node with labels '' is not allowed for user 'Henrik' with roles [PUBLIC, reader] restricted to TOKEN_WRITE." );
     }
 
     //---------- change password -----------

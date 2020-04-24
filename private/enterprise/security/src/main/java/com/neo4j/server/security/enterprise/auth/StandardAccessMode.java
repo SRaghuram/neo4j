@@ -91,6 +91,25 @@ class StandardAccessMode implements AccessMode
     private final IntSet whitelistRemoveLabels;
     private final boolean disallowRemoveAllLabels;
     private final IntSet blacklistRemoveLabels;
+
+    private final boolean allowsCreateNodeAllLabels;
+    private final IntSet whitelistCreateNodeWithLabels;
+    private final boolean disallowCreateNodeAllLabels;
+    private final IntSet blacklistCreateNodeWithLabels;
+    private final boolean allowsDeleteNodeAllLabels;
+    private final IntSet whitelistDeleteNodeWithLabels;
+    private final boolean disallowDeleteNodeAllLabels;
+    private final IntSet blacklistDeleteNodeWithLabels;
+
+    private final boolean allowsCreateRelationshipAllTypes;
+    private final IntSet whitelistCreateRelationshipWithTypes;
+    private final boolean disallowCreateRelationshipAllTypes;
+    private final IntSet blacklistCreateRelationshipWithTypes;
+    private final boolean allowsDeleteRelationshipAllTypes;
+    private final IntSet whitelistDeleteRelationshipWithTypes;
+    private final boolean disallowDeleteRelationshipAllTypes;
+    private final IntSet blacklistDeleteRelationshipWithTypes;
+
     private AdminAccessMode adminAccessMode;
     private AdminActionOnResource.DatabaseScope database;
 
@@ -141,6 +160,24 @@ class StandardAccessMode implements AccessMode
             boolean disallowRemoveAllLabels,
             IntSet blacklistRemoveLabels,
 
+            boolean allowsCreateNodeAllLabels,
+            IntSet whitelistCreateNodeWithLabels,
+            boolean disallowCreateNodeAllLabels,
+            IntSet blacklistCreateNodeWithLabels,
+            boolean allowsDeleteNodeAllLabels,
+            IntSet whitelistDeleteNodeWithLabels,
+            boolean disallowDeleteNodeAllLabels,
+            IntSet blacklistDeleteNodeWithLabels,
+
+            boolean allowsCreateRelationshipAllTypes,
+            IntSet whitelistCreateRelationshipWithTypes,
+            boolean disallowCreateRelationshipAllTypes,
+            IntSet blacklistCreateRelationshipWithTypes,
+            boolean allowsDeleteRelationshipAllTypes,
+            IntSet whitelistDeleteRelationshipWithTypes,
+            boolean disallowDeleteRelationshipAllTypes,
+            IntSet blacklistDeleteRelationshipWithTypes,
+
             AdminAccessMode adminAccessMode,
             String database
     )
@@ -190,6 +227,24 @@ class StandardAccessMode implements AccessMode
         this.whitelistRemoveLabels = whitelistRemoveLabels;
         this.disallowRemoveAllLabels = disallowRemoveAllLabels;
         this.blacklistRemoveLabels = blacklistRemoveLabels;
+
+        this.allowsCreateNodeAllLabels = allowsCreateNodeAllLabels;
+        this.whitelistCreateNodeWithLabels = whitelistCreateNodeWithLabels;
+        this.disallowCreateNodeAllLabels = disallowCreateNodeAllLabels;
+        this.blacklistCreateNodeWithLabels = blacklistCreateNodeWithLabels;
+        this.allowsDeleteNodeAllLabels = allowsDeleteNodeAllLabels;
+        this.whitelistDeleteNodeWithLabels = whitelistDeleteNodeWithLabels;
+        this.disallowDeleteNodeAllLabels = disallowDeleteNodeAllLabels;
+        this.blacklistDeleteNodeWithLabels = blacklistDeleteNodeWithLabels;
+
+        this.allowsCreateRelationshipAllTypes = allowsCreateRelationshipAllTypes;
+        this.whitelistCreateRelationshipWithTypes = whitelistCreateRelationshipWithTypes;
+        this.disallowCreateRelationshipAllTypes = disallowCreateRelationshipAllTypes;
+        this.blacklistCreateRelationshipWithTypes = blacklistCreateRelationshipWithTypes;
+        this.allowsDeleteRelationshipAllTypes = allowsDeleteRelationshipAllTypes;
+        this.whitelistDeleteRelationshipWithTypes = whitelistDeleteRelationshipWithTypes;
+        this.disallowDeleteRelationshipAllTypes = disallowDeleteRelationshipAllTypes;
+        this.blacklistDeleteRelationshipWithTypes = blacklistDeleteRelationshipWithTypes;
 
         this.adminAccessMode = adminAccessMode;
         this.database = new AdminActionOnResource.DatabaseScope( database );
@@ -464,6 +519,78 @@ class StandardAccessMode implements AccessMode
     }
 
     @Override
+    public boolean allowsCreateNode( int[] labelIds )
+    {
+        if ( disallowWrites || disallowCreateNodeAllLabels )
+        {
+            return false;
+        }
+
+        boolean allowed = false;
+        if ( labelIds != null && labelIds.length > 0 )
+        {
+            allowed = true;
+            for ( int label : labelIds )
+            {
+                if ( blacklistCreateNodeWithLabels.contains( label ) )
+                {
+                    return false;
+                }
+                allowed &= whitelistCreateNodeWithLabels.contains( label );
+            }
+        }
+
+        return allowsWrites || allowsCreateNodeAllLabels || allowed;
+    }
+
+    @Override
+    public boolean allowsDeleteNode( Supplier<TokenSet> labelSupplier )
+    {
+        if ( disallowWrites || disallowDeleteNodeAllLabels )
+        {
+            return false;
+        }
+
+        boolean allowed = false;
+        long[] labelIds = labelSupplier.get().all();
+
+        if ( labelIds.length > 0 )
+        {
+            allowed = true;
+            for ( long label : labelIds )
+            {
+                if ( blacklistDeleteNodeWithLabels.contains( (int) label ) )
+                {
+                    return false;
+                }
+                allowed &= whitelistDeleteNodeWithLabels.contains( (int) label );
+            }
+        }
+
+        return allowsWrites || allowsDeleteNodeAllLabels || allowed;
+    }
+
+    @Override
+    public boolean allowsCreateRelationship( int relType )
+    {
+        if ( disallowWrites || disallowCreateRelationshipAllTypes || blacklistCreateRelationshipWithTypes.contains( relType ) )
+        {
+            return false;
+        }
+        return allowsWrites || allowsCreateRelationshipAllTypes || whitelistCreateRelationshipWithTypes.contains( relType );
+    }
+
+    @Override
+    public boolean allowsDeleteRelationship( int relType )
+    {
+        if ( disallowWrites || disallowDeleteRelationshipAllTypes || blacklistDeleteRelationshipWithTypes.contains( relType ) )
+        {
+            return false;
+        }
+        return allowsWrites || allowsDeleteRelationshipAllTypes || whitelistDeleteRelationshipWithTypes.contains( relType );
+    }
+
+    @Override
     public AuthorizationViolationException onViolation( String msg )
     {
         if ( passwordChangeRequired )
@@ -524,6 +651,16 @@ class StandardAccessMode implements AccessMode
         private Map<ResourcePrivilege.GrantOrDeny,Boolean> removeAllLabels = new HashMap<>();
         private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> removableLabels = new HashMap<>();
 
+        private Map<ResourcePrivilege.GrantOrDeny,Boolean> createNodeWithAnyLabel = new HashMap<>();
+        private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> createNodeWithLabels = new HashMap<>();
+        private Map<ResourcePrivilege.GrantOrDeny,Boolean> deleteNodeWithAnyLabel = new HashMap<>();
+        private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> deleteNodeWithLabels = new HashMap<>();
+
+        private Map<ResourcePrivilege.GrantOrDeny,Boolean> createRelationshipWithAnyType = new HashMap<>();
+        private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> createRelationshipWithTypes = new HashMap<>();
+        private Map<ResourcePrivilege.GrantOrDeny,Boolean> deleteRelationshipWithAnyType = new HashMap<>();
+        private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> deleteRelationshipWithTypes = new HashMap<>();
+
         private Map<ResourcePrivilege.GrantOrDeny,Boolean> readAllPropertiesAllLabels = new HashMap<>();
         private Map<ResourcePrivilege.GrantOrDeny,Boolean> readAllPropertiesAllRelTypes = new HashMap<>();
         private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> nodeSegmentForAllProperties = new HashMap<>();
@@ -555,6 +692,10 @@ class StandardAccessMode implements AccessMode
                 this.relationshipSegmentForProperty.put( privilegeType, IntObjectMaps.mutable.empty() );
                 this.settableLabels.put( privilegeType, IntSets.mutable.empty() );
                 this.removableLabels.put( privilegeType, IntSets.mutable.empty() );
+                this.createNodeWithLabels.put( privilegeType, IntSets.mutable.empty() );
+                this.deleteNodeWithLabels.put( privilegeType, IntSets.mutable.empty() );
+                this.createRelationshipWithTypes.put( privilegeType, IntSets.mutable.empty() );
+                this.deleteRelationshipWithTypes.put( privilegeType, IntSets.mutable.empty() );
             }
         }
 
@@ -607,6 +748,24 @@ class StandardAccessMode implements AccessMode
                     removeAllLabels.getOrDefault(DENY, false),
                     removableLabels.get( DENY ),
 
+                    createNodeWithAnyLabel.getOrDefault( GRANT, false ),
+                    createNodeWithLabels.get( GRANT ),
+                    createNodeWithAnyLabel.getOrDefault( DENY, false ),
+                    createNodeWithLabels.get( DENY ),
+                    deleteNodeWithAnyLabel.getOrDefault( GRANT, false ),
+                    deleteNodeWithLabels.get( GRANT ),
+                    deleteNodeWithAnyLabel.getOrDefault( DENY, false ),
+                    deleteNodeWithLabels.get( DENY ),
+
+                    createRelationshipWithAnyType.getOrDefault( GRANT, false ),
+                    createRelationshipWithTypes.get( GRANT ),
+                    createRelationshipWithAnyType.getOrDefault( DENY, false ),
+                    createRelationshipWithTypes.get( DENY ),
+                    deleteRelationshipWithAnyType.getOrDefault( GRANT, false ),
+                    deleteRelationshipWithTypes.get( GRANT ),
+                    deleteRelationshipWithAnyType.getOrDefault( DENY, false ),
+                    deleteRelationshipWithTypes.get( DENY ),
+
                     adminModeBuilder.build(),
                     database );
         }
@@ -657,6 +816,14 @@ class StandardAccessMode implements AccessMode
             case SET_LABEL:
             case REMOVE_LABEL:
                 handleLabelPrivilege( segment, privilegeType, action );
+                break;
+
+            case CREATE_ELEMENT:
+                handleCreatePrivilege( segment, privilegeType );
+                break;
+
+            case DELETE_ELEMENT:
+                handleDeletePrivilege( segment, privilegeType );
                 break;
 
             default:
@@ -712,6 +879,66 @@ class StandardAccessMode implements AccessMode
             else
             {
                 throw new IllegalStateException( "Unsupported segment qualifier for " + privilegeName + " privilege: " + segment.getClass().getSimpleName() );
+            }
+        }
+
+        private void handleCreatePrivilege( Segment segment, ResourcePrivilege.GrantOrDeny privilegeType )
+        {
+            if ( segment instanceof LabelSegment )
+            {
+                if ( segment.equals( LabelSegment.ALL ) )
+                {
+                    createNodeWithAnyLabel.put( privilegeType, true );
+                }
+                else
+                {
+                    addLabel( createNodeWithLabels.get( privilegeType ), (LabelSegment) segment );
+                }
+            }
+            else if ( segment instanceof RelTypeSegment )
+            {
+                if ( segment.equals( RelTypeSegment.ALL ) )
+                {
+                    createRelationshipWithAnyType.put( privilegeType, true );
+                }
+                else
+                {
+                    addRelType( createRelationshipWithTypes.get( privilegeType ), (RelTypeSegment) segment );
+                }
+            }
+            else
+            {
+                throw new IllegalStateException( "Unsupported segment qualifier for create privilege: " + segment.getClass().getSimpleName() );
+            }
+        }
+
+        private void handleDeletePrivilege( Segment segment, ResourcePrivilege.GrantOrDeny privilegeType )
+        {
+            if ( segment instanceof LabelSegment )
+            {
+                if ( segment.equals( LabelSegment.ALL ) )
+                {
+                    deleteNodeWithAnyLabel.put( privilegeType, true );
+                }
+                else
+                {
+                    addLabel( deleteNodeWithLabels.get( privilegeType ), (LabelSegment) segment );
+                }
+            }
+            else if ( segment instanceof RelTypeSegment )
+            {
+                if ( segment.equals( RelTypeSegment.ALL ) )
+                {
+                    deleteRelationshipWithAnyType.put( privilegeType, true );
+                }
+                else
+                {
+                    addRelType( deleteRelationshipWithTypes.get( privilegeType ), (RelTypeSegment) segment );
+                }
+            }
+            else
+            {
+                throw new IllegalStateException( "Unsupported segment qualifier for delete privilege: " + segment.getClass().getSimpleName() );
             }
         }
 

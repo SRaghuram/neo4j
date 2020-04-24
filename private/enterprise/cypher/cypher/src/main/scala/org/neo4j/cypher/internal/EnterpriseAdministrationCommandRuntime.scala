@@ -51,38 +51,38 @@ import org.neo4j.cypher.internal.logical.plans.CreateRole
 import org.neo4j.cypher.internal.logical.plans.CreateUser
 import org.neo4j.cypher.internal.logical.plans.DenyDatabaseAction
 import org.neo4j.cypher.internal.logical.plans.DenyDbmsAction
+import org.neo4j.cypher.internal.logical.plans.DenyGraphAction
 import org.neo4j.cypher.internal.logical.plans.DenyMatch
 import org.neo4j.cypher.internal.logical.plans.DenyRead
 import org.neo4j.cypher.internal.logical.plans.DenyRemoveLabel
 import org.neo4j.cypher.internal.logical.plans.DenySetLabel
 import org.neo4j.cypher.internal.logical.plans.DenyTraverse
-import org.neo4j.cypher.internal.logical.plans.DenyWrite
 import org.neo4j.cypher.internal.logical.plans.DropDatabase
 import org.neo4j.cypher.internal.logical.plans.DropRole
 import org.neo4j.cypher.internal.logical.plans.EnsureValidNonSystemDatabase
 import org.neo4j.cypher.internal.logical.plans.EnsureValidNumberOfDatabases
 import org.neo4j.cypher.internal.logical.plans.GrantDatabaseAction
 import org.neo4j.cypher.internal.logical.plans.GrantDbmsAction
+import org.neo4j.cypher.internal.logical.plans.GrantGraphAction
 import org.neo4j.cypher.internal.logical.plans.GrantMatch
 import org.neo4j.cypher.internal.logical.plans.GrantRead
 import org.neo4j.cypher.internal.logical.plans.GrantRemoveLabel
 import org.neo4j.cypher.internal.logical.plans.GrantRoleToUser
 import org.neo4j.cypher.internal.logical.plans.GrantSetLabel
 import org.neo4j.cypher.internal.logical.plans.GrantTraverse
-import org.neo4j.cypher.internal.logical.plans.GrantWrite
 import org.neo4j.cypher.internal.logical.plans.LogSystemCommand
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NameValidator
 import org.neo4j.cypher.internal.logical.plans.RequireRole
 import org.neo4j.cypher.internal.logical.plans.RevokeDatabaseAction
 import org.neo4j.cypher.internal.logical.plans.RevokeDbmsAction
+import org.neo4j.cypher.internal.logical.plans.RevokeGraphAction
 import org.neo4j.cypher.internal.logical.plans.RevokeMatch
 import org.neo4j.cypher.internal.logical.plans.RevokeRead
 import org.neo4j.cypher.internal.logical.plans.RevokeRemoveLabel
 import org.neo4j.cypher.internal.logical.plans.RevokeRoleFromUser
 import org.neo4j.cypher.internal.logical.plans.RevokeSetLabel
 import org.neo4j.cypher.internal.logical.plans.RevokeTraverse
-import org.neo4j.cypher.internal.logical.plans.RevokeWrite
 import org.neo4j.cypher.internal.logical.plans.ShowPrivileges
 import org.neo4j.cypher.internal.logical.plans.ShowRoles
 import org.neo4j.cypher.internal.logical.plans.ShowUsers
@@ -367,6 +367,22 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       makeRevokeExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke $databaseAction privilege from role '${runtimeValue(roleName, params)}'")
 
+    // GRANT/DENY/REVOKE _ ON DATABASE foo TO role
+    case GrantGraphAction(source, action, database, qualifier, roleName) => (context, parameterMapping) =>
+      val graphAction = AdminActionMapper.asKernelAction(action).toString
+      makeGrantOrDenyExecutionPlan(graphAction, NoResource()(InputPosition.NONE), database, qualifier, roleName,
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant $graphAction privilege to role '${runtimeValue(roleName, params)}'")
+
+    case DenyGraphAction(source, action, database, qualifier, roleName) => (context, parameterMapping) =>
+      val graphAction = AdminActionMapper.asKernelAction(action).toString
+      makeGrantOrDenyExecutionPlan(graphAction, NoResource()(InputPosition.NONE), database, qualifier, roleName,
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny $graphAction privilege to role '${runtimeValue(roleName, params)}'")
+
+    case RevokeGraphAction(source, action, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
+      val graphAction = AdminActionMapper.asKernelAction(action).toString
+      makeRevokeExecutionPlan(graphAction, NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke $graphAction privilege from role '${runtimeValue(roleName, params)}'")
+
     // GRANT/DENY/REVOKE TRAVERSE ON GRAPH foo NODES A (*) TO role
     case GrantTraverse(source, database, qualifier, roleName) => (context, parameterMapping) =>
       makeGrantOrDenyExecutionPlan(PrivilegeAction.TRAVERSE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
@@ -405,19 +421,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     case RevokeMatch(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
       makeRevokeExecutionPlan(PrivilegeAction.MATCH.toString, resource, database, qualifier, roleName, revokeType,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke match privilege from role '${runtimeValue(roleName, params)}'")
-
-    // GRANT/DENY/REVOKE WRITE ON GRAPH foo NODES * (*) TO role
-    case GrantWrite(source, database, qualifier, roleName) => (context, parameterMapping) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.WRITE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant write privilege to role '${runtimeValue(roleName, params)}'")
-
-    case DenyWrite(source, database, qualifier, roleName) => (context, parameterMapping) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.WRITE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny write privilege to role '${runtimeValue(roleName, params)}'")
-
-    case RevokeWrite(source, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
-      makeRevokeExecutionPlan(PrivilegeAction.WRITE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke write privilege from role '${runtimeValue(roleName, params)}'")
 
       // GRANT/DENY/REVOKE SET LABEL * ON GRAPH foo TO role
     case GrantSetLabel(source, database, qualifier, roleName) => (context, parameterMapping) =>

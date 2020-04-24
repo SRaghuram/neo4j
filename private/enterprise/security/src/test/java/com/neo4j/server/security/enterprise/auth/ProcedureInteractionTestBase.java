@@ -86,18 +86,16 @@ import static org.neo4j.procedure.Mode.WRITE;
 @ExtendWith( {TestDirectorySupportExtension.class, ThreadingExtension.class} )
 public abstract class ProcedureInteractionTestBase<S>
 {
-    public static final Matcher<Object> ONE_AS_INT = equalTo( 1 );
-    public static final Matcher<Object> ONE_AS_LONG = equalTo( 1L );
-    public static final Matcher<Object> TWO_AS_INT = equalTo( 2 );
-    public static final Matcher<Object> TWO_AS_LONG = equalTo( 2L );
+    static final Matcher<Object> ONE_AS_INT = equalTo( 1 );
+    static final Matcher<Object> ONE_AS_LONG = equalTo( 1L );
+    static final Matcher<Object> TWO_AS_INT = equalTo( 2 );
+    static final Matcher<Object> TWO_AS_LONG = equalTo( 2L );
     private static final String PROCEDURE_TIMEOUT_ERROR = "Procedure got: Transaction guard check failed";
-    protected String CHANGE_PWD_ERR_MSG = AuthorizationViolationException.PERMISSION_DENIED;
+    String CHANGE_PWD_ERR_MSG = AuthorizationViolationException.PERMISSION_DENIED;
     private static final String BOLT_PWD_ERR_MSG =
             "The credentials you provided were valid, but must be changed before you can use this instance.";
-    String READ_OPS_NOT_ALLOWED = "Read operations are not allowed";
     String PERMISSION_DENIED = "Permission denied.";
     String ACCESS_DENIED = "Database access is not allowed for user";
-    String WRITE_OPS_NOT_ALLOWED = "Write operations are not allowed";
     String CREATE_LABEL_OPS_NOT_ALLOWED = format( "'%s' operations are not allowed", CREATE_LABEL );
     String CREATE_RELTYPE_OPS_NOT_ALLOWED = format( "'%s' operations are not allowed", CREATE_RELTYPE );
     String CREATE_PROPERTYKEY_OPS_NOT_ALLOWED = format( "'%s' operations are not allowed", CREATE_PROPERTYKEY );
@@ -270,11 +268,6 @@ public abstract class ProcedureInteractionTestBase<S>
         } );
     }
 
-    void testFailRead( S subject )
-    {
-        testFailRead( subject, READ_OPS_NOT_ALLOWED );
-    }
-
     void testFailRead( S subject, String errMsg )
     {
         assertFail( subject, "MATCH (n) RETURN count(n)", errMsg );
@@ -287,7 +280,7 @@ public abstract class ProcedureInteractionTestBase<S>
 
     void testFailWrite( S subject )
     {
-        testFailWrite( subject, WRITE_OPS_NOT_ALLOWED );
+        testFailWrite( subject, "Create node with labels 'Node' is not allowed" );
     }
 
     void testFailWrite( S subject, String errMsg )

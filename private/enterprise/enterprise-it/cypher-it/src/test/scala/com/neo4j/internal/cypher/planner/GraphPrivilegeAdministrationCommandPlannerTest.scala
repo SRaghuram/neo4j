@@ -457,4 +457,52 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
       ).toString
     )
   }
+
+  test("Grant create element") {
+    // When
+    val plan = execute("EXPLAIN GRANT CREATE ON GRAPH * TO role").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("GrantCreateElement", Database("ALL GRAPHS"), Qualifier("RELATIONSHIPS *"), "role",
+          graphPrivilegePlan("GrantCreateElement", Database("ALL GRAPHS"), Qualifier("NODES *"), "role",
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Deny create element") {
+    // When
+    val plan = execute("EXPLAIN DENY CREATE ON GRAPH * NODES foo, bar TO role").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("DenyCreateElement", Database("ALL GRAPHS"), Qualifier("NODE bar"), "role",
+          graphPrivilegePlan("DenyCreateElement", Database("ALL GRAPHS"), Qualifier("NODE foo"), "role",
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke delete element") {
+    // When
+    val plan = execute("EXPLAIN REVOKE DELETE ON GRAPH * RELATIONSHIP * FROM role").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("RevokeDeleteElement(DENIED)", Database("ALL GRAPHS"), Qualifier("RELATIONSHIPS *"), "role",
+          graphPrivilegePlan("RevokeDeleteElement(GRANTED)", Database("ALL GRAPHS"), Qualifier("RELATIONSHIPS *"), "role",
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
 }

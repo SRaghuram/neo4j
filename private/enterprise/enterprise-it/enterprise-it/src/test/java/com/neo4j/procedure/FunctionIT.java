@@ -383,7 +383,7 @@ class FunctionIT
                         tx.execute( "RETURN com.neo4j.procedure.readOnlyTryingToWrite()" ).next();
                     }
                 } );
-        assertThat( exception ).hasMessageContaining( "Write operations are not allowed" );
+        assertThat( exception ).hasMessageContaining( "Create node with labels '' is not allowed" );
     }
 
     @Test
@@ -397,7 +397,7 @@ class FunctionIT
                         tx.execute( "RETURN com.neo4j.procedure.readOnlyCallingWriteProcedure()" ).next();
                     }
                 } ) ;
-        assertThat( exception ).hasMessageContaining( "Write operations are not allowed" );
+        assertThat( exception ).hasMessageContaining( "Create node with labels '' is not allowed" );
     }
 
     @Test
@@ -542,7 +542,7 @@ class FunctionIT
         for ( Exception exceptionInFunction : exceptionsInFunction )
         {
             assertThat( exceptionInFunction ).isInstanceOf( AuthorizationViolationException.class )
-                    .hasMessageStartingWith( "Write operations are not allowed" );
+                    .hasMessageStartingWith( "Create node with labels '' is not allowed" );
         }
 
         try ( Transaction transaction = db.beginTx() )

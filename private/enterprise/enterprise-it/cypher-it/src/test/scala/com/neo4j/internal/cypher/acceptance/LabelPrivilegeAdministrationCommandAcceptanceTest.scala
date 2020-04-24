@@ -514,4 +514,71 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("MATCH (n:Label) RETURN n").toSet should have size (1)
   }
 
+  test("should be allowed to remove label that was set in the same transaction even without privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT SET LABEL * ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()")
+    execute("CALL db.createLabel('Label')")
+
+    executeOnDefault("joe", "soap", "MATCH (n:Label) REMOVE n:Label", executeBefore = tx => {
+      tx.execute("MATCH (n) SET n:Label")
+    })
+  }
+
+  test("should not be allowed to remove additional labels that were not set in the same transaction without privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT SET LABEL * ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()")
+    execute("CALL db.createLabel('Label')")
+    execute("CREATE (:Label)")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n:Label) REMOVE n:Label", executeBefore = tx => {
+        tx.execute("MATCH (n) SET n:Label")
+      })
+      // THEN
+    } should have message "Remove label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+  }
+
+  test("should be allowed to add label that was removed in the same transaction even without privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT REMOVE LABEL * ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:Label)")
+
+    executeOnDefault("joe", "soap", "MATCH (n) SET n:Label", executeBefore = tx => {
+      tx.execute("MATCH (n:Label) REMOVE n:Label")
+    })
+  }
+
+  test("should not be allowed to add label that was not removed in the same transaction without privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute("GRANT REMOVE LABEL * ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:Label)")
+    execute("CREATE ()")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n) SET n:Label", executeBefore = tx => {
+        tx.execute("MATCH (n:Label) REMOVE n:Label")
+      })
+    } should have message "Set label for label 'Label' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+  }
+
 }

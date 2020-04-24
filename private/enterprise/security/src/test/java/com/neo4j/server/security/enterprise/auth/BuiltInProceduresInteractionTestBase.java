@@ -1933,7 +1933,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
                 itr -> assertEquals( 2, (int) itr.stream().count() ) );
         // should not be able to do writes
         assertFail( neo.login( "notAllowedToWrite", "abc" ),
-                "CALL test.allowedWriteProcedure() YIELD value CREATE (:NEWNODE {name:value})", WRITE_OPS_NOT_ALLOWED );
+                "CALL test.allowedWriteProcedure() YIELD value CREATE (:NEWNODE {name:value})", "Create node with labels 'NEWNODE' is not allowed" );
     }
 
     @Test
@@ -1947,7 +1947,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         assertSuccess( neo.login( "nopermission", "abc" ), "CALL test.numNodes()", r -> assertKeyIs( r, "count", "0" ) );
 
         // should not be able to invoke any procedure
-        assertFail( neo.login( "nopermission", "abc" ), "CALL test.staticWriteProcedure()", WRITE_OPS_NOT_ALLOWED );
+        assertFail( neo.login( "nopermission", "abc" ), "CALL test.staticWriteProcedure()", "Create node with labels '' is not allowed" );
         assertFail( neo.login( "nopermission", "abc" ), "CALL test.staticSchemaProcedure()", SCHEMA_OPS_NOT_ALLOWED );
     }
 
@@ -1985,7 +1985,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         setupTestSubject();
         assertFail( neo.login( SUBJECT, PASSWORD ),
                 "CALL test.nestedAllowedProcedure('test.allowedWriteProcedure') YIELD value",
-                WRITE_OPS_NOT_ALLOWED );
+                "Create node with labels 'VeryUniqueLabel' is not allowed" );
     }
 
     @Test
@@ -1995,7 +1995,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         assertDDLCommandSuccess( adminSubject, String.format( "GRANT ROLE %s TO %s", ADMIN, SUBJECT ) );
         assertFail( neo.login( SUBJECT, PASSWORD ),
                 "CALL test.nestedAllowedProcedure('test.allowedWriteProcedure') YIELD value",
-                WRITE_OPS_NOT_ALLOWED );
+                "Create node with labels 'VeryUniqueLabel' is not allowed" );
     }
 
     @Test
@@ -2004,7 +2004,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         setupTestSubject();
         assertFail( neo.login( SUBJECT, PASSWORD ),
                 "CALL test.failingNestedAllowedWriteProcedure YIELD value",
-                WRITE_OPS_NOT_ALLOWED );
+                "Create node with labels 'VeryUniqueLabel' is not allowed" );
     }
 
     @Test
@@ -2026,7 +2026,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         // Even if subject has WRITE permission the procedure should restrict to READ
         assertFail( neo.login( SUBJECT, PASSWORD ),
                 "CALL test.nestedReadProcedure('test.allowedWriteProcedure') YIELD value",
-                WRITE_OPS_NOT_ALLOWED );
+                "Create node with labels 'VeryUniqueLabel' is not allowed" );
     }
 
     @Test

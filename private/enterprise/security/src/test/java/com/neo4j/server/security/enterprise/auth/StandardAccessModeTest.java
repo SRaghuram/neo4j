@@ -20,8 +20,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CREATE_ELEMENT;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DELETE_ELEMENT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.MATCH;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.READ;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_LABEL;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_LABEL;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRAVERSE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.WRITE;
 import static org.neo4j.token.api.TokenConstants.ANY_LABEL;
@@ -105,6 +109,18 @@ class StandardAccessModeTest
 
         // WRITE
         assertThat( mode.allowsWrites() ).isEqualTo( false );
+
+        // CREATE
+        assertThat( mode.allowsCreateNode( new int[]{(int) A} ) ).isEqualTo( false );
+        assertThat( mode.allowsCreateRelationship( R1 ) ).isEqualTo( false );
+
+        // DELETE
+        assertThat( mode.allowsDeleteNode( () -> Labels.from( A ) ) ).isEqualTo( false );
+        assertThat( mode.allowsDeleteRelationship( R1 ) ).isEqualTo( false );
+
+        // SET/REMOVE LABEL
+        assertThat( mode.allowsSetLabel( A ) ).isEqualTo( false );
+        assertThat( mode.allowsRemoveLabel( A ) ).isEqualTo( false );
 
         // NAME MANAGEMENT
         assertThat( mode.allowsTokenCreates( PrivilegeAction.CREATE_LABEL ) ).isEqualTo( false );
@@ -1324,5 +1340,265 @@ class StandardAccessModeTest
 
         // THEN
         assertThat( mode.allowsWrites() ).isEqualTo( true );
+    }
+
+    // CREATE
+
+    @Test
+    void shouldAllowCreateNodes() throws Exception
+    {
+        // WHEN
+        // GRANT CREATE ON GRAPH neo4j NODES *
+        var privilege = new ResourcePrivilege( GRANT, CREATE_ELEMENT, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+
+        // THEN
+        assertThat( mode.allowsCreateNode( null ) ).isEqualTo( true );
+        assertThat( mode.allowsCreateNode( new int[]{(int) A} ) ).isEqualTo( true );
+        assertThat( mode.allowsCreateNode( new int[]{(int) B} ) ).isEqualTo( true );
+        assertThat( mode.allowsCreateNode( new int[]{(int) A, (int) B} ) ).isEqualTo( true );
+    }
+
+    @Test
+    void shouldAllowCreateSpecificNode() throws Exception
+    {
+        // WHEN
+        // GRANT CREATE ON GRAPH neo4j NODES A
+        var privilege = new ResourcePrivilege( GRANT, CREATE_ELEMENT, new Resource.GraphResource(), new LabelSegment( "A" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+
+        // THEN
+        assertThat( mode.allowsCreateNode( null ) ).isEqualTo( false );
+        assertThat( mode.allowsCreateNode( new int[]{(int) A} ) ).isEqualTo( true );
+        assertThat( mode.allowsCreateNode( new int[]{(int) B} ) ).isEqualTo( false );
+        assertThat( mode.allowsCreateNode( new int[]{(int) A, (int) B} ) ).isEqualTo( false );
+    }
+
+    @Test
+    void shouldDenyCreateNode() throws Exception
+    {
+        // WHEN
+        // GRANT CREATE ON GRAPH neo4j NODES *
+        // DENY CREATE ON GRAPH neo4j NODES A
+        var privilege1 = new ResourcePrivilege( GRANT, CREATE_ELEMENT, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 = new ResourcePrivilege( DENY, CREATE_ELEMENT, new Resource.GraphResource(), new LabelSegment( "A" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+
+        // THEN
+        assertThat( mode.allowsCreateNode( null ) ).isEqualTo( true );
+        assertThat( mode.allowsCreateNode( new int[]{(int) A} ) ).isEqualTo( false );
+        assertThat( mode.allowsCreateNode( new int[]{(int) B} ) ).isEqualTo( true );
+        assertThat( mode.allowsCreateNode( new int[]{(int) A, (int) B} ) ).isEqualTo( false );
+    }
+
+    @Test
+    void shouldAllowCreateRelationships() throws Exception
+    {
+        // WHEN
+        // GRANT CREATE ON GRAPH neo4j RELATIONSHIP *
+        var privilege = new ResourcePrivilege( GRANT, CREATE_ELEMENT, new Resource.GraphResource(), RelTypeSegment.ALL, DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+
+        // THEN
+        assertThat( mode.allowsCreateRelationship( R1 ) ).isEqualTo( true );
+        assertThat( mode.allowsCreateRelationship( R2 ) ).isEqualTo( true );
+    }
+
+    @Test
+    void shouldAllowCreateSpecificRelationships() throws Exception
+    {
+        // WHEN
+        // GRANT CREATE ON GRAPH neo4j RELATIONSHIP R1
+        var privilege = new ResourcePrivilege( GRANT, CREATE_ELEMENT, new Resource.GraphResource(), new RelTypeSegment( "R1" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+
+        // THEN
+        assertThat( mode.allowsCreateRelationship( R1 ) ).isEqualTo( true );
+        assertThat( mode.allowsCreateRelationship( R2 ) ).isEqualTo( false );
+    }
+
+    @Test
+    void shouldDenyCreateRelationships() throws Exception
+    {
+        // WHEN
+        // GRANT CREATE ON GRAPH neo4j RELATIONSHIP *
+        // DENY CREATE ON GRAPH neo4j RELATIONSHIP R1
+        var privilege1 = new ResourcePrivilege( GRANT, CREATE_ELEMENT, new Resource.GraphResource(), RelTypeSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 = new ResourcePrivilege( DENY, CREATE_ELEMENT, new Resource.GraphResource(), new RelTypeSegment( "R1" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+
+        // THEN
+        assertThat( mode.allowsCreateRelationship( R1 ) ).isEqualTo( false );
+        assertThat( mode.allowsCreateRelationship( R2 ) ).isEqualTo( true );
+    }
+
+    // DELETE
+
+    @Test
+    void shouldAllowDeleteNodes() throws Exception
+    {
+        // WHEN
+        // GRANT DELETE ON GRAPH neo4j NODES *
+        var privilege = new ResourcePrivilege( GRANT, DELETE_ELEMENT, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+
+        // THEN
+        assertThat( mode.allowsDeleteNode( () -> Labels.NONE ) ).isEqualTo( true );
+        assertThat( mode.allowsDeleteNode( () -> Labels.from( A ) ) ).isEqualTo( true );
+        assertThat( mode.allowsDeleteNode( () -> Labels.from( B ) ) ).isEqualTo( true );
+        assertThat( mode.allowsDeleteNode( () -> Labels.from( A, B ) ) ).isEqualTo( true );
+    }
+
+    @Test
+    void shouldAllowDeleteSpecificNode() throws Exception
+    {
+        // WHEN
+        // GRANT DELETE ON GRAPH neo4j NODES A
+        var privilege = new ResourcePrivilege( GRANT, DELETE_ELEMENT, new Resource.GraphResource(), new LabelSegment( "A" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+
+        // THEN
+        assertThat( mode.allowsDeleteNode( () -> Labels.NONE ) ).isEqualTo( false );
+        assertThat( mode.allowsDeleteNode( () -> Labels.from( A ) ) ).isEqualTo( true );
+        assertThat( mode.allowsDeleteNode( () -> Labels.from( B ) ) ).isEqualTo( false );
+        assertThat( mode.allowsDeleteNode( () -> Labels.from( A, B ) ) ).isEqualTo( false );
+    }
+
+    @Test
+    void shouldDenyDeleteNode() throws Exception
+    {
+        // WHEN
+        // GRANT DELETE ON GRAPH neo4j NODES *
+        // DENY DELETE ON GRAPH neo4j NODES A
+        var privilege1 = new ResourcePrivilege( GRANT, DELETE_ELEMENT, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 = new ResourcePrivilege( DENY, DELETE_ELEMENT, new Resource.GraphResource(), new LabelSegment( "A" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+
+        // THEN
+        assertThat( mode.allowsDeleteNode( () -> Labels.NONE ) ).isEqualTo( true );
+        assertThat( mode.allowsDeleteNode( () -> Labels.from( A ) ) ).isEqualTo( false );
+        assertThat( mode.allowsDeleteNode( () -> Labels.from( B ) ) ).isEqualTo( true );
+        assertThat( mode.allowsDeleteNode( () -> Labels.from( A, B ) ) ).isEqualTo( false );
+    }
+
+    @Test
+    void shouldAllowDeleteRelationships() throws Exception
+    {
+        // WHEN
+        // GRANT DELETE ON GRAPH neo4j RELATIONSHIP *
+        var privilege = new ResourcePrivilege( GRANT, DELETE_ELEMENT, new Resource.GraphResource(), RelTypeSegment.ALL, DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+
+        // THEN
+        assertThat( mode.allowsDeleteRelationship( R1 ) ).isEqualTo( true );
+        assertThat( mode.allowsDeleteRelationship( R2 ) ).isEqualTo( true );
+    }
+
+    @Test
+    void shouldAllowDeleteSpecificRelationships() throws Exception
+    {
+        // WHEN
+        // GRANT DELETE ON GRAPH neo4j RELATIONSHIP R1
+        var privilege = new ResourcePrivilege( GRANT, DELETE_ELEMENT, new Resource.GraphResource(), new RelTypeSegment( "R1" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+
+        // THEN
+        assertThat( mode.allowsDeleteRelationship( R1 ) ).isEqualTo( true );
+        assertThat( mode.allowsDeleteRelationship( R2 ) ).isEqualTo( false );
+    }
+
+    @Test
+    void shouldDenyDeleteRelationships() throws Exception
+    {
+        // WHEN
+        // GRANT DELETE ON GRAPH neo4j RELATIONSHIP *
+        // DENY DELETE ON GRAPH neo4j RELATIONSHIP R1
+        var privilege1 = new ResourcePrivilege( GRANT, DELETE_ELEMENT, new Resource.GraphResource(), RelTypeSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 = new ResourcePrivilege( DENY, DELETE_ELEMENT, new Resource.GraphResource(), new RelTypeSegment( "R1" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+
+        // THEN
+        assertThat( mode.allowsDeleteRelationship( R1 ) ).isEqualTo( false );
+        assertThat( mode.allowsDeleteRelationship( R2 ) ).isEqualTo( true );
+    }
+
+    // SET LABEL
+
+    @Test
+    void shouldAllowSetLabel() throws Exception
+    {
+        // GRANT SET LABEL * ON GRAPH neo4j
+        var privilege = new ResourcePrivilege( GRANT, SET_LABEL, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+
+        // THEN
+        assertThat( mode.allowsSetLabel( A ) ).isEqualTo( true );
+        assertThat( mode.allowsSetLabel( B ) ).isEqualTo( true );
+    }
+
+    @Test
+    void shouldAllowSetSpecificLabel() throws Exception
+    {
+        // GRANT SET LABEL A ON GRAPH neo4j
+        var privilege = new ResourcePrivilege( GRANT, SET_LABEL, new Resource.GraphResource(), new LabelSegment( "A" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+
+        // THEN
+        assertThat( mode.allowsSetLabel( A ) ).isEqualTo( true );
+        assertThat( mode.allowsSetLabel( B ) ).isEqualTo( false );
+    }
+
+    @Test
+    void shouldDenySetLabelSpecificLabel() throws Exception
+    {
+        // GRANT SET LABEL * ON GRAPH neo4j
+        // DENY SET LABEL A ON GRAPH neo4j
+        var privilege1 = new ResourcePrivilege( GRANT, SET_LABEL, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 = new ResourcePrivilege( DENY, SET_LABEL, new Resource.GraphResource(), new LabelSegment( "A" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+
+        // THEN
+        assertThat( mode.allowsSetLabel( A ) ).isEqualTo( false );
+        assertThat( mode.allowsSetLabel( B ) ).isEqualTo( true );
+    }
+
+    // REMOVE LABEL
+
+    @Test
+    void shouldAllowRemoveLabel() throws Exception
+    {
+        // GRANT REMOVE LABEL * ON GRAPH neo4j
+        var privilege = new ResourcePrivilege( GRANT, REMOVE_LABEL, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+
+        // THEN
+        assertThat( mode.allowsRemoveLabel( A ) ).isEqualTo( true );
+        assertThat( mode.allowsRemoveLabel( B ) ).isEqualTo( true );
+    }
+
+    @Test
+    void shouldAllowRemoveSpecificLabel() throws Exception
+    {
+        // GRANT REMOVE LABEL A ON GRAPH neo4j
+        var privilege = new ResourcePrivilege( GRANT, REMOVE_LABEL, new Resource.GraphResource(), new LabelSegment( "A" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+
+        // THEN
+        assertThat( mode.allowsRemoveLabel( A ) ).isEqualTo( true );
+        assertThat( mode.allowsRemoveLabel( B ) ).isEqualTo( false );
+    }
+
+    @Test
+    void shouldDenyRemoveLabelSpecificLabel() throws Exception
+    {
+        // GRANT REMOVE LABEL * ON GRAPH neo4j
+        // DENY REMOVE LABEL A ON GRAPH neo4j
+        var privilege1 = new ResourcePrivilege( GRANT, REMOVE_LABEL, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 = new ResourcePrivilege( DENY, REMOVE_LABEL, new Resource.GraphResource(), new LabelSegment( "A" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+
+        // THEN
+        assertThat( mode.allowsRemoveLabel( A ) ).isEqualTo( false );
+        assertThat( mode.allowsRemoveLabel( B ) ).isEqualTo( true );
     }
 }

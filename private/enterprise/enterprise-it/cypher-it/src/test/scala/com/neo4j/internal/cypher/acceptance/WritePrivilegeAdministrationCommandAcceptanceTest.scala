@@ -1203,7 +1203,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     the[AuthorizationViolationException] thrownBy {
       executeOn("foo", "joe", "soap", "CREATE (n:B {name: 'a'}) RETURN 1 AS dummy")
-    } should have message "Write operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
+    } should have message "Create node with labels 'B' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
     selectDatabase("foo")
     execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "b")))
@@ -1232,7 +1232,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     the[AuthorizationViolationException] thrownBy {
       executeOn("foo", "joe", "soap", "CREATE (:B {name: 'a'}) RETURN 1 AS dummy")
-    } should have message "Write operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
+    } should have message "Create node with labels 'B' is not allowed for user 'joe' with roles [PUBLIC, custom]."
 
     selectDatabase("foo")
     execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "b")))

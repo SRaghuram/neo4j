@@ -196,7 +196,7 @@ class PermissionsEndToEndTest
         } );
 
         assertEquals( Forbidden.code().serialize(), e.code() );
-        assertEquals( "Write operations are not allowed for user 'neo4j' with roles [PUBLIC, admin] restricted to ACCESS.", e.getMessage() );
+        assertEquals( "Create node with labels '' is not allowed for user 'neo4j' with roles [PUBLIC, admin] restricted to ACCESS.", e.getMessage() );
     }
 
     @Test
@@ -212,7 +212,7 @@ class PermissionsEndToEndTest
         } );
 
         assertEquals( Forbidden.code().serialize(), e.code() );
-        assertEquals( "Write operations are not allowed for user 'userWithAccessPermission' with roles [PUBLIC, access] restricted to ACCESS.",
+        assertEquals( "Create node with labels '' is not allowed for user 'userWithAccessPermission' with roles [PUBLIC, access] restricted to ACCESS.",
                       e.getMessage() );
     }
 
