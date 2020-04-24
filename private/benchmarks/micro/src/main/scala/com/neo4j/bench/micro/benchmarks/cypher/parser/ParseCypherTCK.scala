@@ -9,6 +9,7 @@ import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.RNGState
+import org.neo4j.cypher.internal.ast.Statement
 import org.opencypher.tools.tck.api.CypherTCK
 import org.opencypher.tools.tck.api.Execute
 import org.openjdk.jmh.annotations.Benchmark
@@ -35,7 +36,7 @@ class ParseCypherTCK extends BaseParserBenchmark {
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
-  def parseNextQuery(threadState: ParseCypherTCKState): Unit = {
+  def parseNextQuery(threadState: ParseCypherTCKState): Statement = {
     threadState.parseNextQuery()
   }
 }
@@ -66,9 +67,9 @@ class ParseCypherTCKState extends BaseParserState {
     queryIndex = 0
   }
 
-  def parseNextQuery(): Unit = {
-    parseQuery(ParseCypherTCK.shuffledTckQueries(queryIndex))
+  def parseNextQuery(): Statement = {
     queryIndex = (queryIndex + 1) % ParseCypherTCK.shuffledTckQueries.length
+    parseQuery(ParseCypherTCK.shuffledTckQueries(queryIndex))
   }
 
   @TearDown
