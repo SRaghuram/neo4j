@@ -321,7 +321,7 @@ public class FrekiCommandSerializationTest
             DenseRelationships relationships = map.getIfAbsentPut( type, new DenseRelationships( 0, type ) );
             for ( int i = 0, count = random.nextInt( 1, 5 ); i < count; i++ )
             {
-                relationships.create( new DenseRelationships.DenseRelationship( randomLargeId(), randomLargeId(), random.nextBoolean(), randomProperties() ) );
+                relationships.insert( new DenseRelationships.DenseRelationship( randomLargeId(), randomLargeId(), random.nextBoolean(), randomProperties() ) );
             }
             for ( int i = 0, count = random.nextInt( 1, 5 ); i < count; i++ )
             {

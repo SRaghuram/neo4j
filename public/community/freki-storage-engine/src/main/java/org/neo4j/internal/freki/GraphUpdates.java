@@ -20,6 +20,7 @@
 package org.neo4j.internal.freki;
 
 import org.eclipse.collections.api.IntIterable;
+import org.eclipse.collections.api.iterator.IntIterator;
 import org.eclipse.collections.api.map.primitive.IntObjectMap;
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
@@ -30,6 +31,7 @@ import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -139,6 +141,9 @@ class GraphUpdates
 
         abstract void deleteRelationship( long internalId, int type, long otherNode, boolean outgoing );
 
+        abstract void updateRelationshipProperties( long internalId, int type, long otherNode, boolean outgoing,
+                Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed );
+
         abstract void delete();
     }
 
@@ -238,6 +243,13 @@ class GraphUpdates
         public void deleteRelationship( long internalId, int type, long otherNode, boolean outgoing )
         {
             forRelationships().deleteRelationship( internalId, type, otherNode, outgoing );
+        }
+
+        @Override
+        void updateRelationshipProperties( long internalId, int type, long otherNode, boolean outgoing, Iterable<StorageProperty> added,
+                Iterable<StorageProperty> changed, IntIterable removed )
+        {
+            forRelationships().updateRelationshipProperties( internalId, type, otherNode, outgoing, added, changed, removed );
         }
 
         @Override
@@ -610,6 +622,13 @@ class GraphUpdates
         }
 
         @Override
+        void updateRelationshipProperties( long internalId, int type, long otherNode, boolean outgoing, Iterable<StorageProperty> added,
+                Iterable<StorageProperty> changed, IntIterable removed )
+        {
+            dataFor( Header.OFFSET_RELATIONSHIPS ).updateRelationshipProperties( internalId, type, nodeId, otherNode, outgoing, added, changed, removed );
+        }
+
+        @Override
         public void delete()
         {
             this.deleted = true;
@@ -677,7 +696,7 @@ class GraphUpdates
             // this counter in an explicit field in the small record. This call keeps that counter updated.
             sparse.dataFor( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID ).registerInternalRelationshipId( internalId );
             sparse.dataFor( Header.OFFSET_DEGREES ).addDegree( type, calculateDirection( targetNode, outgoing ), 1 );
-            relationshipUpdatesForType( type ).create( new DenseRelationships.DenseRelationship( internalId, targetNode, outgoing, properties ) );
+            relationshipUpdatesForType( type ).insert( new DenseRelationships.DenseRelationship( internalId, targetNode, outgoing, properties ) );
         }
 
         private RelationshipDirection calculateDirection( long targetNode, boolean outgoing )
@@ -696,13 +715,45 @@ class GraphUpdates
             // TODO have some way of at least saying whether or not this relationship had properties, so that this loading can be skipped completely
             sparse.dataFor( Header.OFFSET_DEGREES ).addDegree( type, calculateDirection( otherNode, outgoing ), -1 );
             relationshipUpdatesForType( type ).delete( new DenseRelationships.DenseRelationship( internalId, otherNode, outgoing,
-                    store.loadRelationshipPropertiesForRemoval( nodeId(), internalId, type, otherNode, outgoing, cursorTracer ) ) );
+                    store.loadRelationshipProperties( nodeId(), internalId, type, otherNode, outgoing, PropertyUpdate::remove, cursorTracer ) ) );
         }
 
         @Override
         public void updateNodeProperties( Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
         {
             throw new UnsupportedOperationException();
+        }
+
+        @Override
+        void updateRelationshipProperties( long internalId, int type, long otherNode, boolean outgoing, Iterable<StorageProperty> added,
+                Iterable<StorageProperty> changedIterable, IntIterable removedIterable )
+        {
+            MutableIntObjectMap<PropertyUpdate> properties =
+                    store.loadRelationshipProperties( nodeId(), internalId, type, otherNode, outgoing, PropertyUpdate::add, cursorTracer );
+            for ( StorageProperty property : added )
+            {
+                int key = property.propertyKeyId();
+                properties.put( key, PropertyUpdate.add( key, serializeValue( bigValueStore, property.value(), bigValueConsumer ) ) );
+            }
+            Iterator<StorageProperty> changed = changedIterable.iterator();
+            IntIterator removed = removedIterable.intIterator();
+            if ( changed.hasNext() || removed.hasNext() )
+            {
+                while ( changed.hasNext() )
+                {
+                    StorageProperty property = changed.next();
+                    int key = property.propertyKeyId();
+                    PropertyUpdate existing = properties.get( key );
+                    properties.put( key, PropertyUpdate.change( key, existing.after, serializeValue( bigValueStore, property.value(), bigValueConsumer ) ) );
+                }
+                while ( removed.hasNext() )
+                {
+                    int key = removed.next();
+                    PropertyUpdate existing = properties.get( key );
+                    properties.put( key, PropertyUpdate.remove( key, existing.after ) );
+                }
+            }
+            relationshipUpdatesForType( type ).insert( new DenseRelationships.DenseRelationship( internalId, otherNode, outgoing, properties ) );
         }
 
         @Override

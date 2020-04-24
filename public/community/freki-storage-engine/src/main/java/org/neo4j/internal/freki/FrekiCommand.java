@@ -125,7 +125,6 @@ abstract class FrekiCommand implements StorageCommand
      *
      * Property: added, changed, removed
      * Relationship: created(incl. added properties), changed properties, deleted(incl. removed properties)
-     * Degrees: for every changed type/direction(out,in,loop): previous degree, increment(arbitrary +N or -N)
      *
      * There's no such thing as deleting a node, you delete all its entries explicitly and it's gone. This is a good control
      * that it's recoverable because we're not allowed to remove anything not covered by the command because otherwise we
@@ -161,13 +160,13 @@ abstract class FrekiCommand implements StorageCommand
             channel.putInt( relationshipUpdates.size() );
             for ( IntObjectPair<DenseRelationships> relationships : relationshipUpdates.keyValuesView() )
             {
-                // type and degrees
+                // Type
                 DenseRelationships relationshipsOfType = relationships.getTwo();
                 channel.putInt( relationships.getOne() );
 
                 // Created
-                channel.putInt( relationshipsOfType.created.size() ); // number of relationships of this type
-                for ( DenseRelationships.DenseRelationship relationship : relationshipsOfType.created )
+                channel.putInt( relationshipsOfType.inserted.size() ); // number of relationships of this type
+                for ( DenseRelationships.DenseRelationship relationship : relationshipsOfType.inserted )
                 {
                     writeRelationship( channel, relationship );
                 }
@@ -302,7 +301,7 @@ abstract class FrekiCommand implements StorageCommand
             {
                 int type = channel.getInt();
                 DenseRelationships relationshipsOfType = relationships.getIfAbsentPut( type, new DenseRelationships( nodeId, type ) );
-                readRelationships( channel, relationshipsOfType::create );
+                readRelationships( channel, relationshipsOfType::insert );
                 readRelationships( channel, relationshipsOfType::delete );
             }
 

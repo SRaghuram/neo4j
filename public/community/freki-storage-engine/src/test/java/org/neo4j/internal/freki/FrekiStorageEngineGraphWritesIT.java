@@ -124,11 +124,13 @@ import org.neo4j.values.storable.IntValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
+import static java.lang.Integer.min;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;
+import static java.util.stream.Collectors.toMap;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -1020,7 +1022,7 @@ class FrekiStorageEngineGraphWritesIT
                     if ( existenceOfNodeIds.add( otherNodeId ) )
                     {
                         target.visitCreatedNode( otherNodeId );
-                        Set<StorageProperty> otherNodeProperties = randomProperties();
+                        Set<StorageProperty> otherNodeProperties = randomProperties( random.nextInt( 3 ) );
                         target.visitNodePropertyChanges( otherNodeId, otherNodeProperties, emptyList(), IntSets.immutable.empty() );
                         expectedOtherNodesProperties.put( otherNodeId, otherNodeProperties );
                     }
@@ -1037,7 +1039,8 @@ class FrekiStorageEngineGraphWritesIT
                         endNode = nodeId;
                     }
                     RelationshipSpec relationship =
-                            createRelationship( target, txCommandCreationContext, startNode, random.nextInt( 4 ), endNode, randomProperties() );
+                            createRelationship( target, txCommandCreationContext, startNode, random.nextInt( 4 ), endNode, randomProperties(
+                                    random.nextInt( 3 ) ) );
                     createdRelationships.add( relationship );
                 }
                 for ( int i = 0; i < round && !expectedRelationships.isEmpty(); i++ )
@@ -1219,6 +1222,90 @@ class FrekiStorageEngineGraphWritesIT
             assertProperties( relationshipProperties, propertyCursor );
             nodeCursor.properties( propertyCursor );
             assertProperties( nodeProperties, propertyCursor );
+        }
+    }
+
+    @Test
+    void shouldChangeRelationshipProperties() throws Exception
+    {
+        // given
+        long nodeId = commandCreationContext.reserveNode();
+        createAndApplyTransaction( target -> target.visitCreatedNode( nodeId ) );
+
+        // when
+        Set<RelationshipSpec> expectedRelationships = new HashSet<>();
+        for ( int t = 0; t < 30; t++ )
+        {
+            createAndApplyTransaction( target ->
+            {
+                CommandCreationContext txContext = storageEngine.newCommandCreationContext( NULL );
+
+                // Change some properties on existing relationships
+                RelationshipSpec[] existingRelationships = expectedRelationships.toArray( new RelationshipSpec[0] );
+                int numRelationshipsChanged = min( existingRelationships.length, random.nextInt( 1, 10 ) );
+                MutableLongSet changedRelationships = LongSets.mutable.empty();
+                for ( int r = 0; r < numRelationshipsChanged; r++ )
+                {
+                    RelationshipSpec relationship = random.among( existingRelationships );
+                    if ( !changedRelationships.add( relationship.id ) )
+                    {
+                        r--;
+                        continue;
+                    }
+
+                    List<StorageProperty> added = new ArrayList<>();
+                    List<StorageProperty> changed = new ArrayList<>();
+                    MutableIntSet removed = IntSets.mutable.empty();
+                    int numChanges = min( relationship.properties.size(), random.nextInt( 1, 3 ) );
+                    Map<Integer,Value> map = relationship.properties.stream().collect( toMap( StorageProperty::propertyKeyId, StorageProperty::value ) );
+                    MutableIntSet changedKeys = IntSets.mutable.empty();
+                    for ( int c = 0; c < numChanges; c++ )
+                    {
+                        int key = random.nextInt( 10 );
+                        if ( !changedKeys.add( key ) )
+                        {
+                            c--;
+                            continue;
+                        }
+                        Value existingValue = map.get( key );
+                        if ( existingValue != null )
+                        {
+                            if ( random.nextBoolean() )
+                            {
+                                Value newValue = random.nextValue();
+                                changed.add( new PropertyKeyValue( key, newValue ) );
+                                map.put( key, newValue );
+                            }
+                            else
+                            {
+                                removed.add( key );
+                                map.remove( key );
+                            }
+                        }
+                        else
+                        {
+                            Value newValue = random.nextValue();
+                            added.add( new PropertyKeyValue( key, newValue ) );
+                            map.put( key, newValue );
+                        }
+                    }
+
+                    target.visitRelPropertyChanges( relationship.id, relationship.type, relationship.startNodeId, relationship.endNodeId,
+                            added, changed, removed );
+                    relationship.properties.clear();
+                    map.forEach( ( key, value ) -> relationship.properties.add( new PropertyKeyValue( key, value ) ) );
+                }
+
+                // Create some more relationships
+                for ( int i = 0; i < 10; i++ )
+                {
+                    RelationshipSpec relationship = new RelationshipSpec( nodeId, 0, nodeId, randomProperties( random.nextInt( 1, 5 ) ), txContext );
+                    expectedRelationships.add( relationship );
+                    relationship.create( target );
+                }
+            } );
+
+            assertContentsOfNode( nodeId, LongSets.immutable.empty(), emptySet(), expectedRelationships );
         }
     }
 
@@ -1471,10 +1558,9 @@ class FrekiStorageEngineGraphWritesIT
         }
     }
 
-    private Set<StorageProperty> randomProperties()
+    private Set<StorageProperty> randomProperties( int numProperties )
     {
         Set<StorageProperty> properties = new HashSet<>();
-        int numProperties = random.nextInt( 3 );
         for ( int i = 0; i < numProperties; i++ )
         {
             properties.add( new PropertyKeyValue( i, random.nextValue() ) );

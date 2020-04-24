@@ -33,7 +33,7 @@ class DenseRelationships
     private final long nodeId;
     final int type;
     // TODO consider consolidating these lists into one with a Mode on each individual relationship?
-    final List<DenseRelationship> created = new ArrayList<>();
+    final List<DenseRelationship> inserted = new ArrayList<>();
     final List<DenseRelationship> deleted = new ArrayList<>();
 
     DenseRelationships( long nodeId, int type )
@@ -42,17 +42,17 @@ class DenseRelationships
         this.type = type;
     }
 
-    void create( DenseRelationship relationship )
+    void insert( DenseRelationship relationship )
     {
-        add( relationship, created, 1 );
+        add( relationship, inserted );
     }
 
     void delete( DenseRelationship relationship )
     {
-        add( relationship, deleted, -1 );
+        add( relationship, deleted );
     }
 
-    void add( DenseRelationship relationship, List<DenseRelationship> list, int increment )
+    void add( DenseRelationship relationship, List<DenseRelationship> list )
     {
         list.add( relationship );
     }
@@ -69,13 +69,13 @@ class DenseRelationships
             return false;
         }
         DenseRelationships that = (DenseRelationships) o;
-        return type == that.type && Objects.equals( created, that.created ) && Objects.equals( deleted, that.deleted );
+        return type == that.type && Objects.equals( inserted, that.inserted ) && Objects.equals( deleted, that.deleted );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( type, created, deleted );
+        return Objects.hash( type, inserted, deleted );
     }
 
     static class DenseRelationship
@@ -113,56 +113,6 @@ class DenseRelationships
         public int hashCode()
         {
             return Objects.hash( internalId, otherNodeId, outgoing, propertyUpdates );
-        }
-    }
-
-    static class Degree
-    {
-        private int outgoing;
-        private int incoming;
-        private int loop;
-
-        Degree( int outgoing, int incoming, int loop )
-        {
-            this.outgoing = outgoing;
-            this.incoming = incoming;
-            this.loop = loop;
-        }
-
-        int outgoing()
-        {
-            return outgoing;
-        }
-
-        int incoming()
-        {
-            return incoming;
-        }
-
-        int loop()
-        {
-            return loop;
-        }
-
-        @Override
-        public boolean equals( Object o )
-        {
-            if ( this == o )
-            {
-                return true;
-            }
-            if ( o == null || getClass() != o.getClass() )
-            {
-                return false;
-            }
-            Degree degree = (Degree) o;
-            return outgoing == degree.outgoing && incoming == degree.incoming && loop == degree.loop;
-        }
-
-        @Override
-        public int hashCode()
-        {
-            return Objects.hash( outgoing, incoming, loop );
         }
     }
 }

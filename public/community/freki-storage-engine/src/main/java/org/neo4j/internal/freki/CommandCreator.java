@@ -107,9 +107,16 @@ class CommandCreator implements TxStateVisitor
     }
 
     @Override
-    public void visitRelPropertyChanges( long relationshipId, Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
+    public void visitRelPropertyChanges( long relationshipId, int type, long startNode, long endNode,
+            Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+        long internalRelationshipId = internalRelationshipIdFromRelationshipId( relationshipId );
+        graphUpdates.getOrLoad( startNode ).updateRelationshipProperties( internalRelationshipId, type, endNode, true,
+                added, changed, removed );
+        if ( startNode != endNode )
+        {
+            graphUpdates.getOrLoad( endNode ).updateRelationshipProperties( internalRelationshipId, type, startNode, false, added, changed, removed );
+        }
     }
 
     @Override
