@@ -340,20 +340,8 @@ public class EnterpriseBuiltInDbmsProcedures
     }
 
     @SystemProcedure
-    @Description( "List all memory pools currently registered at this instance that are visible to the user." )
-    @Procedure( name = "dbms.listPools", mode = DBMS )
-    public Stream<MemoryPoolResult> listMemoryPools()
-    {
-        var memoryPools = resolver.resolveDependency( MemoryPools.class );
-        var registeredPools = memoryPools.getPools();
-        registeredPools.sort( Comparator.comparing( ScopedMemoryPool::group )
-                .thenComparing( ScopedMemoryPool::databaseName ) );
-        return registeredPools.stream().map( MemoryPoolResult::new );
-    }
-
-    @SystemProcedure
     @Description( "List all memory pools, including sub pools, currently registered at this instance that are visible to the user." )
-    @Procedure( name = "dbms.listPoolsExt", mode = DBMS )
+    @Procedure( name = "dbms.listPools", mode = DBMS )
     public Stream<MemoryPoolResult> listMemoryPoolsExt()
     {
         var memoryPools = resolver.resolveDependency( MemoryPools.class );
