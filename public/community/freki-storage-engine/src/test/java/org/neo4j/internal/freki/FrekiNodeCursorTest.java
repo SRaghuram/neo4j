@@ -687,19 +687,22 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         node().store();
         node().store();
         Node node = node();
+        Node dude = node();
+        node().store();
         Node otherNode = node();
         node.relationship( type, otherNode ); // OUTGOING
-        node().store();
-        node().store();
         otherNode.relationship( type, node ); // INCOMING
+        otherNode.relationship( type, dude ); // INCOMING
         node.relationship( type, node );      // LOOP
         otherNode.store();
         node.storeAndPlaceNodeCursorAt();
+        dude.store();
 
         MutableMultimap<Long,Long> createdRels = Multimaps.mutable.set.empty();
         createdRels.put( node.id(), node.id() );
         createdRels.put( node.id(), otherNode.id() );
         createdRels.put( otherNode.id(), node.id() );
+        createdRels.put( otherNode.id(), dude.id() );
 
         MutableMultimap<Long,Long> actualRels = Multimaps.mutable.set.empty();
         try ( FrekiRelationshipScanCursor relationshipCursor = cursorFactory.allocateRelationshipScanCursor( NULL ) )

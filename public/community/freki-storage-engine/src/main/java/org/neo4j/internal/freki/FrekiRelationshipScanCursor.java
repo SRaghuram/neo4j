@@ -59,13 +59,14 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
                 if ( needsLoading )
                 {
                     needsLoading = false;
-                    traversalCursor.init( scanNodeId++, NULL, selection ); //load next node
+                    traversalCursor.init( scanNodeId, NULL, selection ); //load next node
                 }
 
                 if ( traversalCursor.next() )
                 {
                     return true; // found a relationship
                 }
+                scanNodeId++;
                 needsLoading = true; // reached end of relationships of this node
             }
             inScan = false;
