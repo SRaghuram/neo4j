@@ -374,6 +374,9 @@ class OperationsTest
     {
         // given
         when( relationshipCursor.next() ).thenReturn( true );
+        when( relationshipCursor.type() ).thenReturn( 1 );
+        when( relationshipCursor.sourceNodeReference() ).thenReturn( 2L );
+        when( relationshipCursor.targetNodeReference() ).thenReturn( 3L );
         int propertyKeyId = 8;
         Value value = Values.of( 9 );
         when( propertyCursor.next() ).thenReturn( true );
@@ -385,7 +388,7 @@ class OperationsTest
 
         // then
         order.verify( locks ).acquireExclusive( LockTracer.NONE, ResourceTypes.RELATIONSHIP, 123 );
-        order.verify( txState ).relationshipDoReplaceProperty( 123, propertyKeyId, NO_VALUE, value );
+        order.verify( txState ).relationshipDoReplaceProperty( 123, 1, 2L, 3L, propertyKeyId, NO_VALUE, value );
     }
 
     @Test
@@ -412,6 +415,9 @@ class OperationsTest
     {
         // given
         when( relationshipCursor.next() ).thenReturn( true );
+        when( relationshipCursor.type() ).thenReturn( 1 );
+        when( relationshipCursor.sourceNodeReference() ).thenReturn( 2L );
+        when( relationshipCursor.targetNodeReference() ).thenReturn( 3L );
         when( transaction.hasTxStateWithChanges() ).thenReturn( true );
         txState.relationshipDoCreate( 123, 42, 43, 45 );
         int propertyKeyId = 8;
@@ -422,7 +428,7 @@ class OperationsTest
 
         // then
         verify( locks, never() ).acquireExclusive( LockTracer.NONE, ResourceTypes.RELATIONSHIP, 123 );
-        verify( txState ).relationshipDoReplaceProperty( 123, propertyKeyId, NO_VALUE, value );
+        verify( txState ).relationshipDoReplaceProperty( 123, 1, 2L, 3L, propertyKeyId, NO_VALUE, value );
     }
 
     @Test

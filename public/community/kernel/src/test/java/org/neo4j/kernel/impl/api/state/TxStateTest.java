@@ -930,15 +930,15 @@ abstract class TxStateTest
         assertTrue( observedRevisions.add( state.getDataRevision() ) );
         assertTrue( state.hasDataChanges() );
 
-        state.relationshipDoReplaceProperty( 0, 0, Values.NO_VALUE, Values.booleanValue( true ) );
+        state.relationshipDoReplaceProperty( 0, 0, 0, 0, 0, Values.NO_VALUE, Values.booleanValue( true ) );
         assertTrue( observedRevisions.add( state.getDataRevision() ) );
         assertTrue( state.hasDataChanges() );
 
-        state.relationshipDoReplaceProperty( 0, 0, Values.booleanValue( true ), Values.booleanValue( false ) );
+        state.relationshipDoReplaceProperty( 0, 0, 0, 0, 0, Values.booleanValue( true ), Values.booleanValue( false ) );
         assertTrue( observedRevisions.add( state.getDataRevision() ) );
         assertTrue( state.hasDataChanges() );
 
-        state.relationshipDoRemoveProperty( 0, 0 );
+        state.relationshipDoRemoveProperty( 0, 0, 0, 0, 0 );
         assertTrue( observedRevisions.add( state.getDataRevision() ) );
         assertTrue( state.hasDataChanges() );
 

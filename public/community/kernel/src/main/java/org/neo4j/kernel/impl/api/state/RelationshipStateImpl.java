@@ -93,27 +93,24 @@ class RelationshipStateImpl extends EntityStateImpl implements RelationshipState
         }
     };
 
-    private long startNode = -1;
-    private long endNode = -1;
-    private int type = -1;
+    private final long startNode;
+    private final long endNode;
+    private final int type;
     private boolean deleted;
 
-    static RelationshipStateImpl createRelationshipStateImpl( long id, CollectionsFactory collectionsFactory, MemoryTracker memoryTracker )
+    static RelationshipStateImpl createRelationshipStateImpl( long id, int type, long startNode, long endNode, CollectionsFactory collectionsFactory,
+            MemoryTracker memoryTracker )
     {
         memoryTracker.allocateHeap( SHALLOW_SIZE );
-        return new RelationshipStateImpl( id, collectionsFactory, memoryTracker );
+        return new RelationshipStateImpl( id, type, startNode, endNode, collectionsFactory, memoryTracker );
     }
 
-    private RelationshipStateImpl( long id, CollectionsFactory collectionsFactory, MemoryTracker memoryTracker )
+    private RelationshipStateImpl( long id, int type, long startNode, long endNode, CollectionsFactory collectionsFactory, MemoryTracker memoryTracker )
     {
         super( id, collectionsFactory, memoryTracker );
-    }
-
-    void setMetaData( long startNode, long endNode, int type )
-    {
+        this.type = type;
         this.startNode = startNode;
         this.endNode = endNode;
-        this.type = type;
     }
 
     void setDeleted()

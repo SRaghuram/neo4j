@@ -36,9 +36,7 @@ import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
@@ -216,7 +214,7 @@ class TxStateTransactionDataViewTest
         // Given
         int propertyKeyId = ops.propertyKeyTokenHolder().getOrCreateId( "theKey" );
         Value prevValue = Values.of( "prevValue" );
-        state.relationshipDoRemoveProperty( 1L, propertyKeyId );
+        state.relationshipDoRemoveProperty( 1L, 0, 0, 0, propertyKeyId );
         ops.withRelationship( 1, 0, 0, 0 ).properties( "theKey", prevValue );
 
         // When
@@ -235,7 +233,7 @@ class TxStateTransactionDataViewTest
         // Given
         Value prevValue = Values.of( "prevValue" );
         int propertyKeyId = ops.propertyKeyTokenHolder().getOrCreateId( "theKey" );
-        state.relationshipDoReplaceProperty( 1L, propertyKeyId, prevValue, Values.of( "newValue" ) );
+        state.relationshipDoReplaceProperty( 1L, 0, 0, 0, propertyKeyId, prevValue, Values.of( "newValue" ) );
         ops.withRelationship( 1, 0, 0, 0 ).properties( "theKey", prevValue );
 
         // When

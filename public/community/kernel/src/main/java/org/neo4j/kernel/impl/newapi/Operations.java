@@ -643,14 +643,16 @@ public class Operations implements Write, SchemaWrite
         Value existingValue = readRelationshipProperty( propertyKey );
         if ( existingValue == NO_VALUE )
         {
-            ktx.txState().relationshipDoReplaceProperty( relationship, propertyKey, NO_VALUE, value );
+            ktx.txState().relationshipDoReplaceProperty( relationship, relationshipCursor.type(), relationshipCursor.sourceNodeReference(),
+                    relationshipCursor.targetNodeReference(), propertyKey, NO_VALUE, value );
             return NO_VALUE;
         }
         else
         {
             if ( propertyHasChanged( existingValue, value ) )
             {
-                ktx.txState().relationshipDoReplaceProperty( relationship, propertyKey, existingValue, value );
+                ktx.txState().relationshipDoReplaceProperty( relationship, relationshipCursor.type(), relationshipCursor.sourceNodeReference(),
+                        relationshipCursor.targetNodeReference(), propertyKey, existingValue, value );
             }
 
             return existingValue;
@@ -667,7 +669,8 @@ public class Operations implements Write, SchemaWrite
 
         if ( existingValue != NO_VALUE )
         {
-            ktx.txState().relationshipDoRemoveProperty( relationship, propertyKey );
+            ktx.txState().relationshipDoRemoveProperty( relationship, relationshipCursor.type(), relationshipCursor.sourceNodeReference(),
+                    relationshipCursor.targetNodeReference(), propertyKey );
         }
 
         return existingValue;

@@ -23,11 +23,11 @@ import java.util.function.Function;
 import org.neo4j.common.TokenNameLookup;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.CursorFactory;
-import org.neo4j.internal.kernel.api.TokenSet;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
+import org.neo4j.internal.kernel.api.TokenSet;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.LabelSchemaDescriptor;
@@ -192,11 +192,11 @@ class PropertyExistenceEnforcer
 
         @Override
         public void visitRelPropertyChanges(
-                long id, Iterable<StorageProperty> added, Iterable<StorageProperty> changed,
+                long id, int type, long startNode, long endNode, Iterable<StorageProperty> added, Iterable<StorageProperty> changed,
                 IntIterable removed ) throws ConstraintValidationException
         {
             validateRelationship( id );
-            super.visitRelPropertyChanges( id, added, changed, removed );
+            super.visitRelPropertyChanges( id, type, startNode, endNode, added, changed, removed );
         }
 
         @Override
