@@ -165,7 +165,9 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
         {
             if ( relationships == null || !relationships.getAdded().contains( rel.getId() ) )
             {
-                visitor.visitRelPropertyChanges( rel.getId(), rel.addedProperties(), rel.changedProperties(), rel.removedProperties() );
+                relationshipStatesMap.get( rel.getId() ).accept(
+                        ( relationshipId, typeId, startNodeId, endNodeId ) -> visitor.visitRelPropertyChanges( relationshipId, typeId, startNodeId, endNodeId,
+                                rel.addedProperties(), rel.changedProperties(), rel.removedProperties() ) );
             }
         }
 
@@ -330,7 +332,7 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
             getOrCreateNodeState( endNodeId ).addRelationship( id, relationshipTypeId, RelationshipDirection.INCOMING );
         }
 
-        getOrCreateRelationshipState( id ).setMetaData( startNodeId, endNodeId, relationshipTypeId );
+        getOrCreateRelationshipState( id, relationshipTypeId, startNodeId, endNodeId );
         getOrCreateTypeStateRelationshipDiffSets( relationshipTypeId ).add( id );
 
         dataChanged();
@@ -372,9 +374,7 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
         }
         else
         {
-            RelationshipStateImpl state = getOrCreateRelationshipState( id );
-            state.setMetaData( startNodeId, endNodeId, type );
-            state.setDeleted();
+            getOrCreateRelationshipState( id, type, startNodeId, endNodeId ).setDeleted();
         }
 
         dataChanged();
@@ -408,16 +408,17 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
     }
 
     @Override
-    public void relationshipDoReplaceProperty( long relationshipId, int propertyKeyId, Value replacedValue,
-            Value newValue )
+    public void relationshipDoReplaceProperty( long relationshipId, int type, long startNode, long endNode, int propertyKeyId,
+            Value replacedValue, Value newValue )
     {
+        RelationshipStateImpl relationshipState = getOrCreateRelationshipState( relationshipId, type, startNode, endNode );
         if ( replacedValue != NO_VALUE )
         {
-            getOrCreateRelationshipState( relationshipId ).changeProperty( propertyKeyId, newValue );
+            relationshipState.changeProperty( propertyKeyId, newValue );
         }
         else
         {
-            getOrCreateRelationshipState( relationshipId ).addProperty( propertyKeyId, newValue );
+            relationshipState.addProperty( propertyKeyId, newValue );
         }
         dataChanged();
     }
@@ -430,9 +431,9 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
     }
 
     @Override
-    public void relationshipDoRemoveProperty( long relationshipId, int propertyKeyId )
+    public void relationshipDoRemoveProperty( long relationshipId, int type, long startNode, long endNode, int propertyKeyId )
     {
-        getOrCreateRelationshipState( relationshipId ).removeProperty( propertyKeyId );
+        getOrCreateRelationshipState( relationshipId, type, startNode, endNode ).removeProperty( propertyKeyId );
         dataChanged();
     }
 
@@ -641,13 +642,13 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
         return nodeStatesMap.getIfAbsentPut( nodeId, () -> newNodeState( nodeId ) );
     }
 
-    private RelationshipStateImpl getOrCreateRelationshipState( long relationshipId )
+    private RelationshipStateImpl getOrCreateRelationshipState( long relationshipId, int type, long startNode, long endNode )
     {
         if ( relationshipStatesMap == null )
         {
             relationshipStatesMap = newLongObjectMap( memoryTracker );
         }
-        return relationshipStatesMap.getIfAbsentPut( relationshipId, () -> newRelationshipState( relationshipId ) );
+        return relationshipStatesMap.getIfAbsentPut( relationshipId, () -> newRelationshipState( relationshipId, type, startNode, endNode ) );
     }
 
     @Override
@@ -855,8 +856,8 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
         return NodeStateImpl.createNodeState( nodeId, collectionsFactory, memoryTracker );
     }
 
-    private RelationshipStateImpl newRelationshipState( long relationshipId )
+    private RelationshipStateImpl newRelationshipState( long relationshipId, int type, long startNode, long endNode )
     {
-        return RelationshipStateImpl.createRelationshipStateImpl( relationshipId, collectionsFactory, memoryTracker );
+        return RelationshipStateImpl.createRelationshipStateImpl( relationshipId, type, startNode, endNode, collectionsFactory, memoryTracker );
     }
 }
