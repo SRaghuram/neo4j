@@ -63,7 +63,7 @@ class ClusterJoiningActorIT extends BaseAkkaIT("ClusterJoining") {
             inOrder.verify(cluster).join(address3)
           }
 
-          awaitAssert(assert, max = defaultWaitTime + refresh * 3)
+          awaitAssert(assert, (defaultWaitTime + refresh * 3) * 2)
 
           assertNoJoinToSeedNodes()
         }
@@ -77,7 +77,7 @@ class ClusterJoiningActorIT extends BaseAkkaIT("ClusterJoining") {
             initialDiscoveryMembersAsAddresses.foreach(address => inOrder.verify(cluster).join(address))
           }
 
-          awaitAssert(assert, max = defaultWaitTime + refresh * 3)
+          awaitAssert(assert, (defaultWaitTime + refresh * 3) * 2)
           assertNoJoinToSeedNodes()
         }
       }
