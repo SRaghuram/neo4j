@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.core.batching;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.InboundRaftMessageContainer;
-import com.neo4j.causalclustering.helper.scheduling.QueueingScheduler;
+import com.neo4j.causalclustering.helper.scheduling.LimitingScheduler;
 import com.neo4j.causalclustering.helper.scheduling.ReoccurringJobQueue;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.ComposableMessageHandler;
@@ -34,7 +34,7 @@ public class BatchingMessageHandler implements Runnable, LifecycleMessageHandler
     private final LifecycleMessageHandler<InboundRaftMessageContainer<?>> handler;
     private final Log log;
     private final BoundedPriorityQueue<InboundRaftMessageContainer<?>> inQueue;
-    private final QueueingScheduler scheduler;
+    private final LimitingScheduler scheduler;
     private final BatchingHandlerFactory batchingHandlerFactory;
 
     private volatile boolean stopped;
@@ -42,7 +42,7 @@ public class BatchingMessageHandler implements Runnable, LifecycleMessageHandler
     private AtomicLong droppedCount = new AtomicLong();
 
     BatchingMessageHandler( LifecycleMessageHandler<InboundRaftMessageContainer<?>> handler,
-            BoundedPriorityQueue.Config inQueueConfig, BatchingConfig batchConfig, QueueingScheduler scheduler,
+            BoundedPriorityQueue.Config inQueueConfig, BatchingConfig batchConfig, LimitingScheduler scheduler,
             LogProvider logProvider )
     {
         this.handler = handler;
@@ -62,7 +62,7 @@ public class BatchingMessageHandler implements Runnable, LifecycleMessageHandler
                                               config.get( CausalClusteringSettings.raft_in_queue_max_batch_bytes ) );
 
         return delegate -> new BatchingMessageHandler( delegate, inQueueConfig, batchConfig,
-                                                       new QueueingScheduler( jobScheduler, Group.RAFT_BATCH_HANDLER,
+                                                       new LimitingScheduler( jobScheduler, Group.RAFT_BATCH_HANDLER,
                                                                               logProvider.getLog( BatchingMessageHandler.class ),
                                                                               new ReoccurringJobQueue<>() ), logProvider );
     }

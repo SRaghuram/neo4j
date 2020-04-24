@@ -11,7 +11,7 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobScheduler;
 
-public class QueueingScheduler
+public class LimitingScheduler
 {
     private final JobScheduler executor;
     private final Group group;
@@ -24,15 +24,14 @@ public class QueueingScheduler
 
     /**
      * Schedule {@link ReschedulingJob} on the provided {@link JobScheduler}.
-     *
-     * All calls to the provided {@link JobsQueue} is performed under a lock so it is not
-     * required for {@link JobsQueue} to be thread-safe.
-     *
+     * <p>
+     * All calls to the provided {@link JobsQueue} is performed under a lock so it is not required for {@link JobsQueue} to be thread-safe.
+     * <p>
      * After a job completes it will schedule a new job from the queue if present.
      *
-     * @param jobsQueue        When a job completes it will schedule a new job from this queue. This queue should not be blocking.
+     * @param jobsQueue When a job completes it will schedule a new job from this queue. This queue should not be blocking.
      */
-    public QueueingScheduler( JobScheduler executor, Group group, Log log, JobsQueue<Runnable> jobsQueue )
+    public LimitingScheduler( JobScheduler executor, Group group, Log log, JobsQueue<Runnable> jobsQueue )
     {
         this.executor = executor;
         this.group = group;
@@ -72,8 +71,9 @@ public class QueueingScheduler
             return;
         }
 
-        this.job = new ReschedulingJob( nextJob );
-        this.jobHandle = executor.schedule( group, job );
+        var currentJob = new ReschedulingJob( nextJob );
+        this.jobHandle = executor.schedule( group, currentJob );
+        this.job = currentJob;
     }
 
     /**
@@ -94,15 +94,16 @@ public class QueueingScheduler
     private synchronized void abortJob()
     {
         jobsQueue.clear();
-        if ( job != null )
+        var currentJob = this.job;
+        if ( currentJob != null )
         {
-            job.abort();
+            currentJob.abort();
         }
     }
 
     private class ReschedulingJob implements Runnable, CancelListener
     {
-        private Runnable runnable;
+        private final Runnable runnable;
         private volatile boolean aborted;
 
         private ReschedulingJob( Runnable runnable )
@@ -127,7 +128,7 @@ public class QueueingScheduler
             }
         }
 
-        public void abort()
+        void abort()
         {
             aborted = true;
         }

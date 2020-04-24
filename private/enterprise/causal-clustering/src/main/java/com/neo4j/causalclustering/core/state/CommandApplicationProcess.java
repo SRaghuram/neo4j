@@ -19,7 +19,7 @@ import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.helper.StatUtil;
-import com.neo4j.causalclustering.helper.scheduling.QueueingScheduler;
+import com.neo4j.causalclustering.helper.scheduling.LimitingScheduler;
 import com.neo4j.causalclustering.helper.scheduling.SingleElementJobsQueue;
 
 import java.io.IOException;
@@ -48,7 +48,7 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
     private final RaftLogAppliedIndexMonitor appliedIndexMonitor;
     private final CommandBatcher batcher;
     private final DatabasePanicker panicker;
-    private final QueueingScheduler scheduler;
+    private final LimitingScheduler scheduler;
     private final StatUtil.StatContext batchStat;
 
     private long lastFlushed = NOTHING;
@@ -71,7 +71,7 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
         this.appliedIndexMonitor = monitors.newMonitor( RaftLogAppliedIndexMonitor.class, getClass().getName() );
         this.batcher = new CommandBatcher( maxBatchSize, this::applyBatch );
         this.panicker = panicker;
-        this.scheduler = new QueueingScheduler( scheduler, Group.CORE_STATE_APPLIER, log, new SingleElementJobsQueue<>() );
+        this.scheduler = new LimitingScheduler( scheduler, Group.CORE_STATE_APPLIER, log, new SingleElementJobsQueue<>() );
         this.batchStat = StatUtil.create( "BatchSize", log, 4096, true );
     }
 

@@ -27,12 +27,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.TRUE;
 
-class QueueingSchedulerTest
+class LimitingSchedulerTest
 {
     private final ThreadPoolJobScheduler executorService = new ThreadPoolJobScheduler( Executors.newSingleThreadExecutor() );
     private final UnboundedJobsQueue jobsQueue = new UnboundedJobsQueue();
-    private final QueueingScheduler scheduler =
-            new QueueingScheduler( executorService, Group.CORE_STATE_APPLIER, NullLog.getInstance(), jobsQueue );
+    private final LimitingScheduler scheduler =
+            new LimitingScheduler( executorService, Group.CORE_STATE_APPLIER, NullLog.getInstance(), jobsQueue );
 
     @AfterEach
     void shutdown()
@@ -116,7 +116,7 @@ class QueueingSchedulerTest
         var threadPoolJobScheduler = new ThreadPoolJobScheduler( Executors.newCachedThreadPool() );
         try
         {
-            var scheduler = new QueueingScheduler( threadPoolJobScheduler, Group.CORE_STATE_APPLIER, NullLog.getInstance(), jobsQueue );
+            var scheduler = new LimitingScheduler( threadPoolJobScheduler, Group.CORE_STATE_APPLIER, NullLog.getInstance(), jobsQueue );
 
             // when
             scheduler.offerJob( incrementingJob( integer, firstLatch ) );

@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages.InboundRaftMessage
 import com.neo4j.causalclustering.core.consensus.ReplicatedString;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.helper.scheduling.QueueingScheduler;
+import com.neo4j.causalclustering.helper.scheduling.LimitingScheduler;
 import com.neo4j.causalclustering.helper.scheduling.ReoccurringJobQueue;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
@@ -59,7 +59,7 @@ class BatchingMessageHandlerTest
     @SuppressWarnings( "unchecked" )
     private LifecycleMessageHandler<InboundRaftMessageContainer<?>> downstreamHandler = mock( LifecycleMessageHandler.class );
     private RaftId localRaftId = RaftIdFactory.random();
-    private final QueueingScheduler jobScheduler = mock( QueueingScheduler.class );
+    private final LimitingScheduler jobScheduler = mock( LimitingScheduler.class );
 
     private ExecutorService executor;
     private MemberId leader = new MemberId( UUID.randomUUID() );
@@ -102,9 +102,9 @@ class BatchingMessageHandlerTest
     {
         // given
         var scheduler = new OnDemandJobScheduler();
-        var queueingScheduler = new QueueingScheduler( scheduler, Group.RAFT_BATCH_HANDLER, NullLog.getInstance(), new ReoccurringJobQueue<>() );
+        var limitingScheduler = new LimitingScheduler( scheduler, Group.RAFT_BATCH_HANDLER, NullLog.getInstance(), new ReoccurringJobQueue<>() );
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
-                                                                          BATCH_CONFIG, queueingScheduler, NullLogProvider.getInstance() );
+                                                                          BATCH_CONFIG, limitingScheduler, NullLogProvider.getInstance() );
         ReplicatedString content = new ReplicatedString( "dummy" );
         NewEntry.Request message = new NewEntry.Request( null, content );
 
