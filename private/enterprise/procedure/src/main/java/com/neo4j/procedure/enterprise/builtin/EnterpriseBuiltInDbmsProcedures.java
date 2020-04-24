@@ -358,7 +358,7 @@ public class EnterpriseBuiltInDbmsProcedures
     {
         var memoryPools = resolver.resolveDependency( MemoryPools.class );
         var registeredPools = memoryPools.getPools();
-        List<NamedMemoryPool> allPools = new ArrayList<>( registeredPools );
+        List<ScopedMemoryPool> allPools = new ArrayList<>( registeredPools );
         for ( var pool : registeredPools )
         {
             allPools.addAll( pool.getDatabasePools() );
