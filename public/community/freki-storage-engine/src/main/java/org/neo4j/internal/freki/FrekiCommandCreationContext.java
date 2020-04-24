@@ -30,12 +30,13 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.CommandCreationContext;
 
-import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
+import static org.neo4j.internal.freki.Header.FLAG_HAS_DENSE_RELATIONSHIPS;
+import static org.neo4j.internal.freki.Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID;
+import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIPS;
 import static org.neo4j.internal.freki.MutableNodeData.ARTIFICIAL_MAX_RELATIONSHIP_COUNTER;
 import static org.neo4j.internal.freki.MutableNodeData.FIRST_RELATIONSHIP_ID;
 import static org.neo4j.internal.freki.MutableNodeData.externalRelationshipId;
 import static org.neo4j.internal.freki.MutableNodeData.idFromRecordPointer;
-import static org.neo4j.internal.freki.MutableNodeData.recordPointerToString;
 import static org.neo4j.internal.freki.MutableNodeData.sizeExponentialFromRecordPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.util.Preconditions.checkState;
@@ -83,20 +84,25 @@ class FrekiCommandCreationContext implements CommandCreationContext
                 return new MutableInt( FIRST_RELATIONSHIP_ID );
             }
 
-            long forwardPointer = data.getRecordPointer();
-            if ( forwardPointer != NULL && !data.isDense() )
+            if ( data.hasHeaderMark( FLAG_HAS_DENSE_RELATIONSHIPS ) )
             {
-                int sizeExp = sizeExponentialFromRecordPointer( forwardPointer );
-                long id = idFromRecordPointer( forwardPointer );
-                data = readAndDeserializeNode( sourceNode, sizeExp, id );
-                if ( data == null )
+                if ( data.hasHeaderReferenceMark( OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID ) )
                 {
-                    throw new IllegalStateException(
-                            "Node " + sourceNode + " links to a larger record " + recordPointerToString( forwardPointer ) + " which isn't in use" );
+                    long forwardPointer = data.getRecordPointer();
+                    data = readAndDeserializeNode( sourceNode, sizeExponentialFromRecordPointer( forwardPointer ), idFromRecordPointer( forwardPointer ) );
                 }
+                assert data.hasHeaderMark( OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
+                return new MutableInt( data.getNextInternalRelationshipId() );
             }
-
-            return new MutableInt( data.getNextInternalRelationshipId() );
+            else
+            {
+                if ( data.hasHeaderReferenceMark( OFFSET_RELATIONSHIPS ) )
+                {
+                    long forwardPointer = data.getRecordPointer();
+                    data = readAndDeserializeNode( sourceNode, sizeExponentialFromRecordPointer( forwardPointer ), idFromRecordPointer( forwardPointer ) );
+                }
+                return new MutableInt( data.getNextInternalRelationshipId() );
+            }
         } );
 
         long internalRelationshipId = nextRelationshipId.getAndIncrement();

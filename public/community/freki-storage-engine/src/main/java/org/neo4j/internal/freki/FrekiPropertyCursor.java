@@ -73,9 +73,10 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     public void initNodeProperties( StorageNodeCursor nodeCursor )
     {
         cursorAccessTracer.registerNodeToPropertyDirect();
-        if ( ((FrekiMainStoreCursor) nodeCursor).initializeOtherCursorFromStateOfThisCursor( this ) )
+        FrekiMainStoreCursor frekiNodeCursor = (FrekiMainStoreCursor) nodeCursor;
+        frekiNodeCursor.ensurePropertiesLoaded();
+        if ( frekiNodeCursor.initializeOtherCursorFromStateOfThisCursor( this ) )
         {
-            ensurePropertiesLoaded();
             buffer = data.propertyBuffer();
             if ( readPropertyKeys( buffer ) )
             {

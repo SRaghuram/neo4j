@@ -113,7 +113,7 @@ class FrekiCursorInitializationTest extends FrekiCursorsTest
         // given
         Node node1 = node();
         Node node2 = node();
-        long relationshipId = node1.relationshipAndReturnItsId( 0, node2 );
+        node1.relationshipAndReturnItsId( 0, node2 );
         FrekiNodeCursor nodeCursor = node1.storeAndPlaceNodeCursorAt();
         node2.store();
         var cursor = cursorFactory.allocateRelationshipTraversalCursor( NULL );
