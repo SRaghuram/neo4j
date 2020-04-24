@@ -28,8 +28,8 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_INT_ARRAY;
-import static org.neo4j.internal.freki.MutableNodeRecordData.idFromRecordPointer;
-import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromRecordPointer;
+import static org.neo4j.internal.freki.MutableNodeData.idFromRecordPointer;
+import static org.neo4j.internal.freki.MutableNodeData.sizeExponentialFromRecordPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
 import static org.neo4j.util.Preconditions.checkState;
@@ -251,7 +251,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         else
         {
             data.gatherDataFromXL( record );
-            data.nodeId = MutableNodeRecordData.idFromRecordPointer( data.backwardPointer );
+            data.nodeId = MutableNodeData.idFromRecordPointer( data.backwardPointer );
         }
         //When we initialize here, we dont wanna do additional loading, just look at this specific record.
         data.x1Loaded = true;

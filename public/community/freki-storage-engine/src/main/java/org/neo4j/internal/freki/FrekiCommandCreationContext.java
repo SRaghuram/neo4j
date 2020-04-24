@@ -31,12 +31,12 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.CommandCreationContext;
 
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
-import static org.neo4j.internal.freki.MutableNodeRecordData.ARTIFICIAL_MAX_RELATIONSHIP_COUNTER;
-import static org.neo4j.internal.freki.MutableNodeRecordData.FIRST_RELATIONSHIP_ID;
-import static org.neo4j.internal.freki.MutableNodeRecordData.externalRelationshipId;
-import static org.neo4j.internal.freki.MutableNodeRecordData.idFromRecordPointer;
-import static org.neo4j.internal.freki.MutableNodeRecordData.recordPointerToString;
-import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromRecordPointer;
+import static org.neo4j.internal.freki.MutableNodeData.ARTIFICIAL_MAX_RELATIONSHIP_COUNTER;
+import static org.neo4j.internal.freki.MutableNodeData.FIRST_RELATIONSHIP_ID;
+import static org.neo4j.internal.freki.MutableNodeData.externalRelationshipId;
+import static org.neo4j.internal.freki.MutableNodeData.idFromRecordPointer;
+import static org.neo4j.internal.freki.MutableNodeData.recordPointerToString;
+import static org.neo4j.internal.freki.MutableNodeData.sizeExponentialFromRecordPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.util.Preconditions.checkState;
 
@@ -76,7 +76,7 @@ class FrekiCommandCreationContext implements CommandCreationContext
 
         MutableInt nextRelationshipId = sourceNodeNextRelationshipIds.getIfAbsentPutWithKey( sourceNode, nodeId ->
         {
-            MutableNodeRecordData data = readAndDeserializeNode( sourceNode, 0, sourceNode );
+            MutableNodeData data = readAndDeserializeNode( sourceNode, 0, sourceNode );
             if ( data == null )
             {
                 // TODO This node is probably created in this transaction, can we verify that?
@@ -96,7 +96,7 @@ class FrekiCommandCreationContext implements CommandCreationContext
                 }
             }
 
-            return new MutableInt( data.nextInternalRelationshipId );
+            return new MutableInt( data.getNextInternalRelationshipId() );
         } );
 
         long internalRelationshipId = nextRelationshipId.getAndIncrement();
@@ -104,19 +104,15 @@ class FrekiCommandCreationContext implements CommandCreationContext
         return externalRelationshipId( sourceNode, internalRelationshipId );
     }
 
-    private MutableNodeRecordData readAndDeserializeNode( long nodeId, int sizeExp, long id )
+    private MutableNodeData readAndDeserializeNode( long nodeId, int sizeExp, long id )
     {
         SimpleStore store = stores.mainStore( sizeExp );
         try ( PageCursor cursor = store.openReadCursor( cursorTracer ) )
         {
             Record record = store.newRecord();
-            if ( store.read( cursor, record, id ) && record.hasFlag( FLAG_IN_USE ) )
-            {
-                MutableNodeRecordData data = new MutableNodeRecordData( nodeId );
-                data.deserialize( record.data(), stores.bigPropertyValueStore, cursorTracer );
-                return data;
-            }
-            return null;
+            return store.read( cursor, record, id ) && record.hasFlag( FLAG_IN_USE )
+                   ? new MutableNodeData( nodeId, stores.bigPropertyValueStore, cursorTracer, record.data() )
+                   : null;
         }
     }
 

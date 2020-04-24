@@ -34,7 +34,7 @@ import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 
 import static java.lang.Math.min;
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_LONG_ARRAY;
-import static org.neo4j.internal.freki.MutableNodeRecordData.readDegreesForNextType;
+import static org.neo4j.internal.freki.MutableNodeData.readDegreesForNextType;
 import static org.neo4j.internal.freki.StreamVByte.LONG_CONSUMER;
 import static org.neo4j.internal.freki.StreamVByte.LONG_CREATOR;
 import static org.neo4j.internal.freki.StreamVByte.hasNonEmptyIntArray;

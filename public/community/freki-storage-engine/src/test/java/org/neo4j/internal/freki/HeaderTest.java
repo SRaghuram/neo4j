@@ -32,7 +32,7 @@ import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.rule.RandomRule;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.neo4j.internal.freki.Header.FLAG_IS_DENSE;
+import static org.neo4j.internal.freki.Header.FLAG_HAS_DENSE_RELATIONSHIPS;
 import static org.neo4j.internal.freki.Header.FLAG_LABELS;
 import static org.neo4j.internal.freki.Header.MARKERS_SIZE;
 import static org.neo4j.internal.freki.Header.NUM_OFFSETS;
@@ -51,7 +51,7 @@ class HeaderTest
         // given
         Header header = new Header();
         header.mark( FLAG_LABELS, true );
-        header.mark( FLAG_IS_DENSE, true );
+        header.mark( FLAG_HAS_DENSE_RELATIONSHIPS, true );
 
         // when/then
         assertReadAndWrite( header, MARKERS_SIZE );
@@ -107,7 +107,7 @@ class HeaderTest
         readHeader.deserialize( buffer );
         assertThat( buffer.position() ).isEqualTo( expectedSize );
         assertThat( readHeader.hasMark( FLAG_LABELS ) ).isEqualTo( header.hasMark( FLAG_LABELS ) );
-        assertThat( readHeader.hasMark( FLAG_IS_DENSE ) ).isEqualTo( header.hasMark( FLAG_IS_DENSE ) );
+        assertThat( readHeader.hasMark( FLAG_HAS_DENSE_RELATIONSHIPS ) ).isEqualTo( header.hasMark( FLAG_HAS_DENSE_RELATIONSHIPS ) );
         for ( int offsetSlot = 0; offsetSlot < NUM_OFFSETS; offsetSlot++ )
         {
             assertThat( readHeader.hasMark( offsetSlot ) ).isEqualTo( header.hasMark( offsetSlot ) );

@@ -30,7 +30,7 @@ import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipScanCursor;
 
-import static org.neo4j.internal.freki.MutableNodeRecordData.nodeIdFromRelationshipId;
+import static org.neo4j.internal.freki.MutableNodeData.nodeIdFromRelationshipId;
 
 class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements StorageRelationshipScanCursor
 {

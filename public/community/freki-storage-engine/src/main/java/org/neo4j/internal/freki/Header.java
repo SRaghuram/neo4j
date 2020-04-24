@@ -21,6 +21,7 @@ package org.neo4j.internal.freki;
 
 import java.nio.ByteBuffer;
 
+import static java.lang.Integer.min;
 import static java.lang.Integer.numberOfTrailingZeros;
 
 class Header
@@ -38,11 +39,12 @@ class Header
     static final int OFFSET_RECORD_POINTER = 4;
     static final int OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID = 5;
     static final int FLAG_LABELS = 6;
-    static final int FLAG_IS_DENSE = 7;
+    static final int FLAG_HAS_DENSE_RELATIONSHIPS = 7;
 
     private byte markers;
     private byte referenceMarkers;
     private int[] offsets = new int[NUM_OFFSETS];
+    private int[] sizes = new int[NUM_OFFSETS + 1/*labels*/];
 
     void mark( int slot, boolean marked )
     {
@@ -80,6 +82,10 @@ class Header
 
     int getOffset( int slot )
     {
+        if ( slot == FLAG_LABELS )
+        {
+            return spaceNeeded();
+        }
         return offsets[slot];
     }
 
@@ -99,10 +105,17 @@ class Header
         return numOffsets == 0 ? 0 : ((numOffsets * BITS_PER_OFFSET) - 1) / Byte.SIZE + 1;
     }
 
+    int sizeOf( int slot )
+    {
+        assert hasMark( slot );
+        return sizes[slot];
+    }
+
     void serialize( ByteBuffer buffer, Header referenceHeader )
     {
         referenceMarkers = referenceHeader != null ? referenceHeader.markers : 0;
-        assert ((markers & referenceMarkers) & ~slotBit( FLAG_IS_DENSE ) & ~slotBit( OFFSET_RECORD_POINTER )) == 0 : toString() + " vs " + referenceHeader;
+        assert ((markers & referenceMarkers) & ~slotBit( FLAG_HAS_DENSE_RELATIONSHIPS ) & ~slotBit( OFFSET_RECORD_POINTER )) == 0 :
+                toString() + " vs " + referenceHeader;
         buffer.put( markers );
         buffer.put( referenceMarkers );
         long data = 0;
@@ -143,6 +156,26 @@ class Header
         }
     }
 
+    void deserializeWithSizes( ByteBuffer buffer )
+    {
+        deserialize( buffer );
+
+        for ( int slot = 0; slot < sizes.length; slot++ )
+        {
+            int startOffset = getOffset( slot );
+            int smallestOtherOffset = Integer.MAX_VALUE;
+            for ( int otherSlot = 0; otherSlot < offsets.length; otherSlot++ )
+            {
+                if ( otherSlot != slot && hasMark( otherSlot ) && offsets[otherSlot] > startOffset )
+                {
+                    smallestOtherOffset = min( smallestOtherOffset, offsets[otherSlot] );
+                }
+            }
+            int endOffset = smallestOtherOffset != Integer.MAX_VALUE ? smallestOtherOffset : buffer.limit();
+            sizes[slot] = endOffset - startOffset;
+        }
+    }
+
     void clearMarks()
     {
         markers = 0;
@@ -155,7 +188,7 @@ class Header
         return String.format( "Header{labels:%b/%b,dense:%b,properties:%s/%b,relationships:%s/%b,relTypeOffsets:%s/%b,degrees:%s/%b," +
                 "nextInternalRelId:%s,recordPointer:%s}",
                 hasMark( FLAG_LABELS ), hasReferenceMark( FLAG_LABELS ),
-                hasMark( FLAG_IS_DENSE ),
+                hasMark( FLAG_HAS_DENSE_RELATIONSHIPS ),
                 hasMark( OFFSET_PROPERTIES ) ? getOffset( OFFSET_PROPERTIES ) : "-", hasReferenceMark( OFFSET_PROPERTIES ),
                 hasMark( OFFSET_RELATIONSHIPS ) ? getOffset( OFFSET_RELATIONSHIPS ) : "-", hasReferenceMark( OFFSET_RELATIONSHIPS ),
                 hasMark( OFFSET_RELATIONSHIPS_TYPE_OFFSETS ) ? getOffset( OFFSET_RELATIONSHIPS_TYPE_OFFSETS ) : "-",

@@ -34,7 +34,7 @@ import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
 
 import static java.util.Collections.emptyIterator;
-import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipHasProperties;
+import static org.neo4j.internal.freki.MutableNodeData.relationshipHasProperties;
 import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValueSizeIncludingTypeHeader;
 import static org.neo4j.internal.freki.PropertyValueFormat.readEagerly;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
