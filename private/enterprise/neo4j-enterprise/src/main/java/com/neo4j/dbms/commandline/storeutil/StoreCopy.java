@@ -151,7 +151,7 @@ public class StoreCopy
                   FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
                   JobScheduler scheduler = createInitialisedScheduler();
                   PageCache fromPageCache = createPageCache( fs, fromPageCacheMemory, scheduler );
-                    PageCache toPageCache = createPageCache( fs, toPageCacheMemory, scheduler );
+                  PageCache toPageCache = createPageCache( fs, toPageCacheMemory, scheduler );
                   NeoStores neoStores = new StoreFactory( from, config, new ScanOnOpenReadOnlyIdGeneratorFactory(), fromPageCache, fs,
                           NullLogProvider.getInstance(), pageCacheTracer ).openAllNeoStores() )
             {
@@ -201,7 +201,7 @@ public class StoreCopy
                     String newLine = System.lineSeparator();
                     log.info( newLine + newLine + String.join( ";" + newLine, schemaStatements.values() ) );
                     log.info( "You have to manually apply the above commands to the database when it is stared to recreate the indexes and constraints. " +
-                            "The commands are saved to " + logFilePath.toAbsolutePath() + " as well for reference.");
+                            "The commands are saved to " + logFilePath.toAbsolutePath() + " as well for reference." );
                 }
 
                 if ( recreatedTokens.notEmpty() )

@@ -13,23 +13,28 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.extension.ExtensionCallback;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
-import static java.util.Collections.singletonList;
 import static org.neo4j.configuration.Config.DEFAULT_CONFIG_FILE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 
 @ExtendWith( SuppressOutputExtension.class )
-@EnterpriseDbmsExtension
+@EnterpriseDbmsExtension( configurationCallback = "configuration" )
 abstract class AbstractCommandIT
 {
     @Inject
@@ -40,20 +45,50 @@ abstract class AbstractCommandIT
     TestDirectory testDirectory;
     @Inject
     Config config;
+    @Inject
+    Neo4jLayout neo4jLayout;
+    @Inject
+    FileSystemAbstraction fs;
     Path neo4jHome;
     Path configDir;
 
     @BeforeEach
     void setUp() throws IOException
     {
-        File dataDir = databaseAPI.databaseLayout().getNeo4jLayout().databasesDirectory();
+        File dataDir = neo4jLayout.databasesDirectory();
         neo4jHome = config.get( GraphDatabaseSettings.neo4j_home );
         configDir = testDirectory.directory( "configDir" ).toPath();
-        Files.write( configDir.resolve( DEFAULT_CONFIG_FILE_NAME ), singletonList( formatProperty( databases_root_path, dataDir.toPath() ) ) );
+        appendConfigSetting( databases_root_path, dataDir.toPath() );
     }
 
-    private static String formatProperty( Setting<?> setting, Path path )
+    @ExtensionCallback
+    void configuration( TestDatabaseManagementServiceBuilder builder )
+    {   // no-op by default
+    }
+
+    protected <T> void appendConfigSetting( Setting<T> setting, T value ) throws IOException
     {
-        return format( "%s=%s", setting.name(), path.toString().replace( '\\', '/' ) );
+        Path configFile = configDir.resolve( DEFAULT_CONFIG_FILE_NAME );
+        List<String> allSettings;
+        if ( fs.fileExists( configFile.toFile() ) )
+        {
+            allSettings = Files.readAllLines( configFile );
+        }
+        else
+        {
+            allSettings = new ArrayList<>();
+        }
+        allSettings.add( formatProperty( setting, value ) );
+        Files.write( configFile, allSettings );
+    }
+
+    private <T> String formatProperty( Setting<T> setting, T value )
+    {
+        String valueString = value.toString();
+        if ( value instanceof Path )
+        {
+            valueString = ((Path) value).toString().replace( '\\', '/' );
+        }
+        return format( "%s=%s", setting.name(), valueString );
     }
 }

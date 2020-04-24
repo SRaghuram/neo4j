@@ -5,6 +5,11 @@
  */
 package com.neo4j.commandline.dbms;
 
+import com.neo4j.dbms.commandline.StoreCopyCommand;
+import com.neo4j.kernel.impl.store.format.highlimit.HighLimitFormatFamily;
+import org.junit.jupiter.api.Test;
+import picocli.CommandLine;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,9 +17,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 
-import com.neo4j.dbms.commandline.StoreCopyCommand;
-import com.neo4j.kernel.impl.store.format.highlimit.HighLimitFormatFamily;
-import org.junit.jupiter.api.Test;
 import org.neo4j.cli.CommandFailedException;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.graphdb.Direction;
@@ -42,7 +44,6 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.token.TokenHolders;
-import picocli.CommandLine;
 
 import static java.lang.Math.min;
 import static org.assertj.core.api.Assertions.assertThat;
