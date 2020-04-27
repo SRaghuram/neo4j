@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
 import java.util.concurrent.ConcurrentLinkedQueue
 
+import org.eclipse.collections.api.block.procedure.Procedure
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.memory.ScopedMemoryTracker
 import org.neo4j.values.AnyValue
@@ -32,8 +33,8 @@ case object CollectAllAggregator extends Aggregator {
 
 case object CollectDistinctAggregator extends Aggregator {
   override def newUpdater(memoryTracker: MemoryTracker): Updater = new OrderedDistinctUpdater(memoryTracker)
-  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new OrderedDistinctStandardReducer(DummyReducer, memoryTracker)
-  override def newConcurrentReducer: Reducer = new DistinctConcurrentReducer(DummyReducer)
+  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new OrderedDistinctStandardReducer(DummyReducer, memoryTracker) with CollectDistinctReducer
+  override def newConcurrentReducer: Reducer = new DistinctConcurrentReducer(DummyReducer) with CollectDistinctReducer
 }
 
 class CollectUpdater(preserveNulls: Boolean) extends Updater {
@@ -76,6 +77,16 @@ object DummyReducer extends DistinctInnerReducer {
   override def result: AnyValue = throw new IllegalStateException("Must be used inside of CollectDistinctReducer")
 }
 
+trait CollectDistinctReducer {
+  self: DistinctReducer =>
+
+  override def result: AnyValue = {
+    val collection = ListValueBuilder.newListBuilder()
+    forEachSeen(value => collection.add(value))
+    collection.build()
+  }
+}
+
 class OrderedDistinctStandardReducer(inner: DistinctInnerReducer, memoryTracker: MemoryTracker) extends DistinctReducer(inner) {
   private val seenSet = new java.util.LinkedHashSet[AnyValue]() // TODO: Use a heap tracking ordered distinct set
   private val scopedMemoryTracker = new ScopedMemoryTracker(memoryTracker)
@@ -88,11 +99,8 @@ class OrderedDistinctStandardReducer(inner: DistinctInnerReducer, memoryTracker:
     added
   }
 
-  override def result: AnyValue = {
-    val collection = ListValueBuilder.newListBuilder()
-    seenSet.forEach(value => collection.add(value))
-    collection.build()
-  }
+  override protected def forEachSeen(action: Procedure[AnyValue]): Unit =
+    seenSet.forEach(action)
 
   override def close(): Unit = {
     scopedMemoryTracker.close()

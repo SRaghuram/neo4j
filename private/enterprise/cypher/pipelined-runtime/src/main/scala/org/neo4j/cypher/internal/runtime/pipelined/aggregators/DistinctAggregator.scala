@@ -76,6 +76,8 @@ trait DistinctInnerReducer {
 abstract class DistinctReducer(inner: DistinctInnerReducer) extends Reducer {
   protected def seen(e: AnyValue): Boolean
 
+  protected def forEachSeen(action: Procedure[AnyValue])
+
   override def update(updater: Updater): Unit =
     updater match {
       case u: DistinctUpdater =>
@@ -94,6 +96,14 @@ class DistinctStandardReducer(inner: DistinctInnerReducer, memoryTracker: Memory
 
   override protected def seen(e: AnyValue): Boolean =
     seenSet.add(e)
+
+  override protected def forEachSeen(action: Procedure[AnyValue]): Unit =
+    seenSet.each(action)
+
+  override def close(): Unit = {
+    seenSet.close()
+    super.close()
+  }
 }
 
 class DistinctConcurrentReducer(inner: DistinctInnerReducer) extends DistinctReducer(inner) {
@@ -101,4 +111,7 @@ class DistinctConcurrentReducer(inner: DistinctInnerReducer) extends DistinctRed
 
   override protected def seen(e: AnyValue): Boolean =
     seenSet.add(e)
+
+  override protected def forEachSeen(action: Procedure[AnyValue]): Unit =
+    seenSet.forEach(action)
 }

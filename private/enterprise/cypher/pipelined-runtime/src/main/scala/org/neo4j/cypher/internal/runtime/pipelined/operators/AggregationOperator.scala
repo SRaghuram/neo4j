@@ -88,6 +88,7 @@ import org.neo4j.memory.MemoryTracker
 import org.neo4j.memory.ScopedMemoryTracker
 import org.neo4j.values.AnyValue
 
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -595,12 +596,15 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
         declare(typeRefOf[AggMap], aggMap),
         declare(typeRefOf[java.util.Iterator[Agg]], aggMapIter),
         loop(lessThan(load(i), load(iSize)))(block(
-          assign(aggMap, invoke(cast[PerArgument[AggMap]](invoke(loadField(perArgsField), method[AggOut, PerArgument[AggMap], Int]("apply"), load(i))),
-                                method[PerArgument[AggMap], AggMap]("value"))),
+          assign(aggMap, cast[AggMap](invoke(cast[PerArgument[AggMap]](invoke(loadField(perArgsField),
+                                                                              method[mutable.ResizableArray[Any], Any, Int]("apply"),
+                                                                              load(i))),
+                                             method[PerArgument[Any], Any]("value")))),
           assign(aggMapIter, invoke(invoke(load(aggMap), method[AggMap, java.util.Collection[Agg]]("values")),
-                                    method[java.util.Collection[Agg], Iterator[Array[Any]]]("iterator"))),
-          loop(invoke(load(aggMapIter), method[Iterator[Array[Any]], Boolean]("hasNext")))(block(
-            declareAndAssign(typeRefOf[Array[Updater]], updaters, cast[Array[Updater]](invoke(load(aggMapIter), method[Iterator[Agg], Agg]("next")))),
+                                    method[java.util.Collection[Agg], java.util.Iterator[Array[Any]]]("iterator"))),
+          loop(invoke(load(aggMapIter), method[java.util.Iterator[Array[Any]], Boolean]("hasNext")))(block(
+            declareAndAssign(typeRefOf[Array[Updater]], updaters, cast[Array[Updater]](invoke(load(aggMapIter),
+                                                                                              method[java.util.Iterator[Any], Any]("next")))),
             block(
               compiledAggregationExpressions.indices.map(i => {
                 invokeSideEffect(arrayLoad(load(updaters), i), method[Updater, Unit]("close"))
