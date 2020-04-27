@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.expressions
 
+import org.neo4j.codegen.api.StaticField
 import org.neo4j.cypher.internal.cache.LFUCache
 
 /**
@@ -15,7 +16,7 @@ class CachingExpressionCompilerBack(inner: DefaultExpressionCompilerBack,
                                    ) extends ExpressionCompilerBack {
 
   override def compileExpression(e: IntermediateExpression): CompiledExpression = {
-    if (e.fields.isEmpty) {
+    if (onlyStaticFields(e)) {
       CachingExpressionCompilerBack.EXPRESSIONS.computeIfAbsent(e, innerCompileExpression(e))
     } else {
       innerCompileExpression(e)
@@ -28,7 +29,7 @@ class CachingExpressionCompilerBack(inner: DefaultExpressionCompilerBack,
   }
 
   override def compileProjection(projection: IntermediateExpression): CompiledProjection = {
-    if (projection.fields.isEmpty) {
+    if (onlyStaticFields(projection)) {
       CachingExpressionCompilerBack.PROJECTIONS.computeIfAbsent(projection, innerCompilerProjection(projection))
     } else {
       innerCompilerProjection(projection)
@@ -41,9 +42,9 @@ class CachingExpressionCompilerBack(inner: DefaultExpressionCompilerBack,
   }
 
   override def compileGrouping(grouping: IntermediateGroupingExpression): CompiledGroupingExpression = {
-    if (grouping.computeKey.fields.isEmpty &&
-        grouping.getKey.fields.isEmpty &&
-        grouping.projectKey.fields.isEmpty) {
+    if (onlyStaticFields(grouping.computeKey) &&
+        onlyStaticFields(grouping.getKey) &&
+        onlyStaticFields(grouping.projectKey)) {
       CachingExpressionCompilerBack.GROUPINGS.computeIfAbsent(grouping, innerCompileGrouping(grouping))
     } else {
       innerCompileGrouping(grouping)
@@ -53,6 +54,10 @@ class CachingExpressionCompilerBack(inner: DefaultExpressionCompilerBack,
   private def innerCompileGrouping(grouping: IntermediateGroupingExpression) = {
     tracer.onCompileGrouping()
     inner.compileGrouping(grouping)
+  }
+
+  private def onlyStaticFields(e: IntermediateExpression): Boolean = {
+    e.fields.forall(_.isInstanceOf[StaticField])
   }
 }
 
