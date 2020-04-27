@@ -15,7 +15,7 @@ import scala.reflect.ClassTag
   *      comes from having general solutions and mega-morphic call sites preventing inlining.
   *   2) prevent accidental modification of the arrays, which could happen if we used standard arrays.
   */
-class ReadOnlyArray[T](inner: Array[T]) {
+class ReadOnlyArray[T](private val inner: Array[T]) {
 
   final val length = inner.length
   final val isEmpty = inner.length == 0
