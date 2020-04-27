@@ -51,6 +51,11 @@ class SystemGraphDbmsOperator extends DbmsOperator
         {
             reconciledTxTracker.disable();
         }
+
+        //TODO
+//        var databasesForPriority = databasesToHandle.dropped();
+//        var reconcilerResult = trigger( databasesForPriority.isEmpty() ? ReconcilerRequest.simple() : ReconcilerRequest.priority( databasesForPriority ) );
+
         var databasesForExplicit = databasesToHandle.touched();
         var reconcilerResult = trigger( databasesForExplicit.isEmpty() ? ReconcilerRequest.simple() : ReconcilerRequest.explicit( databasesForExplicit ) );
         reconcilerResult.whenComplete( () -> offerReconciledTransactionId( txId, asPartOfStoreCopy ) );

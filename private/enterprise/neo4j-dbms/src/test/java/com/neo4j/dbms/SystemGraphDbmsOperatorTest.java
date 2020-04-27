@@ -15,6 +15,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.neo4j.bolt.txtracking.DefaultReconciledTransactionTracker;
+import org.neo4j.dbms.DatabaseState;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -23,6 +24,7 @@ import org.neo4j.logging.internal.NullLogService;
 import static com.neo4j.dbms.EnterpriseOperatorState.DIRTY;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 
@@ -32,7 +34,7 @@ class SystemGraphDbmsOperatorTest
     private Map<NamedDatabaseId,EnterpriseDatabaseState> states = new HashMap<>();
 
     @Test
-    void explicitRequestsForFailedDatabasesShouldBePriority()
+    void explicitRequestsForFailedDatabasesShouldBeMarked()
     {
         setState( databaseOne, STARTED, true );
 

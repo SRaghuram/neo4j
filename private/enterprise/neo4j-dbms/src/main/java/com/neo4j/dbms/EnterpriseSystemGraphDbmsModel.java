@@ -46,6 +46,7 @@ public class EnterpriseSystemGraphDbmsModel extends SystemGraphDbmsModel
     {
         Set<NamedDatabaseId> changedDatabases;
         Set<NamedDatabaseId> touchedDatabases;
+        Set<NamedDatabaseId> droppedDatabases;
 
         var changedAndTouchedNodes = extractChangedAndTouchedNodes( transactionData );
         var changedNodes = changedAndTouchedNodes.first();
@@ -65,10 +66,16 @@ public class EnterpriseSystemGraphDbmsModel extends SystemGraphDbmsModel
                                                .map( this::getDatabaseId )
                                                .collect( Collectors.toSet() );
 
+            droppedDatabases = changedNodes.stream()
+                                        .map( tx::getNodeById )
+                                        .filter( n -> n.hasLabel( DELETED_DATABASE_LABEL ) )
+                                        .map( this::getDatabaseId )
+                                        .collect( Collectors.toSet() );
+
             tx.commit();
         }
 
-        return new DatabaseUpdates( changedDatabases, touchedDatabases );
+        return new DatabaseUpdates( changedDatabases, droppedDatabases, touchedDatabases );
     }
 
     private Pair<Set<Long>,Set<Long>> extractChangedAndTouchedNodes( TransactionData transactionData )

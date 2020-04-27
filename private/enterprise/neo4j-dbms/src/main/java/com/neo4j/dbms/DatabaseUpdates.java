@@ -11,15 +11,17 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 
 class DatabaseUpdates
 {
-    static final DatabaseUpdates EMPTY = new DatabaseUpdates( Set.of(), Set.of() );
+    static final DatabaseUpdates EMPTY = new DatabaseUpdates( Set.of(), Set.of(), Set.of() );
 
     private final Set<NamedDatabaseId> changed;
     private final Set<NamedDatabaseId> touched;
+    private final Set<NamedDatabaseId> dropped;
 
-    DatabaseUpdates( Set<NamedDatabaseId> changed, Set<NamedDatabaseId> touched )
+    DatabaseUpdates( Set<NamedDatabaseId> changed, Set<NamedDatabaseId> dropped, Set<NamedDatabaseId> touched )
     {
         this.changed = changed;
         this.touched = touched;
+        this.dropped = dropped;
     }
 
     Set<NamedDatabaseId> changed()
@@ -30,5 +32,10 @@ class DatabaseUpdates
     Set<NamedDatabaseId> touched()
     {
         return touched;
+    }
+
+    Set<NamedDatabaseId> dropped()
+    {
+        return dropped;
     }
 }

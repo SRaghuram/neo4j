@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -73,24 +74,25 @@ class EnterpriseSystemGraphDbmsModelTest
     {
         var changed = Stream.concat( left.changed().stream(), right.changed().stream() ).collect( Collectors.toSet() );
         var touched = Stream.concat( left.touched().stream(), right.touched().stream() ).collect( Collectors.toSet() );
-        return new DatabaseUpdates( changed, touched );
+        var dropped = Stream.concat( left.dropped().stream(), right.dropped().stream() ).collect( Collectors.toSet() );
+        return new DatabaseUpdates( changed, dropped, touched );
     }
 
     @Test
     void shouldDetectChangedDatabases()
     {
         // when
-        HashMap<NamedDatabaseId,EnterpriseDatabaseState> expectedCreated = new HashMap<>();
+        HashMap<NamedDatabaseId,EnterpriseDatabaseState> expectedChanged = new HashMap<>();
         try ( var tx = db.beginTx() )
         {
-            makeDatabaseNode( tx, "A", true, expectedCreated );
-            makeDatabaseNode( tx, "B", true, expectedCreated );
-            makeDatabaseNode( tx, "C", false, expectedCreated );
+            makeDatabaseNode( tx, "A", true, expectedChanged );
+            makeDatabaseNode( tx, "B", true, expectedChanged );
+            makeDatabaseNode( tx, "C", false, expectedChanged );
             tx.commit();
         }
 
         // then
-        assertThat( updatedDatabases.get().changed() ).containsAll( expectedCreated.keySet() );
+        assertThat( updatedDatabases.get().changed() ).containsAll( expectedChanged.keySet() );
 
         // given
         updatedDatabases.set( DatabaseUpdates.EMPTY );
@@ -107,6 +109,7 @@ class EnterpriseSystemGraphDbmsModelTest
 
         // then
         assertThat( updatedDatabases.get().changed() ).containsAll( expectedDeleted.keySet() );
+        assertThat( updatedDatabases.get().dropped() ).containsAll( expectedDeleted.keySet() );
     }
 
     @Test
