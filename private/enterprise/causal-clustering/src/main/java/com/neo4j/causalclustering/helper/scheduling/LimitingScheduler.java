@@ -72,8 +72,8 @@ public class LimitingScheduler
         }
 
         var currentJob = new ReschedulingJob( nextJob );
-        this.jobHandle = executor.schedule( group, currentJob );
         this.job = currentJob;
+        this.jobHandle = executor.schedule( group, currentJob );
     }
 
     /**
