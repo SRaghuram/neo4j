@@ -38,15 +38,16 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     private long singleTargetNodeReference;
     private boolean needsLoading;
     private boolean inScan;
-    private long scanNodeId;
     private RelationshipSelection selection;
 
     private final FrekiRelationshipTraversalCursor traversalCursor;
+    private final FrekiNodeCursor nodeCursor;
 
     FrekiRelationshipScanCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer )
     {
         super( stores, cursorAccessPatternTracer, cursorTracer );
         traversalCursor = new FrekiRelationshipTraversalCursor( stores, cursorAccessPatternTracer, cursorTracer );
+        nodeCursor = new FrekiNodeCursor( stores, cursorAccessPatternTracer, cursorTracer );
     }
 
     @Override
@@ -54,23 +55,19 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     {
         if ( inScan )
         {
-            while ( scanNodeId < stores.mainStore.getHighId() )
+            while ( traversalCursor.next() || (needsLoading = nodeCursor.next()) )
             {
                 if ( needsLoading )
                 {
+                    traversalCursor.init( nodeCursor, selection ); //load next node
                     needsLoading = false;
-                    traversalCursor.init( scanNodeId, NULL, selection ); //load next node
                 }
-
-                if ( traversalCursor.next() )
+                else
                 {
-                    return true; // found a relationship
+                    return true;
                 }
-                scanNodeId++;
-                needsLoading = true; // reached end of relationships of this node
             }
             inScan = false;
-            scanNodeId = NULL;
         }
         else if ( singleId != NULL )
         {
@@ -112,7 +109,6 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
         singleTargetNodeReference = NULL;
         needsLoading = false;
         inScan = false;
-        scanNodeId = NULL;
         selection = null;
     }
 
@@ -122,10 +118,11 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
         //We scan all nodes, traversing only outgoing relationships to not get duplicates
         inScan = true;
         traversalCursor.reset();
+        nodeCursor.reset();
+        nodeCursor.scan( false );
         selection = type == -1
                         ? RelationshipSelection.selection( Direction.OUTGOING )
                         : RelationshipSelection.selection( type, Direction.OUTGOING );
-        scanNodeId = 0;
         needsLoading = true;
     }
 
