@@ -227,6 +227,7 @@ public final class TypesafeConfigService
         configMap.put( "akka.loggers", Collections.singletonList( LoggingActor.class.getCanonicalName() ) );
         configMap.put( "akka.loglevel", logLevel( config ).toString() );
         configMap.put( "akka.logging-filter", LoggingFilter.class.getCanonicalName() );
+        configMap.put( "akka.logger-startup-timeout", "15s" );
 
         return ConfigFactory.parseMap( configMap );
     }
