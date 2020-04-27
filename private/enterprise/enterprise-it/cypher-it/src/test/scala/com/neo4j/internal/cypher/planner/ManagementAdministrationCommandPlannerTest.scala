@@ -7,6 +7,7 @@ package com.neo4j.internal.cypher.planner
 
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
+import org.neo4j.cypher.internal.ast.prettifier.ExpressionStringifier
 import org.neo4j.cypher.internal.plandescription.Arguments.Details
 import org.neo4j.cypher.internal.plandescription.asPrettyString
 
@@ -82,7 +83,7 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     plan should include(
       helperPlan("EnsureValidNumberOfDatabases",
         managementPlan("CreateDatabase", Seq(databaseArg("foo")),
-          managementPlan("DropDatabase", Seq(databaseArg("foo")),
+          managementPlan("DropDatabase", Seq(details(Seq(ExpressionStringifier.backtick("foo"), "DESTROY DATA"))),
             assertDbmsAdminPlan("DROP DATABASE", "CREATE DATABASE")
           )
         )
@@ -115,7 +116,7 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
 
     // Then
     plan should include(
-      managementPlan("DropDatabase", Seq(databaseArg("foo")),
+      managementPlan("DropDatabase", Seq(details(Seq(ExpressionStringifier.backtick("foo"), "DESTROY DATA"))),
         helperPlan("EnsureValidNonSystemDatabase", Seq(databaseArg("foo")),
           assertDbmsAdminPlan("DROP DATABASE")
         )
@@ -132,7 +133,7 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
 
     // Then
     plan should include(
-      managementPlan("DropDatabase", Seq(details("$db")),
+      managementPlan("DropDatabase", Seq(details(Seq("$db", "DESTROY DATA"))),
         helperPlan("EnsureValidNonSystemDatabase", Seq(details("$db")),
           assertDbmsAdminPlan("DROP DATABASE")
         )
@@ -146,11 +147,28 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
 
     // Then
     plan should include(
-      managementPlan("DropDatabase", Seq(databaseArg("foo")),
+      managementPlan("DropDatabase", Seq(details(Seq(ExpressionStringifier.backtick("foo"), "DESTROY DATA"))),
         helperPlan("EnsureValidNonSystemDatabase", Seq(databaseArg("foo")),
           helperPlan("DoNothingIfNotExists(Database)", Seq(databaseArg("foo")),
             assertDbmsAdminPlan("DROP DATABASE")
           )
+        )
+      ).toString
+    )
+  }
+
+  test("Drop database dump data") {
+    // Given
+    execute("CREATE DATABASE foo")
+
+    // When
+    val plan = execute("EXPLAIN DROP DATABASE foo DUMP DATA").executionPlanString()
+
+    // Then
+    plan should include(
+      managementPlan("DropDatabase", Seq(details(Seq(ExpressionStringifier.backtick("foo"), "DUMP DATA"))),
+        helperPlan("EnsureValidNonSystemDatabase", Seq(databaseArg("foo")),
+          assertDbmsAdminPlan("DROP DATABASE")
         )
       ).toString
     )
@@ -827,5 +845,8 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
       ).toString
     )
   }
+
   def details(info: String): Details = Details(asPrettyString.raw(info))
+
+  def details(infos: Seq[String]): Details = Details(infos.map(asPrettyString.raw))
 }

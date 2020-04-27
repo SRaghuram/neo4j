@@ -26,6 +26,7 @@ import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.internal.kernel.api.security.LoginContext
 import org.neo4j.kernel.DeadlockDetectedException
 import org.neo4j.kernel.api.KernelTransaction
+import org.neo4j.kernel.internal.GraphDatabaseAPI
 
 class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
   test("should return empty counts to the outside for commands that update the system graph internally") {
@@ -43,7 +44,8 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       "STOP DATABASE foo" -> 1,
       "START DATABASE foo" -> 1,
       "DROP DATABASE foo" -> 1,
-      "DROP DATABASE foo2 IF EXISTS" -> 1
+      "DROP DATABASE foo2 IF EXISTS" -> 1,
+      "DROP DATABASE foo3 DUMP DATA" -> 1
     ))
   }
 
@@ -655,6 +657,18 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     // WHEN
     execute("CREATE DATABASE foo")
     execute("SHOW DATABASE foo").toList should be(List(db("foo")))
+  }
+
+  test("should be able to drop database with dump additional command") {
+    // GIVEN
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("SHOW DATABASE foo").toList should be(List(db("foo")))
+
+    // WHEN / THEN
+    selectDatabase("system")
+    execute("DROP DATABASE foo DUMP DATA")
+    execute("SHOW DATABASE foo").toList should be(List.empty)
   }
 
   test("should have no access on a re-created database") {

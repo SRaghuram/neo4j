@@ -285,6 +285,27 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
 
   // Additions in 4.1
 
+  test("DROP DATABASE KEEP DATA is not supported in 3.5 or 4.0") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    executeSingle("CREATE DATABASE foo")
+
+    // WHEN 3.5
+    val exception_35 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 DROP DATABASE foo KEEP DATA")
+    }
+    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+    // WHEN 4.0
+    val exception_40 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.0 DROP DATABASE foo DUMP DATA")
+    }
+    exception_40.getMessage should include("Dumping data when dropping databases is not supported in this Cypher version.")
+
+    // THEN
+    executeSingle("DROP DATABASE foo DUMP DATA")
+  }
+
   test("grant DEFAULT DATABASE is not supported in 3.5 or 4.0") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)

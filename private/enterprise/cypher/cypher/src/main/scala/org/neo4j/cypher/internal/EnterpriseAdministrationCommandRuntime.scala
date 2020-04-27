@@ -30,6 +30,7 @@ import org.neo4j.cypher.internal.ast.AllPropertyResource
 import org.neo4j.cypher.internal.ast.AllQualifier
 import org.neo4j.cypher.internal.ast.DatabaseResource
 import org.neo4j.cypher.internal.ast.DefaultDatabaseScope
+import org.neo4j.cypher.internal.ast.DumpData
 import org.neo4j.cypher.internal.ast.GraphScope
 import org.neo4j.cypher.internal.ast.LabelAllQualifier
 import org.neo4j.cypher.internal.ast.LabelQualifier
@@ -622,8 +623,10 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping))
       )
 
-    // DROP DATABASE foo [IF EXISTS]
-    case DropDatabase(source, dbName) => (context, parameterMapping) =>
+    // DROP DATABASE foo [IF EXISTS] [DESTROY | DUMP DATA]
+    case DropDatabase(source, dbName, additionalAction) => (context, parameterMapping) =>
+      val dumpDataKey = internalKey("dumpData")
+      val shouldDumpData = additionalAction == DumpData
       val (key, value, converter) = getNameFields("databaseName", dbName, valueMapper = s => new NormalizedDatabaseName(s).name())
       UpdatingSystemCommandExecutionPlan("DropDatabase", normalExecutionEngine,
         s"""OPTIONAL MATCH (d:Database {name: $$`$key`})
@@ -631,9 +634,10 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |REMOVE d:Database
           |SET d:DeletedDatabase
           |SET d.deleted_at = datetime()
+          |SET d.dump_data = $$`$dumpDataKey`
           |SET d2.updated_at = datetime()
           |RETURN d.name as name, d.status as status""".stripMargin,
-        VirtualValues.map(Array(key), Array(value)),
+        VirtualValues.map(Array(key, dumpDataKey), Array(value, Values.booleanValue(shouldDumpData))),
         QueryHandler.handleError {
           case (error: HasStatus, params) if error.status() == Status.Cluster.NotALeader =>
             new DatabaseAdministrationOnFollowerException(s"Failed to delete the specified database '${runtimeValue(dbName, params)}': $followerError", error)
