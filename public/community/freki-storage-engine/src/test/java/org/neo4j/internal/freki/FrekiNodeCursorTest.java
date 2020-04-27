@@ -21,6 +21,7 @@ package org.neo4j.internal.freki;
 
 import org.apache.commons.lang3.tuple.Triple;
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
+import org.eclipse.collections.api.map.primitive.MutableObjectIntMap;
 import org.eclipse.collections.api.multimap.MutableMultimap;
 import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
@@ -29,6 +30,7 @@ import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
 import org.eclipse.collections.impl.factory.primitive.IntSets;
 import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 import org.eclipse.collections.impl.factory.primitive.LongSets;
+import org.eclipse.collections.impl.factory.primitive.ObjectIntMaps;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
@@ -261,7 +263,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
     }
 
     @Test
-    void shouldNOtBatchScanOutOfRange()
+    void shouldNotBatchScanOutOfRange()
     {
         // given
         long id = node().store().id;
@@ -715,6 +717,54 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         }
 
         assertEquals( createdRels, actualRels );
+    }
+
+    @Test
+    void shouldFindAllRelationshipsInScanWithManyNodesAndRelationships()
+    {
+        //Given
+        List<Node> nodes = new ArrayList<>();
+        for ( int i = 0; i < 10000; i++ )
+        {
+            nodes.add( node() );
+        }
+
+        MutableObjectIntMap<Node> degrees = ObjectIntMaps.mutable.empty();
+        int[] relTypes = new int[3];
+        int[] numRelsCases = new int[]{0, 10, 100};
+        for ( Node node : nodes )
+        {
+            int numRels = numRelsCases[random.nextInt( numRelsCases.length )];
+            for ( int i = 0; i < numRels; i++ )
+            {
+                int type = random.nextInt( relTypes.length );
+                Node otherNode;
+                do
+                {
+                    otherNode = nodes.get( random.nextInt( nodes.size() ) );
+                }
+                while ( degrees.getIfAbsentPut( otherNode, 0 ) > 150 );
+                node.relationship( type, otherNode );
+                relTypes[type]++;
+            }
+        }
+
+        nodes.forEach( Node::store );
+
+        //when
+        int[] foundRelTypes = new int[3];
+
+        try ( FrekiRelationshipScanCursor relationshipCursor = cursorFactory.allocateRelationshipScanCursor( NULL ) )
+        {
+            relationshipCursor.scan();
+            while ( relationshipCursor.next() )
+            {
+                foundRelTypes[relationshipCursor.type()]++;
+            }
+        }
+
+        //then
+        assertArrayEquals( relTypes, foundRelTypes );
     }
 
     @Test

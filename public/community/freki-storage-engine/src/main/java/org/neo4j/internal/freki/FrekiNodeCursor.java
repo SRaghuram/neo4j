@@ -48,6 +48,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     private long highMark = NULL;
     private boolean inScan;
     private FrekiRelationshipTraversalCursor relationshipsCursor;
+    private boolean lightweight;
 
     FrekiNodeCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer )
     {
@@ -182,6 +183,12 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public void scan()
     {
+        scan( true );
+    }
+
+    public void scan( boolean lightweight )
+    {
+        this.lightweight = lightweight;
         inScan = true;
         singleId = 0;
         highMark = NULL;
@@ -258,7 +265,9 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
         {
             while ( singleId < highMark() )
             {
-                if ( loadSuperLight( singleId++ ) )
+                boolean loaded = lightweight ? loadSuperLight( singleId ) : load( singleId );
+                singleId++;
+                if ( loaded )
                 {
                     return true;
                 }
