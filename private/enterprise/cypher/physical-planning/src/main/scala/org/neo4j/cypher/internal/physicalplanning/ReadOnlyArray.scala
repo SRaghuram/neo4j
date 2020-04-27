@@ -65,6 +65,21 @@ class ReadOnlyArray[T](inner: Array[T]) {
     result(0) = t
     new ReadOnlyArray[T](result.asInstanceOf[Array[T]])
   }
+
+  // Equals and hashCode are implemented to simplify testing
+
+  def canEqual(other: Any): Boolean = other.isInstanceOf[ReadOnlyArray[_]]
+
+  override def equals(other: Any): Boolean =
+    other match {
+      case that: ReadOnlyArray[_] =>
+        (that canEqual this) && inner.indices.forall(i => inner(i) == that.inner(i))
+      case _ => false
+    }
+
+  override def hashCode(): Int = {
+    inner.foldLeft(0)((a, b) => 31 * a + b.hashCode())
+  }
 }
 
 object ReadOnlyArray {
