@@ -23,7 +23,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val res = executeWith(Configs.CachedProperty,"PROFILE MATCH (n) WHERE n.foo > 10 RETURN n.foo",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
         aPlan("Projection")
-        .containingArgument("{n.foo : cache[n.foo]}")
+        .containingArgumentForProjection(Map("n.foo" -> "cache[n.foo]"))
         .withDBHits(0)
         .onTopOf(
           aPlan("Filter").containingArgumentRegex("cache\\[n.foo\\] > .*".r)
@@ -40,7 +40,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val res = executeWith(Configs.CachedProperty,"PROFILE MATCH ()-[r]->() WHERE r.foo > 10 RETURN r.foo",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
         aPlan("Projection")
-        .containingArgument("{r.foo : cache[r.foo]}")
+        .containingArgumentForProjection(Map("r.foo" -> "cache[r.foo]"))
         .withDBHits(0)
         .onTopOf(
           aPlan("Filter").containingArgumentRegex("cache\\[r.foo\\] > .*".r)
@@ -59,7 +59,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val res = executeWith(Configs.CachedProperty, q,
       planComparisonStrategy = ComparePlansWithAssertion(_  should includeSomewhere.
         aPlan("Projection")
-        .containingArgument("{m.prop : cache[m.prop], x.prop : cache[x.prop]}")
+        .containingArgumentForProjection(Map("m.prop" -> "cache[m.prop]", "x.prop" -> "cache[x.prop]"))
         .withDBHits(0),
         expectPlansToFail = Configs.Compiled // compiled does not cache properties and will therefore have DB hits
       )
@@ -81,7 +81,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val res = executeWith(Configs.InterpretedAndSlottedAndPipelined, q,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
         aPlan("Projection")
-        .containingArgument("{m.prop : cache[m.prop], x.prop : cache[x.prop]}")
+        .containingArgumentForProjection(Map("m.prop" -> "cache[m.prop]", "x.prop" -> "cache[x.prop]"))
         // As long as aggregation deleted all cached properties, we cannot assert on getting 0 DB hits here)
       )
     )
@@ -102,7 +102,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val res = executeWith(Configs.CachedProperty, "PROFILE MATCH (n) WHERE EXISTS(n.foo) RETURN n.foo",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
         aPlan("Projection")
-        .containingArgument("{n.foo : cache[n.foo]}")
+        .containingArgumentForProjection(Map("n.foo" -> "cache[n.foo]"))
         .withDBHits(0)
         .onTopOf(
           aPlan("Filter").containingArgument("EXISTS(cache[n.foo])")
@@ -124,7 +124,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val res = executeWith(Configs.CachedProperty, "PROFILE MATCH ()-[r]->() WHERE EXISTS(r.foo) RETURN r.foo",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
         aPlan("Projection")
-        .containingArgument("{r.foo : cache[r.foo]}")
+        .containingArgumentForProjection(Map("r.foo" -> "cache[r.foo]"))
         .withDBHits(0)
         .onTopOf(
           aPlan("Filter").containingArgument("EXISTS(cache[r.foo])")
@@ -157,7 +157,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       })
 
     res.executionPlanDescription() should includeSomewhere.
-      aPlan("Projection").containingArgument("{x : EXISTS(cache[n.foo]), n.foo : cache[n.foo]}").onTopOf(
+      aPlan("Projection").containingArgument("EXISTS(cache[n.foo]) AS x, cache[n.foo] AS n.foo").onTopOf(
       aPlan("Filter").containingArgument("not EXISTS(cache[n.foo])")
     )
     res.toList should contain theSameElementsAs List(
@@ -186,7 +186,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       })
 
     res.executionPlanDescription() should includeSomewhere.
-      aPlan("Projection").containingArgument("{x : EXISTS(cache[r.foo]), r.foo : cache[r.foo]}").onTopOf(
+      aPlan("Projection").containingArgumentForProjection(Map("x" -> "EXISTS(cache[r.foo])", "r.foo" -> "cache[r.foo]")).onTopOf(
       aPlan("Filter").containingArgument("not EXISTS(cache[r.foo])")
     )
     res.toList should contain theSameElementsAs List(
@@ -202,10 +202,10 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val res = executeWith(Configs.CachedProperty, "MATCH (x) WHERE x.prop = 2 WITH x AS y MATCH (y)-->(z) WITH y, collect(z) AS ignore RETURN y.prop")
 
     res.executionPlanDescription() should includeSomewhere.
-      aPlan("Projection").containingArgument("{y.prop : cache[y.prop]}")
+      aPlan("Projection").containingArgumentForProjection(Map("y.prop" -> "cache[y.prop]"))
       .onTopOf(aPlan("EagerAggregation")
         .onTopOf(aPlan("Expand(All)")
-          .onTopOf(aPlan("Projection").containingArgument("{y : x}")
+          .onTopOf(aPlan("Projection").containingArgumentForProjection(Map("y" -> "x"))
             .onTopOf(aPlan("Filter").containingArgument("cache[x.prop] = $`  AUTOINT0`")))))
 
     res.toList should contain theSameElementsAs List(Map("y.prop" -> 2))
@@ -226,7 +226,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val result = executeWith(Configs.CachedProperty, query)
 
     result.executionPlanDescription() should includeSomewhere.
-      aPlan("Projection").containingArgument("{m : {x: b, y: cache[b.prop], z: cache[b.prop]}}")
+      aPlan("Projection").containingArgumentForProjection(Map("m" -> "{x: b, y: cache[b.prop], z: cache[b.prop]}"))
 
     result.toList should equal(List(Map("a" -> a,
                                         "m" -> Map("x" -> null,
@@ -250,7 +250,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val result = executeWith(Configs.CachedProperty, query)
 
     result.executionPlanDescription() should includeSomewhere.
-      aPlan("Projection").containingArgument("{m : {x: c, y: cache[c.prop], z: cache[c.prop]}}")
+      aPlan("Projection").containingArgumentForProjection(Map("m" -> "{x: c, y: cache[c.prop], z: cache[c.prop]}"))
 
     result.toList should equal(List(Map("a" -> a,
                                         "m" -> Map("x" -> null,

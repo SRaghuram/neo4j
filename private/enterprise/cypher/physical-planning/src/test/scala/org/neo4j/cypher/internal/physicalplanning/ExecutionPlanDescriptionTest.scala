@@ -5,11 +5,10 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.physicalplanning.ast.ReferenceFromSlot
 import org.neo4j.cypher.internal.plandescription.Arguments
 import org.neo4j.cypher.internal.plandescription.Arguments.DbHits
+import org.neo4j.cypher.internal.plandescription.Arguments.Details
 import org.neo4j.cypher.internal.plandescription.Arguments.EstimatedRows
-import org.neo4j.cypher.internal.plandescription.Arguments.Expression
 import org.neo4j.cypher.internal.plandescription.NoChildren
 import org.neo4j.cypher.internal.plandescription.PlanDescriptionImpl
 import org.neo4j.cypher.internal.plandescription.renderAsTreeTable
@@ -25,18 +24,18 @@ class ExecutionPlanDescriptionTest extends CypherFunSuite {
     val arguments = Seq(
       Arguments.Rows(42),
       DbHits(33),
-      Expression(ReferenceFromSlot(42, "  id@23")),
+      Details("id"),
       EstimatedRows(1))
 
     val plan = PlanDescriptionImpl(Id.INVALID_ID, "NAME", NoChildren, arguments, Set("  n@76"))
 
     val details = renderAsTreeTable(plan)
     details should equal(
-      """+----------+----------------+------+---------+-----------+-------+
-        || Operator | Estimated Rows | Rows | DB Hits | Variables | Other |
-        |+----------+----------------+------+---------+-----------+-------+
-        || +NAME    |              1 |   42 |      33 | n         | id    |
-        |+----------+----------------+------+---------+-----------+-------+
+      """+----------+---------+----------------+------+---------+
+        || Operator | Details | Estimated Rows | Rows | DB Hits |
+        |+----------+---------+----------------+------+---------+
+        || +NAME    | id      |              1 |   42 |      33 |
+        |+----------+---------+----------------+------+---------+
         |""".stripMargin)
   }
 

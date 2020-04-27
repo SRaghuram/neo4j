@@ -1164,7 +1164,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .containingArgumentRegex("name = \\$`  AUTOSTRING\\d+`".r)
       .onTopOf(aPlan("Projection")
         .containingVariables("name")
-        .containingArgument("{name : a.name}")
+        .containingArgumentForProjection(Map("name" -> "a.name"))
       )
   }
 }

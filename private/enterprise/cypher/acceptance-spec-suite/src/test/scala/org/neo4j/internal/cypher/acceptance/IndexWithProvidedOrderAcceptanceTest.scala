@@ -258,7 +258,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       result.executionPlanDescription() should includeSomewhere
         .aPlan("PartialSort")
         .withOrder(order)
-        .containingArgument("n.prop2", "n.prop1")
+        .containingArgument(s"n.prop2 $cypherToken, n.prop1 $cypherToken")
 
       result.toList should equal(expectedOrder(List(
         Map("n.prop2" -> 1, "n.prop1" -> 43),
@@ -285,7 +285,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       result.executionPlanDescription() should includeSomewhere
         .aPlan("PartialTop")
         .withOrder(order)
-        .containingArgument("n.prop2", "n.prop1")
+        .containingArgument(s"n.prop2 $cypherToken, n.prop1 $cypherToken")
 
       result.toList should equal(expectedOrder(List(
         Map("n.prop2" -> 1, "n.prop1" -> 43),
@@ -312,7 +312,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       result.executionPlanDescription() should includeSomewhere
         .aPlan("PartialTop")
         .withOrder(order)
-        .containingArgument("n.prop2", "n.prop1")
+        .containingArgument(s"n.prop2 $cypherToken, n.prop1 $cypherToken")
 
       result.toList should equal(expectedOrder(List(
         Map("n.prop2" -> 1, "n.prop1" -> 43),
@@ -400,7 +400,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
           result.executionPlanDescription() should includeSomewhere
             .aPlan("PartialSort")
             .withOrder(sortOrder)
-            .containingArgument("n.prop1", "n.prop2")
+            .containingArgument(orderByString)
         else result.executionPlanDescription() should not(includeSomewhere.aPlan("PartialSort"))
     }
   }
@@ -575,7 +575,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
         // Then
         result.executionPlanDescription() should includeSomewhere
           .aPlan("PartialSort")
-          .containingArgument("n.prop1, n.prop2", sortItem)
+          .containingArgument(orderByString)
           .withOrder(sortOrder)
           .onTopOf(aPlan("Projection")
             .onTopOf(aPlan("Filter")
@@ -747,7 +747,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
         result.executionPlanDescription() should includeSomewhere
           .aPlan("PartialSort")
-          .containingArgument(alreadySorted, toBeSorted)
+          .containingArgument(orderByString)
           .withOrder(sortOrder)
           .onTopOf(aPlan("Projection")
             .onTopOf(aPlan("Filter")
@@ -818,7 +818,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
         // Then
         result.executionPlanDescription() should includeSomewhere
           .aPlan("PartialSort")
-          .containingArgument(alreadySorted, toBeSorted)
+          .containingArgument(orderByString)
           .withOrder(sortOrder)
           .onTopOf(aPlan("Projection")
             .onTopOf(aPlan("Projection")

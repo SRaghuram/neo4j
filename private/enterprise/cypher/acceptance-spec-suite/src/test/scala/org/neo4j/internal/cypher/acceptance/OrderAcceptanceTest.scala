@@ -72,7 +72,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     result.executionPlanDescription() should includeSomewhere
       .aPlan("PartialSort")
       .withOrder(ProvidedOrder.asc(varFor("gender")).asc(varFor("a.name")).fromLeft)
-      .containingArgument("gender", "a.name")
+      .containingArgument("gender ASC, a.name ASC")
 
     result.toList should equal(List(
       Map("gender" -> "female", "a.name" -> "A"),
@@ -92,7 +92,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .containingArgument("$`  AUTOINT0`")
       .onTopOf(aPlan("Top")
         .withOrder(ProvidedOrder.asc(varFor("a.name")).fromLeft)
-        .containingArgument("a.name", "3 + $`  AUTOINT0`")
+        .containingArgument("a.name ASC LIMIT 3 + $`  AUTOINT0`")
       )
 
     result.toList should equal(List(
@@ -108,7 +108,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     result.executionPlanDescription() should includeSomewhere
       .aPlan("PartialTop")
       .withOrder(ProvidedOrder.asc(varFor("gender")).asc(varFor("a.name")).fromLeft)
-      .containingArgument("gender", "a.name")
+      .containingArgument("gender ASC, a.name ASC")
 
     result.toList should equal(List(
       Map("a.name" -> "A", "gender" -> "female"),
@@ -123,7 +123,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     result.executionPlanDescription() should includeSomewhere
       .aPlan("PartialTop")
       .withOrder(ProvidedOrder.asc(varFor("gender")).asc(varFor("a.name")).fromLeft)
-      .containingArgument("gender", "a.name")
+      .containingArgument("gender ASC, a.name ASC")
 
     result.toList should equal(List(
       Map("a.name" -> "A", "gender" -> "female")
@@ -135,12 +135,12 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Projection")
-      .containingArgument("{a.name : a.name}")
+      .containingArgument("a.name")
       .onTopOf(aPlan("Sort")
         .withOrder(ProvidedOrder.asc(prop("a", "age")))
         .onTopOf(aPlan("Projection")
           .containingVariables("a")
-          .containingArgument("{a.age : a.age}")
+          .containingArgument("a.age")
         ))
 
     result.columnAs[String]("a.name").toList should equal(List("F", "B", "A", "C", "E", "D"))
@@ -151,12 +151,12 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Projection")
-      .containingArgument("{a.name : a.name, a.age : cache[a.age]}")
+      .containingArgumentForProjection(Map("a.name" -> "a.name", "a.age" -> "cache[a.age]"))
       .onTopOf(aPlan("Sort")
         .withOrder(ProvidedOrder.asc(prop("a", "age")))
         .onTopOf(aPlan("Projection")
           .containingVariables("a")
-          .containingArgument("{a.age : cache[a.age]}")
+          .containingArgumentForProjection(Map("a.age" -> "cache[a.age]"))
         ))
 
     result.toList should equal(List(
@@ -180,13 +180,13 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Projection")
-      .containingArgument("{a.name : a.name}")
+      .containingArgument("a.name")
       .onTopOf(aPlan("Sort")
         .withOrder(ProvidedOrder.asc(varFor("age")))
-        .containingArgument("age")
+        .containingArgument("age ASC")
         .onTopOf(aPlan("Projection")
           .containingVariables("a")
-          .containingArgument("{age : a.age}")
+          .containingArgumentForProjection(Map("age" -> "a.age"))
         ))
 
     result.toList should equal(List(
@@ -211,12 +211,12 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Projection")
-      .containingArgument("{age : a.age}")
+      .containingArgumentForProjection(Map("age" -> "a.age"))
       .onTopOf(aPlan("Sort")
         .withOrder(ProvidedOrder.asc(varFor("b")))
-        .containingArgument("b")
+        .containingArgument("b ASC")
         .onTopOf(aPlan("Projection")
-          .containingArgument("{b : name}")
+          .containingArgumentForProjection(Map("b" -> "name"))
         ))
 
     result.toList should equal(List(
@@ -241,12 +241,12 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Projection")
-      .containingArgument("{age : a.age}")
+      .containingArgumentForProjection(Map("age" -> "a.age"))
       .onTopOf(aPlan("Sort")
         .withOrder(ProvidedOrder.asc(varFor("b")))
-        .containingArgument("b")
+        .containingArgument("b ASC")
         .onTopOf(aPlan("Projection")
-          .containingArgument("{b : name}")
+          .containingArgumentForProjection(Map("b" -> "name"))
         ))
 
     result.toList should equal(List(
@@ -271,9 +271,9 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")
       .onTopOf(aPlan("Projection")
-        .containingArgumentRegex("\\{b\\.foo : b\\.foo, age \\+ \\$  AUTOINT\\d+ : age \\+ \\$`  AUTOINT\\d+`\\}".r)
+        .containingArgumentRegex("b\\.foo, age \\+ \\$`  AUTOINT\\d+` AS age \\+ \\$  AUTOINT\\d+".r)
         .onTopOf(aPlan("Projection")
-          .containingArgument("{b : a, age : a.age}")
+          .containingArgumentForProjection(Map("b" -> "a", "age" -> "a.age"))
         )
       )
 
@@ -298,12 +298,12 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Projection")
-      .containingArgument("{age : cache[a.age]}")
+      .containingArgumentForProjection(Map("age" -> "cache[a.age]"))
       .onTopOf(aPlan("Sort")
         .onTopOf(aPlan("Projection")
-          .containingArgumentRegex("\\{b\\.foo : b\\.foo, b\\.age \\+ \\$  AUTOINT\\d+ : cache\\[b\\.age\\] \\+ \\$`  AUTOINT\\d+`\\}".r)
+          .containingArgumentRegex("b\\.foo, cache\\[b\\.age\\] \\+ \\$`  AUTOINT\\d+` AS b\\.age \\+ \\$  AUTOINT\\d+".r)
           .onTopOf(aPlan("Projection")
-            .containingArgument("{b : a}")
+            .containingArgumentForProjection(Map("b" -> "a"))
           )
         ))
 
@@ -322,12 +322,12 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Projection")
-      .containingArgument("{a.name : a.name}")
+      .containingArgumentForProjection(Map("a.name" -> "a.name"))
       .onTopOf(aPlan("Sort")
         .withOrder(ProvidedOrder.asc(prop("a", "age")))
         .onTopOf(aPlan("Projection")
           .containingVariables("a")
-          .containingArgument("{a.age : a.age}")
+          .containingArgumentForProjection(Map("a.age" -> "a.age"))
         ))
 
     result.toList should equal(List(
@@ -350,11 +350,11 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Projection")
-      .containingArgument("{a.name : a.name}")
+      .containingArgumentForProjection(Map("a.name" -> "a.name"))
       .onTopOf(aPlan("Sort")
         .onTopOf(aPlan("Projection")
           .containingVariables("a")
-          .containingArgument("{a.age : a.age}")
+          .containingArgumentForProjection(Map("a.age" -> "a.age"))
         ))
 
     result.toList should equal(List(
@@ -377,11 +377,11 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Projection")
-      .containingArgument("{a.name : a.name}")
+      .containingArgumentForProjection(Map("a.name" -> "a.name"))
       .onTopOf(aPlan("Sort")
         .onTopOf(aPlan("Projection")
           .containingVariables("a")
-          .containingArgument("{age : a.age}")
+          .containingArgumentForProjection(Map("age" -> "a.age"))
         ))
 
     result.toList should equal(List(
@@ -406,7 +406,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .aPlan("Sort")
       .onTopOf(aPlan("Projection")
         .containingVariables("a")
-        .containingArgument("{a.age : a.age}")
+        .containingArgumentForProjection(Map("a.age" -> "a.age"))
       )
 
     result.toList should equal(List(
@@ -431,7 +431,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .aPlan("Sort")
       .onTopOf(aPlan("Projection")
         .containingVariables("a")
-        .containingArgument("{a.age : a.age}")
+        .containingArgumentForProjection(Map("a.age" -> "a.age"))
       )
 
     result.toList should equal(List(
@@ -456,7 +456,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .aPlan("Sort")
       .onTopOf(aPlan("Projection")
         .containingVariables("a")
-        .containingArgument("{age : a.age}")
+        .containingArgumentForProjection(Map("age" -> "a.age"))
       )
 
     result.toList should equal(List(
@@ -480,11 +480,11 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Projection")
-      .containingArgument("{a.name : a.name}")
+      .containingArgumentForProjection(Map("a.name" -> "a.name"))
       .onTopOf(aPlan("Sort")
         .onTopOf(aPlan("Projection")
           .containingVariables("a")
-          .containingArgumentRegex("\\{a.age \\+ \\$  AUTOINT\\d+ : a.age \\+ \\$`  AUTOINT\\d+`\\}".r)
+          .containingArgumentRegex("a.age \\+ \\$`  AUTOINT\\d+` AS a.age \\+ \\$  AUTOINT\\d+".r)
         ))
 
     result.toList should equal(List(
@@ -509,10 +509,10 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")
       .withOrder(ProvidedOrder.asc(varFor("age")))
-      .containingArgument("age")
+      .containingArgument("age ASC")
       .onTopOf(aPlan("Distinct")
         .containingVariables("age")
-        .containingArgument("age")
+        .containingArgument("a.age AS age")
       )
 
     result.toList should equal(List(
@@ -532,10 +532,10 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .aPlan("Sort")
       .withOrder(ProvidedOrder.asc(prop("a", "age")))
       .onTopOf(aPlan("Projection")
-        .containingArgument("{  a@43.age : `a`.age}")
+        .containingArgumentForProjection(Map("a.age" -> "a.age"))
         .onTopOf(aPlan("Distinct")
           .containingVariables("a", "name")
-          .containingArgument("name, a")
+          .containingArgument("a.name AS name, a")
         )
       )
 
@@ -562,10 +562,10 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")
       .withOrder(ProvidedOrder.asc(varFor("age")))
-      .containingArgument("age")
+      .containingArgument("age ASC")
       .onTopOf(aPlan("EagerAggregation")
         .containingVariables("age", "name") // the introduced variables
-        .containingArgument("name") // the group column
+        .containingArgument("a.name AS name, sum(a.age) AS age") // the details column
       )
 
     result.toList should equal(List(
@@ -591,10 +591,10 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")
       .withOrder(ProvidedOrder.asc(varFor("name")))
-      .containingArgument("name")
+      .containingArgument("name ASC")
       .onTopOf(aPlan("EagerAggregation")
         .containingVariables("age", "name") // the introduced variables
-        .containingArgument("name") // the group column
+        .containingArgument("a.name AS name, sum(a.age) AS age") // the details column
       )
 
     result.toList should equal(List(
@@ -615,10 +615,10 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .aPlan("Sort")
       .withOrder(ProvidedOrder.asc(prop("a", "foo")))
       .onTopOf(aPlan("Projection")
-        .containingArgument("{  a@34.foo : `a`.foo}")
+        .containingArgumentForProjection(Map("a.foo" -> "a.foo"))
         .onTopOf(aPlan("EagerAggregation")
           .containingVariables("age", "name") // the introduced variables
-          .containingArgument("name, a") // the group columns
+          .containingArgument("a.name AS name, a, sum(a.age) AS age") // the details column
         ))
 
     result.toList should equal(List(
@@ -641,11 +641,10 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val query = "MATCH (a) WITH a.name AS n ORDER BY a.foo MATCH (a) RETURN a.age ORDER BY a.age"
     val result = executeWith(Configs.All, query)
 
-    // a.prop is written as `a`.prop in the plan due to the reuse of the variable
     result.executionPlanDescription() should includeSomewhere
-      .aPlan("Projection").containingArgument("{n : `a`.name}")
+      .aPlan("Projection").containingArgumentForProjection(Map("n" -> "a.name"))
       .onTopOf(aPlan("Sort")
-        .onTopOf(aPlan("Projection").containingArgument("{  a@7.foo : `a`.foo}"))
+        .onTopOf(aPlan("Projection").containingArgumentForProjection(Map("a.foo" -> "a.foo")))
       )
 
     result.toSet should equal(Set(
@@ -674,12 +673,11 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     val result = executeWith(Configs.All, query)
 
-    // n.prop is written as `n`.prop in the plan due to the reuse of the variable
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort").withOrder(ProvidedOrder.asc(varFor("n.age"))).onTopOf(
-      includeSomewhere.aPlan("Projection").containingArgument("{name : `n`.name}")
+      includeSomewhere.aPlan("Projection").containingArgumentForProjection(Map("name" -> "n.name"))
         .onTopOf(aPlan("Sort").withOrder(ProvidedOrder.asc(prop("n", "foo")))
-          .onTopOf(aPlan("Projection").containingArgument("{  n@7.foo : `n`.foo}"))
+          .onTopOf(aPlan("Projection").containingArgumentForProjection(Map("n.foo" -> "n.foo")))
         )
     )
 

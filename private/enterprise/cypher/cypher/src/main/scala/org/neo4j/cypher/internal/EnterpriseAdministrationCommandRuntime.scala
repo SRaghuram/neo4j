@@ -41,7 +41,7 @@ import org.neo4j.cypher.internal.ast.ShowRolePrivileges
 import org.neo4j.cypher.internal.ast.ShowUserPrivileges
 import org.neo4j.cypher.internal.ast.UserAllQualifier
 import org.neo4j.cypher.internal.ast.UserQualifier
-import org.neo4j.cypher.internal.ast.prettifier.Prettifier
+import org.neo4j.cypher.internal.ast.prettifier.ExpressionStringifier
 import org.neo4j.cypher.internal.compiler.phases.LogicalPlanState
 import org.neo4j.cypher.internal.expressions.Parameter
 import org.neo4j.cypher.internal.logical.plans.AlterUser
@@ -779,7 +779,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
   }
 
   private def escapeName(name: Either[String, AnyRef]): String = name match {
-    case Left(s) => Prettifier.escapeName(s)
+    case Left(s) => ExpressionStringifier.backtick(s)
     case Right(p) if p.isInstanceOf[ParameterFromSlot]=> s"$$`${p.asInstanceOf[ParameterFromSlot].name}`"
     case Right(p) if p.isInstanceOf[Parameter]=> s"$$`${p.asInstanceOf[Parameter].name}`"
   }

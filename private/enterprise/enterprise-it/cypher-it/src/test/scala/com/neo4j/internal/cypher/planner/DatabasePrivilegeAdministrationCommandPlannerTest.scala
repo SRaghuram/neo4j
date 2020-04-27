@@ -6,8 +6,7 @@
 package com.neo4j.internal.cypher.planner
 
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
-import org.neo4j.cypher.internal.plandescription.Arguments.Database
-import org.neo4j.cypher.internal.plandescription.Arguments.Qualifier
+import org.neo4j.cypher.internal.plandescription.Arguments.Details
 
 class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCommandPlannerTestBase {
 
@@ -49,7 +48,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", action, Database("DATABASE $db"), "$role",
+        databasePrivilegePlan("DenyDatabaseAction", action, Details("DATABASE $db"), "$role",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -113,8 +112,8 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       // Then
       plan should include(
         logPlan(
-          databasePrivilegePlan("GrantDatabaseAction", action, allDatabases = true, Qualifier("ALL USERS"), "editor",
-            databasePrivilegePlan("GrantDatabaseAction", action, allDatabases = true, Qualifier("ALL USERS"), "reader",
+          databasePrivilegePlan("GrantDatabaseAction", action, allDatabases = true, Details("ALL USERS"), "editor",
+            databasePrivilegePlan("GrantDatabaseAction", action, allDatabases = true, Details("ALL USERS"), "reader",
               assertDbmsAdminPlan("ASSIGN PRIVILEGE")
             )
           )
@@ -129,7 +128,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       // Then
       plan should include(
         logPlan(
-          databasePrivilegePlan("DenyDatabaseAction", action, databasePrivilegeArg(SYSTEM_DATABASE_NAME), Qualifier("ALL USERS"), "reader",
+          databasePrivilegePlan("DenyDatabaseAction", action, databasePrivilegeArg(SYSTEM_DATABASE_NAME), Details("ALL USERS"), "reader",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         ).toString
@@ -143,7 +142,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       // Then
       plan should include(
         logPlan(
-          databasePrivilegePlan("DenyDatabaseAction", action, Database("DATABASE $db"), Qualifier("ALL USERS"), "$role",
+          databasePrivilegePlan("DenyDatabaseAction", action, Details("DATABASE $db"), Details("ALL USERS"), "$role",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         ).toString
@@ -157,8 +156,8 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       // Then
       plan should include(
         logPlan(
-          databasePrivilegePlan("RevokeDatabaseAction(DENIED)", action, allDatabases = false, Qualifier("ALL USERS"), "reader",
-            databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", action, allDatabases = false, Qualifier("ALL USERS"), "reader",
+          databasePrivilegePlan("RevokeDatabaseAction(DENIED)", action, allDatabases = false, Details("ALL USERS"), "reader",
+            databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", action, allDatabases = false, Details("ALL USERS"), "reader",
               assertDbmsAdminPlan("REMOVE PRIVILEGE")
             )
           )
@@ -187,7 +186,7 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
       // Then
       plan should include(
         logPlan(
-          databasePrivilegePlan("RevokeDatabaseAction(DENIED)", action, allDatabases = false, Qualifier("USER $user2"), "reader",
+          databasePrivilegePlan("RevokeDatabaseAction(DENIED)", action, allDatabases = false, Details("USER $user2"), "reader",
             databasePrivilegePlan("RevokeDatabaseAction(DENIED)", action, allDatabases = false, qualifierArg("USER", "user1"), "reader",
               assertDbmsAdminPlan("REMOVE PRIVILEGE")
             )

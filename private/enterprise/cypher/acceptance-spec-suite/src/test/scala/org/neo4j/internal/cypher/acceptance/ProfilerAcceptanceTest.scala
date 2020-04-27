@@ -149,7 +149,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     plan should includeSomewhere.aPlan("ProcedureCall")
       .withRows(2)
       .withExactVariables("label")
-      .containingArgument("db.labels() :: (label :: String)")
+      .containingArgument("db.labels() :: (label :: STRING?)")
     plan.totalDbHits shouldBe TotalHits(0, uncertain = true)
   }
 
@@ -163,7 +163,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
         plan should includeSomewhere.aPlan("ProcedureCall")
           .withRows(2)
           .withExactVariables("n", "label")
-          .containingArgument("db.labels() :: (label :: String)")
+          .containingArgument("db.labels() :: (label :: STRING?)")
           .onTopOf(aPlan("NodeByLabelScan").withRows(1).withDBHits(2))
         plan.totalDbHits shouldBe TotalHits(2, uncertain = true)
       }
