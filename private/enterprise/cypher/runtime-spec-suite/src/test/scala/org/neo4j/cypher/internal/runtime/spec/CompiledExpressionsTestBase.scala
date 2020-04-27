@@ -109,10 +109,11 @@ abstract class CompiledExpressionsTestBase[CONTEXT <: EnterpriseRuntimeContext](
       .allNodeScan("n")
       .build()
 
-    numberOfCompilationEvents(query) shouldBe 3
+    val initialEvents = numberOfCompilationEvents(query)
+    initialEvents should be >= 3 // pipelined has 4 because of mapper/reducer part of aggregation
 
     // when recompile then
-    numberOfCompilationEvents(query) shouldBe 3
+    numberOfCompilationEvents(query) shouldBe initialEvents
   }
 
   test("should never cache expression/projection/grouping which has late labels") {
@@ -128,10 +129,11 @@ abstract class CompiledExpressionsTestBase[CONTEXT <: EnterpriseRuntimeContext](
       .allNodeScan("n")
       .build()
 
-    numberOfCompilationEvents(query) shouldBe 3
+    val initialEvents = numberOfCompilationEvents(query)
+    initialEvents should be >= 3 // pipelined has 4 because of mapper/reducer part of aggregation
 
     // when recompile then
-    numberOfCompilationEvents(query) shouldBe 3
+    numberOfCompilationEvents(query) shouldBe initialEvents
   }
 
   test("should never cache expression/projection/grouping which has late relationship types") {
@@ -148,9 +150,10 @@ abstract class CompiledExpressionsTestBase[CONTEXT <: EnterpriseRuntimeContext](
       .allNodeScan("n")
       .build()
 
-    numberOfCompilationEvents(query) shouldBe 3
+    val initialEvents = numberOfCompilationEvents(query)
+    initialEvents should be >= 3 // pipelined has 4 because of mapper/reducer part of aggregation
 
     // when recompile then
-    numberOfCompilationEvents(query) shouldBe 3
+    numberOfCompilationEvents(query) shouldBe initialEvents
   }
 }
