@@ -27,6 +27,7 @@ import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED_DUMPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 
@@ -121,7 +122,8 @@ public class EnterpriseSystemGraphDbmsModel extends SystemGraphDbmsModel
         try ( var tx = systemDatabase.get().beginTx() )
         {
             var deletedDatabases = tx.findNodes( DELETED_DATABASE_LABEL ).stream().collect( Collectors.toList() );
-            deletedDatabases.forEach( node -> databases.put( getDatabaseName( node ), new EnterpriseDatabaseState( getDatabaseId( node ), DROPPED ) ) );
+            deletedDatabases.forEach( node -> databases.put( getDatabaseName( node ),
+                    new EnterpriseDatabaseState( getDatabaseId( node ), getDroppedStatus( node ) ) ) );
 
             // existing databases supersede dropped databases of the same name, because they represent a later state
             // there can only ever be exactly 0 or 1 existing database for a particular name and
@@ -178,6 +180,15 @@ public class EnterpriseSystemGraphDbmsModel extends SystemGraphDbmsModel
         default:
             throw new IllegalArgumentException( "Unsupported database status: " + onlineStatus );
         }
+    }
+
+    private EnterpriseOperatorState getDroppedStatus( Node node )
+    {
+        if ( node.hasProperty( DUMP_DATA_PROPERTY ) && (Boolean) node.getProperty( DUMP_DATA_PROPERTY ) )
+        {
+            return DROPPED_DUMPED;
+        }
+        return DROPPED;
     }
 
     private NamedDatabaseId getDatabaseId( Node node )

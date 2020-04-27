@@ -27,7 +27,8 @@ public enum EnterpriseOperatorState implements OperatorState
     STOPPED( "offline", 100 ),
     STORE_COPYING( "store copying", 200 ),
     STARTED( "online", 300 ),
-    DROPPED( "dropped", 0 ),
+    DROPPED( "dropped", 50 ),
+    DROPPED_DUMPED( "dropped", 0 ),
 
     // States which should never be desired by an operator
     UNKNOWN( "unknown", 400 ),

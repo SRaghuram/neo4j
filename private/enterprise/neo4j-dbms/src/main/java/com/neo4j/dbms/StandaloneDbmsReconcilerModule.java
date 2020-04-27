@@ -24,6 +24,7 @@ import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.DIRTY;
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED_DUMPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
@@ -151,16 +152,20 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
     static TransitionsTable createTransitionsTable( ReconcilerTransitions t )
     {
         return TransitionsTable.builder()
-                .from( INITIAL ).to( DROPPED ).doNothing()
-                .from( INITIAL ).to( STOPPED ).doTransitions( t.create() )
-                .from( INITIAL ).to( STARTED ).doTransitions( t.create(), t.start() )
-                .from( STOPPED ).to( STARTED ).doTransitions( t.start() )
-                .from( STARTED ).to( STOPPED ).doTransitions( t.stop() )
-                .from( STOPPED ).to( DROPPED ).doTransitions( t.drop() )
-                .from( STARTED ).to( DROPPED ).doTransitions( t.prepareDrop(), t.stop(), t.drop() )
-                .from( DIRTY ).to( STOPPED ).doNothing()
-                .from( DIRTY ).to( DROPPED ).doTransitions( t.drop() )
-                .build();
+                               .from( INITIAL ).to( DROPPED ).doNothing()
+                               .from( INITIAL ).to( STOPPED ).doTransitions( t.create() )
+                               .from( INITIAL ).to( STARTED ).doTransitions( t.create(), t.start() )
+                               .from( STOPPED ).to( STARTED ).doTransitions( t.start() )
+                               .from( STOPPED ).to( DROPPED ).doTransitions( t.drop() )
+                               .from( STOPPED ).to( DROPPED_DUMPED ).doTransitions( t.dropDumpData() )
+                               .from( STARTED ).to( DROPPED ).doTransitions( t.prepareDrop(), t.stop(), t.drop() )
+                               .from( STARTED ).to( DROPPED_DUMPED ).doTransitions( t.stop(), t.dropDumpData() )
+                               .from( STARTED ).to( STOPPED ).doTransitions( t.stop() )
+                               .from( DIRTY ).to( STOPPED ).doNothing()
+                               .from( DIRTY ).to( DROPPED ).doTransitions( t.drop() )
+                               .from( DIRTY ).to( DROPPED_DUMPED ).doTransitions( t.dropDumpData() )
+                               .from( DROPPED_DUMPED ).to( DROPPED ).doNothing()
+                               .build();
     }
 
     private GraphDatabaseAPI getSystemDatabase( MultiDatabaseManager<?> databaseManager )

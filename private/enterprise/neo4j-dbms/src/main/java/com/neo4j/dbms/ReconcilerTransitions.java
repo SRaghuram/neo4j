@@ -16,6 +16,7 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import static com.neo4j.dbms.EnterpriseOperatorState.DIRTY;
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
+import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED_DUMPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
@@ -29,23 +30,14 @@ import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
 class ReconcilerTransitions
 {
     static final Consumer<NamedDatabaseId> nothing =  ignored -> {};
-
-    private final Transition create;
-    private final Transition start;
-    private final Transition stop;
-    private final Transition drop;
-    private final Transition prepareDrop;
+    private final MultiDatabaseManager<? extends DatabaseContext> databaseManager;
 
     ReconcilerTransitions( MultiDatabaseManager<? extends DatabaseContext> databaseManager )
     {
-        this.create = createFactory( databaseManager );
-        this.start = startFactory( databaseManager );
-        this.stop = stopFactory( databaseManager );
-        this.drop = dropFactory( databaseManager );
-        this.prepareDrop = prepareDropFactory( databaseManager );
+        this.databaseManager = databaseManager;
     }
 
-    private static Transition createFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager )
+    private Transition createFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager )
     {
         return Transition.from( INITIAL )
                          .doTransition( databaseManager::createDatabase )
@@ -53,7 +45,7 @@ class ReconcilerTransitions
                          .ifFailedThenDo( nothing, DIRTY );
     }
 
-    private static Transition startFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager )
+    private Transition startFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager )
     {
         return Transition.from( STOPPED )
                          .doTransition( databaseManager::startDatabase )
@@ -61,7 +53,7 @@ class ReconcilerTransitions
                          .ifFailedThenDo( nothing, STOPPED );
     }
 
-    private static Transition stopFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager )
+    private Transition stopFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager )
     {
         return Transition.from( STARTED, STORE_COPYING )
                          .doTransition( databaseManager::stopDatabase )
@@ -69,11 +61,12 @@ class ReconcilerTransitions
                          .ifFailedThenDo( nothing, STOPPED );
     }
 
-    private static Transition dropFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager )
+    private Transition dropFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager, boolean dumpData )
     {
+        var succeededState = dumpData ? DROPPED_DUMPED : DROPPED;
         return Transition.from( STOPPED, DIRTY )
-                         .doTransition( databaseManager::dropDatabase )
-                         .ifSucceeded( DROPPED )
+                         .doTransition( id -> databaseManager.dropDatabase( id, dumpData ) )
+                         .ifSucceeded( succeededState )
                          .ifFailedThenDo( nothing, DIRTY );
     }
 
@@ -91,26 +84,31 @@ class ReconcilerTransitions
 
     final Transition stop()
     {
-        return stop;
+        return stopFactory( databaseManager );
     }
 
     final Transition prepareDrop()
     {
-        return prepareDrop;
+        return prepareDropFactory( databaseManager );
     }
 
     final Transition drop()
     {
-        return drop;
+        return dropFactory( databaseManager, false );
+    }
+
+    final Transition dropDumpData()
+    {
+        return dropFactory( databaseManager, true );
     }
 
     final Transition start()
     {
-        return start;
+        return startFactory( databaseManager );
     }
 
     final Transition create()
     {
-        return create;
+        return createFactory( databaseManager );
     }
 }
