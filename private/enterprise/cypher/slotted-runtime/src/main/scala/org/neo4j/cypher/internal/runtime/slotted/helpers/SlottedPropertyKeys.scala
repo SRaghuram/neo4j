@@ -15,15 +15,52 @@ import org.neo4j.internal.kernel.api.TokenRead
 
 import scala.collection.mutable
 
-class SlottedPropertyKeys(val resolved: Seq[(Int, Int)], var unresolved: Seq[(String, Int)]) {
+/**
+ * Used for handling multiple property keys at runtime.
+ *
+ * SlottedPropertyKeys is initiated with some combination of resolved and unresolved property keys and then
+ * acts as Set with `accept` returning `true` if the provided key is contained in either the resolved or unresolved
+ * set of keys.
+ *
+ * Usage:
+ * {{{
+ *   val nodeCursor: NodeCursor = _
+ *   val propertyCursor: PropertyCursor = _
+ *   read.singleNode(node, nodeCursor)
+ *   assert(nodeCursor.next())
+ *   nodeCursor.properties(propertyCursor)
+ *   while (propertyCursor.next() && slottedPropertyKeys.accept(db, propertyCursor.propertyKey)) {
+ *    val offset = slottedPropertyKeys.offset//offset will now be for the "accepted" property key
+ *    val value = propertyCursor.propertyValue()
+ *    ...
+ *   }
+ * }}}
+ *
+ * The point of this class is that we can do one single iteration over the property-chain instead of something like.
+ *
+ * {{{
+ *  if (propertyCursor.seekProperty(p1)) {
+ *   ...
+ *  }
+ *  if (propertyCursor.seekProperty(p2)) {
+ *   ...
+ *  }
+ *  ...
+ * }}}
+ *
+ * @param resolved property tokens that are known at the point of creation
+ * @param unresolved property tokens that are unknown at the point of creation.
+ */
+class SlottedPropertyKeys(val resolved: Seq[(Int, Int)], val unresolved: Seq[(String, Int)]) {
   private var _offset = - 1
+  private var _unresolved = unresolved
   private var (resolvedTokens, resolvedOffsets) = resolved.sortBy(_._1).toArray.unzip
 
   private def resolve(dbAccess: DbAccess): Unit = {
-    if (unresolved.isEmpty) return
+    if (_unresolved.isEmpty) return
     val newResolved = mutable.ArrayBuffer.empty[(Int, Int)]
     val newUnresolved = mutable.ArrayBuffer.empty[(String, Int)]
-    unresolved.foreach {
+    _unresolved.foreach {
         case (key, offset) =>
           val token = dbAccess.propertyKey(key)
           if (token != TokenRead.NO_TOKEN) {
@@ -43,7 +80,7 @@ class SlottedPropertyKeys(val resolved: Seq[(Int, Int)], var unresolved: Seq[(St
     val (newResolvedTokens, newResolvedOffsets) = newResolved.sortBy(_._1).toArray.unzip
     resolvedTokens = newResolvedTokens
     resolvedOffsets = newResolvedOffsets
-    unresolved = newUnresolved
+    _unresolved = newUnresolved
   }
 
   def accept(dbAccess: DbAccess, propertyKey: Int): Boolean = {
