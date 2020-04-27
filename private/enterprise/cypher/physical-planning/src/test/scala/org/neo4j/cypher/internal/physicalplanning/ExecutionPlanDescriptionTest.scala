@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.plandescription.Arguments.Details
 import org.neo4j.cypher.internal.plandescription.Arguments.EstimatedRows
 import org.neo4j.cypher.internal.plandescription.NoChildren
 import org.neo4j.cypher.internal.plandescription.PlanDescriptionImpl
+import org.neo4j.cypher.internal.plandescription.PrettyStringCreator
 import org.neo4j.cypher.internal.plandescription.renderAsTreeTable
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
@@ -24,7 +25,7 @@ class ExecutionPlanDescriptionTest extends CypherFunSuite {
     val arguments = Seq(
       Arguments.Rows(42),
       DbHits(33),
-      Details("id"),
+      Details(PrettyStringCreator.raw("id")),
       EstimatedRows(1))
 
     val plan = PlanDescriptionImpl(Id.INVALID_ID, "NAME", NoChildren, arguments, Set("  n@76"))

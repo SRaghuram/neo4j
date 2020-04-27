@@ -8,6 +8,7 @@ package com.neo4j.internal.cypher.planner
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.internal.plandescription.Arguments.Details
+import org.neo4j.cypher.internal.plandescription.PrettyStringCreator
 
 class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPlannerTestBase {
 
@@ -34,7 +35,7 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     val plan = execute("EXPLAIN SHOW DATABASE $db", Map("db" -> DEFAULT_DATABASE_NAME)).executionPlanString()
 
     // Then
-    plan should include(managementPlan("ShowDatabase", Seq(Details("$db"))).toString)
+    plan should include(managementPlan("ShowDatabase", Seq(details("$db"))).toString)
   }
 
   test("Show default database") {
@@ -66,7 +67,7 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     // Then
     plan should include(
       helperPlan("EnsureValidNumberOfDatabases",
-        managementPlan("CreateDatabase", Seq(Details("$db")),
+        managementPlan("CreateDatabase", Seq(details("$db")),
           assertDbmsAdminPlan("CREATE DATABASE")
         )
       ).toString
@@ -131,8 +132,8 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
 
     // Then
     plan should include(
-      managementPlan("DropDatabase", Seq(Details("$db")),
-        helperPlan("EnsureValidNonSystemDatabase", Seq(Details("$db")),
+      managementPlan("DropDatabase", Seq(details("$db")),
+        helperPlan("EnsureValidNonSystemDatabase", Seq(details("$db")),
           assertDbmsAdminPlan("DROP DATABASE")
         )
       ).toString
@@ -181,8 +182,8 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
 
     // Then
     plan should include(
-      managementPlan("StartDatabase", Seq(Details("$db")),
-        assertDatabaseAdminPlan("START", Details("$db"))
+      managementPlan("StartDatabase", Seq(details("$db")),
+        assertDatabaseAdminPlan("START", details("$db"))
       ).toString
     )
   }
@@ -213,9 +214,9 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
 
     // Then
     plan should include(
-      managementPlan("StopDatabase", Seq(Details("$db")),
-        helperPlan("EnsureValidNonSystemDatabase", Seq(Details("$db")),
-          assertDatabaseAdminPlan("STOP", Details("$db"))
+      managementPlan("StopDatabase", Seq(details("$db")),
+        helperPlan("EnsureValidNonSystemDatabase", Seq(details("$db")),
+          assertDatabaseAdminPlan("STOP", details("$db"))
         )
       ).toString
     )
@@ -257,7 +258,7 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     // Then
     plan should include(
       logPlan(
-        managementPlan("CreateUser", Seq(Details("USER $foo")),
+        managementPlan("CreateUser", Seq(details("USER $foo")),
           assertDbmsAdminPlan("CREATE USER")
         )
       ).toString
@@ -329,9 +330,9 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     // Then
     plan should include(
       logPlan(
-        managementPlan("DropUser", Seq(Details("USER $foo")),
-          helperPlan("EnsureNodeExists(User)", Seq(Details("USER $foo")),
-            helperPlan("AssertNotCurrentUser", Seq(Details("USER $foo")),
+        managementPlan("DropUser", Seq(details("USER $foo")),
+          helperPlan("EnsureNodeExists(User)", Seq(details("USER $foo")),
+            helperPlan("AssertNotCurrentUser", Seq(details("USER $foo")),
               assertDbmsAdminPlan("DROP USER")
             )
           )
@@ -385,7 +386,7 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     // Then
     plan should include(
       logPlan(
-        managementPlan("AlterUser", Seq(Details("USER $foo")),
+        managementPlan("AlterUser", Seq(details("USER $foo")),
           assertDbmsAdminPlan("SET PASSWORDS")
         )
       ).toString
@@ -501,7 +502,7 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     // Then
     plan should include(
       logPlan(
-        managementPlan("CreateRole", Seq(Details("ROLE $foo")),
+        managementPlan("CreateRole", Seq(details("ROLE $foo")),
           assertDbmsAdminPlan("CREATE ROLE")
         )
       ).toString
@@ -547,8 +548,8 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     // Then
     plan should include(
       logPlan(
-        helperPlan("CopyRolePrivileges(DENIED)", Seq(Details(s"FROM ROLE reader TO ROLE foo")),
-          helperPlan("CopyRolePrivileges(GRANTED)", Seq(Details(s"FROM ROLE reader TO ROLE foo")),
+        helperPlan("CopyRolePrivileges(DENIED)", Seq(details(s"FROM ROLE reader TO ROLE foo")),
+          helperPlan("CopyRolePrivileges(GRANTED)", Seq(details(s"FROM ROLE reader TO ROLE foo")),
             managementPlan("CreateRole", Seq(roleArg("foo")),
               helperPlan("RequireRole", Seq(roleArg("reader")),
                 assertDbmsAdminPlan("CREATE ROLE")
@@ -567,10 +568,10 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     // Then
     plan should include(
       logPlan(
-        helperPlan("CopyRolePrivileges(DENIED)", Seq(Details(s"FROM ROLE $$bar TO ROLE foo")),
-          helperPlan("CopyRolePrivileges(GRANTED)", Seq(Details(s"FROM ROLE $$bar TO ROLE foo")),
+        helperPlan("CopyRolePrivileges(DENIED)", Seq(details(s"FROM ROLE $$bar TO ROLE foo")),
+          helperPlan("CopyRolePrivileges(GRANTED)", Seq(details(s"FROM ROLE $$bar TO ROLE foo")),
             managementPlan("CreateRole", Seq(roleArg("foo")),
-              helperPlan("RequireRole", Seq(Details("ROLE $bar")),
+              helperPlan("RequireRole", Seq(details("ROLE $bar")),
                 assertDbmsAdminPlan("CREATE ROLE")
               )
             )
@@ -587,8 +588,8 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     // Then
     plan should include(
       logPlan(
-        helperPlan("CopyRolePrivileges(DENIED)", Seq(Details(s"FROM ROLE reader TO ROLE foo")),
-          helperPlan("CopyRolePrivileges(GRANTED)", Seq(Details(s"FROM ROLE reader TO ROLE foo")),
+        helperPlan("CopyRolePrivileges(DENIED)", Seq(details(s"FROM ROLE reader TO ROLE foo")),
+          helperPlan("CopyRolePrivileges(GRANTED)", Seq(details(s"FROM ROLE reader TO ROLE foo")),
             managementPlan("CreateRole", Seq(roleArg("foo")),
               helperPlan("RequireRole", Seq(roleArg("reader")),
                 managementPlan("DropRole", Seq(roleArg("foo")),
@@ -609,8 +610,8 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     // Then
     plan should include(
       logPlan(
-        helperPlan("CopyRolePrivileges(DENIED)", Seq(Details(s"FROM ROLE reader TO ROLE foo")),
-          helperPlan("CopyRolePrivileges(GRANTED)", Seq(Details(s"FROM ROLE reader TO ROLE foo")),
+        helperPlan("CopyRolePrivileges(DENIED)", Seq(details(s"FROM ROLE reader TO ROLE foo")),
+          helperPlan("CopyRolePrivileges(GRANTED)", Seq(details(s"FROM ROLE reader TO ROLE foo")),
             managementPlan("CreateRole", Seq(roleArg("foo")),
               helperPlan("RequireRole", Seq(roleArg("reader")),
                 helperPlan("DoNothingIfExists(Role)", Seq(roleArg("foo")),
@@ -653,8 +654,8 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     // Then
     plan should include(
       logPlan(
-        managementPlan("DropRole", Seq(Details("ROLE $foo")),
-          helperPlan("EnsureNodeExists(Role)", Seq(Details("ROLE $foo")),
+        managementPlan("DropRole", Seq(details("ROLE $foo")),
+          helperPlan("EnsureNodeExists(Role)", Seq(details("ROLE $foo")),
             assertDbmsAdminPlan("DROP ROLE")
           )
         )
@@ -773,7 +774,7 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
 
     // Then
     plan should include(
-      managementPlan("ShowPrivileges", Seq(Details("ALL")),
+      managementPlan("ShowPrivileges", Seq(details("ALL")),
         assertDbmsAdminPlan("SHOW PRIVILEGE")
       ).toString
     )
@@ -797,7 +798,7 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
 
     // Then
     plan should include(
-      managementPlan("ShowPrivileges", Seq(Details("ROLE $role")),
+      managementPlan("ShowPrivileges", Seq(details("ROLE $role")),
         assertDbmsAdminPlan("SHOW PRIVILEGE")
       ).toString
     )
@@ -821,9 +822,10 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
 
     // Then
     plan should include(
-      managementPlan("ShowPrivileges", Seq(Details("USER $user")),
-        assertDbmsAdminOrSelfPlan(Details("USER $user"), "SHOW PRIVILEGE", "SHOW USER")
+      managementPlan("ShowPrivileges", Seq(details("USER $user")),
+        assertDbmsAdminOrSelfPlan(details("USER $user"), "SHOW PRIVILEGE", "SHOW USER")
       ).toString
     )
   }
+  def details(info: String): Details = Details(PrettyStringCreator.raw(info))
 }

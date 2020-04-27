@@ -8,6 +8,7 @@ package com.neo4j.internal.cypher.planner
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.cypher.internal.plandescription.Arguments.Details
+import org.neo4j.cypher.internal.plandescription.PrettyStringCreator
 
 class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationCommandPlannerTestBase {
 
@@ -20,10 +21,10 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("GrantTraverse", Details("RELATIONSHIPS *"), "editor",
-          graphPrivilegePlan("GrantTraverse", Details("NODES *"), "editor",
-            graphPrivilegePlan("GrantTraverse", Details("RELATIONSHIPS *"), "reader",
-              graphPrivilegePlan("GrantTraverse", Details("NODES *"), "reader",
+        graphPrivilegePlan("GrantTraverse", details("RELATIONSHIPS *"), "editor",
+          graphPrivilegePlan("GrantTraverse", details("NODES *"), "editor",
+            graphPrivilegePlan("GrantTraverse", details("RELATIONSHIPS *"), "reader",
+              graphPrivilegePlan("GrantTraverse", details("NODES *"), "reader",
                 assertDbmsAdminPlan("ASSIGN PRIVILEGE")
               )
             )
@@ -40,10 +41,10 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("GrantTraverse", Details("GRAPH $db"), Details("RELATIONSHIPS *"), "$role2",
-          graphPrivilegePlan("GrantTraverse", Details("GRAPH $db"), Details("NODES *"), "$role2",
-            graphPrivilegePlan("GrantTraverse", Details("GRAPH $db"), Details("RELATIONSHIPS *"), "$role1",
-              graphPrivilegePlan("GrantTraverse", Details("GRAPH $db"), Details("NODES *"), "$role1",
+        graphPrivilegePlan("GrantTraverse", details("GRAPH $db"), details("RELATIONSHIPS *"), "$role2",
+          graphPrivilegePlan("GrantTraverse", details("GRAPH $db"), details("NODES *"), "$role2",
+            graphPrivilegePlan("GrantTraverse", details("GRAPH $db"), details("RELATIONSHIPS *"), "$role1",
+              graphPrivilegePlan("GrantTraverse", details("GRAPH $db"), details("NODES *"), "$role1",
                 assertDbmsAdminPlan("ASSIGN PRIVILEGE")
               )
             )
@@ -94,14 +95,14 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("RevokeTraverse(DENIED)", Details("GRAPH $db2"), qualifierArg("RELATIONSHIP", "B"), "reader",
-          graphPrivilegePlan("RevokeTraverse(GRANTED)", Details("GRAPH $db2"), qualifierArg("RELATIONSHIP", "B"), "reader",
-            graphPrivilegePlan("RevokeTraverse(DENIED)", Details("GRAPH $db2"), qualifierArg("RELATIONSHIP", "A"), "reader",
-              graphPrivilegePlan("RevokeTraverse(GRANTED)", Details("GRAPH $db2"), qualifierArg("RELATIONSHIP", "A"), "reader",
-                graphPrivilegePlan("RevokeTraverse(DENIED)", Details("GRAPH $db1"), qualifierArg("RELATIONSHIP", "B"), "reader",
-                  graphPrivilegePlan("RevokeTraverse(GRANTED)", Details("GRAPH $db1"), qualifierArg("RELATIONSHIP", "B"), "reader",
-                    graphPrivilegePlan("RevokeTraverse(DENIED)", Details("GRAPH $db1"), qualifierArg("RELATIONSHIP", "A"), "reader",
-                      graphPrivilegePlan("RevokeTraverse(GRANTED)", Details("GRAPH $db1"), qualifierArg("RELATIONSHIP", "A"), "reader",
+        graphPrivilegePlan("RevokeTraverse(DENIED)", details("GRAPH $db2"), qualifierArg("RELATIONSHIP", "B"), "reader",
+          graphPrivilegePlan("RevokeTraverse(GRANTED)", details("GRAPH $db2"), qualifierArg("RELATIONSHIP", "B"), "reader",
+            graphPrivilegePlan("RevokeTraverse(DENIED)", details("GRAPH $db2"), qualifierArg("RELATIONSHIP", "A"), "reader",
+              graphPrivilegePlan("RevokeTraverse(GRANTED)", details("GRAPH $db2"), qualifierArg("RELATIONSHIP", "A"), "reader",
+                graphPrivilegePlan("RevokeTraverse(DENIED)", details("GRAPH $db1"), qualifierArg("RELATIONSHIP", "B"), "reader",
+                  graphPrivilegePlan("RevokeTraverse(GRANTED)", details("GRAPH $db1"), qualifierArg("RELATIONSHIP", "B"), "reader",
+                    graphPrivilegePlan("RevokeTraverse(DENIED)", details("GRAPH $db1"), qualifierArg("RELATIONSHIP", "A"), "reader",
+                      graphPrivilegePlan("RevokeTraverse(GRANTED)", details("GRAPH $db1"), qualifierArg("RELATIONSHIP", "A"), "reader",
                         assertDbmsAdminPlan("REMOVE PRIVILEGE")
                       )
                     )
@@ -124,14 +125,14 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("GrantRead", Details("GRAPH bar"), allResourceArg(), Details("RELATIONSHIPS *"), "editor",
-          graphPrivilegePlan("GrantRead", Details("GRAPH bar"), allResourceArg(), Details("NODES *"), "editor",
-            graphPrivilegePlan("GrantRead", Details("GRAPH bar"), allResourceArg(), Details("RELATIONSHIPS *"), "reader",
-              graphPrivilegePlan("GrantRead", Details("GRAPH bar"), allResourceArg(), Details("NODES *"), "reader",
-                graphPrivilegePlan("GrantRead", Details("GRAPH foo"), allResourceArg(), Details("RELATIONSHIPS *"), "editor",
-                  graphPrivilegePlan("GrantRead", Details("GRAPH foo"), allResourceArg(), Details("NODES *"), "editor",
-                    graphPrivilegePlan("GrantRead", Details("GRAPH foo"), allResourceArg(), Details("RELATIONSHIPS *"), "reader",
-                      graphPrivilegePlan("GrantRead", Details("GRAPH foo"), allResourceArg(), Details("NODES *"), "reader",
+        graphPrivilegePlan("GrantRead", details("GRAPH bar"), allResourceArg(), details("RELATIONSHIPS *"), "editor",
+          graphPrivilegePlan("GrantRead", details("GRAPH bar"), allResourceArg(), details("NODES *"), "editor",
+            graphPrivilegePlan("GrantRead", details("GRAPH bar"), allResourceArg(), details("RELATIONSHIPS *"), "reader",
+              graphPrivilegePlan("GrantRead", details("GRAPH bar"), allResourceArg(), details("NODES *"), "reader",
+                graphPrivilegePlan("GrantRead", details("GRAPH foo"), allResourceArg(), details("RELATIONSHIPS *"), "editor",
+                  graphPrivilegePlan("GrantRead", details("GRAPH foo"), allResourceArg(), details("NODES *"), "editor",
+                    graphPrivilegePlan("GrantRead", details("GRAPH foo"), allResourceArg(), details("RELATIONSHIPS *"), "reader",
+                      graphPrivilegePlan("GrantRead", details("GRAPH foo"), allResourceArg(), details("NODES *"), "reader",
                         assertDbmsAdminPlan("ASSIGN PRIVILEGE")
                       )
                     )
@@ -152,10 +153,10 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlanForAllGraphs("DenyRead", resourceArg("prop"), Details("RELATIONSHIPS *"), "reader",
-          graphPrivilegePlanForAllGraphs("DenyRead", resourceArg("foo"), Details("RELATIONSHIPS *"), "reader",
-            graphPrivilegePlanForAllGraphs("DenyRead", resourceArg("prop"), Details("NODES *"), "reader",
-              graphPrivilegePlanForAllGraphs("DenyRead", resourceArg("foo"), Details("NODES *"), "reader",
+        graphPrivilegePlanForAllGraphs("DenyRead", resourceArg("prop"), details("RELATIONSHIPS *"), "reader",
+          graphPrivilegePlanForAllGraphs("DenyRead", resourceArg("foo"), details("RELATIONSHIPS *"), "reader",
+            graphPrivilegePlanForAllGraphs("DenyRead", resourceArg("prop"), details("NODES *"), "reader",
+              graphPrivilegePlanForAllGraphs("DenyRead", resourceArg("foo"), details("NODES *"), "reader",
                 assertDbmsAdminPlan("ASSIGN PRIVILEGE")
               )
             )
@@ -172,10 +173,10 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("DenyRead", Details("GRAPH $db"), resourceArg("prop"), Details("RELATIONSHIPS *"), "$role",
-          graphPrivilegePlan("DenyRead", Details("GRAPH $db"), resourceArg("foo"), Details("RELATIONSHIPS *"), "$role",
-            graphPrivilegePlan("DenyRead", Details("GRAPH $db"), resourceArg("prop"), Details("NODES *"), "$role",
-              graphPrivilegePlan("DenyRead", Details("GRAPH $db"), resourceArg("foo"), Details("NODES *"), "$role",
+        graphPrivilegePlan("DenyRead", details("GRAPH $db"), resourceArg("prop"), details("RELATIONSHIPS *"), "$role",
+          graphPrivilegePlan("DenyRead", details("GRAPH $db"), resourceArg("foo"), details("RELATIONSHIPS *"), "$role",
+            graphPrivilegePlan("DenyRead", details("GRAPH $db"), resourceArg("prop"), details("NODES *"), "$role",
+              graphPrivilegePlan("DenyRead", details("GRAPH $db"), resourceArg("foo"), details("NODES *"), "$role",
                 assertDbmsAdminPlan("ASSIGN PRIVILEGE")
               )
             )
@@ -214,8 +215,8 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("GrantMatch", DEFAULT_DATABASE_NAME, allResourceArg(), Details("RELATIONSHIPS *"), "reader",
-          graphPrivilegePlan("GrantMatch", DEFAULT_DATABASE_NAME, allResourceArg(), Details("NODES *"), "reader",
+        graphPrivilegePlan("GrantMatch", DEFAULT_DATABASE_NAME, allResourceArg(), details("RELATIONSHIPS *"), "reader",
+          graphPrivilegePlan("GrantMatch", DEFAULT_DATABASE_NAME, allResourceArg(), details("NODES *"), "reader",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
@@ -230,8 +231,8 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("DenyMatch", SYSTEM_DATABASE_NAME, allResourceArg(), Details("RELATIONSHIPS *"), "reader",
-          graphPrivilegePlan("DenyMatch", SYSTEM_DATABASE_NAME, allResourceArg(), Details("NODES *"), "reader",
+        graphPrivilegePlan("DenyMatch", SYSTEM_DATABASE_NAME, allResourceArg(), details("RELATIONSHIPS *"), "reader",
+          graphPrivilegePlan("DenyMatch", SYSTEM_DATABASE_NAME, allResourceArg(), details("NODES *"), "reader",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
@@ -246,8 +247,8 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlanForAllGraphs("DenyMatch", resourceArg("prop"), Details("RELATIONSHIPS *"), "reader",
-          graphPrivilegePlanForAllGraphs("DenyMatch", resourceArg("prop"), Details("NODES *"), "reader",
+        graphPrivilegePlanForAllGraphs("DenyMatch", resourceArg("prop"), details("RELATIONSHIPS *"), "reader",
+          graphPrivilegePlanForAllGraphs("DenyMatch", resourceArg("prop"), details("NODES *"), "reader",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
@@ -262,8 +263,8 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("DenyMatch", Details("GRAPH $db"), resourceArg("prop"), Details("RELATIONSHIPS *"), "$role",
-          graphPrivilegePlan("DenyMatch", Details("GRAPH $db"), resourceArg("prop"), Details("NODES *"), "$role",
+        graphPrivilegePlan("DenyMatch", details("GRAPH $db"), resourceArg("prop"), details("RELATIONSHIPS *"), "$role",
+          graphPrivilegePlan("DenyMatch", details("GRAPH $db"), resourceArg("prop"), details("NODES *"), "$role",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
@@ -278,10 +279,10 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("DenyMatch", Details("GRAPH $db2"), resourceArg("prop"), Details("RELATIONSHIPS *"), "$role",
-          graphPrivilegePlan("DenyMatch", Details("GRAPH $db2"), resourceArg("prop"), Details("NODES *"), "$role",
-            graphPrivilegePlan("DenyMatch", Details("GRAPH $db1"), resourceArg("prop"), Details("RELATIONSHIPS *"), "$role",
-              graphPrivilegePlan("DenyMatch", Details("GRAPH $db1"), resourceArg("prop"), Details("NODES *"), "$role",
+        graphPrivilegePlan("DenyMatch", details("GRAPH $db2"), resourceArg("prop"), details("RELATIONSHIPS *"), "$role",
+          graphPrivilegePlan("DenyMatch", details("GRAPH $db2"), resourceArg("prop"), details("NODES *"), "$role",
+            graphPrivilegePlan("DenyMatch", details("GRAPH $db1"), resourceArg("prop"), details("RELATIONSHIPS *"), "$role",
+              graphPrivilegePlan("DenyMatch", details("GRAPH $db1"), resourceArg("prop"), details("NODES *"), "$role",
                 assertDbmsAdminPlan("ASSIGN PRIVILEGE")
               )
             )
@@ -320,10 +321,10 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("GrantWrite", Details("RELATIONSHIPS *"), "editor",
-          graphPrivilegePlan("GrantWrite", Details("NODES *"), "editor",
-            graphPrivilegePlan("GrantWrite", Details("RELATIONSHIPS *"), "reader",
-              graphPrivilegePlan("GrantWrite", Details("NODES *"), "reader",
+        graphPrivilegePlan("GrantWrite", details("RELATIONSHIPS *"), "editor",
+          graphPrivilegePlan("GrantWrite", details("NODES *"), "editor",
+            graphPrivilegePlan("GrantWrite", details("RELATIONSHIPS *"), "reader",
+              graphPrivilegePlan("GrantWrite", details("NODES *"), "reader",
                 assertDbmsAdminPlan("ASSIGN PRIVILEGE")
               )
             )
@@ -340,10 +341,10 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("DenyWrite", SYSTEM_DATABASE_NAME, Details("RELATIONSHIPS *"), "editor",
-          graphPrivilegePlan("DenyWrite", SYSTEM_DATABASE_NAME, Details("NODES *"), "editor",
-            graphPrivilegePlan("DenyWrite", SYSTEM_DATABASE_NAME, Details("RELATIONSHIPS *"), "reader",
-              graphPrivilegePlan("DenyWrite", SYSTEM_DATABASE_NAME, Details("NODES *"), "reader",
+        graphPrivilegePlan("DenyWrite", SYSTEM_DATABASE_NAME, details("RELATIONSHIPS *"), "editor",
+          graphPrivilegePlan("DenyWrite", SYSTEM_DATABASE_NAME, details("NODES *"), "editor",
+            graphPrivilegePlan("DenyWrite", SYSTEM_DATABASE_NAME, details("RELATIONSHIPS *"), "reader",
+              graphPrivilegePlan("DenyWrite", SYSTEM_DATABASE_NAME, details("NODES *"), "reader",
                 assertDbmsAdminPlan("ASSIGN PRIVILEGE")
               )
             )
@@ -360,8 +361,8 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("RevokeWrite(GRANTED)", DEFAULT_DATABASE_NAME, Details("RELATIONSHIPS *"), "reader",
-          graphPrivilegePlan("RevokeWrite(GRANTED)", DEFAULT_DATABASE_NAME, Details("NODES *"), "reader",
+        graphPrivilegePlan("RevokeWrite(GRANTED)", DEFAULT_DATABASE_NAME, details("RELATIONSHIPS *"), "reader",
+          graphPrivilegePlan("RevokeWrite(GRANTED)", DEFAULT_DATABASE_NAME, details("NODES *"), "reader",
             assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
@@ -376,10 +377,10 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("RevokeWrite(DENIED)", Details("GRAPH bar"), Details("RELATIONSHIPS *"), "reader",
-          graphPrivilegePlan("RevokeWrite(DENIED)", Details("GRAPH bar"), Details("NODES *"), "reader",
-            graphPrivilegePlan("RevokeWrite(DENIED)", Details("GRAPH $foo"), Details("RELATIONSHIPS *"), "reader",
-              graphPrivilegePlan("RevokeWrite(DENIED)", Details("GRAPH $foo"), Details("NODES *"), "reader",
+        graphPrivilegePlan("RevokeWrite(DENIED)", details("GRAPH bar"), details("RELATIONSHIPS *"), "reader",
+          graphPrivilegePlan("RevokeWrite(DENIED)", details("GRAPH bar"), details("NODES *"), "reader",
+            graphPrivilegePlan("RevokeWrite(DENIED)", details("GRAPH $foo"), details("RELATIONSHIPS *"), "reader",
+              graphPrivilegePlan("RevokeWrite(DENIED)", details("GRAPH $foo"), details("NODES *"), "reader",
                 assertDbmsAdminPlan("REMOVE PRIVILEGE")
               )
             )
@@ -396,10 +397,10 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("RevokeWrite(DENIED)", Details("GRAPH $db"), Details("RELATIONSHIPS *"), "$role",
-          graphPrivilegePlan("RevokeWrite(GRANTED)", Details("GRAPH $db"), Details("RELATIONSHIPS *"), "$role",
-            graphPrivilegePlan("RevokeWrite(DENIED)", Details("GRAPH $db"), Details("NODES *"), "$role",
-              graphPrivilegePlan("RevokeWrite(GRANTED)", Details("GRAPH $db"), Details("NODES *"), "$role",
+        graphPrivilegePlan("RevokeWrite(DENIED)", details("GRAPH $db"), details("RELATIONSHIPS *"), "$role",
+          graphPrivilegePlan("RevokeWrite(GRANTED)", details("GRAPH $db"), details("RELATIONSHIPS *"), "$role",
+            graphPrivilegePlan("RevokeWrite(DENIED)", details("GRAPH $db"), details("NODES *"), "$role",
+              graphPrivilegePlan("RevokeWrite(GRANTED)", details("GRAPH $db"), details("NODES *"), "$role",
                 assertDbmsAdminPlan("REMOVE PRIVILEGE")
               )
             )
@@ -418,7 +419,7 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("GrantSetLabel", Details("ALL GRAPHS"), Details("LABEL foo"), Details("NODES *"), "role",
+        graphPrivilegePlan("GrantSetLabel", details("LABEL foo"), "role",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -432,8 +433,8 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("DenySetLabel", Details("ALL GRAPHS"), Details(Seq("LABEL bar")), Details("NODES *"), "role",
-          graphPrivilegePlan("DenySetLabel", Details("ALL GRAPHS"), Details(Seq("LABEL foo")), Details("NODES *"), "role",
+        graphPrivilegePlan("DenySetLabel", details("LABEL bar"), "role",
+          graphPrivilegePlan("DenySetLabel", details("LABEL foo"), "role",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
@@ -448,8 +449,8 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("RevokeRemoveLabel(DENIED)", Details("ALL GRAPHS"), Details(Seq("ALL LABELS")), Details("NODES *"), "role",
-          graphPrivilegePlan("RevokeRemoveLabel(GRANTED)", Details("ALL GRAPHS"), Details(Seq("ALL LABELS")), Details("NODES *"), "role",
+        graphPrivilegePlan("RevokeRemoveLabel(DENIED)", details("ALL LABELS"), "role",
+          graphPrivilegePlan("RevokeRemoveLabel(GRANTED)", details("ALL LABELS"), "role",
             assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
@@ -464,8 +465,8 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("GrantCreateElement", Details("RELATIONSHIPS *"), "role",
-          graphPrivilegePlan("GrantCreateElement", Details("NODES *"), "role",
+        graphPrivilegePlan("GrantCreateElement", details("RELATIONSHIPS *"), "role",
+          graphPrivilegePlan("GrantCreateElement", details("NODES *"), "role",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
@@ -480,8 +481,8 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("DenyCreateElement", Details("NODE bar"), "role",
-          graphPrivilegePlan("DenyCreateElement", Details("NODE foo"), "role",
+        graphPrivilegePlan("DenyCreateElement", details("NODE bar"), "role",
+          graphPrivilegePlan("DenyCreateElement", details("NODE foo"), "role",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
@@ -496,12 +497,14 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("RevokeDeleteElement(DENIED)", Details("RELATIONSHIPS *"), "role",
-          graphPrivilegePlan("RevokeDeleteElement(GRANTED)", Details("RELATIONSHIPS *"), "role",
+        graphPrivilegePlan("RevokeDeleteElement(DENIED)", details("RELATIONSHIPS *"), "role",
+          graphPrivilegePlan("RevokeDeleteElement(GRANTED)", details("RELATIONSHIPS *"), "role",
             assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
       ).toString
     )
   }
+
+  private def details(info: String): Details = Details(PrettyStringCreator.raw(info))
 }

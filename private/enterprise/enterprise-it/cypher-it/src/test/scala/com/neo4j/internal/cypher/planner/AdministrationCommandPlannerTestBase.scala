@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.plandescription.Arguments.Details
 import org.neo4j.cypher.internal.plandescription.Children
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
+import org.neo4j.cypher.internal.plandescription.LogicalPlan2PlanDescriptionTest.details
 import org.neo4j.cypher.internal.plandescription.NoChildren
 import org.neo4j.cypher.internal.plandescription.PlanDescriptionImpl
 import org.neo4j.cypher.internal.plandescription.SingleChild
@@ -28,26 +29,27 @@ class AdministrationCommandPlannerTestBase extends AdministrationCommandAcceptan
 
   // Argument helpers
 
-  def databaseArg(name: String) = Details(ExpressionStringifier.backtick(name))
+  def databaseArg(name: String) = details(ExpressionStringifier.backtick(name))
 
   def userArg(name: String) = userPrivilegeArg(name)
 
   def roleArg(name: String) = rolePrivilegeArg(name)
 
-  def qualifierArg(label: String, name: String) = Details(s"$label ${ExpressionStringifier.backtick(name)}")
+  def qualifierArg(label: String, name: String) = details(s"$label ${ExpressionStringifier.backtick(name)}")
 
-  def scopeArg(label: String, name: String) = Details(s"$label ${ExpressionStringifier.backtick(name)}")
+  def scopeArg(label: String, name: String) = details(s"$label ${ExpressionStringifier.backtick(name)}")
 
-  def resourceArg(name: String) = Details(s"PROPERTY ${ExpressionStringifier.backtick(name)}")
-  def allResourceArg() = Details("ALL PROPERTIES")
+  def resourceArg(name: String) = details(s"PROPERTY ${ExpressionStringifier.backtick(name)}")
 
-  def graphPrivilegeArg(name: String) = Details(s"GRAPH ${ExpressionStringifier.backtick(name)}")
+  def allResourceArg() = details("ALL PROPERTIES")
 
-  def databasePrivilegeArg(name: String) = Details(s"DATABASE ${ExpressionStringifier.backtick(name)}")
+  def graphPrivilegeArg(name: String) = details(s"GRAPH ${ExpressionStringifier.backtick(name)}")
 
-  def userPrivilegeArg(name: String) = Details(s"USER ${ExpressionStringifier.backtick(name)}")
+  def databasePrivilegeArg(name: String) = details(s"DATABASE ${ExpressionStringifier.backtick(name)}")
 
-  def rolePrivilegeArg(name: String) = Details(s"ROLE ${ExpressionStringifier.backtick(name)}")
+  def userPrivilegeArg(name: String) = details(s"USER ${ExpressionStringifier.backtick(name)}")
+
+  def rolePrivilegeArg(name: String) = details(s"ROLE ${ExpressionStringifier.backtick(name)}")
 
   def roleAndUserPrivilegeArg(role: String, user: String) = Details(rolePrivilegeArg(role).info ++ userPrivilegeArg(user).info)
 
@@ -63,44 +65,44 @@ class AdministrationCommandPlannerTestBase extends AdministrationCommandAcceptan
   def managementPlan(name: String, arguments: Seq[Argument] = Seq.empty): PlanDescriptionImpl = planDescription(name, arguments)
 
   def databasePrivilegePlan(name: String, action: String, database: String, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
-    planDescription(name, Seq(Details(action +: (databasePrivilegeArg(database).info ++ rolePrivilegeArg(roleName).info))), SingleChild(source))
+    planDescription(name, Seq(details(action +: (databasePrivilegeArg(database).info.map(_.prettifiedString) ++ rolePrivilegeArg(roleName).info.map(_.prettifiedString)))), SingleChild(source))
   def databasePrivilegePlan(name: String, action: String, database: Details, parameterRoleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
-    planDescription(name, Seq(Details(action +: database.info :+ s"ROLE $parameterRoleName")), SingleChild(source))
+    planDescription(name, Seq(details(action +: database.info.map(_.prettifiedString) :+ s"ROLE $parameterRoleName")), SingleChild(source))
   def databasePrivilegePlan(name: String, action: String, allDatabases: Boolean, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl = {
     val databaseArg = if (allDatabases) "ALL DATABASES" else "DEFAULT DATABASE"
-    planDescription(name, Seq(Details(Seq(action, databaseArg) ++ rolePrivilegeArg(roleName).info)), SingleChild(source))
+    planDescription(name, Seq(details(Seq(action, databaseArg) ++ rolePrivilegeArg(roleName).info.map(_.prettifiedString))), SingleChild(source))
   }
 
   def databasePrivilegePlan(name: String, action: String, database: String, qualifier: Details, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
-    planDescription(name, Seq(Details(action +: (databasePrivilegeArg(database).info ++ qualifier.info ++ rolePrivilegeArg(roleName).info))), SingleChild(source))
+    planDescription(name, Seq(details(action +: (databasePrivilegeArg(database).info.map(_.prettifiedString) ++ qualifier.info.map(_.prettifiedString) ++ rolePrivilegeArg(roleName).info.map(_.prettifiedString)))), SingleChild(source))
   def databasePrivilegePlan(name: String, action: String, database: Details, qualifier: Details, parameterRoleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
-    planDescription(name, Seq(Details(action +: (database.info ++ qualifier.info) :+ s"ROLE $parameterRoleName")), SingleChild(source))
+    planDescription(name, Seq(details(action +: (database.info.map(_.prettifiedString) ++ qualifier.info.map(_.prettifiedString)) :+ s"ROLE $parameterRoleName")), SingleChild(source))
   def databasePrivilegePlan(name: String, action: String, allDatabases: Boolean, qualifier: Details, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl = {
     val databaseArg = if (allDatabases) "ALL DATABASES" else "DEFAULT DATABASE"
-    planDescription(name, Seq(Details(Seq(action, databaseArg) ++ qualifier.info ++ rolePrivilegeArg(roleName).info)), SingleChild(source))
+    planDescription(name, Seq(details(Seq(action, databaseArg) ++ qualifier.info.map(_.prettifiedString) ++ rolePrivilegeArg(roleName).info.map(_.prettifiedString))), SingleChild(source))
   }
 
-  def dbmsPrivilegePlan(name: String, action: String, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(Details(action +: rolePrivilegeArg(roleName).info)), SingleChild(source))
-  def dbmsPrivilegePlan(name: String, action: String, roleName: Details, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(Details(action +: roleName.info)), SingleChild(source))
+  def dbmsPrivilegePlan(name: String, action: String, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(details(action +: rolePrivilegeArg(roleName).info.map(_.prettifiedString))), SingleChild(source))
+  def dbmsPrivilegePlan(name: String, action: String, roleName: Details, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(details(action +: roleName.info.map(_.prettifiedString))), SingleChild(source))
 
   def graphPrivilegePlan(name: String, database: String, qualifier: Details, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
     planDescription(name, Seq(Details(graphPrivilegeArg(database).info ++ qualifier.info ++ rolePrivilegeArg(roleName).info)), SingleChild(source))
   def graphPrivilegePlan(name: String, database: Details, qualifier: Details, parameterRoleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
-    planDescription(name, Seq(Details((database.info ++ qualifier.info) :+ s"ROLE $parameterRoleName")), SingleChild(source))
+    planDescription(name, Seq(details((database.info.map(_.prettifiedString) ++ qualifier.info.map(_.prettifiedString)) :+ s"ROLE $parameterRoleName")), SingleChild(source))
   def graphPrivilegePlan(name: String, qualifier: Details, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
-    planDescription(name, Seq(Details("ALL GRAPHS" +: (qualifier.info ++ rolePrivilegeArg(roleName).info))), SingleChild(source))
+    planDescription(name, Seq(details("ALL GRAPHS" +: (qualifier.info.map(_.prettifiedString) ++ rolePrivilegeArg(roleName).info.map(_.prettifiedString)))), SingleChild(source))
 
   def graphPrivilegePlan(name: String, database: String, resource: Details, qualifier: Details, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
     planDescription(name, Seq(Details(graphPrivilegeArg(database).info ++ resource.info ++ qualifier.info ++ rolePrivilegeArg(roleName).info)), SingleChild(source))
   def graphPrivilegePlan(name: String, database: Details, resource: Details, qualifier: Details, parameterRoleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
-    planDescription(name, Seq(Details((database.info ++ resource.info ++ qualifier.info) :+ s"ROLE $parameterRoleName")), SingleChild(source))
+    planDescription(name, Seq(details((database.info.map(_.prettifiedString) ++ resource.info.map(_.prettifiedString) ++ qualifier.info.map(_.prettifiedString)) :+ s"ROLE $parameterRoleName")), SingleChild(source))
   def graphPrivilegePlanForAllGraphs(name: String, resource: Details, qualifier: Details, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
-    planDescription(name, Seq(Details("ALL GRAPHS" +: (resource.info ++ qualifier.info ++ rolePrivilegeArg(roleName).info))), SingleChild(source))
+    planDescription(name, Seq(details("ALL GRAPHS" +: (resource.info.map(_.prettifiedString) ++ qualifier.info.map(_.prettifiedString) ++ rolePrivilegeArg(roleName).info.map(_.prettifiedString)))), SingleChild(source))
 
   def helperPlan(name: String, arguments: Seq[Argument], source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, arguments, SingleChild(source))
   def helperPlan(name: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, children = SingleChild(source))
 
-  def assertDbmsAdminPlan(actions: String*): PlanDescriptionImpl = planDescription("AssertDbmsAdmin", Seq(Details(actions)))
-  def assertDbmsAdminOrSelfPlan(user: Details, actions: String*): PlanDescriptionImpl = planDescription("AssertDbmsAdminOrSelf", Seq(Details(actions ++ user.info)))
-  def assertDatabaseAdminPlan(action: String, database: Details): PlanDescriptionImpl = planDescription("AssertDatabaseAdmin", Seq(Details(action +: database.info)))
+  def assertDbmsAdminPlan(actions: String*): PlanDescriptionImpl = planDescription("AssertDbmsAdmin", Seq(details(actions)))
+  def assertDbmsAdminOrSelfPlan(user: Details, actions: String*): PlanDescriptionImpl = planDescription("AssertDbmsAdminOrSelf", Seq(details(actions ++ user.info.map(_.prettifiedString))))
+  def assertDatabaseAdminPlan(action: String, database: Details): PlanDescriptionImpl = planDescription("AssertDatabaseAdmin", Seq(details(action +: database.info.map(_.prettifiedString))))
 }
