@@ -21,6 +21,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPropertyKeys
+import org.neo4j.cypher.internal.runtime.slotted.pipes.ExpandAllSlottedPipe.cacheNodeProperties
 import org.neo4j.cypher.internal.runtime.slotted.pipes.ExpandAllSlottedPipe.cacheRelationshipProperties
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections
@@ -73,9 +74,7 @@ abstract class OptionalExpandAllSlottedPipe(source: Pipe,
                   inputRow.copyTo(outputRow)
                   outputRow.setLongAt(relOffset, relationship)
                   outputRow.setLongAt(toOffset, otherNode)
-                  nodePropsToCache.foreach {
-                    case (offset, value) => outputRow.setCachedPropertyAt(offset, value)
-                  }
+                  cacheNodeProperties(nodePropsToCache, outputRow)
                   cacheRelationshipProperties(relsPropsToRead, relCursor, state.cursors.propertyCursor, outputRow, state.query)
                   outputRow
                 }

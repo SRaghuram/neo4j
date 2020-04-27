@@ -36,7 +36,6 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.isRefSlotAnd
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionSlotForPredicate
-import org.neo4j.cypher.internal.physicalplanning.ast.NodeProperty
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
@@ -127,7 +126,6 @@ import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.schema.IndexOrder
 
 import scala.annotation.tailrec
-import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -700,15 +698,6 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         Some(new ProjectOperator(WorkIdentity.fromPlan(plan), projectionOps))
 
       case plans.CacheProperties(_, properties) =>
-        val nodeProps = mutable.Map.empty[Int, Seq[Int]]
-         properties.foreach{
-           case NodeProperty(offset, prop, _) =>
-             val current = nodeProps.getOrElseUpdate(offset, Seq.empty)
-             nodeProps.update(offset, current :+ prop)
-             //TODO more node property stuff
-           case _ => //ignore other stuff
-       }
-
         val propertyOps = properties.toArray.map(converters.toCommandExpression(id, _))
         Some(new CachePropertiesOperator(WorkIdentity.fromPlan(plan), propertyOps))
 

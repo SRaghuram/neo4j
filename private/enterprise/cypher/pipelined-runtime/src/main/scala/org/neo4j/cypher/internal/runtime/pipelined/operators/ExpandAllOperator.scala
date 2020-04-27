@@ -271,10 +271,6 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
    case (name, _) => name -> field[Int](codeGen.namer.nextVariableName(name), NO_TOKEN)
  }
 
-  nodePropsToRead.map(k => {
-    k.resolved
-  })
-
   codeGen.registerCursor(relName, RelationshipCursorRepresentation(loadField(relationshipsField)))
 
   override def scopeId: String = "expandAll" + id.x
