@@ -19,7 +19,7 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
 
     // when
     val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, readOnly = true, parallelExecution = false),
-      InterpretedPipesFallbackPolicy(disabled, parallelExecution = false))
+      InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"))
 
     //then
     policy.breakOn(plan, Id.INVALID_ID) shouldBe false
@@ -31,7 +31,7 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
 
     // when
     val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = false, readOnly = true, parallelExecution = true),
-      InterpretedPipesFallbackPolicy(disabled, parallelExecution = true))
+      InterpretedPipesFallbackPolicy(disabled, parallelExecution = true, runtimeName = "Pipelined"))
 
     //then
     policy.breakOn(plan, Id.INVALID_ID) shouldBe true
@@ -48,7 +48,7 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
 
     // when
     val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, readOnly = true, parallelExecution = false),
-      InterpretedPipesFallbackPolicy(disabled, parallelExecution = false))
+      InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"))
 
     //then
     policy.breakOn(plan, Id.INVALID_ID) shouldBe true
@@ -66,7 +66,7 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
 
     // when
     val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, readOnly = true, parallelExecution = false),
-      InterpretedPipesFallbackPolicy(disabled, parallelExecution = false))
+      InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"))
 
     //then
     policy.breakOn(plan, Id.INVALID_ID) shouldBe false
@@ -84,7 +84,7 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
 
     // when
     val policy = PipelinedPipelineBreakingPolicy(TemplateOperatorPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true, readOnly = true, parallelExecution = false),
-      InterpretedPipesFallbackPolicy(disabled, parallelExecution = false))
+      InterpretedPipesFallbackPolicy(disabled, parallelExecution = false, runtimeName = "Pipelined"))
 
     //then
     policy.breakOn(plan, Id.INVALID_ID) shouldBe true

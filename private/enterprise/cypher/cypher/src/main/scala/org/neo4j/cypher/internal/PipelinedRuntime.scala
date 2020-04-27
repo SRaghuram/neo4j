@@ -76,8 +76,8 @@ import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
 
 object PipelinedRuntime {
-  val PIPELINED = new PipelinedRuntime(false, "pipelined")
-  val PARALLEL = new PipelinedRuntime(true, "parallel")
+  val PIPELINED = new PipelinedRuntime(false, "Pipelined")
+  val PARALLEL = new PipelinedRuntime(true, "Parallel")
 
   val CODE_GEN_FAILED_MESSAGE = "Code generation failed. Retrying physical planning."
 }
@@ -148,9 +148,9 @@ class PipelinedRuntime private(parallelExecution: Boolean,
 
     val logicalPlan = pipelinedPrePhysicalPlanRewriter(query)
 
-    PipelinedBlacklist.throwOnUnsupportedPlan(logicalPlan, parallelExecution, query.leveragedOrders)
+    PipelinedBlacklist.throwOnUnsupportedPlan(logicalPlan, parallelExecution, query.leveragedOrders, name)
 
-    val interpretedPipesFallbackPolicy = InterpretedPipesFallbackPolicy(context.interpretedPipesFallback, parallelExecution)
+    val interpretedPipesFallbackPolicy = InterpretedPipesFallbackPolicy(context.interpretedPipesFallback, parallelExecution, name)
     val breakingPolicy = PipelinedPipelineBreakingPolicy(operatorFusionPolicy, interpretedPipesFallbackPolicy)
 
     var physicalPlan = PhysicalPlanner.plan(context.tokenContext,
@@ -215,7 +215,8 @@ class PipelinedRuntime private(parallelExecution: Boolean,
       query.semanticTable,
       context.tokenContext,
       interpretedPipesFallbackPolicy,
-      maybePipeMapper)
+      maybePipeMapper,
+      name)
 
     DebugLog.logDiff("ExecutionGraphDefiner")
     //=======================================================

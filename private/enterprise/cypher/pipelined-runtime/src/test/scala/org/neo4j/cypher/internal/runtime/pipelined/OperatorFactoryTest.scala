@@ -75,7 +75,7 @@ class OperatorFactoryTest extends CypherFunSuite with AstConstructionTestSupport
       val c = lp.getClass
       if (c == breaking) true
       else if (nonBreaking.contains(c)) false
-      else throw InterpretedPipesFallbackPolicy.unsupported(c.getSimpleName)
+      else throw InterpretedPipesFallbackPolicy.unsupported(c.getSimpleName, "Pipelined")
     }
   }
 
@@ -247,7 +247,8 @@ class OperatorFactoryTest extends CypherFunSuite with AstConstructionTestSupport
         semanticTable,
         TokenContext.EMPTY,
         fallbackPolicy,
-        slottedPipeBuilder = Some(fallbackPipeMapper))
+        slottedPipeBuilder = Some(fallbackPipeMapper),
+        "Pipelined")
 
     val headOperator = factory.create(pipelineBuilder.headPlan, input)
     val middleOperators = factory.createMiddleOperators(pipelineBuilder.middlePlans, headOperator)

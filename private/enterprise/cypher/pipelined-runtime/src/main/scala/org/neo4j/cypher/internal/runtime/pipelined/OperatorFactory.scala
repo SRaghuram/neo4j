@@ -138,7 +138,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                       semanticTable: SemanticTable,
                       tokenContext: TokenContext,
                       val interpretedPipesFallbackPolicy: InterpretedPipesFallbackPolicy,
-                      val slottedPipeBuilder: Option[PipeMapper]) {
+                      val slottedPipeBuilder: Option[PipeMapper],
+                      runtimeName: String) {
 
   private val physicalPlan = executionGraphDefinition.physicalPlan
   private val aggregatorFactory = AggregatorFactory(physicalPlan)
@@ -176,7 +177,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val argumentSize = physicalPlan.argumentSizes(id)
         val indexSeekMode = IndexSeekModeFactory(unique = false, readOnly = readOnly).fromQueryExpression(valueExpr)
         if (indexSeekMode == LockingUniqueIndexSeek) {
-          throw new CantCompileQueryException("Pipelined does not yet support the plans including `NodeUniqueIndexSeek(Locking)`, use another runtime.")
+          throw new CantCompileQueryException(s"$runtimeName does not yet support the plans including `NodeUniqueIndexSeek(Locking)`, use another runtime.")
         }
 
         new NodeIndexSeekOperator(WorkIdentity.fromPlan(plan),
@@ -604,7 +605,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         createSlottedPipeHeadOperator(plan)
 
       case _ =>
-        throw new CantCompileQueryException(s"Pipelined does not yet support the plans including `$plan`, use another runtime.")
+        throw new CantCompileQueryException(s"$runtimeName does not yet support the plans including `$plan`, use another runtime.")
     }
   }
 
@@ -708,12 +709,12 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         interpretedPipesFallbackPolicy.breakOn(plan)
         if (breakingPolicyForInterpretedPipesFallback.breakOn(plan, physicalPlan.applyPlans(id))) {
           // Plan is supported, but only as a head plan
-          throw new CantCompileQueryException(s"Pipelined does not yet support using `$plan` as a fallback middle plan, use another runtime.")
+          throw new CantCompileQueryException(s"$runtimeName does not yet support using `$plan` as a fallback middle plan, use another runtime.")
         }
         createSlottedPipeMiddleOperator(plan, maybeSlottedPipeOperatorToChainOnTo)
 
       case _ =>
-        throw new CantCompileQueryException(s"Pipelined does not yet support using `$plan` as a middle plan, use another runtime.")
+        throw new CantCompileQueryException(s"$runtimeName does not yet support using `$plan` as a middle plan, use another runtime.")
     }
   }
 
