@@ -8,7 +8,7 @@ package com.neo4j.internal.cypher.planner
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.internal.plandescription.Arguments.Details
-import org.neo4j.cypher.internal.plandescription.PrettyStringCreator
+import org.neo4j.cypher.internal.plandescription.asPrettyString
 
 class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPlannerTestBase {
 
@@ -827,5 +827,5 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
       ).toString
     )
   }
-  def details(info: String): Details = Details(PrettyStringCreator.raw(info))
+  def details(info: String): Details = Details(asPrettyString.raw(info))
 }

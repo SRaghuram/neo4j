@@ -6,7 +6,7 @@
 package com.neo4j.internal.cypher.planner
 
 import org.neo4j.cypher.internal.plandescription.Arguments.Details
-import org.neo4j.cypher.internal.plandescription.PrettyStringCreator
+import org.neo4j.cypher.internal.plandescription.asPrettyString
 
 class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationCommandPlannerTestBase {
 
@@ -18,7 +18,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       // Then
       plan should include(
         logPlan(
-          dbmsPrivilegePlan("GrantDbmsAction", action, Details(PrettyStringCreator.raw("ROLE $role")),
+          dbmsPrivilegePlan("GrantDbmsAction", action, Details(asPrettyString.raw("ROLE $role")),
             dbmsPrivilegePlan("GrantDbmsAction", action, "reader",
               assertDbmsAdminPlan("ASSIGN PRIVILEGE")
             )
