@@ -275,7 +275,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
     test(s"$cypherToken: should plan partial top after index provided order") {
       val query = s"MATCH (n:Awesome) WHERE n.prop2 > 0 RETURN n.prop2, n.prop1 ORDER BY n.prop2 $cypherToken, n.prop1 $cypherToken LIMIT 4"
-      val result = executeWith(Configs.InterpretedAndSlotted, query)
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
       val order = cypherToken match {
         case "ASC" => ProvidedOrder.asc(varFor("n.prop2")).asc(varFor("n.prop1")).fromLeft
@@ -302,7 +302,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
     test(s"$cypherToken: should plan partial top1 after index provided order") {
       val query = s"MATCH (n:Awesome) WHERE n.prop2 > 0 RETURN n.prop2, n.prop1 ORDER BY n.prop2 $cypherToken, n.prop1 $cypherToken LIMIT 1"
-      val result = executeWith(Configs.InterpretedAndSlotted, query)
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
       val order = cypherToken match {
         case "ASC" => ProvidedOrder.asc(varFor("n.prop2")).asc(varFor("n.prop1")).fromLeft
