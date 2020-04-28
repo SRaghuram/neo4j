@@ -28,6 +28,7 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
+import org.neo4j.storageengine.api.CommandReaderFactory;
 import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 
@@ -85,6 +86,11 @@ public class TransactionLogAnalyzer
         return new CombinedMonitor( monitors );
     }
 
+    public static void analyze( FileSystemAbstraction fileSystem, File storeDirOrLogFile, Monitor monitor ) throws IOException
+    {
+        analyze( fileSystem, storeDirOrLogFile, StorageEngineFactory.selectStorageEngine().commandReaderFactory(), monitor );
+    }
+
     /**
      * Analyzes transactions found in log file(s) specified by {@code storeDirOrLogFile} calling methods on the supplied
      * {@link Monitor} for each encountered data item.
@@ -92,12 +98,14 @@ public class TransactionLogAnalyzer
      * @param fileSystem {@link FileSystemAbstraction} to find the files on.
      * @param storeDirOrLogFile {@link File} pointing either to a directory containing transaction log files, or directly
      * pointing to a single transaction log file to analyze.
+     * @param commandReaderFactory {@link CommandReaderFactory} to use.
      * @param monitor {@link Monitor} receiving call-backs for all {@link Monitor#transaction(LogEntry[]) transactions},
      * {@link Monitor#checkpoint(CheckPoint, LogPosition) checkpoints} and {@link Monitor#logFile(File, long) log file transitions}
      * encountered during the analysis.
      * @throws IOException on I/O error.
      */
-    public static void analyze( FileSystemAbstraction fileSystem, File storeDirOrLogFile, Monitor monitor ) throws IOException
+    public static void analyze( FileSystemAbstraction fileSystem, File storeDirOrLogFile, CommandReaderFactory commandReaderFactory,
+            Monitor monitor ) throws IOException
     {
         File firstFile;
         LogVersionBridge bridge;
@@ -109,7 +117,7 @@ public class TransactionLogAnalyzer
         {
             // Use natural log version bridging if a directory is supplied
             logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDirOrLogFile, fileSystem )
-                    .withCommandReaderFactory( StorageEngineFactory.selectStorageEngine().commandReaderFactory() )
+                    .withCommandReaderFactory( commandReaderFactory )
                     .build();
             bridge = new ReaderLogVersionBridge( logFiles )
             {
@@ -138,7 +146,7 @@ public class TransactionLogAnalyzer
             // Use no bridging, simply reading this single log file if a file is supplied
             firstFile = storeDirOrLogFile;
             logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDirOrLogFile.getParentFile(), fileSystem )
-                    .withCommandReaderFactory( StorageEngineFactory.selectStorageEngine().commandReaderFactory() )
+                    .withCommandReaderFactory( commandReaderFactory )
                     .build();
             monitor.logFile( firstFile, logFiles.getLogVersion( firstFile ) );
             bridge = NO_MORE_CHANNELS;
