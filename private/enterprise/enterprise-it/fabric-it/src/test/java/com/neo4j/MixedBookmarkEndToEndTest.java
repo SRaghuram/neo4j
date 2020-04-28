@@ -204,7 +204,7 @@ class MixedBookmarkEndToEndTest
             var database = mock( BoltGraphDatabaseServiceSPI.class );
             when(remote.boltGraphDatabaseManagementService.database( any() )).thenReturn( database );
             var tx = mock( BoltTransaction.class );
-            when(database.beginTransaction( any(), any(), any(), receivedBookmarks.capture(), any(), any(), any() )).thenReturn( tx );
+            when(database.beginTransaction( any(), any(), any(), receivedBookmarks.capture(), any(), any(), any(), any() )).thenReturn( tx );
             when( database.getNamedDatabaseId() ).thenReturn( NAMED_SYSTEM_DATABASE_ID );
 
             var bookmarkMetadata = IntStream.range( 1, txIds.size() )
