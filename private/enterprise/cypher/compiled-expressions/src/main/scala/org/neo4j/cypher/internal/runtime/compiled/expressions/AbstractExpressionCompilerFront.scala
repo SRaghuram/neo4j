@@ -128,7 +128,6 @@ import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter
 import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter.DEFAULT_NULLABLE
 import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter.DEFAULT_OFFSET_IS_FOR_LONG_SLOT
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
@@ -1296,7 +1295,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         val default = maybeDefault.get
         val returnVariable = namer.nextVariableName()
         val local = variable[AnyValue](returnVariable, constant(null))
-        val ops = caseExpression(returnVariable, checks.map(_.ir), loads.map(_.ir), default.ir,
+        val ops = caseExpression(returnVariable, checks.map(nullCheckIfRequired(_)), loads.map(nullCheckIfRequired(_)), nullCheckIfRequired(default),
                         toCheck => equal(toCheck, trueValue))
         Some(IntermediateExpression(ops,
                                     checks.flatMap(_.fields) ++ loads.flatMap(_.fields) ++ default.fields,
