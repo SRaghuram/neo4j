@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import java.util.concurrent.atomic.AtomicLong
 
+import org.neo4j.codegen.ClassHandle
 import org.neo4j.codegen.TypeReference
 import org.neo4j.codegen.api.ClassDeclaration
 import org.neo4j.codegen.api.CodeGeneration
@@ -131,7 +132,7 @@ object CompiledStreamingOperator {
 
   def getClassDeclaration(packageName: String,
                           className: String,
-                          taskClazz: Class[CompiledTask],
+                          taskClassHandle: ClassHandle,
                           workIdentityField: StaticField,
                           argumentStates:  Seq[(ArgumentStateMapId, ArgumentStateFactory[_ <: ArgumentState])]): ClassDeclaration[CompiledStreamingOperator] = {
 
@@ -175,7 +176,7 @@ object CompiledStreamingOperator {
           parameters = Seq(param[Read]("dataRead"),
             param[Morsel]("inputMorsel"),
             param[ArgumentStateMaps]("argumentStateMaps")),
-          body = newInstance(Constructor(TypeReference.typeReference(taskClazz),
+          body = newInstance(Constructor(taskClassHandle,
             Seq(TypeReference.typeReference(classOf[Read]),
               TypeReference.typeReference(classOf[Morsel]),
               TypeReference.typeReference(classOf[ArgumentStateMaps]))),
@@ -213,10 +214,14 @@ object ContinuableOperatorTaskWithMorselGenerator {
     val staticWorkIdentity = staticConstant[WorkIdentity](WORK_IDENTITY_STATIC_FIELD_NAME, workIdentity)
     val operatorId = COUNTER.getAndIncrement()
     val generator = CodeGeneration.createGenerator(codeGenerationMode)
-    val taskClazz = compileClass(template.genClassDeclaration(PACKAGE_NAME, "OperatorTask"+operatorId, Seq(staticWorkIdentity)), generator)
-    val operatorClazz = compileClass(CompiledStreamingOperator.getClassDeclaration(PACKAGE_NAME, "Operator"+operatorId, taskClazz, staticWorkIdentity, argumentStates), generator)
+    val taskDeclaration = template.genClassDeclaration(PACKAGE_NAME, "OperatorTask" + operatorId, Seq(staticWorkIdentity))
+    val taskClassHandle = compileClass(taskDeclaration, generator)
+    val operatorDeclaration = CompiledStreamingOperator.getClassDeclaration(PACKAGE_NAME, "Operator" + operatorId, taskClassHandle, staticWorkIdentity, argumentStates)
+    val operatorClassHandle = compileClass(operatorDeclaration, generator)
 
-    operatorClazz.getDeclaredConstructor().newInstance()
+    CodeGeneration.loadAndSetConstants(taskClassHandle, taskDeclaration)
+    val clazz = CodeGeneration.loadAndSetConstants(operatorClassHandle, operatorDeclaration)
+    clazz.getDeclaredConstructor().newInstance()
   }
 
 }
