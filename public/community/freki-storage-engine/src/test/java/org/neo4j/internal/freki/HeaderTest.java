@@ -56,7 +56,7 @@ class HeaderTest
         // when/then
         assertReadAndWrite( header, MARKERS_SIZE );
 
-        List<Integer> offsets = new ArrayList<>( List.of( 0, 1, 2, 3, 4, 5 ) );
+        List<Integer> offsets = new ArrayList<>( List.of( 0, 1, 2, 3, 4, 5, 6 ) );
         Collections.shuffle( offsets, random.random() );
 
         assertAddOffsetAndReadAndWrite( header, offsets.get( 0 ), MARKERS_SIZE + 2 );
@@ -65,6 +65,9 @@ class HeaderTest
         assertAddOffsetAndReadAndWrite( header, offsets.get( 3 ), MARKERS_SIZE + 5 );
         assertAddOffsetAndReadAndWrite( header, offsets.get( 4 ), MARKERS_SIZE + 7 );
         assertAddOffsetAndReadAndWrite( header, offsets.get( 5 ), MARKERS_SIZE + 8 );
+        // The header currently only supports 6 active offsets, so to set this last one first unset another
+        header.mark( offsets.get( random.nextInt( 6 ) ), false );
+        assertAddOffsetAndReadAndWrite( header, offsets.get( 6 ), MARKERS_SIZE + 8 );
     }
 
     @Test

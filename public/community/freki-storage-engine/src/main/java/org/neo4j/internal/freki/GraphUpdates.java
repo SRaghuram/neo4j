@@ -71,9 +71,10 @@ class GraphUpdates
     static final int RELATIONSHIPS = Header.OFFSET_RELATIONSHIPS;
     static final int DEGREES = Header.OFFSET_DEGREES;
     static final int RELATIONSHIPS_OFFSETS = Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS;
-    static final int NEXT_INTERNAL_RELATIONSHIP_ID = Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID;
     static final int RECORD_POINTER = Header.OFFSET_RECORD_POINTER;
-    static final int LABELS = Header.NUM_OFFSETS;
+    static final int NEXT_INTERNAL_RELATIONSHIP_ID = Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID;
+    static final int LABELS = NEXT_INTERNAL_RELATIONSHIP_ID + 1;
+    static final int NUM_BUFFERS = LABELS + 1;
 
     GraphUpdates( MainStores stores, PageCursorTracer cursorTracer )
     {
@@ -109,7 +110,7 @@ class GraphUpdates
     void extractUpdates( Consumer<StorageCommand> commands ) throws ConstraintViolationTransactionFailureException
     {
         List<StorageCommand> otherCommands = new ArrayList<>();
-        ByteBuffer[] intermediateBuffers = new ByteBuffer[Header.NUM_OFFSETS + 1];
+        ByteBuffer[] intermediateBuffers = new ByteBuffer[NUM_BUFFERS];
         int x8Size = stores.largestMainStore().recordDataSize();
         intermediateBuffers[PROPERTIES] = ByteBuffer.wrap( new byte[x8Size] );
         intermediateBuffers[RELATIONSHIPS] = ByteBuffer.wrap( new byte[x8Size] );
@@ -270,6 +271,16 @@ class GraphUpdates
             {
                 dense.prepareForCommandExtraction();
             }
+            // Reset the positions of the before buffers
+            // assumption: MutableNodeData has already looked at the header and set the limit to the end of the effective data
+            if ( x1Before != null )
+            {
+                x1Before.data().position( 0 );
+            }
+            if ( xLBefore != null )
+            {
+                xLBefore.data().position( 0 );
+            }
         }
 
         void serialize( ByteBuffer smallBuffer, ByteBuffer maxBuffer, ByteBuffer[] intermediateBuffers, Consumer<StorageCommand> otherCommands, Header x1Header,
@@ -341,6 +352,7 @@ class GraphUpdates
             // X LEGO TIME
             int miscSize = 0;
             x1Header.clearMarks();
+            x1Header.mark( Header.OFFSET_END, true );
             x1Header.mark( Header.FLAG_LABELS, labelsSize > 0 );
             x1Header.mark( Header.OFFSET_PROPERTIES, propsSize > 0 );
             int nextInternalRelIdSize = 0;
@@ -378,6 +390,7 @@ class GraphUpdates
 
             x1Header.clearMarks();
             // build x1 header
+            x1Header.mark( Header.OFFSET_END, true );
             x1Header.mark( Header.OFFSET_RECORD_POINTER, true );
             x1Header.mark( Header.FLAG_HAS_DENSE_RELATIONSHIPS, isDense );
             int spaceLeftInX1 = stores.mainStore.recordDataSize() - worstCaseMiscSize;
@@ -389,6 +402,7 @@ class GraphUpdates
 
             // build xL header and serialize
             xLHeader.clearMarks();
+            xLHeader.mark( Header.OFFSET_END, true );
             xLHeader.mark( Header.FLAG_HAS_DENSE_RELATIONSHIPS, isDense );
             prepareRecordPointer( xLHeader, intermediateBuffers[RECORD_POINTER], buildRecordPointer( 0, nodeId ) );
             movePartToXL( x1Header, xLHeader, labelsSize, Header.FLAG_LABELS );
@@ -474,6 +488,7 @@ class GraphUpdates
             serializePart( into, intermediateBuffers[RECORD_POINTER], header, Header.OFFSET_RECORD_POINTER );
             serializePart( into, intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID], header, Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
             int endPosition = into.position();
+            header.setOffset( Header.OFFSET_END, endPosition );
             header.serialize( into.position( 0 ), referenceHeader );
             into.position( endPosition ).flip();
         }

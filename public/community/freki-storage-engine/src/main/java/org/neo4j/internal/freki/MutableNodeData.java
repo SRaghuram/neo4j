@@ -714,6 +714,10 @@ class MutableNodeData
     {
         assert buffer.position() == 0 : buffer.position();
         header.deserializeWithSizes( buffer );
+        // Reading a record from storage we have no idea how much of the record capacity is actually used before looking at the header
+        // Now that we're read the header this is a good time to do limit the buffer to the effective end offset of the data
+        // so that we can write only the effective parts to log/store upon writing.
+        buffer.limit( header.getOffset( Header.OFFSET_END ) );
 
         this.buffer = buffer;
         labels = null;

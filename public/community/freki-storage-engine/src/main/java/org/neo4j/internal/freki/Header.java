@@ -26,11 +26,11 @@ import static java.lang.Integer.numberOfTrailingZeros;
 
 class Header
 {
-    static final int NUM_OFFSETS = 6;
+    static final int NUM_OFFSETS = 7;
     private static final int MASK_OFFSET_MARKERS = (1 << NUM_OFFSETS) - 1;
     private static final int BITS_PER_OFFSET = 10;
     private static final int MASK_OFFSET_BITS = (1 << BITS_PER_OFFSET) - 1;
-    static final int MARKERS_SIZE = 2;
+    static final int MARKERS_SIZE = 3; // 1B markers, 1B referenceMarkers, 1B higher bits for both markers and referenceMarkers
 
     static final int OFFSET_PROPERTIES = 0;
     static final int OFFSET_RELATIONSHIPS = 1;
@@ -38,24 +38,25 @@ class Header
     static final int OFFSET_RELATIONSHIPS_TYPE_OFFSETS = 3;
     static final int OFFSET_RECORD_POINTER = 4;
     static final int OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID = 5;
-    static final int FLAG_LABELS = 6;
-    static final int FLAG_HAS_DENSE_RELATIONSHIPS = 7;
+    static final int OFFSET_END = 6;
+    static final int FLAG_LABELS = 7;
+    static final int FLAG_HAS_DENSE_RELATIONSHIPS = 8;
 
-    private byte markers;
-    private byte referenceMarkers;
+    private int markers;
+    private int referenceMarkers;
     private int[] offsets = new int[NUM_OFFSETS];
     private int[] sizes = new int[NUM_OFFSETS + 1/*labels*/];
 
     void mark( int slot, boolean marked )
     {
         markers = marked
-                  ? (byte) ((int) markers | slotBit( slot ))
-                  : (byte) ((int) markers & ~slotBit( slot ));
+                  ? markers | slotBit( slot )
+                  : markers & ~slotBit( slot );
     }
 
-    private static byte slotBit( int slot )
+    private static int slotBit( int slot )
     {
-        return (byte) (1 << slot);
+        return 1 << slot;
     }
 
     boolean hasMark( int slot )
@@ -77,6 +78,7 @@ class Header
     {
         assert (offset & ~MASK_OFFSET_BITS) == 0;
         assert hasMark( slot );
+        assert slot != FLAG_LABELS;
         offsets[slot] = offset;
     }
 
@@ -114,10 +116,15 @@ class Header
     void serialize( ByteBuffer buffer, Header referenceHeader )
     {
         referenceMarkers = referenceHeader != null ? referenceHeader.markers : 0;
-        assert ((markers & referenceMarkers) & ~slotBit( FLAG_HAS_DENSE_RELATIONSHIPS ) & ~slotBit( OFFSET_RECORD_POINTER )) == 0 :
+        assert ((markers & referenceMarkers)
+                & ~slotBit( FLAG_HAS_DENSE_RELATIONSHIPS ) & ~slotBit( OFFSET_RECORD_POINTER ) & ~slotBit( OFFSET_END )) == 0 :
                 toString() + " vs " + referenceHeader;
-        buffer.put( markers );
-        buffer.put( referenceMarkers );
+        assert Integer.bitCount( markers & MASK_OFFSET_MARKERS ) <= 6 :
+                "Even though there are 7 types of offsets there can only be 6 active concurrently (RELATIONSHIPS vs DEGREES) so long data is fine for now";
+        buffer.put( (byte) markers );
+        buffer.put( (byte) referenceMarkers );
+        byte highMarks = (byte) (markers >>> Byte.SIZE | (referenceMarkers >>> 4) & 0xF0);
+        buffer.put( highMarks );
         long data = 0;
         for ( int slot = NUM_OFFSETS - 1; slot >= 0; slot-- )
         {
@@ -136,8 +143,11 @@ class Header
 
     void deserialize( ByteBuffer buffer )
     {
-        markers = buffer.get();
-        referenceMarkers = buffer.get();
+        int markersLsb = buffer.get() & 0xFF;
+        int referenceMarkersLsb = buffer.get() & 0xFF;
+        int highMarks = buffer.get() & 0xFF;
+        markers = markersLsb | (highMarks & 0xF) << Byte.SIZE;
+        referenceMarkers = referenceMarkersLsb | (highMarks & 0xF0) << 4;
         int bytesNeeded = offsetBytesNeeded();
         long data = 0;
         for ( int i = 0; i < bytesNeeded; i++ )
@@ -186,7 +196,7 @@ class Header
     public String toString()
     {
         return String.format( "Header{labels:%b/%b,dense:%b,properties:%s/%b,relationships:%s/%b,relTypeOffsets:%s/%b,degrees:%s/%b," +
-                "nextInternalRelId:%s,recordPointer:%s}",
+                "nextInternalRelId:%s,recordPointer:%s,end:%s}",
                 hasMark( FLAG_LABELS ), hasReferenceMark( FLAG_LABELS ),
                 hasMark( FLAG_HAS_DENSE_RELATIONSHIPS ),
                 hasMark( OFFSET_PROPERTIES ) ? getOffset( OFFSET_PROPERTIES ) : "-", hasReferenceMark( OFFSET_PROPERTIES ),
@@ -195,7 +205,8 @@ class Header
                 hasReferenceMark( OFFSET_RELATIONSHIPS_TYPE_OFFSETS ),
                 hasMark( OFFSET_DEGREES ) ? getOffset( OFFSET_DEGREES ) : "-", hasReferenceMark( OFFSET_DEGREES ),
                 hasMark( OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID ) ? getOffset( OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID ) : "-",
-                hasMark( OFFSET_RECORD_POINTER ) ? getOffset( OFFSET_RECORD_POINTER ) : "-"
+                hasMark( OFFSET_RECORD_POINTER ) ? getOffset( OFFSET_RECORD_POINTER ) : "-",
+                hasMark( OFFSET_END ) ? getOffset( OFFSET_END ) : "-"
         );
     }
 }
