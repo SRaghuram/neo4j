@@ -286,7 +286,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       "PROFILE MATCH (n)-[r]->(m) WHERE r.prop > 10 RETURN r.prop",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
         aPlan("Projection")
-        .containingArgument("{r.prop : cache[r.prop]}")
+        .containingArgumentForProjection(Map("r.prop" -> "cache[r.prop]"))
         .withDBHits(0)
         .onTopOf(
           aPlan("Filter").containingArgumentRegex("cache\\[r.prop\\] > .*".r)
@@ -302,3 +302,17 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     Map(GraphDatabaseSettings.cypher_read_properties_from_cursor -> java.lang.Boolean.TRUE
     )
 }
+
+//+-----------------+------------------------------+----------------+------+---------+----------------+---------------------+
+//| Operator        | Details                      | Estimated Rows | Rows | DB Hits | Memory (Bytes) | Other               |
+//+-----------------+------------------------------+----------------+------+---------+----------------+---------------------+
+//| +ProduceResults | r.foo                        |              1 |    2 |       0 |                | Fused in Pipeline 0 |
+//| |               +------------------------------+----------------+------+---------+----------------+---------------------+
+//| +Projection     | cache[r.foo] AS r.foo        |              1 |    2 |       1 |                | Fused in Pipeline 0 |
+//| |               +------------------------------+----------------+------+---------+----------------+---------------------+
+//| +Filter         | cache[r.foo] > $`  AUTOINT0` |              1 |    2 |       1 |                | Fused in Pipeline 0 |
+//| |               +------------------------------+----------------+------+---------+----------------+---------------------+
+//| +Expand(All)    | ()<-[r]-()                   |              3 |    3 |       6 |                | Fused in Pipeline 0 |
+//| |               +------------------------------+----------------+------+---------+----------------+---------------------+
+//| +AllNodesScan   |   UNNAMED15                  |             10 |    6 |       7 |             56 | Fused in Pipeline 0 |
+//+-----------------+------------------------------+----------------+------+---------+----------------+---------------------+
