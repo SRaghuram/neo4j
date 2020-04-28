@@ -57,6 +57,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilat
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.PROPERTY_CURSOR
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.vPROPERTY_CURSOR
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression.EMPTY
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.pipelined.NodeCursorRepresentation
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
@@ -288,15 +289,12 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     localFields
   }
 
-  override def genLocalVariables: Seq[LocalVariable] = {
-    if (nodePropsToRead.nonEmpty || relsPropsToRead.nonEmpty) {
-      Seq(CURSOR_POOL_V, vPROPERTY_CURSOR)
-    } else {
-      Seq(CURSOR_POOL_V)
-    }
-  }
+  override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
 
-  override def genExpressions: Seq[IntermediateExpression] = Seq.empty
+ //we return an empty expression here to get proper tracing for the property cursor
+  override def genExpressions: Seq[IntermediateExpression] =
+    if (nodePropsToRead.nonEmpty || relsPropsToRead.nonEmpty) Seq(EMPTY.withVariable(vPROPERTY_CURSOR))
+    else Seq.empty
 
   /**
    * {{{

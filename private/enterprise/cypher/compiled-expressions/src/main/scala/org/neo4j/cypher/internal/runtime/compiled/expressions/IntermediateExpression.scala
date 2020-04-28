@@ -23,4 +23,10 @@ case class IntermediateExpression(ir: IntermediateRepresentation,
                                   fields: Seq[Field],
                                   variables: Seq[LocalVariable],
                                   nullChecks: Set[IntermediateRepresentation],
-                                  requireNullCheck: Boolean = true)
+                                  requireNullCheck: Boolean = true) {
+  def withVariable(variable: LocalVariable): IntermediateExpression = copy(variables = variables :+ variable)
+}
+
+object IntermediateExpression {
+  val EMPTY: IntermediateExpression = IntermediateExpression(IntermediateRepresentation.noop(), Seq.empty, Seq.empty, Set.empty)
+}
