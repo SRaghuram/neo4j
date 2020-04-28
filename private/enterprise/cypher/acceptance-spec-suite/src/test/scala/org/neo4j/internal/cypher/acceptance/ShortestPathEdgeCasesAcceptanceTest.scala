@@ -6,6 +6,7 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.internal.plandescription.PrettyStringCreator.PrettyStringInterpolator
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
@@ -110,7 +111,7 @@ class ShortestPathEdgeCasesAcceptanceTest extends ExecutionEngineFunSuite with C
     val result = executeUsingCostPlannerOnly(query)
     val shortestPathOperations = result.executionPlanDescription().find("ShortestPath")
     val (shortestPathWithPredicate, shortestPathWithoutPredicate) = shortestPathOperations.partition { op =>
-      op.variables.contains("returnPath")
+      op.variables.contains(pretty"returnPath")
     }
 
     // Then the predicate should only be associated with the correct shortestPath pattern
