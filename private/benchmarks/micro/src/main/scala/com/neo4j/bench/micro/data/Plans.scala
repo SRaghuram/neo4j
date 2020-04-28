@@ -228,9 +228,9 @@ object Plans {
 
   def astAdd(l: Expression, r: Expression): Expression = Add(l, r)(Pos)
 
-  def astOrs(es: Expression*): Expression = Ors(es.toSet)(Pos)
+  def astOrs(es: Expression*): Expression = Ors(es)(Pos)
 
-  def astAnds(es: Expression*): Ands = Ands(es.toSet)(Pos)
+  def astAnds(es: Expression*): Ands = Ands(es)(Pos)
 
   def astMap(kvs: (String, Expression)*): Expression = MapExpression(kvs.map {
     case (key, value) => PropertyKeyName(key)(Pos) -> value
