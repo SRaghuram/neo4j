@@ -1662,20 +1662,6 @@ class FrekiStorageEngineGraphWritesIT
         return readRelationships;
     }
 
-    private Set<RelationshipSpec> readRelationships( StoragePropertyCursor propertyCursor, StorageRelationshipTraversalCursor relationshipCursor )
-    {
-        Set<RelationshipSpec> readRelationships = new HashSet<>();
-        while ( relationshipCursor.next() )
-        {
-            relationshipCursor.properties( propertyCursor );
-            RelationshipSpec relationship =
-                    new RelationshipSpec( relationshipCursor.sourceNodeReference(), relationshipCursor.type(), relationshipCursor.targetNodeReference(),
-                            readProperties( propertyCursor ), relationshipCursor.entityReference() );
-            readRelationships.add( relationship );
-        }
-        return readRelationships;
-    }
-
     private static Degrees buildExpectedDegrees( long nodeId, Set<RelationshipSpec> relationships )
     {
         EagerDegrees degrees = new EagerDegrees();

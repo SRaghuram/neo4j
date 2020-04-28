@@ -386,10 +386,4 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
         init( nodeCursor, selection );
         this.neighbourNodeReferenceSelection = neighbourNodeReference;
     }
-
-    void init( StorageNodeCursor nodeCursor, RelationshipSelection selection, long neighbourNodeReference )
-    {
-        init( nodeCursor, selection );
-        this.neighbourNodeReferenceSelection = neighbourNodeReference;
-    }
 }

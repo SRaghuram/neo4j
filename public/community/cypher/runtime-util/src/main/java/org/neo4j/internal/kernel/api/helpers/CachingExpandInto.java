@@ -113,7 +113,6 @@ public class CachingExpandInto
         Preconditions.requireNegative( this.fromNode );
         Preconditions.requireNegative( this.toNode );
         Direction reverseDirection = direction.reverse();
-
         this.fromNode = fromNode;
         this.toNode = toNode;
 
