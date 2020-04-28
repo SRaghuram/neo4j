@@ -18,7 +18,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.internal.batchimport.BatchImporter;
 import org.neo4j.internal.batchimport.BatchImporterFactory;
 import org.neo4j.internal.batchimport.DataImporter;
-import org.neo4j.internal.batchimport.RelationshipCountsStage;
+import org.neo4j.internal.batchimport.RelationshipCountsAndTypeIndexBuildStage;
 import org.neo4j.internal.batchimport.RelationshipLinkbackStage;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
@@ -81,7 +81,7 @@ class RestartImportFromSpecificStatesTest
     void shouldContinueFromCountsState() throws Exception
     {
         // given
-        crashImportAt( RelationshipCountsStage.NAME );
+        crashImportAt( RelationshipCountsAndTypeIndexBuildStage.NAME );
 
         // when
         SimpleRandomizedInput input = input();

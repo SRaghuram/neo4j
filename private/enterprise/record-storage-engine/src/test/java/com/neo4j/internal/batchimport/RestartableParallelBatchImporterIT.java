@@ -23,7 +23,7 @@ import org.neo4j.internal.batchimport.IdMapperPreparationStage;
 import org.neo4j.internal.batchimport.NodeCountsAndLabelIndexBuildStage;
 import org.neo4j.internal.batchimport.NodeDegreeCountStage;
 import org.neo4j.internal.batchimport.NodeFirstGroupStage;
-import org.neo4j.internal.batchimport.RelationshipCountsStage;
+import org.neo4j.internal.batchimport.RelationshipCountsAndTypeIndexBuildStage;
 import org.neo4j.internal.batchimport.RelationshipGroupStage;
 import org.neo4j.internal.batchimport.RelationshipLinkbackStage;
 import org.neo4j.internal.batchimport.RelationshipLinkforwardStage;
@@ -234,13 +234,13 @@ class RestartableParallelBatchImporterIT
     @Test
     void shouldRestartImportAfterRelationshipCountsStart() throws Exception
     {
-        shouldRestartImport( RelationshipCountsStage.NAME, true );
+        shouldRestartImport( RelationshipCountsAndTypeIndexBuildStage.NAME, true );
     }
 
     @Test
     void shouldRestartImportAfterRelationshipCountsEnd() throws Exception
     {
-        shouldRestartImport( RelationshipCountsStage.NAME, false );
+        shouldRestartImport( RelationshipCountsAndTypeIndexBuildStage.NAME, false );
     }
 
     private SimpleRandomizedInput input()
