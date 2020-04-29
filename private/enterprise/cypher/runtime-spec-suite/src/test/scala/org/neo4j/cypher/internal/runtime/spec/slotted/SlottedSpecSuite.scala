@@ -182,7 +182,3 @@ class SlottedNestedPlanExpressionTest extends NestedPlanExpressionTestBase(ENTER
 class SlottedRollupApplyTest extends RollupApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedCacheFromCursorTest extends CacheFromCursorTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 
-// EXPERIMENTAL PROFILING
-
-// Enable this to get heap dumps and memory usage estimates
-//class SlottedMemoryManagementProfiling extends MemoryManagementProfilingBase(ENTERPRISE_PROFILING, SlottedRuntime)

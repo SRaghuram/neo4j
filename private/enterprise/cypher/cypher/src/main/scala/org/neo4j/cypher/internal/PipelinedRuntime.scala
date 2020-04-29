@@ -76,14 +76,19 @@ import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
 
 object PipelinedRuntime {
-  val PIPELINED = new PipelinedRuntime(false, "Pipelined")
-  val PARALLEL = new PipelinedRuntime(true, "Parallel")
+  val PIPELINED = new PipelinedRuntime(false, "Pipelined") with NoEnterpriseCustomMemoryTrackingController
+  val PARALLEL = new PipelinedRuntime(true, "Parallel") with NoEnterpriseCustomMemoryTrackingController
+
+  val PIPELINED_PROFILING = new PipelinedRuntime(false, "pipelined") with HasEnterpriseCustomMemoryTrackingController
 
   val CODE_GEN_FAILED_MESSAGE = "Code generation failed. Retrying physical planning."
 }
 
-class PipelinedRuntime private(parallelExecution: Boolean,
-                               override val name: String) extends CypherRuntime[EnterpriseRuntimeContext] with DebugPrettyPrinter {
+abstract class PipelinedRuntime private(parallelExecution: Boolean,
+                                        override val name: String)
+  extends CypherRuntime[EnterpriseRuntimeContext]
+     with DebugPrettyPrinter
+     with EnterpriseCustomMemoryTrackingController {
 
   private val runtimeName = RuntimeName(name)
 
@@ -100,12 +105,14 @@ class PipelinedRuntime private(parallelExecution: Boolean,
   override val PRINT_PIPELINE_INFO = false
   override val PRINT_FAILURE_STACK_TRACE = true
 
-  override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlan = {
+  override def compileToExecutable(query: LogicalQuery, inContext: EnterpriseRuntimeContext): ExecutionPlan = {
     DebugLog.log("PipelinedRuntime.compileToExecutable()")
 
     if (ENABLE_DEBUG_PRINTS && PRINT_PLAN_INFO_EARLY) {
       printPlanInfo(query)
     }
+
+    val context = mapRuntimeContext(inContext)
 
     try {
       if (query.periodicCommitInfo.isDefined)

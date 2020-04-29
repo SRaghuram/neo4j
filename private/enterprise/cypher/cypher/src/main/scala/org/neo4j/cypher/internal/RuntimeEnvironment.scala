@@ -88,3 +88,22 @@ class RuntimeEnvironment(config: CypherRuntimeConfiguration,
     if (parallelExecution) parallelQueryExecutor else pipelinedQueryExecutor
 
 }
+
+trait EnterpriseCustomMemoryTrackingController {
+  def mapRuntimeContext(inContext: EnterpriseRuntimeContext): EnterpriseRuntimeContext
+}
+
+trait NoEnterpriseCustomMemoryTrackingController extends EnterpriseCustomMemoryTrackingController with NoCustomMemoryTrackingController {
+  def mapRuntimeContext(inContext: EnterpriseRuntimeContext): EnterpriseRuntimeContext = inContext
+}
+
+trait HasEnterpriseCustomMemoryTrackingController extends EnterpriseCustomMemoryTrackingController with HasCustomMemoryTrackingController {
+  def mapRuntimeContext(inContext: EnterpriseRuntimeContext): EnterpriseRuntimeContext = {
+    val context = customMemoryTrackingController match {
+      case Some(memoryTrackingController) =>
+        inContext.copy(config = inContext.config.copy(memoryTrackingController = memoryTrackingController))
+      case _ => inContext
+    }
+    context
+  }
+}

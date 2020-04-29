@@ -496,13 +496,3 @@ class PipelinedDynamicLimitPropagationTest extends RuntimeTestSuite[EnterpriseRu
 object PipelinedDynamicLimitPropagationTest {
   val CONFIGURED_MORSEL_SIZE: Int = 100
 }
-
-// EXPERIMENTAL PROFILING
-
-// Enable these to get heap dumps and memory usage estimates
-//class PipelinedMemoryManagementBigMorselProfiling extends MemoryManagementProfilingBase(ENTERPRISE_PROFILING, PIPELINED, DEFAULT_MORSEL_SIZE_BIG)
-//  with PipelinedSpecSuite
-//class PipelinedMemoryManagementSmallMorselProfiling extends MemoryManagementProfilingBase(ENTERPRISE_PROFILING, PIPELINED, DEFAULT_MORSEL_SIZE_SMALL)
-//  with PipelinedSpecSuite
-//class PipelinedMemoryManagementCustomProfiling extends MemoryManagementProfilingBase(ENTERPRISE_PROFILING, PIPELINED, DEFAULT_MORSEL_SIZE_BIG,
-//                                                                                     runtimeSuffix="after") with PipelinedSpecSuite

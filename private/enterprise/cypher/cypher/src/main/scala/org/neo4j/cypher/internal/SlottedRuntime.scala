@@ -24,7 +24,9 @@ import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionCo
 import org.neo4j.cypher.internal.util.CypherException
 import org.neo4j.exceptions.CantCompileQueryException
 
-object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with DebugPrettyPrinter {
+object SlottedRuntime extends SlottedRuntime with NoEnterpriseCustomMemoryTrackingController
+
+abstract class SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with DebugPrettyPrinter with EnterpriseCustomMemoryTrackingController {
   override def name: String = "slotted"
 
   val ENABLE_DEBUG_PRINTS = false // NOTE: false toggles all debug prints off, overriding the individual settings below
@@ -41,11 +43,13 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
   override val PRINT_FAILURE_STACK_TRACE = true
 
   @throws[CantCompileQueryException]
-  override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlan = {
+  override def compileToExecutable(query: LogicalQuery, inContext: EnterpriseRuntimeContext): ExecutionPlan = {
     try {
       if (ENABLE_DEBUG_PRINTS && PRINT_PLAN_INFO_EARLY) {
         printPlanInfo(query)
       }
+
+      val context = mapRuntimeContext(inContext)
 
       val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
         query.logicalPlan,
