@@ -494,7 +494,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       case plans.PartialTop(_, alreadySortedPrefix, stillToSortSuffix, limit) =>
         val prefixComparator = MorselSorting.createComparator(alreadySortedPrefix.map(translateColumnOrder(slots, _)))
         val suffixComparator = MorselSorting.createComparator(stillToSortSuffix.map(translateColumnOrder(slots, _)))
-        val Seq(bufferAsmId, workCancellerAsmId) = executionGraphDefinition.argumentStateMaps.collect {
+        val Seq(bufferAsmId, workCancellerAsmId) = executionGraphDefinition.argumentStateMaps.toSeq.collect {
           case argumentStateDef if argumentStateDef.planId == id => argumentStateDef.id
         }
 

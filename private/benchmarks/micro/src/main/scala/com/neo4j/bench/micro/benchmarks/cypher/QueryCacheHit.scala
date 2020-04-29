@@ -6,27 +6,27 @@
 package com.neo4j.bench.micro.benchmarks.cypher
 
 import java.nio.file.Paths
-import java.time.Clock
 
 import com.neo4j.bench.common.profiling.ParameterizedProfiler
-import com.neo4j.bench.common.profiling.ProfilerType
 import com.neo4j.bench.common.util.ErrorReporter
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.BaseRegularBenchmark
 import com.neo4j.bench.micro.benchmarks.cypher.QueryCacheHitThreadState.CacheValue
 import com.neo4j.bench.micro.benchmarks.cypher.QueryCacheHitThreadState.DataPoint
-import org.neo4j.cypher.internal.CacheLookup
+import com.neo4j.bench.micro.benchmarks.cypher.QueryCacheHitThreadState.NeverStale
+import org.neo4j.cypher.CypherReplanOption
 import org.neo4j.cypher.internal.CacheTracer
 import org.neo4j.cypher.internal.CacheabilityInfo
-import org.neo4j.cypher.internal.FineToReuse
+import org.neo4j.cypher.internal.CompilerWithExpressionCodeGenOption
+import org.neo4j.cypher.internal.NotStale
 import org.neo4j.cypher.internal.PlanStalenessCaller
 import org.neo4j.cypher.internal.QueryCache
 import org.neo4j.cypher.internal.QueryCache.ParameterTypeMap
-import org.neo4j.cypher.internal.compiler.StatsDivergenceCalculator
+import org.neo4j.cypher.internal.Staleness
 import org.neo4j.cypher.internal.util.InternalNotification
 import org.neo4j.internal.helpers.collection.Pair
-import org.neo4j.logging.NullLog
+import org.neo4j.kernel.impl.query.TransactionalContext
 import org.neo4j.values.storable.RandomValues
 import org.neo4j.values.virtual.MapValue
 import org.neo4j.values.virtual.VirtualValues
@@ -50,7 +50,7 @@ class QueryCacheHit extends BaseRegularBenchmark {
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
-  def queryCacheHit(threadState: QueryCacheHitThreadState): CacheLookup[CacheValue] = {
+  def queryCacheHit(threadState: QueryCacheHitThreadState): CacheValue = {
     threadState.nextCacheHit()
   }
 }
@@ -65,20 +65,14 @@ class QueryCacheHitThreadState {
     queryCache =
       new QueryCache(
         QueryCacheHitThreadState.dataPoints.length,
-        new PlanStalenessCaller(
-          Clock.systemDefaultZone(),
-          StatsDivergenceCalculator.divergenceNoDecayCalculator(0.5, 1009),
-          () => 42L,
-          (_, _) => FineToReuse,
-          NullLog.getInstance()
-        ),
+        NeverStale,
         QueryCacheHitThreadState.NO_TRACER
       )
 
     QueryCacheHitThreadState.dataPoints.map(lookupDataPoint)
   }
 
-  def nextCacheHit(): CacheLookup[CacheValue] = {
+  def nextCacheHit(): CacheValue = {
     index += 1
     if (index >= QueryCacheHitThreadState.dataPoints.length) {
       index = 0
@@ -86,13 +80,19 @@ class QueryCacheHitThreadState {
     lookupDataPoint(QueryCacheHitThreadState.dataPoints(index))
   }
 
-  private def lookupDataPoint(dataPoint: DataPoint): CacheLookup[CacheValue] = {
+  private def lookupDataPoint(dataPoint: DataPoint): CacheValue = {
     val parameterTypeMap = QueryCache.extractParameterTypeMap(dataPoint.params)
+    val compiler = new CompilerWithExpressionCodeGenOption[CacheValue] {
+      override def compile(): CacheValue = CacheValue(dataPoint.query.toLowerCase)
+      override def compileWithExpressionCodeGen(): CacheValue = CacheValue(dataPoint.query.toLowerCase)
+      override def maybeCompileWithExpressionCodeGen(hitCount: Int): Option[CacheValue] = None
+    }
+
     queryCache.computeIfAbsentOrStale(
       Pair.of(dataPoint.query, parameterTypeMap),
       null,
-      () => CacheValue(dataPoint.query.toLowerCase),
-      i => None
+      compiler,
+      CypherReplanOption.default
     )
   }
 
@@ -107,7 +107,8 @@ object QueryCacheHitThreadState {
     override def queryCacheHit(queryKey: Pair[String, ParameterTypeMap],
                                metaData: String): Unit = {}
     override def queryCacheMiss(queryKey: Pair[String, ParameterTypeMap], metaData: String): Unit = {}
-    override def queryCacheRecompile(queryKey: Pair[String, ParameterTypeMap], metaData: String): Unit = {}
+    override def queryCompile(queryKey: Pair[String, ParameterTypeMap], metaData: String): Unit = {}
+    override def queryCompileWithExpressionCodeGen(queryKey: Pair[String, ParameterTypeMap], metaData: String): Unit = {}
     override def queryCacheStale(queryKey: Pair[String, ParameterTypeMap], secondsSincePlan: Int, metaData: String, maybeReason: Option[String]): Unit = {}
     override def queryCacheFlush(sizeOfCacheBeforeFlush: Long): Unit = {}
   }
@@ -125,7 +126,12 @@ object QueryCacheHitThreadState {
 
   case class CacheValue(query: String) extends CacheabilityInfo {
     override def shouldBeCached: Boolean = true
-    override def notifications: Set[InternalNotification] = Set.empty
+    override def notifications: IndexedSeq[InternalNotification] = IndexedSeq.empty
+  }
+
+  case object NeverStale extends PlanStalenessCaller[CacheValue] {
+    override def staleness(transactionalContext: TransactionalContext,
+                           cachedExecutableQuery: CacheValue): Staleness = NotStale
   }
 
   def main(args: Array[String]): Unit = {
