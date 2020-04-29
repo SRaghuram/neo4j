@@ -724,18 +724,15 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
           new ManyQueriesNodeIndexSeekTaskTemplate(ctx.inner,
             plan.id,
             ctx.innermost,
-            node,
             ctx.slots.getLongOffsetFor(node),
             property,
             SeekExpression(Seq(ctx.compileExpression(expr)), in => manyExactSeek(property.propertyKeyId, in.head)),
             ctx.indexRegistrator.registerQueryIndex(label, properties),
-            IndexOrder.NONE,
+            order,
             ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
 
       case RangeQueryExpression(rangeWrapper) if !needsLockingUnique =>
         require(properties.length == 1)
-        //NOTE: So far we only support fusing of single-bound inequalities. Not sure if it ever makes sense to have
-        //multiple bounds
         computeRangeExpression(rangeWrapper, properties.head).map(
           seek => {
             ctx: TemplateContext => {
@@ -758,7 +755,6 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                   new ManyQueriesNodeIndexSeekTaskTemplate(ctx.inner,
                     plan.id,
                     ctx.innermost,
-                    node,
                     ctx.slots.getLongOffsetFor(node),
                     property,
                     seek,

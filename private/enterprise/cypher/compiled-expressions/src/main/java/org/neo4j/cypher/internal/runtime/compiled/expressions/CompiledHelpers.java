@@ -5,10 +5,12 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.expressions;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
-import org.neo4j.cypher.internal.runtime.DbAccess;
 import org.neo4j.cypher.internal.runtime.CypherRow;
+import org.neo4j.cypher.internal.runtime.DbAccess;
 import org.neo4j.cypher.internal.runtime.KernelAPISupport$;
 import org.neo4j.cypher.operations.CypherFunctions;
 import org.neo4j.exceptions.CypherTypeException;
@@ -25,6 +27,7 @@ import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
 import org.neo4j.values.storable.Values;
 import org.neo4j.values.virtual.ListValue;
+import org.neo4j.values.virtual.ListValueBuilder;
 import org.neo4j.values.virtual.VirtualNodeValue;
 
 import static java.lang.String.format;
@@ -228,7 +231,17 @@ public final class CompiledHelpers
     @CalledFromGeneratedCode
     public static IndexQuery[] manyExactQueries( int property, AnyValue seekValues )
     {
-        ListValue listOfSeekValues = CypherFunctions.asList( seekValues ).distinct();
+        Set<AnyValue> seen = new HashSet<>();
+        ListValueBuilder builder = new ListValueBuilder.UnknownSizeListValueBuilder();
+        ListValue seekValuesAsList = CypherFunctions.asList( seekValues );
+        for ( AnyValue value : seekValuesAsList )
+        {
+            if ( value != NO_VALUE && seen.add( value ) )
+            {
+                builder.add( value );
+            }
+        }
+        ListValue listOfSeekValues = builder.build();
         final int size = listOfSeekValues.size();
         IndexQuery[] predicates = new IndexQuery[size];
         for ( int i = 0; i < size; i++ )
