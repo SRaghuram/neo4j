@@ -56,8 +56,6 @@ import org.neo4j.cypher.internal.logical.plans.DenyDbmsAction
 import org.neo4j.cypher.internal.logical.plans.DenyGraphAction
 import org.neo4j.cypher.internal.logical.plans.DenyMatch
 import org.neo4j.cypher.internal.logical.plans.DenyRead
-import org.neo4j.cypher.internal.logical.plans.DenyRemoveLabel
-import org.neo4j.cypher.internal.logical.plans.DenySetLabel
 import org.neo4j.cypher.internal.logical.plans.DenyTraverse
 import org.neo4j.cypher.internal.logical.plans.DropDatabase
 import org.neo4j.cypher.internal.logical.plans.DropRole
@@ -68,9 +66,7 @@ import org.neo4j.cypher.internal.logical.plans.GrantDbmsAction
 import org.neo4j.cypher.internal.logical.plans.GrantGraphAction
 import org.neo4j.cypher.internal.logical.plans.GrantMatch
 import org.neo4j.cypher.internal.logical.plans.GrantRead
-import org.neo4j.cypher.internal.logical.plans.GrantRemoveLabel
 import org.neo4j.cypher.internal.logical.plans.GrantRoleToUser
-import org.neo4j.cypher.internal.logical.plans.GrantSetLabel
 import org.neo4j.cypher.internal.logical.plans.GrantTraverse
 import org.neo4j.cypher.internal.logical.plans.LogSystemCommand
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
@@ -81,9 +77,7 @@ import org.neo4j.cypher.internal.logical.plans.RevokeDbmsAction
 import org.neo4j.cypher.internal.logical.plans.RevokeGraphAction
 import org.neo4j.cypher.internal.logical.plans.RevokeMatch
 import org.neo4j.cypher.internal.logical.plans.RevokeRead
-import org.neo4j.cypher.internal.logical.plans.RevokeRemoveLabel
 import org.neo4j.cypher.internal.logical.plans.RevokeRoleFromUser
-import org.neo4j.cypher.internal.logical.plans.RevokeSetLabel
 import org.neo4j.cypher.internal.logical.plans.RevokeTraverse
 import org.neo4j.cypher.internal.logical.plans.ShowPrivileges
 import org.neo4j.cypher.internal.logical.plans.ShowRoles
@@ -370,19 +364,19 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke $databaseAction privilege from role '${runtimeValue(roleName, params)}'")
 
     // GRANT/DENY/REVOKE _ ON DATABASE foo TO role
-    case GrantGraphAction(source, action, database, qualifier, roleName) => (context, parameterMapping) =>
+    case GrantGraphAction(source, action, resource, database, qualifier, roleName) => (context, parameterMapping) =>
       val graphAction = AdminActionMapper.asKernelAction(action).toString
-      makeGrantOrDenyExecutionPlan(graphAction, NoResource()(InputPosition.NONE), database, qualifier, roleName,
+      makeGrantOrDenyExecutionPlan(graphAction, resource, database, qualifier, roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant $graphAction privilege to role '${runtimeValue(roleName, params)}'")
 
-    case DenyGraphAction(source, action, database, qualifier, roleName) => (context, parameterMapping) =>
+    case DenyGraphAction(source, action, resource, database, qualifier, roleName) => (context, parameterMapping) =>
       val graphAction = AdminActionMapper.asKernelAction(action).toString
-      makeGrantOrDenyExecutionPlan(graphAction, NoResource()(InputPosition.NONE), database, qualifier, roleName,
+      makeGrantOrDenyExecutionPlan(graphAction, resource, database, qualifier, roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny $graphAction privilege to role '${runtimeValue(roleName, params)}'")
 
-    case RevokeGraphAction(source, action, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
+    case RevokeGraphAction(source, action, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
       val graphAction = AdminActionMapper.asKernelAction(action).toString
-      makeRevokeExecutionPlan(graphAction, NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
+      makeRevokeExecutionPlan(graphAction, resource, database, qualifier, roleName, revokeType,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke $graphAction privilege from role '${runtimeValue(roleName, params)}'")
 
     // GRANT/DENY/REVOKE TRAVERSE ON GRAPH foo NODES A (*) TO role
@@ -423,33 +417,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     case RevokeMatch(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
       makeRevokeExecutionPlan(PrivilegeAction.MATCH.toString, resource, database, qualifier, roleName, revokeType,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke match privilege from role '${runtimeValue(roleName, params)}'")
-
-      // GRANT/DENY/REVOKE SET LABEL * ON GRAPH foo TO role
-    case GrantSetLabel(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.SET_LABEL.toString, resource, database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant set label privilege to role '${runtimeValue(roleName, params)}'")
-
-    case DenySetLabel(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.SET_LABEL.toString, resource, database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny set label privilege to role '${runtimeValue(roleName, params)}'")
-
-    case RevokeSetLabel(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
-      makeRevokeExecutionPlan(PrivilegeAction.SET_LABEL.toString, resource, database, qualifier, roleName, revokeType,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke set label privilege from role '${runtimeValue(roleName, params)}'")
-
-      // GRANT/DENY/REVOKE REMOVE LABEL * ON GRAPH foo TO role
-    case GrantRemoveLabel(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.REMOVE_LABEL.toString, resource, database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant removel label privilege to role '${runtimeValue(roleName, params)}'")
-
-    case DenyRemoveLabel(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.REMOVE_LABEL.toString, resource, database, qualifier, roleName,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny removel label privilege to role '${runtimeValue(roleName, params)}'")
-
-    case RevokeRemoveLabel(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
-      makeRevokeExecutionPlan(PrivilegeAction.REMOVE_LABEL.toString, resource, database, qualifier, roleName, revokeType,
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke removel label privilege from role '${runtimeValue(roleName, params)}'")
-
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES
     case ShowPrivileges(source, scope) => (context, parameterMapping) =>
@@ -764,9 +731,9 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     case DatabaseResource() => (Values.NO_VALUE, Values.utf8Value(Resource.Type.DATABASE.toString), s"$matchOrMerge (res:Resource {type: $$`${privilegeKeys("resource")}`})")
     case PropertyResource(name) => (Values.utf8Value(name), Values.utf8Value(Resource.Type.PROPERTY.toString), s"$matchOrMerge (res:Resource {type: $$`${privilegeKeys("resource")}`, arg1: $$`${privilegeKeys("resourceValue")}`})")
     case AllPropertyResource() => (Values.NO_VALUE, Values.utf8Value(Resource.Type.ALL_PROPERTIES.toString), s"$matchOrMerge (res:Resource {type: $$`${privilegeKeys("resource")}`})") // The label is just for later printout of results
-    case NoResource() => (Values.NO_VALUE, Values.utf8Value(Resource.Type.GRAPH.toString), s"$matchOrMerge (res:Resource {type: $$`${privilegeKeys("resource")}`})")
     case LabelResource(name) =>(Values.utf8Value(name), Values.utf8Value(Resource.Type.LABEL.toString), s"$matchOrMerge (res:Resource {type: $$`${privilegeKeys("resource")}`, arg1: $$`${privilegeKeys("resourceValue")}`})")
     case AllLabelResource() => (Values.NO_VALUE, Values.utf8Value(Resource.Type.ALL_LABELS.toString), s"$matchOrMerge (res:Resource {type: $$`${privilegeKeys("resource")}`})")
+    case NoResource() => (Values.NO_VALUE, Values.utf8Value(Resource.Type.GRAPH.toString), s"$matchOrMerge (res:Resource {type: $$`${privilegeKeys("resource")}`})")
     case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege $grantName resource type $resource")
   }
 

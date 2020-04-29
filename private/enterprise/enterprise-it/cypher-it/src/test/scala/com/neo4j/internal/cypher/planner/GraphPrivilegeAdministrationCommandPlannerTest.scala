@@ -418,7 +418,7 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("GrantSetLabel", Details(Seq("LABEL foo")), "role",
+        graphPrivilegePlan("GrantSetLabel", Details("ALL GRAPHS"), Details("LABEL foo"), Details("NODES *"), "role",
           assertDbmsAdminPlan("ASSIGN PRIVILEGE")
         )
       ).toString
@@ -432,8 +432,8 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("DenySetLabel", Details(Seq("LABEL bar")), "role",
-          graphPrivilegePlan("DenySetLabel", Details(Seq("LABEL foo")), "role",
+        graphPrivilegePlan("DenySetLabel", Details("ALL GRAPHS"), Details(Seq("LABEL bar")), Details("NODES *"), "role",
+          graphPrivilegePlan("DenySetLabel", Details("ALL GRAPHS"), Details(Seq("LABEL foo")), Details("NODES *"), "role",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
@@ -448,8 +448,8 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("RevokeRemoveLabel(DENIED)", Details(Seq("ALL LABELS")), "role",
-          graphPrivilegePlan("RevokeRemoveLabel(GRANTED)", Details(Seq("ALL LABELS")), "role",
+        graphPrivilegePlan("RevokeRemoveLabel(DENIED)", Details("ALL GRAPHS"), Details(Seq("ALL LABELS")), Details("NODES *"), "role",
+          graphPrivilegePlan("RevokeRemoveLabel(GRANTED)", Details("ALL GRAPHS"), Details(Seq("ALL LABELS")), Details("NODES *"), "role",
             assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
