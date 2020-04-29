@@ -23,8 +23,8 @@ import org.neo4j.configuration.helpers.DatabaseNameValidator
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.cypher.internal.ast.ActionResource
 import org.neo4j.cypher.internal.ast.AllGraphsScope
+import org.neo4j.cypher.internal.ast.AllPropertyResource
 import org.neo4j.cypher.internal.ast.AllQualifier
-import org.neo4j.cypher.internal.ast.AllResource
 import org.neo4j.cypher.internal.ast.DatabaseResource
 import org.neo4j.cypher.internal.ast.DefaultDatabaseScope
 import org.neo4j.cypher.internal.ast.GraphScope
@@ -760,8 +760,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
   private def getResourcePart(resource: ActionResource, startOfErrorMessage: String, grantName: String, matchOrMerge: String): (Value, Value, String) = resource match {
     case DatabaseResource() => (Values.NO_VALUE, Values.utf8Value(Resource.Type.DATABASE.toString), s"$matchOrMerge (res:Resource {type: $$`${privilegeKeys("resource")}`})")
     case PropertyResource(name) => (Values.utf8Value(name), Values.utf8Value(Resource.Type.PROPERTY.toString), s"$matchOrMerge (res:Resource {type: $$`${privilegeKeys("resource")}`, arg1: $$`${privilegeKeys("property")}`})")
+    case AllPropertyResource() => (Values.NO_VALUE, Values.utf8Value(Resource.Type.ALL_PROPERTIES.toString), s"$matchOrMerge (res:Resource {type: $$`${privilegeKeys("resource")}`})") // The label is just for later printout of results
     case NoResource() => (Values.NO_VALUE, Values.utf8Value(Resource.Type.GRAPH.toString), s"$matchOrMerge (res:Resource {type: $$`${privilegeKeys("resource")}`})")
-    case AllResource() => (Values.NO_VALUE, Values.utf8Value(Resource.Type.ALL_PROPERTIES.toString), s"$matchOrMerge (res:Resource {type: $$`${privilegeKeys("resource")}`})") // The label is just for later printout of results
     case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege $grantName resource type $resource")
   }
 
