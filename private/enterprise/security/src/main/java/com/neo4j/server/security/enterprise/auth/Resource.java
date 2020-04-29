@@ -199,6 +199,105 @@ public interface Resource
         }
     }
 
+    class AllLabelsResource implements Resource
+    {
+        public AllLabelsResource( )
+        {
+        }
+
+        @Override
+        public void assertValidCombination( PrivilegeAction action ) throws InvalidArgumentsException
+        {
+            if ( !(action.equals( PrivilegeAction.SET_LABEL ) || action.equals( PrivilegeAction.REMOVE_LABEL )) )
+            {
+                throw new InvalidArgumentsException( String.format( "Label resource cannot be combined with action `%s`", action.toString() ) );
+            }
+        }
+
+        @Override
+        public Type type()
+        {
+            return Type.ALL_LABELS;
+        }
+
+        @Override
+        public String toString()
+        {
+            return "all labels ";
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Type.ALL_LABELS.hashCode();
+        }
+
+        @Override
+        public boolean equals( Object obj )
+        {
+            return obj == this || obj instanceof AllLabelsResource;
+        }
+    }
+
+    class LabelResource implements Resource
+    {
+        private final String label;
+
+        public LabelResource( String label )
+        {
+            this.label = label;
+        }
+
+        @Override
+        public void assertValidCombination( PrivilegeAction action ) throws InvalidArgumentsException
+        {
+            if ( !(action.equals( PrivilegeAction.SET_LABEL ) || action.equals( PrivilegeAction.REMOVE_LABEL )) )
+            {
+                throw new InvalidArgumentsException( String.format( "Label resource cannot be combined with action `%s`", action.toString() ) );
+            }
+        }
+
+        @Override
+        public String getArg1()
+        {
+            return label == null ? "" : label;
+        }
+
+        @Override
+        public Type type()
+        {
+            return Type.LABEL;
+        }
+
+        @Override
+        public String toString()
+        {
+            return "label " + label;
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return label == null ? 0 : label.hashCode() + 31 * Type.LABEL.hashCode();
+        }
+
+        @Override
+        public boolean equals( Object obj )
+        {
+            if ( obj == this )
+            {
+                return true;
+            }
+
+            if ( obj instanceof LabelResource )
+            {
+                LabelResource other = (LabelResource) obj;
+                return this.label == null && other.label == null || this.label != null && this.label.equals( other.label );
+            }
+            return false;
+        }
+    }
+
     class ProcedureResource implements Resource
     {
         private final String nameSpace;
@@ -272,6 +371,8 @@ public interface Resource
     {
         ALL_PROPERTIES,
         PROPERTY,
+        ALL_LABELS,
+        LABEL,
         GRAPH,
         DATABASE,
         PROCEDURE;

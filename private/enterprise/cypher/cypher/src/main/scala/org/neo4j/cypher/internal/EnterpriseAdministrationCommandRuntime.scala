@@ -23,6 +23,7 @@ import org.neo4j.configuration.helpers.DatabaseNameValidator
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.cypher.internal.ast.ActionResource
 import org.neo4j.cypher.internal.ast.AllGraphsScope
+import org.neo4j.cypher.internal.ast.AllLabelResource
 import org.neo4j.cypher.internal.ast.AllPropertyResource
 import org.neo4j.cypher.internal.ast.AllQualifier
 import org.neo4j.cypher.internal.ast.DatabaseResource
@@ -30,6 +31,7 @@ import org.neo4j.cypher.internal.ast.DefaultDatabaseScope
 import org.neo4j.cypher.internal.ast.GraphScope
 import org.neo4j.cypher.internal.ast.LabelAllQualifier
 import org.neo4j.cypher.internal.ast.LabelQualifier
+import org.neo4j.cypher.internal.ast.LabelResource
 import org.neo4j.cypher.internal.ast.NamedGraphScope
 import org.neo4j.cypher.internal.ast.NoResource
 import org.neo4j.cypher.internal.ast.PrivilegeQualifier
@@ -423,29 +425,29 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke match privilege from role '${runtimeValue(roleName, params)}'")
 
       // GRANT/DENY/REVOKE SET LABEL * ON GRAPH foo TO role
-    case GrantSetLabel(source, database, qualifier, roleName) => (context, parameterMapping) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.SET_LABEL.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
+    case GrantSetLabel(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.SET_LABEL.toString, resource, database, qualifier, roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant set label privilege to role '${runtimeValue(roleName, params)}'")
 
-    case DenySetLabel(source, database, qualifier, roleName) => (context, parameterMapping) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.SET_LABEL.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
+    case DenySetLabel(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.SET_LABEL.toString, resource, database, qualifier, roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny set label privilege to role '${runtimeValue(roleName, params)}'")
 
-    case RevokeSetLabel(source, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
-      makeRevokeExecutionPlan(PrivilegeAction.SET_LABEL.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
+    case RevokeSetLabel(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
+      makeRevokeExecutionPlan(PrivilegeAction.SET_LABEL.toString, resource, database, qualifier, roleName, revokeType,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke set label privilege from role '${runtimeValue(roleName, params)}'")
 
       // GRANT/DENY/REVOKE REMOVE LABEL * ON GRAPH foo TO role
-    case GrantRemoveLabel(source, database, qualifier, roleName) => (context, parameterMapping) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.REMOVE_LABEL.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
+    case GrantRemoveLabel(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.REMOVE_LABEL.toString, resource, database, qualifier, roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant removel label privilege to role '${runtimeValue(roleName, params)}'")
 
-    case DenyRemoveLabel(source, database, qualifier, roleName) => (context, parameterMapping) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.REMOVE_LABEL.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
+    case DenyRemoveLabel(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.REMOVE_LABEL.toString, resource, database, qualifier, roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny removel label privilege to role '${runtimeValue(roleName, params)}'")
 
-    case RevokeRemoveLabel(source, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
-      makeRevokeExecutionPlan(PrivilegeAction.REMOVE_LABEL.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
+    case RevokeRemoveLabel(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
+      makeRevokeExecutionPlan(PrivilegeAction.REMOVE_LABEL.toString, resource, database, qualifier, roleName, revokeType,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke removel label privilege from role '${runtimeValue(roleName, params)}'")
 
 
@@ -474,6 +476,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         """
           |CASE res.type
           |  WHEN 'property' THEN 'property('+res.arg1+')'
+          |  WHEN 'label' THEN 'label('+res.arg1+')'
           |  ELSE res.type
           |END
         """.stripMargin
@@ -759,9 +762,11 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
   private def getResourcePart(resource: ActionResource, startOfErrorMessage: String, grantName: String, matchOrMerge: String): (Value, Value, String) = resource match {
     case DatabaseResource() => (Values.NO_VALUE, Values.utf8Value(Resource.Type.DATABASE.toString), s"$matchOrMerge (res:Resource {type: $$`${privilegeKeys("resource")}`})")
-    case PropertyResource(name) => (Values.utf8Value(name), Values.utf8Value(Resource.Type.PROPERTY.toString), s"$matchOrMerge (res:Resource {type: $$`${privilegeKeys("resource")}`, arg1: $$`${privilegeKeys("property")}`})")
+    case PropertyResource(name) => (Values.utf8Value(name), Values.utf8Value(Resource.Type.PROPERTY.toString), s"$matchOrMerge (res:Resource {type: $$`${privilegeKeys("resource")}`, arg1: $$`${privilegeKeys("resourceValue")}`})")
     case AllPropertyResource() => (Values.NO_VALUE, Values.utf8Value(Resource.Type.ALL_PROPERTIES.toString), s"$matchOrMerge (res:Resource {type: $$`${privilegeKeys("resource")}`})") // The label is just for later printout of results
     case NoResource() => (Values.NO_VALUE, Values.utf8Value(Resource.Type.GRAPH.toString), s"$matchOrMerge (res:Resource {type: $$`${privilegeKeys("resource")}`})")
+    case LabelResource(name) =>(Values.utf8Value(name), Values.utf8Value(Resource.Type.LABEL.toString), s"$matchOrMerge (res:Resource {type: $$`${privilegeKeys("resource")}`, arg1: $$`${privilegeKeys("resourceValue")}`})")
+    case AllLabelResource() => (Values.NO_VALUE, Values.utf8Value(Resource.Type.ALL_LABELS.toString), s"$matchOrMerge (res:Resource {type: $$`${privilegeKeys("resource")}`})")
     case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege $grantName resource type $resource")
   }
 
@@ -784,7 +789,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     case Right(p) if p.isInstanceOf[Parameter]=> s"$$`${p.asInstanceOf[Parameter].name}`"
   }
 
-  private val privilegeKeys = Seq("action", "property", "resource", "label").foldLeft(Map.empty[String, String])((a, k) => a + (k -> internalKey(k)))
+  private val privilegeKeys = Seq("action", "resourceValue", "resource", "label").foldLeft(Map.empty[String, String])((a, k) => a + (k -> internalKey(k)))
   private def makeGrantOrDenyExecutionPlan(actionName: String,
                                            resource: ActionResource,
                                            database: GraphScope,
@@ -799,7 +804,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     val action = Values.utf8Value(actionName)
     val (roleKey, roleValue, roleConverter) = getNameFields("role", roleName)
     val roleMap = VirtualValues.map(Array(roleKey), Array(Values.utf8Value(escapeName(roleName))))
-    val (property: Value, resourceType: Value, resourceMerge: String) = getResourcePart(resource, startOfErrorMessage(roleMap), grant.name, "MERGE")
+    val (resourceValue: Value, resourceType: Value, resourceMerge: String) = getResourcePart(resource, startOfErrorMessage(roleMap), grant.name, "MERGE")
     val (qualifierKey, qualifierValue, qualifierConverter, qualifierMerge) = getQualifierPart(qualifier, startOfErrorMessage(roleMap), grant.name, "MERGE")
     val (databaseKey, databaseValue, databaseConverter, databaseMerge, scopeMerge) = database match {
       case NamedGraphScope(name) =>
@@ -832,7 +837,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |
          |// Return the table of results
          |RETURN '${grant.prefix}' AS grant, p.action AS action, d.name AS database, q.label AS label, r.name AS role""".stripMargin,
-      VirtualValues.map(Array(privilegeKeys("action"), privilegeKeys("resource"), privilegeKeys("property"), databaseKey, qualifierKey, roleKey), Array(action, resourceType, property, databaseValue, qualifierValue, roleValue)),
+      VirtualValues.map(Array(privilegeKeys("action"), privilegeKeys("resource"), privilegeKeys("resourceValue"), databaseKey, qualifierKey, roleKey),
+        Array(action, resourceType, resourceValue, databaseValue, qualifierValue, roleValue)),
       QueryHandler
         .handleNoResult(params => {
           val db = params.get(databaseKey).asInstanceOf[TextValue].stringValue()
@@ -861,7 +867,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     val (roleKey, roleValue, roleConverter) = getNameFields("role", roleName)
     val roleMap = VirtualValues.map(Array(roleKey), Array(Values.utf8Value(escapeName(roleName))))
 
-    val (property: Value, resourceType: Value, resourceMatch: String) = getResourcePart(resource, startOfErrorMessage(roleMap), "revoke", "MATCH")
+    val (resourceValue: Value, resourceType: Value, resourceMatch: String) = getResourcePart(resource, startOfErrorMessage(roleMap), "revoke", "MATCH")
     val (qualifierKey, qualifierValue, qualifierConverter, qualifierMatch) = getQualifierPart(qualifier, startOfErrorMessage(roleMap), "revoke", "MATCH")
     val (databaseKey, databaseValue, databaseConverter, scopeMatch) = database match {
       case NamedGraphScope(name) =>
@@ -890,7 +896,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |// Remove the assignment
          |DELETE g
          |RETURN r.name AS role, g AS grant""".stripMargin,
-      VirtualValues.map(Array(privilegeKeys("action"), privilegeKeys("resource"), privilegeKeys("property"), databaseKey, qualifierKey, roleKey), Array(action, resourceType, property, databaseValue, qualifierValue, roleValue)),
+      VirtualValues.map(Array(privilegeKeys("action"), privilegeKeys("resource"), privilegeKeys("resourceValue"), databaseKey, qualifierKey, roleKey),
+        Array(action, resourceType, resourceValue, databaseValue, qualifierValue, roleValue)),
       QueryHandler.handleError {
         case (e: HasStatus, p) if e.status() == Status.Cluster.NotALeader =>
           new DatabaseAdministrationOnFollowerException(s"${startOfErrorMessage(p)}: $followerError", e)

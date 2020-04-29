@@ -28,6 +28,7 @@ import org.neo4j.internal.kernel.api.security.LoginContext.IdLookup;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.Segment;
 
+import static com.neo4j.server.security.enterprise.auth.Resource.Type.ALL_LABELS;
 import static com.neo4j.server.security.enterprise.auth.Resource.Type.PROPERTY;
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.DENY;
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
@@ -815,7 +816,7 @@ class StandardAccessMode implements AccessMode
 
             case SET_LABEL:
             case REMOVE_LABEL:
-                handleLabelPrivilege( segment, privilegeType, action );
+                handleLabelPrivilege( resource, privilegeType, action );
                 break;
 
             case CREATE_ELEMENT:
@@ -942,9 +943,9 @@ class StandardAccessMode implements AccessMode
             }
         }
 
-        private void handleLabelPrivilege( Segment segment, ResourcePrivilege.GrantOrDeny privilegeType, PrivilegeAction action )
+        private void handleLabelPrivilege( Resource resource, ResourcePrivilege.GrantOrDeny privilegeType, PrivilegeAction action )
         {
-            if ( segment.equals( LabelSegment.ALL ) )
+            if ( resource.type().equals( ALL_LABELS ) )
             {
                 if ( action == SET_LABEL )
                 {
@@ -959,11 +960,11 @@ class StandardAccessMode implements AccessMode
             {
                 if ( action == SET_LABEL )
                 {
-                    addLabel( settableLabels.get( privilegeType ), (LabelSegment) segment );
+                    addLabelResource( settableLabels.get( privilegeType ), (Resource.LabelResource) resource );
                 }
                 else if ( action == REMOVE_LABEL )
                 {
-                    addLabel( removableLabels.get( privilegeType ), (LabelSegment) segment );
+                    addLabelResource( removableLabels.get( privilegeType ), (Resource.LabelResource) resource );
                 }
             }
         }
@@ -1117,6 +1118,15 @@ class StandardAccessMode implements AccessMode
             if ( relTypeId != ANY_RELATIONSHIP_TYPE )
             {
                 whiteOrBlacklist.add( relTypeId );
+            }
+        }
+
+        private void addLabelResource( MutableIntSet whiteOrBlacklist, Resource.LabelResource resource )
+        {
+            int labelId = resolveLabelId( resource.getArg1() );
+            if ( labelId != ANY_LABEL )
+            {
+                whiteOrBlacklist.add( labelId );
             }
         }
     }

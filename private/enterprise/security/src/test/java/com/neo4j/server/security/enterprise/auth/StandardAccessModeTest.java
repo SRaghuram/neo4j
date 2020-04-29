@@ -1528,7 +1528,7 @@ class StandardAccessModeTest
     void shouldAllowSetLabel() throws Exception
     {
         // GRANT SET LABEL * ON GRAPH neo4j
-        var privilege = new ResourcePrivilege( GRANT, SET_LABEL, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege = new ResourcePrivilege( GRANT, SET_LABEL, new Resource.AllLabelsResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
         var mode = builder.addPrivilege( privilege ).build();
 
         // THEN
@@ -1540,7 +1540,7 @@ class StandardAccessModeTest
     void shouldAllowSetSpecificLabel() throws Exception
     {
         // GRANT SET LABEL A ON GRAPH neo4j
-        var privilege = new ResourcePrivilege( GRANT, SET_LABEL, new Resource.GraphResource(), new LabelSegment( "A" ), DEFAULT_DATABASE_NAME );
+        var privilege = new ResourcePrivilege( GRANT, SET_LABEL, new Resource.LabelResource( "A" ), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
         var mode = builder.addPrivilege( privilege ).build();
 
         // THEN
@@ -1553,8 +1553,8 @@ class StandardAccessModeTest
     {
         // GRANT SET LABEL * ON GRAPH neo4j
         // DENY SET LABEL A ON GRAPH neo4j
-        var privilege1 = new ResourcePrivilege( GRANT, SET_LABEL, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
-        var privilege2 = new ResourcePrivilege( DENY, SET_LABEL, new Resource.GraphResource(), new LabelSegment( "A" ), DEFAULT_DATABASE_NAME );
+        var privilege1 = new ResourcePrivilege( GRANT, SET_LABEL, new Resource.AllLabelsResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 = new ResourcePrivilege( DENY, SET_LABEL, new Resource.LabelResource( "A" ), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
         var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
 
         // THEN
@@ -1568,7 +1568,7 @@ class StandardAccessModeTest
     void shouldAllowRemoveLabel() throws Exception
     {
         // GRANT REMOVE LABEL * ON GRAPH neo4j
-        var privilege = new ResourcePrivilege( GRANT, REMOVE_LABEL, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege = new ResourcePrivilege( GRANT, REMOVE_LABEL, new Resource.AllLabelsResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
         var mode = builder.addPrivilege( privilege ).build();
 
         // THEN
@@ -1580,7 +1580,7 @@ class StandardAccessModeTest
     void shouldAllowRemoveSpecificLabel() throws Exception
     {
         // GRANT REMOVE LABEL A ON GRAPH neo4j
-        var privilege = new ResourcePrivilege( GRANT, REMOVE_LABEL, new Resource.GraphResource(), new LabelSegment( "A" ), DEFAULT_DATABASE_NAME );
+        var privilege = new ResourcePrivilege( GRANT, REMOVE_LABEL, new Resource.LabelResource( "A" ), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
         var mode = builder.addPrivilege( privilege ).build();
 
         // THEN
@@ -1593,8 +1593,8 @@ class StandardAccessModeTest
     {
         // GRANT REMOVE LABEL * ON GRAPH neo4j
         // DENY REMOVE LABEL A ON GRAPH neo4j
-        var privilege1 = new ResourcePrivilege( GRANT, REMOVE_LABEL, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
-        var privilege2 = new ResourcePrivilege( DENY, REMOVE_LABEL, new Resource.GraphResource(), new LabelSegment( "A" ), DEFAULT_DATABASE_NAME );
+        var privilege1 = new ResourcePrivilege( GRANT, REMOVE_LABEL, new Resource.AllLabelsResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 = new ResourcePrivilege( DENY, REMOVE_LABEL, new Resource.LabelResource( "A" ), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
         var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
 
         // THEN
