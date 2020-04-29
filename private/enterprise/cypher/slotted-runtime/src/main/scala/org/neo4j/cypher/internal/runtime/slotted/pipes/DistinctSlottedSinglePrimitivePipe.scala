@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
+import org.neo4j.collection.trackable.HeapTrackingCollections
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeSetValueInSlotFunctionFor
@@ -15,7 +16,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.kernel.impl.util.collection.HeapTrackingCollections
 import org.neo4j.values.AnyValue
 
 case class DistinctSlottedSinglePrimitivePipe(source: Pipe,
