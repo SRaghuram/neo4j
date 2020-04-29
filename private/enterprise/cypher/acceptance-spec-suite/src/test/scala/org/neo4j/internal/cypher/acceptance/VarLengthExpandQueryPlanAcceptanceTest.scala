@@ -19,7 +19,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
 
     executeWith(Configs.VarExpand, query, planComparisonStrategy =
       ComparePlansWithAssertion(plan => {
-        plan should includeSomewhere.aPlan("VarLengthExpand(All)").containingArgument("(e)<-[*..4]-(a)")
+        plan should includeSomewhere.aPlan("VarLengthExpand(All)").containingArgumentRegex("""\(e\)\<\-\[anon_[0-9]*\*\.\.4\]\-\(a\)""".r)
         plan should includeSomewhere.aPlan("NodeByLabelScan").containingArgument("e:To")
       }))
   }
@@ -29,7 +29,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
     val query = "PROFILE MATCH (a:From {name:'Keanu Reeves'})-[*..4]->(e:To {name:'Andres'}) RETURN *"
     executeWith(Configs.VarExpand, query, planComparisonStrategy =
       ComparePlansWithAssertion( plan => {
-        plan should includeSomewhere.aPlan("VarLengthExpand(All)").containingArgument("(a)-[*..4]->(e)")
+        plan should includeSomewhere.aPlan("VarLengthExpand(All)").containingArgumentRegex("""\(a\)\-\[anon_[0-9]*\*\.\.4\]\-\>\(e\)""".r)
         plan should includeSomewhere.aPlan("NodeByLabelScan").containingArgument("a:From")
       }))
   }

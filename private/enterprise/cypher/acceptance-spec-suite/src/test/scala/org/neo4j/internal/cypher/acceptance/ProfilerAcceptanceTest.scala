@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.plandescription.Arguments.DbHits
 import org.neo4j.cypher.internal.plandescription.Arguments.Rows
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription.TotalHits
+import org.neo4j.cypher.internal.plandescription.LogicalPlan2PlanDescriptionTest.anonVar
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.cypher.internal.runtime.ProfileMode
 import org.neo4j.cypher.internal.util.helpers.StringHelper.RichString
@@ -410,18 +411,6 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
         includeSomewhere.aPlan("Expand(All)").withDBHits(7) and
           includeSomewhere.aPlan("NodeUniqueIndexSeek").withDBHits(2)
         ))
-  }
-
-  test("should show expand without types in a simple form") {
-    profile(Configs.All,
-      "MATCH (n)-->() RETURN *",
-      _.toString should include("()<--(n)"))
-  }
-
-  test("should show expand with types in a simple form") {
-    profile(Configs.All,
-      "MATCH (n)-[r:T]->() RETURN *",
-      _.toString should include("()<-[r:T]-(n)"))
   }
 
   test("should report correct dbhits and rows for label scan") {
