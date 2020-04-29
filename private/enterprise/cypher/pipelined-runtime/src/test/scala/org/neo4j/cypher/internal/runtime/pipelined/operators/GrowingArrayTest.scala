@@ -61,4 +61,10 @@ class GrowingArrayTest extends CypherFunSuite {
     x.set(0, null)
     x.hasNeverSeenData shouldBe false
   }
+
+  test("set on an large out-of-bounds index") {
+    val x = new GrowingArray[String]
+    x.set(1234, "a")
+    x.get(1234) shouldBe "a"
+  }
 }

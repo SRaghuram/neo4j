@@ -7,8 +7,8 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
 import org.neo4j.cypher.internal.runtime.pipelined.operators.VarExpandCursor.relationshipFromCursor
@@ -334,7 +334,8 @@ class GrowingArray[T <: AnyRef] {
 
     if (array.length < size) {
       val temp = array
-      array = new Array[AnyRef](array.length * 2)
+      val newLength = math.max(array.length * 2, size)
+      array = new Array[AnyRef](newLength)
       System.arraycopy(temp, 0, array, 0, temp.length)
     }
   }
