@@ -92,7 +92,7 @@ class FrekiTransactionApplierTest
         // when
         try ( FrekiTransactionApplier applier = applier() )
         {
-            applier.handle( new FrekiCommand.SparseNode( nodeId, unusedRecord( sizeExp, nodeId ), usedRecord( sizeExp, nodeId ) ) );
+            applier.handle( new FrekiCommand.SparseNode( nodeId, null, usedRecord( sizeExp, nodeId ) ) );
         }
 
         // then
@@ -109,7 +109,7 @@ class FrekiTransactionApplierTest
         // when
         try ( FrekiTransactionApplier applier = applier() )
         {
-            applier.handle( new FrekiCommand.SparseNode( nodeId, unusedRecord( sizeExp, nodeId ), usedRecord( sizeExp, nodeId ) ) );
+            applier.handle( new FrekiCommand.SparseNode( nodeId, null, usedRecord( sizeExp, nodeId ) ) );
         }
 
         // then
@@ -122,15 +122,12 @@ class FrekiTransactionApplierTest
         // given
         int sizeExp = 0;
         long nodeId = 0;
-        preState( applier ->
-        {
-            applier.handle( new FrekiCommand.SparseNode( nodeId, unusedRecord( sizeExp, nodeId ), usedRecord( sizeExp, nodeId ) ) );
-        } );
+        preState( applier -> applier.handle( new FrekiCommand.SparseNode( nodeId, null, usedRecord( sizeExp, nodeId ) ) ) );
 
         // when
         try ( FrekiTransactionApplier applier = applier() )
         {
-            applier.handle( new FrekiCommand.SparseNode( nodeId, usedRecord( sizeExp, nodeId ), unusedRecord( sizeExp, nodeId ) ) );
+            applier.handle( new FrekiCommand.SparseNode( nodeId, usedRecord( sizeExp, nodeId ), null ) );
         }
 
         // then
@@ -143,15 +140,12 @@ class FrekiTransactionApplierTest
         // given
         int sizeExp = 1;
         long nodeId = 0;
-        preState( applier ->
-        {
-            applier.handle( new FrekiCommand.SparseNode( nodeId, unusedRecord( sizeExp, nodeId ), usedRecord( sizeExp, nodeId ) ) );
-        } );
+        preState( applier -> applier.handle( new FrekiCommand.SparseNode( nodeId, null, usedRecord( sizeExp, nodeId ) ) ) );
 
         // when
         try ( FrekiTransactionApplier applier = applier() )
         {
-            applier.handle( new FrekiCommand.SparseNode( nodeId, usedRecord( sizeExp, nodeId ), unusedRecord( sizeExp, nodeId ) ) );
+            applier.handle( new FrekiCommand.SparseNode( nodeId, usedRecord( sizeExp, nodeId ), null ) );
         }
 
         // then
@@ -164,10 +158,7 @@ class FrekiTransactionApplierTest
         // given
         int sizeExp = 1;
         long nodeId = 0;
-        preState( applier ->
-        {
-            applier.handle( new FrekiCommand.SparseNode( nodeId, unusedRecord( sizeExp, nodeId ), usedRecord( sizeExp, nodeId ) ) );
-        } );
+        preState( applier -> applier.handle( new FrekiCommand.SparseNode( nodeId, null, usedRecord( sizeExp, nodeId ) ) ) );
 
         // when
         try ( FrekiTransactionApplier applier = applier() )
@@ -186,10 +177,7 @@ class FrekiTransactionApplierTest
         // given
         int sizeExp = 3;
         long nodeId = 0;
-        preState( applier ->
-        {
-            applier.handle( new FrekiCommand.SparseNode( nodeId, unusedRecord( sizeExp, nodeId ), usedRecord( sizeExp, nodeId ) ) );
-        } );
+        preState( applier -> applier.handle( new FrekiCommand.SparseNode( nodeId, null, usedRecord( sizeExp, nodeId ) ) ) );
 
         // when
         try ( FrekiTransactionApplier applier = applier() )
@@ -213,14 +201,9 @@ class FrekiTransactionApplierTest
 
     private Record usedRecord( int sizeExp, long id )
     {
-        Record record = unusedRecord( sizeExp, id );
+        Record record = new Record( sizeExp, id );
         record.setFlag( Record.FLAG_IN_USE, true );
         return record;
-    }
-
-    private static Record unusedRecord( int sizeExp, long id )
-    {
-        return new Record( sizeExp, id );
     }
 
     private FrekiTransactionApplier applier()

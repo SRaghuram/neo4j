@@ -61,14 +61,13 @@ public class FrekiCommandSerializationTest
         // given
         int sizeExp = randomSizeExp();
         long nodeId = randomLargeId();
-        long id = randomLargeId();
-        Record before = new Record( sizeExp, id );
+        long id = sizeExp == 0 ? nodeId : randomLargeId();
         Record after = new Record( sizeExp, id );
         after.setFlag( FLAG_IN_USE, true );
         fillWithRandomData( after );
 
         // when/then
-        shouldReadAndWriteSparseNode( nodeId, before, after );
+        shouldReadAndWriteSparseNode( nodeId, null, after );
     }
 
     @Test
@@ -77,7 +76,7 @@ public class FrekiCommandSerializationTest
         // given
         int sizeExp = randomSizeExp();
         long nodeId = randomLargeId();
-        long id = randomLargeId();
+        long id = sizeExp == 0 ? nodeId : randomLargeId();
         Record before = new Record( sizeExp, id );
         before.setFlag( FLAG_IN_USE, true );
         fillWithRandomData( before );
@@ -95,14 +94,13 @@ public class FrekiCommandSerializationTest
         // given
         int sizeExp = randomSizeExp();
         long nodeId = randomLargeId();
-        long id = randomLargeId();
+        long id = sizeExp == 0 ? nodeId : randomLargeId();
         Record before = new Record( sizeExp, id );
         before.setFlag( FLAG_IN_USE, true );
         fillWithRandomData( before );
-        Record after = new Record( sizeExp, id );
 
         // when/then
-        shouldReadAndWriteSparseNode( nodeId, before, after );
+        shouldReadAndWriteSparseNode( nodeId, before, null );
     }
 
     @Test
@@ -336,14 +334,26 @@ public class FrekiCommandSerializationTest
         FrekiCommand.SparseNode command = new FrekiCommand.SparseNode( nodeId, before, after );
 
         // when
-        InMemoryClosableChannel channel = new InMemoryClosableChannel( 2_000 );
+        InMemoryClosableChannel channel = new InMemoryClosableChannel( 3_000 );
         command.serialize( channel );
 
         // then
         FrekiCommand.SparseNode readNode = readCommand( channel, FrekiCommand.SparseNode.class );
         assertThat( readNode.nodeId ).isEqualTo( nodeId );
-        assertThat( readNode.before.hasSameContentsAs( before ) ).isTrue();
-        assertThat( readNode.after.hasSameContentsAs( after ) ).isTrue();
+        assertRecord( before, readNode.before );
+        assertRecord( after, readNode.after );
+    }
+
+    private void assertRecord( Record expected, Record actual )
+    {
+        if ( expected == null )
+        {
+            assertThat( actual ).isNull();
+        }
+        else
+        {
+            assertThat( actual.hasSameContentsAs( expected ) ).isTrue();
+        }
     }
 
     private void fillWithRandomData( Record after )

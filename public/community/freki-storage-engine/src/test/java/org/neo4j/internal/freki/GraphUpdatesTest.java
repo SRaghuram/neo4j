@@ -36,12 +36,13 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.PropertyKeyValue;
 import org.neo4j.storageengine.api.StorageProperty;
-import org.neo4j.storageengine.util.IdUpdateListener;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.rule.RandomRule;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.neo4j.internal.freki.Record.deletedRecord;
+import static org.neo4j.storageengine.util.IdUpdateListener.IGNORE;
 
 @ExtendWith( RandomExtension.class )
 class GraphUpdatesTest
@@ -121,11 +122,11 @@ class GraphUpdatesTest
                     public void handle( FrekiCommand.SparseNode node ) throws IOException
                     {
                         Record record = node.after;
-                        byte sizeExp = record.sizeExp();
+                        byte sizeExp = node.sizeExp();
                         SimpleStore store = mainStores.mainStore( sizeExp );
                         try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
                         {
-                            store.write( cursor, record, IdUpdateListener.IGNORE, PageCursorTracer.NULL );
+                            store.write( cursor, record != null ? record : deletedRecord( sizeExp, node.recordId() ), IGNORE, PageCursorTracer.NULL );
                         }
                     }
 

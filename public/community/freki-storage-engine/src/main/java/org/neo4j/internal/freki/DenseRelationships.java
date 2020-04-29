@@ -114,5 +114,12 @@ class DenseRelationships
         {
             return Objects.hash( internalId, otherNodeId, outgoing, propertyUpdates );
         }
+
+        @Override
+        public String toString()
+        {
+            return "DenseRelationship{" + "internalId=" + internalId + ", otherNodeId=" + otherNodeId + ", outgoing=" + outgoing + ", propertyUpdates=" +
+                    propertyUpdates + '}';
+        }
     }
 }

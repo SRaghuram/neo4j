@@ -52,7 +52,7 @@ import org.neo4j.values.storable.Value;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_LONG_ARRAY;
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
-import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
+import static org.neo4j.internal.freki.Record.deletedRecord;
 import static org.neo4j.io.IOUtils.closeAll;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.REVERSE_RECOVERY;
 import static org.neo4j.storageengine.util.IdUpdateListener.IGNORE;
@@ -134,13 +134,13 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     {
         checkExtractIndexUpdates( node.nodeId );
 
-        Record record = node.after;
-        int sizeExp = record.sizeExp();
+        int sizeExp = node.sizeExp();
         SimpleStore store = stores.mainStore( sizeExp );
         try ( PageCursor cursor = store.openWriteCursor( cursorTracer ) )
         {
-            boolean onlyUpdated = node.before.hasFlag( FLAG_IN_USE ) && node.after.hasFlag( FLAG_IN_USE );
-            store.write( cursor, node.after, idUpdates == null || onlyUpdated ? IGNORE : idUpdates, cursorTracer );
+            boolean updated = node.mode() == Mode.UPDATE;
+            Record afterRecord = node.after != null ? node.after : deletedRecord( sizeExp, node.recordId() );
+            store.write( cursor, afterRecord, idUpdates == null || updated ? IGNORE : idUpdates, cursorTracer );
         }
 
         if ( indexUpdates != null )
@@ -180,7 +180,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     public EntityUpdates extractIndexUpdates( long[] labelsBefore, long[] labelsAfter )
     {
         FrekiCommand.SparseNode x1 = currentSparseNodeCommands[0];
-        boolean nodeIsCreatedRightNow = x1 != null && !x1.before.hasFlag( FLAG_IN_USE );
+        boolean nodeIsCreatedRightNow = x1 != null && x1.mode() == Mode.CREATE;
 
         EntityUpdates.Builder builder = EntityUpdates.forEntity( currentNodeId, nodeIsCreatedRightNow );
         builder.withTokens( labelsBefore ).withTokensAfter( labelsAfter );
@@ -239,55 +239,53 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
             if ( currentSparseNodeCommands[i] != null )
             {
                 Record record = recordFunction.apply( currentSparseNodeCommands[i] );
-                if ( record != null )
+                boolean inUse = record != null;
+                if ( inUse )
                 {
-                    if ( record.hasFlag( FLAG_IN_USE ) )
+                    nodeCursor.initializeFromRecord( record );
+                    if ( !labelsLoaded )
                     {
-                        nodeCursor.initializeFromRecord( record );
-                        if ( !labelsLoaded )
+                        if ( nodeCursor.data.header.hasMark( Header.FLAG_LABELS ) )
                         {
-                            if ( nodeCursor.data.header.hasMark( Header.FLAG_LABELS ) )
-                            {
-                                labels = nodeCursor.labels();
-                                labelsLoaded = true;
-                            }
-                            else if ( !nodeCursor.data.header.hasReferenceMark( Header.FLAG_LABELS ) )
-                            {
-                                labelsLoaded = true;
-                            }
+                            labels = nodeCursor.labels();
+                            labelsLoaded = true;
                         }
-                        if ( !propertiesLoaded )
+                        else if ( !nodeCursor.data.header.hasReferenceMark( Header.FLAG_LABELS ) )
                         {
-                            if ( nodeCursor.data.header.hasMark( Header.OFFSET_PROPERTIES ) )
-                            {
-                                nodeCursor.properties( propertyCursor );
-                                propertiesLoaded = true;
-                            }
-                            else if ( !nodeCursor.data.header.hasReferenceMark( Header.OFFSET_PROPERTIES ) )
-                            {
-                                propertyCursor.reset();
-                                propertiesLoaded = true;
-                            }
+                            labelsLoaded = true;
                         }
                     }
+                    if ( !propertiesLoaded )
+                    {
+                        if ( nodeCursor.data.header.hasMark( Header.OFFSET_PROPERTIES ) )
+                        {
+                            nodeCursor.properties( propertyCursor );
+                            propertiesLoaded = true;
+                        }
+                        else if ( !nodeCursor.data.header.hasReferenceMark( Header.OFFSET_PROPERTIES ) )
+                        {
+                            propertyCursor.reset();
+                            propertiesLoaded = true;
+                        }
+                    }
+                }
 
-                    if ( i == 0 )
-                    {
-                        //in x1
-                        investigatedX1 = true;
-                        if ( !record.hasFlag( FLAG_IN_USE ) || nodeCursor.data.forwardPointer == NULL )
-                        {
-                            investigatedXL = true;
-                            break;
-                        }
-                    }
-                    else
+                if ( i == 0 )
+                {
+                    //in x1
+                    investigatedX1 = true;
+                    if ( !inUse || nodeCursor.data.forwardPointer == NULL )
                     {
                         investigatedXL = true;
-                        if ( record.hasFlag( FLAG_IN_USE ) )
-                        {
-                            break;
-                        }
+                        break;
+                    }
+                }
+                else
+                {
+                    investigatedXL = true;
+                    if ( inUse )
+                    {
+                        break;
                     }
                 }
             }

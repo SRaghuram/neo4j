@@ -30,6 +30,7 @@ import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -48,6 +49,7 @@ import static java.lang.Math.toIntExact;
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
 import static org.neo4j.internal.freki.MutableNodeData.buildRecordPointer;
 import static org.neo4j.internal.freki.MutableNodeData.idFromRecordPointer;
+import static org.neo4j.internal.freki.MutableNodeData.recordPointerToString;
 import static org.neo4j.internal.freki.MutableNodeData.serializeRecordPointer;
 import static org.neo4j.internal.freki.MutableNodeData.sizeExponentialFromRecordPointer;
 import static org.neo4j.internal.freki.PropertyUpdate.add;
@@ -193,6 +195,10 @@ class GraphUpdates
             if ( recordPointer != NULL )
             {
                 Record xL = readRecord( stores, sizeExponentialFromRecordPointer( recordPointer ), idFromRecordPointer( recordPointer ), cursorTracer );
+                if ( xL == null )
+                {
+                    throw new IllegalStateException( x1 + " points to " + recordPointerToString( recordPointer ) + " that isn't in use" );
+                }
                 sparse.add( xL );
                 xLBefore = xL;
             }
@@ -380,7 +386,7 @@ class GraphUpdates
                 x1Command( smallBuffer, otherCommands );
                 if ( xLBefore != null )
                 {
-                    otherCommands.accept( new FrekiCommand.SparseNode( nodeId, xLBefore, deletedVersionOf( xLBefore ) ) );
+                    otherCommands.accept( new FrekiCommand.SparseNode( nodeId, xLBefore, null ) );
                 }
                 return;
             }
@@ -425,11 +431,11 @@ class GraphUpdates
         {
             if ( x1Before != null )
             {
-                otherCommands.accept( new FrekiCommand.SparseNode( nodeId, x1Before, deletedVersionOf( x1Before ) ) );
+                otherCommands.accept( new FrekiCommand.SparseNode( nodeId, x1Before, null ) );
             }
             if ( xLBefore != null )
             {
-                otherCommands.accept( new FrekiCommand.SparseNode( nodeId, xLBefore, deletedVersionOf( xLBefore ) ) );
+                otherCommands.accept( new FrekiCommand.SparseNode( nodeId, xLBefore, null ) );
             }
             if ( dense != null )
             {
@@ -502,13 +508,6 @@ class GraphUpdates
             }
         }
 
-        private Record deletedVersionOf( Record record )
-        {
-            Record deletedRecord = new Record( record.sizeExp(), record.id );
-            deletedRecord.setFlag( FLAG_IN_USE, false );
-            return deletedRecord;
-        }
-
         private void moveDataToDense()
         {
             if ( dense == null )
@@ -528,22 +527,24 @@ class GraphUpdates
             if ( xLBefore != null && xLBefore.sizeExp() == sizeExp )
             {
                 // There was a large record before and we're just modifying it
-                commands.accept( new FrekiCommand.SparseNode( nodeId, xLBefore, after = recordForData( xLBefore.id, maxBuffer, sizeExp ) ) );
+                after = recordForData( xLBefore.id, maxBuffer, sizeExp );
+                if ( contentsDiffer( xLBefore, after ) )
+                {
+                    commands.accept( new FrekiCommand.SparseNode( nodeId, xLBefore, after ) );
+                }
             }
             else if ( xLBefore != null && xLBefore.sizeExp() != sizeExp )
             {
                 // There was a large record before, but this time it'll be of a different size, so a different one
-                commands.accept( new FrekiCommand.SparseNode( nodeId, xLBefore, deletedVersionOf( xLBefore ) ) );
+                commands.accept( new FrekiCommand.SparseNode( nodeId, xLBefore, null ) );
                 long recordId = store.nextId( cursorTracer );
-                commands.accept(
-                        new FrekiCommand.SparseNode( nodeId, new Record( sizeExp, recordId ), after = recordForData( recordId, maxBuffer, sizeExp ) ) );
+                commands.accept( new FrekiCommand.SparseNode( nodeId, null, after = recordForData( recordId, maxBuffer, sizeExp ) ) );
             }
             else
             {
                 // There was no large record before at all
                 long recordId = store.nextId( cursorTracer );
-                commands.accept(
-                        new FrekiCommand.SparseNode( nodeId, new Record( sizeExp, recordId ), after = recordForData( recordId, maxBuffer, sizeExp ) ) );
+                commands.accept( new FrekiCommand.SparseNode( nodeId, null, after = recordForData( recordId, maxBuffer, sizeExp ) ) );
             }
 
             return buildRecordPointer( after.sizeExp(), after.id );
@@ -551,9 +552,22 @@ class GraphUpdates
 
         private void x1Command( ByteBuffer smallBuffer, Consumer<StorageCommand> commands )
         {
-            Record before = x1Before != null ? x1Before : new Record( 0, nodeId );
             Record after = recordForData( nodeId, smallBuffer, 0 );
-            commands.accept( new FrekiCommand.SparseNode( nodeId, before, after ) );
+            if ( x1Before == null || contentsDiffer( x1Before, after ) )
+            {
+                commands.accept( new FrekiCommand.SparseNode( nodeId, x1Before, after ) );
+            }
+        }
+
+        private boolean contentsDiffer( Record before, Record after )
+        {
+            if ( before.data().limit() != after.data().limit() )
+            {
+                return true;
+            }
+            return !Arrays.equals(
+                    before.data().array(), 0, before.data().limit(),
+                    after.data().array(), 0, after.data().limit() );
         }
     }
 
@@ -832,6 +846,7 @@ class GraphUpdates
         after.setFlag( FLAG_IN_USE, true );
         ByteBuffer byteBuffer = after.data();
         byteBuffer.put( buffer.array(), 0, buffer.limit() );
+        byteBuffer.position( buffer.limit() ).flip();
         return after;
     }
 
