@@ -59,9 +59,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate.compositeGetPropertyMethod
-import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate.compositeNextMethod
-import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate.compositeQueryIteratorMethod
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate.createCursorsMethod
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate.isImpossible
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_NODE_INDEX_CURSOR
@@ -75,7 +72,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.indexOrder
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.indexReadSession
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.nodeIndexSeek
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
@@ -419,34 +415,25 @@ class SingleRangeSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
   override protected def predicate: IntermediateRepresentation = load(predicateVar)
 }
 
-/**
- * Code generation template for index seeks of the form `MATCH (n:L) WHERE n.prop = 1 OR n.prop = 2 OR n.prop =...`
- * Generates code for first doing an exact search of the first predicate and when the result is exhausted
- * it moves on to the next predicate until all predicates have been visited.
- */
-class ManyQueriesNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTemplate,
+abstract class BaseManyQueriesNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTemplate,
                                            id: Id,
                                            innermost: DelegateOperatorTaskTemplate,
                                            offset: Int,
-                                           property: SlottedIndexedProperty,
-                                           seekExpression: SeekExpression,
-                                           queryIndexId: Int,
+                                           properties: Seq[SlottedIndexedProperty],
                                            order: IndexOrder,
-                                           argumentSize: SlotConfiguration.Size)
-                                          (codeGen: OperatorExpressionCompiler)
+                                           argumentSize: SlotConfiguration.Size,
+                                           codeGen: OperatorExpressionCompiler)
   extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
-
-
-  private var seekValues: Seq[IntermediateExpression] = _
-  private val needsValues = property.getValueFromIndex
+  private val indexPropertyIndices: Array[Int] = properties.zipWithIndex.filter(_._1.getValueFromIndex).map(_._2).toArray
+  private val indexPropertySlotOffsets: Array[Int] = properties.flatMap(_.maybeCachedNodePropertySlot).toArray
+  protected val needsValues: Boolean = indexPropertyIndices.nonEmpty
   private val nodeIndexCursorField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName("indexCursor"))
   private val nodeCursorsToCloseField = field[Array[NodeValueIndexCursor]](codeGen.namer.nextVariableName("cursorsToClose"))
 
+  def createCursorArray: IntermediateRepresentation
   override def genMoreFields: Seq[Field] = Seq(nodeIndexCursorField, nodeCursorsToCloseField)
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
-
-  override def genExpressions: Seq[IntermediateExpression] = seekValues
 
   private def getCursor = {
     val methodName =
@@ -459,9 +446,6 @@ class ManyQueriesNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTempl
   }
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
-    if (seekValues == null) {
-      seekValues = seekExpression.generateSeekValues.map(_ ()).map(v => v.copy(ir = nullCheckIfRequired(v)))
-    }
     /**
      * {{{
      *   this.cursorsToClose = createCursor(...)
@@ -471,14 +455,7 @@ class ManyQueriesNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTempl
      * }}}
      */
     block(
-      setField(nodeCursorsToCloseField,
-        invokeStatic(createCursorsMethod,
-          seekExpression.generatePredicate(seekValues.map(_.ir)),
-          indexReadSession(queryIndexId),
-          indexOrder(order),
-          constant(needsValues),
-          loadField(DATA_READ),
-          CURSOR_POOL)),
+      setField(nodeCursorsToCloseField, createCursorArray),
       setField(nodeIndexCursorField, invokeStatic(getCursor, loadField(nodeCursorsToCloseField))),
       setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id)),
       constant(true))
@@ -500,8 +477,7 @@ class ManyQueriesNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTempl
       block(
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
-        property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_,
-          getPropertyValueRepresentation)).getOrElse(noop()),
+        cacheProperties,
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(
           innermost.setUnlessPastLimit(canContinue,
@@ -512,12 +488,12 @@ class ManyQueriesNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTempl
     )
   }
 
-  private def getPropertyValueRepresentation: IntermediateRepresentation =
+  private def getPropertyValueRepresentation(offset: Int): IntermediateRepresentation =
     invoke(loadField(nodeIndexCursorField),
-      method[NodeValueIndexCursor, Value, Int]("propertyValue"), constant(0))
+      method[NodeValueIndexCursor, Value, Int]("propertyValue"), constant(offset))
 
-  private val i = codeGen.namer.nextVariableName("i")
   override protected def genCloseInnerLoop: IntermediateRepresentation = {
+    val i = codeGen.namer.nextVariableName("i")
     /**
      * {{{
      *   if (cursorsToClose != null) {
@@ -548,15 +524,58 @@ class ManyQueriesNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTempl
     block(
       condition(isNotNull(loadField(nodeIndexCursorField)))(
         invokeSideEffect(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Unit, KernelReadTracer]("setTracer"), event)
-        ),
+      ),
       inner.genSetExecutionEvent(event)
-      )
+    )
+
+  private def cacheProperties: IntermediateRepresentation = {
+    val ops = for {i <- indexPropertyIndices.indices
+                   indexPropertyIndex = indexPropertyIndices(i)
+                   slot = indexPropertySlotOffsets(i)
+                   } yield {
+
+      codeGen.setCachedPropertyAt(slot, getPropertyValueRepresentation(indexPropertyIndex))
+    }
+    block(ops:_*)
+  }
 }
 
-class CompositeNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTemplate,
+/**
+ * Code generation template for index seeks of the form `MATCH (n:L) WHERE n.prop = 1 OR n.prop = 2 OR n.prop =...`
+ * Generates code for first doing an exact search of the first predicate and when the result is exhausted
+ * it moves on to the next predicate until all predicates have been visited.
+ */
+class ManyQueriesNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
+                                           id: Id,
+                                           innermost: DelegateOperatorTaskTemplate,
+                                           offset: Int,
+                                           property: SlottedIndexedProperty,
+                                           seekExpression: SeekExpression,
+                                           queryIndexId: Int,
+                                           order: IndexOrder,
+                                           argumentSize: SlotConfiguration.Size)
+                                          (codeGen: OperatorExpressionCompiler)
+  extends BaseManyQueriesNodeIndexSeekTaskTemplate(inner, id, innermost, offset, Seq(property), order, argumentSize, codeGen) {
+  private var seekValues: Seq[IntermediateExpression] = _
+
+  override def createCursorArray: IntermediateRepresentation = {
+    if (seekValues == null) {
+      seekValues = seekExpression.generateSeekValues.map(_ ()).map(v => v.copy(ir = nullCheckIfRequired(v)))
+    }
+    invokeStatic(createCursorsMethod,
+      seekExpression.generatePredicate(seekValues.map(_.ir)),
+      indexReadSession(queryIndexId),
+      indexOrder(order),
+      constant(needsValues),
+      loadField(DATA_READ),
+      CURSOR_POOL)
+  }
+  override def genExpressions: Seq[IntermediateExpression] = seekValues
+}
+
+class CompositeNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
                                          id: Id,
                                          innermost: DelegateOperatorTaskTemplate,
-                                         nodeVarName: String,
                                          offset: Int,
                                          properties: Seq[SlottedIndexedProperty],
                                          seekExpressions: Seq[SeekExpression],
@@ -564,130 +583,26 @@ class CompositeNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTemplat
                                          order: IndexOrder,
                                          argumentSize: SlotConfiguration.Size)
                                         (codeGen: OperatorExpressionCompiler)
-  extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
-
+  extends BaseManyQueriesNodeIndexSeekTaskTemplate(inner, id, innermost, offset, properties, order, argumentSize, codeGen) {
   private var seekValues: Seq[Seq[IntermediateExpression]] = _
-
-  private val nodeIndexCursorField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName())
-  private val queryIteratorField = field[CompositePredicateIterator](codeGen.namer.nextVariableName())
-  private val indexPropertyIndices: Array[Int] = properties.zipWithIndex.filter(_._1.getValueFromIndex).map(_._2).toArray
-  private val indexPropertySlotOffsets: Array[Int] = properties.flatMap(_.maybeCachedNodePropertySlot).toArray
-
-  private val needsValues: Boolean = indexPropertyIndices.nonEmpty
-
-  override def genMoreFields: Seq[Field] = Seq(nodeIndexCursorField, queryIteratorField)
-
-  override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
-
-  override def genExpressions: Seq[IntermediateExpression] = seekValues.flatten
-
-  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+  override def createCursorArray: IntermediateRepresentation = {
     if (seekValues == null) {
       seekValues = seekExpressions.map(_.generateSeekValues).map(compile).map(nullCheck)
     }
-    /**
-      * {{{
-      *   this.queryIterator = compositeQueryIterator(new IndexQuery[][]{[query predicate]}
-      *   this.nodeIndexCursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
-      *   this.canContinue = next(indexReadSession(queryIndexId), nodeIndexCursor, queryIterator, read)
-      *   true
-      * }}}
-      */
     val predicates = seekValues.zip(seekExpressions.map(_.generatePredicate)).map{
       case (vs, p) => p(vs.map(_.ir))
     }
-
-    block(
-      setField(queryIteratorField,
-               invokeStatic(compositeQueryIteratorMethod, arrayOf[Array[IndexQuery]](predicates:_*))),
-      setField(nodeIndexCursorField, ALLOCATE_NODE_INDEX_CURSOR),
-      setField(canContinue,
-               invokeStatic(compositeNextMethod,
-                            indexReadSession(queryIndexId),
-                            loadField(nodeIndexCursorField),
-                            loadField(queryIteratorField),
-                            indexOrder(order),
-                            constant(needsValues),
-                            loadField(DATA_READ))),
-      profileRow(id, loadField(canContinue)),
-      constant(true))
+    invokeStatic(ManyQueriesNodeIndexSeekTaskTemplate.compositeCreateCursorsMethod,
+      arrayOf[Array[IndexQuery]](predicates:_*),
+      indexReadSession(queryIndexId),
+      indexOrder(order),
+      constant(needsValues),
+      loadField(DATA_READ),
+      CURSOR_POOL)
   }
-
-  override protected def genInnerLoop: IntermediateRepresentation = {
-    /**
-      * {{{
-      *   while (hasDemand && this.canContinue) {
-      *     ...
-      *     setLongAt(offset, nodeIndexCursor.nodeReference())
-      *     setCachedPropertyAt(offset, queryIterator.current)//only if applicable
-      *     << inner.genOperate >>
-      *     this.canContinue = next(indexReadSession(queryIndexId), nodeIndexCursor, queryIterator, read)
-      *   }
-      * }}}
-      */
-    loop(and(innermost.predicate, loadField(canContinue)))(
-      block(
-        codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
-        codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
-        cacheProperties,
-        inner.genOperateWithExpressions,
-        doIfInnerCantContinue(
-          block(
-            innermost.setUnlessPastLimit(canContinue,
-              invokeStatic(compositeNextMethod,
-                indexReadSession(queryIndexId),
-                loadField(nodeIndexCursorField),
-                loadField(queryIteratorField),
-                indexOrder(order),
-                constant(needsValues),
-                loadField(DATA_READ))),
-            profileRow(id, loadField(canContinue))),
-        ),
-        endInnerLoop
-        )
-      )
-  }
-
-  private def cacheProperties: IntermediateRepresentation = {
-    val ops = for {i <- indexPropertyIndices.indices
-      indexPropertyIndex = indexPropertyIndices(i)
-      slot = indexPropertySlotOffsets(i)
-    } yield {
-
-      codeGen.setCachedPropertyAt(slot, getPropertyValueRepresentation(indexPropertyIndex))
-    }
-    block(ops:_*)
-  }
+  override def genExpressions: Seq[IntermediateExpression] = seekValues.flatten
   private def compile(generators: Seq[() => IntermediateExpression]): Seq[IntermediateExpression] = generators.map(_())
-
   private def nullCheck(in: Seq[IntermediateExpression]): Seq[IntermediateExpression] = in.map(v => v.copy(ir = nullCheckIfRequired(v)))
-
-  private def getPropertyValueRepresentation(offset: Int): IntermediateRepresentation =
-    invokeStatic(compositeGetPropertyMethod,
-                 loadField(queryIteratorField),
-                 loadField(nodeIndexCursorField),
-                 constant(offset))
-
-  override protected def genCloseInnerLoop: IntermediateRepresentation = {
-    /**
-      * {{{
-      *   resources.cursorPools.nodeValueIndexCursorPool.free(nodeIndexCursor)
-      *   nodeIndexCursor = null
-      * }}}
-      */
-    block(
-      freeCursor[NodeValueIndexCursor](loadField(nodeIndexCursorField), NodeValueIndexCursorPool),
-      setField(nodeIndexCursorField, constant(null))
-      )
-  }
-
-  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation =
-    block(
-      condition(isNotNull(loadField(nodeIndexCursorField)))(
-        invokeSideEffect(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Unit, KernelReadTracer]("setTracer"), event)
-        ),
-      inner.genSetExecutionEvent(event)
-      )
 }
 
 object ManyQueriesNodeIndexSeekTaskTemplate {
@@ -703,6 +618,25 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
     while (i < cursors.length) {
       val cursor = pool.allocate()
       read.nodeIndexSeek(index, cursor, IndexQueryConstraints.constrained(order, needsValues || order != IndexOrder.NONE), predicates(i))
+      cursors(i) = cursor
+      i += 1
+    }
+    cursors
+  }
+
+  def compositeCreateCursors(predicates: Array[Array[IndexQuery]],
+                    index: IndexReadSession,
+                    order: IndexOrder,
+                    needsValues: Boolean,
+                    read: Read,
+                    cursorPools: CursorPools): Array[NodeValueIndexCursor] = {
+    val combinedPredicates = combine(predicates)
+    val cursors = new Array[NodeValueIndexCursor](combinedPredicates.length)
+    val pool = cursorPools.nodeValueIndexCursorPool
+    var i = 0
+    while (i < cursors.length) {
+      val cursor = pool.allocate()
+      read.nodeIndexSeek(index, cursor, IndexQueryConstraints.constrained(order, needsValues || order != IndexOrder.NONE), combinedPredicates(i):_*)
       cursors(i) = cursor
       i += 1
     }
@@ -769,6 +703,8 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
 
   val createCursorsMethod: Method =
     method[ManyQueriesNodeIndexSeekTaskTemplate, Array[NodeValueIndexCursor], Array[IndexQuery], IndexReadSession, IndexOrder, Boolean, Read, CursorPools]("createCursors")
+  val compositeCreateCursorsMethod: Method =
+    method[ManyQueriesNodeIndexSeekTaskTemplate, Array[NodeValueIndexCursor], Array[Array[IndexQuery]], IndexReadSession, IndexOrder, Boolean, Read, CursorPools]("compositeCreateCursors")
 
   val compositeNextMethod: Method =
     method[ManyQueriesNodeIndexSeekTaskTemplate,
