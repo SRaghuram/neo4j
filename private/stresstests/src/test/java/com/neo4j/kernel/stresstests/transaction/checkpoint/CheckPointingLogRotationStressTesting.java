@@ -5,15 +5,13 @@
  */
 package com.neo4j.kernel.stresstests.transaction.checkpoint;
 
-import com.neo4j.kernel.stresstests.transaction.checkpoint.tracers.TimerTransactionTracer;
-import com.neo4j.kernel.stresstests.transaction.checkpoint.workload.Workload;
-import org.junit.jupiter.api.Test;
-
 import java.io.File;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
+import com.neo4j.kernel.stresstests.transaction.checkpoint.tracers.TimerTransactionTracer;
+import com.neo4j.kernel.stresstests.transaction.checkpoint.workload.Workload;
+import org.junit.jupiter.api.Test;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -28,6 +26,7 @@ import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
+import org.neo4j.kernel.impl.transaction.log.files.TransactionLogInitializer;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
@@ -75,10 +74,11 @@ class CheckPointingLogRotationStressTesting
               JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
             Config dbConfig = Config.defaults();
-            new ParallelBatchImporter( DatabaseLayout.ofFlat( ensureExistsAndEmpty( storeDir ) ), fileSystem, null, PageCacheTracer.NULL, DEFAULT,
-                    NullLogService.getInstance(), ExecutionMonitors.defaultVisible(), EMPTY, dbConfig,
-                    RecordFormatSelector.selectForConfig( dbConfig, NullLogProvider.getInstance() ), NO_MONITOR, jobScheduler, Collector.EMPTY,
-                    TransactionLogsInitializer.INSTANCE, INSTANCE )
+            new ParallelBatchImporter(
+                    DatabaseLayout.ofFlat( ensureExistsAndEmpty( storeDir ) ), fileSystem, null, PageCacheTracer.NULL,
+                    DEFAULT, NullLogService.getInstance(), ExecutionMonitors.defaultVisible(), EMPTY, dbConfig,
+                    RecordFormatSelector.selectForConfig( dbConfig, NullLogProvider.getInstance() ), NO_MONITOR, jobScheduler,
+                    Collector.EMPTY, TransactionLogInitializer.asLogFilesInitializer(), INSTANCE )
                     .doImport( new NodeCountInputs( nodeCount ) );
         }
 

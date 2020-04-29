@@ -5,13 +5,12 @@
  */
 package com.neo4j.kernel.impl.store.format.highlimit;
 
-import com.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
-import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
-import org.junit.jupiter.api.Test;
-
 import java.io.File;
 import java.io.IOException;
 
+import com.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
+import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
+import org.junit.jupiter.api.Test;
 import org.neo4j.common.ProgressReporter;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -20,7 +19,6 @@ import org.neo4j.internal.batchimport.BatchImporter;
 import org.neo4j.internal.batchimport.BatchImporterFactory;
 import org.neo4j.internal.batchimport.Configuration;
 import org.neo4j.internal.batchimport.ImportLogic;
-import org.neo4j.internal.batchimport.LogFilesInitializer;
 import org.neo4j.internal.batchimport.StandardBatchImporterFactory;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
@@ -42,6 +40,7 @@ import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.LogFilesInitializer;
 import org.neo4j.storageengine.api.format.CapabilityType;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
@@ -173,7 +172,8 @@ class HighLimitStoreMigrationTest
         }
 
         @Override
-        public BatchImporter instantiate( DatabaseLayout directoryStructure, FileSystemAbstraction fileSystem, PageCache externalPageCache,
+        public BatchImporter instantiate(
+                DatabaseLayout directoryStructure, FileSystemAbstraction fileSystem, PageCache externalPageCache,
                 PageCacheTracer pageCacheTracer, Configuration config, LogService logService, ExecutionMonitor executionMonitor,
                 AdditionalInitialIds additionalInitialIds, Config dbConfig, RecordFormats recordFormats, ImportLogic.Monitor monitor, JobScheduler jobScheduler,
                 Collector badCollector, LogFilesInitializer logFilesInitializer, MemoryTracker memoryTracker )
