@@ -31,6 +31,7 @@ import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 import org.eclipse.collections.impl.factory.primitive.LongSets;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
@@ -1307,6 +1308,99 @@ class FrekiStorageEngineGraphWritesIT
 
             assertContentsOfNode( nodeId, LongSets.immutable.empty(), emptySet(), expectedRelationships );
         }
+    }
+
+    @TestFactory
+    @Disabled
+    Collection<DynamicTest> shouldHandlePermutationsOfDataBlocksXLChains()
+    {
+        List<DynamicTest> tests = new ArrayList<>();
+        Set<Double> fillRates = Set.of( 0d, 0.8d/*, 1.5d, 3.5d*/);
+        for ( double labelsFillRate : fillRates )
+        {
+            for ( double propertiesFillRate : fillRates )
+            {
+                for ( double degreesFillRate : fillRates )
+                {
+                    double totalSize = labelsFillRate + propertiesFillRate + degreesFillRate;
+                    if ( totalSize > .1 ) //skip case with no fill
+                    {
+                        tests.add( createXLChainTest( labelsFillRate, propertiesFillRate, degreesFillRate ) );
+                    }
+                }
+            }
+        }
+        return tests;
+    }
+
+    private DynamicTest createXLChainTest( double labelXLFill, double propertiesXLFill, double degreesXLFill )
+    {
+        Executable test = new Executable()
+        {
+            @Override
+            public void execute() throws Throwable
+            {
+                int x8Size = Record.recordSize( Record.sizeExpFromXFactor( 8 ) );
+
+                MutableLongSet labels = LongSets.mutable.empty();
+                double labelsSize = x8Size * labelXLFill;
+                double sizePerLabel = 1.3;
+                for ( int i = 0; i < labelsSize / sizePerLabel; i++ )
+                {
+                    labels.add( i  );
+                }
+
+                Set<StorageProperty> properties = new HashSet<>();
+                Value prop = Values.byteArray( new byte[]{0, 1, 2, 3, 4, 5, 6} ); //this will generate 10B data (header + length + data + key)
+                int sizePerProp = 10;
+                int propSize = (int) (x8Size * propertiesXLFill);
+                for ( int i = 0; i < propSize / sizePerProp; i++ )
+                {
+                    properties.add( new PropertyKeyValue( i + 1, prop ) );
+                }
+
+                Set<RelationshipSpec> relationships = new HashSet<>();
+                double degSize = x8Size * degreesXLFill;
+                int numRelsOfDifferentType = (int) (degSize / 6);
+
+                long node = 1;
+                createAndApplyTransaction( target ->
+                {
+                    CommandCreationContext context = storageEngine.newCommandCreationContext( NULL );
+                    target.visitCreatedNode( node );
+                    target.visitNodeLabelChanges( node, labels, LongSets.immutable.empty() );
+                    target.visitNodePropertyChanges( node, properties, Collections.emptyList(), IntSets.immutable.empty() );
+                    if ( numRelsOfDifferentType > 0 )
+                    {
+                        long otherNode = node + 1;
+                        target.visitCreatedNode( otherNode );
+                        int relPad = x8Size / 2;
+                        int relType = 0;
+                        for ( int i = 0; i < numRelsOfDifferentType + relPad; i++ )
+                        {
+                            //only one rel/type ensures big degrees block
+                            RelationshipSpec relationshipSpec = new RelationshipSpec( node, relType, otherNode, emptySet(), context );
+                            relationships.add( relationshipSpec );
+                            relationshipSpec.create( target );
+
+                            if ( i < numRelsOfDifferentType )
+                            {
+                                relType++;
+                            }
+                        }
+                    }
+                } );
+
+                assertContentsOfNode( node, labels, properties, relationships );
+            }
+
+            @Override
+            public String toString()
+            {
+                return String.format( "XL chains - Labels:%.1f Properties:%.1f Degrees:%.1f", labelXLFill, propertiesXLFill, degreesXLFill );
+            }
+        };
+        return DynamicTest.dynamicTest( test.toString(), test );
     }
 
     @TestFactory
