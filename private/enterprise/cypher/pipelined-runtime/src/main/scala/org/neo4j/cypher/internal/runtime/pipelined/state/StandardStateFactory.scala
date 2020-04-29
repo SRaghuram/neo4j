@@ -45,7 +45,7 @@ class StandardStateFactory extends StateFactory {
   override def newArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                                        argumentSlotOffset: Int,
                                                        factory: ArgumentStateFactory[S],
-                                                       ordered: Boolean): ArgumentStateMap[S] = {
+                                                       orderPreservingInParallel: Boolean): ArgumentStateMap[S] = {
     if (argumentSlotOffset == TopLevelArgument.SLOT_OFFSET) {
       new StandardSingletonArgumentStateMap[S](argumentStateMapId, factory)
     } else {

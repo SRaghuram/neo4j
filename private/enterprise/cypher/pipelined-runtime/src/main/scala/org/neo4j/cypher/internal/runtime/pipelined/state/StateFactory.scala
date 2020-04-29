@@ -32,10 +32,15 @@ trait StateFactory {
                  tracer: QueryExecutionTracer): QueryCompletionTracker
   def newIdAllocator(): IdAllocator
   def newLock(id: String): Lock
+
+  /**
+   *
+   * @param orderPreservingInParallel order is always preserved in single threaded. In parallel we decide if the argument state map preserves order based on this parameter.
+   */
   def newArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                               argumentSlotOffset: Int,
                                               factory: ArgumentStateFactory[S],
-                                              ordered: Boolean): ArgumentStateMap[S]
+                                              orderPreservingInParallel: Boolean): ArgumentStateMap[S]
 
   /**
    * Obtain the query memory tracker (this call does not create a new object).
