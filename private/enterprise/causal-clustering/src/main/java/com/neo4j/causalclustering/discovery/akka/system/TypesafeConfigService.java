@@ -53,6 +53,7 @@ import org.neo4j.kernel.database.DatabaseId;
 public final class TypesafeConfigService
 {
     static final String DISCOVERY_SINK_DISPATCHER = "discovery-dispatcher";
+    static final String LOGGING_DISPATCHER = "logging-dispatcher";
 
     public enum ArteryTransport
     {
@@ -173,6 +174,11 @@ public final class TypesafeConfigService
         configMap.put( DISCOVERY_SINK_DISPATCHER + ".fork-join-executor.parallelism-max", parallelism );
         configMap.put( DISCOVERY_SINK_DISPATCHER + ".throughput", 10 );
 
+        configMap.put( LOGGING_DISPATCHER + ".type", "Dispatcher" );
+        configMap.put( LOGGING_DISPATCHER + ".executor", "thread-pool-executor" );
+        configMap.put( LOGGING_DISPATCHER + ".thread-pool-executor.fixed-pool-size", 1 );
+        configMap.put( LOGGING_DISPATCHER + ".throughput", 1 );
+
         return ConfigFactory.parseMap( configMap );
     }
 
@@ -227,6 +233,7 @@ public final class TypesafeConfigService
         configMap.put( "akka.loggers", Collections.singletonList( LoggingActor.class.getCanonicalName() ) );
         configMap.put( "akka.loglevel", logLevel( config ).toString() );
         configMap.put( "akka.logging-filter", LoggingFilter.class.getCanonicalName() );
+        configMap.put( "akka.loggers-dispatcher", LOGGING_DISPATCHER );
         configMap.put( "akka.logger-startup-timeout", "15s" );
 
         return ConfigFactory.parseMap( configMap );
