@@ -18,6 +18,7 @@ import java.util.function.Function;
 import org.neo4j.bolt.dbapi.BoltGraphDatabaseServiceSPI;
 import org.neo4j.bolt.dbapi.BoltTransaction;
 import org.neo4j.bolt.runtime.AccessMode;
+import org.neo4j.bolt.v41.messaging.RoutingContext;
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
 import org.neo4j.internal.kernel.api.security.LoginContext;
@@ -54,7 +55,8 @@ public class TestFabricGraphDatabaseService extends GraphDatabaseFacade
         var fabricTxId = TRANSACTION_COUNTER.incrementAndGet();
         var boltTransaction = boltFabricDatabaseService.beginTransaction( type, loginContext, connectionInfo, List.of(),
                                                                           Duration.ofMillis( timeoutMillis ), AccessMode.WRITE,
-                                                                          Map.of( TAG_NAME, fabricTxId ) );
+                                                                          Map.of( TAG_NAME, fabricTxId ),
+                                                                          new RoutingContext( false, Map.of() ) );
         var internalTransaction = forceKernelTxCreation( boltTransaction );
         return new TestFabricTransaction( contextFactory, boltTransaction, internalTransaction );
     }
