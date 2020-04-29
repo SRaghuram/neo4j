@@ -413,7 +413,7 @@ class ClusteredShowDatabasesIT
                               timeoutSeconds, SECONDS );
 
             // when
-            dropDatabase( ADDITIONAL_DATABASE_NAME, cluster );
+            dropDatabase( ADDITIONAL_DATABASE_NAME, cluster, false );
             waitForClusterToReachLocalState( cluster, additionalDatabaseId, DROPPED );
 
             // then

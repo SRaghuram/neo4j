@@ -108,13 +108,6 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
     }
 
     @Override
-    protected void dropDatabase( NamedDatabaseId namedDatabaseId, ClusteredDatabaseContext context )
-    {
-        super.dropDatabase( namedDatabaseId, context );
-        cleanupClusterState( namedDatabaseId.name() );
-    }
-
-    @Override
     public void cleanupClusterState( String databaseName )
     {
         try

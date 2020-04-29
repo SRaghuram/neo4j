@@ -18,8 +18,10 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
@@ -42,7 +44,6 @@ import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.drop
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.startDatabase;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.stopDatabase;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
-import static java.util.Collections.singleton;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -235,7 +236,7 @@ class ClusterDatabaseManagementIT
         assertDatabaseEventuallyStarted( "foo", cluster );
 
         // when
-        dropDatabase( "foo", cluster );
+        dropDatabase( "foo", cluster, false );
 
         // then
         assertDatabaseEventuallyDoesNotExist( "foo", cluster );
@@ -253,7 +254,7 @@ class ClusterDatabaseManagementIT
         assertDatabaseEventuallyStopped( "foo", cluster );
 
         // when
-        dropDatabase( "foo", cluster );
+        dropDatabase( "foo", cluster, false );
 
         // then
         assertDatabaseEventuallyDoesNotExist( "foo", cluster );
@@ -268,7 +269,7 @@ class ClusterDatabaseManagementIT
         assertDatabaseEventuallyStarted( "foo", cluster );
 
         // when
-        dropDatabase( "foo", cluster );
+        dropDatabase( "foo", cluster, false );
 
         // then
         assertDatabaseEventuallyDoesNotExist( "foo", cluster );
@@ -281,6 +282,36 @@ class ClusterDatabaseManagementIT
     }
 
     @Test
+    void shouldDropKeepDataAndRecreateDatabaseWithSameStore() throws Exception
+    {
+        // given
+        var label = Label.label( "label" );
+        var cluster = startCluster();
+        createDatabase( "foo", cluster );
+        assertDatabaseEventuallyStarted( "foo", cluster );
+
+        cluster.coreTx( "foo", ( db, tx ) ->
+        {
+            tx.createNode( label );
+            tx.commit();
+        } );
+
+        // when
+        dropDatabase( "foo", cluster, true );
+
+        // then
+        assertDatabaseEventuallyDoesNotExist( "foo", cluster );
+
+        // when
+        createDatabase( "foo", cluster );
+
+        // then
+        assertDatabaseEventuallyStarted( "foo", cluster );
+        Callable<Boolean> allMembersHaveNode = () -> haveNodeCount( cluster, "foo", label ).stream().allMatch( l -> l == 1 );
+        assertEventually( allMembersHaveNode, equalityCondition( true ), 90, SECONDS );
+    }
+
+    @Test
     void shouldKeepDroppedStateBetweenMemberRestarts() throws Exception
     {
         // given
@@ -290,7 +321,7 @@ class ClusterDatabaseManagementIT
 
         assertDatabaseEventuallyStarted( "foo", cluster );
 
-        dropDatabase( "foo", cluster );
+        dropDatabase( "foo", cluster, false );
         assertDatabaseEventuallyDoesNotExist( "foo", cluster );
 
         var someMembers = oneCoreAndOneReadReplica( cluster );
@@ -315,8 +346,8 @@ class ClusterDatabaseManagementIT
         assertDatabaseEventuallyStarted( "foo", cluster );
         assertDatabaseEventuallyStarted( "bar", cluster );
 
-        dropDatabase( "foo", cluster );
-        dropDatabase( "bar", cluster );
+        dropDatabase( "foo", cluster, false );
+        dropDatabase( "bar", cluster, false );
 
         assertDatabaseEventuallyDoesNotExist( "foo", cluster );
         assertDatabaseEventuallyDoesNotExist( "bar", cluster );
@@ -346,7 +377,7 @@ class ClusterDatabaseManagementIT
         rejoiningMembers.forEach( ClusterMember::shutdown );
 
         // when
-        dropDatabase( "foo", cluster );
+        dropDatabase( "foo", cluster, false );
         assertDatabaseEventuallyDoesNotExist( "foo", remainingMembers );
 
         rejoiningMembers.forEach( ClusterMember::start );
@@ -389,7 +420,7 @@ class ClusterDatabaseManagementIT
 
         // Drop and recreate database
         cluster.awaitLeader( databaseName );
-        dropDatabase( databaseName, cluster );
+        dropDatabase( databaseName, cluster, false );
         assertDatabaseEventuallyDoesNotExist( databaseName, remaining );
         createDatabase( databaseName, cluster );
         assertDatabaseEventuallyStarted( databaseName, remaining );
@@ -436,7 +467,7 @@ class ClusterDatabaseManagementIT
         }
 
         assertDatabaseEventuallyStarted( databaseName, cluster );
-        dropDatabase( databaseName, cluster );
+        dropDatabase( databaseName, cluster, false );
 
         for ( DatabaseIdRepository.Caching dbIdRepo : dbIdRepos )
         {
@@ -444,6 +475,11 @@ class ClusterDatabaseManagementIT
         }
 
         assertDatabaseEventuallyDoesNotExist( databaseName, cluster );
+    }
+
+    private static List<Long> haveNodeCount( Cluster cluster, String databaseName, Label label )
+    {
+        return cluster.coreMembers().stream().map( member -> hasNodeCount( member, databaseName, label ) ).collect( Collectors.toList() );
     }
 
     private static long hasNodeCount( CoreClusterMember member, String databaseName, Label label )

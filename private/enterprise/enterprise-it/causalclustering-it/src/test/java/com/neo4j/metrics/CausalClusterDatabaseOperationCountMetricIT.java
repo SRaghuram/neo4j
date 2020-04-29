@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -77,7 +76,7 @@ class CausalClusterDatabaseOperationCountMetricIT
         assertDatabaseCount( cluster, 4, 4, 1, 0 );
 
         // when drop
-        dropDatabase( "bar", cluster );
+        dropDatabase( "bar", cluster, false );
         // then
         assertDatabaseEventuallyDoesNotExist( "bar", cluster );
         assertDatabaseCount( cluster, 4, 4,2, 1 );

@@ -202,7 +202,7 @@ class CausalClusteringProceduresIT
         assertDatabaseEventuallyStarted( databaseName, cluster );
         verifyClusterRoleProcedure( databaseName );
 
-        dropDatabase( databaseName, cluster );
+        dropDatabase( databaseName, cluster, false );
         assertDatabaseEventuallyDoesNotExist( databaseName, cluster );
 
         assertRoleProcedureThrowsOnAllMembers( databaseName, Status.Database.DatabaseNotFound );

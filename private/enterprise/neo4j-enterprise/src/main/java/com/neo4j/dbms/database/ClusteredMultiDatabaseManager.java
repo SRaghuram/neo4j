@@ -96,6 +96,13 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
         }
     }
 
+    @Override
+    protected void dropDatabase( NamedDatabaseId namedDatabaseId, ClusteredDatabaseContext context, boolean keepData )
+    {
+        super.dropDatabase( namedDatabaseId, context, keepData );
+        cleanupClusterState( namedDatabaseId.name() );
+    }
+
     public void stopDatabaseBeforeStoreCopy( NamedDatabaseId namedDatabaseId )
     {
         forSingleDatabase( namedDatabaseId, ( id, context ) ->

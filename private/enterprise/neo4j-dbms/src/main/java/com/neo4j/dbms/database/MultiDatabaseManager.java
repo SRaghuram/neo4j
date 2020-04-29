@@ -83,11 +83,16 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
     @Override
     public void dropDatabase( NamedDatabaseId namedDatabaseId ) throws DatabaseNotFoundException
     {
+        dropDatabase( namedDatabaseId, false );
+    }
+
+    public void dropDatabase( NamedDatabaseId namedDatabaseId, boolean keepData ) throws DatabaseNotFoundException
+    {
         if ( SYSTEM_DATABASE_NAME.equals( namedDatabaseId.name() ) )
         {
             throw new DatabaseManagementException( "System database can't be dropped." );
         }
-        forSingleDatabase( namedDatabaseId, this::dropDatabase );
+        forSingleDatabase( namedDatabaseId, ( id, context ) -> dropDatabase( id, context, keepData ) );
         operationCounts.increaseDropCount();
     }
 
@@ -145,13 +150,16 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
         databaseMap.clear();
     }
 
-    protected void dropDatabase( NamedDatabaseId namedDatabaseId, DB context )
+    protected void dropDatabase( NamedDatabaseId namedDatabaseId, DB context, boolean keepData )
     {
         try
         {
             log.info( "Drop '%s' database.", namedDatabaseId.name() );
-            Database database = context.database();
-            database.drop();
+            if ( !keepData )
+            {
+                Database database = context.database();
+                database.drop();
+            }
             databaseIdRepository().invalidate( namedDatabaseId );
             databaseMap.remove( namedDatabaseId );
         }

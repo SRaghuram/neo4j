@@ -74,8 +74,8 @@ public class Transition
 
     static class Prepared
     {
-        private NamedDatabaseId namedDatabaseId;
-        private Transition transition;
+        private final NamedDatabaseId namedDatabaseId;
+        private final Transition transition;
 
         private Prepared( NamedDatabaseId namedDatabaseId, Transition transition )
         {
@@ -112,7 +112,7 @@ public class Transition
     // Builder
     private static class StepBuilder implements NeedsDo, NeedsEndSuccess, NeedsEndFail
     {
-        private Set<EnterpriseOperatorState> validStarts;
+        private final Set<EnterpriseOperatorState> validStarts;
         private EnterpriseOperatorState endSuccess;
         private Consumer<NamedDatabaseId> transitionFunction;
 

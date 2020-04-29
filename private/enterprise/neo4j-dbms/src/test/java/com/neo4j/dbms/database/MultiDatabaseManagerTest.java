@@ -20,6 +20,8 @@ import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
@@ -120,4 +122,18 @@ class MultiDatabaseManagerTest
         assertEquals( expectedNames, actualNames );
     }
 
+    @Test
+    void shouldNotDropOnDatabaseIfKeepData() throws Exception
+    {
+        // given
+        initDatabaseManager();
+
+        // when
+        databaseManager.dropDatabase( neoId, false );
+        databaseManager.dropDatabase( customId, true );
+
+        // then
+        verify( neo.database() ).drop();
+        verify( custom.database(), never() ).drop();
+    }
 }
