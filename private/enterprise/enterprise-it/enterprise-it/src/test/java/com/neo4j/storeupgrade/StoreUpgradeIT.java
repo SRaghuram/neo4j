@@ -5,17 +5,11 @@
  */
 package com.neo4j.storeupgrade;
 
-import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
-import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -25,8 +19,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.LongSupplier;
 import java.util.stream.Stream;
 
+import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
+import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.experimental.runners.Enclosed;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
@@ -51,6 +53,10 @@ import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
+import org.neo4j.io.memory.NativeScopedBuffer;
+import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.api.Kernel;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.security.AnonymousContext;
@@ -58,13 +64,30 @@ import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
+import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
+import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.storemigration.StoreUpgrader;
+import org.neo4j.kernel.impl.transaction.log.LogPosition;
+import org.neo4j.kernel.impl.transaction.log.PhysicalLogVersionedStoreChannel;
+import org.neo4j.kernel.impl.transaction.log.PositionAwarePhysicalFlushableChecksumChannel;
+import org.neo4j.kernel.impl.transaction.log.ReadableLogChannel;
+import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
+import org.neo4j.kernel.impl.transaction.log.entry.LogEntryTypeCodes;
+import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
+import org.neo4j.kernel.impl.transaction.log.entry.LogVersions;
+import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
+import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.kernel.lifecycle.Lifespan;
+import org.neo4j.memory.EmptyMemoryTracker;
+import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.server.CommunityBootstrapper;
 import org.neo4j.server.NeoBootstrapper;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.storageengine.migration.UpgradeNotAllowedException;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
@@ -79,6 +102,7 @@ import static org.apache.commons.io.FileUtils.moveToDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeFalse;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -87,6 +111,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.data_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.fail_on_missing_files;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
+import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
@@ -445,6 +470,148 @@ public class StoreUpgradeIT
             assertEquals( transactionLogFilesBeforeMigration, transactionLogFilesAfterMigration );
         }
 
+        @Test
+        public void upgradeMustInjectEmptyTransactionIfTransactionLogsAreEmpty() throws Exception
+        {
+            FileSystemAbstraction fileSystem = testDir.getFileSystem();
+            DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            File databaseDir = databaseLayout.databaseDirectory();
+            File transactionLogsRoot = testDir.directory( "transactionLogsRoot" );
+            store.prepareDirectory( databaseDir );
+
+            // Remove everything from the log file, except the header and last check point.
+            try ( JobScheduler scheduler = JobSchedulerFactory.createInitialisedScheduler();
+                 PageCache pageCache = StandalonePageCacheFactory.createPageCache( testDir.getFileSystem(), scheduler ) )
+            {
+                LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseDir, fileSystem ).build();
+                assertEquals( "This test only anticipates a single log file. " +
+                                "Please update if a test database has more than one log file.",
+                        logFiles.getLowestLogVersion(), logFiles.getHighestLogVersion() );
+                LongSupplier lastCommittedTxId = () ->
+                {
+                    try
+                    {
+                        File neoStore = databaseLayout.metadataStore();
+                        return MetaDataStore.getRecord( pageCache, neoStore, MetaDataStore.Position.LAST_TRANSACTION_ID,
+                                PageCursorTracer.NULL );
+                    }
+                    catch ( IOException e )
+                    {
+                        throw new UncheckedIOException( e );
+                    }
+                };
+                long version = logFiles.getHighestLogVersion();
+                try ( PhysicalLogVersionedStoreChannel channel = logFiles.createLogChannelForVersion( version, lastCommittedTxId ) )
+                {
+                    byte logFormatVersion = channel.getLogFormatVersion();
+                    switch ( logFormatVersion )
+                    {
+                        case LogVersions.LOG_VERSION_3_5:
+                            channel.truncate( LogVersions.LOG_HEADER_SIZE_3_5 );
+                            break;
+                        case LogVersions.LOG_VERSION_4_0:
+                            channel.truncate( LogVersions.LOG_HEADER_SIZE_4_0 );
+                            break;
+                        default:
+                            throw new RuntimeException( "Unexpected log format version: " + logFormatVersion );
+                    }
+                    try ( NativeScopedBuffer buffer = new NativeScopedBuffer( 100, EmptyMemoryTracker.INSTANCE ) )
+                    {
+                        var writableChannel = new PositionAwarePhysicalFlushableChecksumChannel( channel, buffer );
+                        var entryWriter = new LogEntryWriter( writableChannel );
+                        entryWriter.writeCheckPointEntry( new LogPosition( version, channel.position() ) );
+                    }
+                }
+            }
+
+            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( databaseLayout );
+            builder.setConfig( allow_upgrade, true );
+            builder.setConfig( transaction_logs_root_path, transactionLogsRoot.toPath().toAbsolutePath() );
+            DatabaseManagementService managementService = builder.build();
+            managementService.database( DEFAULT_DATABASE_NAME );
+            managementService.shutdown();
+
+            Config config = Config.defaults( Map.of(
+                    neo4j_home, testDir.homeDir().toPath(),
+                    transaction_logs_root_path, transactionLogsRoot.toPath().toAbsolutePath() ) );
+            DatabaseLayout layout  = Neo4jLayout.of( config ).databaseLayout( DEFAULT_DATABASE_NAME );
+            try ( Lifespan lifespan = getAccessibleLogFiles( layout ) )
+            {
+                LogFiles logFiles = lifespan.unwrap( LogFiles.class );
+                LogPosition startPosition = logFiles.extractHeader( logFiles.getHighestLogVersion() ).getStartPosition();
+                boolean foundStartEntry = false;
+                boolean foundCommitEntry = false;
+                List<LogEntry> entries = new ArrayList<>();
+                try ( ReadableLogChannel channel = logFiles.getLogFile().getReader( startPosition ) )
+                {
+                    VersionAwareLogEntryReader reader = new VersionAwareLogEntryReader(
+                            StorageEngineFactory.selectStorageEngine().commandReaderFactory() );
+                    LogEntry logEntry;
+                    while ( ( logEntry = reader.readLogEntry( channel ) ) != null )
+                    {
+                        entries.add( logEntry );
+                        foundStartEntry |= logEntry.getType() == LogEntryTypeCodes.TX_START;
+                        foundCommitEntry |= logEntry.getType() == LogEntryTypeCodes.TX_COMMIT;
+                    }
+                }
+                assertTrue( "Expected to find a transaction start entry. Actual entries: " + entries, foundStartEntry );
+                assertTrue( "Expected to find a transaction commit entry. Actual entries: " + entries, foundCommitEntry );
+            }
+        }
+
+        @Test
+        public void upgradeMustInjectEmptyTransactionIfTransactionLogsAreMissing() throws Exception
+        {
+            FileSystemAbstraction fileSystem = testDir.getFileSystem();
+            DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            File databaseDir = databaseLayout.databaseDirectory();
+            File transactionLogsRoot = testDir.directory( "transactionLogsRoot" );
+            store.prepareDirectory( databaseDir );
+
+            // Remove all log files.
+            TransactionLogFilesHelper helper = new TransactionLogFilesHelper( fileSystem, databaseDir );
+            File[] logs = helper.getLogFiles();
+            assertNotNull( "Expected some log files to exist.", logs );
+            for ( File logFile : logs )
+            {
+                fileSystem.deleteFile( logFile );
+            }
+
+            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( databaseLayout );
+            builder.setConfig( allow_upgrade, true );
+            builder.setConfig( transaction_logs_root_path, transactionLogsRoot.toPath().toAbsolutePath() );
+            DatabaseManagementService managementService = builder.build();
+            managementService.database( DEFAULT_DATABASE_NAME );
+            managementService.shutdown();
+
+            Config config = Config.defaults( Map.of(
+                    neo4j_home, testDir.homeDir().toPath(),
+                    transaction_logs_root_path, transactionLogsRoot.toPath().toAbsolutePath() ) );
+            DatabaseLayout layout  = Neo4jLayout.of( config ).databaseLayout( DEFAULT_DATABASE_NAME );
+            try ( Lifespan lifespan = getAccessibleLogFiles( layout ) )
+            {
+                LogFiles logFiles = lifespan.unwrap( LogFiles.class );
+                LogPosition startPosition = logFiles.extractHeader( logFiles.getHighestLogVersion() ).getStartPosition();
+                boolean foundStartEntry = false;
+                boolean foundCommitEntry = false;
+                List<LogEntry> entries = new ArrayList<>();
+                try ( ReadableLogChannel channel = logFiles.getLogFile().getReader( startPosition ) )
+                {
+                    VersionAwareLogEntryReader reader = new VersionAwareLogEntryReader(
+                            StorageEngineFactory.selectStorageEngine().commandReaderFactory() );
+                    LogEntry logEntry;
+                    while ( ( logEntry = reader.readLogEntry( channel ) ) != null )
+                    {
+                        entries.add( logEntry );
+                        foundStartEntry |= logEntry.getType() == LogEntryTypeCodes.TX_START;
+                        foundCommitEntry |= logEntry.getType() == LogEntryTypeCodes.TX_COMMIT;
+                    }
+                }
+                assertTrue( "Expected to find a transaction start entry. Actual entries: " + entries, foundStartEntry );
+                assertTrue( "Expected to find a transaction commit entry. Actual entries: " + entries, foundCommitEntry );
+            }
+        }
+
         private static void moveAvailableLogsToCustomLocation( FileSystemAbstraction fileSystem, File customTransactionLogsLocation, File databaseDirectory )
                 throws IOException
         {
@@ -467,6 +634,25 @@ public class StoreUpgradeIT
         {
             LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseDirectory, fileSystem ).build();
             return logFiles.logFiles();
+        }
+
+        private Lifespan getAccessibleLogFiles( DatabaseLayout layout ) throws IOException
+        {
+            JobScheduler scheduler = JobSchedulerFactory.createInitialisedScheduler();
+            PageCache pageCache = StandalonePageCacheFactory.createPageCache( testDir.getFileSystem(), scheduler );
+            PageCursorTracer cursorTracer = PageCursorTracer.NULL;
+
+            FileSystemAbstraction fileSystem = testDir.getFileSystem();
+            StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine();
+            LogFiles logFiles = LogFilesBuilder.activeFilesBuilder( layout, fileSystem, pageCache )
+                                  .withStoreId( storageEngineFactory.storeId( layout, pageCache, cursorTracer ) )
+                                  .withLogVersionRepository( storageEngineFactory.readOnlyLogVersionRepository(
+                                          layout, pageCache, cursorTracer ) )
+                                  .withTransactionIdStore( storageEngineFactory.readOnlyTransactionIdStore(
+                                          fileSystem, layout, pageCache, cursorTracer ) )
+                                  .build();
+
+            return new Lifespan( scheduler, LifecycleAdapter.onShutdown( pageCache::close ), logFiles );
         }
     }
 
