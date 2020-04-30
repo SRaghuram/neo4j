@@ -135,6 +135,17 @@ public class TestFabricTransaction implements InternalTransaction
     @Override
     public void close()
     {
+        if ( kernelInternalTransaction.isOpen() )
+        {
+            try
+            {
+                fabricTransaction.rollback();
+            }
+            catch ( TransactionFailureException e )
+            {
+                throw new RuntimeException( e );
+            }
+        }
     }
 
     @Override

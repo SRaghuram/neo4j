@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.neo4j.bolt.dbapi.BoltGraphDatabaseServiceSPI;
 import org.neo4j.bolt.dbapi.BoltTransaction;
@@ -33,15 +34,15 @@ public class TestFabricGraphDatabaseService extends GraphDatabaseFacade
     private static final AtomicLong TRANSACTION_COUNTER = new AtomicLong();
     private static final String TAG_NAME = "fabric-tx-id";
 
-    final BoltGraphDatabaseServiceSPI boltFabricDatabaseService;
+    final Supplier<BoltGraphDatabaseServiceSPI> boltFabricDatabaseServiceSupplier;
     final Config config;
 
     public TestFabricGraphDatabaseService( GraphDatabaseFacade baseDb,
-                                           BoltGraphDatabaseServiceSPI boltFabricDatabaseService,
-                                           Config config )
+                                           Config config,
+                                           Supplier<BoltGraphDatabaseServiceSPI> boltFabricDatabaseServiceSupplier )
     {
         super( baseDb, Function.identity() );
-        this.boltFabricDatabaseService = boltFabricDatabaseService;
+        this.boltFabricDatabaseServiceSupplier = boltFabricDatabaseServiceSupplier;
         this.config = requireNonNull( config );
     }
 
@@ -53,7 +54,8 @@ public class TestFabricGraphDatabaseService extends GraphDatabaseFacade
     {
 
         var fabricTxId = TRANSACTION_COUNTER.incrementAndGet();
-        var boltTransaction = boltFabricDatabaseService.beginTransaction( type, loginContext, connectionInfo, List.of(),
+        var databaseService = boltFabricDatabaseServiceSupplier.get();
+        var boltTransaction = databaseService.beginTransaction( type, loginContext, connectionInfo, List.of(),
                                                                           Duration.ofMillis( timeoutMillis ), AccessMode.WRITE,
                                                                           Map.of( TAG_NAME, fabricTxId ),
                                                                           new RoutingContext( false, Map.of() ) );

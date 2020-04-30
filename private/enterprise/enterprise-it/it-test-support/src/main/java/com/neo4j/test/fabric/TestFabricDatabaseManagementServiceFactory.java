@@ -9,7 +9,6 @@ import com.neo4j.fabric.bolt.BoltFabricDatabaseManagementService;
 
 import java.util.function.Function;
 
-import org.neo4j.bolt.dbapi.BoltGraphDatabaseServiceSPI;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
@@ -58,17 +57,25 @@ public class TestFabricDatabaseManagementServiceFactory extends TestDatabaseMana
                 BoltFabricDatabaseManagementService fabricBoltDbms =
                         globalModule.getGlobalDependencies().resolveDependency( BoltFabricDatabaseManagementService.class );
 
-                try
+                var baseDb = databaseManager.getDatabaseContext( name )
+                                            .orElseThrow( () -> new DatabaseNotFoundException( name ) ).databaseFacade();
+                // Bolt API behaves a little differently than the embedded one.
+                // The embedded API expects a lookup of a database representation to succeed even if the database
+                // is not available. GraphDatabaseService#isAvailable will return false in such case.
+                // On the other hand, Bolt API throws UnavailableException when an unavailable
+                // database is being looked up.
+                // Therefore the lookup of Bolt API representation of a database has to be done lazily.
+                return new TestFabricGraphDatabaseService( baseDb, config, () ->
                 {
-                    var baseDb = databaseManager.getDatabaseContext( name )
-                                                .orElseThrow( () -> new DatabaseNotFoundException( name ) ).databaseFacade();
-                    BoltGraphDatabaseServiceSPI fabricBoltDb = fabricBoltDbms.database( name );
-                    return new TestFabricGraphDatabaseService( baseDb, fabricBoltDb, config );
-                }
-                catch ( UnavailableException e )
-                {
-                    throw new RuntimeException( e );
-                }
+                    try
+                    {
+                        return fabricBoltDbms.database( name );
+                    }
+                    catch ( UnavailableException e )
+                    {
+                        throw new RuntimeException( e );
+                    }
+                } );
             }
         };
     }
