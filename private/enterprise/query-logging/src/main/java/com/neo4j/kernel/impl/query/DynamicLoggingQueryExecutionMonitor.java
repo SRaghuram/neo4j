@@ -67,7 +67,7 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
     {
         // This set of settings are currently not dynamic:
         ZoneId currentLogTimeZone = config.get( GraphDatabaseSettings.db_timezone ).getZoneId();
-        logBuilder = FormattedLog.withZoneId( currentLogTimeZone );
+        logBuilder = FormattedLog.withZoneId( currentLogTimeZone ).withFormat( config.get( GraphDatabaseSettings.log_format ) );
         currentQueryLogFile = config.get( GraphDatabaseSettings.log_queries_filename ).toFile();
 
         updateSettings();
