@@ -68,7 +68,19 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
     execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive)
   }
 
-  test("should execute dbms.security.createUser on system with parameter") {
+  test("should execute dbms.security.createUser on system with username parameter") {
+    // GIVEN
+    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
+
+    // WHEN
+    executeOnSystem("neo4j", "neo", "CALL dbms.security.createUser($name, 'foo')", Map[String, Object]("name" -> "Alice").asJava)
+
+    //THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUserActive, user("Alice"))
+    testUserLogin("Alice", "foo", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+  }
+
+  test("should execute dbms.security.createUser on system with password parameter") {
     // GIVEN
     execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
 

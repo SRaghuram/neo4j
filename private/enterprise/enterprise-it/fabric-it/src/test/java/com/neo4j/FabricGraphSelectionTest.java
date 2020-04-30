@@ -31,6 +31,7 @@ import org.neo4j.exceptions.KernelException;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
+import org.neo4j.server.security.auth.AuthProcedures;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -79,6 +80,8 @@ class FabricGraphSelectionTest
                 .registerFunction( ProxyFunctions.class );
         globalProceduresRegistry
                 .registerProcedure( ProxyFunctions.class );
+        globalProceduresRegistry
+                .registerProcedure( AuthProcedures.class );
 
         mainDriver = GraphDatabase.driver(
                 testServer.getBoltRoutingUri(),
@@ -627,6 +630,54 @@ class FabricGraphSelectionTest
         assertThat( run( neo4j, query ) ).isNotNull();
         assertThat( run( fabric, query ) ).isNotNull();
         assertThat( run( system, query ) ).isNotNull();
+    }
+
+    @Test
+    void systemSecurityProcedureCall()
+    {
+        var queryCreate = joinAsLines( "USE system",
+                "CALL dbms.security.createUser('myUser', 'secret')" );
+        var queryDrop = "DROP USER myUser";
+
+        assertThat( run( neo4j, queryCreate ) ).isNotNull();
+        assertThat( run( system, queryDrop ) ).isNotNull();
+
+        assertThat( run( fabric, queryCreate ) ).isNotNull();
+        assertThat( run( system, queryDrop ) ).isNotNull();
+
+        assertThat( run( system, queryCreate ) ).isNotNull();
+        assertThat( run( system, queryDrop ) ).isNotNull();
+    }
+
+    @Test
+    void systemSecurityProcedureCallWithParameter()
+    {
+        var queryCreate = joinAsLines( "USE system",
+                "CALL dbms.security.createUser($myUsername, 'secret')" );
+        var queryDrop = "DROP USER myUser";
+
+        assertThat( run( neo4j, queryCreate, Map.of("myUsername", "myUser") ) ).isNotNull();
+        assertThat( run( system, queryDrop ) ).isNotNull();
+
+        assertThat( run( fabric, queryCreate, Map.of("myUsername", "myUser") ) ).isNotNull();
+        assertThat( run( system, queryDrop ) ).isNotNull();
+
+        assertThat( run( system, queryCreate, Map.of("myUsername", "myUser") ) ).isNotNull();
+        assertThat( run( system, queryDrop ) ).isNotNull();
+    }
+
+    @Test
+    void systemSecurityProcedureCallFailWhenNotOnSystem()
+    {
+        var queryCreate = "CALL dbms.security.createUser('myUser', 'secret')";
+
+        assertThat( catchThrowable( () -> run( neo4j, queryCreate ) ) ).hasMessageContaining(
+                "This is an administration command and it should be executed against the system database: dbms.security.createUser" );
+
+        assertThat( catchThrowable( () -> run( fabric, queryCreate ) ) ).hasMessageContaining(
+                "This is an administration command and it should be executed against the system database: dbms.security.createUser" );
+
+        assertThat( run( system, queryCreate ) ).isNotNull();
     }
 
     @Test
