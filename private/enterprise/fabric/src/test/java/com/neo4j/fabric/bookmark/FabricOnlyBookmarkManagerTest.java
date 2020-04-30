@@ -5,10 +5,6 @@
  */
 package com.neo4j.fabric.bookmark;
 
-import com.neo4j.fabric.bolt.FabricBookmark;
-import com.neo4j.fabric.bolt.FabricBookmarkParser;
-import com.neo4j.fabric.driver.RemoteBookmark;
-import com.neo4j.fabric.executor.Location;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -18,7 +14,13 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.neo4j.bolt.txtracking.TransactionIdTracker;
-
+import org.neo4j.fabric.bolt.FabricBookmark;
+import org.neo4j.fabric.bolt.FabricBookmarkParser;
+import org.neo4j.fabric.bookmark.FabricOnlyBookmarkManager;
+import org.neo4j.fabric.bookmark.LocalGraphTransactionIdTracker;
+import org.neo4j.fabric.bookmark.RemoteBookmark;
+import org.neo4j.fabric.bookmark.TransactionBookmarkManager;
+import org.neo4j.fabric.executor.Location;
 
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;

@@ -5,11 +5,11 @@
  */
 package com.neo4j;
 
-import com.neo4j.fabric.localdb.FabricDatabaseManager;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
+import org.neo4j.fabric.FabricDatabaseManager;
 import org.neo4j.util.FeatureToggles;
 
 public class FabricEverywhereExtension implements BeforeAllCallback, AfterAllCallback

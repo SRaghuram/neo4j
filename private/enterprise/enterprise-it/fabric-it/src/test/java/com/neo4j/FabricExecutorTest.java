@@ -5,17 +5,11 @@
  */
 package com.neo4j;
 
-import com.neo4j.fabric.config.FabricSettings;
+import com.neo4j.fabric.config.FabricEnterpriseSettings;
 import com.neo4j.fabric.driver.AutoCommitStatementResult;
 import com.neo4j.fabric.driver.DriverPool;
 import com.neo4j.fabric.driver.FabricDriverTransaction;
 import com.neo4j.fabric.driver.PooledDriver;
-import com.neo4j.fabric.driver.RemoteBookmark;
-import com.neo4j.fabric.executor.FabricException;
-import com.neo4j.fabric.executor.FabricExecutor;
-import com.neo4j.fabric.stream.Records;
-import com.neo4j.fabric.stream.StatementResult;
-import com.neo4j.fabric.stream.summary.PartialSummary;
 import com.neo4j.utils.DriverUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,6 +43,12 @@ import org.neo4j.driver.summary.Notification;
 import org.neo4j.driver.summary.Plan;
 import org.neo4j.driver.summary.QueryType;
 import org.neo4j.driver.summary.ResultSummary;
+import org.neo4j.fabric.bookmark.RemoteBookmark;
+import org.neo4j.fabric.executor.FabricException;
+import org.neo4j.fabric.executor.FabricExecutor;
+import org.neo4j.fabric.stream.Records;
+import org.neo4j.fabric.stream.StatementResult;
+import org.neo4j.fabric.stream.summary.PartialSummary;
 import org.neo4j.graphdb.InputPosition;
 import org.neo4j.graphdb.QueryStatistics;
 import org.neo4j.graphdb.impl.notification.NotificationCode;
@@ -89,8 +89,8 @@ import static org.mockito.Mockito.when;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 import static org.neo4j.logging.AssertableLogProvider.Level.DEBUG;
 import static org.neo4j.logging.LogAssertions.assertThat;
-import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 
 @TestDirectoryExtension
 class FabricExecutorTest
@@ -122,9 +122,9 @@ class FabricExecutorTest
     {
         config = Config.newBuilder()
                 .set( GraphDatabaseSettings.neo4j_home, testDirectory.homeDir().toPath() )
-                .set( FabricSettings.databaseName, "mega" )
-                .set( FabricSettings.GraphSetting.of( "0" ).uris, List.of( URI.create( "bolt://localhost:1111" ) ) )
-                .set( FabricSettings.GraphSetting.of( "1" ).uris, List.of( URI.create( "bolt://localhost:2222" ) ) )
+                .set( FabricEnterpriseSettings.databaseName, "mega" )
+                .set( FabricEnterpriseSettings.GraphSetting.of( "0" ).uris, List.of( URI.create( "bolt://localhost:1111" ) ) )
+                .set( FabricEnterpriseSettings.GraphSetting.of( "1" ).uris, List.of( URI.create( "bolt://localhost:2222" ) ) )
                 .set( BoltConnector.listen_address, new SocketAddress( "0.0.0.0", 0 ) )
                 .set( BoltConnector.enabled, true )
                 .set( GraphDatabaseSettings.log_queries, GraphDatabaseSettings.LogQueryLevel.VERBOSE )
@@ -675,12 +675,12 @@ class FabricExecutorTest
         return notificationCode.notification( new InputPosition( 0, 0, 0 ) ).getCode();
     }
 
-    private Flux<com.neo4j.fabric.stream.Record> recs( com.neo4j.fabric.stream.Record... records )
+    private Flux<org.neo4j.fabric.stream.Record> recs( org.neo4j.fabric.stream.Record... records )
     {
         return Flux.just( records );
     }
 
-    private com.neo4j.fabric.stream.Record rec( AnyValue... vals )
+    private org.neo4j.fabric.stream.Record rec( AnyValue... vals )
     {
         return Records.of( vals );
     }

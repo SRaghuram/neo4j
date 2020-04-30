@@ -5,7 +5,6 @@
  */
 package com.neo4j.fabric.stream;
 
-import com.neo4j.fabric.config.FabricConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
@@ -24,6 +23,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.neo4j.fabric.config.FabricConfig;
+import org.neo4j.fabric.stream.Prefetcher;
+import org.neo4j.fabric.stream.Record;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.Values;
 

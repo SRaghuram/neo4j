@@ -5,9 +5,6 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.stream.summary.EmptyExecutionPlanDescription;
-import com.neo4j.fabric.stream.summary.Summary;
-
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -20,6 +17,8 @@ import org.neo4j.driver.summary.Plan;
 import org.neo4j.driver.summary.ProfiledPlan;
 import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.driver.summary.SummaryCounters;
+import org.neo4j.fabric.stream.summary.EmptyExecutionPlanDescription;
+import org.neo4j.fabric.stream.summary.Summary;
 import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.InputPosition;
 import org.neo4j.graphdb.Notification;

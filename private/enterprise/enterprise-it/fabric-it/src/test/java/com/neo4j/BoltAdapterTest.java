@@ -5,19 +5,6 @@
  */
 package com.neo4j;
 
-import com.neo4j.fabric.bolt.BoltFabricDatabaseManagementService;
-import com.neo4j.fabric.bolt.FabricBookmark;
-import com.neo4j.fabric.bookmark.LocalGraphTransactionIdTracker;
-import com.neo4j.fabric.bookmark.TransactionBookmarkManagerFactory;
-import com.neo4j.fabric.config.FabricConfig;
-import com.neo4j.fabric.executor.FabricExecutor;
-import com.neo4j.fabric.localdb.FabricDatabaseManager;
-import com.neo4j.fabric.stream.FabricExecutionStatementResult;
-import com.neo4j.fabric.stream.Record;
-import com.neo4j.fabric.stream.summary.EmptySummary;
-import com.neo4j.fabric.transaction.FabricTransaction;
-import com.neo4j.fabric.bookmark.TransactionBookmarkManager;
-import com.neo4j.fabric.transaction.TransactionManager;
 import com.neo4j.utils.DriverUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -45,6 +32,19 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.exceptions.DatabaseException;
+import org.neo4j.fabric.FabricDatabaseManager;
+import org.neo4j.fabric.bolt.BoltFabricDatabaseManagementService;
+import org.neo4j.fabric.bolt.FabricBookmark;
+import org.neo4j.fabric.bookmark.LocalGraphTransactionIdTracker;
+import org.neo4j.fabric.bookmark.TransactionBookmarkManager;
+import org.neo4j.fabric.bookmark.TransactionBookmarkManagerFactory;
+import org.neo4j.fabric.config.FabricConfig;
+import org.neo4j.fabric.executor.FabricExecutor;
+import org.neo4j.fabric.stream.FabricExecutionStatementResult;
+import org.neo4j.fabric.stream.Record;
+import org.neo4j.fabric.stream.summary.EmptySummary;
+import org.neo4j.fabric.transaction.FabricTransaction;
+import org.neo4j.fabric.transaction.TransactionManager;
 import org.neo4j.graphdb.QueryExecutionType;
 import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.DatabaseIdFactory;
@@ -438,7 +438,7 @@ class BoltAdapterTest
         }
     }
 
-    private static class RecordImpl extends com.neo4j.fabric.stream.Record
+    private static class RecordImpl extends org.neo4j.fabric.stream.Record
     {
 
         private final List<Object> values;

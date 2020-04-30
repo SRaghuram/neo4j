@@ -5,9 +5,6 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.executor.Location;
-import com.neo4j.fabric.stream.Record;
-import com.neo4j.fabric.transaction.FabricTransactionInfo;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -21,6 +18,10 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.reactive.RxResult;
 import org.neo4j.driver.reactive.RxSession;
 import org.neo4j.driver.reactive.RxTransaction;
+import org.neo4j.fabric.bookmark.RemoteBookmark;
+import org.neo4j.fabric.executor.Location;
+import org.neo4j.fabric.stream.Record;
+import org.neo4j.fabric.transaction.FabricTransactionInfo;
 import org.neo4j.values.virtual.MapValue;
 
 import static com.neo4j.fabric.driver.Utils.convertBookmark;

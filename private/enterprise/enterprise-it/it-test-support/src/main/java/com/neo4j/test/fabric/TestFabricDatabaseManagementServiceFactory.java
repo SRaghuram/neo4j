@@ -5,7 +5,7 @@
  */
 package com.neo4j.test.fabric;
 
-import com.neo4j.fabric.bolt.BoltFabricDatabaseManagementService;
+import org.neo4j.fabric.bolt.BoltFabricDatabaseManagementService;
 
 import java.util.function.Function;
 

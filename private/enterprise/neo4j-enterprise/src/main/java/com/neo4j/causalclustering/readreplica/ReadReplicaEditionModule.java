@@ -32,7 +32,7 @@ import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.dbms.procedures.ClusteredDatabaseStateProcedure;
 import com.neo4j.enterprise.edition.AbstractEnterpriseEditionModule;
-import com.neo4j.fabric.bootstrap.FabricServicesBootstrap;
+import com.neo4j.fabric.bootstrap.EnterpriseFabricServicesBootstrap;
 import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
@@ -104,7 +104,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     private DatabaseStartAborter databaseStartAborter;
     private final ClusterStateStorageFactory storageFactory;
     private final ClusterStateLayout clusterStateLayout;
-    private final FabricServicesBootstrap fabricServicesBootstrap;
+    private final EnterpriseFabricServicesBootstrap fabricServicesBootstrap;
 
     public ReadReplicaEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory, MemberId myIdentity )
     {
@@ -151,7 +151,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
 
         editionInvariants( globalModule, globalDependencies );
 
-        fabricServicesBootstrap = new FabricServicesBootstrap.ReadReplica( globalModule.getGlobalLife(), globalDependencies, logService );
+        fabricServicesBootstrap = new EnterpriseFabricServicesBootstrap.ReadReplica( globalModule.getGlobalLife(), globalDependencies, logService );
     }
 
     private void addThroughputMonitorService()

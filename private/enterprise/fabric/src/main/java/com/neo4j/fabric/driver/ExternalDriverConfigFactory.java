@@ -5,8 +5,7 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.config.FabricConfig;
-import com.neo4j.fabric.executor.Location;
+import com.neo4j.fabric.config.FabricEnterpriseConfig;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -22,6 +21,7 @@ import org.neo4j.driver.Config;
 import org.neo4j.driver.Logging;
 import org.neo4j.driver.internal.security.SecurityPlan;
 import org.neo4j.driver.net.ServerAddress;
+import org.neo4j.fabric.executor.Location;
 import org.neo4j.logging.Level;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.config.SslPolicyLoader;
@@ -35,13 +35,13 @@ import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_l
 
 public class ExternalDriverConfigFactory implements DriverConfigFactory
 {
-    private final FabricConfig fabricConfig;
+    private final FabricEnterpriseConfig fabricConfig;
     private final Level serverLogLevel;
     private final SSLContext sslContext;
     private final SslPolicy sslPolicy;
-    private final Map<Long,FabricConfig.GraphDriverConfig> graphDriverConfigs;
+    private final Map<Long,FabricEnterpriseConfig.GraphDriverConfig> graphDriverConfigs;
 
-    public ExternalDriverConfigFactory( FabricConfig fabricConfig, org.neo4j.configuration.Config serverConfig, SslPolicyLoader sslPolicyLoader )
+    public ExternalDriverConfigFactory( FabricEnterpriseConfig fabricConfig, org.neo4j.configuration.Config serverConfig, SslPolicyLoader sslPolicyLoader )
     {
         this.fabricConfig = fabricConfig;
 
@@ -62,7 +62,7 @@ public class ExternalDriverConfigFactory implements DriverConfigFactory
         {
             graphDriverConfigs = fabricConfig.getDatabase().getGraphs().stream()
                     .filter( graph -> graph.getDriverConfig() != null )
-                    .collect( Collectors.toMap( FabricConfig.Graph::getId, FabricConfig.Graph::getDriverConfig ) );
+                    .collect( Collectors.toMap( FabricEnterpriseConfig.Graph::getId, FabricEnterpriseConfig.Graph::getDriverConfig ) );
         }
         else
         {
@@ -75,13 +75,13 @@ public class ExternalDriverConfigFactory implements DriverConfigFactory
     {
         var builder = Config.builder();
 
-        var logLeakedSessions = getProperty( location, FabricConfig.DriverConfig::getLogLeakedSessions );
+        var logLeakedSessions = getProperty( location, FabricEnterpriseConfig.DriverConfig::getLogLeakedSessions );
         if ( logLeakedSessions )
         {
             builder.withLeakedSessionsLogging();
         }
 
-        var idleTimeBeforeConnectionTest = getProperty( location, FabricConfig.DriverConfig::getIdleTimeBeforeConnectionTest );
+        var idleTimeBeforeConnectionTest = getProperty( location, FabricEnterpriseConfig.DriverConfig::getIdleTimeBeforeConnectionTest );
         if ( idleTimeBeforeConnectionTest != null )
         {
             builder.withConnectionLivenessCheckTimeout( idleTimeBeforeConnectionTest.toMillis(), MILLISECONDS );
@@ -91,25 +91,25 @@ public class ExternalDriverConfigFactory implements DriverConfigFactory
             builder.withConnectionLivenessCheckTimeout( -1, MILLISECONDS );
         }
 
-        var maxConnectionLifetime = getProperty( location, FabricConfig.DriverConfig::getMaxConnectionLifetime );
+        var maxConnectionLifetime = getProperty( location, FabricEnterpriseConfig.DriverConfig::getMaxConnectionLifetime );
         if ( maxConnectionLifetime != null )
         {
             builder.withMaxConnectionLifetime( maxConnectionLifetime.toMillis(), MILLISECONDS );
         }
 
-        var connectionAcquisitionTimeout = getProperty( location, FabricConfig.DriverConfig::getConnectionAcquisitionTimeout );
+        var connectionAcquisitionTimeout = getProperty( location, FabricEnterpriseConfig.DriverConfig::getConnectionAcquisitionTimeout );
         if ( connectionAcquisitionTimeout != null )
         {
             builder.withConnectionAcquisitionTimeout( connectionAcquisitionTimeout.toMillis(), MILLISECONDS );
         }
 
-        var connectTimeout = getProperty( location, FabricConfig.DriverConfig::getConnectTimeout );
+        var connectTimeout = getProperty( location, FabricEnterpriseConfig.DriverConfig::getConnectTimeout );
         if ( connectTimeout != null )
         {
             builder.withConnectionTimeout( connectTimeout.toMillis(), MILLISECONDS );
         }
 
-        var maxConnectionPoolSize = getProperty( location, FabricConfig.DriverConfig::getMaxConnectionPoolSize );
+        var maxConnectionPoolSize = getProperty( location, FabricEnterpriseConfig.DriverConfig::getMaxConnectionPoolSize );
         if ( maxConnectionPoolSize != null )
         {
             builder.withMaxConnectionPoolSize( maxConnectionPoolSize );
@@ -140,10 +140,10 @@ public class ExternalDriverConfigFactory implements DriverConfigFactory
     @Override
     public DriverApi getDriverApi( Location.Remote location )
     {
-        return getProperty( location, FabricConfig.DriverConfig::getDriverApi );
+        return getProperty( location, FabricEnterpriseConfig.DriverConfig::getDriverApi );
     }
 
-    private <T> T getProperty( Location.Remote location, Function<FabricConfig.DriverConfig,T> extractor )
+    private <T> T getProperty( Location.Remote location, Function<FabricEnterpriseConfig.DriverConfig,T> extractor )
     {
         var graphDriverConfig = graphDriverConfigs.get( location.getGraphId() );
 
@@ -163,7 +163,7 @@ public class ExternalDriverConfigFactory implements DriverConfigFactory
 
     private java.util.logging.Level getLoggingLevel( Location.Remote location )
     {
-        var loggingLevel = getProperty( location, FabricConfig.DriverConfig::getLoggingLevel );
+        var loggingLevel = getProperty( location, FabricEnterpriseConfig.DriverConfig::getLoggingLevel );
         if ( loggingLevel == null )
         {
             loggingLevel = serverLogLevel;

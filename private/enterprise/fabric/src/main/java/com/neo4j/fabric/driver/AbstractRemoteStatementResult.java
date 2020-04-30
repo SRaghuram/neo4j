@@ -5,12 +5,6 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.executor.FabricException;
-import com.neo4j.fabric.executor.FabricSecondaryException;
-import com.neo4j.fabric.stream.Record;
-import com.neo4j.fabric.stream.Records;
-import com.neo4j.fabric.stream.StatementResult;
-import com.neo4j.fabric.stream.summary.Summary;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -20,6 +14,12 @@ import java.util.stream.Collectors;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.Neo4jException;
 import org.neo4j.driver.summary.ResultSummary;
+import org.neo4j.fabric.executor.FabricException;
+import org.neo4j.fabric.executor.FabricSecondaryException;
+import org.neo4j.fabric.stream.Record;
+import org.neo4j.fabric.stream.Records;
+import org.neo4j.fabric.stream.StatementResult;
+import org.neo4j.fabric.stream.summary.Summary;
 import org.neo4j.kernel.api.exceptions.Status;
 
 abstract class AbstractRemoteStatementResult implements StatementResult

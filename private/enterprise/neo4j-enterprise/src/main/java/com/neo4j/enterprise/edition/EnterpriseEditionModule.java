@@ -18,9 +18,11 @@ import com.neo4j.dbms.StandaloneDbmsReconcilerModule;
 import com.neo4j.dbms.database.EnterpriseMultiDatabaseManager;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.fabric.auth.FabricAuthManagerWrapper;
-import com.neo4j.fabric.bootstrap.FabricServicesBootstrap;
-import com.neo4j.fabric.config.FabricConfig;
-import com.neo4j.fabric.localdb.FabricDatabaseManager;
+import com.neo4j.fabric.bootstrap.EnterpriseFabricServicesBootstrap;
+import com.neo4j.fabric.config.FabricEnterpriseConfig;
+
+import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
+import org.neo4j.fabric.FabricDatabaseManager;
 import com.neo4j.fabric.localdb.FabricSystemGraphInitializer;
 import com.neo4j.fabric.routing.FabricRoutingProcedureInstaller;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
@@ -41,7 +43,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
 import org.neo4j.bolt.txtracking.DefaultReconciledTransactionTracker;
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.collection.Dependencies;
@@ -94,7 +95,7 @@ import static org.neo4j.token.api.TokenHolder.TYPE_RELATIONSHIP_TYPE;
 public class EnterpriseEditionModule extends CommunityEditionModule implements AbstractEnterpriseEditionModule
 {
     private final ReconciledTransactionTracker reconciledTxTracker;
-    private final FabricServicesBootstrap fabricServicesBootstrap;
+    private final EnterpriseFabricServicesBootstrap fabricServicesBootstrap;
     private final Dependencies dependencies;
     private DatabaseStartAborter databaseStartAborter;
 
@@ -111,7 +112,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         satisfyEnterpriseOnlyDependencies( globalModule );
         ioLimiter = new ConfigurableIOLimiter( globalModule.getGlobalConfig() );
         reconciledTxTracker = new DefaultReconciledTransactionTracker( globalModule.getLogService() );
-        fabricServicesBootstrap = new FabricServicesBootstrap.Single( globalModule.getGlobalLife(), dependencies, globalModule.getLogService() );
+        fabricServicesBootstrap = new EnterpriseFabricServicesBootstrap.Single( globalModule.getGlobalLife(), dependencies, globalModule.getLogService() );
         SettingsWhitelist settingsWhiteList = new SettingsWhitelist( globalModule.getGlobalConfig() );
         dependencies.satisfyDependency( settingsWhiteList );
     }
@@ -246,7 +247,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         ConnectorPortRegister portRegister = globalModule.getConnectorPortRegister();
         Config config = globalModule.getGlobalConfig();
         LogProvider logProvider = globalModule.getLogService().getInternalLogProvider();
-        var fabricConfig = dependencies.resolveDependency( FabricConfig.class );
+        var fabricConfig = dependencies.resolveDependency( FabricEnterpriseConfig.class );
         var fabricDatabaseManager = dependencies.resolveDependency( FabricDatabaseManager.class );
         return new FabricRoutingProcedureInstaller( databaseManager, portRegister, config, fabricDatabaseManager, fabricConfig, logProvider );
     }
@@ -293,7 +294,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     public BoltGraphDatabaseManagementServiceSPI createBoltDatabaseManagementServiceProvider( Dependencies dependencies,
             DatabaseManagementService managementService, Monitors monitors, SystemNanoClock clock, LogService logService )
     {
-        var kernelDatabaseManagementService = super.createBoltDatabaseManagementServiceProvider(dependencies, managementService, monitors, clock, logService);
+        var kernelDatabaseManagementService = createBoltKernelDatabaseManagementServiceProvider(dependencies, managementService, monitors, clock, logService);
         return fabricServicesBootstrap.createBoltDatabaseManagementServiceProvider( kernelDatabaseManagementService, managementService, monitors, clock );
     }
 

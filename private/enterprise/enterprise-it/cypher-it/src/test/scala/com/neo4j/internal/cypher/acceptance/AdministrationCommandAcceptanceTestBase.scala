@@ -13,7 +13,6 @@ import java.util.Collections
 
 import com.neo4j.cypher.EnterpriseGraphDatabaseTestSupport
 import com.neo4j.dbms.EnterpriseSystemGraphInitializer
-import com.neo4j.fabric.executor.TaggingPlanDescriptionWrapper
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager
 import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
@@ -30,6 +29,7 @@ import org.neo4j.cypher.internal.plandescription.PlanDescriptionImpl
 import org.neo4j.cypher.internal.security.SecureHasher
 import org.neo4j.dbms.database.DatabaseContext
 import org.neo4j.dbms.database.DatabaseManager
+import org.neo4j.fabric.executor.TaggingPlanDescriptionWrapper
 import org.neo4j.graphdb.ExecutionPlanDescription
 import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.config.Setting

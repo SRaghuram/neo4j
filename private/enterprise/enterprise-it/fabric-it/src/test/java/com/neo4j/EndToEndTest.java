@@ -35,8 +35,6 @@ import org.neo4j.driver.Record;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.ClientException;
-import org.neo4j.driver.summary.QueryType;
-import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.driver.types.Node;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.harness.Neo4j;

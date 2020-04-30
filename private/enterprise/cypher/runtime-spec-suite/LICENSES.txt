@@ -68,6 +68,7 @@ Apache Software License, Version 2.0
   LZ4 and xxHash
   Netty
   Netty/All-in-One
+  Non-Blocking Reactive Foundation for the JVM
   parboiled-core
   parboiled-scala
   picocli - a mighty tiny Command Line Interface

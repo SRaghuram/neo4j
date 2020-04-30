@@ -5,8 +5,6 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.stream.Record;
-import com.neo4j.fabric.stream.Records;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -17,6 +15,8 @@ import java.util.stream.Collectors;
 
 import org.neo4j.driver.async.ResultCursor;
 import org.neo4j.driver.internal.util.Futures;
+import org.neo4j.fabric.stream.Record;
+import org.neo4j.fabric.stream.Records;
 
 class RecordPublisher implements Publisher<Record>
 {

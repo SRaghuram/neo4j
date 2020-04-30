@@ -37,14 +37,14 @@ class FabricConfigTest
                 .setRaw( properties )
                 .build();
 
-        var fabricConfig = FabricConfig.from( config );
+        var fabricConfig = FabricEnterpriseConfig.from( config );
 
         var database = fabricConfig.getDatabase();
         assertEquals( "mega", database.getName().name() );
         assertEquals( Set.of(
-                new FabricConfig.Graph( 0L, FabricConfig.RemoteUri.create( "bolt://mega:1111" ), null, null, emptyDriverConfig() ),
-                new FabricConfig.Graph( 1L, FabricConfig.RemoteUri.create( "bolt://mega:2222" ), "db0", new NormalizedGraphName( "source-of-all-wisdom" ),
-                        emptyDriverConfig() )
+                new FabricEnterpriseConfig.Graph( 0L, FabricEnterpriseConfig.RemoteUri.create( "bolt://mega:1111" ), null, null, emptyDriverConfig() ),
+                new FabricEnterpriseConfig.Graph( 1L, FabricEnterpriseConfig.RemoteUri.create( "bolt://mega:2222" ), "db0",
+                        new NormalizedGraphName( "source-of-all-wisdom" ), emptyDriverConfig() )
         ), database.getGraphs() );
     }
 
@@ -59,7 +59,7 @@ class FabricConfigTest
                 .setRaw( properties )
                 .build();
 
-        var fabricConfig = FabricConfig.from( config );
+        var fabricConfig = FabricEnterpriseConfig.from( config );
 
         var database = fabricConfig.getDatabase();
         assertEquals( "mega", database.getName().name() );
@@ -79,7 +79,7 @@ class FabricConfigTest
                 .build();
 
         assertThrows( IllegalArgumentException.class,
-                () -> FabricConfig.from( config ) );
+                () -> FabricEnterpriseConfig.from( config ) );
     }
 
     @Test
@@ -98,7 +98,7 @@ class FabricConfigTest
                 .build();
 
         var e = assertThrows( IllegalArgumentException.class,
-                () -> FabricConfig.from( config ) );
+                () -> FabricEnterpriseConfig.from( config ) );
 
         assertEquals( "Graphs with ids: 0, 1, have conflicting names", e.getMessage() );
     }
@@ -124,7 +124,7 @@ class FabricConfigTest
                 .build();
 
         var e = assertThrows( IllegalArgumentException.class,
-                () -> FabricConfig.from( config ) );
+                () -> FabricEnterpriseConfig.from( config ) );
 
         assertEquals( "Graphs with ids: 0, 1, 3, have conflicting names", e.getMessage() );
     }
@@ -171,7 +171,7 @@ class FabricConfigTest
                 .setRaw( properties )
                 .build();
 
-        var fabricConfig = FabricConfig.from( config );
+        var fabricConfig = FabricEnterpriseConfig.from( config );
         assertNull( fabricConfig.getDatabase() );
     }
 
@@ -184,7 +184,7 @@ class FabricConfigTest
                 .setRaw( properties )
                 .build();
 
-        var fabricConfig = FabricConfig.from( config );
+        var fabricConfig = FabricEnterpriseConfig.from( config );
         assertNull( fabricConfig.getDatabase() );
     }
 
@@ -201,7 +201,7 @@ class FabricConfigTest
                 .setRaw( properties )
                 .build();
 
-        assertThrows( IllegalArgumentException.class, () -> FabricConfig.from( config ) );
+        assertThrows( IllegalArgumentException.class, () -> FabricEnterpriseConfig.from( config ) );
     }
 
     @Test
@@ -264,7 +264,7 @@ class FabricConfigTest
 
         var config = Config.newBuilder().setRaw( properties ).build();
 
-        var fabricConfig = FabricConfig.from( config );
+        var fabricConfig = FabricEnterpriseConfig.from( config );
         assertEquals( 10, fabricConfig.getDataStream().getBufferLowWatermark() );
     }
 
@@ -282,7 +282,7 @@ class FabricConfigTest
         assertThat( thrown.getMessage() ).contains( expectedMessage );
     }
 
-    private FabricConfig doTestRemoteUri( String uri )
+    private FabricEnterpriseConfig doTestRemoteUri( String uri )
     {
         var properties = Map.of(
                 "fabric.database.name", "mega",
@@ -293,11 +293,11 @@ class FabricConfigTest
                 .setRaw( properties )
                 .build();
 
-        return FabricConfig.from( config );
+        return FabricEnterpriseConfig.from( config );
     }
 
-    private FabricConfig.GraphDriverConfig emptyDriverConfig()
+    private FabricEnterpriseConfig.GraphDriverConfig emptyDriverConfig()
     {
-        return new FabricConfig.GraphDriverConfig( null, null, null, null, null, null, null, null, true );
+        return new FabricEnterpriseConfig.GraphDriverConfig( null, null, null, null, null, null, null, null, true );
     }
 }

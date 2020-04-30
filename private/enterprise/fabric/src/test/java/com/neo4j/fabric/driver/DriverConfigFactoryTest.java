@@ -5,8 +5,7 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.config.FabricConfig;
-import com.neo4j.fabric.executor.Location;
+import com.neo4j.fabric.config.FabricEnterpriseConfig;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -17,6 +16,7 @@ import java.util.Map;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.driver.net.ServerAddress;
+import org.neo4j.fabric.executor.Location;
 import org.neo4j.ssl.config.SslPolicyLoader;
 
 import static com.neo4j.fabric.TestUtils.createUri;
@@ -67,7 +67,7 @@ class DriverConfigFactoryTest
                 .setRaw( properties )
                 .build();
 
-        var fabricConfig = FabricConfig.from( config );
+        var fabricConfig = FabricEnterpriseConfig.from( config );
         var driverConfigFactory = new ExternalDriverConfigFactory( fabricConfig, config, mock( SslPolicyLoader.class ) );
 
         var graph0DriverConfig = driverConfigFactory.createConfig( new Location.Remote.External( 0, null, createUri( "bolt://mega:1111" ), null ) );
@@ -106,7 +106,7 @@ class DriverConfigFactoryTest
                 .setRaw( properties )
                 .build();
 
-        var fabricConfig = FabricConfig.from( config );
+        var fabricConfig = FabricEnterpriseConfig.from( config );
         var driverConfigFactory = new ExternalDriverConfigFactory( fabricConfig, config, mock( SslPolicyLoader.class ) );
 
         var graph0DriverConfig = driverConfigFactory.createConfig( new Location.Remote.External( 0, null, createUri( "bolt://mega:1111" ), null ) );
@@ -131,7 +131,7 @@ class DriverConfigFactoryTest
                 .setRaw( properties )
                 .build();
 
-        var fabricConfig = FabricConfig.from( config );
+        var fabricConfig = FabricEnterpriseConfig.from( config );
         var driverConfigFactory = new ExternalDriverConfigFactory( fabricConfig, config, mock( SslPolicyLoader.class ) );
 
         var address1 = new SocketAddress( "core-1", 1111 );

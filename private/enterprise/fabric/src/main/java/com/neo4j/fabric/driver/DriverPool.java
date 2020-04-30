@@ -6,8 +6,7 @@
 package com.neo4j.fabric.driver;
 
 import com.neo4j.fabric.auth.CredentialsProvider;
-import com.neo4j.fabric.config.FabricConfig;
-import com.neo4j.fabric.executor.Location;
+import com.neo4j.fabric.config.FabricEnterpriseConfig;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -26,6 +25,7 @@ import org.neo4j.driver.internal.async.connection.EventLoopGroupFactory;
 import org.neo4j.driver.internal.cluster.RoutingSettings;
 import org.neo4j.driver.internal.retry.RetrySettings;
 import org.neo4j.driver.internal.shaded.io.netty.channel.EventLoopGroup;
+import org.neo4j.fabric.executor.Location;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.scheduler.JobScheduler;
@@ -42,12 +42,12 @@ public class DriverPool extends LifecycleAdapter
     private final JobScheduler jobScheduler;
     private final Clock clock;
     private final DriverConfigFactory driverConfigFactory;
-    private final FabricConfig fabricConfig;
+    private final FabricEnterpriseConfig fabricConfig;
     private final EventLoopGroup eventLoopGroup;
 
     public DriverPool( JobScheduler jobScheduler,
             DriverConfigFactory driverConfigFactory,
-            FabricConfig fabricConfig,
+            FabricEnterpriseConfig fabricConfig,
             Clock clock,
             CredentialsProvider credentialsProvider )
     {

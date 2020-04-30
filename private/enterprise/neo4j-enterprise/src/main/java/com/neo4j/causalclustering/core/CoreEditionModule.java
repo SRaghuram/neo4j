@@ -60,7 +60,7 @@ import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.dbms.procedures.ClusteredDatabaseStateProcedure;
 import com.neo4j.enterprise.edition.AbstractEnterpriseEditionModule;
-import com.neo4j.fabric.bootstrap.FabricServicesBootstrap;
+import com.neo4j.fabric.bootstrap.EnterpriseFabricServicesBootstrap;
 import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
@@ -146,7 +146,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     private final EnterpriseTemporaryDatabaseFactory temporaryDatabaseFactory;
     private final RaftSender raftSender;
 
-    private final FabricServicesBootstrap fabricServicesBootstrap;
+    private final EnterpriseFabricServicesBootstrap fabricServicesBootstrap;
 
     private CoreDatabaseFactory coreDatabaseFactory;
     private CoreTopologyService topologyService;
@@ -216,7 +216,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
         editionInvariants( globalModule, globalDependencies );
 
-        fabricServicesBootstrap = new FabricServicesBootstrap.Core( globalLife, globalDependencies, logService );
+        fabricServicesBootstrap = new EnterpriseFabricServicesBootstrap.Core( globalLife, globalDependencies, logService );
     }
 
     private void createCoreServers( LifeSupport life, DatabaseManager<?> databaseManager, FileSystemAbstraction fileSystem )

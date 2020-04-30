@@ -5,10 +5,6 @@
  */
 package com.neo4j.fabric.bookmark;
 
-import com.neo4j.fabric.bolt.FabricBookmark;
-import com.neo4j.fabric.bolt.FabricBookmarkParser;
-import com.neo4j.fabric.driver.RemoteBookmark;
-import com.neo4j.fabric.executor.FabricException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -18,6 +14,10 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.neo4j.fabric.bolt.FabricBookmark;
+import org.neo4j.fabric.bolt.FabricBookmarkParser;
+import org.neo4j.fabric.bookmark.RemoteBookmark;
+import org.neo4j.fabric.executor.FabricException;
 import org.neo4j.kernel.api.exceptions.Status;
 
 import static org.assertj.core.api.Assertions.assertThat;

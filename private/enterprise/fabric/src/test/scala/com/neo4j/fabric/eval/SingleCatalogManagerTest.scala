@@ -9,32 +9,34 @@ import java.time.Duration
 import java.util
 import java.util.UUID
 
-import com.neo4j.fabric.FabricTest
-import com.neo4j.fabric.config.FabricConfig
-import com.neo4j.fabric.config.FabricConfig.GlobalDriverConfig
-import com.neo4j.fabric.config.FabricConfig.Graph
-import com.neo4j.fabric.eval.Catalog.ExternalGraph
-import com.neo4j.fabric.eval.Catalog.InternalGraph
-import com.neo4j.fabric.executor.Location
+import com.neo4j.fabric.config.FabricEnterpriseConfig
+import com.neo4j.fabric.config.FabricEnterpriseConfig.GlobalDriverConfig
+import com.neo4j.fabric.config.FabricEnterpriseConfig.Graph
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.configuration.helpers.NormalizedGraphName
 import org.neo4j.cypher.internal.ast.CatalogName
+import org.neo4j.fabric.FabricTest
+import org.neo4j.fabric.config.FabricConfig
+import org.neo4j.fabric.eval.Catalog.ExternalGraph
+import org.neo4j.fabric.eval.Catalog.InternalGraph
+import org.neo4j.fabric.eval.DatabaseLookup
+import org.neo4j.fabric.executor.Location
 import org.neo4j.kernel.database.DatabaseIdFactory
 import org.neo4j.kernel.database.NamedDatabaseId
 import org.neo4j.values.storable.Values
 
 class SingleCatalogManagerTest extends FabricTest {
 
-  private val mega0 = new Graph(0L, FabricConfig.RemoteUri.create("bolt://mega:1111"), "neo4j0", new NormalizedGraphName("extA"), null)
-  private val mega1 = new Graph(1L, FabricConfig.RemoteUri.create("bolt://mega:2222"), "neo4j1", null, null)
-  private val mega2 = new Graph(2L, FabricConfig.RemoteUri.create("bolt://mega:3333"), "neo4j2", new NormalizedGraphName("extB"), null)
+  private val mega0 = new Graph(0L, FabricEnterpriseConfig.RemoteUri.create("bolt://mega:1111"), "neo4j0", new NormalizedGraphName("extA"), null)
+  private val mega1 = new Graph(1L, FabricEnterpriseConfig.RemoteUri.create("bolt://mega:2222"), "neo4j1", null, null)
+  private val mega2 = new Graph(2L, FabricEnterpriseConfig.RemoteUri.create("bolt://mega:3333"), "neo4j2", new NormalizedGraphName("extB"), null)
 
   private val intAUuid = UUID.randomUUID()
   private val intBUuid = UUID.randomUUID()
   private val megaUuid = UUID.randomUUID()
 
-  private val config = new FabricConfig(
-    new FabricConfig.Database(new NormalizedDatabaseName("mega"), util.Set.of(mega0, mega1, mega2)),
+  private val config = new FabricEnterpriseConfig(
+    new FabricEnterpriseConfig.Database(new NormalizedDatabaseName("mega"), util.Set.of(mega0, mega1, mega2)),
     util.List.of(), Duration.ZERO, Duration.ZERO,
     new GlobalDriverConfig(Duration.ZERO, Duration.ZERO, 0, null),
     new FabricConfig.DataStream(300, 1000, 50, 10)
@@ -54,14 +56,14 @@ class SingleCatalogManagerTest extends FabricTest {
       internalDbs.find(_.name() == databaseName.name())
   }
 
-  private val managerWithFabricDatabase = new SingleCatalogManager(
+  private val managerWithFabricDatabase = new EnterpriseSingleCatalogManager(
     databaseLookup = databaseLookup,
     fabricConfig = config,
   )
 
-  private val managerWithoutFabricDatabase = new SingleCatalogManager(
+  private val managerWithoutFabricDatabase = new EnterpriseSingleCatalogManager(
     databaseLookup,
-    fabricConfig = new FabricConfig(null, util.List.of(), null, null, null, null),
+    fabricConfig = new FabricEnterpriseConfig(null, util.List.of(), null, null, null, null),
   )
 
   "catalog resolution" in {
@@ -132,8 +134,8 @@ class SingleCatalogManagerTest extends FabricTest {
       .shouldEqual(new Location.Local(1, intBUuid, "intb"))
   }
 
-  private def external(graph: FabricConfig.Graph) = ExternalGraph(graph, uuid(graph.getId))
+  private def external(graph: FabricEnterpriseConfig.Graph) = ExternalGraph(graph.getId, Option(graph.getName).map(_.name()), uuid(graph.getId))
   private def internal(id: Long, uuid:UUID, name: String) = InternalGraph(id, uuid, new NormalizedGraphName(name), new NormalizedDatabaseName(name))
-  private def remoteUri(uri: FabricConfig.RemoteUri): Location.RemoteUri = new Location.RemoteUri(uri.getScheme, uri.getAddresses, uri.getQuery)
+  private def remoteUri(uri: FabricEnterpriseConfig.RemoteUri): Location.RemoteUri = new Location.RemoteUri(uri.getScheme, uri.getAddresses, uri.getQuery)
   private def uuid(id: Long) = new UUID(id, 0)
 }

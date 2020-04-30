@@ -5,8 +5,6 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.executor.Location;
-import com.neo4j.fabric.transaction.FabricTransactionInfo;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -21,6 +19,9 @@ import org.neo4j.driver.Bookmark;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.TransactionConfig;
+import org.neo4j.fabric.bookmark.RemoteBookmark;
+import org.neo4j.fabric.executor.Location;
+import org.neo4j.fabric.transaction.FabricTransactionInfo;
 import org.neo4j.values.virtual.MapValue;
 
 public abstract class PooledDriver

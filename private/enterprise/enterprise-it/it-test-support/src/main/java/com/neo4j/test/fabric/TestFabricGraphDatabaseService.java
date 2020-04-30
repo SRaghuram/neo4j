@@ -5,9 +5,9 @@
  */
 package com.neo4j.test.fabric;
 
-import com.neo4j.fabric.bolt.BoltFabricDatabaseService;
-import com.neo4j.fabric.executor.FabricExecutor;
-import com.neo4j.fabric.transaction.FabricTransaction;
+import org.neo4j.fabric.bolt.BoltFabricDatabaseService;
+import org.neo4j.fabric.executor.FabricExecutor;
+import org.neo4j.fabric.transaction.FabricTransaction;
 
 import java.time.Duration;
 import java.util.List;

@@ -5,11 +5,6 @@
  */
 package com.neo4j;
 
-import com.neo4j.fabric.executor.FabricRemoteExecutor;
-import com.neo4j.fabric.stream.Record;
-import com.neo4j.fabric.stream.Records;
-import com.neo4j.fabric.stream.StatementResult;
-import com.neo4j.fabric.stream.summary.EmptySummary;
 import com.neo4j.utils.DriverUtils;
 import com.neo4j.utils.ProxyFunctions;
 import org.junit.jupiter.api.AfterAll;
@@ -33,6 +28,11 @@ import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.fabric.executor.FabricRemoteExecutor;
+import org.neo4j.fabric.stream.Record;
+import org.neo4j.fabric.stream.Records;
+import org.neo4j.fabric.stream.StatementResult;
+import org.neo4j.fabric.stream.summary.EmptySummary;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 import org.neo4j.values.storable.Values;
 

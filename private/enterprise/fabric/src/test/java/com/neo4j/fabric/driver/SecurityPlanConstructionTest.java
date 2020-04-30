@@ -5,13 +5,13 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.config.FabricConfig;
-import com.neo4j.fabric.executor.Location;
+import com.neo4j.fabric.config.FabricEnterpriseConfig;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.fabric.executor.Location;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.test.extension.Inject;
@@ -40,7 +40,7 @@ class SecurityPlanConstructionTest
                 .setRaw( properties )
                 .build();
 
-        var fabricConfig = FabricConfig.from( config );
+        var fabricConfig = FabricEnterpriseConfig.from( config );
         var sslLoader = SslPolicyLoader.create( config, NullLogProvider.nullLogProvider() );
         var driverConfigFactory = new ExternalDriverConfigFactory( fabricConfig, config, sslLoader );
 
@@ -63,7 +63,7 @@ class SecurityPlanConstructionTest
                 .setRaw( properties )
                 .build();
 
-        var fabricConfig = FabricConfig.from( config );
+        var fabricConfig = FabricEnterpriseConfig.from( config );
         var sslLoader = SslPolicyLoader.create( config, NullLogProvider.nullLogProvider() );
         var driverConfigFactory = new ExternalDriverConfigFactory( fabricConfig, config, sslLoader );
 
@@ -90,7 +90,7 @@ class SecurityPlanConstructionTest
                 .setRaw( properties )
                 .build();
 
-        var fabricConfig = FabricConfig.from( config );
+        var fabricConfig = FabricEnterpriseConfig.from( config );
         var sslLoader = SslPolicyLoader.create( config, NullLogProvider.nullLogProvider() );
         var driverConfigFactory = new ExternalDriverConfigFactory( fabricConfig, config, sslLoader );
 

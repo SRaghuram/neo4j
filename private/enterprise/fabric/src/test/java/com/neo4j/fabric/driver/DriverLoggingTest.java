@@ -5,8 +5,7 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.config.FabricConfig;
-import com.neo4j.fabric.executor.Location;
+import com.neo4j.fabric.config.FabricEnterpriseConfig;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -14,6 +13,7 @@ import java.util.logging.Level;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.driver.Logger;
+import org.neo4j.fabric.executor.Location;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.logging.JULBridge;
 import org.neo4j.ssl.config.SslPolicyLoader;
@@ -97,7 +97,7 @@ class DriverLoggingTest
 
         setUpLogging();
 
-        var fabricConfig = FabricConfig.from( config );
+        var fabricConfig = FabricEnterpriseConfig.from( config );
         var driverConfigFactory = new ExternalDriverConfigFactory( fabricConfig, config, mock( SslPolicyLoader.class ) );
         var graph0DriverConfig = driverConfigFactory.createConfig( new Location.Remote.External( 0, null, createUri( "bolt://mega:1111" ), null ) );
 
