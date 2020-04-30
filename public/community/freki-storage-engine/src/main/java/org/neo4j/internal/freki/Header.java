@@ -47,6 +47,14 @@ class Header
     private int[] offsets = new int[NUM_OFFSETS];
     private int[] sizes = new int[NUM_OFFSETS + 1/*labels*/];
 
+    static Header shallowCopy( Header from )
+    {
+        //This is not a full copy!!
+        Header header = new Header();
+        header.markers = from.markers;
+        return header;
+    }
+
     void mark( int slot, boolean marked )
     {
         markers = marked
@@ -115,10 +123,7 @@ class Header
 
     void serialize( ByteBuffer buffer, Header referenceHeader )
     {
-        referenceMarkers = referenceHeader != null ? referenceHeader.markers : 0;
-        assert ((markers & referenceMarkers)
-                & ~slotBit( FLAG_HAS_DENSE_RELATIONSHIPS ) & ~slotBit( OFFSET_RECORD_POINTER ) & ~slotBit( OFFSET_END )) == 0 :
-                toString() + " vs " + referenceHeader;
+        referenceMarkers = referenceHeader != null ? referenceHeader.markers & ~markers : 0;
         assert Integer.bitCount( markers & MASK_OFFSET_MARKERS ) <= 6 :
                 "Even though there are 7 types of offsets there can only be 6 active concurrently (RELATIONSHIPS vs DEGREES) so long data is fine for now";
         buffer.put( (byte) markers );
@@ -190,6 +195,11 @@ class Header
     {
         markers = 0;
         referenceMarkers = 0;
+    }
+
+    public boolean hasMarkers()
+    {
+        return markers != 0;
     }
 
     @Override

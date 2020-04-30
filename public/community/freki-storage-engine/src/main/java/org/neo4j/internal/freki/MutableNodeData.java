@@ -579,10 +579,11 @@ class MutableNodeData
         writeLongs( new long[]{nextInternalRelationshipId}, buffer );
     }
 
-    static void serializeRecordPointer( ByteBuffer buffer, long recordPointer )
+    static void serializeRecordPointers( ByteBuffer buffer, long... recordPointers )
     {
+        //first is backwards pointer, second is forward. except in x1, first is forward as it can not have a backward pointer
         assert buffer.position() == 0;
-        writeLongs( new long[]{recordPointer}, buffer );
+        writeLongs( recordPointers, buffer );
     }
 
     private void writeLabels( ByteBuffer buffer )
