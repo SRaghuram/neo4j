@@ -55,6 +55,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.NestedPlanExpressionTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeCountFromCountStoreTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeHashJoinTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ValueHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexContainsScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexEndsWithScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexPointDistanceSeekTestBase
@@ -291,6 +292,10 @@ class PipelinedOrderedAggregationNoFusingTest extends OrderedAggregationTestBase
 // NODE HASH JOIN
 class PipelinedNodeHashJoinTest extends NodeHashJoinTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedNodeHashJoinNoFusingTest extends NodeHashJoinTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
+// VALUE HASH JOIN
+class PipelinedValueHashJoinTest extends ValueHashJoinTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedValueHashJoinNoFusingTest extends ValueHashJoinTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // PROVIDED ORDER
 class PipelinedProvidedOrderTest extends ProvidedOrderTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite

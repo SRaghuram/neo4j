@@ -67,6 +67,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementDisabledTest
 import org.neo4j.cypher.internal.runtime.spec.tests.MiscTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeCountFromCountStoreTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ValueHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexContainsScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexEndsWithScanTestBase
@@ -287,6 +288,10 @@ class ParallelRuntimeAggregationStressTest extends AggregationStressTestBase(FUS
 // NODE HASH JOIN
 class ParallelRuntimeNodeHashJoinTest extends NodeHashJoinTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 class ParallelRuntimeNodeHashJoinNoFusingTest extends NodeHashJoinTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+
+// VALUE HASH JOIN
+class ParallelRuntimeValueHashJoinTest extends ValueHashJoinTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeValueHashJoinNoFusingTest extends ValueHashJoinTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 
 // REACTIVE
 class ParallelRuntimeReactiveResultsTest extends ReactiveResultTestBase(FUSING, PARALLEL) with ParallelRuntimeSpecSuite

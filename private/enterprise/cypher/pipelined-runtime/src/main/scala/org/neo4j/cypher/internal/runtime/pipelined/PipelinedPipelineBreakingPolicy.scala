@@ -56,6 +56,7 @@ import org.neo4j.cypher.internal.logical.plans.UndirectedRelationshipByIdSeek
 import org.neo4j.cypher.internal.logical.plans.Union
 import org.neo4j.cypher.internal.logical.plans.UnwindCollection
 import org.neo4j.cypher.internal.logical.plans.UpdatingPlan
+import org.neo4j.cypher.internal.logical.plans.ValueHashJoin
 import org.neo4j.cypher.internal.logical.plans.VarExpand
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
 import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy
@@ -119,6 +120,7 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, i
       => false
 
       case _: NodeHashJoin |
+           _: ValueHashJoin |
            _: CartesianProduct |
            _: Union
       => true

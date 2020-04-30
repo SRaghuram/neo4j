@@ -113,6 +113,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.TopOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedRelationshipByIdSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnionOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnwindOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ValueHashJoinOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.VarExpandOperator
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityMutableDescription
@@ -450,6 +451,20 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             refsToCopy,
             cachedPropertiesToCopy)(id)
         }
+
+      case joinPlan: plans.ValueHashJoin =>
+
+        val slotConfigs = physicalPlan.slotConfigurations
+        val argumentSize = physicalPlan.argumentSizes(id)
+        val lhsSlots = slotConfigs(joinPlan.left.id)
+        val longOffset = lhsSlots.numberOfLongs
+        val refOffset = lhsSlots.numberOfReferences
+        val buffer = inputBuffer.variant.asInstanceOf[LHSAccumulatingRHSStreamingBufferVariant]
+        val lhsExpression = converters.toCommandExpression(id, joinPlan.join.lhs)
+        val rhsExpression = converters.toCommandExpression(id, joinPlan.join.rhs)
+
+       new ValueHashJoinOperator(WorkIdentity.fromPlan(plan), buffer.lhsArgumentStateMapId, buffer.rhsArgumentStateMapId, slots, lhsExpression, rhsExpression, longOffset, refOffset,  argumentSize)(id)
+
 
       case _: plans.CartesianProduct =>
         val buffer = inputBuffer.variant.asInstanceOf[LHSAccumulatingRHSStreamingBufferVariant]
