@@ -137,7 +137,7 @@ public class TransactionLogAnalyzer
         {
             // Use no bridging, simply reading this single log file if a file is supplied
             firstFile = storeDirOrLogFile;
-            logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDirOrLogFile, fileSystem )
+            logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDirOrLogFile.getParentFile(), fileSystem )
                     .withCommandReaderFactory( StorageEngineFactory.selectStorageEngine().commandReaderFactory() )
                     .build();
             monitor.logFile( firstFile, logFiles.getLogVersion( firstFile ) );
