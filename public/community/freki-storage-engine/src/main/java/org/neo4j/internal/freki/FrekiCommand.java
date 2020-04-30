@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.neo4j.internal.kernel.api.exceptions.schema.MalformedSchemaRuleException;
 import org.neo4j.internal.schema.SchemaRule;
@@ -75,16 +76,66 @@ abstract class FrekiCommand implements StorageCommand
         static final byte TYPE = 1;
 
         final long nodeId;
-        final Record before;
-        final Record after;
+        private RecordChange lowestChange;
 
-        SparseNode( long nodeId, Record before, Record after )
+        SparseNode( long nodeId )
         {
             super( TYPE );
-            assert before != null || after != null : "Both before and after records cannot be null";
             this.nodeId = nodeId;
-            this.before = before;
-            this.after = after;
+        }
+
+        private SparseNode( long nodeId, RecordChange lowestChange )
+        {
+            this( nodeId );
+            this.lowestChange = lowestChange;
+        }
+
+        void addChange( Record before, Record after )
+        {
+            assert before != null || after != null : "Both before and after records cannot be null";
+            RecordChange change = new RecordChange( before, after );
+            if ( lowestChange == null )
+            {
+                lowestChange = change;
+            }
+            else
+            {
+                int sizeExp = change.sizeExp();
+                RecordChange prev = null;
+                RecordChange candidate = changes();
+                while ( candidate != null && candidate.sizeExp() < sizeExp )
+                {
+                    prev = candidate;
+                    candidate = candidate.next();
+                }
+                if ( prev == null ) // first
+                {
+                    change.next = lowestChange;
+                    lowestChange = change;
+                }
+                else // not first: prev -> change -> candidate
+                {
+                    change.next = candidate;
+                    prev.next = change;
+                }
+            }
+        }
+
+        RecordChange changes()
+        {
+            return lowestChange;
+        }
+
+        RecordChange change( int sizeExp )
+        {
+            for ( RecordChange candidate = changes(); candidate != null && candidate.sizeExp() <= sizeExp; candidate = candidate.next() )
+            {
+                if ( candidate.sizeExp() == sizeExp )
+                {
+                    return candidate;
+                }
+            }
+            return null;
         }
 
         @Override
@@ -94,14 +145,78 @@ abstract class FrekiCommand implements StorageCommand
             return false;
         }
 
-        Mode mode()
+        @Override
+        public String toString()
         {
-            return after != null ? before == null ? Mode.CREATE : Mode.UPDATE : Mode.DELETE;
+            StringBuilder toString = new StringBuilder( format( "SparseNode[%d,", nodeId ) );
+            addRecordsToToString( toString, "-", change -> change.before );
+            addRecordsToToString( toString, "+", change -> change.after );
+            return toString.append( ']' ).toString();
+        }
+
+        private void addRecordsToToString( StringBuilder toString, String versionSign, Function<RecordChange,Record> version )
+        {
+            for ( RecordChange change = changes(); change != null; change = change.next() )
+            {
+                Record record = version.apply( change );
+                if ( record != null )
+                {
+                    toString.append( format( "%n  %s%s", versionSign, record ) );
+                }
+            }
+        }
+
+        @Override
+        public void serialize( WritableChannel channel ) throws IOException
+        {
+            assert lowestChange != null : "Gotta have _something_ in a SparseNode command";
+            super.serialize( channel );
+            channel.put( (byte) longSizeCode( nodeId ) );
+            putCompactLong( channel, nodeId );
+            for ( RecordChange change = changes(); change != null; change = change.next() )
+            {
+                change.serialize( channel );
+            }
+        }
+
+        static SparseNode deserialize( ReadableChannel channel ) throws IOException
+        {
+            byte header = channel.get();
+            long nodeId = getCompactLong( channel, header & 0x3 );
+            RecordChange lowestChange = RecordChange.deserialize( channel, nodeId );
+            RecordChange change = lowestChange;
+            while ( change.next != null )
+            {
+                RecordChange nextChange = RecordChange.deserialize( channel, nodeId );
+                change.next = nextChange;
+                change = nextChange;
+            }
+            return new SparseNode( nodeId, lowestChange );
+        }
+    }
+
+    static class RecordChange
+    {
+        private static final RecordChange DESERIALIZATION_HAS_NEXT_MARKER = new RecordChange( null, null );
+
+        final Record before;
+        final Record after;
+        private RecordChange next;
+
+        RecordChange( Record before, Record after )
+        {
+            this.before = before;
+            this.after = after;
         }
 
         private Record anyUsed()
         {
             return after != null ? after : before;
+        }
+
+        Mode mode()
+        {
+            return after != null ? before == null ? Mode.CREATE : Mode.UPDATE : Mode.DELETE;
         }
 
         byte sizeExp()
@@ -114,16 +229,11 @@ abstract class FrekiCommand implements StorageCommand
             return anyUsed().id;
         }
 
-        @Override
-        public void serialize( WritableChannel channel ) throws IOException
+        private void serialize( WritableChannel channel ) throws IOException
         {
-            super.serialize( channel );
             int sizeExp = sizeExp();
             long recordIdToWrite = sizeExp > 0 ? recordId() : 0;
-            byte header = (byte) (longSizeCode( nodeId ) | (longSizeCode( recordIdToWrite ) << 2) |
-                    (before != null ? 0x10 : 0) | (after != null ? 0x20 : 0));
-            channel.put( header );
-            putCompactLong( channel, nodeId );
+            channel.put( (byte) (longSizeCode( recordIdToWrite ) | (before != null ? 0x4 : 0) | (after != null ? 0x8 : 0) | (next != null ? 0x10 : 0)) );
             putCompactLong( channel, recordIdToWrite );
             if ( before != null )
             {
@@ -135,35 +245,24 @@ abstract class FrekiCommand implements StorageCommand
             }
         }
 
-        @Override
-        public String toString()
-        {
-            byte sizeExp = sizeExp();
-            StringBuilder toString = new StringBuilder( format( "SparseNode[%d,", nodeId ) );
-            if ( sizeExp != 0 )
-            {
-                toString.append( format( "(%d)", recordId() ) );
-            }
-            if ( before != null )
-            {
-                toString.append( format( "%n  -%s", before ) );
-            }
-            if ( after != null )
-            {
-                toString.append( format( "%n  +%s", after ) );
-            }
-            return toString.append( ']' ).toString();
-        }
-
-        static SparseNode deserialize( ReadableChannel channel ) throws IOException
+        private static RecordChange deserialize( ReadableChannel channel, long nodeId ) throws IOException
         {
             byte header = channel.get();
-            long nodeId = getCompactLong( channel, header & 0x3 );
-            int idSizeCode = (header >>> 2) & 0x3;
+            int idSizeCode = header & 0x3;
             long id = idSizeCode == 0 ? nodeId : getCompactLong( channel, idSizeCode );
-            Record before = (header & 0x10) != 0 ? Record.deserialize( channel, id ) : null;
-            Record after = (header & 0x20) != 0 ? Record.deserialize( channel, id ) : null;
-            return new SparseNode( nodeId, before, after );
+            Record before = (header & 0x4) != 0 ? Record.deserialize( channel, id ) : null;
+            Record after = (header & 0x8) != 0 ? Record.deserialize( channel, id ) : null;
+            RecordChange change = new RecordChange( before, after );
+            if ( (header & 0x10) != 0 )
+            {
+                change.next = DESERIALIZATION_HAS_NEXT_MARKER;
+            }
+            return change;
+        }
+
+        RecordChange next()
+        {
+            return next;
         }
     }
 

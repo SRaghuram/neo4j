@@ -106,19 +106,22 @@ abstract class FrekiCursorsTest
                 graphUpdates.extractUpdates( command ->
                 {
                     FrekiCommand.SparseNode sparseNode = (FrekiCommand.SparseNode) command;
-                    Record record = sparseNode.after;
-                    SimpleStore store = stores.mainStore( record.sizeExp() );
-                    try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
+                    for ( FrekiCommand.RecordChange change = sparseNode.changes(); change != null; change = change.next() )
                     {
-                        store.write( cursor, record, IdUpdateListener.IGNORE, PageCursorTracer.NULL );
-                    }
-                    catch ( IOException e )
-                    {
-                        throw new UncheckedIOException( e );
-                    }
-                    if ( record.sizeExp() == 0 )
-                    {
-                        x1.setValue( record );
+                        Record record = change.after;
+                        SimpleStore store = stores.mainStore( record.sizeExp() );
+                        try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
+                        {
+                            store.write( cursor, record, IdUpdateListener.IGNORE, PageCursorTracer.NULL );
+                        }
+                        catch ( IOException e )
+                        {
+                            throw new UncheckedIOException( e );
+                        }
+                        if ( record.sizeExp() == 0 )
+                        {
+                            x1.setValue( record );
+                        }
                     }
                 } );
                 return x1.getValue();

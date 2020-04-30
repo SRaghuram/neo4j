@@ -19,9 +19,9 @@
  */
 package org.neo4j.internal.freki;
 
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.commons.lang3.tuple.Triple;
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
-import org.eclipse.collections.api.map.primitive.MutableObjectIntMap;
 import org.eclipse.collections.api.multimap.MutableMultimap;
 import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
@@ -30,7 +30,6 @@ import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
 import org.eclipse.collections.impl.factory.primitive.IntSets;
 import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 import org.eclipse.collections.impl.factory.primitive.LongSets;
-import org.eclipse.collections.impl.factory.primitive.ObjectIntMaps;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
@@ -43,8 +42,10 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.graphdb.Direction;
@@ -80,7 +81,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
     {
         // given
         Node node = node();
-        node.delete().store();
+        stores.mainStore.nextId( NULL );
         FrekiNodeCursor cursor = cursorFactory.allocateNodeCursor( NULL );
 
         // when
@@ -724,12 +725,14 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
     {
         //Given
         List<Node> nodes = new ArrayList<>();
+        Map<Node,MutableInt> degrees = new HashMap<>();
         for ( int i = 0; i < 10000; i++ )
         {
-            nodes.add( node() );
+            Node node = node();
+            nodes.add( node );
+            degrees.put( node, new MutableInt() );
         }
 
-        MutableObjectIntMap<Node> degrees = ObjectIntMaps.mutable.empty();
         int[] relTypes = new int[3];
         int[] numRelsCases = new int[]{0, 10, 100};
         for ( Node node : nodes )
@@ -743,7 +746,12 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
                 {
                     otherNode = nodes.get( random.nextInt( nodes.size() ) );
                 }
-                while ( degrees.getIfAbsentPut( otherNode, 0 ) > 150 );
+                while ( degrees.get( otherNode ).intValue() > 150 );
+                degrees.get( node ).increment();
+                if ( node != otherNode )
+                {
+                    degrees.get( otherNode ).increment();
+                }
                 node.relationship( type, otherNode );
                 relTypes[type]++;
             }

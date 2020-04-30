@@ -35,6 +35,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.IntPredicate;
 
 import org.neo4j.internal.kernel.api.exceptions.ConstraintViolationTransactionFailureException;
 import org.neo4j.internal.kernel.api.exceptions.DeletedNodeStillHasRelationships;
@@ -158,8 +159,8 @@ class GraphUpdates
         private final PageCursorTracer cursorTracer;
 
         // the before-state
-        private Record x1Before;
-        private Record xLBefore;
+        private RecordChain firstBeforeRecord;
+        private RecordChain lastBeforeRecord;
 
         // the after-state
         private SparseRecordAndData sparse;
@@ -189,7 +190,7 @@ class GraphUpdates
             }
 
             MutableNodeData x1Data = sparse.add( x1 );
-            x1Before = x1;
+            firstBeforeRecord = lastBeforeRecord = new RecordChain( x1 );
 
             long recordPointer = x1Data.getRecordPointer();
             if ( recordPointer != NULL )
@@ -200,7 +201,9 @@ class GraphUpdates
                     throw new IllegalStateException( x1 + " points to " + recordPointerToString( recordPointer ) + " that isn't in use" );
                 }
                 sparse.add( xL );
-                xLBefore = xL;
+                RecordChain chain = new RecordChain( xL );
+                lastBeforeRecord.next = chain;
+                lastBeforeRecord = chain;
             }
             if ( x1Data.isDense() )
             {
@@ -279,13 +282,9 @@ class GraphUpdates
             }
             // Reset the positions of the before buffers
             // assumption: MutableNodeData has already looked at the header and set the limit to the end of the effective data
-            if ( x1Before != null )
+            for ( RecordChain chain = firstBeforeRecord; chain != null; chain = chain.next )
             {
-                x1Before.data().position( 0 );
-            }
-            if ( xLBefore != null )
-            {
-                xLBefore.data().position( 0 );
+                chain.record.data( 0 );
             }
         }
 
@@ -379,15 +378,14 @@ class GraphUpdates
                 x1Header.mark( Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS, true );
             }
 
+            FrekiCommand.SparseNode command = new FrekiCommand.SparseNode( nodeId );
             if ( x1Header.spaceNeeded() + labelsSize + propsSize + Math.max( relsSize, degreesSize ) + miscSize <= stores.mainStore.recordDataSize() )
             {
                 //WE FIT IN x1
                 serializeParts( smallBuffer, intermediateBuffers, x1Header, null );
-                x1Command( smallBuffer, otherCommands );
-                if ( xLBefore != null )
-                {
-                    otherCommands.accept( new FrekiCommand.SparseNode( nodeId, xLBefore, null ) );
-                }
+                addX1Record( smallBuffer, command );
+                deleteRemainingBeforeRecords( command );
+                otherCommands.accept( command );
                 return;
             }
 
@@ -419,28 +417,30 @@ class GraphUpdates
             movePartToXL( x1Header, xLHeader, relsSize, Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
             serializeParts( maxBuffer, intermediateBuffers, xLHeader, x1Header );
             SimpleStore xLStore = stores.storeSuitableForRecordSize( maxBuffer.limit(), 1 );
-            long forwardPointer = xLargeCommands( maxBuffer, xLStore, otherCommands );
+            long forwardPointer = addXLRecords( maxBuffer, xLStore, command );
 
             // serialize x1
             prepareRecordPointer( x1Header, intermediateBuffers[RECORD_POINTER], forwardPointer );
             serializeParts( smallBuffer, intermediateBuffers, x1Header, xLHeader );
-            x1Command( smallBuffer, otherCommands );
+            addX1Record( smallBuffer, command );
+            deleteRemainingBeforeRecords( command );
+            otherCommands.accept( command );
+        }
+
+        private void deleteRemainingBeforeRecords( FrekiCommand.SparseNode node )
+        {
+            for ( RecordChain chain = firstBeforeRecord; chain != null; chain = chain.next )
+            {
+                node.addChange( chain.record, null );
+            }
+            firstBeforeRecord = lastBeforeRecord = null;
         }
 
         private void deletionCommands( Consumer<StorageCommand> otherCommands )
         {
-            if ( x1Before != null )
-            {
-                otherCommands.accept( new FrekiCommand.SparseNode( nodeId, x1Before, null ) );
-            }
-            if ( xLBefore != null )
-            {
-                otherCommands.accept( new FrekiCommand.SparseNode( nodeId, xLBefore, null ) );
-            }
-            if ( dense != null )
-            {
-                dense.createCommands( otherCommands );
-            }
+            FrekiCommand.SparseNode node = new FrekiCommand.SparseNode( nodeId );
+            deleteRemainingBeforeRecords( node );
+            otherCommands.accept( node );
         }
 
         private void prepareRecordPointer( Header header, ByteBuffer intermediateBuffer, long recordPointer )
@@ -520,43 +520,71 @@ class GraphUpdates
         /**
          * @return the existing or allocated xL ID into sparse.data so that X1 can be serialized afterwards
          */
-        private long xLargeCommands( ByteBuffer maxBuffer, SimpleStore store, Consumer<StorageCommand> commands )
+        private long addXLRecords( ByteBuffer maxBuffer, SimpleStore store, FrekiCommand.SparseNode command )
         {
             Record after;
             int sizeExp = store.recordSizeExponential();
+            Record xLBefore = takeBeforeRecord( s -> s > 0 );
             if ( xLBefore != null && xLBefore.sizeExp() == sizeExp )
             {
                 // There was a large record before and we're just modifying it
                 after = recordForData( xLBefore.id, maxBuffer, sizeExp );
                 if ( contentsDiffer( xLBefore, after ) )
                 {
-                    commands.accept( new FrekiCommand.SparseNode( nodeId, xLBefore, after ) );
+                    command.addChange( xLBefore, after );
                 }
             }
             else if ( xLBefore != null && xLBefore.sizeExp() != sizeExp )
             {
                 // There was a large record before, but this time it'll be of a different size, so a different one
-                commands.accept( new FrekiCommand.SparseNode( nodeId, xLBefore, null ) );
+                command.addChange( xLBefore, null );
                 long recordId = store.nextId( cursorTracer );
-                commands.accept( new FrekiCommand.SparseNode( nodeId, null, after = recordForData( recordId, maxBuffer, sizeExp ) ) );
+                command.addChange( null, after = recordForData( recordId, maxBuffer, sizeExp ) );
             }
             else
             {
                 // There was no large record before at all
                 long recordId = store.nextId( cursorTracer );
-                commands.accept( new FrekiCommand.SparseNode( nodeId, null, after = recordForData( recordId, maxBuffer, sizeExp ) ) );
+                command.addChange( null, after = recordForData( recordId, maxBuffer, sizeExp ) );
             }
 
             return buildRecordPointer( after.sizeExp(), after.id );
         }
 
-        private void x1Command( ByteBuffer smallBuffer, Consumer<StorageCommand> commands )
+        private void addX1Record( ByteBuffer smallBuffer, FrekiCommand.SparseNode node )
         {
             Record after = recordForData( nodeId, smallBuffer, 0 );
-            if ( x1Before == null || contentsDiffer( x1Before, after ) )
+            Record before = takeBeforeRecord( sizeExp -> sizeExp == 0 );
+            if ( before == null || contentsDiffer( before, after ) )
             {
-                commands.accept( new FrekiCommand.SparseNode( nodeId, x1Before, after ) );
+                node.addChange( before, after );
             }
+        }
+
+        private Record takeBeforeRecord( IntPredicate filter )
+        {
+            RecordChain prev = null;
+            for ( RecordChain chain = firstBeforeRecord; chain != null; prev = chain, chain = chain.next )
+            {
+                if ( filter.test( chain.record.sizeExp() ) )
+                {
+                    if ( prev == null )
+                    {
+                        boolean firstAndLastIsSame = firstBeforeRecord == lastBeforeRecord;
+                        firstBeforeRecord = chain.next;
+                        if ( firstAndLastIsSame )
+                        {
+                            lastBeforeRecord = firstBeforeRecord;
+                        }
+                    }
+                    else
+                    {
+                        prev.next = chain.next;
+                    }
+                    return chain.record;
+                }
+            }
+            return null;
         }
 
         private boolean contentsDiffer( Record before, Record after )
@@ -568,6 +596,17 @@ class GraphUpdates
             return !Arrays.equals(
                     before.data().array(), 0, before.data().limit(),
                     after.data().array(), 0, after.data().limit() );
+        }
+    }
+
+    private static class RecordChain
+    {
+        private final Record record;
+        private RecordChain next;
+
+        RecordChain( Record record )
+        {
+            this.record = record;
         }
     }
 

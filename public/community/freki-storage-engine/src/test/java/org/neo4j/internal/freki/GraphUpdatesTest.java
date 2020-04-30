@@ -121,12 +121,15 @@ class GraphUpdatesTest
                     @Override
                     public void handle( FrekiCommand.SparseNode node ) throws IOException
                     {
-                        Record record = node.after;
-                        byte sizeExp = node.sizeExp();
-                        SimpleStore store = mainStores.mainStore( sizeExp );
-                        try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
+                        for ( FrekiCommand.RecordChange change = node.changes(); change != null; change = change.next() )
                         {
-                            store.write( cursor, record != null ? record : deletedRecord( sizeExp, node.recordId() ), IGNORE, PageCursorTracer.NULL );
+                            Record record = change.after;
+                            byte sizeExp = change.sizeExp();
+                            SimpleStore store = mainStores.mainStore( sizeExp );
+                            try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
+                            {
+                                store.write( cursor, record != null ? record : deletedRecord( sizeExp, change.recordId() ), IGNORE, PageCursorTracer.NULL );
+                            }
                         }
                     }
 

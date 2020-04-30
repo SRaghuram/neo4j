@@ -22,7 +22,6 @@ package org.neo4j.internal.freki;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -77,8 +76,6 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     private DenseRelationshipsWorkSync.Batch denseRelationshipUpdates;
 
     // State used for generating index updates
-    private long currentNodeId = NULL;
-    private final FrekiCommand.SparseNode[] currentSparseNodeCommands = new FrekiCommand.SparseNode[4];
     private boolean hasAnySchema;
 
     FrekiTransactionApplier( Stores stores, FrekiStorageReader reader, SchemaState schemaState, IndexUpdateListener indexUpdateListener,
@@ -132,57 +129,49 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     @Override
     public void handle( FrekiCommand.SparseNode node ) throws IOException
     {
-        checkExtractIndexUpdates( node.nodeId );
-
-        int sizeExp = node.sizeExp();
-        SimpleStore store = stores.mainStore( sizeExp );
-        try ( PageCursor cursor = store.openWriteCursor( cursorTracer ) )
+        for ( FrekiCommand.RecordChange change = node.changes(); change != null; change = change.next() )
         {
-            boolean updated = node.mode() == Mode.UPDATE;
-            Record afterRecord = node.after != null ? node.after : deletedRecord( sizeExp, node.recordId() );
-            store.write( cursor, afterRecord, idUpdates == null || updated ? IGNORE : idUpdates, cursorTracer );
+            int sizeExp = change.sizeExp();
+            SimpleStore store = stores.mainStore( sizeExp );
+            try ( PageCursor cursor = store.openWriteCursor( cursorTracer ) )
+            {
+                boolean updated = change.mode() == Mode.UPDATE;
+                Record afterRecord = change.after != null ? change.after : deletedRecord( sizeExp, change.recordId() );
+                store.write( cursor, afterRecord, idUpdates == null || updated ? IGNORE : idUpdates, cursorTracer );
+            }
         }
 
         if ( indexUpdates != null )
         {
-            currentSparseNodeCommands[sizeExp] = node;
+            checkExtractIndexUpdates( node );
         }
     }
 
-    private void checkExtractIndexUpdates( long nodeId )
+    private void checkExtractIndexUpdates( FrekiCommand.SparseNode node )
     {
-        if ( nodeId != currentNodeId )
+        long[] labelsBefore = findLabelsAndInitializePropertyCursor( node, propertyCursorBefore, change -> change.before, !hasAnySchema );
+        long[] labelsAfter = findLabelsAndInitializePropertyCursor( node, propertyCursorAfter, change -> change.after, !hasAnySchema );
+        if ( hasAnySchema )
         {
-            if ( currentNodeId != NULL )
+            EntityUpdates entityUpdates = extractIndexUpdates( node, labelsBefore, labelsAfter );
+            Set<IndexDescriptor> relatedIndexes = stores.schemaCache.getIndexesRelatedTo( entityUpdates, EntityType.NODE );
+            if ( !relatedIndexes.isEmpty() )
             {
-                long[] labelsBefore = findLabelsAndInitializePropertyCursor( propertyCursorBefore, node -> node.before, !hasAnySchema );
-                long[] labelsAfter = findLabelsAndInitializePropertyCursor( propertyCursorAfter, node -> node.after, !hasAnySchema );
-                if ( hasAnySchema )
-                {
-                    EntityUpdates entityUpdates = extractIndexUpdates( labelsBefore, labelsAfter );
-                    Set<IndexDescriptor> relatedIndexes = stores.schemaCache.getIndexesRelatedTo( entityUpdates, EntityType.NODE );
-                    if ( !relatedIndexes.isEmpty() )
-                    {
-                        indexUpdates.add( entityUpdates.forIndexKeys( relatedIndexes, reader, EntityType.NODE, cursorTracer ) );
-                    }
-                }
-                if ( labelIndexUpdates != null )
-                {
-                    labelIndexUpdates.add( EntityTokenUpdate.tokenChanges( currentNodeId, labelsBefore.clone(), labelsAfter.clone() ) );
-                }
+                indexUpdates.add( entityUpdates.forIndexKeys( relatedIndexes, reader, EntityType.NODE, cursorTracer ) );
             }
-
-            Arrays.fill( currentSparseNodeCommands, null );
-            currentNodeId = nodeId;
+        }
+        if ( labelIndexUpdates != null )
+        {
+            labelIndexUpdates.add( EntityTokenUpdate.tokenChanges( node.nodeId, labelsBefore.clone(), labelsAfter.clone() ) );
         }
     }
 
-    public EntityUpdates extractIndexUpdates( long[] labelsBefore, long[] labelsAfter )
+    public EntityUpdates extractIndexUpdates( FrekiCommand.SparseNode node, long[] labelsBefore, long[] labelsAfter )
     {
-        FrekiCommand.SparseNode x1 = currentSparseNodeCommands[0];
+        FrekiCommand.RecordChange x1 = node.change( 0 );
         boolean nodeIsCreatedRightNow = x1 != null && x1.mode() == Mode.CREATE;
 
-        EntityUpdates.Builder builder = EntityUpdates.forEntity( currentNodeId, nodeIsCreatedRightNow );
+        EntityUpdates.Builder builder = EntityUpdates.forEntity( node.nodeId, nodeIsCreatedRightNow );
         builder.withTokens( labelsBefore ).withTokensAfter( labelsAfter );
         boolean beforeHasNext = propertyCursorBefore.next();
         boolean afterHasNext = propertyCursorAfter.next();
@@ -226,74 +215,71 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         return builder.build();
     }
 
-    private long[] findLabelsAndInitializePropertyCursor( FrekiPropertyCursor propertyCursor, Function<FrekiCommand.SparseNode,Record> recordFunction,
-            boolean skipProperties )
+    private long[] findLabelsAndInitializePropertyCursor( FrekiCommand.SparseNode node, FrekiPropertyCursor propertyCursor,
+            Function<FrekiCommand.RecordChange,Record> recordFunction, boolean skipProperties )
     {
         long[] labels = EMPTY_LONG_ARRAY;
         boolean investigatedX1 = false;
         boolean investigatedXL = false;
         boolean labelsLoaded = false;
         boolean propertiesLoaded = skipProperties;
-        for ( int i = 0; i < currentSparseNodeCommands.length && (!propertiesLoaded || !labelsLoaded); i++ )
+        for ( FrekiCommand.RecordChange change = node.changes(); change != null && (!propertiesLoaded || !labelsLoaded); change = change.next() )
         {
-            if ( currentSparseNodeCommands[i] != null )
+            Record record = recordFunction.apply( change );
+            boolean inUse = record != null;
+            if ( inUse )
             {
-                Record record = recordFunction.apply( currentSparseNodeCommands[i] );
-                boolean inUse = record != null;
-                if ( inUse )
+                nodeCursor.initializeFromRecord( record );
+                if ( !labelsLoaded )
                 {
-                    nodeCursor.initializeFromRecord( record );
-                    if ( !labelsLoaded )
+                    if ( nodeCursor.data.header.hasMark( Header.FLAG_LABELS ) )
                     {
-                        if ( nodeCursor.data.header.hasMark( Header.FLAG_LABELS ) )
-                        {
-                            labels = nodeCursor.labels();
-                            labelsLoaded = true;
-                        }
-                        else if ( !nodeCursor.data.header.hasReferenceMark( Header.FLAG_LABELS ) )
-                        {
-                            labelsLoaded = true;
-                        }
+                        labels = nodeCursor.labels();
+                        labelsLoaded = true;
                     }
-                    if ( !propertiesLoaded )
+                    else if ( !nodeCursor.data.header.hasReferenceMark( Header.FLAG_LABELS ) )
                     {
-                        if ( nodeCursor.data.header.hasMark( Header.OFFSET_PROPERTIES ) )
-                        {
-                            nodeCursor.properties( propertyCursor );
-                            propertiesLoaded = true;
-                        }
-                        else if ( !nodeCursor.data.header.hasReferenceMark( Header.OFFSET_PROPERTIES ) )
-                        {
-                            propertyCursor.reset();
-                            propertiesLoaded = true;
-                        }
+                        labelsLoaded = true;
                     }
                 }
+                if ( !propertiesLoaded )
+                {
+                    if ( nodeCursor.data.header.hasMark( Header.OFFSET_PROPERTIES ) )
+                    {
+                        nodeCursor.properties( propertyCursor );
+                        propertiesLoaded = true;
+                    }
+                    else if ( !nodeCursor.data.header.hasReferenceMark( Header.OFFSET_PROPERTIES ) )
+                    {
+                        propertyCursor.reset();
+                        propertiesLoaded = true;
+                    }
+                }
+            }
 
-                if ( i == 0 )
-                {
-                    //in x1
-                    investigatedX1 = true;
-                    if ( !inUse || nodeCursor.data.forwardPointer == NULL )
-                    {
-                        investigatedXL = true;
-                        break;
-                    }
-                }
-                else
+            if ( change.sizeExp() == 0 )
+            {
+                //in x1
+                investigatedX1 = true;
+                if ( !inUse || nodeCursor.data.forwardPointer == NULL )
                 {
                     investigatedXL = true;
-                    if ( inUse )
-                    {
-                        break;
-                    }
+                    break;
+                }
+            }
+            else
+            {
+                investigatedXL = true;
+                if ( inUse )
+                {
+                    break;
                 }
             }
         }
 
         if ( (!propertiesLoaded || !labelsLoaded) && (!investigatedX1 || !investigatedXL) )
         {
-            nodeCursor.single( currentNodeId );
+            nodeCursor.single( node.nodeId );
             if ( nodeCursor.next() )
             {
                 if ( !labelsLoaded )
@@ -440,6 +426,6 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
             indexUpdatesAsyncApply.await();
             denseAsyncApply.await();
         };
-        closeAll( () -> checkExtractIndexUpdates( NULL ), nodeCursor, propertyCursorBefore, propertyCursorAfter, indexesCloser );
+        closeAll( nodeCursor, propertyCursorBefore, propertyCursorAfter, indexesCloser );
     }
 }

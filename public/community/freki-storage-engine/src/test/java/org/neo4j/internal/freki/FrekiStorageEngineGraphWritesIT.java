@@ -737,10 +737,7 @@ class FrekiStorageEngineGraphWritesIT
         } );
 
         // when
-        createAndApplyTransaction( target ->
-        {
-            target.visitDeletedNode( nodeId );
-        } );
+        createAndApplyTransaction( target -> target.visitDeletedNode( nodeId ) );
 
         // then
         try ( StorageReader reader = storageEngine.newReader();
