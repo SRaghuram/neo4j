@@ -95,6 +95,9 @@ public class MetricsSettings implements SettingsDeclaration
     public static final Setting<Boolean> jvmFileDescriptorsEnabled =
             newBuilder( "metrics.jvm.file.descriptors.enabled", BOOL, true ).build();
 
+    @Description( "Enable reporting metrics about the VM pause time." )
+    public static final Setting<Boolean> jvmPauseTimeEnabled = newBuilder( "metrics.jvm.pause_time.enabled", BOOL, true ).build();
+
     @Description( "Enable reporting metrics about number of occurred replanning events." )
     public static final Setting<Boolean> cypherPlanningEnabled = newBuilder( "metrics.cypher.replanning.enabled", BOOL, true ).build();
 

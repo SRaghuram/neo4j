@@ -17,6 +17,7 @@ import com.neo4j.metrics.source.jvm.GCMetrics;
 import com.neo4j.metrics.source.jvm.HeapMetrics;
 import com.neo4j.metrics.source.jvm.JVMMemoryBuffersMetrics;
 import com.neo4j.metrics.source.jvm.JVMMemoryPoolMetrics;
+import com.neo4j.metrics.source.jvm.PauseMetrics;
 import com.neo4j.metrics.source.jvm.ThreadMetrics;
 import com.neo4j.metrics.source.server.ServerMetrics;
 
@@ -80,6 +81,11 @@ public class GlobalMetricsExporter
         if ( config.get( MetricsSettings.jvmFileDescriptorsEnabled ) )
         {
             life.add( new FileDescriptorMetrics( globalMetricsPrefix, registry ) );
+        }
+
+        if ( config.get( MetricsSettings.jvmPauseTimeEnabled ) )
+        {
+            life.add( new PauseMetrics( globalMetricsPrefix, registry, dependencies.monitors() ) );
         }
 
         if ( config.get( MetricsSettings.boltMessagesEnabled ) )
