@@ -253,6 +253,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val write: Map[String, String] = baseMap + ("resource" -> "graph", "action" -> "write")
   val create: Map[String, String] = baseMap + ("resource" -> "graph", "action" -> "create_element")
   val delete: Map[String, String] = baseMap + ("resource" -> "graph", "action" -> "delete_element")
+  val setProperty: Map[String, String] = baseMap + ("resource" -> "all_properties", "action" -> "set_property")
   val setLabel: Map[String, String] = baseMap + ("action" -> "set_label", "segment" -> "NODE(*)")
   val removeLabel: Map[String, String] = baseMap + ("action" -> "remove_label", "segment" -> "NODE(*)")
 

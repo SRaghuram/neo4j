@@ -506,5 +506,53 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     )
   }
 
+  test("Grant set property") {
+    // When
+    val plan = execute("EXPLAIN GRANT SET PROPERTY {*} ON GRAPH * TO role").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        graphPrivilegePlanForAllGraphs("GrantSetProperty", allResourceArg(), Details("RELATIONSHIPS *"), "role",
+          graphPrivilegePlanForAllGraphs("GrantSetProperty", allResourceArg(), Details("NODES *"), "role",
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Deny set property") {
+    // When
+    val plan = execute("EXPLAIN DENY SET PROPERTY {prop} ON GRAPH foo NODES bar, baz TO role").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("DenySetProperty", "foo", resourceArg("prop"), Details("NODE baz"), "role",
+          graphPrivilegePlan("DenySetProperty", "foo", resourceArg("prop"), Details("NODE bar"), "role",
+            assertDbmsAdminPlan("ASSIGN PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke set property") {
+    // When
+    val plan = execute("EXPLAIN REVOKE GRANT SET PROPERTY {foo,bar} ON GRAPH * RELATIONSHIP baz FROM role").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        graphPrivilegePlanForAllGraphs("RevokeSetProperty(GRANTED)", resourceArg("bar"), Details("RELATIONSHIP baz"), "role",
+          graphPrivilegePlanForAllGraphs("RevokeSetProperty(GRANTED)", resourceArg("foo"), Details("RELATIONSHIP baz"), "role",
+            assertDbmsAdminPlan("REMOVE PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
   private def details(info: String): Details = Details(asPrettyString.raw(info))
 }
