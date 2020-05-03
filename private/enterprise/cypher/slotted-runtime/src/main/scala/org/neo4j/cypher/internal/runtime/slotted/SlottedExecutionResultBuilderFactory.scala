@@ -20,6 +20,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.ExecutionResultBuilder
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.kernel.impl.query.QuerySubscriber
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
 
@@ -40,15 +41,14 @@ class SlottedExecutionResultBuilderFactory(pipe: Pipe,
 
   case class SlottedExecutionResultBuilder(queryContext: QueryContext) extends BaseExecutionResultBuilder {
 
-    val cursors = new ExpressionCursors(queryContext.transactionalContext.cursors, queryContext.transactionalContext.transaction.pageCursorTracer())
+    val transactionMemoryTracker: MemoryTracker = queryContext.transactionalContext.transaction.memoryTracker()
+    val cursors = new ExpressionCursors(queryContext.transactionalContext.cursors, queryContext.transactionalContext.transaction.pageCursorTracer(), transactionMemoryTracker)
     queryContext.resources.trace(cursors)
     override protected def createQueryState(params: MapValue,
                                             prePopulateResults: Boolean,
                                             input: InputDataStream,
                                             subscriber: QuerySubscriber,
-                                            doProfile: Boolean): QueryState = {
-
-      val transactionMemoryTracker = queryContext.transactionalContext.transaction.memoryTracker()
+    doProfile: Boolean): QueryState = {
 
       new QueryState(queryContext,
         externalResource,

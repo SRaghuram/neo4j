@@ -48,6 +48,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngine;
 
 class RemoteStoreTest
@@ -230,7 +231,7 @@ class RemoteStoreTest
             throws IOException, StoreCopyFailedException
     {
         RemoteStore remoteStore = new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ), null,
-                storeCopyClient, txPullClient, factory( writer ), config, new Monitors(), selectStorageEngine(), DATABASE_ID, PageCacheTracer.NULL );
+                storeCopyClient, txPullClient, factory( writer ), config, new Monitors(), selectStorageEngine(), DATABASE_ID, PageCacheTracer.NULL, INSTANCE );
 
         remoteStore.copy( catchupAddressProvider, storeId, databaseLayout );
     }
@@ -250,7 +251,7 @@ class RemoteStoreTest
     {
         TransactionLogCatchUpFactory factory = mock( TransactionLogCatchUpFactory.class );
         when( factory.create( any(), any( FileSystemAbstraction.class ), isNull(), any( Config.class ), any( LogProvider.class ), any(),
-                any(), anyBoolean(), anyBoolean(), any() ) ).thenReturn( writer );
+                any(), anyBoolean(), anyBoolean(), any(), any() ) ).thenReturn( writer );
         return factory;
     }
 }

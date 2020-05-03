@@ -66,7 +66,8 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
         case CUSTOM_MEMORY_TRACKING(decorator: MemoryTrackerDecorator) => new MemoryTrackingStandardStateFactory(decorator(transactionMemoryTracker));
       }
 
-    val resources = new QueryResources(cursors: CursorFactory, queryContext.transactionalContext.transaction.pageCursorTracer())
+    val transaction = queryContext.transactionalContext.transaction
+    val resources = new QueryResources(cursors: CursorFactory, transaction.pageCursorTracer(), transaction.memoryTracker())
     val tracer = schedulerTracer.traceQuery()
     val tracker = stateFactory.newTracker(subscriber, queryContext, tracer)
     val queryState = PipelinedQueryState(queryContext,

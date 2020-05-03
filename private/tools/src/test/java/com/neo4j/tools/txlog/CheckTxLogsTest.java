@@ -5,20 +5,20 @@
  */
 package com.neo4j.tools.txlog;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.function.LongFunction;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 import org.mockito.Mockito;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.LongFunction;
+
 import org.neo4j.function.ThrowingConsumer;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory;
@@ -26,6 +26,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.PhysicalFlushableChecksumChannel;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.memory.HeapScopedBuffer;
 import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.PropertyType;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
@@ -61,6 +62,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeaderWriter.writeLogHeader;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 
 @EphemeralNeo4jLayoutExtension
@@ -871,11 +873,11 @@ class CheckTxLogsTest
             throws IOException
     {
         ensureLogExists( log );
-        ByteBuffer buf = ByteBuffer.allocate( 100 );
         try ( StoreChannel channel = fs.write( log );
                 LogVersionedStoreChannel versionedChannel = new PhysicalLogVersionedStoreChannel( channel, 0, (byte) 0, log,
                         getLogFiles().getChannelNativeAccessor() );
-              PhysicalFlushableChecksumChannel writableLogChannel = new PhysicalFlushableChecksumChannel( versionedChannel, buf ) )
+                PhysicalFlushableChecksumChannel writableLogChannel = new PhysicalFlushableChecksumChannel( versionedChannel,
+                        new HeapScopedBuffer( 100, INSTANCE ) ) )
         {
             long offset = channel.size();
             channel.position( offset );
@@ -890,7 +892,7 @@ class CheckTxLogsTest
         {
             try ( StoreChannel channel = fs.write( logFile ) )
             {
-                writeLogHeader( channel, new LogHeader( getLogFiles().getLogVersion( logFile ), 0, StoreId.UNKNOWN ) );
+                writeLogHeader( channel, new LogHeader( getLogFiles().getLogVersion( logFile ), 0, StoreId.UNKNOWN ), INSTANCE );
             }
         }
     }

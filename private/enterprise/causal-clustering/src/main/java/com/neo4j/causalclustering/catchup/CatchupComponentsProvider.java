@@ -34,6 +34,7 @@ import org.neo4j.kernel.database.DatabaseTracers;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogProvider;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngineFactory;
@@ -64,6 +65,7 @@ public final class CatchupComponentsProvider
     private final StorageEngineFactory storageEngineFactory;
     private final ExponentialBackoffStrategy storeCopyBackoffStrategy;
     private final DatabaseTracers databaseTracers;
+    private final MemoryTracker otherMemoryGlobalTracker;
 
     public CatchupComponentsProvider( GlobalModule globalModule, PipelineBuilders pipelineBuilders )
     {
@@ -82,7 +84,7 @@ public final class CatchupComponentsProvider
         this.catchupClientFactory = createCatchupClientFactory();
         this.portRegister = globalModule.getConnectorPortRegister();
         this.databaseTracers = new DatabaseTracers( globalModule.getTracers() );
-        var otherMemoryGlobalTracker = globalModule.getOtherMemoryPool().getPoolMemoryTracker();
+        this.otherMemoryGlobalTracker = globalModule.getOtherMemoryPool().getPoolMemoryTracker();
         this.copiedStoreRecovery = globalLife.add(
                 new CopiedStoreRecovery( pageCache, databaseTracers, fileSystem, globalModule.getStorageEngineFactory(), otherMemoryGlobalTracker ) );
         this.storeCopyBackoffStrategy = new ExponentialBackoffStrategy( 1,
@@ -162,7 +164,7 @@ public final class CatchupComponentsProvider
         TxPullClient txPullClient = new TxPullClient( catchupClientFactory, clusteredDatabaseContext.databaseId(), () -> monitors, databaseLogProvider );
 
         RemoteStore remoteStore = new RemoteStore( databaseLogProvider, fileSystem, pageCache, storeCopyClient, txPullClient, transactionLogFactory, config,
-                monitors, storageEngineFactory, clusteredDatabaseContext.databaseId(), databaseTracers.getPageCacheTracer() );
+                monitors, storageEngineFactory, clusteredDatabaseContext.databaseId(), databaseTracers.getPageCacheTracer(), otherMemoryGlobalTracker );
 
         StoreCopyProcess storeCopy = new StoreCopyProcess( fileSystem, pageCache, clusteredDatabaseContext,
                 copiedStoreRecovery, remoteStore, databaseLogProvider );

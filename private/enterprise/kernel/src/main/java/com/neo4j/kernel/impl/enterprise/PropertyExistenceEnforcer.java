@@ -37,6 +37,7 @@ import org.neo4j.io.IOUtils;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.api.exceptions.schema.NodePropertyExistenceException;
 import org.neo4j.kernel.api.exceptions.schema.RelationshipPropertyExistenceException;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.StorageReader;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
@@ -58,7 +59,7 @@ class PropertyExistenceEnforcer
     private final List<RelationTypeSchemaDescriptor> relationshipConstraints;
     private final MutableLongObjectMap<int[]> mandatoryNodePropertiesByLabel = new LongObjectHashMap<>();
     private final MutableLongObjectMap<int[]> mandatoryRelationshipPropertiesByType = new LongObjectHashMap<>();
-    private TokenNameLookup tokenNameLookup;
+    private final TokenNameLookup tokenNameLookup;
 
     private PropertyExistenceEnforcer( List<LabelSchemaDescriptor> nodes, List<RelationTypeSchemaDescriptor> rels, TokenNameLookup tokenNameLookup )
     {
@@ -95,16 +96,17 @@ class PropertyExistenceEnforcer
         return values;
     }
 
-    TxStateVisitor decorate( TxStateVisitor visitor, Read read, CursorFactory cursorFactory, PageCursorTracer pageCursorTracer )
+    TxStateVisitor decorate( TxStateVisitor visitor, Read read, CursorFactory cursorFactory, PageCursorTracer pageCursorTracer, MemoryTracker memoryTracker )
     {
-        return new Decorator( visitor, read, cursorFactory, pageCursorTracer );
+        return new Decorator( visitor, read, cursorFactory, pageCursorTracer, memoryTracker );
     }
 
     private static final PropertyExistenceEnforcer NO_CONSTRAINTS = new PropertyExistenceEnforcer(
             emptyList(), emptyList(), null /*not used when there are no constraints*/ )
     {
         @Override
-        TxStateVisitor decorate( TxStateVisitor visitor, Read read, CursorFactory cursorFactory, PageCursorTracer pageCursorTracer )
+        TxStateVisitor decorate( TxStateVisitor visitor, Read read, CursorFactory cursorFactory, PageCursorTracer pageCursorTracer,
+                MemoryTracker memoryTracker )
         {
             return visitor;
         }
@@ -155,12 +157,12 @@ class PropertyExistenceEnforcer
         private final PropertyCursor propertyCursor;
         private final RelationshipScanCursor relationshipCursor;
 
-        Decorator( TxStateVisitor next, Read read, CursorFactory cursorFactory, PageCursorTracer cursorTracer )
+        Decorator( TxStateVisitor next, Read read, CursorFactory cursorFactory, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
         {
             super( next );
             this.read = read;
             this.nodeCursor = cursorFactory.allocateFullAccessNodeCursor( cursorTracer );
-            this.propertyCursor = cursorFactory.allocateFullAccessPropertyCursor( cursorTracer );
+            this.propertyCursor = cursorFactory.allocateFullAccessPropertyCursor( cursorTracer, memoryTracker );
             this.relationshipCursor = cursorFactory.allocateRelationshipScanCursor( cursorTracer );
         }
 

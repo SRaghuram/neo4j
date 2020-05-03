@@ -273,7 +273,7 @@ class RecoveryProtocolTest
             long headerVersion, long prevIndex, long prevTerm ) throws IOException
     {
         StoreChannel channel = fsa.write( fileNames.getForSegment( fileNameVersion ) );
-        PhysicalFlushableChannel writer = new PhysicalFlushableChannel( channel );
+        PhysicalFlushableChannel writer = new PhysicalFlushableChannel( channel, INSTANCE );
         headerMarshal.marshal( new SegmentHeader( prevFileLastIndex, headerVersion, prevIndex, prevTerm ), writer );
         writer.prepareForFlush().flush();
         channel.close();

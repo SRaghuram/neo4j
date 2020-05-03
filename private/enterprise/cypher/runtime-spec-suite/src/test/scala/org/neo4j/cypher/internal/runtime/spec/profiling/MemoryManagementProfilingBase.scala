@@ -46,6 +46,7 @@ import org.neo4j.kernel.api.Kernel
 import org.neo4j.memory.HeapDumper
 import org.neo4j.memory.HeapDumpingMemoryTracker
 import org.neo4j.memory.MemoryTracker
+import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.scheduler.JobScheduler
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.ListValue
@@ -118,7 +119,7 @@ object MemoryManagementProfilingBase {
       val workerManager = resolver.resolveDependency(classOf[WorkerManagement])
       val augmentedRuntimeConfig = runtimeConfig.copy(memoryTrackingController = memoryTrackingController)
 
-      val runtimeEnvironment = RuntimeEnvironment.of(augmentedRuntimeConfig, jobScheduler, kernel.cursors(), lifeSupport, workerManager)
+      val runtimeEnvironment = RuntimeEnvironment.of(augmentedRuntimeConfig, jobScheduler, kernel.cursors(), lifeSupport, workerManager, EmptyMemoryTracker.INSTANCE)
 
       EnterpriseRuntimeContextManager(
         GeneratedQueryStructure,

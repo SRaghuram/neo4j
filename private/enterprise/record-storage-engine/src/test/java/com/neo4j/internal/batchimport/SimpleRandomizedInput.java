@@ -26,6 +26,7 @@ import org.neo4j.internal.batchimport.input.IdType;
 import org.neo4j.internal.batchimport.input.Input;
 import org.neo4j.internal.batchimport.input.InputChunk;
 import org.neo4j.internal.batchimport.input.InputEntity;
+import org.neo4j.internal.batchimport.input.PropertySizeCalculator;
 import org.neo4j.internal.batchimport.input.ReadableGroups;
 import org.neo4j.internal.batchimport.input.csv.Header.Entry;
 import org.neo4j.internal.batchimport.input.csv.Type;
@@ -261,7 +262,7 @@ public class SimpleRandomizedInput implements Input
     }
 
     @Override
-    public Estimates calculateEstimates( ToIntBiFunction<Value[],PageCursorTracer> valueSizeCalculator )
+    public Estimates calculateEstimates( PropertySizeCalculator valueSizeCalculator ) throws IOException
     {
         return Input.knownEstimates( nodeCount, relationshipCount, 0, 0, 0, 0, 0 );
     }

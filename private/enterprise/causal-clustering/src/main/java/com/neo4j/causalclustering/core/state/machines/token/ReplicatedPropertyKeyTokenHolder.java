@@ -14,15 +14,17 @@ import org.neo4j.internal.id.IdType;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.database.NamedDatabaseId;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.token.TokenRegistry;
 
 public class ReplicatedPropertyKeyTokenHolder extends ReplicatedTokenHolder
 {
     public ReplicatedPropertyKeyTokenHolder( NamedDatabaseId namedDatabaseId, TokenRegistry registry, Replicator replicator,
-            IdGeneratorFactory idGeneratorFactory, Supplier<StorageEngine> storageEngineSupplier, PageCacheTracer pageCacheTracer )
+            IdGeneratorFactory idGeneratorFactory, Supplier<StorageEngine> storageEngineSupplier, PageCacheTracer pageCacheTracer,
+            MemoryTracker memoryTracker )
     {
         super( namedDatabaseId, registry, replicator, idGeneratorFactory, IdType.PROPERTY_KEY_TOKEN, storageEngineSupplier, TokenType.PROPERTY,
-                TransactionState::propertyKeyDoCreateForName, pageCacheTracer );
+                TransactionState::propertyKeyDoCreateForName, pageCacheTracer, memoryTracker );
     }
 }

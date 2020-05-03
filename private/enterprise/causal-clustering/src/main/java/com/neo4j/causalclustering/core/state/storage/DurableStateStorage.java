@@ -16,17 +16,20 @@ import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FlushableChannel;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
+import org.neo4j.io.memory.HeapScopedBuffer;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.memory.MemoryTracker;
 
 import static java.lang.Math.toIntExact;
+import static org.neo4j.io.ByteUnit.kibiBytes;
 
 public class DurableStateStorage<STATE> extends LifecycleAdapter implements StateStorage<STATE>
 {
     private final StateRecoveryManager<STATE> recoveryManager;
     private final Log log;
+    private final MemoryTracker memoryTracker;
     private STATE initialState;
     private final File fileA;
     private final File fileB;
@@ -48,6 +51,7 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
         this.marshal = fileType.marshal();
         this.numberOfEntriesBeforeRotation = numberOfEntriesBeforeRotation;
         this.log = logProvider.getLog( getClass() );
+        this.memoryTracker = memoryTracker;
         this.recoveryManager = new StateRecoveryManager<>( fsa, this.marshal, memoryTracker );
         this.fileA = new File( baseDir, fileType.name() + ".a" );
         this.fileB = new File( baseDir, fileType.name() + ".b" );
@@ -156,7 +160,6 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
 
     private PhysicalFlushableChannel channelForFile( File file ) throws IOException
     {
-        ByteBuffer buffer = ByteBuffer.allocate( toIntExact( ByteUnit.kibiBytes( 512 ) ) );
-        return new PhysicalFlushableChannel( fsa.write( file ), buffer );
+        return new PhysicalFlushableChannel( fsa.write( file ), new HeapScopedBuffer( toIntExact( kibiBytes( 512 ) ), memoryTracker ) );
     }
 }

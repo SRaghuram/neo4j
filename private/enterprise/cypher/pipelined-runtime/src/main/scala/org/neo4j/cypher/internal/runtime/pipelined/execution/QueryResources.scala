@@ -19,9 +19,9 @@ import org.neo4j.values.AnyValue
  * Resources used by the pipelined runtime for query execution.
  * Each worker has its own resources and they are valid for multiple queries.
  */
-class QueryResources(cursorFactory: CursorFactory, cursorTracer: PageCursorTracer) extends AutoCloseable {
+class QueryResources(cursorFactory: CursorFactory, cursorTracer: PageCursorTracer, tracker: MemoryTracker) extends AutoCloseable {
 
-  val expressionCursors: ExpressionCursors = new ExpressionCursors(cursorFactory, cursorTracer)
+  val expressionCursors: ExpressionCursors = new ExpressionCursors(cursorFactory, cursorTracer, tracker)
   val cursorPools: CursorPools = new CursorPools(cursorFactory, cursorTracer)
   private var _expressionVariables = new Array[AnyValue](8)
   private var _memoryTracker: MemoryTracker = EmptyMemoryTracker.INSTANCE

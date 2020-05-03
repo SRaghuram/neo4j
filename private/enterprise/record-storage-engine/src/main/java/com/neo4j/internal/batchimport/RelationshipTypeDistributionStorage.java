@@ -15,7 +15,7 @@ import org.neo4j.io.fs.FlushableChannel;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.ReadableChannel;
-import org.neo4j.io.memory.BufferScope;
+import org.neo4j.io.memory.NativeScopedBuffer;
 import org.neo4j.memory.MemoryTracker;
 
 class RelationshipTypeDistributionStorage
@@ -35,7 +35,7 @@ class RelationshipTypeDistributionStorage
     {
         // This could have been done using a writer and writing human readable text.
         // Perhaps simpler code, but this format is safe against any type of weird characters that the type may contain
-        try ( FlushableChannel channel = new PhysicalFlushableChannel( fs.write( file ) ) )
+        try ( FlushableChannel channel = new PhysicalFlushableChannel( fs.write( file ), memoryTracker ) )
         {
             channel.putLong( distribution.getNodeCount() );
             channel.putLong( distribution.getPropertyCount() );
@@ -50,8 +50,8 @@ class RelationshipTypeDistributionStorage
 
     DataStatistics load() throws IOException
     {
-        try ( BufferScope bufferScope = new BufferScope( ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE, memoryTracker );
-              ReadableChannel channel = new ReadAheadChannel<>( fs.read( file ), bufferScope.buffer ) )
+        try ( NativeScopedBuffer bufferScope = new NativeScopedBuffer( ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE, memoryTracker );
+              ReadableChannel channel = new ReadAheadChannel<>( fs.read( file ), bufferScope.getBuffer() ) )
         {
             long nodeCount = channel.getLong();
             long propertyCount = channel.getLong();

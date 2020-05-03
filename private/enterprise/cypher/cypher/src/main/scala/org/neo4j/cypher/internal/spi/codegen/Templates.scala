@@ -61,6 +61,7 @@ import org.neo4j.kernel.api.KernelTransaction
 import org.neo4j.kernel.impl.api.RelationshipDataExtractor
 import org.neo4j.kernel.impl.core.TransactionalEntityFactory
 import org.neo4j.kernel.impl.util.ValueUtils
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.AnyValues
 import org.neo4j.values.storable.Value
@@ -195,6 +196,13 @@ object Templates {
           method[QueryTransactionalContext, KernelTransaction]("transaction")),
       method[KernelTransaction, PageCursorTracer]("pageCursorTracer")
     )).
+    put(self(classHandle), typeRef[MemoryTracker], "memoryTracker",
+      invoke(
+        invoke(
+          invoke(load("queryContext", typeRef[QueryContext]), method[QueryContext, QueryTransactionalContext]("transactionalContext")),
+          method[QueryTransactionalContext, KernelTransaction]("transaction")),
+        method[KernelTransaction, MemoryTracker]("memoryTracker")
+    )).
     put(self(classHandle), typeRef[TransactionalEntityFactory], "proxySpi",
       invoke(load("queryContext", typeRef[QueryContext]), method[QueryContext, TransactionalEntityFactory]("entityAccessor"))).
     put(self(classHandle), typeRef[java.util.ArrayList[AutoCloseable]], "closeables",
@@ -323,8 +331,8 @@ object Templates {
         methodReference(generate.owner(), typeRef[CursorFactory], "getOrLoadCursors" ))
       using(generate.ifStatement(Expression.isNull(propertyCursor))) { block =>
         block.put(block.self(), fields.propertyCursor,
-          Expression.invoke(cursors, method[CursorFactory, PropertyCursor]("allocatePropertyCursor", typeRef[PageCursorTracer]),
-            Expression.get(generate.self(), fields.cursorTracer))
+          Expression.invoke(cursors, method[CursorFactory, PropertyCursor]("allocatePropertyCursor", typeRef[PageCursorTracer], typeRef[MemoryTracker]),
+            Expression.get(generate.self(), fields.cursorTracer), Expression.get(generate.self(), fields.memoryTracker))
         )
       }
       generate.returns(propertyCursor)

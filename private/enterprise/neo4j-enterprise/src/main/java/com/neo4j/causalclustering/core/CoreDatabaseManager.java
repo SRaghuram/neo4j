@@ -76,7 +76,7 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         var kernelResolvers = new CoreKernelResolvers();
         var kernelContext = edition.coreDatabaseFactory()
                 .createKernelComponents( namedDatabaseId, clusterComponents, raftContext, kernelResolvers,
-                        coreDatabaseLogService, versionContextSupplier );
+                        coreDatabaseLogService, versionContextSupplier, globalModule.getOtherMemoryPool().getPoolMemoryTracker() );
 
         var databaseCreationContext = newDatabaseCreationContext( namedDatabaseId, coreDatabaseDependencies,
                                                                   coreDatabaseMonitors, kernelContext, versionContextSupplier, databaseConfig,

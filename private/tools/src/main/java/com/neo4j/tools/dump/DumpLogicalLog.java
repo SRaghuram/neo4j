@@ -32,10 +32,12 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
 import org.neo4j.kernel.impl.transaction.log.entry.LogHeader;
 import org.neo4j.kernel.impl.transaction.log.entry.LogHeaderReader;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.storageengine.api.StorageCommand;
 
 import static java.util.TimeZone.getTimeZone;
 import static org.neo4j.internal.helpers.Format.DEFAULT_TIME_ZONE;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 /**
  * Tool to represent logical logs in readable format for further analysis.
@@ -67,7 +69,7 @@ public class DumpLogicalLog
             public void logFile( File file, long logVersion ) throws IOException
             {
                 this.file = file;
-                LogHeader logHeader = LogHeaderReader.readLogHeader( fileSystem, file );
+                LogHeader logHeader = LogHeaderReader.readLogHeader( fileSystem, file, INSTANCE );
                 out.println( "=== " + file.getAbsolutePath() + "[" + logHeader + "] ===" );
             }
 

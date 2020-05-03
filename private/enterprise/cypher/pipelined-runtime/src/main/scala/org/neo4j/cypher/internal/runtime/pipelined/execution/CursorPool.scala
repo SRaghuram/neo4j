@@ -22,6 +22,7 @@ import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.RelationshipTypeIndexCursor
 import org.neo4j.io.IOUtils
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
+import org.neo4j.memory.MemoryTracker
 
 class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTracer) extends CursorFactory with AutoCloseable {
 
@@ -70,9 +71,9 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
 
   override def allocateRelationshipTraversalCursor(cursorTracer: PageCursorTracer): RelationshipTraversalCursor = relationshipTraversalCursorPool.allocate()
 
-  override def allocatePropertyCursor(cursorTracer: PageCursorTracer): PropertyCursor = fail("PropertyCursor")
+  override def allocatePropertyCursor(cursorTracer: PageCursorTracer, memoryTracker: MemoryTracker): PropertyCursor = fail("PropertyCursor")
 
-  override def allocateFullAccessPropertyCursor(cursorTracer: PageCursorTracer): PropertyCursor = fail("FullAccessPropertyCursor")
+  override def allocateFullAccessPropertyCursor(cursorTracer: PageCursorTracer, memoryTracker: MemoryTracker): PropertyCursor = fail("FullAccessPropertyCursor")
 
   override def allocateNodeValueIndexCursor(cursorTracer: PageCursorTracer): NodeValueIndexCursor = nodeValueIndexCursorPool.allocate()
 

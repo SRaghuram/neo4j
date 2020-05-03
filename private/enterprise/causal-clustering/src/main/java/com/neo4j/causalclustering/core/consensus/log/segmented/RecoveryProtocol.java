@@ -24,10 +24,12 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.io.memory.HeapScopedBuffer;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.memory.MemoryTracker;
 
+import static com.neo4j.causalclustering.core.consensus.log.segmented.SegmentHeader.CURRENT_RECORD_OFFSET;
 import static java.lang.String.format;
 import static java.util.Collections.emptyList;
 
@@ -150,7 +152,7 @@ class RecoveryProtocol
             log.warn( "Recovering last file based on next-to-last file. " + header );
 
             File file = fileNames.getForSegment( expectedSegmentNumber );
-            writeHeader( fileSystem, file, header );
+            writeHeader( fileSystem, file, header, memoryTracker );
 
             segment = new SegmentFile( fileSystem, file, readerPool, expectedSegmentNumber,
                     marshalSelector.apply( header.formatVersion() ), logProvider, header, memoryTracker );
@@ -169,7 +171,7 @@ class RecoveryProtocol
     {
         try ( StoreChannel channel = fileSystem.read( file ) )
         {
-            ByteBuffer buffer = ByteBuffer.allocate( SegmentHeader.CURRENT_RECORD_OFFSET );
+            ByteBuffer buffer = ByteBuffer.allocate( CURRENT_RECORD_OFFSET );
             return headerMarshal.unmarshal( new ReadAheadChannel<>( channel, buffer ) );
         }
     }
@@ -177,15 +179,17 @@ class RecoveryProtocol
     private static void writeHeader(
             FileSystemAbstraction fileSystem,
             File file,
-            SegmentHeader header ) throws IOException
+            SegmentHeader header,
+            MemoryTracker memoryTracker ) throws IOException
     {
         try ( StoreChannel channel = fileSystem.write( file ) )
         {
             channel.position( 0 );
-            ByteBuffer buffer = ByteBuffer.allocate( SegmentHeader.CURRENT_RECORD_OFFSET );
-            PhysicalFlushableChannel writer = new PhysicalFlushableChannel( channel, buffer );
-            headerMarshal.marshal( header, writer );
-            writer.prepareForFlush().flush();
+            try ( PhysicalFlushableChannel writer = new PhysicalFlushableChannel( channel, new HeapScopedBuffer( CURRENT_RECORD_OFFSET, memoryTracker ) ) )
+            {
+                headerMarshal.marshal( header, writer );
+                writer.prepareForFlush().flush();
+            }
         }
     }
 

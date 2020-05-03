@@ -71,6 +71,7 @@ import org.neo4j.internal.kernel.api.SchemaRead
 import org.neo4j.internal.kernel.api.TokenRead
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
 import org.neo4j.kernel.impl.core.TransactionalEntityFactory
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
 
@@ -202,6 +203,7 @@ object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
       entityAccessor = clazz.field(typeRef[TransactionalEntityFactory], "proxySpi"),
       tracer = clazz.field(typeRef[QueryProfiler], "tracer"),
       cursorTracer = clazz.field(typeRef[PageCursorTracer], "cursorTracer"),
+      memoryTracker = clazz.field(typeRef[MemoryTracker], "memoryTracker"),
       params = clazz.field(typeRef[MapValue], "params"),
       queryContext = clazz.field(typeRef[QueryContext], "queryContext"),
       cursors = clazz.field(typeRef[CursorFactory], "cursors"),

@@ -244,7 +244,7 @@ class CoreDatabaseFactory
     }
 
     CoreEditionKernelComponents createKernelComponents( NamedDatabaseId namedDatabaseId, LifeSupport life, CoreRaftContext raftContext,
-            CoreKernelResolvers kernelResolvers, DatabaseLogService logService, VersionContextSupplier versionContextSupplier )
+            CoreKernelResolvers kernelResolvers, DatabaseLogService logService, VersionContextSupplier versionContextSupplier, MemoryTracker memoryTracker )
     {
         RaftGroup raftGroup = raftContext.raftGroup();
         Replicator replicator = raftContext.replicator();
@@ -258,15 +258,15 @@ class CoreDatabaseFactory
 
         TokenRegistry relationshipTypeTokenRegistry = new TokenRegistry( TokenHolder.TYPE_RELATIONSHIP_TYPE );
         ReplicatedRelationshipTypeTokenHolder relationshipTypeTokenHolder = new ReplicatedRelationshipTypeTokenHolder( namedDatabaseId,
-                relationshipTypeTokenRegistry, replicator, idContext.getIdGeneratorFactory(), storageEngineSupplier, pageCacheTracer );
+                relationshipTypeTokenRegistry, replicator, idContext.getIdGeneratorFactory(), storageEngineSupplier, pageCacheTracer, memoryTracker );
 
         TokenRegistry propertyKeyTokenRegistry = new TokenRegistry( TokenHolder.TYPE_PROPERTY_KEY );
         ReplicatedPropertyKeyTokenHolder propertyKeyTokenHolder = new ReplicatedPropertyKeyTokenHolder( namedDatabaseId, propertyKeyTokenRegistry, replicator,
-                idContext.getIdGeneratorFactory(), storageEngineSupplier, pageCacheTracer );
+                idContext.getIdGeneratorFactory(), storageEngineSupplier, pageCacheTracer, memoryTracker );
 
         TokenRegistry labelTokenRegistry = new TokenRegistry( TokenHolder.TYPE_LABEL );
         ReplicatedLabelTokenHolder labelTokenHolder = new ReplicatedLabelTokenHolder( namedDatabaseId, labelTokenRegistry, replicator,
-                idContext.getIdGeneratorFactory(), storageEngineSupplier, pageCacheTracer );
+                idContext.getIdGeneratorFactory(), storageEngineSupplier, pageCacheTracer, memoryTracker );
 
         ReplicatedDatabaseEventDispatch databaseEventDispatch = databaseEventService.getDatabaseEventDispatch( namedDatabaseId );
         StateMachineCommitHelper commitHelper = new StateMachineCommitHelper( raftContext.commandIndexTracker(), versionContextSupplier,

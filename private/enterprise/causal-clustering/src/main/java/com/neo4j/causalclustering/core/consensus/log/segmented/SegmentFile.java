@@ -14,7 +14,6 @@ import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 import org.neo4j.cursor.EmptyIOCursor;
 import org.neo4j.cursor.IOCursor;
@@ -22,12 +21,11 @@ import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.StoreChannel;
-import org.neo4j.io.memory.ByteBuffers;
+import org.neo4j.io.memory.NativeScopedBuffer;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.memory.MemoryTracker;
 
-import static java.lang.Math.toIntExact;
 import static java.lang.String.format;
 
 /**
@@ -52,7 +50,6 @@ class SegmentFile implements AutoCloseable
     private final long version;
 
     private PhysicalFlushableChannel bufferedWriter;
-    private ByteBuffer writeBuffer;
 
     SegmentFile( FileSystemAbstraction fileSystem, File file, ReaderPool readerPool, long version,
             ChannelMarshal<ReplicatedContent> contentMarshal, LogProvider logProvider, SegmentHeader header, MemoryTracker memoryTracker )
@@ -136,8 +133,7 @@ class SegmentFile implements AutoCloseable
 
             StoreChannel channel = fileSystem.write( file );
             channel.position( channel.size() );
-            writeBuffer = ByteBuffers.allocateDirect( toIntExact( ByteUnit.kibiBytes( 512 ) ), memoryTracker );
-            bufferedWriter = new PhysicalFlushableChannel( channel, writeBuffer );
+            bufferedWriter = new PhysicalFlushableChannel( channel, new NativeScopedBuffer( ByteUnit.kibiBytes( 512 ), memoryTracker ) );
         }
         return bufferedWriter;
     }
@@ -166,8 +162,6 @@ class SegmentFile implements AutoCloseable
             }
             finally
             {
-                ByteBuffers.releaseBuffer( writeBuffer, memoryTracker );
-                writeBuffer = null;
                 bufferedWriter = null;
                 refCount.decrease();
             }

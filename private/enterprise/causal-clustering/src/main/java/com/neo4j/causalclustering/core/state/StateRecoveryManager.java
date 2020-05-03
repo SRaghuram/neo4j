@@ -14,7 +14,7 @@ import java.io.IOException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.ReadableChannel;
-import org.neo4j.io.memory.BufferScope;
+import org.neo4j.io.memory.NativeScopedBuffer;
 import org.neo4j.memory.MemoryTracker;
 
 public class StateRecoveryManager<STATE>
@@ -90,8 +90,8 @@ public class StateRecoveryManager<STATE>
 
     private STATE readLastEntryFrom( File file, MemoryTracker memoryTracker ) throws IOException
     {
-        try ( BufferScope bufferScope = new BufferScope( ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE, memoryTracker );
-              ReadableChannel channel = new ReadAheadChannel<>( fileSystem.read( file ), bufferScope.buffer ) )
+        try ( NativeScopedBuffer bufferScope = new NativeScopedBuffer( ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE, memoryTracker );
+              ReadableChannel channel = new ReadAheadChannel<>( fileSystem.read( file ), bufferScope.getBuffer() ) )
         {
             STATE result = null;
             STATE lastRead;

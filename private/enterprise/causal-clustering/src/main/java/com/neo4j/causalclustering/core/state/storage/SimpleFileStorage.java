@@ -11,18 +11,17 @@ import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import java.io.File;
 import java.io.IOException;
 
-import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FlushableChannel;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.ReadableChannel;
-import org.neo4j.io.memory.BufferScope;
+import org.neo4j.io.memory.NativeScopedBuffer;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.memory.MemoryTracker;
 
-import static java.lang.Math.toIntExact;
+import static org.neo4j.io.ByteUnit.kibiBytes;
 
 public class SimpleFileStorage<T> implements SimpleStorage<T>
 {
@@ -50,8 +49,8 @@ public class SimpleFileStorage<T> implements SimpleStorage<T>
     @Override
     public T readState() throws IOException
     {
-        try ( BufferScope bufferScope = new BufferScope( ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE, memoryTracker );
-              ReadableChannel channel = new ReadAheadChannel<>( fileSystem.read( file ), bufferScope.buffer ) )
+        try ( NativeScopedBuffer bufferScope = new NativeScopedBuffer( ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE, memoryTracker );
+              ReadableChannel channel = new ReadAheadChannel<>( fileSystem.read( file ), bufferScope.getBuffer() ) )
         {
             return marshal.unmarshal( channel );
         }
@@ -71,8 +70,7 @@ public class SimpleFileStorage<T> implements SimpleStorage<T>
         }
         fileSystem.deleteFile( file );
 
-        try ( BufferScope bufferScope = new BufferScope( toIntExact( ByteUnit.kibiBytes( 512 ) ), memoryTracker );
-              FlushableChannel channel = new PhysicalFlushableChannel( fileSystem.write( file ), bufferScope.buffer ) )
+        try ( FlushableChannel channel = new PhysicalFlushableChannel( fileSystem.write( file ), new NativeScopedBuffer( kibiBytes( 512 ), memoryTracker ) ) )
         {
             marshal.marshal( state, channel );
         }

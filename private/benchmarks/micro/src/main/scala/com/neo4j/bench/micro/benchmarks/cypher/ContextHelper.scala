@@ -25,6 +25,7 @@ import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.SchemaRead
 import org.neo4j.kernel.lifecycle.LifeSupport
 import org.neo4j.logging.NullLog
+import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.scheduler.JobScheduler
 import org.scalatest.mock.MockitoSugar
 
@@ -63,7 +64,7 @@ object ContextHelper extends MockitoSugar {
       clock,
       debugOptions,
       runtimeConfig,
-      runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, cursors, lifeSupport, workerManager),
+      runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, cursors, lifeSupport, workerManager, EmptyMemoryTracker.INSTANCE),
       compileExpressions = useCompiledExpressions,
       materializedEntitiesMode = materializedEntitiesMode,
       operatorEngine = CypherOperatorEngineOption.compiled,

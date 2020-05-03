@@ -145,7 +145,7 @@ class TransactionLogCatchUpWriterIT
         {
             LongRange validInitialTxId = LongRange.range( nextTxId, nextTxId );
             TransactionLogCatchUpWriter writer = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, nullLogProvider(),
-                    storageEngineFactory, validInitialTxId, fullStoreCopy, false, PageCacheTracer.NULL );
+                    storageEngineFactory, validInitialTxId, fullStoreCopy, false, PageCacheTracer.NULL, INSTANCE );
 
             // when a bunch of transactions received
             LongStream.range( nextTxId, nextTxId + MANY_TRANSACTIONS )
@@ -173,7 +173,7 @@ class TransactionLogCatchUpWriterIT
         assumeTrue( SystemUtils.IS_OS_LINUX );
         Config config = defaults();
         TransactionLogCatchUpWriter writer = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
-                storageEngineFactory, LongRange.range( BASE_TX_ID, BASE_TX_ID ), fullStoreCopy, true, NULL );
+                storageEngineFactory, LongRange.range( BASE_TX_ID, BASE_TX_ID ), fullStoreCopy, true, NULL, INSTANCE );
         writer.close();
         if ( fullStoreCopy )
         {
@@ -192,7 +192,7 @@ class TransactionLogCatchUpWriterIT
         assumeTrue( !SystemUtils.IS_OS_LINUX );
         Config config = defaults();
         TransactionLogCatchUpWriter writer = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
-                storageEngineFactory, LongRange.range( BASE_TX_ID, BASE_TX_ID ), fullStoreCopy, true, NULL );
+                storageEngineFactory, LongRange.range( BASE_TX_ID, BASE_TX_ID ), fullStoreCopy, true, NULL, INSTANCE );
         writer.close();
         assertThat(sizeOf( databaseLayout.getTransactionLogsDirectory() ), lessThanOrEqualTo( 100L ) );
     }
@@ -207,7 +207,7 @@ class TransactionLogCatchUpWriterIT
         LongRange validRange = LongRange.range( fromTxId, fromTxId );
         var pageCacheTracer = new DefaultPageCacheTracer();
         try ( TransactionLogCatchUpWriter subject = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
-                storageEngineFactory, validRange, fullStoreCopy, false, pageCacheTracer ) )
+                storageEngineFactory, validRange, fullStoreCopy, false, pageCacheTracer, INSTANCE ) )
         {
             LongStream.range( fromTxId, MANY_TRANSACTIONS )
                     .mapToObj( TransactionLogCatchUpWriterIT::tx )
@@ -239,7 +239,7 @@ class TransactionLogCatchUpWriterIT
         LongRange validRange = LongRange.range( fromTxId, fromTxId );
 
         TransactionLogCatchUpWriter catchUpWriter = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
-                storageEngineFactory, validRange, fullStoreCopy, logsInStoreDir, NULL );
+                storageEngineFactory, validRange, fullStoreCopy, logsInStoreDir, NULL, INSTANCE );
 
         // when
         for ( int i = fromTxId; i <= endTxId; i++ )

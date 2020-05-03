@@ -44,6 +44,7 @@ import org.neo4j.time.Clocks;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.nonContendingStridingFor;
 import static org.neo4j.io.ByteUnit.KibiByte;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 public abstract class AbstractPageCacheBenchmarkV2 extends BaseDatabaseBenchmark
 {
@@ -72,7 +73,7 @@ public abstract class AbstractPageCacheBenchmarkV2 extends BaseDatabaseBenchmark
         {
             throw new AssertionError( e );
         }
-        buf = ByteBuffers.allocate( 8, KibiByte );
+        buf = ByteBuffers.allocate( 8, KibiByte, INSTANCE );
         // NOTE: can not use SplittableRandom as it does not have nextBytes()
         ThreadLocalRandom.current().nextBytes( buf.array() );
     }

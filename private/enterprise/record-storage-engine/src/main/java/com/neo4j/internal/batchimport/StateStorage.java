@@ -16,7 +16,7 @@ import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.ReadPastEndException;
 import org.neo4j.io.fs.ReadableChannel;
-import org.neo4j.io.memory.BufferScope;
+import org.neo4j.io.memory.NativeScopedBuffer;
 import org.neo4j.memory.MemoryTracker;
 
 import static com.neo4j.internal.batchimport.ChannelUtils.readString;
@@ -48,8 +48,8 @@ public class StateStorage
         {
             return Pair.of( NO_STATE, EMPTY_BYTE_ARRAY );
         }
-        try ( BufferScope bufferScope = new BufferScope( ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE, memoryTracker );
-              ReadableChannel channel = new ReadAheadChannel<>( fs.read( stateFile ), bufferScope.buffer ) )
+        try ( NativeScopedBuffer bufferScope = new NativeScopedBuffer( ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE, memoryTracker );
+              ReadableChannel channel = new ReadAheadChannel<>( fs.read( stateFile ), bufferScope.getBuffer() ) )
         {
             String name = readString( channel );
             byte[] checkPoint = new byte[channel.getInt()];
@@ -71,7 +71,7 @@ public class StateStorage
     public void set( String name, byte[] checkPoint ) throws IOException
     {
         fs.mkdirs( tempFile.getParentFile() );
-        try ( FlushableChannel channel = new PhysicalFlushableChannel( fs.write( tempFile ) ) )
+        try ( FlushableChannel channel = new PhysicalFlushableChannel( fs.write( tempFile ), memoryTracker ) )
         {
             writeString( name, channel );
             channel.putInt( checkPoint.length );

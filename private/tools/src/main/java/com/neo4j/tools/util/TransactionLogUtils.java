@@ -21,6 +21,7 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogHeader;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.files.ChannelNativeAccessor;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.storageengine.api.CommandReaderFactory;
 
 import static java.util.Objects.requireNonNull;
@@ -71,7 +72,7 @@ public class TransactionLogUtils
             ChannelNativeAccessor nativeAccessor ) throws IOException
     {
         StoreChannel fileChannel = fileSystem.read( file );
-        LogHeader logHeader = readLogHeader( allocate( CURRENT_FORMAT_LOG_HEADER_SIZE ), fileChannel, true, file );
+        LogHeader logHeader = readLogHeader( allocate( CURRENT_FORMAT_LOG_HEADER_SIZE, INSTANCE ), fileChannel, true, file );
         requireNonNull( logHeader, "There is no log header in log file '" + file + "', so it is likely a pre-allocated empty log file." );
         return new PhysicalLogVersionedStoreChannel( fileChannel, logHeader.getLogVersion(), logHeader.getLogFormatVersion(), file, nativeAccessor );
     }

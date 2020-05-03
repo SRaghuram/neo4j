@@ -33,6 +33,7 @@ import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.TransactionId;
 import org.neo4j.storageengine.api.TransactionMetaDataStore;
@@ -69,7 +70,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
 
     TransactionLogCatchUpWriter( DatabaseLayout databaseLayout, FileSystemAbstraction fs, PageCache pageCache, Config config, LogProvider logProvider,
             StorageEngineFactory storageEngineFactory, LongRange validInitialTxId, boolean fullStoreCopy, boolean keepTxLogsInStoreDir,
-            PageCacheTracer pageCacheTracer ) throws IOException
+            PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker ) throws IOException
     {
         this.log = logProvider.getLog( getClass() );
         this.fullStoreCopy = fullStoreCopy;
@@ -82,7 +83,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
 
         Config customConfig = customisedConfig( config, keepTxLogsInStoreDir, fullStoreCopy );
         this.logFiles = getLogFiles( databaseLayout, fs, customConfig, storageEngineFactory, validInitialTxId,
-                configWithoutSpecificStoreFormat, metaDataStore );
+                configWithoutSpecificStoreFormat, metaDataStore, memoryTracker );
 
         this.life.add( logFiles );
 
@@ -94,12 +95,12 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
 
     private static LogFiles getLogFiles( DatabaseLayout databaseLayout, FileSystemAbstraction fs, Config customConfig,
             StorageEngineFactory storageEngineFactory, LongRange validInitialTxId, Config configWithoutSpecificStoreFormat,
-            TransactionMetaDataStore metaDataStore ) throws IOException
+            TransactionMetaDataStore metaDataStore, MemoryTracker memoryTracker ) throws IOException
     {
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependencies( databaseLayout, fs, configWithoutSpecificStoreFormat );
 
-        LogPosition startPosition = getLastClosedTransactionPosition( databaseLayout, metaDataStore, fs );
+        LogPosition startPosition = getLastClosedTransactionPosition( databaseLayout, metaDataStore, fs, memoryTracker );
         LogFilesBuilder logFilesBuilder = LogFilesBuilder
                 .builder( databaseLayout, fs )
                 .withDependencies( dependencies )
@@ -115,11 +116,12 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
     }
 
     private static LogPosition getLastClosedTransactionPosition( DatabaseLayout databaseLayout, TransactionMetaDataStore metaDataStore,
-            FileSystemAbstraction fs ) throws IOException
+            FileSystemAbstraction fs, MemoryTracker memoryTracker ) throws IOException
     {
         var logFilesHelper = new TransactionLogFilesHelper( fs, databaseLayout.getTransactionLogsDirectory() );
         var logFile = logFilesHelper.getLogFileForVersion( metaDataStore.getCurrentLogVersion() );
-        return fs.fileExists( logFile ) ? readLogHeader( fs, logFile ).getStartPosition() : new LogPosition( 0, CURRENT_FORMAT_LOG_HEADER_SIZE );
+        return fs.fileExists( logFile ) ? readLogHeader( fs, logFile, memoryTracker ).getStartPosition() :
+               new LogPosition( 0, CURRENT_FORMAT_LOG_HEADER_SIZE );
     }
 
     private static Config configWithoutSpecificStoreFormat( Config config )

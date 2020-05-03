@@ -27,6 +27,7 @@ import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.internal.kernel.api.SchemaRead
 import org.neo4j.kernel.GraphDatabaseQueryService
+import org.neo4j.kernel.database.DatabaseMemoryTrackers
 import org.neo4j.kernel.impl.query.QueryEngineProvider.SPI
 import org.neo4j.logging.Log
 
@@ -43,7 +44,8 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
   private val runtimeEnvironment: RuntimeEnvironment = {
     val resolver = graph.getDependencyResolver
     val workerManager = resolver.resolveDependency(classOf[WorkerManagement])
-    RuntimeEnvironment.of(runtimeConfig, spi.jobScheduler, spi.kernel.cursors(), spi.lifeSupport, workerManager)
+    val otherMemoryTracker = resolver.resolveDependency(classOf[DatabaseMemoryTrackers]).getOtherTracker
+    RuntimeEnvironment.of(runtimeConfig, spi.jobScheduler, spi.kernel.cursors(), spi.lifeSupport, workerManager, otherMemoryTracker)
   }
 
   private val log: Log = spi.logProvider().getLog(getClass)

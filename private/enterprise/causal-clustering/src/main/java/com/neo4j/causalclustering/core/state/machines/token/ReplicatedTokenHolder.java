@@ -24,6 +24,7 @@ import org.neo4j.kernel.impl.api.state.TxState;
 import org.neo4j.kernel.impl.util.collection.OnHeapCollectionsFactory;
 import org.neo4j.lock.ResourceLocker;
 import org.neo4j.memory.EmptyMemoryTracker;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.CommandCreationContext;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
@@ -44,11 +45,12 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
     private final ReplicatedTokenCreator tokenCreator;
     private final DatabaseId databaseId;
     private final PageCacheTracer pageCacheTracer;
+    private final MemoryTracker memoryTracker;
 
     ReplicatedTokenHolder( NamedDatabaseId namedDatabaseId, TokenRegistry tokenRegistry, Replicator replicator,
                            IdGeneratorFactory idGeneratorFactory, IdType tokenIdType,
                            Supplier<StorageEngine> storageEngineSupplier, TokenType type,
-                           ReplicatedTokenCreator tokenCreator, PageCacheTracer pageCacheTracer )
+                           ReplicatedTokenCreator tokenCreator, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
     {
         super( tokenRegistry );
         this.replicator = replicator;
@@ -59,6 +61,7 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
         this.tokenCreator = tokenCreator;
         this.databaseId = namedDatabaseId.databaseId();
         this.pageCacheTracer = pageCacheTracer;
+        this.memoryTracker = memoryTracker;
     }
 
     @Override

@@ -715,7 +715,8 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                 new LdbcHeaderFactory( relationshipHeaders.stream().toArray( Header[]::new ) ),
                 IdType.INTEGER,
                 configuration,
-                CsvInput.NO_MONITOR
+                CsvInput.NO_MONITOR,
+                INSTANCE
         );
 
         FormattedLogProvider systemOutLogProvider = FormattedLogProvider.toOutputStream( System.out );
