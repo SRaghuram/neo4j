@@ -67,6 +67,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.CachePropertiesOper
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CartesianProductOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipByIdSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctPrimitiveOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctSinglePrimitiveOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandIntoOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.FilterOperator
@@ -116,7 +118,9 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityMutableDescription
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityMutableDescriptionImpl
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.AllPrimitive
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionsForResult
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.findDistinctPhysicalOp
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.partitionGroupingExpressions
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColumnOrder
 import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPropertyKeys
@@ -674,9 +678,20 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         Some(new SkipOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, count)))
 
       case plans.Distinct(_, groupingExpressions) =>
+        val physicalDistinctOp = findDistinctPhysicalOp(groupingExpressions, Seq.empty)
         val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
         val groupings = converters.toGroupingExpression(id, groupingExpressions, Seq.empty)
-        Some(new DistinctOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), groupings)(id))
+
+        physicalDistinctOp match {
+          case AllPrimitive(offsets, _) if offsets.size == 1 =>
+            val (toSlot, expression) = groupingExpressions.head
+            val runtimeExpression = converters.toCommandExpression(id, expression)
+            Some(new DistinctSinglePrimitiveOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), slots(toSlot), offsets.head, runtimeExpression)(id))
+          case SlottedPipeMapper.AllPrimitive(offsets, _) =>
+            Some(new DistinctPrimitiveOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), offsets.sorted.toArray, groupings)(id))
+          case SlottedPipeMapper.References =>
+            Some(new DistinctOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), groupings)(id))
+        }
 
       case plans.OrderedDistinct(_, groupingExpressions, orderToLeverage) =>
         val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)

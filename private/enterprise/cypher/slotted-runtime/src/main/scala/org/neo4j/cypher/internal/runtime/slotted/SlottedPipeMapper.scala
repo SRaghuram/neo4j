@@ -119,8 +119,11 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.Top1Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Top1WithTiesPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.TopNPipe
 import org.neo4j.cypher.internal.runtime.slotted
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.AllPrimitive
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.References
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionForIdentifier
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionsForResult
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.findDistinctPhysicalOp
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.partitionGroupingExpressions
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColumnOrder
 import org.neo4j.cypher.internal.runtime.slotted.aggregation.SlottedGroupingAggTable
@@ -626,50 +629,19 @@ class SlottedPipeMapper(fallback: PipeMapper,
     (copyLongsFromRHS.result().toArray, copyRefsFromRHS.result().toArray, copyCachedPropertiesFromRHS.result().toArray)
   }
 
-
   private def chooseDistinctPipe(groupingExpressions: Map[String, internal.expressions.Expression],
                                  orderToLeverage: Seq[internal.expressions.Expression],
                                  slots: SlotConfiguration,
                                  source: Pipe,
                                  id: Id): Pipe = {
-
     val convertExpressions = (e: internal.expressions.Expression) => expressionConverters.toCommandExpression(id, e)
-
-    /**
-     * We use these objects to figure out:
-     * a) can we use the primitive distinct pipe?
-     * b) if we can, what offsets are interesting
-     */
-    trait DistinctPhysicalOp {
-      def addExpression(e: internal.expressions.Expression, ordered: Boolean): DistinctPhysicalOp
-    }
-
-    case class AllPrimitive(offsets: Seq[Int], orderedOffsets: Seq[Int]) extends DistinctPhysicalOp {
-      override def addExpression(e: internal.expressions.Expression, ordered: Boolean): DistinctPhysicalOp = e match {
-        case v: NodeFromSlot =>
-          val oo = if (ordered) orderedOffsets :+ v.offset else orderedOffsets
-          AllPrimitive(offsets :+ v.offset, oo)
-        case v: RelationshipFromSlot =>
-          val oo = if (ordered) orderedOffsets :+ v.offset else orderedOffsets
-          AllPrimitive(offsets :+ v.offset, oo)
-        case _ =>
-          References
-      }
-    }
-
-    object References extends DistinctPhysicalOp {
-      override def addExpression(e: internal.expressions.Expression, ordered: Boolean): DistinctPhysicalOp = References
-    }
 
     val runtimeProjections: Map[Slot, commands.expressions.Expression] = groupingExpressions.map {
       case (key, expression) =>
         slots(key) -> convertExpressions(expression)
     }
 
-    val physicalDistinctOp = groupingExpressions.foldLeft[DistinctPhysicalOp](AllPrimitive(Seq.empty, Seq.empty)) {
-      case (acc: DistinctPhysicalOp, (_, expression)) =>
-        acc.addExpression(expression, orderToLeverage.contains(expression))
-    }
+    val physicalDistinctOp = findDistinctPhysicalOp(groupingExpressions, orderToLeverage)
 
     physicalDistinctOp match {
       case AllPrimitive(offsets, orderedOffsets) if offsets.size == 1 && orderedOffsets.isEmpty =>
@@ -815,6 +787,39 @@ class SlottedPipeMapper(fallback: PipeMapper,
 }
 
 object SlottedPipeMapper {
+
+  /**
+   * We use these objects to figure out:
+   * a) can we use the primitive distinct pipe?
+   * b) if we can, what offsets are interesting
+   */
+  sealed trait DistinctPhysicalOp {
+    def addExpression(e: internal.expressions.Expression, ordered: Boolean): DistinctPhysicalOp
+  }
+
+  case class AllPrimitive(offsets: Seq[Int], orderedOffsets: Seq[Int]) extends DistinctPhysicalOp {
+    override def addExpression(e: internal.expressions.Expression, ordered: Boolean): DistinctPhysicalOp = e match {
+      case v: NodeFromSlot =>
+        val oo = if (ordered) orderedOffsets :+ v.offset else orderedOffsets
+        AllPrimitive(offsets :+ v.offset, oo)
+      case v: RelationshipFromSlot =>
+        val oo = if (ordered) orderedOffsets :+ v.offset else orderedOffsets
+        AllPrimitive(offsets :+ v.offset, oo)
+      case _ =>
+        References
+    }
+  }
+
+  object References extends DistinctPhysicalOp {
+    override def addExpression(e: internal.expressions.Expression, ordered: Boolean): DistinctPhysicalOp = References
+  }
+
+  def findDistinctPhysicalOp(groupingExpressions: Map[String, internal.expressions.Expression], orderToLeverage: Seq[internal.expressions.Expression]): DistinctPhysicalOp = {
+    groupingExpressions.foldLeft[DistinctPhysicalOp](AllPrimitive(Seq.empty, Seq.empty)) {
+      case (acc: DistinctPhysicalOp, (_, expression)) =>
+        acc.addExpression(expression, orderToLeverage.contains(expression))
+    }
+  }
 
   def createProjectionsForResult(columns: Seq[String], slots: SlotConfiguration): Seq[(String, Expression)] = {
     val runtimeColumns: Seq[(String, commands.expressions.Expression)] =

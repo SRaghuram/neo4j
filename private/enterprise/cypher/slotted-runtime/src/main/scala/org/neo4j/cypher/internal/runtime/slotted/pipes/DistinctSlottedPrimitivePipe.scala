@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.PrefetchingIterator
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
@@ -54,11 +55,11 @@ case class DistinctSlottedPrimitivePipe(source: Pipe,
 }
 
 object DistinctSlottedPrimitivePipe {
-  def buildGroupingValue(next: CypherRow, slots: Array[Int]): LongArray = {
+  def buildGroupingValue(row: ReadableRow, slots: Array[Int]): LongArray = {
     val keys = new Array[Long](slots.length)
     var i = 0
     while (i < slots.length) {
-      keys(i) = next.getLongAt(slots(i))
+      keys(i) = row.getLongAt(slots(i))
       i += 1
     }
     Values.longArray(keys)
