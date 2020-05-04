@@ -185,7 +185,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
     class PreAggregatedOutput(preAggregated: IndexedSeq[PerArgument[AggPreMap]],
                               sink: Sink[IndexedSeq[PerArgument[AggPreMap]]]) extends PreparedOutput {
-      override def produce(): Unit = sink.put(preAggregated)
+      override def produce(resources: QueryResources): Unit = sink.put(preAggregated, resources)
 
       override def close(): Unit = {
         var i = 0
@@ -226,7 +226,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
     val reducerMap = new java.util.LinkedHashMap[groupings.KeyType, Array[Reducer]] // TODO: Use a heap tracking ordered map
     val scopedMemoryTracker = new ScopedMemoryTracker(memoryTracker)
 
-    override def update(data: AggPreMap): Unit = {
+    override def update(data: AggPreMap, resources: QueryResources): Unit = {
       val iterator = data.entrySet().iterator()
       while (iterator.hasNext) {
         val entry = iterator.next()
@@ -266,7 +266,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
     val reducerMap = new ConcurrentHashMap[groupings.KeyType, Array[Reducer]]
 
-    override def update(data: AggPreMap): Unit = {
+    override def update(data: AggPreMap, resources: QueryResources): Unit = {
       val iterator = data.entrySet().iterator()
       while (iterator.hasNext) {
         val entry = iterator.next()

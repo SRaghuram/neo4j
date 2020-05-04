@@ -113,7 +113,10 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
 
   override def initializeState(): Unit = {
     // Assumption: Buffer with ID 0 is the initial buffer
-    putMorsel(BufferId(0), Morsel.createInitialRow())
+    val initialBuffer = BufferId(0)
+    // Assumption: No resources are used by the initial buffer
+    val NO_RESOURCES = null
+    putMorsel(initialBuffer, Morsel.createInitialRow(), NO_RESOURCES)
   }
 
   // Methods
@@ -122,10 +125,9 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     new AlarmSink(buffers.sink[T](bufferId), workerWaker, queryStatus)
   }
 
-  override def putMorsel(bufferId: BufferId,
-                         output: Morsel): Unit = {
+  override def putMorsel(bufferId: BufferId, output: Morsel, resources: QueryResources): Unit = {
     if (!queryStatus.cancelled) {
-      buffers.sink[Morsel](bufferId).put(output)
+      buffers.sink[Morsel](bufferId).put(output, resources)
       workerWaker.wakeOne()
     } else {
       DebugSupport.ERROR_HANDLING.log("Dropped morsel %s because of query cancellation", output)
@@ -207,7 +209,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
       // Put the continuation before unlocking (closeWorkUnit)
       // so that in serial pipelines we can guarantee that the continuation
       // is the next thing which is picked up
-      continuations(task.pipelineState.pipeline.id.x).put(task)
+      continuations(task.pipelineState.pipeline.id.x).put(task, resources)
       if (wakeUp && !task.pipelineState.pipeline.serial) {
         // We only wake up other Threads if this pipeline is not serial.
         // Otherwise they will all race to get this continuation while

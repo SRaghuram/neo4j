@@ -7,6 +7,8 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.memory.MemoryTracker
@@ -20,7 +22,7 @@ class AggregatingAccumulator(override val argumentRowId: Long,
                              override val argumentRowIdsForReducers: Array[Long],
                              val argumentRow: MorselRow) extends MorselAccumulator[Array[Updater]] {
 
-  override def update(data: Array[Updater]): Unit = {
+  override def update(data: Array[Updater], resources: QueryResources): Unit = {
     var i = 0
     while (i < data.length) {
       reducers(i).update(data(i))

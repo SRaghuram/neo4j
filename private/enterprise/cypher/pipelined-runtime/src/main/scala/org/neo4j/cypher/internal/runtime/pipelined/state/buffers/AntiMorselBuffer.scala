@@ -12,6 +12,8 @@ import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
@@ -39,7 +41,7 @@ class AntiMorselBuffer(id: BufferId,
 
   override def canPut: Boolean = true
 
-  override def put(data: IndexedSeq[PerArgument[Morsel]]): Unit = {
+  override def put(data: IndexedSeq[PerArgument[Morsel]], resources: QueryResources): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
     }
@@ -48,7 +50,7 @@ class AntiMorselBuffer(id: BufferId,
     while (i < data.length) {
       argumentStateMap.update(data(i).argumentRowId, {acc =>
         // updating the AntiArgumentState simply sets a flag -> no need to increment tracker or reducers.
-        acc.update(data(i).value)
+        acc.update(data(i).value, resources)
       })
       i += 1
     }
@@ -151,7 +153,7 @@ object AntiArgumentState {
 
     def didReceiveData: Boolean = _didReceiveData
 
-    override def update(data: Morsel): Unit = _didReceiveData = true
+    override def update(data: Morsel, resources: QueryResources): Unit = _didReceiveData = true
 
     override def toString: String = {
       s"StandardAntiArgumentState(argumentRowId=$argumentRowId, argumentRowIdsForReducers=[${argumentRowIdsForReducers.mkString(",")}], argumentMorsel=$argumentRow)"
@@ -167,7 +169,7 @@ object AntiArgumentState {
 
     def didReceiveData: Boolean = _didReceiveData
 
-    override def update(data: Morsel): Unit = _didReceiveData = true
+    override def update(data: Morsel, resources: QueryResources): Unit = _didReceiveData = true
 
     override def toString: String = {
       s"ConcurrentAntiArgumentState(argumentRowId=$argumentRowId, argumentRowIdsForReducers=[${argumentRowIdsForReducers.mkString(",")}], argumentMorsel=$argumentRow)"

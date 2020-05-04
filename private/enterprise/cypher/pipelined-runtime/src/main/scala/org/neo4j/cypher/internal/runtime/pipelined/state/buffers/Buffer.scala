@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+
 /**
   * Basic buffer (put things and then take them in FIFO order).
   */
@@ -47,7 +49,7 @@ trait Sink[-T <: AnyRef] {
   /**
     * Put an element in this sink
     */
-  def put(t: T): Unit
+  def put(t: T, resources: QueryResources): Unit
 
   /**
    * Checks if there is room in the sink

@@ -11,6 +11,8 @@ import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.PipelinedDebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
@@ -172,13 +174,13 @@ class LHSAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[DATA]](va
 
   override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
 
-  override def put(data: IndexedSeq[PerArgument[DATA]]): Unit = {
+  override def put(data: IndexedSeq[PerArgument[DATA]], resources: QueryResources): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
     }
     var i = 0
     while (i < data.length) {
-      argumentStateMap.update(data(i).argumentRowId, acc => acc.update(data(i).value))
+      argumentStateMap.update(data(i).argumentRowId, acc => acc.update(data(i).value, resources))
       i += 1
     }
   }
@@ -215,7 +217,7 @@ class RHSStreamingSink(val argumentStateMapId: ArgumentStateMapId,
 
   override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
 
-  override def put(data: IndexedSeq[PerArgument[Morsel]]): Unit = {
+  override def put(data: IndexedSeq[PerArgument[Morsel]], resources: QueryResources): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
     }
@@ -224,7 +226,7 @@ class RHSStreamingSink(val argumentStateMapId: ArgumentStateMapId,
     while (i < data.length) {
       val argumentValue = data(i)
       argumentStateMap.update(argumentValue.argumentRowId, acc => {
-        acc.put(argumentValue.value)
+        acc.put(argumentValue.value, resources)
         // Increment for a morsel in the RHS buffer
         forAllArgumentReducers(downstreamArgumentReducers, acc.argumentRowIdsForReducers, _.increment(_))
       })

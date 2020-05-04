@@ -7,6 +7,8 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import java.util
 
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.internal.helpers.collection.Iterators
 
 /**
@@ -15,7 +17,7 @@ import org.neo4j.internal.helpers.collection.Iterators
 class StandardSingletonBuffer[T <: AnyRef] extends SingletonBuffer[T] {
   private var datum: T = _
 
-  override def put(t: T): Unit = {
+  override def put(t: T, resources: QueryResources): Unit = {
     if (datum != null) {
       throw new IllegalStateException(s"SingletonBuffer is full: tried to put $t, but already held element $datum")
     }

@@ -12,6 +12,8 @@ import org.neo4j.cypher.internal.physicalplanning.ReadOnlyArray
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ArgumentSlots
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.IdAllocator
@@ -43,7 +45,7 @@ class MorselApplyBuffer(id: BufferId,
                        ) extends ArgumentCountUpdater
                          with Sink[Morsel] {
 
-  def put(morsel: Morsel): Unit = {
+  def put(morsel: Morsel, resources: QueryResources): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- $morsel")
     }
@@ -78,7 +80,7 @@ class MorselApplyBuffer(id: BufferId,
 
       var i = 0
       while (i < delegates.length) {
-        delegates(i).putInDelegate(morsel.shallowCopy())
+        delegates(i).putInDelegate(morsel.shallowCopy(), resources)
         i += 1
       }
     }

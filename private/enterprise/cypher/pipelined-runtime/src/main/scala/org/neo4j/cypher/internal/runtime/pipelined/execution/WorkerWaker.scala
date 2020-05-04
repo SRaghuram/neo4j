@@ -23,9 +23,9 @@ class AlarmSink[-T <: AnyRef](inner: Sink[T], waker: WorkerWaker, queryStatus: Q
   /**
    * Put an element in this sink
    */
-  override def put(t: T): Unit = {
+  override def put(t: T, resources: QueryResources): Unit = {
     if (!queryStatus.cancelled) {
-      inner.put(t)
+      inner.put(t, resources)
 
       inner match {
         case x: Source[T] =>

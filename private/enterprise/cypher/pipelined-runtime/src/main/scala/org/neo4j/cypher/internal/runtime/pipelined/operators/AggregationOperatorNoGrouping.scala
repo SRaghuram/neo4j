@@ -145,7 +145,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
 
     class PreAggregatedOutput(preAggregated: IndexedSeq[PerArgument[Array[Updater]]],
                               sink: Sink[IndexedSeq[PerArgument[Array[Updater]]]]) extends PreparedOutput {
-      override def produce(): Unit = sink.put(preAggregated)
+      override def produce(resources: QueryResources): Unit = sink.put(preAggregated, resources)
 
       override def close(): Unit = {
         var i = 0

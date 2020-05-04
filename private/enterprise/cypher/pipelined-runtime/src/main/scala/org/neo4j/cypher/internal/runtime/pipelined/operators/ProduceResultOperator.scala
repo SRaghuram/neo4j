@@ -144,7 +144,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
       this
     }
 
-    override def produce(): Unit = {}
+    override def produce(resources: QueryResources): Unit = {}
 
     override def trackTime: Boolean = true
   }

@@ -70,6 +70,6 @@ class SortPreOperator(val workIdentity: WorkIdentity,
 
   class PreSortedOutput(preSorted: IndexedSeq[PerArgument[Morsel]],
                         sink: Sink[IndexedSeq[PerArgument[Morsel]]]) extends PreparedOutput {
-    override def produce(): Unit = sink.put(preSorted)
+    override def produce(resources: QueryResources): Unit = sink.put(preSorted, resources)
   }
 }

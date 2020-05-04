@@ -285,7 +285,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
   /**
    * Method of [[PreparedOutput]] trait. Implementing this allows fused reducing operators to write to [[ExecutionState]].
    */
-  override final def produce(): Unit = compiledProduce()
+  override final def produce(resources: QueryResources): Unit = compiledProduce()
 
   override final def close(): Unit = compiledCloseOutput()
 

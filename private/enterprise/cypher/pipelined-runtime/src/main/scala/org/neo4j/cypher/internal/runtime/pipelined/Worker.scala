@@ -139,7 +139,7 @@ class Worker(val workerId: Int,
     }
     // This just puts the output in a buffer, which is not part of the workUnit
     try {
-      preparedOutput.produce()
+      preparedOutput.produce(resources)
     } finally {
       preparedOutput.close()
     }

@@ -91,8 +91,8 @@ case class TopOperator(workIdentity: WorkIdentity,
 
     class PreTopOutput(preTopped: IndexedSeq[PerArgument[Morsel]],
                        sink: Sink[IndexedSeq[PerArgument[Morsel]]]) extends PreparedOutput {
-      override def produce(): Unit = {
-        sink.put(preTopped)
+      override def produce(resources: QueryResources): Unit = {
+        sink.put(preTopped, resources)
       }
     }
 
@@ -205,7 +205,7 @@ object TopOperator {
     // expected to be called by reduce task
     override protected def getTopRows: util.Iterator[MorselRow] = util.Collections.emptyIterator()
 
-    override def update(data: Morsel): Unit =
+    override def update(data: Morsel, resources: QueryResources): Unit =
       error()
 
     // expected to be called by reduce task
@@ -226,7 +226,7 @@ object TopOperator {
     private var morselCount = 0L
     private var maxMorselHeapUsage = 0L
 
-    override def update(morsel: Morsel): Unit = {
+    override def update(morsel: Morsel, resources: QueryResources): Unit = {
       var hasAddedRow = false
       val cursor = morsel.readCursor()
       while (cursor.next()) {
@@ -261,7 +261,7 @@ object TopOperator {
 
     private val topTableByThread = new ConcurrentHashMap[Long, DefaultComparatorTopTable[MorselRow]]
 
-    override def update(morsel: Morsel): Unit = {
+    override def update(morsel: Morsel, resources: QueryResources): Unit = {
       val threadId = Thread.currentThread().getId
       val topTable = topTableByThread.computeIfAbsent(threadId, _ => new DefaultComparatorTopTable(comparator, limit))
       val cursor = morsel.readCursor()

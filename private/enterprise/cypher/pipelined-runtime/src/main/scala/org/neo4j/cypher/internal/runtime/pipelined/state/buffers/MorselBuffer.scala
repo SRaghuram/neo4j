@@ -14,6 +14,8 @@ import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ArgumentSlots
 import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
@@ -58,14 +60,14 @@ class MorselBuffer(id: BufferId,
     x
   }
 
-  override def put(morsel: Morsel): Unit = {
+  override def put(morsel: Morsel, resources: QueryResources): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- $morsel")
     }
     if (morsel.hasData) {
       incrementArgumentCounts(downstreamArgumentReducers, morsel)
       tracker.increment()
-      inner.put(morsel)
+      inner.put(morsel, resources)
     }
   }
 
@@ -76,13 +78,13 @@ class MorselBuffer(id: BufferId,
    * The reason is that if this is one of the delegates of a [[MorselApplyBuffer]], that
    * buffer took care of incrementing the right ones already.
    */
-  def putInDelegate(morsel: Morsel): Unit = {
+  def putInDelegate(morsel: Morsel, resources: QueryResources): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[putInDelegate] $this <- $morsel")
     }
     if (morsel.hasData) {
       tracker.increment()
-      inner.put(morsel)
+      inner.put(morsel, resources)
     }
   }
 

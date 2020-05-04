@@ -12,8 +12,10 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -233,7 +235,7 @@ object ArgumentStateMap {
     /**
      * Update internal state using the provided data.
      */
-    def update(data: DATA): Unit
+    def update(data: DATA, resources: QueryResources): Unit
   }
 
   /**

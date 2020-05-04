@@ -75,7 +75,7 @@ trait OutputOperatorState extends HasWorkIdentity {
 }
 
 trait PreparedOutput extends AutoCloseable {
-  def produce(): Unit
+  def produce(resources: QueryResources): Unit
   override def close(): Unit = {}
 }
 
@@ -89,7 +89,7 @@ case object NoOutputOperator extends OutputOperator with OutputOperatorState wit
                              resources: QueryResources,
                              operatorExecutionEvent: OperatorProfileEvent): PreparedOutput = this
 
-  override def produce(): Unit = ()
+  override def produce(resources: QueryResources): Unit = ()
   override def workIdentity: WorkIdentity = WorkIdentityImpl(Id.INVALID_ID, "Perform no output")
   override def trackTime: Boolean = true
 }
@@ -118,8 +118,8 @@ case class MorselBufferOutputState(override val workIdentity: WorkIdentity,
 case class MorselBufferPreparedOutput(bufferId: BufferId,
                                       executionState: ExecutionState,
                                       outputMorsel: Morsel) extends PreparedOutput {
-  override def produce(): Unit =
-    executionState.putMorsel(bufferId, outputMorsel)
+  override def produce(resources: QueryResources): Unit =
+    executionState.putMorsel(bufferId, outputMorsel, resources)
 }
 
 // PIPELINED ARGUMENT STATE BUFFER OUTPUT
@@ -149,5 +149,5 @@ case class MorselArgumentStateBufferOutputState(override val workIdentity: WorkI
 }
 case class MorselArgumentStateBufferPreparedOutput(sink: Sink[IndexedSeq[PerArgument[Morsel]]],
                                                    data: IndexedSeq[PerArgument[Morsel]]) extends PreparedOutput {
-  override def produce(): Unit = sink.put(data)
+  override def produce(resources: QueryResources): Unit = sink.put(data, resources)
 }

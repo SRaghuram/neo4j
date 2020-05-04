@@ -7,6 +7,8 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import java.util
 
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.memory.Measurable
 import org.neo4j.memory.MemoryTracker
 
@@ -19,7 +21,7 @@ import scala.collection.mutable.ArrayBuffer
 class StandardBuffer[T <: AnyRef] extends Buffer[T] {
   private val data = new ArrayBuffer[T]
 
-  override def put(t: T): Unit = {
+  override def put(t: T, resources: QueryResources): Unit = {
     data.append(t)
   }
 
@@ -51,9 +53,9 @@ class StandardBuffer[T <: AnyRef] extends Buffer[T] {
 }
 
 class MemoryTrackingStandardBuffer[T <: Measurable](memoryTracker: MemoryTracker) extends StandardBuffer[T] {
-  override def put(t: T): Unit = {
+  override def put(t: T, resources: QueryResources): Unit = {
     memoryTracker.allocateHeap(t.estimatedHeapUsage())
-    super.put(t)
+    super.put(t, resources)
   }
 
   override def take(): T = {

@@ -130,7 +130,7 @@ object NodeHashJoinOperator {
     private val table = ProbeTable.createProbeTable[LongArray, Morsel]( memoryTracker )
 
     // This is update from LHS, i.e. we need to put stuff into a hash table
-    override def update(morsel: Morsel): Unit = {
+    override def update(morsel: Morsel, resources: QueryResources): Unit = {
       val cursor = morsel.readCursor()
       while (cursor.next()) {
         val key = new Array[Long](lhsOffsets.length)
@@ -165,7 +165,7 @@ object NodeHashJoinOperator {
     private val table = new ConcurrentHashMap[LongArray, ConcurrentLinkedQueue[Morsel]]()
 
     // This is update from LHS, i.e. we need to put stuff into a hash table
-    override def update(morsel: Morsel): Unit = {
+    override def update(morsel: Morsel, resources: QueryResources): Unit = {
       val cursor = morsel.readCursor()
       while (cursor.next()) {
         val key = new Array[Long](lhsOffsets.length)
