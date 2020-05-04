@@ -17,6 +17,7 @@ import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,7 @@ import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Result;
+import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.fabric.FabricDatabaseManager;
 import org.neo4j.fabric.bolt.BoltFabricDatabaseManagementService;
@@ -332,6 +334,56 @@ class BoltAdapterTest
         verify( fabricTransaction ).rollback();
     }
 
+    @Test
+    void testCompletionWhenLastRecordRead() throws InterruptedException
+    {
+        mockConfig();
+
+        var latch = new CountDownLatch( 1 );
+        List<org.neo4j.driver.Record> records = new ArrayList<>();
+        var session = driver.rxSession( SessionConfig.forDatabase( "mega" ) );
+        try
+        {
+            var tx = Mono.from( session.beginTransaction() ).block();
+            var result = tx.run( "Some Cypher query" );
+            Flux.from( result.records() )
+                .subscribe( new Subscriber<>()
+                {
+                    @Override
+                    public void onSubscribe( Subscription subscription )
+                    {
+                        subscription.request( 2 );
+                    }
+
+                    @Override
+                    public void onNext( org.neo4j.driver.Record record )
+                    {
+                        records.add( record );
+                    }
+
+                    @Override
+                    public void onError( Throwable throwable )
+                    {
+                        throwable.printStackTrace();
+                    }
+
+                    @Override
+                    public void onComplete()
+                    {
+                        latch.countDown();
+                    }
+                } );
+
+            publishDefaultResult();
+            assertTrue( latch.await( 10, TimeUnit.SECONDS ) );
+            verifyDefaultResult( records );
+        }
+        finally
+        {
+            Mono.from( session.close() ).block();
+        }
+    }
+
     private void mockConfig()
     {
         var streamConfig = new FabricConfig.DataStream( 1, 1000, 1000, 10 );
@@ -386,6 +438,11 @@ class BoltAdapterTest
     private void verifyDefaultResult( Result result )
     {
         var records = result.list();
+        verifyDefaultResult( records );
+    }
+
+    private void verifyDefaultResult( List<org.neo4j.driver.Record> records )
+    {
         assertEquals( 2, records.size() );
         var r1 = records.get( 0 );
         assertEquals( "v1", r1.get( "c1" ).asString() );
