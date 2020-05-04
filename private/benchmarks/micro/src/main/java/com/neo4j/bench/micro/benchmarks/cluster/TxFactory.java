@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.TreeSet;
 import java.util.stream.IntStream;
 
@@ -29,6 +30,16 @@ public class TxFactory
     public static void commitTx( int txSize, GraphDatabaseService db )
     {
         PathBuilder pathBuilder = createBuilder( txSize );
+        try ( Transaction tx = db.beginTx() )
+        {
+            pathBuilder.build( tx );
+            tx.commit();
+        }
+    }
+
+    public static void commitOneNodeTx( int txSize, GraphDatabaseService db )
+    {
+        PathBuilder pathBuilder = createOneNodeBuilder( txSize );
         try ( Transaction tx = db.beginTx() )
         {
             pathBuilder.build( tx );
@@ -87,6 +98,17 @@ public class TxFactory
                 .labelsPerNode( labels );
     }
 
+    private static PathBuilder createOneNodeBuilder( int txSize )
+    {
+        int labelSize = 15;
+        return new PathBuilder()
+                .nodesInPath( 1 )
+                .propertySetsPerRelationship( 0 )
+                .propertySetsPerNode( 0 )
+                .bulkPropertySize( txSize - labelSize )
+                .labelsPerNode( 1 );
+    }
+
     private static int[] splitInto( long totalSize, Collection<Long> sizes )
     {
         TreeSet<Long> reversedOrderSet = new TreeSet<>( ( o1, o2 ) -> -1 * Long.compare( o1, o2 ) );
@@ -115,6 +137,9 @@ public class TxFactory
         private int labelsPerNode = 1;
         private int propertiesPerRelationship = 1;
         private int nodesInPath = 2;
+        private int bulkPropertySize;
+
+        private Random rnd = new Random();
 
         private static final int PROPERTY_SET_SIZE = 5874;
         private static final List<Object> PROPERTY_SET = new ArrayList<>()
@@ -195,6 +220,12 @@ public class TxFactory
             return this;
         }
 
+        PathBuilder bulkPropertySize( int bulkPropertySize )
+        {
+            this.bulkPropertySize = bulkPropertySize;
+            return this;
+        }
+
         PathBuilder nodesInPath( int nodesInPath )
         {
             this.nodesInPath = nodesInPath;
@@ -236,15 +267,15 @@ public class TxFactory
 
         private Map<String,Object> createRelationshipProperties()
         {
-            return createProperties( propertiesPerRelationship );
+            return createProperties( propertiesPerRelationship, 0 );
         }
 
         private Map<String,Object> createNodeProperties()
         {
-            return createProperties( propertySetsPerNode );
+            return createProperties( propertySetsPerNode, bulkPropertySize );
         }
 
-        private Map<String,Object> createProperties( int propertySets )
+        private Map<String,Object> createProperties( int propertySets, int bulkPropertySize )
         {
             HashMap<String,Object> map = new HashMap<>();
             for ( int i = 0; i < propertySets; i++ )
@@ -253,6 +284,12 @@ public class TxFactory
                 {
                     map.put( "THIS_IS_KEY_" + i + "_IN_SET_" + j, PROPERTY_SET.get( j ) );
                 }
+            }
+            if ( bulkPropertySize > 0 )
+            {
+                var bytes = new byte[ bulkPropertySize ];
+                rnd.nextBytes( bytes );
+                map.put( "THIS_IS_KEY_FOR_BULK", bytes );
             }
             return map;
         }

@@ -24,14 +24,14 @@ public class StoreFileStreamingProtocol
      * <p>
      * Note that we do not block here.
      */
-    void stream( ChannelHandlerContext ctx, StoreResource resource )
+    public void stream( ChannelHandlerContext ctx, StoreResource resource )
     {
         ctx.write( ResponseMessageType.FILE );
         ctx.write( new FileHeader( resource.path(), resource.recordSize() ) );
         ctx.write( new FileSender( resource, maxChunkSize ) );
     }
 
-    Future<Void> end( ChannelHandlerContext ctx, StoreCopyFinishedResponse.Status status, long lastCheckpointedTx )
+    public Future<Void> end( ChannelHandlerContext ctx, StoreCopyFinishedResponse.Status status, long lastCheckpointedTx )
     {
         ctx.write( ResponseMessageType.STORE_COPY_FINISHED );
         return ctx.writeAndFlush( new StoreCopyFinishedResponse( status, lastCheckpointedTx ) );

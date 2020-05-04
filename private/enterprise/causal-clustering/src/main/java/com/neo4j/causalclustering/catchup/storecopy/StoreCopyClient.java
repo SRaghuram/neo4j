@@ -52,7 +52,7 @@ public class StoreCopyClient
         this.log = logProvider.getLog( getClass() );
     }
 
-    RequiredTransactions copyStoreFiles( CatchupAddressProvider catchupAddressProvider, StoreId expectedStoreId,
+    public RequiredTransactions copyStoreFiles( CatchupAddressProvider catchupAddressProvider, StoreId expectedStoreId,
             StoreFileStreamProvider storeFileStreamProvider, Supplier<TerminationCondition> requestWiseTerminationCondition, File destDir )
             throws StoreCopyFailedException
     {

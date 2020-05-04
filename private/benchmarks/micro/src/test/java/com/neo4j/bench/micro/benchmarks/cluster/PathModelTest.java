@@ -41,7 +41,7 @@ public class PathModelTest
     private EditionModuleBackedAbstractBenchmark editionModuleBackedAbstractBenchmark;
 
     @AfterEach
-    void cleanupDB()
+    void cleanupDB() throws Throwable
     {
         editionModuleBackedAbstractBenchmark.benchmarkTearDown();
     }
