@@ -527,7 +527,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
                 plan.id,
                 argumentStateMapId,
                 groupMapping)(ctx.expressionCompiler),
-              Some(argumentStateMapId -> new SerialTopLevelDistinctOperatorTaskTemplate.DistinctStateFactory(plan.id))
+              Some(argumentStateMapId -> SerialTopLevelDistinctOperatorTaskTemplate.DistinctStateFactory)
             )
 
         // Special case for limit with serial execution

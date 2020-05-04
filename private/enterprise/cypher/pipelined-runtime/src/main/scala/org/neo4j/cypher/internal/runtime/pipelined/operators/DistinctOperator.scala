@@ -24,22 +24,23 @@ import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateGroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperator.ConcurrentDistinctState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperator.DistinctState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperator.DistinctStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperator.StandardDistinctState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.peekState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.setMemoryTracker
-import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDistinctOperatorTaskTemplate.SerialTopLevelDistinctState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
@@ -64,11 +65,9 @@ import org.neo4j.values.AnyValue
  *   RETURN DISTINCT x
  */
 
-trait DistinctOperatorState extends ArgumentState {
-  def filterOrProject(row: ReadWriteRow, queryState: QueryState): Boolean
-}
-
-class DistinctOperatorTask[S <: DistinctOperatorState](argumentStateMap: ArgumentStateMap[S], val workIdentity: WorkIdentity) extends OperatorTask {
+class DistinctOperatorTask[S <: DistinctState](argumentStateMap: ArgumentStateMap[S],
+                                               val workIdentity: WorkIdentity,
+                                               groupings: GroupingExpression) extends OperatorTask {
 
   override def operate(outputMorsel: Morsel,
                        state: PipelinedQueryState,
@@ -78,7 +77,15 @@ class DistinctOperatorTask[S <: DistinctOperatorState](argumentStateMap: Argumen
 
     argumentStateMap.filterWithSideEffect[S](outputMorsel,
       (distinctState, _) => distinctState,
-      (distinctState, row) => distinctState.filterOrProject(row, queryState))
+      (distinctState, row) => {
+        val groupingKey = groupings.computeGroupingKey(row, queryState)
+        if (distinctState.seen(groupingKey)) {
+          groupings.project(row, groupingKey)
+          true
+        } else {
+          false
+        }
+      })
   }
 
   override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
@@ -94,43 +101,46 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
                           state: PipelinedQueryState,
                           resources: QueryResources,
                           memoryTracker: MemoryTracker): OperatorTask = {
-    new DistinctOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId, new DistinctStateFactory(memoryTracker)), workIdentity)
+    new DistinctOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId, new DistinctStateFactory(memoryTracker)), workIdentity, groupings)
   }
+}
+
+object DistinctOperator {
 
   class DistinctStateFactory(memoryTracker: MemoryTracker) extends ArgumentStateFactory[DistinctState] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): DistinctState = {
-      new StandardDistinctState(argumentRowId, argumentRowIdsForReducers, memoryTracker)
+      val state = new StandardDistinctState(argumentRowId, argumentRowIdsForReducers)
+      state.setMemoryTracker(memoryTracker)
+      state
     }
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): DistinctState = {
-      new ConcurrentDistinctState(argumentRowId, argumentRowIdsForReducers, memoryTracker)
+      new ConcurrentDistinctState(argumentRowId, argumentRowIdsForReducers)
     }
 
     override def completeOnConstruction: Boolean = true
   }
 
-  abstract class DistinctState(override val argumentRowId: Long,
-                               override val argumentRowIdsForReducers: Array[Long],
-                               memoryTracker: MemoryTracker) extends DistinctOperatorState {
-    def seen(key: groupings.KeyType): Boolean
-
-    override def filterOrProject(row: ReadWriteRow, queryState: QueryState): Boolean = {
-      val groupingKey = groupings.computeGroupingKey(row, queryState)
-      if (seen(groupingKey)) {
-        groupings.project(row, groupingKey)
-        true
-      } else {
-        false
-      }
-    }
+  trait DistinctState extends ArgumentState {
+    def seen(key: AnyValue): Boolean
+    /**
+     * We need this method instead of having the memoryTracked as a constructor parameter because the Factory
+     * needs be statically known for the fused code. This allows us to share the DistinctState between fused and non-fused code.
+     */
+    def setMemoryTracker(memoryTracker: MemoryTracker): Unit
   }
 
-  class StandardDistinctState(argumentRowId: Long, argumentRowIdsForReducers: Array[Long], memoryTracker: MemoryTracker)
-    extends DistinctState(argumentRowId, argumentRowIdsForReducers, memoryTracker) {
+  class StandardDistinctState(override val argumentRowId: Long, override val argumentRowIdsForReducers: Array[Long])
+    extends DistinctState {
 
-    private val seenSet = DistinctSet.createDistinctSet[groupings.KeyType](memoryTracker)
+    private var seenSet: DistinctSet[AnyValue] = _
 
-    override def seen(key: groupings.KeyType): Boolean =
+    // This is called from generated code by genCreateState
+    override def setMemoryTracker(memoryTracker: MemoryTracker): Unit = {
+      seenSet = DistinctSet.createDistinctSet[AnyValue](memoryTracker)
+    }
+
+    override def seen(key: AnyValue): Boolean =
       seenSet.add(key)
 
     override def close(): Unit = {
@@ -141,12 +151,15 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
     override def toString: String = s"StandardDistinctState($argumentRowId)"
   }
 
-  class ConcurrentDistinctState(argumentRowId: Long, argumentRowIdsForReducers: Array[Long], memoryTracker: MemoryTracker)
-    extends DistinctState(argumentRowId, argumentRowIdsForReducers, memoryTracker) {
+  class ConcurrentDistinctState(override val argumentRowId: Long, override val argumentRowIdsForReducers: Array[Long])
+    extends DistinctState {
 
-    private val seenSet = ConcurrentHashMap.newKeySet[groupings.KeyType]()
+    private val seenSet = ConcurrentHashMap.newKeySet[AnyValue]()
 
-    override def seen(key: groupings.KeyType): Boolean =
+    // This is called from generated code by genCreateState
+    override def setMemoryTracker(memoryTracker: MemoryTracker): Unit = {}
+
+    override def seen(key: AnyValue): Boolean =
       seenSet.add(key)
 
     override def toString: String = s"ConcurrentDistinctState($argumentRowId)"
@@ -162,8 +175,8 @@ class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate
 
   private var groupingExpression: IntermediateGroupingExpression = _
 
-  private val distinctStateField = field[SerialTopLevelDistinctState](codeGen.namer.nextVariableName("distinctState"),
-                                                                      peekState[SerialTopLevelDistinctState](argumentStateMapId))
+  private val distinctStateField = field[DistinctState](codeGen.namer.nextVariableName("distinctState"),
+                                                                      peekState[DistinctState](argumentStateMapId))
   private val memoryTrackerField = field[MemoryTracker](codeGen.namer.nextVariableName("memoryTracker"))
 
   override def genInit: IntermediateRepresentation = inner.genInit
@@ -181,7 +194,7 @@ class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate
 
     /**
       * val key = [computeKey]
-      * if (distinctState.distinct(key, memoryTracker)) {
+      * if (distinctState.seen(key, memoryTracker)) {
       *   [project key]
       *   <<inner.generate>>
       * }
@@ -190,7 +203,7 @@ class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate
       declareAndAssign(typeRefOf[AnyValue], keyVar, nullCheckIfRequired(groupingExpression.computeKey)),
       condition(or(innerCanContinue,
                    invoke(loadField(distinctStateField),
-                          method[SerialTopLevelDistinctState, Boolean, AnyValue]("distinct"),
+                          method[DistinctState, Boolean, AnyValue]("seen"),
                           load(keyVar)))) {
         block(
           profileRow(id),
@@ -203,7 +216,7 @@ class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate
   override def genCreateState: IntermediateRepresentation = block(
     setMemoryTracker(memoryTrackerField, id.x),
     invoke(loadField(distinctStateField),
-           method[SerialTopLevelDistinctState, Unit, MemoryTracker]("setMemoryTracker"),
+           method[DistinctState, Unit, MemoryTracker]("setMemoryTracker"),
            loadField(memoryTrackerField)),
     inner.genCreateState)
 
@@ -219,61 +232,17 @@ class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate
 }
 
 object SerialTopLevelDistinctOperatorTaskTemplate {
-  class DistinctStateFactory(id: Id) extends ArgumentStateFactory[SerialTopLevelDistinctState] {
+  object DistinctStateFactory extends ArgumentStateFactory[DistinctState] {
     override def newStandardArgumentState(argumentRowId: Long,
                                           argumentMorsel: MorselReadCursor,
-                                          argumentRowIdsForReducers: Array[Long]): SerialTopLevelDistinctState = {
-      new StandardSerialTopLevelDistinctState(argumentRowId, argumentRowIdsForReducers, id)
+                                          argumentRowIdsForReducers: Array[Long]): DistinctState = {
+      new StandardDistinctState(argumentRowId, argumentRowIdsForReducers)
     }
 
     override def newConcurrentArgumentState(argumentRowId: Long,
                                             argumentMorsel: MorselReadCursor,
-                                            argumentRowIdsForReducers: Array[Long]): SerialTopLevelDistinctState = {
-      new ConcurrentSerialTopLevelDistinctState(argumentRowId, argumentRowIdsForReducers, id)
+                                            argumentRowIdsForReducers: Array[Long]): DistinctState = {
+      new ConcurrentDistinctState(argumentRowId, argumentRowIdsForReducers)
     }
-  }
-
-  abstract class SerialTopLevelDistinctState(override val argumentRowId: Long,
-                                             override val argumentRowIdsForReducers: Array[Long],
-                                             id: Id) extends ArgumentState {
-    // This is always called from generated code by genCreateState
-    def setMemoryTracker(memoryTracker: MemoryTracker): Unit
-
-    def distinct(groupingKey: AnyValue): Boolean
-  }
-
-  class StandardSerialTopLevelDistinctState(argumentRowId: Long,
-                                            argumentRowIdsForReducers: Array[Long],
-                                            id: Id) extends SerialTopLevelDistinctState(argumentRowId, argumentRowIdsForReducers, id) {
-    private var seenSet: DistinctSet[AnyValue] = _
-
-    // This is always called from generated code by genCreateState
-    override def setMemoryTracker(memoryTracker: MemoryTracker): Unit = {
-      seenSet = DistinctSet.createDistinctSet[AnyValue](memoryTracker)
-    }
-
-    override def distinct(groupingKey: AnyValue): Boolean =
-      seenSet.add(groupingKey)
-
-    override def close(): Unit = {
-      seenSet.close()
-      super.close()
-    }
-
-    override def toString: String = s"StandardSerialTopLevelDistinctState($argumentRowId)"
-  }
-
-  class ConcurrentSerialTopLevelDistinctState(argumentRowId: Long,
-                                              argumentRowIdsForReducers: Array[Long],
-                                              id: Id) extends SerialTopLevelDistinctState(argumentRowId, argumentRowIdsForReducers, id) {
-    private val seenSet = ConcurrentHashMap.newKeySet[AnyValue]()
-
-    // This is always called from generated code by genCreateState
-    override def setMemoryTracker(memoryTracker: MemoryTracker): Unit = {}
-
-    override def distinct(groupingKey: AnyValue): Boolean =
-      seenSet.add(groupingKey)
-
-    override def toString: String = s"ConcurrentSerialTopLevelDistinctState($argumentRowId)"
   }
 }

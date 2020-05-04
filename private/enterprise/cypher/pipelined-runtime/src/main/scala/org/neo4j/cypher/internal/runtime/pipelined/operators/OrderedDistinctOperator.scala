@@ -6,13 +6,18 @@
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OrderedDistinctOperator.AbstractOrderedDistinctState
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -31,7 +36,7 @@ class OrderedDistinctOperator(argumentStateMapId: ArgumentStateMapId,
                           state: PipelinedQueryState,
                           resources: QueryResources): OperatorTask = {
     val memoryTracker = stateFactory.newMemoryTracker(id.x)
-    new DistinctOperatorTask(
+    new OrderedDistinctOperatorTask(
       argumentStateCreator.createArgumentStateMap(argumentStateMapId, new OrderedDistinctStateFactory(memoryTracker)),
       workIdentity)
   }
@@ -48,7 +53,7 @@ class OrderedDistinctOperator(argumentStateMapId: ArgumentStateMapId,
 
   class OrderedDistinctState(override val argumentRowId: Long,
                              override val argumentRowIdsForReducers: Array[Long],
-                             memoryTracker: MemoryTracker) extends DistinctOperatorState {
+                             memoryTracker: MemoryTracker) extends AbstractOrderedDistinctState {
 
     private var prevOrderedGroupingKey: orderedGroupings.KeyType = _
     private var seen: DistinctSet[unorderedGroupings.KeyType] = _
@@ -80,4 +85,26 @@ class OrderedDistinctOperator(argumentStateMapId: ArgumentStateMapId,
     }
     override def toString: String = s"OrderedDistinctState($argumentRowId)"
   }
+}
+
+object OrderedDistinctOperator {
+  trait AbstractOrderedDistinctState extends ArgumentState {
+    def filterOrProject(row: ReadWriteRow, queryState: QueryState): Boolean
+  }
+}
+
+class OrderedDistinctOperatorTask[S <: AbstractOrderedDistinctState](argumentStateMap: ArgumentStateMap[S], val workIdentity: WorkIdentity) extends OperatorTask {
+
+  override def operate(outputMorsel: Morsel,
+                       state: PipelinedQueryState,
+                       resources: QueryResources): Unit = {
+
+    val queryState = state.queryStateForExpressionEvaluation(resources)
+
+    argumentStateMap.filterWithSideEffect[S](outputMorsel,
+      (distinctState, _) => distinctState,
+      (distinctState, row) => distinctState.filterOrProject(row, queryState))
+  }
+
+  override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
 }

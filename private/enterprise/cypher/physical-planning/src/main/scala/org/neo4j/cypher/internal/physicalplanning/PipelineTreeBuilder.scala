@@ -82,7 +82,7 @@ object PipelineTreeBuilder {
     var serial: Boolean = false
     var workCanceller: Option[ArgumentStateMapId] = None
 
-    def fuse(plan: LogicalPlan, isBreaking: Boolean): Boolean = {
+    def fuse(plan: LogicalPlan): Boolean = {
       headPlan match {
         case FusedHead(operatorFuser) if middlePlans.isEmpty && outputDefinition == NoOutput =>
           operatorFuser.fuseIn(plan)
@@ -91,7 +91,7 @@ object PipelineTreeBuilder {
     }
 
     def fuseOrInterpret(plan: LogicalPlan, isBreaking: Boolean): Unit = {
-      if (!fuse(plan, isBreaking)) {
+      if (!fuse(plan)) {
         middlePlans += plan
       }
     }
@@ -616,7 +616,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
 
       case _ =>
         val isBreaking = breakingPolicy.breakOn(plan, applyPlans(plan.id))
-        if (source.fuse(plan, isBreaking)) {
+        if (source.fuse(plan)) {
           source
         } else {
           if (isBreaking) {
