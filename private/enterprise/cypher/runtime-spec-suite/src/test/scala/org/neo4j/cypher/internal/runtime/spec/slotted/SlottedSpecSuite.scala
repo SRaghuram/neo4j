@@ -80,6 +80,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipCountFromCountStoreTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RightOuterHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RollupApplyTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.SelectOrSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ShortestPathTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SkipTestBase
