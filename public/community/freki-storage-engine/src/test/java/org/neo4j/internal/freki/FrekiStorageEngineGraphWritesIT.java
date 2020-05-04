@@ -1342,8 +1342,9 @@ class FrekiStorageEngineGraphWritesIT
                 double sizePerLabel = 1.3;
                 for ( int i = 0; i < labelsSize / sizePerLabel; i++ )
                 {
-                    labels.add( i  );
+                    labels.add( SCHEMA_DESCRIPTOR.getLabelId() + i + 1 );
                 }
+                labels.add( SCHEMA_DESCRIPTOR.getLabelId() );
 
                 Set<StorageProperty> properties = new HashSet<>();
                 Value prop = Values.byteArray( new byte[]{0, 1, 2, 3, 4, 5, 6} ); //this will generate 10B data (header + length + data + key)
@@ -1351,18 +1352,20 @@ class FrekiStorageEngineGraphWritesIT
                 int propSize = (int) (x8Size * propertiesXLFill);
                 for ( int i = 0; i < propSize / sizePerProp; i++ )
                 {
-                    properties.add( new PropertyKeyValue( i + 1, prop ) );
+                    properties.add( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId() + i + 1, prop ) );
                 }
+                PropertyKeyValue before = new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), Values.intValue( 25 ) );
+                properties.add( before );
 
                 Set<RelationshipSpec> relationships = new HashSet<>();
                 double degSize = x8Size * degreesXLFill;
                 int numRelsOfDifferentType = (int) (degSize / 6);
 
                 long node = 1;
-                createAndApplyTransaction( target ->
+                shouldGenerateIndexUpdates( target -> { /* do nothing */ }, target ->
                 {
-                    CommandCreationContext context = storageEngine.newCommandCreationContext( NULL );
                     target.visitCreatedNode( node );
+                    CommandCreationContext context = storageEngine.newCommandCreationContext( NULL );
                     target.visitNodeLabelChanges( node, labels, LongSets.immutable.empty() );
                     target.visitNodePropertyChanges( node, properties, Collections.emptyList(), IntSets.immutable.empty() );
                     if ( numRelsOfDifferentType > 0 )
@@ -1384,8 +1387,7 @@ class FrekiStorageEngineGraphWritesIT
                             }
                         }
                     }
-                } );
-
+                }, index -> asSet( IndexEntryUpdate.add( node, index, before.value()) ) );
                 assertContentsOfNode( node, labels, properties, relationships );
             }
 

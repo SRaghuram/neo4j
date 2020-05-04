@@ -219,8 +219,6 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
             Function<FrekiCommand.RecordChange,Record> recordFunction, boolean skipProperties )
     {
         long[] labels = EMPTY_LONG_ARRAY;
-        boolean investigatedX1 = false;
-        boolean investigatedXL = false;
         boolean labelsLoaded = false;
         boolean propertiesLoaded = skipProperties;
         for ( FrekiCommand.RecordChange change = node.changes(); change != null && (!propertiesLoaded || !labelsLoaded); change = change.next() )
@@ -257,28 +255,15 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
                 }
             }
 
-            if ( change.sizeExp() == 0 )
+            if ( change.sizeExp() == 0 && (!inUse || nodeCursor.data.xLChainStartPointer == NULL) )
             {
-                //in x1
-                investigatedX1 = true;
-                if ( !inUse || nodeCursor.data.xLChainStartPointer == NULL )
-                {
-                    investigatedXL = true;
-                    break;
-                }
-            }
-            else
-            {
-                //TODO this is no longer correct.. Fix!!!
-                investigatedXL = true;
-                if ( inUse )
-                {
-                    break;
-                }
+                propertiesLoaded = true;
+                labelsLoaded = true;
+                break; //no need to look further. Either deleted or has no XL.
             }
         }
 
-        if ( (!propertiesLoaded || !labelsLoaded) && (!investigatedX1 || !investigatedXL) )
+        if ( !propertiesLoaded || !labelsLoaded )
         {
             nodeCursor.single( node.nodeId );
             if ( nodeCursor.next() )
