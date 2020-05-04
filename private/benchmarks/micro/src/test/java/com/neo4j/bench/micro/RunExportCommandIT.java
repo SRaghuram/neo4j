@@ -27,8 +27,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -40,6 +38,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static com.neo4j.bench.model.options.Edition.ENTERPRISE;
 import static com.neo4j.bench.model.util.MapPrinter.prettyPrint;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsStringIgnoringCase;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -53,7 +52,7 @@ class RunExportCommandIT
     @Test
     void shouldThrowExceptionWhenNoBenchmarkIsEnabled()
     {
-        assertThrows( RuntimeException.class, () ->
+        var e = assertThrows( RuntimeException.class, () ->
         {
             // Create empty Neo4j configuration file
             File neo4jConfigFile = temporaryFolder.file( "neo4j.conf" );
@@ -66,11 +65,11 @@ class RunExportCommandIT
 
             // Create empty benchmark configuration file
             File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
-            Files.write( benchmarkConfig.toPath(), Arrays.asList( "# empty config file" ) );
+            Files.write( benchmarkConfig.toPath(), List.of( "# empty config file" ) );
 
             Path jsonFile = temporaryFolder.file( "file.json" ).toPath();
             Path profileOutputDirectory = temporaryFolder.directory( "output" ).toPath();
-            Path storesDir = Paths.get( "benchmark_stores" );
+            Path storesDir = temporaryFolder.directory( "benchmark_stores" ).toPath();
 
             List<String> commandArgs = RunExportCommand.argsFor(
                     jsonFile,
@@ -93,9 +92,10 @@ class RunExportCommandIT
                     ErrorReporter.ErrorPolicy.FAIL,
                     Jvm.defaultJvm(),
                     "Trinity",
-                    Lists.newArrayList( ProfilerType.JFR ) );
+                    List.of() );
             Main.main( commandArgs.toArray( new String[0] ) );
         } );
+        assertThat( e.getMessage(), containsStringIgnoringCase( "Validation failed" ) );
     }
 
     @Test
@@ -122,7 +122,7 @@ class RunExportCommandIT
 
         Path jsonFile = temporaryFolder.file( "file.json" ).toPath();
         Path profilerRecordingDirectory = temporaryFolder.directory( "output" ).toPath();
-        Path storesDir = Paths.get( "benchmark_stores" );
+        Path storesDir = temporaryFolder.directory( "benchmark_stores" ).toPath();
 
         List<String> commandArgs = RunExportCommand.argsFor(
                 jsonFile,
