@@ -14,8 +14,9 @@ import com.neo4j.bench.micro.data.DataGenerator.PropertyLocality;
 import com.neo4j.bench.micro.data.DataGenerator.RelationshipLocality;
 
 import java.nio.file.Path;
-import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -25,7 +26,7 @@ import org.neo4j.graphdb.RelationshipType;
 
 public class DataGeneratorConfig
 {
-    private static final DecimalFormat FORMAT = new DecimalFormat( "###,###,###,##0" );
+    private static final NumberFormat FORMAT = NumberFormat.getNumberInstance( Locale.ENGLISH );
 
     private int nodeCount;
     private String[] relationshipTypeNames;
