@@ -910,7 +910,10 @@ object SlottedPipeMapper {
     }
     //Apply all transformations
     (incoming, outgoing, state) => {
-      mapSlots.foreach(f => f.mapRows(incoming, outgoing, state))
+      val iterator = mapSlots.iterator
+      while(iterator.hasNext) {
+        iterator.next().mapRows(incoming, outgoing, state)
+      }
     }
   }
 
