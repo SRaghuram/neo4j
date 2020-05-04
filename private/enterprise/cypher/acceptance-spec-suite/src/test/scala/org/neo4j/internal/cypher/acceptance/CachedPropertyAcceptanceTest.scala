@@ -208,7 +208,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       .onTopOf(aPlan("EagerAggregation")
         .onTopOf(aPlan("Expand(All)")
           .onTopOf(aPlan("Projection").containingArgumentForProjection(Map("y" -> "x"))
-            .onTopOf(aPlan("Filter").containingArgument("cache[x.prop] = $`  AUTOINT0`")))))
+            .onTopOf(aPlan("Filter").containingArgument("cache[x.prop] = $autoint_0")))))
 
     res.toList should contain theSameElementsAs List(Map("y.prop" -> 2))
   }

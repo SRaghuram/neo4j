@@ -1161,7 +1161,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Filter")
-      .containingArgumentRegex("name = \\$`  AUTOSTRING\\d+`".r)
+      .containingArgumentRegex("name = \\$autostring_\\d+".r)
       .onTopOf(aPlan("Projection")
         .containingVariables("name")
         .containingArgumentForProjection(Map("name" -> "a.name"))

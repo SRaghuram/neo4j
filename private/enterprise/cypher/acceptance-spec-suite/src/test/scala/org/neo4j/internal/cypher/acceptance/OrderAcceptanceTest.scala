@@ -89,10 +89,10 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val result = executeWith(Configs.All, query)
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Skip")
-      .containingArgument("$`  AUTOINT0`")
+      .containingArgument("$autoint_0")
       .onTopOf(aPlan("Top")
         .withOrder(ProvidedOrder.asc(varFor("a.name")).fromLeft)
-        .containingArgument("`a.name` ASC LIMIT 3 + $`  AUTOINT0`")
+        .containingArgument("`a.name` ASC LIMIT 3 + $autoint_0")
       )
 
     result.toList should equal(List(
@@ -271,7 +271,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")
       .onTopOf(aPlan("Projection")
-        .containingArgumentRegex("b\\.foo AS `b\\.foo`, age \\+ \\$`  AUTOINT\\d+` AS `age \\+ \\$  AUTOINT\\d+`".r)
+        .containingArgumentRegex("b\\.foo AS `b\\.foo`, age \\+ \\$autoint_\\d+ AS `age \\+ \\$autoint_\\d+`".r)
         .onTopOf(aPlan("Projection")
           .containingArgumentForProjection(Map("b" -> "a", "age" -> "a.age"))
         )
@@ -301,7 +301,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .containingArgumentForProjection(Map("age" -> "cache[a.age]"))
       .onTopOf(aPlan("Sort")
         .onTopOf(aPlan("Projection")
-          .containingArgumentRegex("b\\.foo AS `b\\.foo`, cache\\[b\\.age\\] \\+ \\$`  AUTOINT\\d+` AS `b\\.age \\+ \\$  AUTOINT\\d+`".r)
+          .containingArgumentRegex("b\\.foo AS `b\\.foo`, cache\\[b\\.age\\] \\+ \\$autoint_\\d+ AS `b\\.age \\+ \\$autoint_\\d+`".r)
           .onTopOf(aPlan("Projection")
             .containingArgumentForProjection(Map("b" -> "a"))
           )
@@ -484,7 +484,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .onTopOf(aPlan("Sort")
         .onTopOf(aPlan("Projection")
           .containingVariables("a")
-          .containingArgumentRegex("a.age \\+ \\$`  AUTOINT\\d+` AS `a.age \\+ \\$  AUTOINT\\d+`".r)
+          .containingArgumentRegex("a.age \\+ \\$autoint_\\d+ AS `a.age \\+ \\$autoint_\\d+`".r)
         ))
 
     result.toList should equal(List(

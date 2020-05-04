@@ -140,7 +140,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     val result = executeWith(Configs.CachedProperty + Configs.Compiled, "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 42 RETURN n.prop1 * 2", executeBefore = createSomeNodes,
       planComparisonStrategy = ComparePlansWithAssertion(
         _ should includeSomewhere.aPlan("Projection")
-          .containingArgumentForProjection(Map("`n.prop1 * 2`" -> "cache[n.prop1] * $`  AUTOINT1`"))
+          .containingArgumentForProjection(Map("`n.prop1 * 2`" -> "cache[n.prop1] * $autoint_1"))
           .withDBHits(0)
           .onTopOf(aPlan("NodeIndexSeek")
             .withExactVariables("n").containingArgumentForCachedProperty("n", "prop1")),
