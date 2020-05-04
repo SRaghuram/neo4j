@@ -52,7 +52,6 @@ class PipelineCompiler(operatorFactory: OperatorFactory,
 
   private def requiresUpstreamPipelinesToUseFilteringMorsel(plan: LogicalPlan): Boolean = plan match {
     case _: Limit => true // All upstreams from LIMIT need filtering morsels
-    case _: Skip => true // All upstreams from SKIP need filtering morsels
     case _: PartialTop => true
     case _ => false
   }
