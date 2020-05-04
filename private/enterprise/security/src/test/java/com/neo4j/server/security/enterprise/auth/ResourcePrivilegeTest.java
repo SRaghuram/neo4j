@@ -32,6 +32,7 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.MATCH;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.READ;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_LABEL;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_LABEL;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_PROPERTY;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRAVERSE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.WRITE;
@@ -74,6 +75,11 @@ class ResourcePrivilegeTest
                 {
                     assertOk( privilegeType, action, new AllLabelsResource() );
                     assertOk( privilegeType, action, new LabelResource( "foo" ) );
+                }
+                else if ( SET_PROPERTY.satisfies( action ) )
+                {
+                    assertOk( privilegeType, action, new AllPropertiesResource() );
+                    assertOk( privilegeType, action, new PropertyResource( "foo" ) );
                 }
                 else if ( WRITE.satisfies( action ) )
                 {
@@ -173,8 +179,6 @@ class ResourcePrivilegeTest
                 else if ( WRITE.satisfies( action ) )
                 {
                     assertFail( privilegeType, action, new ProcedureResource( "", "" ) );
-                    assertFail( privilegeType, action, new PropertyResource( "foo" ) );
-                    assertFail( privilegeType, action, new AllPropertiesResource() );
                     assertFail( privilegeType, action, new DatabaseResource() );
                     assertFail( privilegeType, action, new LabelResource( "foo" ) );
                     assertFail( privilegeType, action, new AllLabelsResource() );

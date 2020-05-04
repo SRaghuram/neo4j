@@ -6,7 +6,6 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.AdminAccessMode;
-import org.eclipse.collections.api.map.primitive.IntObjectMap;
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
 import org.eclipse.collections.api.set.primitive.IntSet;
 import org.eclipse.collections.api.set.primitive.MutableIntSet;
@@ -64,25 +63,11 @@ class StandardAccessMode implements AccessMode
     private final IntSet blacklistTraverseLabels;
     private final IntSet blacklistTraverseRelTypes;
 
-    private final boolean allowsReadAllPropertiesAllLabels;
-    private final boolean allowsReadAllPropertiesAllRelTypes;
-    private final IntSet whitelistedLabelsForAllProperties;
-    private final IntSet whitelistedRelTypesForAllProperties;
-    private final IntSet whitelistedNodePropertiesForAllLabels;
     private final IntSet whitelistedNodePropertiesForSomeLabel;
-    private final IntSet whitelistedRelationshipPropertiesForAllTypes;
     private final IntSet whitelistedRelationshipPropertiesForSomeType;
-    private final IntObjectMap<IntSet> whitelistedLabelsForProperty;
-    private final IntObjectMap<IntSet> whitelistedRelTypesForProperty;
 
-    private final boolean disallowsReadAllPropertiesAllLabels;
-    private final boolean disallowsReadAllPropertiesAllRelTypes;
-    private final IntSet blacklistedNodeProperties;
-    private final IntSet blacklistedRelationshipProperties;
-    private final IntSet blacklistedLabelsForAllProperties;
-    private final IntSet blacklistedRelTypesForAllProperties;
-    private final IntObjectMap<IntSet> blacklistedLabelsForProperty;
-    private final IntObjectMap<IntSet> blacklistedRelTypesForProperty;
+    private final PropertyPrivileges readAllow;
+    private final PropertyPrivileges readDisallow;
 
     private final boolean allowsSetAllLabels;
     private final IntSet whitelistSetLabels;
@@ -111,6 +96,9 @@ class StandardAccessMode implements AccessMode
     private final boolean disallowDeleteRelationshipAllTypes;
     private final IntSet blacklistDeleteRelationshipWithTypes;
 
+    private final PropertyPrivileges writeAllow;
+    private final PropertyPrivileges writeDisallow;
+
     private AdminAccessMode adminAccessMode;
     private AdminActionOnResource.DatabaseScope database;
 
@@ -134,23 +122,8 @@ class StandardAccessMode implements AccessMode
             IntSet blacklistTraverseLabels,
             IntSet blacklistTraverseRelTypes,
 
-            boolean allowsReadAllPropertiesAllLabels,
-            boolean allowsReadAllPropertiesAllRelTypes,
-            IntSet whitelistedLabelsForAllProperties,
-            IntSet whitelistedRelTypesForAllProperties,
-            IntSet whitelistedNodePropertiesForAllLabels,
-            IntSet whitelistedRelationshipPropertiesForAllTypes,
-            IntObjectMap<IntSet> whitelistedLabelsForProperty,
-            IntObjectMap<IntSet> whitelistedRelTypesForProperty,
-
-            boolean disallowsReadAllPropertiesAllLabels,
-            boolean disallowsReadAllPropertiesAllRelTypes,
-            IntSet blacklistedLabelsForAllProperties,
-            IntSet blacklistedRelTypesForAllProperties,
-            IntSet blacklistedNodeProperties,
-            IntSet blacklistedRelationshipProperties,
-            IntObjectMap<IntSet> blacklistedLabelsForProperty,
-            IntObjectMap<IntSet> blacklistedRelTypesForProperty,
+            PropertyPrivileges readAllow,
+            PropertyPrivileges readDisallow,
 
             boolean allowsSetAllLabels,
             IntSet whitelistSetLabels,
@@ -179,6 +152,9 @@ class StandardAccessMode implements AccessMode
             boolean disallowDeleteRelationshipAllTypes,
             IntSet blacklistDeleteRelationshipWithTypes,
 
+            PropertyPrivileges writeAllow,
+            PropertyPrivileges writeDisallow,
+
             AdminAccessMode adminAccessMode,
             String database
     )
@@ -202,23 +178,8 @@ class StandardAccessMode implements AccessMode
         this.blacklistTraverseLabels = blacklistTraverseLabels;
         this.blacklistTraverseRelTypes = blacklistTraverseRelTypes;
 
-        this.allowsReadAllPropertiesAllLabels = allowsReadAllPropertiesAllLabels;
-        this.allowsReadAllPropertiesAllRelTypes = allowsReadAllPropertiesAllRelTypes;
-        this.whitelistedLabelsForAllProperties = whitelistedLabelsForAllProperties;
-        this.whitelistedRelTypesForAllProperties = whitelistedRelTypesForAllProperties;
-        this.whitelistedNodePropertiesForAllLabels = whitelistedNodePropertiesForAllLabels;
-        this.whitelistedRelationshipPropertiesForAllTypes = whitelistedRelationshipPropertiesForAllTypes;
-        this.whitelistedLabelsForProperty = whitelistedLabelsForProperty;
-        this.whitelistedRelTypesForProperty = whitelistedRelTypesForProperty;
-
-        this.disallowsReadAllPropertiesAllLabels = disallowsReadAllPropertiesAllLabels;
-        this.disallowsReadAllPropertiesAllRelTypes = disallowsReadAllPropertiesAllRelTypes;
-        this.blacklistedLabelsForAllProperties = blacklistedLabelsForAllProperties;
-        this.blacklistedRelTypesForAllProperties = blacklistedRelTypesForAllProperties;
-        this.blacklistedNodeProperties = blacklistedNodeProperties;
-        this.blacklistedRelationshipProperties = blacklistedRelationshipProperties;
-        this.blacklistedLabelsForProperty = blacklistedLabelsForProperty;
-        this.blacklistedRelTypesForProperty = blacklistedRelTypesForProperty;
+        this.readAllow = readAllow;
+        this.readDisallow = readDisallow;
 
         this.allowsSetAllLabels = allowsSetAllLabels;
         this.whitelistSetLabels = whitelistSetLabels;
@@ -246,15 +207,68 @@ class StandardAccessMode implements AccessMode
         this.whitelistDeleteRelationshipWithTypes = whitelistDeleteRelationshipWithTypes;
         this.disallowDeleteRelationshipAllTypes = disallowDeleteRelationshipAllTypes;
         this.blacklistDeleteRelationshipWithTypes = blacklistDeleteRelationshipWithTypes;
+        this.writeAllow = writeAllow;
+        this.writeDisallow = writeDisallow;
 
         this.adminAccessMode = adminAccessMode;
         this.database = new AdminActionOnResource.DatabaseScope( database );
 
         this.whitelistedNodePropertiesForSomeLabel =
-                whitelistedLabelsForProperty.keySet().select( key -> !whitelistedLabelsForProperty.get( key ).isEmpty() );
+                readAllow.getLabelsForProperty().keySet()
+                         .select( key -> !readAllow.getLabelsForProperty().get( key ).isEmpty() );
 
         this.whitelistedRelationshipPropertiesForSomeType =
-                whitelistedRelTypesForProperty.keySet().select( key -> !whitelistedRelTypesForProperty.get( key ).isEmpty() );
+                readAllow.getRelTypesForProperty().keySet()
+                         .select( key -> !readAllow.getRelTypesForProperty().get( key ).isEmpty() );
+    }
+
+    enum PermissionState
+    {
+        NOT_GRANTED,
+        EXPLICIT_GRANT,
+        EXPLICIT_DENY;
+
+        public PermissionState combine( PermissionState p )
+        {
+            int order = this.compareTo( p );
+            if ( order <= 0 )
+            {
+                return p;
+            }
+            else
+            {
+                return this;
+            }
+        }
+
+        public boolean allowsAccess()
+        {
+            return this == EXPLICIT_GRANT;
+        }
+
+        public static PermissionState fromWhitelist( boolean permitted )
+        {
+            if ( permitted )
+            {
+                return EXPLICIT_GRANT;
+            }
+            else
+            {
+                return NOT_GRANTED;
+            }
+        }
+
+        public static PermissionState fromBlacklist( boolean permitted )
+        {
+            if ( permitted )
+            {
+                return NOT_GRANTED;
+            }
+            else
+            {
+                return EXPLICIT_DENY;
+            }
+        }
     }
 
     @Override
@@ -359,20 +373,26 @@ class StandardAccessMode implements AccessMode
     @Override
     public boolean allowsReadPropertyAllLabels( int propertyKey )
     {
-        return (allowsReadAllPropertiesAllLabels || whitelistedNodePropertiesForAllLabels.contains( propertyKey )) &&
-                !disallowsReadPropertyForSomeLabel( propertyKey );
+        return (readAllow.isAllPropertiesAllLabels() || readAllow.getNodePropertiesForAllLabels().contains( propertyKey )) &&
+               !disallowsReadPropertyForSomeLabel( propertyKey );
     }
 
     @Override
     public boolean disallowsReadPropertyForSomeLabel( int propertyKey )
     {
-        return disallowsReadAllPropertiesAllLabels || blacklistedNodeProperties.contains( propertyKey ) || !blacklistedLabelsForAllProperties.isEmpty() ||
-                blacklistedLabelsForProperty.get( propertyKey ) != null;
+        return disallowsPropertyForSomeLabel( propertyKey, readDisallow );
+    }
+
+    private boolean disallowsPropertyForSomeLabel( int propertyKey, PropertyPrivileges disallow )
+    {
+        return disallow.isAllPropertiesAllLabels() || disallow.getNodePropertiesForAllLabels().contains( propertyKey ) ||
+               !disallow.getLabelsForAllProperties().isEmpty() ||
+               disallow.getLabelsForProperty().get( propertyKey ) != null;
     }
 
     private boolean disallowsReadPropertyForAllLabels( int propertyKey )
     {
-        return disallowsReadAllPropertiesAllLabels || blacklistedNodeProperties.contains( propertyKey );
+        return readDisallow.isAllPropertiesAllLabels() || readDisallow.getNodePropertiesForAllLabels().contains( propertyKey );
     }
 
     @Override
@@ -382,15 +402,19 @@ class StandardAccessMode implements AccessMode
         {
             return true;
         }
-
         if ( disallowsReadPropertyForAllLabels( propertyKey ) )
         {
             return false;
         }
+        return canAccessNodeProperty( labelSupplier, propertyKey, readAllow, readDisallow ).allowsAccess();
+    }
+
+    private PermissionState canAccessNodeProperty( Supplier<TokenSet> labelSupplier, int propertyKey, PropertyPrivileges allow, PropertyPrivileges disallow )
+    {
 
         TokenSet tokenSet = labelSupplier.get();
-        IntSet whiteListed = whitelistedLabelsForProperty.get( propertyKey );
-        IntSet blackListed = blacklistedLabelsForProperty.get( propertyKey );
+        IntSet whiteListed = allow.getLabelsForProperty().get( propertyKey );
+        IntSet blackListed = disallow.getLabelsForProperty().get( propertyKey );
 
         boolean allowed = false;
 
@@ -403,36 +427,36 @@ class StandardAccessMode implements AccessMode
             }
             if ( blackListed != null && blackListed.contains( label ) )
             {
-                return false;
+                return PermissionState.EXPLICIT_DENY;
             }
-            if ( whitelistedLabelsForAllProperties.contains( label ) )
+            if ( allow.getLabelsForAllProperties().contains( label ) )
             {
                 allowed = true;
             }
-            if ( blacklistedLabelsForAllProperties.contains( label ) )
+            if ( disallow.getLabelsForAllProperties().contains( label ) )
             {
-                return false;
+                return PermissionState.EXPLICIT_DENY;
             }
         }
-        return allowed || allowsReadAllPropertiesAllLabels || whitelistedNodePropertiesForAllLabels.contains( propertyKey );
+        return PermissionState.fromWhitelist( allowed || allow.isAllPropertiesAllLabels() || allow.getNodePropertiesForAllLabels().contains( propertyKey ) );
     }
 
     @Override
     public boolean allowsReadPropertyAllRelTypes( int propertyKey )
     {
-        return (allowsReadAllPropertiesAllRelTypes || whitelistedRelationshipPropertiesForAllTypes.contains( propertyKey )) &&
-                !disallowsReadPropertyForSomeRelType( propertyKey );
+        return (readAllow.isAllPropertiesAllRelTypes() || readAllow.getRelationshipPropertiesForAllTypes().contains( propertyKey )) &&
+               !disallowsPropertyForSomeRelType( propertyKey, readDisallow );
     }
 
-    private boolean disallowsReadPropertyForSomeRelType( int propertyKey )
+    private boolean disallowsPropertyForSomeRelType( int propertyKey, PropertyPrivileges disallow )
     {
-        return disallowsReadAllPropertiesAllRelTypes || blacklistedRelationshipProperties.contains( propertyKey ) ||
-                !blacklistedRelTypesForAllProperties.isEmpty() || blacklistedRelTypesForProperty.get( propertyKey ) != null;
+        return disallow.isAllPropertiesAllRelTypes() || disallow.getRelationshipPropertiesForAllTypes().contains( propertyKey ) ||
+               !disallow.getRelTypesForAllProperties().isEmpty() || disallow.getRelTypesForProperty().get( propertyKey ) != null;
     }
 
     private boolean disallowsReadPropertyForAllRelTypes( int propertyKey )
     {
-        return disallowsReadAllPropertiesAllRelTypes || blacklistedRelationshipProperties.contains( propertyKey );
+        return readDisallow.isAllPropertiesAllRelTypes() || readDisallow.getRelationshipPropertiesForAllTypes().contains( propertyKey );
     }
 
     @Override
@@ -447,43 +471,49 @@ class StandardAccessMode implements AccessMode
         {
             return false;
         }
+        return canAccessRelProperty( relType, propertyKey, readAllow, readDisallow).allowsAccess();
+    }
 
-        IntSet whitelisted = whitelistedRelTypesForProperty.get( propertyKey );
-        IntSet blacklisted = blacklistedRelTypesForProperty.get( propertyKey );
+    private PermissionState canAccessRelProperty( IntSupplier relType, int propertyKey, PropertyPrivileges allow, PropertyPrivileges disallow )
+    {
+        IntSet whitelisted = allow.getRelTypesForProperty().get( propertyKey );
+        IntSet blacklisted = disallow.getRelTypesForProperty().get( propertyKey );
 
         boolean allowed =
-                (whitelisted != null && whitelisted.contains( relType.getAsInt() ) ) ||
-                        whitelistedRelTypesForAllProperties.contains( relType.getAsInt() ) ||
-                        allowsReadAllPropertiesAllRelTypes || whitelistedRelationshipPropertiesForAllTypes.contains( propertyKey );
+                (whitelisted != null && whitelisted.contains( relType.getAsInt() )) ||
+                allow.getRelTypesForAllProperties().contains( relType.getAsInt() ) ||
+                allow.isAllPropertiesAllRelTypes() || allow.getRelationshipPropertiesForAllTypes().contains( propertyKey );
 
         boolean disallowedRelType =
-                (blacklisted != null && blacklisted.contains( relType.getAsInt() )) || blacklistedRelTypesForAllProperties.contains( relType.getAsInt() );
+                (blacklisted != null && blacklisted.contains( relType.getAsInt() )) ||
+                disallow.getRelTypesForAllProperties().contains( relType.getAsInt() );
 
-        return allowed && !disallowedRelType;
+        return PermissionState.fromBlacklist( !disallowedRelType ).combine( PermissionState.fromWhitelist( allowed ));
     }
 
     @Override
     public boolean allowsSeePropertyKeyToken( int propertyKey )
     {
         boolean disabledForNodes =
-                disallowsReadAllPropertiesAllLabels || blacklistedNodeProperties.contains( propertyKey ) || !allowPropertyReadOnSomeNode( propertyKey );
+                readDisallow.isAllPropertiesAllLabels() || readDisallow.getNodePropertiesForAllLabels().contains( propertyKey ) ||
+                !allowPropertyReadOnSomeNode( propertyKey );
 
-        boolean disabledForRels = disallowsReadAllPropertiesAllRelTypes || blacklistedRelationshipProperties.contains( propertyKey ) ||
-                !allowsPropertyReadOnSomeRelType( propertyKey );
+        boolean disabledForRels = readDisallow.isAllPropertiesAllRelTypes() || readDisallow.getRelationshipPropertiesForAllTypes().contains( propertyKey ) ||
+                                  !allowsPropertyReadOnSomeRelType( propertyKey );
 
         return !(disabledForNodes && disabledForRels);
     }
 
     private boolean allowPropertyReadOnSomeNode( int propertyKey )
     {
-        return allowsReadAllPropertiesAllLabels || whitelistedNodePropertiesForAllLabels.contains( propertyKey ) ||
-                whitelistedNodePropertiesForSomeLabel.contains( propertyKey ) || whitelistedLabelsForAllProperties.notEmpty();
+        return readAllow.isAllPropertiesAllLabels() || readAllow.getNodePropertiesForAllLabels().contains( propertyKey ) ||
+               whitelistedNodePropertiesForSomeLabel.contains( propertyKey ) || readAllow.getLabelsForAllProperties().notEmpty();
     }
 
     private boolean allowsPropertyReadOnSomeRelType( int propertyKey )
     {
-        return allowsReadAllPropertiesAllRelTypes || whitelistedRelationshipPropertiesForAllTypes.contains( propertyKey ) ||
-                whitelistedRelationshipPropertiesForSomeType.contains( propertyKey ) || whitelistedRelTypesForAllProperties.notEmpty();
+        return readAllow.isAllPropertiesAllRelTypes() || readAllow.getRelationshipPropertiesForAllTypes().contains( propertyKey ) ||
+               whitelistedRelationshipPropertiesForSomeType.contains( propertyKey ) || readAllow.getRelTypesForAllProperties().notEmpty();
     }
 
     @Override
@@ -592,6 +622,46 @@ class StandardAccessMode implements AccessMode
     }
 
     @Override
+    public boolean allowsSetProperty( Supplier<TokenSet> labelIds, int propertyKey )
+    {
+        if ( disallowWrites )
+        {
+            return false;
+        }
+        if ( (writeAllow.isAllPropertiesAllLabels() || writeAllow.getNodePropertiesForAllLabels().contains( propertyKey )) &&
+             !disallowsPropertyForSomeLabel( propertyKey, writeDisallow ) )
+        {
+            return true;
+        }
+        if ( writeDisallow.isAllPropertiesAllLabels() || writeDisallow.getNodePropertiesForAllLabels().contains( propertyKey ) )
+        {
+            return false;
+        }
+        return canAccessNodeProperty( labelIds, propertyKey, writeAllow, writeDisallow )
+                .combine( PermissionState.fromWhitelist( allowsWrites ) ).allowsAccess();
+    }
+
+    @Override
+    public boolean allowsSetProperty( IntSupplier relType, int propertyKey )
+    {
+        if ( disallowWrites )
+        {
+            return false;
+        }
+        if ( (writeDisallow.isAllPropertiesAllRelTypes() || writeDisallow.getRelationshipPropertiesForAllTypes().contains( propertyKey )) &&
+             !disallowsPropertyForSomeRelType( propertyKey, writeDisallow ) )
+        {
+            return true;
+        }
+        if ( writeDisallow.isAllPropertiesAllRelTypes() || writeDisallow.getRelationshipPropertiesForAllTypes().contains( propertyKey ) )
+        {
+            return false;
+        }
+        return canAccessRelProperty( relType, propertyKey, writeAllow, writeDisallow )
+                .combine( PermissionState.fromWhitelist( allowsWrites ) ).allowsAccess();
+    }
+
+    @Override
     public AuthorizationViolationException onViolation( String msg )
     {
         if ( passwordChangeRequired )
@@ -671,6 +741,15 @@ class StandardAccessMode implements AccessMode
         private Map<ResourcePrivilege.GrantOrDeny,MutableIntObjectMap<IntSet>> nodeSegmentForProperty = new HashMap<>();
         private Map<ResourcePrivilege.GrantOrDeny,MutableIntObjectMap<IntSet>> relationshipSegmentForProperty = new HashMap<>();
 
+        private Map<ResourcePrivilege.GrantOrDeny,Boolean> writeAllPropertiesAllLabels = new HashMap<>();
+        private Map<ResourcePrivilege.GrantOrDeny,Boolean> writeAllPropertiesAllRelTypes = new HashMap<>();
+        private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> writeNodeSegmentForAllProperties = new HashMap<>();
+        private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> writeRelationshipSegmentForAllProperties = new HashMap<>();
+        private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> writeNodeProperties = new HashMap<>();
+        private Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> writeRelationshipProperties = new HashMap<>();
+        private Map<ResourcePrivilege.GrantOrDeny,MutableIntObjectMap<IntSet>> writeNodeSegmentForProperty = new HashMap<>();
+        private Map<ResourcePrivilege.GrantOrDeny,MutableIntObjectMap<IntSet>> writeRelationshipSegmentForProperty = new HashMap<>();
+
         private StandardAdminAccessMode.Builder adminModeBuilder = new StandardAdminAccessMode.Builder();
 
         Builder( boolean isAuthenticated, boolean passwordChangeRequired, Set<String> roles, IdLookup resolver, String database, String defaultDbName )
@@ -697,6 +776,12 @@ class StandardAccessMode implements AccessMode
                 this.deleteNodeWithLabels.put( privilegeType, IntSets.mutable.empty() );
                 this.createRelationshipWithTypes.put( privilegeType, IntSets.mutable.empty() );
                 this.deleteRelationshipWithTypes.put( privilegeType, IntSets.mutable.empty() );
+                this.writeNodeSegmentForAllProperties.put( privilegeType, IntSets.mutable.empty() );
+                this.writeRelationshipSegmentForAllProperties.put( privilegeType, IntSets.mutable.empty() );
+                this.writeNodeProperties.put( privilegeType, IntSets.mutable.empty() );
+                this.writeRelationshipProperties.put( privilegeType, IntSets.mutable.empty() );
+                this.writeNodeSegmentForProperty.put( privilegeType, IntObjectMaps.mutable.empty() );
+                this.writeRelationshipSegmentForProperty.put( privilegeType, IntObjectMaps.mutable.empty() );
             }
         }
 
@@ -722,31 +807,31 @@ class StandardAccessMode implements AccessMode
                     traverseLabels.get( DENY ),
                     traverseRelTypes.get( DENY ),
 
-                    readAllPropertiesAllLabels.getOrDefault( GRANT, false ),
-                    readAllPropertiesAllRelTypes.getOrDefault( GRANT, false ),
-                    nodeSegmentForAllProperties.get( GRANT ),
-                    relationshipSegmentForAllProperties.get( GRANT ),
-                    nodeProperties.get( GRANT ),
-                    relationshipProperties.get( GRANT ),
-                    nodeSegmentForProperty.get( GRANT ),
-                    relationshipSegmentForProperty.get( GRANT ),
+                    new PropertyPrivileges( readAllPropertiesAllLabels.getOrDefault( GRANT, false ),
+                                            readAllPropertiesAllRelTypes.getOrDefault( GRANT, false ),
+                                            nodeSegmentForAllProperties.get( GRANT ),
+                                            relationshipSegmentForAllProperties.get( GRANT ),
+                                            nodeProperties.get( GRANT ),
+                                            relationshipProperties.get( GRANT ),
+                                            nodeSegmentForProperty.get( GRANT ),
+                                            relationshipSegmentForProperty.get( GRANT ) ),
 
-                    readAllPropertiesAllLabels.getOrDefault( DENY, false ),
-                    readAllPropertiesAllRelTypes.getOrDefault( DENY, false ),
-                    nodeSegmentForAllProperties.get( DENY ),
-                    relationshipSegmentForAllProperties.get( DENY ),
-                    nodeProperties.get( DENY ),
-                    relationshipProperties.get( DENY ),
-                    nodeSegmentForProperty.get( DENY ),
-                    relationshipSegmentForProperty.get( DENY ),
+                    new PropertyPrivileges( readAllPropertiesAllLabels.getOrDefault( DENY, false ),
+                                            readAllPropertiesAllRelTypes.getOrDefault( DENY, false ),
+                                            nodeSegmentForAllProperties.get( DENY ),
+                                            relationshipSegmentForAllProperties.get( DENY ),
+                                            nodeProperties.get( DENY ),
+                                            relationshipProperties.get( DENY ),
+                                            nodeSegmentForProperty.get( DENY ),
+                                            relationshipSegmentForProperty.get( DENY ) ),
 
-                    setAllLabels.getOrDefault(GRANT, false),
+                    setAllLabels.getOrDefault( GRANT, false ),
                     settableLabels.get( GRANT ),
-                    setAllLabels.getOrDefault(DENY, false),
+                    setAllLabels.getOrDefault( DENY, false ),
                     settableLabels.get( DENY ),
-                    removeAllLabels.getOrDefault(GRANT, false),
+                    removeAllLabels.getOrDefault( GRANT, false ),
                     removableLabels.get( GRANT ),
-                    removeAllLabels.getOrDefault(DENY, false),
+                    removeAllLabels.getOrDefault( DENY, false ),
                     removableLabels.get( DENY ),
 
                     createNodeWithAnyLabel.getOrDefault( GRANT, false ),
@@ -766,6 +851,24 @@ class StandardAccessMode implements AccessMode
                     deleteRelationshipWithTypes.get( GRANT ),
                     deleteRelationshipWithAnyType.getOrDefault( DENY, false ),
                     deleteRelationshipWithTypes.get( DENY ),
+
+                    new PropertyPrivileges( writeAllPropertiesAllLabels.getOrDefault( GRANT, false ),
+                                            writeAllPropertiesAllRelTypes.getOrDefault( GRANT, false ),
+                                            writeNodeSegmentForAllProperties.get( GRANT ),
+                                            writeRelationshipSegmentForAllProperties.get( GRANT ),
+                                            writeNodeProperties.get( GRANT ),
+                                            writeRelationshipProperties.get( GRANT ),
+                                            writeNodeSegmentForProperty.get( GRANT ),
+                                            writeRelationshipSegmentForProperty.get( GRANT ) ),
+
+                    new PropertyPrivileges( writeAllPropertiesAllLabels.getOrDefault( DENY, false ),
+                                            writeAllPropertiesAllRelTypes.getOrDefault( DENY, false ),
+                                            writeNodeSegmentForAllProperties.get( DENY ),
+                                            writeRelationshipSegmentForAllProperties.get( DENY ),
+                                            writeNodeProperties.get( DENY ),
+                                            writeRelationshipProperties.get( DENY ),
+                                            writeNodeSegmentForProperty.get( DENY ),
+                                            writeRelationshipSegmentForProperty.get( DENY ) ),
 
                     adminModeBuilder.build(),
                     database );
@@ -792,7 +895,7 @@ class StandardAccessMode implements AccessMode
 
             case TRAVERSE:
                 anyRead.put( privilegeType, true );
-                handleTraversePrivilege( segment, privilegeType, "traverse" );
+                handleAllResourceQualifier( segment, privilegeType, "traverse", traverseAllLabels, traverseLabels, traverseAllRelTypes, traverseRelTypes );
                 break;
 
             case READ:
@@ -805,7 +908,7 @@ class StandardAccessMode implements AccessMode
                 if ( !(privilegeType.isDeny() && resource.type() == PROPERTY) )
                 {
                     // don't deny TRAVERSE for DENY MATCH {prop}
-                    handleTraversePrivilege( segment, privilegeType, "match" );
+                    handleAllResourceQualifier( segment, privilegeType, "match", traverseAllLabels, traverseLabels, traverseAllRelTypes, traverseRelTypes );
                 }
                 handleReadPrivilege( resource, segment, privilegeType, "match" );
                 break;
@@ -826,7 +929,9 @@ class StandardAccessMode implements AccessMode
             case DELETE_ELEMENT:
                 handleDeletePrivilege( segment, privilegeType );
                 break;
-
+            case SET_PROPERTY:
+                handleSetPropertyPrivilege( resource, segment, privilegeType );
+                break;
             default:
                 if ( TOKEN.satisfies( action ) )
                 {
@@ -851,36 +956,6 @@ class StandardAccessMode implements AccessMode
                 }
             }
             return this;
-        }
-
-        private void handleTraversePrivilege( Segment segment, ResourcePrivilege.GrantOrDeny privilegeType, String privilegeName )
-        {
-            if ( segment instanceof LabelSegment )
-            {
-                if ( segment.equals( LabelSegment.ALL ) )
-                {
-                    traverseAllLabels.put( privilegeType, true );
-                }
-                else
-                {
-                    addLabel( traverseLabels.get( privilegeType ), (LabelSegment) segment );
-                }
-            }
-            else if ( segment instanceof RelTypeSegment )
-            {
-                if ( segment.equals( RelTypeSegment.ALL ) )
-                {
-                    traverseAllRelTypes.put( privilegeType, true );
-                }
-                else
-                {
-                    addRelType( traverseRelTypes.get( privilegeType ), (RelTypeSegment) segment );
-                }
-            }
-            else
-            {
-                throw new IllegalStateException( "Unsupported segment qualifier for " + privilegeName + " privilege: " + segment.getClass().getSimpleName() );
-            }
         }
 
         private void handleCreatePrivilege( Segment segment, ResourcePrivilege.GrantOrDeny privilegeType )
@@ -969,6 +1044,22 @@ class StandardAccessMode implements AccessMode
             }
         }
 
+        private void handleSetPropertyPrivilege( Resource resource, Segment segment, ResourcePrivilege.GrantOrDeny privilegeType )
+        {
+            switch ( resource.type() )
+            {
+            case PROPERTY:
+                handlePropertyResource( resource, segment, privilegeType, "set property", writeNodeProperties, writeNodeSegmentForProperty,
+                                        writeRelationshipProperties, writeRelationshipSegmentForProperty );
+                break;
+            case ALL_PROPERTIES:
+                handleAllResourceQualifier( segment, privilegeType, "set property", writeAllPropertiesAllLabels, writeNodeSegmentForAllProperties,
+                                            writeAllPropertiesAllRelTypes, writeRelationshipSegmentForAllProperties );
+                break;
+            default:
+            }
+        }
+
         private void handleReadPrivilege( Resource resource, Segment segment, ResourcePrivilege.GrantOrDeny privilegeType, String privilegeName )
         {
             switch ( resource.type() )
@@ -978,70 +1069,90 @@ class StandardAccessMode implements AccessMode
                 readAllPropertiesAllRelTypes.put( privilegeType, true );
                 break;
             case PROPERTY:
-                int propertyId = resolvePropertyId( resource.getArg1() );
-                if ( propertyId == ANY_PROPERTY_KEY )
-                {
-                    // there exists no property with this name at the start of this transaction
-                    break;
-                }
-                if ( segment instanceof LabelSegment )
-                {
-                    if ( segment.equals( LabelSegment.ALL ) )
-                    {
-                        nodeProperties.get( privilegeType ).add( propertyId );
-                    }
-                    else
-                    {
-                        addLabel( nodeSegmentForProperty.get( privilegeType ), (LabelSegment) segment, propertyId );
-                    }
-                }
-                else if ( segment instanceof RelTypeSegment )
-                {
-                    if ( segment.equals( RelTypeSegment.ALL ) )
-                    {
-                        relationshipProperties.get( privilegeType ).add( propertyId );
-                    }
-                    else
-                    {
-                        addRelType( relationshipSegmentForProperty.get( privilegeType ), (RelTypeSegment) segment, propertyId );
-                    }
-                }
-                else
-                {
-                    throw new IllegalStateException(
-                            "Unsupported segment qualifier for " + privilegeName + " privilege: " + segment.getClass().getSimpleName() );
-                }
+                handlePropertyResource( resource, segment, privilegeType, privilegeName, nodeProperties, nodeSegmentForProperty, relationshipProperties,
+                                        relationshipSegmentForProperty );
                 break;
             case ALL_PROPERTIES:
-                if ( segment instanceof LabelSegment )
+                handleAllResourceQualifier( segment, privilegeType, privilegeName, readAllPropertiesAllLabels, nodeSegmentForAllProperties,
+                                            readAllPropertiesAllRelTypes, relationshipSegmentForAllProperties );
+                break;
+            default:
+            }
+        }
+
+        private void handlePropertyResource( Resource propertyResource, Segment segment, ResourcePrivilege.GrantOrDeny privilegeType, String privilegeName,
+                                             Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> nodeProperties,
+                                             Map<ResourcePrivilege.GrantOrDeny,MutableIntObjectMap<IntSet>> nodeSegmentForProperty,
+                                             Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> relationshipProperties,
+                                             Map<ResourcePrivilege.GrantOrDeny,MutableIntObjectMap<IntSet>> relationshipSegmentForProperty )
+        {
+            int propertyId = resolvePropertyId( propertyResource.getArg1() );
+            if ( propertyId == ANY_PROPERTY_KEY )
+            {
+                return;
+            }
+            if ( segment instanceof LabelSegment )
+            {
+                if ( segment.equals( LabelSegment.ALL ) )
                 {
-                    if ( segment.equals( LabelSegment.ALL ) )
-                    {
-                        readAllPropertiesAllLabels.put( privilegeType, true );
-                    }
-                    else
-                    {
-                        addLabel( nodeSegmentForAllProperties.get( privilegeType ), (LabelSegment) segment );
-                    }
-                }
-                else if ( segment instanceof RelTypeSegment )
-                {
-                    if ( segment.equals( RelTypeSegment.ALL ) )
-                    {
-                        readAllPropertiesAllRelTypes.put( privilegeType, true );
-                    }
-                    else
-                    {
-                        addRelType( relationshipSegmentForAllProperties.get( privilegeType ), (RelTypeSegment) segment );
-                    }
+                    nodeProperties.get( privilegeType ).add( propertyId );
                 }
                 else
                 {
-                    throw new IllegalStateException(
-                            "Unsupported segment qualifier for " + privilegeName + " privilege: " + segment.getClass().getSimpleName() );
+                    addLabel( nodeSegmentForProperty.get( privilegeType ), (LabelSegment) segment, propertyId );
                 }
-                break;
-            default:
+            }
+            else if ( segment instanceof RelTypeSegment )
+            {
+                if ( segment.equals( RelTypeSegment.ALL ) )
+                {
+                    relationshipProperties.get( privilegeType ).add( propertyId );
+                }
+                else
+                {
+                    addRelType( relationshipSegmentForProperty.get( privilegeType ), (RelTypeSegment) segment, propertyId );
+                }
+            }
+            else
+            {
+                throw new IllegalStateException(
+                        "Unsupported segment qualifier for " + privilegeName + " privilege: " + segment.getClass().getSimpleName() );
+            }
+        }
+
+        private void handleAllResourceQualifier( Segment segment, ResourcePrivilege.GrantOrDeny privilegeType, String privilegeName,
+                                                 Map<ResourcePrivilege.GrantOrDeny,Boolean> allPropertiesAllLabels,
+                                                 Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> nodeSegmentForAllProperties,
+                                                 Map<ResourcePrivilege.GrantOrDeny,Boolean> allPropertiesAllRelTypes,
+                                                 Map<ResourcePrivilege.GrantOrDeny,MutableIntSet> relationshipSegmentForAllProperties )
+        {
+            if ( segment instanceof LabelSegment )
+            {
+                if ( segment.equals( LabelSegment.ALL ) )
+                {
+                    allPropertiesAllLabels.put( privilegeType, true );
+                }
+                else
+                {
+                    addLabel( nodeSegmentForAllProperties.get( privilegeType ), (LabelSegment) segment );
+                }
+            }
+            else if ( segment instanceof RelTypeSegment )
+
+            {
+                if ( segment.equals( RelTypeSegment.ALL ) )
+                {
+                    allPropertiesAllRelTypes.put( privilegeType, true );
+                }
+                else
+                {
+                    addRelType( relationshipSegmentForAllProperties.get( privilegeType ), (RelTypeSegment) segment );
+                }
+            }
+            else
+            {
+                throw new IllegalStateException(
+                        "Unsupported segment qualifier for " + privilegeName + " privilege: " + segment.getClass().getSimpleName() );
             }
         }
 

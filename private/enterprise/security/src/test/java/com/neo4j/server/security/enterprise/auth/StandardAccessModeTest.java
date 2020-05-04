@@ -26,6 +26,7 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.MATCH;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.READ;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_LABEL;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_LABEL;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_PROPERTY;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRAVERSE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.WRITE;
 import static org.neo4j.token.api.TokenConstants.ANY_LABEL;
@@ -1600,5 +1601,284 @@ class StandardAccessModeTest
         // THEN
         assertThat( mode.allowsRemoveLabel( A ) ).isEqualTo( false );
         assertThat( mode.allowsRemoveLabel( B ) ).isEqualTo( true );
+    }
+
+    // SET PROPERTY
+
+    @Test
+    void shouldAllowSetPropertyAllNodes() throws Exception
+    {
+        // GRANT SET PROPERTY {*} ON GRAPH neo4j NODES *
+        var privilege = new ResourcePrivilege( GRANT, SET_PROPERTY, new Resource.AllPropertiesResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( true );
+    }
+
+    @Test
+    void shouldAllowSetSpecificPropertyAllNodes() throws Exception
+    {
+        // GRANT SET PROPERTY { PROP1 } ON GRAPH neo4j NODES *
+        var privilege = new ResourcePrivilege( GRANT, SET_PROPERTY, new Resource.PropertyResource( "PROP1" ), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+        assertThat( mode.allowsSetProperty( () -> Labels.from(), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> Labels.from(), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A, B ), PROP2 ) ).isEqualTo( false );
+    }
+
+    @Test
+    void shouldAllowSetPropertySpecificLabel() throws Exception
+    {
+        // GRANT SET PROPERTY {*} ON GRAPH neo4j NODES A
+        var privilege = new ResourcePrivilege( GRANT, SET_PROPERTY, new Resource.AllPropertiesResource(), new LabelSegment( "A" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+        assertThat( mode.allowsSetProperty( () -> Labels.from(), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( true );
+    }
+
+    @Test
+    void shouldAllowSetSpecificPropertySpecificLabel() throws Exception
+    {
+        // GRANT SET PROPERTY { PROP1 } ON GRAPH neo4j NODES A
+        var privilege = new ResourcePrivilege( GRANT, SET_PROPERTY, new Resource.PropertyResource( "PROP1" ), new LabelSegment( "A" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+        assertThat( mode.allowsSetProperty( () -> Labels.from(), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> Labels.from(), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A, B ), PROP2 ) ).isEqualTo( false );
+    }
+
+    @Test
+    void shouldDenySetPropertyOnNodeBeforeGrant() throws Exception
+    {
+        // GRANT SET PROPERTY {*} ON GRAPH neo4j NODES *
+        var privilege1 = new ResourcePrivilege( GRANT, SET_PROPERTY, new Resource.AllPropertiesResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 = new ResourcePrivilege( DENY, SET_PROPERTY, new Resource.PropertyResource( "PROP1" ), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A, B ), PROP2 ) ).isEqualTo( true );
+    }
+
+    @Test
+    void shouldDenySetPropertyOnNode() throws Exception
+    {
+        // GRANT SET PROPERTY {*} ON GRAPH neo4j NODES *
+        // DENY SET PROPERTY { PROP1 } ON GRAPH neo4j NODES B
+        var privilege1 = new ResourcePrivilege( GRANT, SET_PROPERTY, new Resource.AllPropertiesResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 = new ResourcePrivilege( DENY, SET_PROPERTY, new Resource.PropertyResource( "PROP1" ), new LabelSegment( "B" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+        assertThat( mode.allowsSetProperty( () -> Labels.from(), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from(), PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A, B ), PROP2 ) ).isEqualTo( true );
+    }
+
+    @Test
+    void shouldDenyAllSetPropertyOverGrantAll() throws Exception
+    {
+        // GRANT SET PROPERTY {*} ON GRAPH neo4j NODES *
+        // DENY SET PROPERTY {*} ON GRAPH neo4j NODES *
+        var privilege1 = new ResourcePrivilege( GRANT, SET_PROPERTY, new Resource.AllPropertiesResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 = new ResourcePrivilege( DENY, SET_PROPERTY, new Resource.AllPropertiesResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+        assertThat( mode.allowsSetProperty( () -> Labels.from(), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from(), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A, B ), PROP2 ) ).isEqualTo( false );
+    }
+
+    @Test
+    void shouldDenyAllSetPropertyOverSpecificGrant() throws Exception
+    {
+        // GRANT SET PROPERTY { PROP1 } ON GRAPH neo4j NODES B
+        // DENY SET PROPERTY {*} ON GRAPH neo4j NODES *
+        var privilege1 = new ResourcePrivilege( GRANT, SET_PROPERTY, new Resource.PropertyResource( "PROP1" ), new LabelSegment( "B" ), DEFAULT_DATABASE_NAME );
+        var privilege2 = new ResourcePrivilege( DENY, SET_PROPERTY, new Resource.AllPropertiesResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+        assertThat( mode.allowsSetProperty( () -> Labels.from(), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from(), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A, B ), PROP2 ) ).isEqualTo( false );
+    }
+
+    @Test
+    void shouldOverrideWriteWithDenySetPropertyOnASpecificNodeType() throws Exception
+    {
+        var privilege1 = new ResourcePrivilege( GRANT, WRITE, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 = new ResourcePrivilege( DENY, SET_PROPERTY, new Resource.PropertyResource( "PROP1" ), new LabelSegment( "B" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+        assertThat( mode.allowsSetProperty( () -> Labels.from(), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from(), PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A, B ), PROP2 ) ).isEqualTo( true );
+    }
+
+    @Test
+    void denyWriteShouldOverrideSetProperty() throws Exception
+    {
+        var privilege2 = new ResourcePrivilege( GRANT, SET_PROPERTY, new Resource.AllPropertiesResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege1 = new ResourcePrivilege( DENY, WRITE, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+        assertThat( mode.allowsSetProperty( () -> Labels.from(), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from(), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A, B ), PROP2 ) ).isEqualTo( false );
+    }
+
+    @Test
+    void shouldAllowSetPropertyAllRelationships() throws Exception
+    {
+        // GRANT SET PROPERTY {*} ON GRAPH neo4j RELATIONSHIPS *
+        var privilege = new ResourcePrivilege( GRANT, SET_PROPERTY, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+        assertThat( mode.allowsSetProperty( () -> R1, PROP1 ) ).isEqualTo( true );
+    }
+
+    @Test
+    void shouldAllowSetSpecificPropertyAllRelationships() throws Exception
+    {
+        // GRANT SET PROPERTY { PROP1 } ON GRAPH neo4j RELATIONSHIPS *
+        var privilege = new ResourcePrivilege( GRANT, SET_PROPERTY, new Resource.PropertyResource( "PROP1" ), RelTypeSegment.ALL, DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+        assertThat( mode.allowsSetProperty( () -> R1, PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> R1, PROP2 ) ).isEqualTo( false );
+    }
+
+    @Test
+    void shouldAllowSetPropertySpecificRelationships() throws Exception
+    {
+        // GRANT SET PROPERTY {*} ON GRAPH neo4j RELATIONSHIPS R1
+        var privilege = new ResourcePrivilege( GRANT, SET_PROPERTY, new Resource.AllPropertiesResource(), new RelTypeSegment( "R1" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+        assertThat( mode.allowsSetProperty( () -> R1, PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> R1, PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> R2, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> R2, PROP2 ) ).isEqualTo( false );
+    }
+
+    @Test
+    void shouldAllowSetSpecificPropertySpecificRelationships() throws Exception
+    {
+        // GRANT SET PROPERTY { PROP1 } ON GRAPH neo4j RELATIONSHIPS R1
+        var privilege =
+                new ResourcePrivilege( GRANT, SET_PROPERTY, new Resource.PropertyResource( "PROP1" ), new RelTypeSegment( "R1" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+        assertThat( mode.allowsSetProperty( () -> R1, PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> R1, PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> R2, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> R2, PROP2 ) ).isEqualTo( false );
+    }
+
+    @Test
+    void shouldDenySetPropertyOnRelationshipBeforeGrant() throws Exception
+    {
+        // GRANT SET PROPERTY {*} ON GRAPH neo4j RELATIONSHIP *
+        // DENY SET PROPERTY { PROP1 } on GRAPH neo4j RELATIONSHIP *
+        var privilege1 = new ResourcePrivilege( GRANT, SET_PROPERTY, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 = new ResourcePrivilege( DENY, SET_PROPERTY, new Resource.PropertyResource( "PROP1" ), RelTypeSegment.ALL, DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+        assertThat( mode.allowsSetProperty( () -> R1, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> R1, PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> R2, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> R2, PROP2 ) ).isEqualTo( true );
+    }
+
+    @Test
+    void shouldDenySetPropertyOnRelationship() throws Exception
+    {
+        // GRANT SET PROPERTY {*} ON GRAPH neo4j RELATIONSHIP *
+        // DENY SET PROPERTY { PROP1 } ON GRAPH neo4j RELATIONSHIP R1
+        var privilege1 = new ResourcePrivilege( GRANT, SET_PROPERTY, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 =
+                new ResourcePrivilege( DENY, SET_PROPERTY, new Resource.PropertyResource( "PROP1" ), new RelTypeSegment( "R1" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+        assertThat( mode.allowsSetProperty( () -> R1, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> R1, PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> R2, PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> R2, PROP2 ) ).isEqualTo( true );
+    }
+
+    @Test
+    void shouldDenyAllSetPropertyOnRelationshipOverGrantAll() throws Exception
+    {
+        // GRANT SET PROPERTY {*} ON GRAPH neo4j RELATIONSHIP *
+        // DENY SET PROPERTY {*} ON GRAPH neo4j RELATIONSHIP *
+        var privilege1 = new ResourcePrivilege( GRANT, SET_PROPERTY, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 = new ResourcePrivilege( DENY, SET_PROPERTY, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+        assertThat( mode.allowsSetProperty( () -> R1, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> R1, PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> R2, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> R2, PROP2 ) ).isEqualTo( false );
+    }
+
+    @Test
+    void shouldDenyAllSetPropertyOnRelationshipOverSpecificGrant() throws Exception
+    {
+        // GRANT SET PROPERTY { PROP1 } ON GRAPH neo4j RELATIONSHIP R1
+        // DENY SET PROPERTY {*} ON GRAPH neo4j RELATIONSHIP *
+        var privilege1 =
+                new ResourcePrivilege( GRANT, SET_PROPERTY, new Resource.PropertyResource( "PROP1" ), new RelTypeSegment( "R1" ), DEFAULT_DATABASE_NAME );
+        var privilege2 = new ResourcePrivilege( DENY, SET_PROPERTY, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+        assertThat( mode.allowsSetProperty( () -> R1, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> R1, PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> R2, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> R2, PROP2 ) ).isEqualTo( false );
+    }
+
+    @Test
+    void shouldOverrideWriteWithDenySetPropertyOnASpecificRelationshipType() throws Exception
+    {
+        var privilege1 = new ResourcePrivilege( GRANT, WRITE, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 =
+                new ResourcePrivilege( DENY, SET_PROPERTY, new Resource.PropertyResource( "PROP1" ), new RelTypeSegment( "R1" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+        assertThat( mode.allowsSetProperty( () -> R1, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> R1, PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> R2, PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSetProperty( () -> R2, PROP2 ) ).isEqualTo( true );
+    }
+
+    @Test
+    void denyWriteShouldOverrideSetPropertyonRelationship() throws Exception
+    {
+        var privilege2 = new ResourcePrivilege( GRANT, SET_PROPERTY, new Resource.AllPropertiesResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege1 = new ResourcePrivilege( DENY, WRITE, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+        assertThat( mode.allowsSetProperty( () -> R1, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> R1, PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> R2, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSetProperty( () -> R2, PROP2 ) ).isEqualTo( false );
     }
 }

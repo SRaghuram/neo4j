@@ -6,6 +6,7 @@
 package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
+import org.neo4j.graphdb.security.AuthorizationViolationException
 
 class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
@@ -204,5 +205,242 @@ class SetPropertyAdministrationCommandAcceptanceTest extends AdministrationComma
           execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
         }
     }
+
+  test(s"revoke should revoke both grant and deny") {
+    // GIVEN
+    execute("CREATE ROLE custom")
+    execute("CREATE ROLE role")
+    execute("GRANT SET PROPERTY { prop } ON GRAPH * TO custom")
+    execute("DENY SET PROPERTY { prop } ON GRAPH * TO custom")
+
+    // WHEN
+    execute(s"REVOKE SET PROPERTY { prop } ON GRAPH * FROM custom")
+    // THEN
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+  }
+
+  test(s"revoke grant should revoke only grant") {
+    // GIVEN
+    execute("CREATE ROLE custom")
+    execute("GRANT SET PROPERTY { prop } ON GRAPH * TO custom")
+    execute("DENY SET PROPERTY { prop } ON GRAPH * TO custom")
+
+    // WHEN
+    execute(s"REVOKE GRANT SET PROPERTY { prop } ON GRAPH * FROM custom")
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      denied(setProperty).role("custom").property("prop").node("*").map,
+      denied(setProperty).role("custom").property("prop").relationship("*").map,
+    ))
+  }
+
+  test(s"revoke deny should revoke only deny") {
+    // GIVEN
+    execute("CREATE ROLE custom")
+    execute("GRANT SET PROPERTY { prop } ON GRAPH * TO custom")
+    execute("DENY SET PROPERTY { prop } ON GRAPH * TO custom")
+
+    // WHEN
+    execute(s"REVOKE DENY SET PROPERTY { prop } ON GRAPH * FROM custom")
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      granted(setProperty).role("custom").property("prop").node("*").map,
+      granted(setProperty).role("custom").property("prop").relationship("*").map,
+    ))
+  }
+
+  test(s"revoke something not granted should do nothing") {
+    // GIVEN
+    execute("CREATE ROLE custom")
+    execute("GRANT SET PROPERTY { prop } ON GRAPH * TO custom")
+
+    // WHEN
+    execute(s"REVOKE DENY SET PROPERTY { prop } ON GRAPH * FROM custom")
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      granted(setProperty).role("custom").property("prop").node("*").map,
+      granted(setProperty).role("custom").property("prop").relationship("*").map,
+    ))
+  }
+
+  // Implementation tests
+
+  test("set property should allow setting a property on a node") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute(s"GRANT SET PROPERTY { prop } ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CALL db.createProperty('prop')")
+    execute("CREATE ()")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "MATCH (n) SET n.prop = 'value'")
+
+    // THEN
+    execute("MATCH (n{prop:'value'}) RETURN n").toSet should have size(1)
+  }
+
+  test("set property should allow remove a property from a node") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute(s"GRANT SET PROPERTY { prop } ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CALL db.createProperty('prop')")
+    execute("CREATE ({prop:'value'})")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "MATCH (n) SET n.prop = null")
+
+    // THEN
+    execute("MATCH (n{prop:'value'}) RETURN n").toSet should have size(0)
+  }
+
+  test("set property on a node should allow specific property only") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute(s"GRANT SET PROPERTY { prop } ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CALL db.createProperty('prop')")
+    execute("CALL db.createProperty('prop2')")
+    execute("CREATE ()")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "MATCH (n) SET n.prop = 'value'")
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n) SET n.prop2 = 'value'")
+      // THEN
+    } should have message "Set property for property 'prop2' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH (n{prop:'value'}) RETURN n").toSet should have size(1)
+  }
+
+  test("set property on a relationship should allow specific property only") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute(s"GRANT SET PROPERTY { prop } ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CALL db.createProperty('prop')")
+    execute("CALL db.createProperty('prop2')")
+    execute("CREATE (:A)-[:R]->(:B)")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "MATCH (:A)-[r:R]->(:B) SET r.prop = 'value'")
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (:A)-[r:R]->(:B) SET r.prop2 = 'value'")
+      // THEN
+    } should have message "Set property for property 'prop2' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH (:A)-[r:R]->(:B) RETURN r.prop").toSet should be(Set(Map("r.prop" -> "value")))
+  }
+
+
+  test("set property should allow setting a property on a relationship") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute(s"GRANT SET PROPERTY { prop } ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CALL db.createProperty('prop')")
+    execute("CREATE (:A)-[:R]->(:B)")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "MATCH (:A)-[r:R]->(:B) SET r.prop = 'value'")
+
+    // THEN
+    execute("MATCH (:A)-[r:R]->(:B) RETURN r.prop").toSet should be(Set(Map("r.prop" -> "value")))
+  }
+
+  test("set property should allow deleting a property from a relationship") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute(s"GRANT SET PROPERTY { prop } ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CALL db.createProperty('prop')")
+    execute("CREATE (:A)-[:R{prop:'value'}]->(:B)")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "MATCH (:A)-[r:R]->(:B) SET r.prop = null")
+
+    // THEN
+    val c = execute("MATCH (:A)-[r:R{prop:'value'}]->(:B) RETURN r.prop").toSet should be(empty)
+  }
+
+  test("deny set property should not allow setting a specific property on a node") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute(s"GRANT SET PROPERTY { * } ON GRAPH * TO custom")
+    execute(s"DENY SET PROPERTY { prop } ON GRAPH * NODES * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CALL db.createProperty('prop')")
+    execute("CREATE ()")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n) SET n.prop = 'value'")
+      // THEN
+    } should have message "Set property for property 'prop' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH (n{prop:'value'}) RETURN n").toSet should be(empty)
+  }
+
+  test("deny set property should not allow setting a specific property on a relationship") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute(s"GRANT SET PROPERTY { * } ON GRAPH * TO custom")
+    execute(s"DENY SET PROPERTY { prop } ON GRAPH * RELATIONSHIPS * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CALL db.createProperty('prop')")
+    execute("CREATE (:A)-[:R]->(:B)")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n)-[r:R]->(o) SET r.prop = 'value'")
+      // THEN
+    } should have message "Set property for property 'prop' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH (n{prop:'value'}) RETURN n").toSet should be(empty)
+  }
+
+  test("deny set property should override general write permission") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {*} ON GRAPH * TO custom")
+    execute(s"GRANT WRITE ON GRAPH * TO custom")
+    execute(s"DENY SET PROPERTY { prop } ON GRAPH * RELATIONSHIPS * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CALL db.createProperty('prop')")
+    execute("CREATE (:A)-[:R]->(:B)")
+
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnDefault("joe", "soap", "MATCH (n)-[r:R]->(o) SET r.prop = 'value'")
+      // THEN
+    } should have message "Set property for property 'prop' is not allowed for user 'joe' with roles [PUBLIC, custom]."
+
+    // THEN
+    execute("MATCH (n{prop:'value'}) RETURN n").toSet should be(empty)
+  }
 
 }
