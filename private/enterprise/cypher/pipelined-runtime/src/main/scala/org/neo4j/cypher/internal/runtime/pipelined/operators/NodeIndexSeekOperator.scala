@@ -45,6 +45,7 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.CompositeValueIndexCursor
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.RANGE_SEEKABLE_VALUE_GROUPS
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
+import org.neo4j.cypher.internal.runtime.ValuedNodeIndexCursor
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -636,8 +637,22 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
     var i = 0
     while (i < cursors.length) {
       val cursor = pool.allocate()
-      read.nodeIndexSeek(index, cursor, IndexQueryConstraints.constrained(order, needsValues || order != IndexOrder.NONE), combinedPredicates(i):_*)
-      cursors(i) = cursor
+      val queries = combinedPredicates(i)
+      val reallyNeedsValues = needsValues || order != IndexOrder.NONE
+      val actualValues =
+        if (reallyNeedsValues && queries.forall(_.isInstanceOf[ExactPredicate]))
+        // We don't need property values from the index for an exact seek
+        queries.map(_.asInstanceOf[ExactPredicate].value())
+          else
+          null
+
+      val needsValuesFromIndexSeek = actualValues == null && reallyNeedsValues
+      read.nodeIndexSeek(index, cursor, IndexQueryConstraints.constrained(order, needsValuesFromIndexSeek), queries:_*)
+      if (reallyNeedsValues && actualValues != null) {
+        cursors(i) = new ValuedNodeIndexCursor(cursor, actualValues)
+      } else {
+        cursors(i) = cursor
+      }
       i += 1
     }
     cursors
