@@ -85,7 +85,8 @@ class HeaderTest
 
         // when
         ByteBuffer buffer = ByteBuffer.allocate( header.spaceNeeded() );
-        header.serialize( buffer, referenceHeader );
+        header.setReference( referenceHeader );
+        header.serialize( buffer );
         Header readHeader = new Header();
         readHeader.deserialize( buffer.position( 0 ) );
 
@@ -104,7 +105,7 @@ class HeaderTest
         header.allocateSpace( buffer );
         assertThat( buffer.position() ).isEqualTo( expectedSize );
         buffer.clear();
-        header.serialize( buffer, null );
+        header.serialize( buffer );
         buffer.flip();
         Header readHeader = new Header();
         readHeader.deserialize( buffer );

@@ -44,10 +44,11 @@ class FrekiCursorData
 
     long nodeId = NULL;
     boolean x1Loaded;
-    long forwardPointer = NULL;
-    long backwardPointer = NULL;
+    long xLChainStartPointer = NULL;
+    long xLChainNextLinkPointer = NULL;
+    long x1Pointer = NULL;
     boolean isDense;
-    boolean xLLoaded;
+    boolean xLChainLoaded;
 
     int labelOffset;
     private ByteBuffer labelBuffer;
@@ -72,23 +73,27 @@ class FrekiCursorData
         assignDataOffsets( buffer );
         if ( header.hasMark( OFFSET_RECORD_POINTER ) )
         {
-            forwardPointer = readRecordPointer( buffer );
+            xLChainStartPointer = readRecordPointers( buffer )[0];
+            xLChainNextLinkPointer = readRecordPointers( buffer )[0];
             // xL can be loaded lazily when/if needed
         }
         else
         {
-            xLLoaded = true;
+            //We have no chain
+            xLChainLoaded = true;
         }
     }
 
     void gatherDataFromXL( Record record )
     {
-        xLLoaded = true;
         ByteBuffer buffer = record.data( 0 );
         header.deserialize( buffer );
         assignDataOffsets( buffer );
         assert header.hasMark( OFFSET_RECORD_POINTER );
-        backwardPointer = readRecordPointer( buffer );
+        long[] pointers = readRecordPointers( buffer );
+        x1Pointer = pointers[0];
+        xLChainLoaded = pointers.length == 1;
+        xLChainNextLinkPointer = !xLChainLoaded ? pointers[1] : NULL;
     }
 
     private void assignDataOffsets( ByteBuffer buffer )
@@ -120,9 +125,9 @@ class FrekiCursorData
         }
     }
 
-    private long readRecordPointer( ByteBuffer xLBuffer )
+    private long[] readRecordPointers( ByteBuffer buffer )
     {
-        return readLongs( xLBuffer.position( header.getOffset( OFFSET_RECORD_POINTER ) ) )[0];
+        return readLongs( buffer.position( header.getOffset( OFFSET_RECORD_POINTER ) ) );
     }
 
     ByteBuffer labelBuffer()
@@ -152,7 +157,7 @@ class FrekiCursorData
 
     boolean isLoaded()
     {
-        return x1Loaded || xLLoaded;
+        return x1Loaded | xLChainLoaded;
     }
 
     void reset()
@@ -160,10 +165,11 @@ class FrekiCursorData
         assert refCount == 1;
         nodeId = NULL;
         x1Loaded = false;
-        forwardPointer = NULL;
-        backwardPointer = NULL;
+        xLChainStartPointer = NULL;
+        xLChainNextLinkPointer = NULL;
+        x1Pointer = NULL;
         isDense = false;
-        xLLoaded = false;
+        xLChainLoaded = false;
         labelOffset = 0;
         propertyOffset = 0;
         relationshipOffset = 0;
@@ -173,7 +179,7 @@ class FrekiCursorData
     @Override
     public String toString()
     {
-        return isLoaded() ? String.format( "NodeData[%d,fw:%s%s,lo:%d,po:%d,ro:%d]", nodeId, recordPointerToString( forwardPointer ),
+        return isLoaded() ? String.format( "NodeData[%d,fw:%s%s,lo:%d,po:%d,ro:%d]", nodeId, recordPointerToString( xLChainStartPointer ),
                 isDense ? "->DENSE" : "", labelOffset, propertyOffset, relationshipOffset )
                           : "<not loaded>";
     }

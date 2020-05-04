@@ -44,7 +44,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
 {
     private boolean initializedFromEntity;
 
-    // either the properties are in the record data, where these fields come into play...
+    // either the properties are in the record data (node properties (and relationship properties when sparse)), where these fields come into play...
     private FrekiReference referenceToLoad;
     private int[] propertyKeyArray;
     private int propertyKeyIndex = (int) NULL;
@@ -52,7 +52,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     private Value readValue;
     private ByteBuffer buffer;
 
-    // ... or they are in the dense form, where these fields come into play
+    // ... or they are in the dense form (relationship properties when dense), where these fields come into play
     private Iterator<StorageProperty> denseProperties;
     private StorageProperty currentDenseProperty;
 

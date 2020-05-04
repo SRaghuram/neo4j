@@ -30,6 +30,7 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.CommandCreationContext;
 
+import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
 import static org.neo4j.internal.freki.Header.FLAG_HAS_DENSE_RELATIONSHIPS;
 import static org.neo4j.internal.freki.Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID;
 import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIPS;
@@ -77,32 +78,14 @@ class FrekiCommandCreationContext implements CommandCreationContext
 
         MutableInt nextRelationshipId = sourceNodeNextRelationshipIds.getIfAbsentPutWithKey( sourceNode, nodeId ->
         {
-            MutableNodeData data = readAndDeserializeNode( sourceNode, 0, sourceNode );
+            MutableNodeData data = readAndDeserializeNode( sourceNode, 0, sourceNode, false );
             if ( data == null )
             {
                 // TODO This node is probably created in this transaction, can we verify that?
                 return new MutableInt( FIRST_RELATIONSHIP_ID );
             }
-
-            if ( data.hasHeaderMark( FLAG_HAS_DENSE_RELATIONSHIPS ) )
-            {
-                if ( data.hasHeaderReferenceMark( OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID ) )
-                {
-                    long forwardPointer = data.getRecordPointer();
-                    data = readAndDeserializeNode( sourceNode, sizeExponentialFromRecordPointer( forwardPointer ), idFromRecordPointer( forwardPointer ) );
-                }
-                assert data.hasHeaderMark( OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
-                return new MutableInt( data.getNextInternalRelationshipId() );
-            }
-            else
-            {
-                if ( data.hasHeaderReferenceMark( OFFSET_RELATIONSHIPS ) )
-                {
-                    long forwardPointer = data.getRecordPointer();
-                    data = readAndDeserializeNode( sourceNode, sizeExponentialFromRecordPointer( forwardPointer ), idFromRecordPointer( forwardPointer ) );
-                }
-                return new MutableInt( data.getNextInternalRelationshipId() );
-            }
+            int relevantMark = data.hasHeaderMark( FLAG_HAS_DENSE_RELATIONSHIPS ) ? OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID : OFFSET_RELATIONSHIPS;
+            return new MutableInt( traverseToCorrectChainLink( sourceNode, data, relevantMark ).getNextInternalRelationshipId() );
         } );
 
         long internalRelationshipId = nextRelationshipId.getAndIncrement();
@@ -110,15 +93,35 @@ class FrekiCommandCreationContext implements CommandCreationContext
         return externalRelationshipId( sourceNode, internalRelationshipId );
     }
 
-    private MutableNodeData readAndDeserializeNode( long nodeId, int sizeExp, long id )
+    private MutableNodeData traverseToCorrectChainLink( long sourceNode, MutableNodeData x1, int mark )
+    {
+        MutableNodeData chainLink = x1;
+        long forwardPointer = chainLink.getRecordPointers() != null ? chainLink.getRecordPointers()[0] : NULL;
+        while ( chainLink.hasHeaderReferenceMark( mark ) && forwardPointer != NULL )
+        {
+            chainLink = readAndDeserializeNode( sourceNode, sizeExponentialFromRecordPointer( forwardPointer ), idFromRecordPointer( forwardPointer ), true );
+            assert chainLink != null;
+            forwardPointer = chainLink.getRecordPointers().length > 1 ? chainLink.getRecordPointers()[1] : NULL;
+        }
+        assert x1 == chainLink || chainLink.hasHeaderMark( mark );
+        return chainLink;
+    }
+
+    private MutableNodeData readAndDeserializeNode( long nodeId, int sizeExp, long id, boolean mustExist )
     {
         SimpleStore store = stores.mainStore( sizeExp );
         try ( PageCursor cursor = store.openReadCursor( cursorTracer ) )
         {
             Record record = store.newRecord();
-            return store.read( cursor, record, id ) && record.hasFlag( FLAG_IN_USE )
-                   ? new MutableNodeData( nodeId, stores.bigPropertyValueStore, cursorTracer, record.data() )
-                   : null;
+            if ( store.read( cursor, record, id ) && record.hasFlag( FLAG_IN_USE ) )
+            {
+                return new MutableNodeData( nodeId, stores.bigPropertyValueStore, cursorTracer, record.data() );
+            }
+            if ( mustExist )
+            {
+                throw new IllegalStateException( String.format( "Broken node record. NodeId:%d SizeExp:%d Id:%d", nodeId, sizeExp, id ) );
+            }
+            return null;
         }
     }
 

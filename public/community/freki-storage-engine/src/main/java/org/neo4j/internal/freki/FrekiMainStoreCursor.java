@@ -114,6 +114,12 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         {
             data.records[sizeExp] = stores.mainStore( sizeExp ).newRecord();
         }
+        else if ( sizeExp > 0 && data.xLChainNextLinkPointer != data.xLChainStartPointer )
+        {
+            //We cant reuse records when loading chains, just create a new one.
+            //TODO reuse up to 2 or 3 first in chain?
+            data.records[sizeExp] = stores.mainStore( sizeExp ).newRecord();
+        }
         return data.records[sizeExp];
     }
 
@@ -161,28 +167,34 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         }
     }
 
-    private void ensureXLLoaded()
+    private boolean loadNextChainLink()
     {
-        if ( !data.xLLoaded && data.forwardPointer != NULL )
+        //This is only capable of reading chain in one direction, until reached end.
+        if ( !data.xLChainLoaded && data.xLChainNextLinkPointer != NULL )
         {
-            int sizeExp = sizeExponentialFromRecordPointer( data.forwardPointer );
-            Record xLRecord = loadRecord( sizeExp, idFromRecordPointer( data.forwardPointer ) );
+            int sizeExp = sizeExponentialFromRecordPointer( data.xLChainNextLinkPointer );
+            Record xLRecord = loadRecord( sizeExp, idFromRecordPointer( data.xLChainNextLinkPointer ) );
             if ( xLRecord != null )
             {
                 data.gatherDataFromXL( xLRecord );
+                return true;
             }
-            data.xLLoaded = true;
         }
+        return false;
     }
 
     private void ensureLoaded( ToIntFunction<FrekiCursorData> test, int headerSlot )
     {
-        if ( test.applyAsInt( data ) == 0 )
+        if ( (!data.x1Loaded || !data.xLChainLoaded) && test.applyAsInt( data ) == 0 )
         {
             ensureX1Loaded();
-            if ( test.applyAsInt( data ) == 0 && data.header.hasReferenceMark( headerSlot ) )
+            while ( test.applyAsInt( data ) == 0 && data.header.hasReferenceMark( headerSlot ) )
             {
-                ensureXLLoaded();
+                if ( !loadNextChainLink() )
+                {
+                    //We traversed the rest of the chain. Either the header/store is corrupt or we did not start at the beginning of the chain.
+                    throw new IllegalStateException( String.format( "Should have found %d in record chain", headerSlot ) );
+                }
             }
         }
     }
@@ -250,12 +262,14 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         }
         else
         {
+            //TODO what do we do when we have XL chains but initialize from a single record?
             data.gatherDataFromXL( record );
-            data.nodeId = MutableNodeData.idFromRecordPointer( data.backwardPointer );
+            data.nodeId = MutableNodeData.idFromRecordPointer( data.x1Pointer );
         }
+        //TODO is this still true?
         //When we initialize here, we dont wanna do additional loading, just look at this specific record.
         data.x1Loaded = true;
-        data.xLLoaded = true;
+        data.xLChainLoaded = true;
         return true;
     }
 

@@ -261,7 +261,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
             {
                 //in x1
                 investigatedX1 = true;
-                if ( !inUse || nodeCursor.data.forwardPointer == NULL )
+                if ( !inUse || nodeCursor.data.xLChainStartPointer == NULL )
                 {
                     investigatedXL = true;
                     break;
@@ -269,6 +269,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
             }
             else
             {
+                //TODO this is no longer correct.. Fix!!!
                 investigatedXL = true;
                 if ( inUse )
                 {

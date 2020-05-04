@@ -121,9 +121,8 @@ class Header
         return sizes[slot];
     }
 
-    void serialize( ByteBuffer buffer, Header referenceHeader )
+    void serialize( ByteBuffer buffer )
     {
-        referenceMarkers = referenceHeader != null ? referenceHeader.markers & ~markers : 0;
         assert Integer.bitCount( markers & MASK_OFFSET_MARKERS ) <= 6 :
                 "Even though there are 7 types of offsets there can only be 6 active concurrently (RELATIONSHIPS vs DEGREES) so long data is fine for now";
         buffer.put( (byte) markers );
@@ -144,6 +143,11 @@ class Header
             buffer.put( (byte) (data & 0xFF) );
             data >>>= Byte.SIZE;
         }
+    }
+
+    void setReference( Header referenceHeader )
+    {
+        referenceMarkers = (referenceHeader.markers | referenceHeader.referenceMarkers) & ~markers; //what is found in reference, or elsewhere, but not here
     }
 
     void deserialize( ByteBuffer buffer )

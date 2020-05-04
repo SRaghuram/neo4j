@@ -81,7 +81,7 @@ class MutableNodeData
     private MutableIntObjectMap<Relationships> relationships;
     private EagerDegrees degrees;
     private long nextInternalRelationshipId = FIRST_RELATIONSHIP_ID;
-    private long recordPointer = NULL;
+    private long[] recordPointers;
 
     private SimpleBigValueStore bigValueStore;
     private PageCursorTracer cursorTracer;
@@ -111,24 +111,26 @@ class MutableNodeData
             return false;
         }
         MutableNodeData that = (MutableNodeData) o;
-        return nodeId == that.nodeId && nextInternalRelationshipId == that.nextInternalRelationshipId && recordPointer == that.recordPointer &&
-                isDense() == that.isDense() && labels.equals( that.labels ) && Objects.equals( properties, that.properties ) &&
-                Objects.equals( relationships, that.relationships ) && degrees.equals( that.degrees );
+        return nodeId == that.nodeId && nextInternalRelationshipId == that.nextInternalRelationshipId && Objects.equals( labels, that.labels ) &&
+                Objects.equals( properties, that.properties ) && Objects.equals( relationships, that.relationships ) &&
+                Objects.equals( degrees, that.degrees ) && Arrays.equals( recordPointers, that.recordPointers );
     }
 
     @Override
     public int hashCode()
     {
-        int result = Objects.hash( nodeId, properties, relationships, degrees, nextInternalRelationshipId, recordPointer, isDense() );
-        result = 31 * result + labels.hashCode();
+        int result = Objects.hash( nodeId, labels, properties, relationships, degrees, nextInternalRelationshipId );
+        result = 31 * result + Arrays.hashCode( recordPointers );
         return result;
     }
 
     @Override
     public String toString()
     {
-        return format( "ID:%s, labels:%s, properties:%s, relationships:%s, degrees:%s, pointer:%s, dense:%b, nextRelId:%d", nodeId, labels, properties,
-                relationships, degrees, recordPointerToString( recordPointer ), isDense(), nextInternalRelationshipId );
+        long p1 = recordPointers != null ? recordPointers[0] : NULL;
+        long p2 = recordPointers != null && recordPointers.length > 1 ? recordPointers[1] : NULL;
+        return format( "ID:%s, labels:%s, properties:%s, relationships:%s, degrees:%s, pointer[0]:%s, pointer[1]:%s, dense:%b, nextRelId:%d", nodeId, labels,
+                properties, relationships, degrees, recordPointerToString( p1 ), recordPointerToString( p2 ), isDense(), nextInternalRelationshipId );
     }
 
     boolean isDense()
@@ -483,14 +485,14 @@ class MutableNodeData
     // [ssff,ffff][ffff,ffff][ffff,ffff][ffff,ffff] [ffff,ffff][ffff,ffff][ffff,ffff][ffff,ffff]
     // s: sizeExp
     // f: record pointer id
-    void setRecordPointer( long recordPointer )
+    void setRecordPointers( long... recordPointers )
     {
-        this.recordPointer = recordPointer;
+        this.recordPointers = recordPointers;
     }
 
-    long getRecordPointer()
+    long[] getRecordPointers()
     {
-        return this.recordPointer;
+        return this.recordPointers;
     }
 
     void setDense( boolean isDense )
@@ -745,7 +747,7 @@ class MutableNodeData
 
     private void readRecordPointer( ByteBuffer buffer )
     {
-        recordPointer = readLongs( buffer )[0];
+        recordPointers = readLongs( buffer );
     }
 
     private void readRelationships( ByteBuffer buffer )

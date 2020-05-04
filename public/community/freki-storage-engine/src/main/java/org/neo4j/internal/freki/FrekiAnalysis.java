@@ -189,9 +189,10 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         // More physical
         System.out.println( nodeCursor.toString() );
         printRawRecordContents( nodeCursor.data.records[0], 0 );
-        if ( nodeCursor.data.forwardPointer != NULL )
+        if ( nodeCursor.data.xLChainNextLinkPointer != NULL )
         {
-            int sizeExp = sizeExponentialFromRecordPointer( nodeCursor.data.forwardPointer );
+            //TODO this does not handle chains properly
+            int sizeExp = sizeExponentialFromRecordPointer( nodeCursor.data.xLChainStartPointer );
             printRawRecordContents( nodeCursor.data.records[sizeExp], nodeCursor.entityReference() );
         }
     }

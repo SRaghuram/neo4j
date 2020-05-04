@@ -183,7 +183,7 @@ class MutableNodeDataTest
     void canHaveDegreesForDenseNode()
     {
         // given
-        mutableNodeData.setRecordPointer( buildRecordPointer( 0, 0 ) );
+        mutableNodeData.setRecordPointers( buildRecordPointer( 0, 0 ) );
         mutableNodeData.setDense( true );
 
         // when
@@ -198,7 +198,7 @@ class MutableNodeDataTest
     void canHaveZeroLoopDegreesForDenseNode()
     {
         // given
-        mutableNodeData.setRecordPointer( buildRecordPointer( 0, 0 ) );
+        mutableNodeData.setRecordPointers( buildRecordPointer( 0, 0 ) );
         mutableNodeData.setDense( true );
 
         // when

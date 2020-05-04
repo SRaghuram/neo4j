@@ -193,18 +193,25 @@ class GraphUpdates
             MutableNodeData x1Data = sparse.add( x1 );
             firstBeforeRecord = lastBeforeRecord = new RecordChain( x1 );
 
-            long recordPointer = x1Data.getRecordPointer();
-            if ( recordPointer != NULL )
+            long[] recordPointers = x1Data.getRecordPointers();
+            if ( recordPointers != null )
             {
-                Record xL = readRecord( stores, sizeExponentialFromRecordPointer( recordPointer ), idFromRecordPointer( recordPointer ), cursorTracer );
-                if ( xL == null )
+                long fwPointer = recordPointers[0];
+                do
                 {
-                    throw new IllegalStateException( x1 + " points to " + recordPointerToString( recordPointer ) + " that isn't in use" );
+                    Record xL = readRecord( stores, sizeExponentialFromRecordPointer( fwPointer ), idFromRecordPointer( fwPointer ), cursorTracer );
+                    if ( xL == null )
+                    {
+                        throw new IllegalStateException( x1 + " points to " + recordPointerToString( fwPointer ) + " that isn't in use" );
+                    }
+                    recordPointers = sparse.add( xL ).getRecordPointers();
+                    RecordChain chain = new RecordChain( xL );
+                    chain.next = firstBeforeRecord;
+                    firstBeforeRecord = chain;
+
+                    fwPointer = recordPointers.length > 1 ? recordPointers[1] : NULL;
                 }
-                sparse.add( xL );
-                RecordChain chain = new RecordChain( xL );
-                chain.next = firstBeforeRecord;
-                firstBeforeRecord = chain;
+                while ( fwPointer != NULL );
             }
             if ( x1Data.isDense() )
             {
@@ -368,7 +375,7 @@ class GraphUpdates
             if ( x1Header.spaceNeeded() + labelsSize + propsSize + Math.max( relsSize, degreesSize ) + miscSize <= stores.mainStore.recordDataSize() )
             {
                 //WE FIT IN x1
-                serializeParts( smallBuffer, intermediateBuffers, x1Header, null );
+                serializeParts( smallBuffer, intermediateBuffers, x1Header );
                 addX1Record( smallBuffer, command );
                 deleteRemainingBeforeRecords( command );
                 otherCommands.accept( command );
@@ -384,10 +391,10 @@ class GraphUpdates
             x1Header.mark( Header.OFFSET_RECORD_POINTER, true );
             x1Header.mark( Header.FLAG_HAS_DENSE_RELATIONSHIPS, isDense );
             int spaceLeftInX1 = stores.mainStore.recordDataSize() - worstCaseMiscSize;
-            spaceLeftInX1 = tryKeepInX1( x1Header, labelsSize, spaceLeftInX1, Header.FLAG_LABELS );
             spaceLeftInX1 = tryKeepInX1( x1Header, nextInternalRelIdSize, spaceLeftInX1, Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
-            spaceLeftInX1 = tryKeepInX1( x1Header, propsSize, spaceLeftInX1, Header.OFFSET_PROPERTIES );
+            spaceLeftInX1 = tryKeepInX1( x1Header, labelsSize, spaceLeftInX1, Header.FLAG_LABELS );
             spaceLeftInX1 = tryKeepInX1( x1Header, degreesSize, spaceLeftInX1, Header.OFFSET_DEGREES );
+            spaceLeftInX1 = tryKeepInX1( x1Header, propsSize, spaceLeftInX1, Header.OFFSET_PROPERTIES );
             tryKeepInX1( x1Header, relsSize, spaceLeftInX1, Header.OFFSET_RELATIONSHIPS, Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
 
             // build xLChain header
@@ -400,8 +407,11 @@ class GraphUpdates
             movePartToXL( x1Header, xLHeader, relsSize, Header.OFFSET_RELATIONSHIPS );
             movePartToXL( x1Header, xLHeader, relsSize, Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
 
+            //Now we know whats in X1 and XL(chain), update their references.
+            x1Header.setReference( xLHeader );
+            xLHeader.setReference( x1Header );
+
             //split chain header into individual headers
-            //TODO check if xLHeader can fit into a single XL, then there is no need to build a chain
             boolean canFitInSingleXL
                     = (xLHeader.hasMark( Header.FLAG_LABELS ) ? labelsSize : 0)
                     + (xLHeader.hasMark( Header.OFFSET_PROPERTIES ) ? propsSize : 0)
@@ -427,10 +437,10 @@ class GraphUpdates
                     linkHeader.mark( Header.OFFSET_RECORD_POINTER, true );
 
                     int spaceLeft = xLMaxSize;
-                    spaceLeft = tryPutInXLLink( chainHeader, linkHeader, labelsSize, spaceLeft, Header.FLAG_LABELS );
-                    spaceLeft = tryPutInXLLink( chainHeader, linkHeader, propsSize, spaceLeft, Header.OFFSET_PROPERTIES );
-                    spaceLeft = tryPutInXLLink( chainHeader, linkHeader, degreesSize, spaceLeft, Header.OFFSET_DEGREES );
                     spaceLeft = tryPutInXLLink( chainHeader, linkHeader, nextInternalRelIdSize, spaceLeft, Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
+                    spaceLeft = tryPutInXLLink( chainHeader, linkHeader, labelsSize, spaceLeft, Header.FLAG_LABELS );
+                    spaceLeft = tryPutInXLLink( chainHeader, linkHeader, degreesSize, spaceLeft, Header.OFFSET_DEGREES );
+                    spaceLeft = tryPutInXLLink( chainHeader, linkHeader, propsSize, spaceLeft, Header.OFFSET_PROPERTIES );
                     spaceLeft = tryPutInXLLink( chainHeader, linkHeader, relsSize, spaceLeft,
                             Header.OFFSET_RELATIONSHIPS, Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
                     xLChain.add( linkHeader );
@@ -447,17 +457,12 @@ class GraphUpdates
                 for ( int i = xLChain.size() - 1; i >= 0; i-- )
                 {
                     Header linkHeader = xLChain.get( i );
-                    if ( forwardPointer != NULL )
-                    {
-                        prepareRecordPointer( linkHeader, intermediateBuffers[RECORD_POINTER], backwardPointer, forwardPointer );
-                    }
-                    else
-                    {
-                        prepareRecordPointer( linkHeader, intermediateBuffers[RECORD_POINTER], backwardPointer );
-                    }
+                    long[] pointers = forwardPointer != NULL ? new long[]{backwardPointer, forwardPointer} : new long[]{backwardPointer};
+                    prepareRecordPointer( linkHeader, intermediateBuffers[RECORD_POINTER], pointers );
 
                     maxBuffer.clear();
-                    serializeParts( maxBuffer, intermediateBuffers, linkHeader, x1Header );
+                    linkHeader.setReference( x1Header );
+                    serializeParts( maxBuffer, intermediateBuffers, linkHeader );
                     SimpleStore xLStore = stores.storeSuitableForRecordSize( maxBuffer.limit(), 1 );
                     forwardPointer = addXLRecords( maxBuffer, xLStore, command );
                 }
@@ -468,14 +473,14 @@ class GraphUpdates
                 xLHeader.mark( Header.FLAG_HAS_DENSE_RELATIONSHIPS, isDense );
 
                 prepareRecordPointer( xLHeader, intermediateBuffers[RECORD_POINTER], backwardPointer );
-                serializeParts( maxBuffer, intermediateBuffers, xLHeader, x1Header );
+                serializeParts( maxBuffer, intermediateBuffers, xLHeader);
                 SimpleStore xLStore = stores.storeSuitableForRecordSize( maxBuffer.limit(), 1 );
                 forwardPointer = addXLRecords( maxBuffer, xLStore, command );
             }
 
             // serialize x1
             prepareRecordPointer( x1Header, intermediateBuffers[RECORD_POINTER], forwardPointer );
-            serializeParts( smallBuffer, intermediateBuffers, x1Header, xLHeader );
+            serializeParts( smallBuffer, intermediateBuffers, x1Header );
             addX1Record( smallBuffer, command );
             deleteRemainingBeforeRecords( command );
             otherCommands.accept( command );
@@ -556,7 +561,7 @@ class GraphUpdates
             return spaceLeftInXL;
         }
 
-        private static void serializeParts( ByteBuffer into, ByteBuffer[] intermediateBuffers, Header header, Header referenceHeader )
+        private static void serializeParts( ByteBuffer into, ByteBuffer[] intermediateBuffers, Header header )
         {
             header.allocateSpace( into );
             if ( header.hasMark( Header.FLAG_LABELS ) )
@@ -571,7 +576,7 @@ class GraphUpdates
             serializePart( into, intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID], header, Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
             int endPosition = into.position();
             header.setOffset( Header.OFFSET_END, endPosition );
-            header.serialize( into.position( 0 ), referenceHeader );
+            header.serialize( into.position( 0 ) );
             into.position( endPosition ).flip();
         }
 

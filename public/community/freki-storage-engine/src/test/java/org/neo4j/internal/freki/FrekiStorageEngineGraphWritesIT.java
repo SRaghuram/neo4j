@@ -31,7 +31,6 @@ import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 import org.eclipse.collections.impl.factory.primitive.LongSets;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
@@ -1308,7 +1307,6 @@ class FrekiStorageEngineGraphWritesIT
     }
 
     @TestFactory
-    @Disabled
     Collection<DynamicTest> shouldHandlePermutationsOfDataBlocksXLChains()
     {
         List<DynamicTest> tests = new ArrayList<>();
@@ -1618,15 +1616,15 @@ class FrekiStorageEngineGraphWritesIT
             assertThat( nodeCursor.next() ).isEqualTo( sizeX > 0 );
             if ( sizeX > 1 )
             {
-                assertThat( nodeCursor.data.forwardPointer ).isNotEqualTo( FrekiMainStoreCursor.NULL );
+                assertThat( nodeCursor.data.xLChainStartPointer ).isNotEqualTo( FrekiMainStoreCursor.NULL );
                 assertThat( nodeCursor.data.header.hasReferenceMark( Header.FLAG_LABELS ) ).isEqualTo( labelsInXL );
                 assertThat( nodeCursor.data.header.hasReferenceMark( Header.OFFSET_PROPERTIES ) ).isEqualTo( propsInXL );
-                int sizeExp = sizeExponentialFromRecordPointer( nodeCursor.data.forwardPointer );
+                int sizeExp = sizeExponentialFromRecordPointer( nodeCursor.data.xLChainStartPointer );
                 assertThat( sizeX ).isEqualTo( Record.recordXFactor( sizeExp ) );
             }
             else if ( sizeX == 1 )
             {
-                assertThat( nodeCursor.data.forwardPointer ).isEqualTo( FrekiMainStoreCursor.NULL );
+                assertThat( nodeCursor.data.xLChainStartPointer ).isEqualTo( FrekiMainStoreCursor.NULL );
             }
         }
     }
