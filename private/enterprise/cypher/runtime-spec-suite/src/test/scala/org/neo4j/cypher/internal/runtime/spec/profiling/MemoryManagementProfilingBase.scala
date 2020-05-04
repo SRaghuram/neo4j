@@ -527,6 +527,34 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
     runPeakMemoryUsageProfiling(logicalQuery, inputArray, heapDumpFileNamePrefix)
   }
 
+  test("measure partial top - ordered column has one value") {
+    val testName = "partial-top-one"
+    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_$runtimeName"
+
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("y")
+      .partialTop(Seq(Ascending("x")), Seq(Ascending("y")), DEFAULT_INPUT_LIMIT)
+      .input(variables = Seq("x", "y"))
+      .build()
+
+    val inputRows = for (i <- 0L until DEFAULT_INPUT_LIMIT) yield Array[Any](1, DEFAULT_INPUT_LIMIT - i)
+    runPeakMemoryUsageProfiling(logicalQuery, inputRows.toArray, heapDumpFileNamePrefix)
+  }
+
+  test("measure partial top - ordered column has distinct values") {
+    val testName = "partial-top-distinct"
+    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_$runtimeName"
+
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("y")
+      .partialTop(Seq(Ascending("x")), Seq(Ascending("y")), DEFAULT_INPUT_LIMIT)
+      .input(variables = Seq("x", "y"))
+      .build()
+
+    val inputRows = for (i <- 0L until DEFAULT_INPUT_LIMIT) yield Array[Any](i, i)
+    runPeakMemoryUsageProfiling(logicalQuery, inputRows.toArray, heapDumpFileNamePrefix)
+  }
+
   /**
    * Convenience method when you have an Array of input data
    */

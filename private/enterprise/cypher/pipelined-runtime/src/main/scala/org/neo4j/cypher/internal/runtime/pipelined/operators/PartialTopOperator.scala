@@ -11,7 +11,6 @@ import java.util.Comparator
 
 import org.neo4j.cypher.internal.DefaultComparatorTopTable
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
-import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ArgumentSlots
@@ -32,6 +31,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.helpers.ArrayUtil
+import org.neo4j.memory.MemoryTracker
+import org.neo4j.memory.ScopedMemoryTracker
 
 class PartialTopWorkCanceller(override val argumentRowId: Long, limit: Int) extends WorkCanceller {
 
@@ -72,23 +73,23 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
                            resources: QueryResources): OperatorState = {
     argumentStateCreator.createArgumentStateMap(bufferAsmId, new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id), ordered = true)
     val limit = Math.min(CountingState.evaluateCountValue(state, resources, limitExpression), ArrayUtil.MAX_ARRAY_SIZE).toInt
-    val workCancellerAsm = argumentStateCreator.createArgumentStateMap(workCancellerAsmId, new PartialTopWorkCanceller.Factory(stateFactory, id, limit), ordered = false)
-    new PartialTopState(stateFactory.memoryTracker, limit, workCancellerAsm)
+    val workCancellerAsm = argumentStateCreator.createArgumentStateMap(workCancellerAsmId, new PartialTopWorkCanceller.Factory(stateFactory, id, limit))
+    new PartialTopState(stateFactory.newMemoryTracker(id.x), limit, workCancellerAsm)
   }
 
   override def toString: String = "PartialTopOperator"
 
-  private class PartialTopState(val memoryTracker: QueryMemoryTracker,
+  private class PartialTopState(val memoryTracker: MemoryTracker,
                                 val limit: Int,
-                                val argumentStateMap: ArgumentStateMap[PartialTopWorkCanceller],
-                                var lastSeen: MorselRow,
-                                var topTable: DefaultComparatorTopTable[MorselRow],
-                                var resultsIterator: util.Iterator[MorselRow]) extends OperatorState {
+                                val argumentStateMap: ArgumentStateMap[PartialTopWorkCanceller]) extends OperatorState {
 
     var remainingLimit: Int = limit
+    var lastSeen: MorselRow = _
+    var topTable: DefaultComparatorTopTable[MorselRow] = _
+    var resultsIterator: util.Iterator[MorselRow] = Collections.emptyIterator()
 
-    def this(memoryTracker: QueryMemoryTracker, limit: Int, argumentStateMap: ArgumentStateMap[PartialTopWorkCanceller]) =
-      this(memoryTracker, limit, argumentStateMap, null, new DefaultComparatorTopTable[MorselRow](suffixComparator, limit), Collections.emptyIterator())
+    private var activeMemoryTracker: ScopedMemoryTracker = _
+    private var resultsMemoryTracker: ScopedMemoryTracker = _
 
     override def nextTasks(state: PipelinedQueryState,
                            operatorInput: OperatorInput,
@@ -98,6 +99,37 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
       val input: MorselData = operatorInput.takeData()
       if (input != null) singletonIndexedSeq(new PartialTopTask(input, this))
       else null
+    }
+
+    def addRow(row: MorselRow): Unit = {
+      if (topTable == null) {
+        activeMemoryTracker = new ScopedMemoryTracker(memoryTracker)
+        topTable = new DefaultComparatorTopTable[MorselRow](suffixComparator, remainingLimit, activeMemoryTracker)
+      }
+
+      lastSeen = row
+      val sizeBefore = topTable.getSize
+      topTable.add(lastSeen)
+      val sizeAfter = topTable.getSize
+      if (sizeAfter > sizeBefore)
+        activeMemoryTracker.allocateHeap(lastSeen.estimatedHeapUsage)
+    }
+
+    def computeResults(): Unit = {
+      topTable.sort()
+      resultsIterator = topTable.iterator()
+      resultsMemoryTracker = activeMemoryTracker
+
+      topTable = null
+      activeMemoryTracker = null
+    }
+
+    def clearResults(): Unit = {
+      if (resultsMemoryTracker != null) {
+        resultsIterator = Collections.emptyIterator()
+        resultsMemoryTracker.close()
+        resultsMemoryTracker = null
+      }
     }
   }
 
@@ -120,14 +152,8 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
         }
 
         // if we have reached the end of a chunk, remaining limit might've changed, check again
-        if (taskState.remainingLimit > 0) {
-          taskState.lastSeen = inputCursor.snapshot()
-          val sizeBefore = taskState.topTable.getSize
-          taskState.topTable.add(taskState.lastSeen)
-          val sizeAfter = taskState.topTable.getSize
-          if (sizeAfter > sizeBefore)
-            taskState.memoryTracker.allocated(taskState.lastSeen, id.x)
-        }
+        if (taskState.remainingLimit > 0)
+          taskState.addRow(inputCursor.snapshot())
       }
     }
 
@@ -139,7 +165,6 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
 
           // reset limit for the next argument id
           taskState.remainingLimit = taskState.limit
-          taskState.topTable = new DefaultComparatorTopTable[MorselRow](suffixComparator, taskState.limit)
         case _ =>
         // Do nothing
       }
@@ -154,25 +179,21 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
       while (taskState.resultsIterator.hasNext && outputCursor.onValidRow()) {
         val morselRow = taskState.resultsIterator.next()
         outputCursor.copyFrom(morselRow)
-        taskState.memoryTracker.deallocated(morselRow, id.x)
         outputCursor.next()
       }
+
+      if (!taskState.resultsIterator.hasNext)
+        taskState.clearResults()
     }
 
     private def completeCurrentChunk(nextRemainingLimit: Int): Unit = {
       val argumentRowId = ArgumentSlots.getArgumentAt(taskState.lastSeen, argumentSlotOffset)
       taskState.argumentStateMap.update(argumentRowId, _.remaining = nextRemainingLimit)
 
-      taskState.topTable.sort()
-      taskState.resultsIterator = taskState.topTable.iterator()
+      taskState.computeResults()
 
       taskState.lastSeen = null
       taskState.remainingLimit = nextRemainingLimit
-
-      if (nextRemainingLimit > 0)
-        taskState.topTable = new DefaultComparatorTopTable[MorselRow](suffixComparator, nextRemainingLimit)
-      else
-        taskState.topTable = null
     }
   }
 }
