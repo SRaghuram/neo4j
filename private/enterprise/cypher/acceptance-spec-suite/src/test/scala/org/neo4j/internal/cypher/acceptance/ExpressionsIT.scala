@@ -2762,6 +2762,21 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       parameters("a" -> intValue(-1))) should equal(NO_VALUE)
     evaluate(compile(simpleCase(parameter(0), alts, Some(literalString("THIS IS THE DEFAULT")))),
       parameters("a" -> intValue(-1))) should equal(stringValue("THIS IS THE DEFAULT"))
+
+    // check that null are handled correctly
+    val slots = SlotConfiguration.empty.newReference("n", nullable = true, symbols.CTNode)
+    val context = SlottedRow(slots)
+    context.setRefAt(0, NO_VALUE)
+
+    evaluate(
+      compile(simpleCase(hasLabels(ReferenceFromSlot(0, "n"), "L1"), List(trueLiteral -> literalString("true")), Some(literalString("default"))), slots),
+      context) should equal(stringValue("default"))
+    evaluate(
+      compile(simpleCase(trueLiteral, List(trueLiteral -> hasLabels(ReferenceFromSlot(0, "n"), "L1")), Some(literalString("default"))), slots),
+      context) should equal(NO_VALUE)
+    evaluate(
+      compile(simpleCase(falseLiteral, List(trueLiteral -> literalString("true")), Some(hasLabels(ReferenceFromSlot(0, "n"), "L1"))), slots),
+      context) should equal(NO_VALUE)
   }
 
   test("generic case expressions") {

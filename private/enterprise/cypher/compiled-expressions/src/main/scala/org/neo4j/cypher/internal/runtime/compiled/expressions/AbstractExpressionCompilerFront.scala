@@ -1256,8 +1256,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           val default = maybeDefault.get
           val returnVariable = namer.nextVariableName()
           val local = variable[AnyValue](returnVariable, constant(null))
-          val ops = caseExpression(returnVariable, checks.map(_.ir), loads.map(_.ir), default.ir,
-                          toCheck => invoke(inner.ir, method[AnyValue, Boolean, AnyRef]("equals"), toCheck))
+          val ops = caseExpression(returnVariable, checks.map(nullCheckIfRequired(_)), loads.map(nullCheckIfRequired(_)), nullCheckIfRequired(default),
+                          toCheck => invoke(nullCheckIfRequired(inner), method[AnyValue, Boolean, AnyRef]("equals"), toCheck))
           IntermediateExpression(ops,
                                  inner.fields ++ checks.flatMap(_.fields) ++ loads.flatMap(_.fields) ++ default.fields,
                                  inner.variables ++ checks.flatMap(_.variables) ++ loads.flatMap(_.variables) ++ default.variables :+ local,
