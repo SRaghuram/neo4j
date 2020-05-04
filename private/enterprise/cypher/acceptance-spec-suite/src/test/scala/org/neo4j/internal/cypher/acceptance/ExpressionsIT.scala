@@ -2773,6 +2773,21 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     ) should equal(NO_VALUE)
     evaluate(compile(genericCase(List(falseLiteral -> literalString("no"), falseLiteral -> literalString("yes")), Some(literalString("default"))))
     ) should equal(stringValue("default"))
+
+    // check that null are handled correctly
+    val slots = SlotConfiguration.empty.newReference("n", nullable = true, symbols.CTNode)
+    val context = SlottedRow(slots)
+    context.setRefAt(0, NO_VALUE)
+
+    evaluate(
+      compile(genericCase(List(hasLabels(ReferenceFromSlot(0, "n"), "L1") -> literalString("has-label")), Some(literalString("default"))), slots),
+      context) should equal(stringValue("default"))
+    evaluate(
+      compile(genericCase(List(trueLiteral -> hasLabels(ReferenceFromSlot(0, "n"), "L1")), Some(literalString("default"))), slots),
+      context) should equal(NO_VALUE)
+    evaluate(
+      compile(genericCase(List(falseLiteral -> literalString("false")), Some(hasLabels(ReferenceFromSlot(0, "n"), "L1"))), slots),
+      context) should equal(NO_VALUE)
   }
 
   test("map projection node with map context") {
