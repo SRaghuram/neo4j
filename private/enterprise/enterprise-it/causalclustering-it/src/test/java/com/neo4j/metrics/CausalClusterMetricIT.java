@@ -7,6 +7,8 @@ package com.neo4j.metrics;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
+import com.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.causalclustering.core.consensus.roles.RoleProvider;
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.metrics.MetricsTestHelper.TimerField;
 import com.neo4j.test.causalclustering.ClusterExtension;
@@ -17,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.util.concurrent.Callable;
 
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
@@ -140,7 +143,12 @@ class CausalClusterMetricIT
                 TIMEOUT, SECONDS );
 
         assertEventually( "is leader eventually accurate",
-                () -> readLongGaugeValue( metricsFile( coreMember, "core.is_leader" ) ), value -> value >= 0L, TIMEOUT, SECONDS );
+                () -> readLongGaugeValue( metricsFile( coreMember, "core.is_leader" ) ),
+                value -> isMemberLeader( coreMember ) ? (value == 1) : (value == 0), TIMEOUT, SECONDS );
+
+        assertEventually( "is last message from leader elapsed time eventually accurate",
+                () -> readLongGaugeValue( metricsFile( coreMember, "core.last_leader_message" ) ),
+                value -> isMemberLeader( coreMember ) ? (value == 0) : (value > 0), TIMEOUT, SECONDS );
 
         var readReplica = cluster.getReadReplicaById( 0 );
 
@@ -154,6 +162,12 @@ class CausalClusterMetricIT
         assertEventually( "pull update response received",
                 () -> readLongCounterValue( metricsFile( readReplica, "read_replica.pull_update_highest_tx_id_received" ) ),
                 value -> value > 0L, TIMEOUT, SECONDS );
+    }
+
+    private boolean isMemberLeader( ClusterMember member )
+    {
+        var dependencyResolver = member.defaultDatabase().getDependencyResolver();
+        return dependencyResolver.resolveDependency( RoleProvider.class ).currentRole() == Role.LEADER;
     }
 
     private static File metricsFile( ClusterMember member, String metricName )
