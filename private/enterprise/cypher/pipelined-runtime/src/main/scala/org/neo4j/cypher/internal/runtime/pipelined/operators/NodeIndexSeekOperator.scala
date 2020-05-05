@@ -543,8 +543,9 @@ abstract class BaseManyQueriesNodeIndexSeekTaskTemplate(override val inner: Oper
 
 /**
  * Code generation template for index seeks of the form `MATCH (n:L) WHERE n.prop = 1 OR n.prop = 2 OR n.prop =...`
- * Generates code for first doing an exact search of the first predicate and when the result is exhausted
- * it moves on to the next predicate until all predicates have been visited.
+ *
+ * Will use delegate to `unordered`, `ascending`, or `descending` in `CompositeValueIndexCursor` depending on the order
+ * to get a cursor.
  */
 class ManyQueriesNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
                                            id: Id,
@@ -640,12 +641,12 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
       val queries = combinedPredicates(i)
       val reallyNeedsValues = needsValues || order != IndexOrder.NONE
       val actualValues =
-        if (reallyNeedsValues && queries.forall(_.isInstanceOf[ExactPredicate]))
-        // We don't need property values from the index for an exact seek
-        queries.map(_.asInstanceOf[ExactPredicate].value())
-          else
+      // We don't need property values from the index for an exact seek
+        if (reallyNeedsValues && queries.forall(_.isInstanceOf[ExactPredicate])) {
+            queries.map(_.asInstanceOf[ExactPredicate].value())
+          } else {
           null
-
+        }
       val needsValuesFromIndexSeek = actualValues == null && reallyNeedsValues
       read.nodeIndexSeek(index, cursor, IndexQueryConstraints.constrained(order, needsValuesFromIndexSeek), queries:_*)
       if (reallyNeedsValues && actualValues != null) {
@@ -656,35 +657,6 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
       i += 1
     }
     cursors
-  }
-
-  def next(index: IndexReadSession,
-           cursor: NodeValueIndexCursor,
-           queries: CompositePredicateIterator,
-           order: IndexOrder,
-           needsValues: Boolean,
-           read: Read): Boolean = {
-    while (true) {
-      if (cursor.next()) {
-        return true
-      }
-      else if (queries.hasNext) {
-        var continue = true
-        while (continue) {
-          val indexQueries = queries.next()
-          if (!isImpossible(indexQueries)) {
-            val reallyNeedsValues = needsValues && !indexQueries.forall(_.isInstanceOf[ExactPredicate])
-            read.nodeIndexSeek(index, cursor, IndexQueryConstraints.constrained(order, reallyNeedsValues), indexQueries:_*)
-            continue = false
-          } else {
-            continue = queries.hasNext
-          }
-        }
-      } else {
-        return false
-      }
-    }
-    throw new IllegalStateException("Unreachable code")
   }
 
   def isImpossible(predicates: Seq[IndexQuery]): Boolean = predicates.exists(isImpossible)
@@ -720,24 +692,12 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
     method[ManyQueriesNodeIndexSeekTaskTemplate, Array[NodeValueIndexCursor], Array[IndexQuery], IndexReadSession, IndexOrder, Boolean, Read, CursorPools]("createCursors")
   val compositeCreateCursorsMethod: Method =
     method[ManyQueriesNodeIndexSeekTaskTemplate, Array[NodeValueIndexCursor], Array[Array[IndexQuery]], IndexReadSession, IndexOrder, Boolean, Read, CursorPools]("compositeCreateCursors")
-
-  val compositeNextMethod: Method =
-    method[ManyQueriesNodeIndexSeekTaskTemplate,
-      Boolean,
-      IndexReadSession,
-      NodeValueIndexCursor,
-      CompositePredicateIterator,
-      IndexOrder,
-      Boolean,
-      Read]("next")
-
   val compositeGetPropertyMethod: Method =
     method[ManyQueriesNodeIndexSeekTaskTemplate,
       Value,
       CompositePredicateIterator,
       NodeValueIndexCursor,
       Int]("getPropertyValue")
-
   val compositeQueryIteratorMethod: Method = method[ManyQueriesNodeIndexSeekTaskTemplate, CompositePredicateIterator, Array[Array[IndexQuery]]]("compositeQueryIterator")
 }
 
