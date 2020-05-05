@@ -418,7 +418,7 @@ class GraphUpdates
                     + (xLHeader.hasMark( Header.OFFSET_RELATIONSHIPS ) ? relsSize : 0)
                     + (xLHeader.hasMark( Header.OFFSET_DEGREES ) ? degreesSize : 0)
                     + (xLHeader.hasMark( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID ) ? nextInternalRelIdSize : 0)
-                    + x1Header.spaceNeeded() + 2 * SINGLE_VLONG_MAX_SIZE
+                    + xLHeader.spaceNeeded() + 2 * SINGLE_VLONG_MAX_SIZE
                     <= stores.largestMainStore().recordDataSize();
 
             long forwardPointer = NULL;
