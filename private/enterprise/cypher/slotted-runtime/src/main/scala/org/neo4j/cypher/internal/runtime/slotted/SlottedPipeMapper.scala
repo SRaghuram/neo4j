@@ -901,23 +901,45 @@ object SlottedPipeMapper {
    * Compute the [[RowMapping]] from [[UnionSlotMapping]]s, which can be then applied to Rows at runtime.
    */
   def computeUnionRowMapping(in: SlotConfiguration, out: SlotConfiguration): RowMapping = {
-    val mapSlots: Iterable[RowMapping] = computeUnionSlotMappings(in, out).map {
-      case CopyLongSlot(sourceOffset, targetOffset) =>
-        ((in, out, _) => out.setLongAt(targetOffset, in.getLongAt(sourceOffset))): RowMapping
-      case CopyRefSlot(sourceOffset, targetOffset) =>
-        ((in, out, _) => out.setRefAt(targetOffset, in.getRefAt(sourceOffset))): RowMapping
-      case CopyCachedProperty(sourceOffset, targetOffset) =>
-        ((in, out, _) => out.setCachedPropertyAt(targetOffset, in.getCachedPropertyAt(sourceOffset))): RowMapping
-      case ProjectLongToRefSlot(sourceSlot, targetOffset) =>
-        //here we must map the long slot to a reference slot
-        val projectionExpression = projectSlotExpression(sourceSlot) // Pre-compute projection expression
-        ((in, out, state) => out.setRefAt(targetOffset, projectionExpression(in, state))): RowMapping
-    }
+    val mappings = computeUnionSlotMappings(in, out)
+
+    // Collect all 4 types of mappings
+    case class ProjectExpressionToRefSlot(expression: Expression, targetOffset: Int)
+    val copyLongSlots = mappings.collect { case c: CopyLongSlot => c}.toArray
+    val copyRefSlots = mappings.collect { case c: CopyRefSlot => c}.toArray
+    val copyCachedProperties = mappings.collect { case c: CopyCachedProperty => c }.toArray
+    val projectExpressionToRefSlots = mappings.collect {
+      case c: ProjectLongToRefSlot =>
+        // Pre-compute projection expression
+        val projectionExpression = projectSlotExpression(c.sourceSlot)
+        ProjectExpressionToRefSlot(projectionExpression, c.targetOffset)
+    }.toArray
+
     //Apply all transformations
-    (incoming, outgoing, state) => {
-      val iterator = mapSlots.iterator
-      while(iterator.hasNext) {
-        iterator.next().mapRows(incoming, outgoing, state)
+    (in, out, state) => {
+      var i = 0
+      while (i < copyLongSlots.length) {
+        val x = copyLongSlots(i)
+        out.setLongAt(x.targetOffset, in.getLongAt(x.sourceOffset))
+        i += 1
+      }
+      i = 0
+      while (i < copyRefSlots.length) {
+        val x = copyRefSlots(i)
+        out.setRefAt(x.targetOffset, in.getRefAt(x.sourceOffset))
+        i += 1
+      }
+      i = 0
+      while (i < copyCachedProperties.length) {
+        val x = copyCachedProperties(i)
+        out.setCachedPropertyAt(x.targetOffset, in.getCachedPropertyAt(x.sourceOffset))
+        i += 1
+      }
+      i = 0
+      while (i < projectExpressionToRefSlots.length) {
+        val x = projectExpressionToRefSlots(i)
+        out.setRefAt(x.targetOffset, x.expression(in, state))
+        i += 1
       }
     }
   }
