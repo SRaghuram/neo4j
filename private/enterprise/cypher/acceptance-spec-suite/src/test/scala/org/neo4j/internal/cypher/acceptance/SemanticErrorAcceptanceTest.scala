@@ -186,24 +186,10 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
     )
   }
 
-  test("should be semantically incorrect to refer to nexted property in create constraint") {
-    executeAndEnsureError(
-      "create constraint on (foo:Foo) assert foo.bar.name is unique",
-      "Cannot index nested properties (line 1, column 47 (offset: 46))"
-    )
-  }
-
   test("should be semantically incorrect to refer to unknown variable in drop constraint") {
     executeAndEnsureError(
       "drop constraint on (foo:Foo) assert bar.name is unique",
       "Variable `bar` not defined (line 1, column 37 (offset: 36))"
-    )
-  }
-
-  test("should be semantically incorrect to refer to nested property in drop constraint") {
-    executeAndEnsureError(
-      "drop constraint on (foo:Foo) assert foo.bar.name is unique",
-      "Cannot index nested properties (line 1, column 45 (offset: 44))"
     )
   }
 
