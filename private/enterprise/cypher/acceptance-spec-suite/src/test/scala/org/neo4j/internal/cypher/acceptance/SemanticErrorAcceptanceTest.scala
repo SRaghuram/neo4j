@@ -11,8 +11,9 @@ import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.CompiledRuntimeName
 import org.neo4j.cypher.internal.InterpretedRuntimeName
 import org.neo4j.cypher.internal.SlottedRuntimeName
-import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.cypher.internal.util.helpers.StringHelper.RichString
+import org.neo4j.graphdb.QueryExecutionException
+
 import scala.collection.JavaConverters.asScalaIteratorConverter
 
 class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
@@ -480,6 +481,43 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
     executeAndEnsureError(
       "CYPHER runtime = interpreted MATCH (n) RETURN n LIMIT " + limit,
       expectedErrorMessage)
+  }
+
+  test("should give an error message about aliasing importing WITH") {
+    val msg = "Importing WITH should consist only of simple references to outside variables. Aliasing or expressions are not supported."
+
+    executeAndEnsureError(
+      "WITH 1 AS n CALL { WITH n AS x RETURN x } RETURN x",
+      s"$msg (line 1, column 20 (offset: 19))"
+    )
+    executeAndEnsureError(
+      "WITH 1 AS n CALL { WITH n, 2 AS m RETURN n as x } RETURN x",
+      s"$msg (line 1, column 20 (offset: 19))"
+    )
+    executeAndEnsureError(
+      "WITH 1 AS n CALL { WITH n+1 AS x RETURN x } RETURN x",
+      s"$msg (line 1, column 20 (offset: 19))"
+    )
+    executeAndEnsureError(
+      "WITH 1 AS n CALL { FROM g WITH n+1 AS x RETURN x } RETURN x",
+      s"$msg (line 1, column 27 (offset: 26))"
+    )
+    executeAndEnsureError(
+      "WITH 1 AS n CALL { USE g WITH n+1 AS x RETURN x } RETURN x",
+      s"$msg (line 1, column 26 (offset: 25))"
+    )
+    executeAndEnsureError(
+      "WITH 1 AS n CALL { WITH collect(n) AS ns RETURN ns } RETURN ns",
+      s"$msg (line 1, column 20 (offset: 19))"
+    )
+    executeAndEnsureError(
+      "WITH 1 AS n CALL { WITH n AS m RETURN m+1 AS x UNION WITH n RETURN n-1 AS x } RETURN x",
+      s"$msg (line 1, column 20 (offset: 19))"
+    )
+    executeAndEnsureError(
+      "WITH 1 AS n CALL { WITH n RETURN n+1 AS x UNION WITH n AS m RETURN m-1 AS x } RETURN x",
+      s"$msg (line 1, column 49 (offset: 48))"
+    )
   }
 
   private def executeAndEnsureErrorForAllRuntimes(query: String, expected: String, params: (String,Any)*): Unit = {
