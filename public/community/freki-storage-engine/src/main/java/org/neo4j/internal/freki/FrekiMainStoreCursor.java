@@ -26,7 +26,6 @@ import java.util.function.ToIntFunction;
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.util.VisibleForTesting;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_INT_ARRAY;
 import static org.neo4j.internal.freki.MutableNodeData.idFromRecordPointer;
@@ -168,7 +167,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         }
     }
 
-    @VisibleForTesting
+    //Package-private for testing/analysis purposes
     boolean loadNextChainLink()
     {
         //This is only capable of reading chain in one direction, until reached end.

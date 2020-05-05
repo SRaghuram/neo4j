@@ -189,11 +189,19 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         // More physical
         System.out.println( nodeCursor.toString() );
         printRawRecordContents( nodeCursor.data.records[0], 0 );
-        if ( nodeCursor.data.xLChainNextLinkPointer != NULL )
+        if ( nodeCursor.data.xLChainStartPointer != NULL )
         {
-            //TODO this does not handle chains properly
-            int sizeExp = sizeExponentialFromRecordPointer( nodeCursor.data.xLChainStartPointer );
-            printRawRecordContents( nodeCursor.data.records[sizeExp], nodeCursor.entityReference() );
+            long id = nodeCursor.data.nodeId;
+            //Force full reload, to step XLChain manually
+            nodeCursor.reset();
+            nodeCursor.single( id );
+            nodeCursor.next();
+            while ( nodeCursor.data.xLChainNextLinkPointer != NULL )
+            {
+                int sizeExp = sizeExponentialFromRecordPointer( nodeCursor.data.xLChainNextLinkPointer );
+                printRawRecordContents( nodeCursor.data.records[sizeExp], nodeCursor.entityReference() );
+                nodeCursor.loadNextChainLink();
+            }
         }
     }
 
