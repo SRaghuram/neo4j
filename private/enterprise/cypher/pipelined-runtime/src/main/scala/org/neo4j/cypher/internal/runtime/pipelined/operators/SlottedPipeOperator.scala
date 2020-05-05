@@ -32,6 +32,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeOperator.createFeedPipeQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityMutableDescription
@@ -126,7 +127,7 @@ class SlottedPipeHeadOperator(workIdentity: WorkIdentityMutableDescription,
         if (input != null) {
           val inputMorsel = input.nextCopy
           val inputQueryState = createFeedPipeQueryState(inputMorsel, state, resources, stateFactory.memoryTracker)
-          IndexedSeq(new OTask(inputMorsel, inputQueryState))
+          singletonIndexedSeq(new OTask(inputMorsel, inputQueryState))
         } else {
           null
         }

@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.AntiArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfEmptyStream
@@ -49,7 +50,7 @@ class AntiOperator(val workIdentity: WorkIdentity,
                            argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
       val input: Seq[MorselData] = operatorInput.takeData()
       if (input != null) {
-        IndexedSeq(new OTask(input))
+        singletonIndexedSeq(new OTask(input))
       } else {
         null
       }

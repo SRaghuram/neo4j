@@ -46,6 +46,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTa
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.cursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -79,8 +80,8 @@ class OptionalExpandIntoOperator(val workIdentity: WorkIdentity,
                                    resources: QueryResources,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
     maybeExpression match {
-      case None => IndexedSeq(new OptionalExpandIntoTask(inputMorsel.nextCopy, resources.memoryTracker, id))
-      case Some(expression) => IndexedSeq(new FilteringOptionalExpandIntoTask(inputMorsel.nextCopy, expression, resources.memoryTracker, id))
+      case None => singletonIndexedSeq(new OptionalExpandIntoTask(inputMorsel.nextCopy, resources.memoryTracker, id))
+      case Some(expression) => singletonIndexedSeq(new FilteringOptionalExpandIntoTask(inputMorsel.nextCopy, expression, resources.memoryTracker, id))
     }
   }
 

@@ -53,6 +53,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.nodeIndexSeek
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -84,7 +85,7 @@ abstract class NodeIndexStringSearchScanOperator(val workIdentity: WorkIdentity,
                          argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     val indexSession = state.queryIndexes(queryIndexId)
-    IndexedSeq(new OTask(inputMorsel.nextCopy, indexSession))
+    singletonIndexedSeq(new OTask(inputMorsel.nextCopy, indexSession))
   }
 
   def computeIndexQuery(property: Int, value: TextValue): IndexQuery

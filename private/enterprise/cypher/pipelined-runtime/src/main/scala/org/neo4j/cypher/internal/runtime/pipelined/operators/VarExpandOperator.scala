@@ -57,6 +57,10 @@ import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.DefaultExpressionCompilerFront
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.CURSORS
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.EXPRESSION_VARIABLES
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.PARAMS
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -73,13 +77,10 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.CURSORS
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.EXPRESSION_VARIABLES
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.PARAMS
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
@@ -134,7 +135,7 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
                          parallelism: Int,
                          resources: QueryResources,
                          argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
-    IndexedSeq(new OTask(inputMorsel.nextCopy))
+    singletonIndexedSeq(new OTask(inputMorsel.nextCopy))
 
   class OTask(inputMorsel: Morsel) extends InputLoopTask(inputMorsel) {
 

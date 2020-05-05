@@ -39,6 +39,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.InputOperator.relat
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATE
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
@@ -61,7 +62,7 @@ class InputOperator(val workIdentity: WorkIdentity,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     if (parallelism == 1)
-      IndexedSeq(new InputTask(new MutatingInputCursor(state.input), inputMorsel.nextCopy))
+      singletonIndexedSeq(new InputTask(new MutatingInputCursor(state.input), inputMorsel.nextCopy))
     else
       new Array[InputTask](parallelism).map(_ => new InputTask(new MutatingInputCursor(state.input), inputMorsel.nextCopy))
   }

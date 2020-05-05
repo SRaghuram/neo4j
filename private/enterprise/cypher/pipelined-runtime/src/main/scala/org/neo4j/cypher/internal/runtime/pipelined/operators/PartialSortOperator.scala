@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStreamArgumentStateBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfNonEmptyStream
@@ -56,7 +57,7 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
                            argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
       val input: MorselData = operatorInput.takeData()
       if (input != null) {
-        IndexedSeq(new PartialSortTask(input, this))
+        singletonIndexedSeq(new PartialSortTask(input, this))
       } else {
         null
       }

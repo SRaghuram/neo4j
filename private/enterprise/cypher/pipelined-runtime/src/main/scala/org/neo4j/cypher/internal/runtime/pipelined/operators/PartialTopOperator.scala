@@ -24,6 +24,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStreamArgumentStateBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfNonEmptyStream
@@ -95,7 +96,7 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
                            resources: QueryResources,
                            argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
       val input: MorselData = operatorInput.takeData()
-      if (input != null) IndexedSeq(new PartialTopTask(input, this))
+      if (input != null) singletonIndexedSeq(new PartialTopTask(input, this))
       else null
     }
   }
