@@ -53,10 +53,8 @@ import static org.neo4j.graphdb.Direction.INCOMING;
 import static org.neo4j.graphdb.Direction.OUTGOING;
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
 import static org.neo4j.internal.freki.Record.recordXFactor;
-import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
 import static org.neo4j.internal.freki.StreamVByte.readInts;
 import static org.neo4j.internal.freki.StreamVByte.readLongs;
-import static org.neo4j.internal.freki.StreamVByte.writeIntDeltas;
 import static org.neo4j.internal.freki.StreamVByte.writeInts;
 import static org.neo4j.internal.freki.StreamVByte.writeLongs;
 import static org.neo4j.internal.helpers.Numbers.safeCastIntToUnsignedByte;
@@ -203,9 +201,10 @@ class MutableNodeData
             }
         }
     }
+
     private void addLabels( ByteBuffer from )
     {
-        labels.addAll( readIntDeltas( from ) );
+        labels.addAll( readInts( from, true ) );
     }
 
     void addDegree( int type, RelationshipDirection calculateDirection, int count )
@@ -594,14 +593,14 @@ class MutableNodeData
 
     private void writeLabels( ByteBuffer buffer )
     {
-        writeIntDeltas( labels.toSortedArray(), buffer );
+        writeInts( labels.toSortedArray(), buffer, true );
     }
 
     private int[] writeRelationships( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore, Consumer<StorageCommand> commandConsumer )
     {
         Relationships[] allRelationships = this.relationships.toArray( new Relationships[relationships.size()] );
         Arrays.sort( allRelationships );
-        writeIntDeltas( typesOf( allRelationships ), buffer );
+        writeInts( typesOf( allRelationships ), buffer, true );
         int firstTypeOffset = buffer.position();
         long[][] allPackedRelationships = new long[allRelationships.length][];
         for ( int i = 0; i < allRelationships.length; i++ )
@@ -640,7 +639,7 @@ class MutableNodeData
 
     private void writeTypeOffsets( ByteBuffer buffer, int[] typeOffsets )
     {
-        writeIntDeltas( typeOffsets, buffer );
+        writeInts( typeOffsets, buffer, true );
     }
 
     private void writeDegrees( ByteBuffer buffer )
@@ -678,15 +677,15 @@ class MutableNodeData
                 degreesArray[degreesArrayIndex++] = loop;
             }
         }
-        writeIntDeltas( types, buffer );
-        writeInts( Arrays.copyOf( degreesArray, degreesArrayIndex ), buffer );
+        writeInts( types, buffer, true );
+        writeInts( Arrays.copyOf( degreesArray, degreesArrayIndex ), buffer, false );
     }
 
     private static void writeProperties( MutableIntObjectMap<Value> properties, ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore,
             Consumer<StorageCommand> commandConsumer )
     {
         int[] propertyKeys = properties.keySet().toSortedArray();
-        writeIntDeltas( propertyKeys, buffer );
+        writeInts( propertyKeys, buffer, true );
         PropertyValueFormat writer = new PropertyValueFormat( bigPropertyValueStore, commandConsumer, buffer );
         for ( int propertyKey : propertyKeys )
         {
@@ -696,7 +695,7 @@ class MutableNodeData
 
     private void readProperties( MutableIntObjectMap<Value> into, ByteBuffer buffer )
     {
-        for ( int propertyKey : readIntDeltas( buffer.array(), buffer.position(), buffer ) )
+        for ( int propertyKey : readInts( buffer, true ) )
         {
             into.put( propertyKey, PropertyValueFormat.read( buffer, bigValueStore, cursorTracer ) );
         }
@@ -833,7 +832,7 @@ class MutableNodeData
 
     private void readRelationships( ByteBuffer buffer )
     {
-        int[] relationshipTypes = readIntDeltas( buffer.array(), buffer.position(), buffer );
+        int[] relationshipTypes = readInts( buffer, true );
         for ( int relationshipType : relationshipTypes )
         {
             Relationships relationships = new Relationships( relationshipType );
@@ -863,8 +862,8 @@ class MutableNodeData
 
     private void readDegrees( ByteBuffer buffer )
     {
-        int[] relationshipTypes = readIntDeltas( buffer );
-        int[] degreesArray = readInts( buffer );
+        int[] relationshipTypes = readInts( buffer, true );
+        int[] degreesArray = readInts( buffer, false );
         for ( int t = 0, i = 0; t < relationshipTypes.length; t++ )
         {
             i = readDegreesForNextType( degrees, relationshipTypes[t], BOTH, degreesArray, i );

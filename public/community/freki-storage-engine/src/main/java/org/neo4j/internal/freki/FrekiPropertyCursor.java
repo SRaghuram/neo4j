@@ -38,7 +38,7 @@ import static java.util.Collections.emptyIterator;
 import static org.neo4j.internal.freki.MutableNodeData.relationshipHasProperties;
 import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValueSizeIncludingTypeHeader;
 import static org.neo4j.internal.freki.PropertyValueFormat.readEagerly;
-import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
+import static org.neo4j.internal.freki.StreamVByte.readInts;
 import static org.neo4j.internal.freki.StreamVByte.readLongs;
 
 class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropertyCursor
@@ -284,7 +284,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
             return false;
         }
 
-        propertyKeyArray = readIntDeltas( buffer.array(), buffer.position(), buffer );
+        propertyKeyArray = readInts( buffer, true );
         nextValuePosition = buffer.position();
         propertyKeyIndex = -1;
         return true;

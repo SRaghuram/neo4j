@@ -63,8 +63,9 @@ import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValu
 import static org.neo4j.internal.freki.StreamVByte.calculateLongSizeIndex;
 import static org.neo4j.internal.freki.StreamVByte.decodeLongValue;
 import static org.neo4j.internal.freki.StreamVByte.encodeLongValue;
+import static org.neo4j.internal.freki.StreamVByte.readInts;
 import static org.neo4j.internal.freki.StreamVByte.sizeOfLongSizeIndex;
-import static org.neo4j.internal.freki.StreamVByte.writeIntDeltas;
+import static org.neo4j.internal.freki.StreamVByte.writeInts;
 import static org.neo4j.internal.helpers.collection.Iterators.iterator;
 import static org.neo4j.storageengine.api.RelationshipDirection.LOOP;
 import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
@@ -206,7 +207,7 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         {
             return NO_PROPERTIES;
         }
-        int[] propertyKeys = StreamVByte.readIntDeltas( relationshipData );
+        int[] propertyKeys = readInts( relationshipData, true );
         return new RelationshipPropertyIterator()
         {
             private int current = -1;
@@ -579,7 +580,7 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
                 }
                 sortedKeys = cursor == properties.size() ? sortedKeys : Arrays.copyOf( sortedKeys, cursor );
                 Arrays.sort( sortedKeys );
-                writeIntDeltas( sortedKeys, data );
+                writeInts( sortedKeys, data, true );
                 for ( int key : sortedKeys )
                 {
                     data.put( version.apply( properties.get( key ) ) );

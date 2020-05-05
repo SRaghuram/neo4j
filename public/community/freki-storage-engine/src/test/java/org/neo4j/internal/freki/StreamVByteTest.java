@@ -23,14 +23,21 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.rule.RandomRule;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.neo4j.internal.freki.StreamVByte.readInts;
+import static org.neo4j.internal.freki.StreamVByte.readLongs;
+import static org.neo4j.internal.freki.StreamVByte.writeInts;
+import static org.neo4j.internal.freki.StreamVByte.writeLongs;
 
 @ExtendWith( RandomExtension.class )
 class StreamVByteTest
@@ -52,17 +59,10 @@ class StreamVByteTest
             prev = values[i];
         }
 
-        // when
-        ByteBuffer data = newTargetBuffer( 10_000, randomExistingData );
-        StreamVByte.writeIntDeltas( values, data );
-        int writeOffset = data.position();
-
-        // then
-        data.position( 0 );
-        int[] read = StreamVByte.readIntDeltas( data );
-        int readOffset = data.position();
-        assertArrayEquals( values, read );
-        assertEquals( writeOffset, readOffset );
+        // when/then
+        assertWriteAndReadCorrectly( values, randomExistingData,
+                ( writer, data ) -> writeInts( writer, data, true, values.length ),
+                data -> readInts( data, true ) );
     }
 
     @ParameterizedTest
@@ -78,18 +78,10 @@ class StreamVByteTest
             prev = values[i];
         }
 
-        // when
-        ByteBuffer data = newTargetBuffer( 50, randomExistingData );
-        StreamVByte.writeIntDeltas( values, data );
-        int writeOffset = data.position();
-
-        // then
-        data.position( 0 );
-        int[] read = StreamVByte.readIntDeltas( data );
-        int readOffset = data.position();
-        assertArrayEquals( values, read );
-        assertEquals( writeOffset, readOffset );
-        assertEquals( values.length + 1, writeOffset );
+        // when/then
+        assertWriteAndReadCorrectly( values, randomExistingData,
+                ( writer, data ) -> writeInts( writer, data, true, values.length ),
+                data -> readInts( data, true ) );
     }
 
     @ParameterizedTest
@@ -104,17 +96,70 @@ class StreamVByteTest
             values[i] = random.nextLong( 0, sizes[random.nextInt( sizes.length )] + 1 );
         }
 
+        // when/then
+        assertWriteAndReadCorrectly( values, randomExistingData,
+                ( writer, data ) -> writeLongs( writer, data, values.length ),
+                data -> readLongs( data ) );
+    }
+
+    @ParameterizedTest
+    @ValueSource( booleans = {true, false} )
+    void shouldWriteLessValuesThanWorstCaseCountAndUndoLastWrittenLong( boolean randomExistingData )
+    {
+        // given
+        long[] values = new long[random.nextInt( 1, 1_000 )];
+        long[] sizes = {0xFFFFFF, 0xFFFFFFFF, 0xFFFFFFFFFFL};
+        for ( int i = 0; i < values.length; i++ )
+        {
+            values[i] = random.nextLong( 0, sizes[random.nextInt( sizes.length )] + 1 );
+        }
+
         // when
-        ByteBuffer data = newTargetBuffer( 50_000, randomExistingData );
-        StreamVByte.writeLongs( values, data );
+        ByteBuffer buffer = newTargetBuffer( 10_000, randomExistingData );
+        int numValuesToWrite = random.nextInt( 0, values.length - 1 );
+        long[] subset = Arrays.copyOf( values, numValuesToWrite );
+        writeLongs( subset, buffer );
+        int expectedOffset = buffer.position();
+        buffer.position( 0 );
+
+        StreamVByte.Writer writer = new StreamVByte.Writer();
+        writeLongs( writer, buffer, values.length );
+        for ( int i = 0; i < numValuesToWrite + 1; i++ )
+        {
+            writer.writeNext( values[i] );
+        }
+        if ( numValuesToWrite > 0 )
+        {
+            writer.undoLastWrite();
+        }
+        writer.done();
+
+        // then
+        assertThat( buffer.position() ).isEqualTo( expectedOffset );
+        assertThat( readLongs( buffer.position( 0 ) ) ).isEqualTo( subset );
+    }
+
+    private void assertWriteAndReadCorrectly( Object values, boolean randomExistingData, BiConsumer<StreamVByte.Writer,ByteBuffer> writeInitializer,
+            Function<ByteBuffer,Object> reader )
+    {
+        // when
+        ByteBuffer data = newTargetBuffer( 10_000, randomExistingData );
+        StreamVByte.Writer writer = new StreamVByte.Writer();
+        int length = Array.getLength( values );
+        writeInitializer.accept( writer, data );
+        for ( int i = 0; i < length; i++ )
+        {
+            writer.writeNext( ((Number) Array.get( values, i )).longValue() );
+        }
+        writer.done();
         int writeOffset = data.position();
 
         // then
-        data.position( 0 );
-        long[] readValues = StreamVByte.readLongs( data );
-        assertArrayEquals( values, readValues );
+        Object read = reader.apply( data.position( 0 ) );
         int readOffset = data.position();
-        assertEquals( writeOffset, readOffset );
+        assertThat( read ).isEqualTo( values );
+        assertThat( readOffset ).isEqualTo( writeOffset );
+        // TODO and also verify using Reader
     }
 
     private ByteBuffer newTargetBuffer( int length, boolean randomExistingData )

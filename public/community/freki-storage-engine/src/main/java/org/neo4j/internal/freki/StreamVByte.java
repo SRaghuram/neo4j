@@ -19,20 +19,19 @@
  */
 package org.neo4j.internal.freki;
 
+import org.eclipse.collections.api.iterator.LongIterator;
+
 import java.nio.ByteBuffer;
 
 import org.neo4j.io.pagecache.PageCursor;
 
-import static org.apache.commons.lang3.ArrayUtils.EMPTY_INT_ARRAY;
-import static org.apache.commons.lang3.ArrayUtils.EMPTY_LONG_ARRAY;
-
 class StreamVByte
 {
     static final int SINGLE_VLONG_MAX_SIZE = 8;
-    private static final int[] INT_CODE_SIZES = {1, 2, 3, 4};
     private static final int[] INT_RELATIVE_OFFSETS = new int[256];
-    private static final int[] LONG_CODE_SIZES = {1, 3, 5, 7};
     private static final int[] LONG_RELATIVE_OFFSETS = new int[256];
+    private static final int[] INT_CODE_SIZES = {1, 2, 3, 4};
+    private static final int[] LONG_CODE_SIZES = {1, 3, 5, 7};
     private static final long LONG_BYTE_SIZE_0 = 1L << (LONG_CODE_SIZES[0] * Byte.SIZE);
     private static final long LONG_BYTE_SIZE_1 = 1L << (LONG_CODE_SIZES[1] * Byte.SIZE);
     private static final long LONG_BYTE_SIZE_2 = 1L << (LONG_CODE_SIZES[2] * Byte.SIZE);
@@ -62,156 +61,39 @@ class StreamVByte
 
     // === INTS ===
 
-    private static int writeInts( int[] values, byte[] bytes, int offset, boolean deltas )
+    static int writeInts( int[] values, ByteBuffer buffer, boolean deltas )
     {
-        int count = values.length;
-        if ( count == 0 )
+        Writer writer = new Writer(); // TODO pass in instead
+        writer.initialize( buffer, deltas, INT_CODE_SIZES, INT_ENCODER, values.length );
+        for ( int value : values )
         {
-            bytes[offset] = 0;
-            return offset + 1;
+            writer.writeNext( value );
         }
-
-        int numberOfHeaderBytes = numHeaderBytes( count );
-        byte shift = 0;
-        int countHeader = writeCountHeader( count, bytes, offset );
-        int headerOffset = countHeader & 0xFFFFFF;
-        byte key = (byte) (countHeader >>> 24);
-        int dataOffset = headerOffset + numberOfHeaderBytes;
-        int prev = 0;
-        for ( int c = 0; c < count; c++ )
-        {
-            if ( shift == 8 )
-            {
-                shift = 0;
-                bytes[headerOffset++] = key;
-                key = 0;
-            }
-            int value = values[c];
-            byte code = encodeIntValue( deltas ? value - prev : value, bytes, dataOffset );
-            dataOffset += INT_CODE_SIZES[code];
-            key |= code << shift;
-            shift += 2;
-            prev = value;
-        }
-
-        bytes[headerOffset] = key;
-        return dataOffset;
+        writer.done();
+        return buffer.position();
     }
 
-    static void writeInts( int[] values, ByteBuffer buffer )
+    static void writeInts( Writer writer, ByteBuffer buffer, boolean deltas, int worstCaseNumValues )
     {
-        buffer.position( writeInts( values, buffer.array(), buffer.position(), false ) );
+        writer.initialize( buffer, deltas, INT_CODE_SIZES, INT_ENCODER, worstCaseNumValues );
     }
 
-    static void writeIntDeltas( int[] values, ByteBuffer buffer )
+    static int[] readInts( ByteBuffer buffer, boolean deltas )
     {
-        buffer.position( writeInts( values, buffer.array(), buffer.position(), true ) );
+        return (int[]) readInts( buffer, deltas, INT_CREATOR, INT_CONSUMER );
     }
 
-    static int[] readInts( byte[] bytes, int offset, ByteBuffer buffer )
+    static Object readInts( ByteBuffer buffer, boolean deltas, StreamVByte.TargetCreator creator, StreamVByte.TargetConsumer consumer )
     {
-        if ( bytes[offset] == 0 )
+        Reader reader = new Reader();
+        reader.initialize( buffer, deltas, INT_CODE_SIZES, INT_DECODER );
+        Object values = creator.create( reader.count );
+        for ( int i = 0; i < reader.count; i++ )
         {
-            buffer.position( offset + 1 );
-            return EMPTY_INT_ARRAY;
+            consumer.accept( values, (int) reader.next(), i );
         }
-        int countAndHeaderOffset = readCountHeader( bytes, offset );
-        int count = countAndHeaderOffset & 0xFFFF;
-        int headerOffset = countAndHeaderOffset >>> 16;
-        int[] values = new int[count];
-        int numberOfHeaderBytes = numHeaderBytes( count );
-        int dataOffset = headerOffset + numberOfHeaderBytes;
-        int valueIndex = 0;
-        for ( ; count >= 4; count -= 4 )
-        {
-            int keyBytes = bytes[headerOffset++] & 0xFF;
-            int relativeOffsets = INT_RELATIVE_OFFSETS[keyBytes & 0xFF];
-            values[valueIndex] = decodeIntValue( keyBytes & 0x3, bytes, dataOffset );
-            values[valueIndex + 1] = decodeIntValue( (keyBytes >>> 2) & 0x3, bytes, dataOffset + (relativeOffsets & 0xFF) );
-            values[valueIndex + 2] = decodeIntValue( (keyBytes >>> 4) & 0x3, bytes, dataOffset + ((relativeOffsets >>> 8) & 0xFF) );
-            values[valueIndex + 3] = decodeIntValue( (keyBytes >>> 6) & 0x3, bytes, dataOffset + ((relativeOffsets >>> 16) & 0xFF) );
-            dataOffset += relativeOffsets >>> 24;
-            valueIndex += 4;
-        }
-        if ( count > 0 )
-        {
-            int keyBytes = bytes[headerOffset] & 0xFF;
-            for ( int i = 0; i < count; i++ )
-            {
-                int code = (keyBytes >>> (i * 2)) & 0x3;
-                values[valueIndex + i] = decodeIntValue( code, bytes, dataOffset );
-                dataOffset += INT_CODE_SIZES[code];
-            }
-        }
-        buffer.position( dataOffset );
+        buffer.position( reader.offset );
         return values;
-    }
-
-    static int[] readInts( ByteBuffer buffer )
-    {
-        return readInts( buffer.array(), buffer.position(), buffer );
-    }
-
-    static Object readIntDeltas( byte[] bytes, int offset, ByteBuffer buffer, StreamVByte.TargetCreator creator, StreamVByte.TargetConsumer consumer )
-    {
-        if ( bytes[offset] == 0 )
-        {
-            buffer.position( offset + 1 );
-            return EMPTY_INT_ARRAY;
-        }
-        int countAndHeaderOffset = readCountHeader( bytes, offset );
-        int count = countAndHeaderOffset & 0xFFFF;
-        int headerOffset = countAndHeaderOffset >>> 16;
-        Object values = creator.create( count );
-        int numberOfHeaderBytes = numHeaderBytes( count );
-        int dataOffset = headerOffset + numberOfHeaderBytes;
-        int valueIndex = 0;
-        int prev = 0;
-        for ( ; count >= 4; count -= 4 )
-        {
-            int keyBytes = bytes[headerOffset++] & 0xFF;
-            int relativeOffsets = INT_RELATIVE_OFFSETS[keyBytes & 0xFF];
-            int value1 = prev + decodeIntValue( keyBytes & 0x3, bytes, dataOffset );
-            int value2 = decodeIntValue( (keyBytes >>> 2) & 0x3, bytes, dataOffset + (relativeOffsets & 0xFF) ) + value1;
-            int value3 = decodeIntValue( (keyBytes >>> 4) & 0x3, bytes, dataOffset + ((relativeOffsets >>> 8) & 0xFF) ) + value2;
-            int value4 = decodeIntValue( (keyBytes >>> 6) & 0x3, bytes, dataOffset + ((relativeOffsets >>> 16) & 0xFF) ) + value3;
-            consumer.accept( values, value1, valueIndex );
-            consumer.accept( values, value2, valueIndex + 1 );
-            consumer.accept( values, value3, valueIndex + 2 );
-            consumer.accept( values, value4, valueIndex + 3 );
-            dataOffset += relativeOffsets >>> 24;
-            prev = value4;
-            valueIndex += 4;
-        }
-        if ( count > 0 )
-        {
-            int keyBytes = bytes[headerOffset] & 0xFF;
-            for ( int i = 0; i < count; i++ )
-            {
-                int code = (keyBytes >>> (i * 2)) & 0x3;
-                int value = decodeIntValue( code, bytes, dataOffset ) + prev;
-                consumer.accept( values, value, valueIndex + i );
-                dataOffset += INT_CODE_SIZES[code];
-                prev = value;
-            }
-        }
-        buffer.position( dataOffset );
-        return values;
-    }
-
-    static int[] readIntDeltas( byte[] bytes, int offset, ByteBuffer buffer )
-    {
-        return (int[]) readIntDeltas( bytes, offset, buffer, INT_CREATOR, INT_CONSUMER );
-    }
-
-    static int[] readIntDeltas( ByteBuffer buffer )
-    {
-        return (int[]) readIntDeltas( buffer.array(), buffer.position(), buffer, INT_CREATOR, INT_CONSUMER );
-    }
-
-    static Object readIntDeltas( ByteBuffer buffer, TargetCreator creator, TargetConsumer consumer )
-    {
-        return readIntDeltas( buffer.array(), buffer.position(), buffer, creator, consumer );
     }
 
     static boolean hasNonEmptyIntArray( ByteBuffer data )
@@ -281,87 +163,39 @@ class StreamVByte
 
     // === LONGS ===
 
-    static int writeLongs( long[] values, byte[] bytes, int offset )
+    static void writeLongs( Writer writer, ByteBuffer buffer, int worstCaseNumValues )
     {
-        int count = values.length;
-        if ( count == 0 )
-        {
-            bytes[offset] = 0;
-            return offset + 1;
-        }
-
-        int numberOfHeaderBytes = numHeaderBytes( count );
-        byte shift = 0;
-        int countHeader = writeCountHeader( count, bytes, offset );
-        int headerOffset = countHeader & 0xFFFFFF;
-        byte key = (byte) (countHeader >>> 24);
-        int dataOffset = headerOffset + numberOfHeaderBytes;
-        for ( int c = 0; c < count; c++ )
-        {
-            if ( shift == 8 )
-            {
-                shift = 0;
-                bytes[headerOffset++] = key;
-                key = 0;
-            }
-            long value = values[c];
-            byte code = encodeLongValue( value, bytes, dataOffset );
-            dataOffset += LONG_CODE_SIZES[code];
-            key |= code << shift;
-            shift += 2;
-        }
-
-        bytes[headerOffset] = key;
-        return dataOffset;
+        writer.initialize( buffer, false, LONG_CODE_SIZES, LONG_ENCODER, worstCaseNumValues );
     }
 
-    static void writeLongs( long[] values, ByteBuffer buffer )
+    static int writeLongs( long[] values, ByteBuffer buffer )
     {
-        buffer.position( writeLongs( values, buffer.array(), buffer.position() ) );
-    }
-
-    static long[] readLongs( byte[] bytes, int offset, ByteBuffer buffer )
-    {
-        if ( bytes[offset] == 0 )
+        Writer writer = new Writer(); // TODO pass in instead
+        writeLongs( writer, buffer, values.length );
+        for ( long value : values )
         {
-            buffer.position( offset + 1 );
-            return EMPTY_LONG_ARRAY;
+            writer.writeNext( value );
         }
-        int countAndHeaderOffset = readCountHeader( bytes, offset );
-        int count = countAndHeaderOffset & 0xFFFF;
-        int headerOffset = countAndHeaderOffset >>> 16;
-        long[] values = new long[count];
-        int numberOfHeaderBytes = numHeaderBytes( count );
-        int dataOffset = headerOffset + numberOfHeaderBytes;
-        int valueIndex = 0;
-        for ( ; count >= 4; count -= 4 )
-        {
-            int keyBytes = bytes[headerOffset++] & 0xFF;
-            int relativeOffsets = LONG_RELATIVE_OFFSETS[keyBytes & 0xFF];
-            values[valueIndex] = decodeLongValue( keyBytes & 0x3, bytes, dataOffset );
-            values[valueIndex + 1] = decodeLongValue( (keyBytes >>> 2) & 0x3, bytes, dataOffset + (relativeOffsets & 0xFF) );
-            values[valueIndex + 2] = decodeLongValue( (keyBytes >>> 4) & 0x3, bytes, dataOffset + ((relativeOffsets >>> 8) & 0xFF) );
-            values[valueIndex + 3] = decodeLongValue( (keyBytes >>> 6) & 0x3, bytes, dataOffset + ((relativeOffsets >>> 16) & 0xFF) );
-            dataOffset += relativeOffsets >>> 24;
-            valueIndex += 4;
-        }
-        if ( count > 0 )
-        {
-            int keyBytes = bytes[headerOffset] & 0xFF;
-            for ( int i = 0; i < count; i++ )
-            {
-                int code = (keyBytes >>> (i * 2)) & 0x3;
-                values[valueIndex + i] = decodeLongValue( code, bytes, dataOffset );
-                dataOffset += LONG_CODE_SIZES[code];
-            }
-        }
-        buffer.position( dataOffset );
-        return values;
+        writer.done();
+        return buffer.position();
     }
 
     static long[] readLongs( ByteBuffer buffer )
     {
-        return readLongs( buffer.array(), buffer.position(), buffer );
+        Reader reader = new Reader();
+        reader.initialize( buffer, false, LONG_CODE_SIZES, LONG_DECODER );
+        long[] values = new long[reader.count];
+        for ( int i = 0; i < values.length; i++ )
+        {
+            values[i] = reader.next();
+        }
+        buffer.position( reader.offset );
+        return values;
+    }
+
+    static void readLongs( ByteBuffer buffer, Reader reader )
+    {
+        reader.initialize( buffer, false, LONG_CODE_SIZES, LONG_DECODER );
     }
 
     static int calculateLongSizeIndex( long value )
@@ -524,19 +358,28 @@ class StreamVByte
         return value & 0xFF;
     }
 
-    private static int numHeaderBytes( int count )
-    {
-        return (count + 3) / 4;
-    }
-
-    private static int writeCountHeader( int count, byte[] bytes, int offset )
+    private static int figureOutCountHeaderSize( int count )
     {
         assert count <= 0x3FFF;
         if ( count <= 2 )
+        {   // doesn't use an additional byte, instead shares with the single header byte
+            return 0;
+        }
+        return count <= 63
+               ? 1  // count fits in 1B
+               : 2; // count fits in 2B
+    }
+
+    private static void writeCountHeader( int count, byte[] bytes, int offset, int style, boolean additive )
+    {
+        assert count <= 0x3FFF;
+        if ( style == 0 )
         {
             // [1_cc,bbaa]
-            bytes[offset] = (byte) ((count << 4) | 0x80);
-            return offset | (bytes[offset] << 24);
+            byte countAndMark = (byte) ((count << 4) | 0x80);
+            bytes[offset] = additive
+                    ? (byte) (bytes[offset] | countAndMark)
+                    : countAndMark;
         }
         else
         {
@@ -545,10 +388,9 @@ class StreamVByte
             {
                 // [_Mcc,cccc][cccc,cccc]
                 bytes[offset - 1] |= 0x40;
-                bytes[offset++] = (byte) (count >>> 6);
+                bytes[offset] = (byte) (count >>> 6);
             }
             // else [__cc,cccc]
-            return offset;
         }
     }
 
@@ -557,16 +399,16 @@ class StreamVByte
         byte headerByte = bytes[offset];
         if ( (headerByte & 0x80) != 0 ) // Count is 0-2
         {
-            return ((headerByte >>> 4) & 0x3) | (offset << 16);
+            return (headerByte >>> 4) & 0x3;
         }
         else if ( (headerByte & 0x40) == 0 ) // Count is 3-63
         {
-            return headerByte | ((offset + 1) << 16);
+            return headerByte | (1 << 16);
         }
         else // Count is 64-16383, so one more byte is required to hold the count
         {
             int count = (headerByte & 0x3F) | (bytes[offset + 1] & 0xFF) << 6;
-            return count | ((offset + 2) << 16);
+            return count | (2 << 16);
         }
     }
 
@@ -618,4 +460,206 @@ class StreamVByte
             ((long[]) target)[index] = value;
         }
     };
+
+    static class Writer
+    {
+        // sort-of-final stuff
+        private byte[] data;
+        private boolean deltas;
+        private int[] codeSizes;
+        private Encoder encoder;
+        private int countHeaderSize;
+        private int countHeaderOffset;
+
+        // state while writing
+        private long prevValue;
+        private int headerOffset;
+        private int offset;
+        private int count;
+        private byte header;
+        private int headerShift;
+        private ByteBuffer buffer;
+
+        private void initialize( ByteBuffer buffer, boolean deltas, int[] codeSizes, Encoder encoder, int worstCaseCount )
+        {
+            this.buffer = buffer;
+            this.data = buffer.array();
+            this.deltas = deltas;
+            this.codeSizes = codeSizes;
+            this.encoder = encoder;
+            this.prevValue = 0;
+            this.count = 0;
+            this.countHeaderOffset = buffer.position();
+            this.countHeaderSize = figureOutCountHeaderSize( worstCaseCount );
+
+            writeCountHeader( worstCaseCount, data, countHeaderOffset, countHeaderSize, false );
+            this.header = 0;
+            this.headerShift = 8;
+            this.offset = countHeaderOffset + countHeaderSize;
+        }
+
+        /**
+         * @return {@code true} if the value was written and fit in the target data array, otherwise {@code false} and the state is left
+         * as it was prior to this call.
+         */
+        boolean writeNext( long value )
+        {
+            // TODO figure out size before writing and return false if it wouldn't fit
+
+            if ( headerShift == 8 )
+            {
+                if ( count > 0 )
+                {
+                    data[headerOffset] = header;
+                    header = 0;
+                }
+                headerOffset = offset++;
+                headerShift = 0;
+            }
+
+            int sizeCode = encoder.encodeNext( data, offset, value - prevValue );
+            header |= sizeCode << headerShift;
+            offset += codeSizes[sizeCode];
+            if ( deltas )
+            {
+                prevValue = value;
+            }
+            headerShift += 2;
+            count++;
+            return true;
+        }
+
+        void undoLastWrite()
+        {
+            assert count > 0;
+            headerShift -= 2;
+            int sizeCode = (header >>> headerShift) & 0x3;
+            offset -= codeSizes[sizeCode];
+            if ( headerShift == 0 )
+            {
+                // The last value required a new header byte to be written. Undo that too.
+                offset--;
+            }
+            count--;
+        }
+
+        /**
+         * @return writes any pending headers and returns the offset that would be the next writable offset after the data written by this writer.
+         */
+        void done()
+        {
+            if ( headerShift > 0 && count > 0 )
+            {
+                data[headerOffset] = header;
+            }
+            if ( count == 0 && countHeaderSize == 0 )
+            {
+                // Special case because count header and single header byte shares the same byte
+                offset++;
+            }
+            writeCountHeader( count, data, countHeaderOffset, countHeaderSize, true );
+            buffer.position( offset );
+        }
+    }
+
+    private interface Encoder
+    {
+        int encodeNext( byte[] data, int offset, long value );
+    }
+
+    private static final Encoder INT_ENCODER = ( data, offset, value ) -> encodeIntValue( (int) value, data, offset );
+    private static final Encoder LONG_ENCODER = ( data, offset, value ) -> encodeLongValue( value, data, offset );
+
+    static class Reader implements LongIterator
+    {
+        // TODO experiment with using the relative offsets and reading 4 by 4 as long as possible, could make use of SIMD instructions better
+
+        private byte[] data;
+        private int i;
+        private int count;
+        private boolean deltas;
+        private int[] codeSizes;
+        private Decoder decoder;
+
+        private byte header;
+        private int headerShift;
+        private long prevValue;
+        private long current;
+        private int offset;
+        private ByteBuffer buffer;
+
+        private void initialize( ByteBuffer buffer, boolean deltas, int[] codeSizes, Decoder decoder )
+        {
+            this.buffer = buffer;
+            this.data = buffer.array();
+            this.deltas = deltas;
+            this.codeSizes = codeSizes;
+            this.decoder = decoder;
+            this.prevValue = 0;
+            this.i = 0;
+            this.offset = buffer.position();
+            int countAndHeaderSize = readCountHeader( data, offset );
+            this.count = countAndHeaderSize & 0xFFFF;
+            int countHeaderSize = countAndHeaderSize >>> 16;
+            if ( countHeaderSize == 0 )
+            {
+                this.header = data[offset];
+                this.headerShift = 0;
+                this.offset = offset + 1;
+            }
+            else
+            {
+                this.headerShift = 8;
+                this.offset = offset + countHeaderSize;
+            }
+        }
+
+        @Override
+        public long next()
+        {
+            assert i < count;
+            if ( headerShift == 8 )
+            {
+                header = data[offset++];
+                headerShift = 0;
+            }
+            int sizeCode = (header >> headerShift) & 0x3;
+            headerShift += 2;
+            current = decoder.decodeNext( sizeCode, data, offset );
+            if ( deltas )
+            {
+                current += prevValue;
+                prevValue = current;
+            }
+            offset += codeSizes[sizeCode];
+            i++;
+            return current;
+        }
+
+        @Override
+        public boolean hasNext()
+        {
+            return i < count;
+        }
+
+        long current()
+        {
+            assert i > 0;
+            return current;
+        }
+
+        void clear()
+        {
+            i = 0;
+            count = 0;
+        }
+    }
+
+    private interface Decoder
+    {
+        long decodeNext( int sizeCode, byte[] data, int offset );
+    }
+
+    private static final Decoder INT_DECODER = StreamVByte::decodeIntValue;
+    private static final Decoder LONG_DECODER = StreamVByte::decodeLongValue;
 }

@@ -32,7 +32,7 @@ import static org.apache.commons.lang3.ArrayUtils.EMPTY_INT_ARRAY;
 import static org.neo4j.internal.freki.MutableNodeData.idFromRecordPointer;
 import static org.neo4j.internal.freki.MutableNodeData.sizeExponentialFromRecordPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
-import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
+import static org.neo4j.internal.freki.StreamVByte.readInts;
 import static org.neo4j.util.Preconditions.checkState;
 
 abstract class FrekiMainStoreCursor implements AutoCloseable
@@ -288,7 +288,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         else
         {
             ByteBuffer buffer = data.relationshipBuffer();
-            relationshipTypesInNode = readIntDeltas( buffer );
+            relationshipTypesInNode = readInts( buffer, true );
             // Right after the types array the relationship group data starts, so this is the offset for the first type
             firstRelationshipTypeOffset = buffer.position();
             return buffer;
@@ -303,7 +303,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         }
         else if ( !data.isDense )
         {
-            relationshipTypeOffsets = readIntDeltas( data.relationshipBuffer( data.relationshipTypeOffsetsOffset ) );
+            relationshipTypeOffsets = readInts( data.relationshipBuffer( data.relationshipTypeOffsetsOffset ), true );
         }
     }
 
