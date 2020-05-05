@@ -42,11 +42,11 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
 
         void waitingForBootstrap( NamedDatabaseId namedDatabaseId );
 
-        void bootstrapped( CoreSnapshot snapshot, NamedDatabaseId namedDatabaseId, RaftId raftId );
+        void bootstrapped( CoreSnapshot snapshot, NamedDatabaseId namedDatabaseId, RaftId raftId, MemberId myself );
 
-        void boundToRaftFromDisk( NamedDatabaseId namedDatabaseId, RaftId raftId );
+        void boundToRaftFromDisk( NamedDatabaseId namedDatabaseId, RaftId raftId, MemberId myself );
 
-        void boundToRaftThroughTopology( NamedDatabaseId namedDatabaseId, RaftId raftId );
+        void boundToRaftThroughTopology( NamedDatabaseId namedDatabaseId, RaftId raftId, MemberId myself );
 
         void retryPublishRaftId( NamedDatabaseId namedDatabaseId, RaftId raftId );
 
@@ -161,7 +161,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
 
         awaitPublishRaftId( namedDatabaseId, bindingConditions, raftId );
 
-        monitor.boundToRaftFromDisk( namedDatabaseId, raftId );
+        monitor.boundToRaftFromDisk( namedDatabaseId, raftId, topologyService.memberId() );
         return new BoundState( raftId );
     }
 
@@ -199,7 +199,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
                 {
                     this.raftId = raftId;
                     snapshot = raftBootstrapper.bootstrap( topology.members().keySet() );
-                    monitor.bootstrapped( snapshot, namedDatabaseId, raftId );
+                    monitor.bootstrapped( snapshot, namedDatabaseId, raftId, topologyService.memberId() );
                     return new BoundState( raftId, snapshot );
                 }
             }
@@ -242,7 +242,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
             if ( Publisher.successfullyPublishedBy( ME, outcome ) )
             {
                 var snapshot = raftBootstrapper.bootstrap( initialMemberIds, storeId );
-                monitor.bootstrapped( snapshot, namedDatabaseId, raftId );
+                monitor.bootstrapped( snapshot, namedDatabaseId, raftId, topologyService.memberId() );
                 return new BoundState( raftId, snapshot );
             }
 
@@ -263,7 +263,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
     private BoundState handleBootstrapByOther( DatabaseCoreTopology topology ) throws IOException
     {
         saveSystemDatabase();
-        monitor.boundToRaftThroughTopology( namedDatabaseId, raftId );
+        monitor.boundToRaftThroughTopology( namedDatabaseId, raftId, topologyService.memberId() );
         raftId = topology.raftId();
         return new BoundState( raftId );
     }

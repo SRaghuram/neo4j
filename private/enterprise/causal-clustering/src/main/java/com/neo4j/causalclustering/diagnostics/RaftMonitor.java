@@ -77,22 +77,24 @@ public class RaftMonitor implements RaftBinder.Monitor, PersistentSnapshotDownlo
     }
 
     @Override
-    public void bootstrapped( CoreSnapshot snapshot, NamedDatabaseId namedDatabaseId, RaftId raftId )
+    public void bootstrapped( CoreSnapshot snapshot, NamedDatabaseId namedDatabaseId, RaftId raftId, MemberId myself )
     {
-        user.info( format( "This instance bootstrapped a raft for database '%s'.", namedDatabaseId.name() ) );
-        debug.info( format( "Bootstrapped %s with %s using %s", namedDatabaseId, raftId, snapshot ) );
+        user.info( format( "This instance bootstrapped a raft for database '%s' with raft id '%s' as member id '%s'.",
+                namedDatabaseId.name(), raftId.uuid(), myself.getUuid() ) );
+        debug.info( format( "Bootstrapped %s with %s using %s as %s", namedDatabaseId, raftId, snapshot, myself ) );
     }
 
     @Override
-    public void boundToRaftFromDisk( NamedDatabaseId namedDatabaseId, RaftId raftId )
+    public void boundToRaftFromDisk( NamedDatabaseId namedDatabaseId, RaftId raftId, MemberId myself )
     {
-        user.info( format( "Bound database '%s' to raft with id '%s', found on disk.", namedDatabaseId.name(), raftId.uuid() ) );
+        user.info( format( "Bound database '%s' to raft with id '%s' as member id '%s', found on disk.",
+                namedDatabaseId.name(), raftId.uuid(), myself.getUuid() ) );
     }
 
     @Override
-    public void boundToRaftThroughTopology( NamedDatabaseId namedDatabaseId, RaftId raftId )
+    public void boundToRaftThroughTopology( NamedDatabaseId namedDatabaseId, RaftId raftId, MemberId myself )
     {
-        user.info( format( "Bound database '%s' to raft with id '%s'.", namedDatabaseId.name(), raftId.uuid() ) );
+        user.info( format( "Bound database '%s' to raft with id '%s' as member id '%s'.", namedDatabaseId.name(), raftId.uuid(), myself.getUuid() ) );
     }
 
     @Override
