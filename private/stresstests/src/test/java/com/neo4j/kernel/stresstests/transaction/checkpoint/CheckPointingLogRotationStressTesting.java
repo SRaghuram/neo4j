@@ -78,7 +78,7 @@ class CheckPointingLogRotationStressTesting
                     DatabaseLayout.ofFlat( ensureExistsAndEmpty( storeDir ) ), fileSystem, null, PageCacheTracer.NULL,
                     DEFAULT, NullLogService.getInstance(), ExecutionMonitors.defaultVisible(), EMPTY, dbConfig,
                     RecordFormatSelector.selectForConfig( dbConfig, NullLogProvider.getInstance() ), NO_MONITOR, jobScheduler,
-                    Collector.EMPTY, TransactionLogInitializer.asLogFilesInitializer(), INSTANCE )
+                    Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE )
                     .doImport( new NodeCountInputs( nodeCount ) );
         }
 

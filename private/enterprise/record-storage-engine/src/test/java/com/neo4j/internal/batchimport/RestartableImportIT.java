@@ -161,7 +161,7 @@ class RestartableImportIT
             BatchImporterFactory factory = BatchImporterFactory.withHighestPriority();
             factory.instantiate( DatabaseLayout.ofFlat( databaseDirectory ), new DefaultFileSystemAbstraction(), null, PageCacheTracer.NULL, DEFAULT,
                     NullLogService.getInstance(), ExecutionMonitors.invisible(), EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(),
-                    NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogInitializer.asLogFilesInitializer(), INSTANCE )
+                    NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE )
                    .doImport( input( Long.parseLong( args[1] ) ) );
             // Create this file to communicate completion for real
             new File( databaseDirectory, COMPLETED ).createNewFile();

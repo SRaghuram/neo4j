@@ -275,6 +275,6 @@ class RestartableParallelBatchImporterIT
         return factory.instantiate(
                 databaseLayout, fs, null, PageCacheTracer.NULL, DEFAULT, NullLogService.getInstance(), monitor, EMPTY,
                 Config.defaults( preallocate_logical_logs, false ), RecordFormatSelector.defaultFormat(), NO_MONITOR,
-                jobScheduler, Collector.EMPTY, TransactionLogInitializer.asLogFilesInitializer(), INSTANCE );
+                jobScheduler, Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), INSTANCE );
     }
 }

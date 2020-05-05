@@ -107,7 +107,7 @@ class RestartImportFromSpecificStatesTest
         return factory.instantiate(
                 databaseLayout, fs, null, PageCacheTracer.NULL, DEFAULT, NullLogService.getInstance(), monitor, EMPTY,
                 Config.defaults(), RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY,
-                TransactionLogInitializer.asLogFilesInitializer(), INSTANCE );
+                TransactionLogInitializer.getLogFilesInitializer(), INSTANCE );
     }
 
     private void verifyDb( SimpleRandomizedInput input ) throws IOException

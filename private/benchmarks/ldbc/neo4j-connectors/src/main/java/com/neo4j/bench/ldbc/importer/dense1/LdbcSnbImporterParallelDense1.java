@@ -944,7 +944,7 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                 NO_MONITOR,
                 jobScheduler,
                 badCollector,
-                TransactionLogInitializer.asLogFilesInitializer(),
+                TransactionLogInitializer.getLogFilesInitializer(),
                 INSTANCE
         );
 

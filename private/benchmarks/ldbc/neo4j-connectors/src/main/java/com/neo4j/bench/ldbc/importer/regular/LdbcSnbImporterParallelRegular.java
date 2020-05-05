@@ -742,7 +742,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                 NO_MONITOR,
                 jobScheduler,
                 badCollector,
-                TransactionLogInitializer.asLogFilesInitializer(),
+                TransactionLogInitializer.getLogFilesInitializer(),
                 INSTANCE
         );
 
