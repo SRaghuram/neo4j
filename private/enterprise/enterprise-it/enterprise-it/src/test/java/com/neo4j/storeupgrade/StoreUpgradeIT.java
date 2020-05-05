@@ -79,6 +79,7 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogVersions;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
+import org.neo4j.kernel.impl.transaction.log.files.LogFilesSpan;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -535,9 +536,9 @@ public class StoreUpgradeIT
                     neo4j_home, testDir.homeDir().toPath(),
                     transaction_logs_root_path, transactionLogsRoot.toPath().toAbsolutePath() ) );
             DatabaseLayout layout  = Neo4jLayout.of( config ).databaseLayout( DEFAULT_DATABASE_NAME );
-            try ( Lifespan lifespan = getAccessibleLogFiles( layout ) )
+            try ( LogFilesSpan span = getAccessibleLogFiles( layout ) )
             {
-                LogFiles logFiles = lifespan.unwrap( LogFiles.class );
+                LogFiles logFiles = span.getLogFiles();
                 LogPosition startPosition = logFiles.extractHeader( logFiles.getHighestLogVersion() ).getStartPosition();
                 boolean foundStartEntry = false;
                 boolean foundCommitEntry = false;
@@ -588,9 +589,9 @@ public class StoreUpgradeIT
                     neo4j_home, testDir.homeDir().toPath(),
                     transaction_logs_root_path, transactionLogsRoot.toPath().toAbsolutePath() ) );
             DatabaseLayout layout  = Neo4jLayout.of( config ).databaseLayout( DEFAULT_DATABASE_NAME );
-            try ( Lifespan lifespan = getAccessibleLogFiles( layout ) )
+            try ( LogFilesSpan span = getAccessibleLogFiles( layout ) )
             {
-                LogFiles logFiles = lifespan.unwrap( LogFiles.class );
+                LogFiles logFiles = span.getLogFiles();
                 LogPosition startPosition = logFiles.extractHeader( logFiles.getHighestLogVersion() ).getStartPosition();
                 boolean foundStartEntry = false;
                 boolean foundCommitEntry = false;
@@ -636,7 +637,7 @@ public class StoreUpgradeIT
             return logFiles.logFiles();
         }
 
-        private Lifespan getAccessibleLogFiles( DatabaseLayout layout ) throws IOException
+        private LogFilesSpan getAccessibleLogFiles( DatabaseLayout layout ) throws IOException
         {
             JobScheduler scheduler = JobSchedulerFactory.createInitialisedScheduler();
             PageCache pageCache = StandalonePageCacheFactory.createPageCache( testDir.getFileSystem(), scheduler );
@@ -652,7 +653,8 @@ public class StoreUpgradeIT
                                           fileSystem, layout, pageCache, cursorTracer ) )
                                   .build();
 
-            return new Lifespan( scheduler, LifecycleAdapter.onShutdown( pageCache::close ), logFiles );
+            Lifespan lifespan = new Lifespan( scheduler, LifecycleAdapter.onShutdown( pageCache::close ), logFiles );
+            return new LogFilesSpan( lifespan, logFiles );
         }
     }
 
