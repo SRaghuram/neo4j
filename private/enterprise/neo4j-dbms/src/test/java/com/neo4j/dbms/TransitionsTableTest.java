@@ -48,22 +48,22 @@ class TransitionsTableTest
     {
         databaseIdRepository = new TestDatabaseIdRepository();
 
-        create = new TransitionWrapper( "create", INITIAL, STOPPED, DIRTY );
-        start = new TransitionWrapper( "start", STOPPED, STARTED, STOPPED );
-        stop = new TransitionWrapper( "stop", STARTED, STOPPED, STOPPED );
-        drop = new TransitionWrapper( "drop", STOPPED, DROPPED, DIRTY );
-        prepareDrop = new TransitionWrapper( "prepareDrop", STARTED, STARTED, UNKNOWN );
-        startAfterStoreCopy = new TransitionWrapper( "startAfterStoreCopy", STORE_COPYING, STARTED, STORE_COPYING );
+        create = TransitionWrapper.make( "create", INITIAL, STOPPED, DIRTY );
+        start = TransitionWrapper.make( "start", STOPPED, STARTED, STOPPED );
+        stop = TransitionWrapper.make( "stop", STARTED, STOPPED, STOPPED );
+        drop = TransitionWrapper.make( "drop", STOPPED, DROPPED, DIRTY );
+        prepareDrop = TransitionWrapper.make( "prepareDrop", STARTED, STARTED, UNKNOWN );
+        startAfterStoreCopy = TransitionWrapper.make( "startAfterStoreCopy", STORE_COPYING, STARTED, STORE_COPYING );
 
         transitionsTable = TransitionsTable.builder()
-                                           .from( INITIAL ).to( DROPPED ).doNothing()
-                                           .from( INITIAL ).to( STOPPED ).doTransitions( create.wrapped )
-                                           .from( INITIAL ).to( STARTED ).doTransitions( create.wrapped, start.wrapped )
-                                           .from( STOPPED ).to( STARTED ).doTransitions( start.wrapped )
-                                           .from( STARTED ).to( STOPPED ).doTransitions( stop.wrapped )
-                                           .from( STOPPED ).to( DROPPED ).doTransitions( drop.wrapped )
-                                           .from( STARTED ).to( DROPPED ).doTransitions( prepareDrop.wrapped, stop.wrapped, drop.wrapped )
-                                           .build();
+                .from( INITIAL ).to( DROPPED ).doNothing()
+                .from( INITIAL ).to( STOPPED ).doTransitions( create.wrapped )
+                .from( INITIAL ).to( STARTED ).doTransitions( create.wrapped, start.wrapped )
+                .from( STOPPED ).to( STARTED ).doTransitions( start.wrapped )
+                .from( STARTED ).to( STOPPED ).doTransitions( stop.wrapped )
+                .from( STOPPED ).to( DROPPED ).doTransitions( drop.wrapped )
+                .from( STARTED ).to( DROPPED ).doTransitions( prepareDrop.wrapped, stop.wrapped, drop.wrapped )
+                .build();
     }
 
     @Test
@@ -310,11 +310,107 @@ class TransitionsTableTest
     }
 
     @Test
+    void invalidSequenceWithMultipleFromShouldThrow()
+    {
+        // when
+        try
+        {
+            TransitionsTable.builder()
+                            .from( STOPPED, STARTED ).to( DROPPED ).doTransitions( drop.wrapped )
+                            .build();
+            fail();
+        }
+        catch ( IllegalArgumentException e )
+        {
+            // then
+            assertThat( e.getMessage() ).startsWith( "Chain is invalid, transition cannot be chained after" );
+        }
+    }
+
+    @Test
+    void workWithMultipleFromsInTransitionAndInTransitionTable() throws TransitionFailureException
+    {
+        // given
+        var id = databaseIdRepository.getRaw( "foo" );
+        var multiFrom = new TransitionWrapper( "multiFrom1", STARTED, STOPPED, STOPPED, INITIAL );
+        List<Transition.Prepared> lookup;
+
+        var multiFromTable = TransitionsTable.builder()
+                .from( STOPPED, INITIAL ).to( STARTED ).doTransitions( multiFrom.wrapped )
+                .build();
+
+        var currentInitial = new EnterpriseDatabaseState( id, INITIAL );
+        var currentStopped = new EnterpriseDatabaseState( id, STOPPED );
+        var currentStarted = new EnterpriseDatabaseState( id, STARTED );
+
+        // when
+        lookup = multiFromTable
+                .fromCurrent( currentInitial )
+                .toDesired( currentStarted )
+                .collect( Collectors.toList() );
+        for ( var transition : lookup )
+        {
+            transition.doTransition();
+        }
+        lookup = multiFromTable
+                .fromCurrent( currentStopped )
+                .toDesired( currentStarted )
+                .collect( Collectors.toList() );
+        for ( var transition : lookup )
+        {
+            transition.doTransition();
+        }
+
+        // then
+        multiFrom.assertCalled( id, 2 );
+    }
+
+    @Test
+    void workWithMultipleFromsInTransitionAndOnlyOneInTransitionTable() throws TransitionFailureException
+    {
+        // given
+        var id = databaseIdRepository.getRaw( "foo" );
+        var multiFrom = new TransitionWrapper( "multiFrom2", DROPPED, DIRTY, STOPPED, STARTED );
+
+        var multiFromTable = TransitionsTable.builder()
+                .from( STOPPED ).to( DROPPED ).doTransitions( multiFrom.wrapped )
+                .build();
+
+        var currentStopped = new EnterpriseDatabaseState( id, STOPPED );
+        var currentStarted = new EnterpriseDatabaseState( id, STARTED );
+        var currentDropped = new EnterpriseDatabaseState( id, DROPPED );
+
+        // when
+        var lookup = multiFromTable
+                .fromCurrent( currentStopped )
+                .toDesired( currentDropped )
+                .collect( Collectors.toList() );
+        for ( var transition : lookup )
+        {
+            transition.doTransition();
+        }
+
+        // then
+        multiFrom.assertCalled( id, 1 );
+
+        // when then throw
+        try
+        {
+            multiFromTable.fromCurrent( currentStarted ).toDesired( currentDropped );
+            fail();
+        }
+        catch ( IllegalArgumentException e )
+        {
+            assertThat( e.getMessage() ).contains( "unsupported state transition" );
+        }
+    }
+
+    @Test
     void doTransitionExceptionShouldRaiseTransactionFailure()
     {
         // given
         var exception = new RuntimeException();
-        var throwingTransition = new TransitionWrapper( "throwing", STARTED, DROPPED, DIRTY )
+        var throwingTransition = new TransitionWrapper( "throwing", DROPPED, DIRTY, STARTED )
         {
             @Override
             void perform( NamedDatabaseId namedDatabaseId )
@@ -363,10 +459,19 @@ class TransitionsTableTest
         Transition wrapped;
         List<NamedDatabaseId> forTransitionCalls;
 
-        TransitionWrapper( String name, EnterpriseOperatorState from, EnterpriseOperatorState ifSuccess, EnterpriseOperatorState ifFail )
+        static TransitionWrapper make( String name, EnterpriseOperatorState from, EnterpriseOperatorState ifSuccess, EnterpriseOperatorState ifFail )
+        {
+            return new TransitionWrapper( name, ifSuccess, ifFail, from );
+        }
+
+        TransitionWrapper( String name, EnterpriseOperatorState ifSuccess, EnterpriseOperatorState ifFail,
+                EnterpriseOperatorState from, EnterpriseOperatorState... additionalFroms )
         {
             this.name = name;
-            this.wrapped = Transition.from( from ).doTransition( this::perform ).ifSucceeded( ifSuccess ).ifFailed( ifFail );
+            this.wrapped = Transition.from( from, additionalFroms )
+                    .doTransition( this::perform )
+                    .ifSucceeded( ifSuccess )
+                    .ifFailedThenDo( ignored -> {}, ifFail );
             this.forTransitionCalls = new ArrayList<>();
         }
 

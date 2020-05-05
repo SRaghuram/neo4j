@@ -5,9 +5,12 @@
  */
 package com.neo4j.dbms;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.neo4j.kernel.database.NamedDatabaseId;
 
@@ -17,19 +20,22 @@ public class Transition
     private final EnterpriseOperatorState successfulEndState;
     private final EnterpriseOperatorState failedEndState;
     private final Consumer<NamedDatabaseId> transitionFunction;
+    private final Consumer<NamedDatabaseId> cleanupFunction;
 
     private Transition( Set<EnterpriseOperatorState> validStartStates, EnterpriseOperatorState successfulEndState,
-            EnterpriseOperatorState failedEndState, Consumer<NamedDatabaseId> transitionFunction )
+            EnterpriseOperatorState failedEndState, Consumer<NamedDatabaseId> transitionFunction, Consumer<NamedDatabaseId> cleanupFunction )
     {
         this.validStartStates = validStartStates;
         this.successfulEndState = successfulEndState;
         this.failedEndState = failedEndState;
         this.transitionFunction = transitionFunction;
+        this.cleanupFunction = cleanupFunction;
     }
 
-    static NeedsDo from( EnterpriseOperatorState... validStarts )
+    static NeedsDo from( EnterpriseOperatorState validStart, EnterpriseOperatorState... additionalValidStarts )
     {
-        return new StepBuilder( validStarts );
+        var allValidStarts = Stream.concat( Stream.of( validStart ), Arrays.stream( additionalValidStarts ) ).collect( Collectors.toSet() );
+        return new StepBuilder( allValidStarts );
     }
 
     /**
@@ -68,7 +74,6 @@ public class Transition
 
     static class Prepared
     {
-
         private NamedDatabaseId namedDatabaseId;
         private Transition transition;
 
@@ -80,10 +85,21 @@ public class Transition
 
         EnterpriseDatabaseState doTransition() throws TransitionFailureException
         {
+            return doTransitionAction( transition.transitionFunction, transition.successfulEndState );
+        }
+
+        EnterpriseDatabaseState doCleanup() throws TransitionFailureException
+        {
+            return doTransitionAction( transition.cleanupFunction, transition.failedEndState );
+        }
+
+        private EnterpriseDatabaseState doTransitionAction( Consumer<NamedDatabaseId> action, EnterpriseOperatorState successfulEndState )
+                throws TransitionFailureException
+        {
             try
             {
-                transition.transitionFunction.accept( namedDatabaseId );
-                return new EnterpriseDatabaseState( namedDatabaseId, transition.successfulEndState );
+                action.accept( namedDatabaseId );
+                return new EnterpriseDatabaseState( namedDatabaseId, successfulEndState );
             }
             catch ( Throwable t )
             {
@@ -100,9 +116,9 @@ public class Transition
         private EnterpriseOperatorState endSuccess;
         private Consumer<NamedDatabaseId> transitionFunction;
 
-        private StepBuilder( EnterpriseOperatorState... validStarts )
+        private StepBuilder( Set<EnterpriseOperatorState> validStarts )
         {
-            this.validStarts = Set.of( validStarts );
+            this.validStarts = validStarts;
         }
 
         @Override
@@ -120,9 +136,9 @@ public class Transition
         }
 
         @Override
-        public Transition ifFailed( EnterpriseOperatorState endFail )
+        public Transition ifFailedThenDo( Consumer<NamedDatabaseId> cleanupFunction, EnterpriseOperatorState endFail )
         {
-            return new Transition( validStarts, endSuccess, endFail, transitionFunction );
+            return new Transition( validStarts, endSuccess, endFail, transitionFunction, cleanupFunction );
         }
     }
 
@@ -139,6 +155,6 @@ public class Transition
 
     interface NeedsEndFail
     {
-        Transition ifFailed( EnterpriseOperatorState endFail );
+        Transition ifFailedThenDo( Consumer<NamedDatabaseId> cleanupFunction, EnterpriseOperatorState endFail );
     }
 }

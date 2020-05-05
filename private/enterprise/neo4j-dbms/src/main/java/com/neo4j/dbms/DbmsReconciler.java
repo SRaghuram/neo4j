@@ -343,12 +343,16 @@ public class DbmsReconciler implements DatabaseStateService
 
         try
         {
-            var nextState = steps.next().doTransition();
-            return doTransitionStep( steps, result.withState( nextState ) );
-        }
-        catch ( TransitionFailureException failure )
-        {
-            return result.withState( failure.failedState() ).withError( failure.getCause() );
+            var preparedTransition = steps.next();
+            try
+            {
+                var nextState = preparedTransition.doTransition();
+                return doTransitionStep( steps, result.withState( nextState ) );
+            }
+            catch ( TransitionFailureException failure )
+            {
+                return doTransitionCleanupStep( preparedTransition, failure, result );
+            }
         }
         catch ( Throwable throwable )
         {
@@ -360,6 +364,20 @@ public class DbmsReconciler implements DatabaseStateService
             //   and just set that to failed with the catched Throwable
             return result.withError( throwable );
         }
+    }
+
+    private static ReconcilerStepResult doTransitionCleanupStep( Transition.Prepared preparedTransition,
+            TransitionFailureException originalFailure, ReconcilerStepResult result )
+    {
+        try
+        {
+            preparedTransition.doCleanup();
+        }
+        catch ( TransitionFailureException actualFailure )
+        {
+            originalFailure.getCause().addSuppressed( actualFailure.getCause() );
+        }
+        return result.withState( originalFailure.failedState() ).withError( originalFailure.getCause() );
     }
 
     private CompletableFuture<ReconcilerStepResult> handleResult( NamedDatabaseId namedDatabaseId, EnterpriseDatabaseState desiredState,
