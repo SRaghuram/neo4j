@@ -22,6 +22,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.CacheFromCursorTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CachePropertiesTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ConditionalApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DistinctTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllTestBase
@@ -176,6 +177,7 @@ class SlottedShortestPathTest extends ShortestPathTestBase(ENTERPRISE.DEFAULT, S
 class SlottedUnionTest extends UnionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedSemiApplyTest extends SemiApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedAntiSemiApplyTest extends AntiSemiApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedConditionalApplyTest extends ConditionalApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedCompiledExpressionsTest extends CompiledExpressionsTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
 
 class SlottedNestedPlanExpressionTest extends NestedPlanExpressionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
