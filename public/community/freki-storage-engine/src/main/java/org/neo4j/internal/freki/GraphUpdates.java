@@ -116,12 +116,11 @@ class GraphUpdates
         ByteBuffer[] intermediateBuffers = new ByteBuffer[NUM_BUFFERS];
         int x8Size = stores.largestMainStore().recordDataSize();
         intermediateBuffers[PROPERTIES] = ByteBuffer.wrap( new byte[x8Size] );
-        int relationshipDenseMargin = 100; //TODO...
-        intermediateBuffers[RELATIONSHIPS] = ByteBuffer.wrap( new byte[x8Size  - relationshipDenseMargin] );
+        intermediateBuffers[RELATIONSHIPS] = ByteBuffer.wrap( new byte[x8Size] );
         intermediateBuffers[DEGREES] = ByteBuffer.wrap( new byte[x8Size] );
         intermediateBuffers[RELATIONSHIPS_OFFSETS] = ByteBuffer.wrap( new byte[x8Size] );
         intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID] = ByteBuffer.wrap( new byte[SINGLE_VLONG_MAX_SIZE] );
-        intermediateBuffers[RECORD_POINTER] = ByteBuffer.wrap( new byte[SINGLE_VLONG_MAX_SIZE] );
+        intermediateBuffers[RECORD_POINTER] = ByteBuffer.wrap( new byte[SINGLE_VLONG_MAX_SIZE * 2] );
         intermediateBuffers[LABELS] = ByteBuffer.wrap( new byte[x8Size] );
 
         ByteBuffer smallBuffer = ByteBuffer.wrap( new byte[stores.mainStore.recordDataSize()] );
@@ -331,6 +330,10 @@ class GraphUpdates
             int relsSize = intermediateBuffers[RELATIONSHIPS].limit() + intermediateBuffers[RELATIONSHIPS_OFFSETS].limit();
             int degreesSize = intermediateBuffers[DEGREES].limit();
 
+            if ( relsSize > stores.largestMainStore().recordDataSize() - 50 )
+            {
+                isDense = true;
+            }
             if ( isDense )
             {
                 if ( dense == null )
