@@ -26,7 +26,7 @@ import org.neo4j.graphdb.RelationshipType;
 
 public class DataGeneratorConfig
 {
-    private static final NumberFormat FORMAT = NumberFormat.getNumberInstance( Locale.ENGLISH );
+    private static final NumberFormat FORMAT = NumberFormat.getNumberInstance( Locale.ROOT );
 
     private int nodeCount;
     private String[] relationshipTypeNames;
