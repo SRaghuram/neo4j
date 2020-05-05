@@ -21,12 +21,14 @@ package org.neo4j.internal.freki;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.commons.lang3.mutable.MutableLong;
+import org.eclipse.collections.api.list.primitive.MutableLongList;
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.api.set.primitive.ImmutableLongSet;
 import org.eclipse.collections.api.set.primitive.LongSet;
 import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.factory.primitive.IntSets;
+import org.eclipse.collections.impl.factory.primitive.LongLists;
 import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 import org.eclipse.collections.impl.factory.primitive.LongSets;
 import org.junit.jupiter.api.AfterEach;
@@ -1306,6 +1308,51 @@ class FrekiStorageEngineGraphWritesIT
         }
     }
 
+    @Test
+    void shouldFormXLChainBeforeDense() throws Exception
+    {
+        // given
+        long nodeId = commandCreationContext.reserveNode();
+        MutableLongList otherNodes = LongLists.mutable.empty();
+        for ( int i = 0; i < 100; i++ )
+        {
+            otherNodes.add( commandCreationContext.reserveNode() );
+        }
+        int x8Size = Record.recordSize( Record.sizeExpFromXFactor( 8 ) );
+        Set<StorageProperty> properties = new HashSet<>();
+        Value prop = Values.byteArray( new byte[]{0, 1, 2, 3, 4, 5, 6} ); //this will generate 10B data (header + length + data + key)
+        int sizePerProp = 10;
+        int propSize = (int) (x8Size * 0.8);
+        for ( int i = 0; i < propSize / sizePerProp; i++ )
+        {
+            properties.add( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId() + i + 1, prop ) );
+        }
+
+        int relsToAdd = 100;
+        Set<RelationshipSpec> relationships = new HashSet<>();
+
+        createAndApplyTransaction( target ->
+        {
+            otherNodes.forEach( target::visitCreatedNode );
+        } );
+        createAndApplyTransaction( target ->
+        {
+            CommandCreationContext txContext = storageEngine.newCommandCreationContext( NULL );
+
+            target.visitCreatedNode( nodeId );
+            target.visitNodePropertyChanges( nodeId, properties, emptyList(), IntSets.immutable.empty() );
+            for ( int i = 0; i < relsToAdd; i++ )
+            {
+                RelationshipSpec relationship = new RelationshipSpec( nodeId, i % 3, otherNodes.get( i % otherNodes.size() ), emptySet(), txContext );
+                relationship.create( target );
+                relationships.add( relationship );
+            }
+        } );
+
+        assertContentsOfNode( nodeId, LongSets.immutable.empty(), properties, relationships );
+        assertXLChainLength( nodeId, 2, false );
+    }
+
     @TestFactory
     Collection<DynamicTest> shouldHandlePermutationsOfDataBlocksXLChains()
     {
@@ -1389,6 +1436,7 @@ class FrekiStorageEngineGraphWritesIT
                     }
                 }, index -> asSet( IndexEntryUpdate.add( node, index, before.value()) ) );
                 assertContentsOfNode( node, labels, properties, relationships );
+                assertXLChainLength( node, (int) (labelXLFill + propertiesXLFill + degreesXLFill + 0.65), degreesXLFill > 1e-3);
             }
 
             @Override
@@ -1628,6 +1676,25 @@ class FrekiStorageEngineGraphWritesIT
             {
                 assertThat( nodeCursor.data.xLChainStartPointer ).isEqualTo( FrekiMainStoreCursor.NULL );
             }
+        }
+    }
+
+    private void assertXLChainLength( long nodeId, int expectedLength, boolean expectedDense )
+    {
+        try ( var storageReader = storageEngine.newReader();
+                var nodeCursor = storageReader.allocateNodeCursor( NULL ) )
+        {
+            nodeCursor.single( nodeId );
+            assertThat( nodeCursor.next() ).isTrue();
+            assertThat( nodeCursor.data.isDense ).isEqualTo( expectedDense );
+            assertThat( nodeCursor.data.xLChainStartPointer ).isEqualTo( nodeCursor.data.xLChainNextLinkPointer ); //we have not yet loaded the chain
+
+            int actualChainLength = 0;
+            while ( nodeCursor.loadNextChainLink() )
+            {
+                actualChainLength++;
+            }
+            assertThat( actualChainLength ).isEqualTo( expectedLength );
         }
     }
 
