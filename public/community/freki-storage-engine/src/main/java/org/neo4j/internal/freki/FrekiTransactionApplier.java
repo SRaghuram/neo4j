@@ -129,7 +129,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     @Override
     public void handle( FrekiCommand.SparseNode node ) throws IOException
     {
-        for ( FrekiCommand.RecordChange change = node.changes(); change != null; change = change.next() )
+        for ( FrekiCommand.RecordChange change : node )
         {
             int sizeExp = change.sizeExp();
             SimpleStore store = stores.mainStore( sizeExp );
@@ -221,7 +221,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         long[] labels = EMPTY_LONG_ARRAY;
         boolean labelsLoaded = false;
         boolean propertiesLoaded = skipProperties;
-        for ( FrekiCommand.RecordChange change = node.changes(); change != null && (!propertiesLoaded || !labelsLoaded); change = change.next() )
+        for ( FrekiCommand.RecordChange change : node )
         {
             Record record = recordFunction.apply( change );
             boolean inUse = record != null;
@@ -257,9 +257,13 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
 
             if ( change.sizeExp() == 0 && (!inUse || nodeCursor.data.xLChainStartPointer == NULL) )
             {
+                // Either deleted or has no XL.
                 propertiesLoaded = true;
                 labelsLoaded = true;
-                break; //no need to look further. Either deleted or has no XL.
+            }
+            if ( propertiesLoaded && labelsLoaded )
+            {
+                break; //no need to look further.
             }
         }
 

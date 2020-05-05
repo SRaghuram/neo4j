@@ -364,7 +364,7 @@ public class FrekiCommandSerializationTest
         // then
         FrekiCommand.SparseNode readNode = readCommand( channel, FrekiCommand.SparseNode.class );
         assertThat( readNode.nodeId ).isEqualTo( nodeId );
-        FrekiCommand.RecordChange readChange = readNode.changes();
+        FrekiCommand.RecordChange readChange = readNode.change();
         for ( FrekiCommand.RecordChange change : changes )
         {
             assertRecord( change.before, readChange.before );

@@ -105,8 +105,7 @@ abstract class FrekiCursorsTest
                 MutableObject<Record> x1 = new MutableObject<>();
                 graphUpdates.extractUpdates( command ->
                 {
-                    FrekiCommand.SparseNode sparseNode = (FrekiCommand.SparseNode) command;
-                    for ( FrekiCommand.RecordChange change = sparseNode.changes(); change != null; change = change.next() )
+                    for ( FrekiCommand.RecordChange change : (FrekiCommand.SparseNode) command )
                     {
                         Record record = change.after;
                         SimpleStore store = stores.mainStore( record.sizeExp() );

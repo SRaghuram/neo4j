@@ -121,7 +121,7 @@ class GraphUpdatesTest
                     @Override
                     public void handle( FrekiCommand.SparseNode node ) throws IOException
                     {
-                        for ( FrekiCommand.RecordChange change = node.changes(); change != null; change = change.next() )
+                        for ( FrekiCommand.RecordChange change : node )
                         {
                             Record record = change.after;
                             byte sizeExp = change.sizeExp();

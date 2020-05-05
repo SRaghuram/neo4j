@@ -28,9 +28,11 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import javax.annotation.Nonnull;
 
 import org.neo4j.internal.kernel.api.exceptions.schema.MalformedSchemaRuleException;
 import org.neo4j.internal.schema.SchemaRule;
@@ -71,7 +73,7 @@ abstract class FrekiCommand implements StorageCommand
 
     abstract boolean accept( Dispatcher applier ) throws IOException;
 
-    static class SparseNode extends FrekiCommand
+    static class SparseNode extends FrekiCommand implements Iterable<RecordChange>
     {
         static final byte TYPE = 1;
 
@@ -102,7 +104,7 @@ abstract class FrekiCommand implements StorageCommand
             {
                 int sizeExp = change.sizeExp();
                 RecordChange prev = null;
-                RecordChange candidate = changes();
+                RecordChange candidate = change();
                 while ( candidate != null && candidate.sizeExp() < sizeExp )
                 {
                     prev = candidate;
@@ -121,18 +123,45 @@ abstract class FrekiCommand implements StorageCommand
             }
         }
 
-        RecordChange changes()
+        RecordChange change()
         {
             return lowestChange;
         }
 
+        @Nonnull
+        @Override
+        public Iterator<RecordChange> iterator()
+        {
+            return new Iterator<>()
+            {
+                private RecordChange next = change();
+                @Override
+                public boolean hasNext()
+                {
+                    return next != null;
+                }
+
+                @Override
+                public RecordChange next()
+                {
+                    RecordChange curr = next;
+                    next = curr.next;
+                    return curr;
+                }
+            };
+        }
+
         RecordChange change( int sizeExp )
         {
-            for ( RecordChange candidate = changes(); candidate != null && candidate.sizeExp() <= sizeExp; candidate = candidate.next() )
+            for ( RecordChange candidate : this )
             {
                 if ( candidate.sizeExp() == sizeExp )
                 {
                     return candidate;
+                }
+                else if ( candidate.sizeExp() > sizeExp )
+                {
+                    break;
                 }
             }
             return null;
@@ -156,7 +185,7 @@ abstract class FrekiCommand implements StorageCommand
 
         private void addRecordsToToString( StringBuilder toString, String versionSign, Function<RecordChange,Record> version )
         {
-            for ( RecordChange change = changes(); change != null; change = change.next() )
+            for ( RecordChange change : this )
             {
                 Record record = version.apply( change );
                 if ( record != null )
@@ -173,7 +202,7 @@ abstract class FrekiCommand implements StorageCommand
             super.serialize( channel );
             channel.put( (byte) longSizeCode( nodeId ) );
             putCompactLong( channel, nodeId );
-            for ( RecordChange change = changes(); change != null; change = change.next() )
+            for ( RecordChange change : this )
             {
                 change.serialize( channel );
             }
