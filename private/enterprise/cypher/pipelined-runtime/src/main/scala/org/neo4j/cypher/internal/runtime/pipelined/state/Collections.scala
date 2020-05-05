@@ -10,7 +10,7 @@ import scala.collection.mutable
 object Collections {
 
   // Curiously, this is faster than doing e.g. IndexedSeq(...) or ArraySeq(...)
-  def arraySeq[T <: AnyRef](t: T): mutable.ArraySeq[T] = {
+  def singletonIndexedSeq[T <: AnyRef](t: T): mutable.ArraySeq[T] = {
     val result = new mutable.ArraySeq[T](1)
     result(0) = t
     result
