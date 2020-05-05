@@ -399,6 +399,8 @@ class GraphUpdates
 
             // build xLChain header
             xLHeader.clearMarks();
+            xLHeader.mark( Header.OFFSET_END, true );
+            xLHeader.mark( Header.FLAG_HAS_DENSE_RELATIONSHIPS, isDense );
 
             movePartToXL( x1Header, xLHeader, labelsSize, Header.FLAG_LABELS );
             movePartToXL( x1Header, xLHeader, propsSize, Header.OFFSET_PROPERTIES );
@@ -426,6 +428,10 @@ class GraphUpdates
             if ( !canFitInSingleXL )
             {
                 Header chainHeader = Header.shallowCopy( xLHeader );
+                //Unmark common offsets for each link
+                chainHeader.mark( Header.OFFSET_END, false );
+                chainHeader.mark( Header.FLAG_HAS_DENSE_RELATIONSHIPS, false );
+
                 List<Header> xLChain = new ArrayList<>();
                 worstCaseMiscSize = miscSize + 2 * SINGLE_VLONG_MAX_SIZE;
                 final int xLMaxSize = stores.largestMainStore().recordDataSize() - worstCaseMiscSize;
@@ -447,7 +453,7 @@ class GraphUpdates
 
                     if ( spaceLeft == xLMaxSize )
                     {
-                        // Some single part does not fit into a single XL, this should not happen!
+                        // We did not put anything in this link, likely some single part that does not fit into a single (max-size) record. Should not happen!
                         String msg = "Splitting XL into chain failed. Chain:%s, Link%s. Labels(%d), Props(%d), Degrees(%d), NextRelId(%d), Rels(%d)";
                         throw new IllegalStateException(
                                 String.format( msg, chainHeader, linkHeader, labelsSize, propsSize, degreesSize, nextInternalRelIdSize, relsSize ) );
@@ -469,9 +475,6 @@ class GraphUpdates
             }
             else
             {
-                xLHeader.mark( Header.OFFSET_END, true );
-                xLHeader.mark( Header.FLAG_HAS_DENSE_RELATIONSHIPS, isDense );
-
                 prepareRecordPointer( xLHeader, intermediateBuffers[RECORD_POINTER], backwardPointer );
                 serializeParts( maxBuffer, intermediateBuffers, xLHeader);
                 SimpleStore xLStore = stores.storeSuitableForRecordSize( maxBuffer.limit(), 1 );
