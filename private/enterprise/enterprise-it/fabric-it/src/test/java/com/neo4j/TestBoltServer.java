@@ -91,17 +91,18 @@ public class TestBoltServer
         when( dbIdRepository.getById( any() ) ).thenReturn( Optional.of( NAMED_SYSTEM_DATABASE_ID ) );
 
         boltServer = new BoltServer( boltGraphDatabaseManagementService,
-                jobScheduler,
-                connectorPortRegister,
-                networkConnectionTracker,
-                dbIdRepository,
-                config,
-                mock( SystemNanoClock.class ),
-                monitors,
-                NullLogService.getInstance(),
-                dependencies,
-                authManager,
-                new MemoryPools()
+                                     jobScheduler,
+                                     connectorPortRegister,
+                                     networkConnectionTracker,
+                                     dbIdRepository,
+                                     config,
+                                     mock( SystemNanoClock.class ),
+                                     monitors,
+                                     NullLogService.getInstance(),
+                                     dependencies,
+                                     authManager,
+                                     authManager,
+                                     new MemoryPools()
         );
 
         try
