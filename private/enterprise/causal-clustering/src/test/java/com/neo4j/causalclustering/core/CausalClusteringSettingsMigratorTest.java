@@ -129,6 +129,13 @@ class CausalClusteringSettingsMigratorTest
                             failure_resolution_window.defaultValue() );
         testFailureWindows( "4s", fromSeconds( 4, 8 ), failure_resolution_window.defaultValue() );
         testFailureWindows( "1s", fromSeconds( 1, 2 ), fromSeconds( 1, 2 ) );
+
+        // Test cases that contain durations which span TimeUnits (i.e. 1500ms -> 1s500ms)
+        var onePointFiveToThreeSeconds = new DurationRange( Duration.ofMillis( 1500 ), Duration.ofMillis( 3000 ) );
+        testFailureWindows( "1500ms", onePointFiveToThreeSeconds, onePointFiveToThreeSeconds );
+        testFailureWindows( "1s500ms", onePointFiveToThreeSeconds, onePointFiveToThreeSeconds );
+        testFailureWindows( "61s", fromSeconds( 61, 66 ), failure_resolution_window.defaultValue() );
+        testFailureWindows( "1m1s", fromSeconds( 61, 66 ), failure_resolution_window.defaultValue() );
     }
 
     @Test
