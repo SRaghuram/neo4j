@@ -37,6 +37,7 @@ import org.neo4j.internal.freki.GraphUpdates.NodeUpdates;
 import org.neo4j.internal.kernel.api.exceptions.ConstraintViolationTransactionFailureException;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.storageengine.api.PropertyKeyValue;
 import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StorageEntityCursor;
@@ -88,7 +89,8 @@ abstract class FrekiCursorsTest
 
         Node( long id )
         {
-            graphUpdates = new GraphUpdates( stores, new ArrayList<>(), applyToStoreImmediately( stores.bigPropertyValueStore ), PageCursorTracer.NULL );
+            graphUpdates = new GraphUpdates( stores, new ArrayList<>(), applyToStoreImmediately( stores.bigPropertyValueStore ), PageCursorTracer.NULL,
+                    EmptyMemoryTracker.INSTANCE );
             graphUpdates.create( id );
             updates = graphUpdates.getOrLoad( id );
         }

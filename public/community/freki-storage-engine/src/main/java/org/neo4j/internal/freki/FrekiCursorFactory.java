@@ -40,21 +40,21 @@ class FrekiCursorFactory
 
     public FrekiNodeCursor allocateNodeCursor( PageCursorTracer cursorTracer )
     {
-        return new FrekiNodeCursor( stores, cursorAccessPatternTracer, cursorTracer );
+        return new FrekiNodeCursor( stores, cursorAccessPatternTracer, cursorTracer, null ); //Awaiting next MT propagation PR.
     }
 
     public FrekiPropertyCursor allocatePropertyCursor( PageCursorTracer cursorTracer )
     {
-        return new FrekiPropertyCursor( stores, cursorAccessPatternTracer, cursorTracer );
+        return new FrekiPropertyCursor( stores, cursorAccessPatternTracer, cursorTracer, null ); //Awaiting next MT propagation PR.
     }
 
     public FrekiRelationshipTraversalCursor allocateRelationshipTraversalCursor( PageCursorTracer cursorTracer )
     {
-        return new FrekiRelationshipTraversalCursor( stores, cursorAccessPatternTracer, cursorTracer );
+        return new FrekiRelationshipTraversalCursor( stores, cursorAccessPatternTracer, cursorTracer, null ); //Awaiting next MT propagation PR.
     }
 
     public FrekiRelationshipScanCursor allocateRelationshipScanCursor( PageCursorTracer cursorTracer )
     {
-        return new FrekiRelationshipScanCursor( stores, cursorAccessPatternTracer, cursorTracer );
+        return new FrekiRelationshipScanCursor( stores, cursorAccessPatternTracer, cursorTracer, null ); //Awaiting next MT propagation PR.
     }
 }

@@ -26,6 +26,7 @@ import java.util.function.ToIntFunction;
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.memory.MemoryTracker;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_INT_ARRAY;
 import static org.neo4j.internal.freki.MutableNodeData.idFromRecordPointer;
@@ -43,6 +44,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     final CursorAccessPatternTracer cursorAccessPatternTracer;
     final CursorAccessPatternTracer.ThreadAccess cursorAccessTracer;
     final PageCursorTracer cursorTracer;
+    final MemoryTracker memoryTracker;
     boolean forceLoad;
 
     FrekiCursorData data;
@@ -53,13 +55,14 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
 
     private PageCursor[] xCursors;
 
-    FrekiMainStoreCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer )
+    FrekiMainStoreCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
         this.stores = stores;
         this.cursorAccessPatternTracer = cursorAccessPatternTracer;
         this.cursorAccessTracer = cursorAccessPatternTracer.access();
         this.cursorTracer = cursorTracer;
         this.xCursors = new PageCursor[stores.getNumMainStores()];
+        this.memoryTracker = memoryTracker;
     }
 
     public void reset()

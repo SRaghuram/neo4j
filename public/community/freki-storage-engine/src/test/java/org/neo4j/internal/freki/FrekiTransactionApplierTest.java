@@ -39,6 +39,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.storageengine.api.StandardConstraintRuleAccessor;
 import org.neo4j.storageengine.util.IdGeneratorUpdatesWorkSync;
 import org.neo4j.test.extension.Inject;
@@ -70,7 +71,7 @@ class FrekiTransactionApplierTest
     void setUp() throws IOException
     {
         stores = life.add( new Stores( fs, DatabaseLayout.ofFlat( directory.directory( "store" ) ), pageCache, new DefaultIdGeneratorFactory( fs, immediate() ),
-                PageCacheTracer.NULL, immediate(), true, new StandardConstraintRuleAccessor(), index -> index ) );
+                PageCacheTracer.NULL, immediate(), true, new StandardConstraintRuleAccessor(), index -> index, EmptyMemoryTracker.INSTANCE ) );
         life.start();
         idUpdates = new RecordingIdGeneratorWorkSync();
         stores.idGenerators( idUpdates::add );

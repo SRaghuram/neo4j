@@ -464,6 +464,18 @@ class DefaultNodeCursor extends TraceableCursor implements NodeCursor
         }
 
         @Override
+        public int numberOfCriteria()
+        {
+           return inner.numberOfCriteria();
+        }
+
+        @Override
+        public Criterion criterion( int index )
+        {
+            return inner.criterion( index );
+        }
+
+        @Override
         public LongIterator addedRelationship( NodeState transactionState )
         {
             return inner.addedRelationship( transactionState );

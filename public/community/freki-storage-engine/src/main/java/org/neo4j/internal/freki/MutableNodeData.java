@@ -83,8 +83,8 @@ class MutableNodeData
     private long nextInternalRelationshipId = FIRST_RELATIONSHIP_ID;
     private long[] recordPointers;
 
-    private SimpleBigValueStore bigValueStore;
-    private PageCursorTracer cursorTracer;
+    private final SimpleBigValueStore bigValueStore;
+    private final PageCursorTracer cursorTracer;
 
     MutableNodeData( long nodeId, SimpleBigValueStore bigValueStore, PageCursorTracer cursorTracer )
     {

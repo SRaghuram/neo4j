@@ -33,6 +33,7 @@ import org.neo4j.internal.schema.ConstraintType;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.constraints.UniquenessConstraintDescriptor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.ConstraintRuleAccessor;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageProperty;
@@ -51,13 +52,14 @@ class CommandCreator implements TxStateVisitor
     private final PageCursorTracer cursorTracer;
     private final GraphUpdates graphUpdates;
 
-    CommandCreator( Collection<StorageCommand> commands, Stores stores, ConstraintRuleAccessor constraintSemantics, PageCursorTracer cursorTracer )
+    CommandCreator( Collection<StorageCommand> commands, Stores stores, ConstraintRuleAccessor constraintSemantics, PageCursorTracer cursorTracer,
+            MemoryTracker memoryTracker )
     {
         this.commands = commands;
         this.stores = stores;
         this.constraintSemantics = constraintSemantics;
         this.cursorTracer = cursorTracer;
-        this.graphUpdates = new GraphUpdates( stores, cursorTracer );
+        this.graphUpdates = new GraphUpdates( stores, cursorTracer, memoryTracker );
     }
 
     @Override

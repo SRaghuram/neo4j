@@ -34,6 +34,7 @@ import java.util.List;
 import org.neo4j.internal.kernel.api.exceptions.ConstraintViolationTransactionFailureException;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.storageengine.api.PropertyKeyValue;
 import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.test.extension.Inject;
@@ -60,7 +61,7 @@ class GraphUpdatesTest
     {
         long nodeId = 0;
         {
-            GraphUpdates updates = new GraphUpdates( mainStores, PageCursorTracer.NULL );
+            GraphUpdates updates = new GraphUpdates( mainStores, PageCursorTracer.NULL, EmptyMemoryTracker.INSTANCE );
             updates.create( nodeId );
             extractAndApplyUpdates( updates );
         }
@@ -74,7 +75,7 @@ class GraphUpdatesTest
         BitSet existing = new BitSet();
         for ( int i = 0; i < 1_000; i++ )
         {
-            GraphUpdates updates = new GraphUpdates( mainStores, PageCursorTracer.NULL );
+            GraphUpdates updates = new GraphUpdates( mainStores, PageCursorTracer.NULL, EmptyMemoryTracker.INSTANCE );
             int numChanges = random.nextInt( 1, 10 );
             GraphUpdates.NodeUpdates nodeUpdates = updates.getOrLoad( nodeId );
             List<StorageProperty> added = new ArrayList<>();

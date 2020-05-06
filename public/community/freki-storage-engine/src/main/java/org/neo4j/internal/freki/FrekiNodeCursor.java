@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.AllNodeScan;
 import org.neo4j.storageengine.api.Degrees;
 import org.neo4j.storageengine.api.Reference;
@@ -50,9 +51,9 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     private FrekiRelationshipTraversalCursor relationshipsCursor;
     private boolean lightweight;
 
-    FrekiNodeCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer )
+    FrekiNodeCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
-        super( stores, cursorAccessPatternTracer, cursorTracer );
+        super( stores, cursorAccessPatternTracer, cursorTracer, memoryTracker );
     }
 
     @Override
@@ -106,8 +107,9 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     }
 
     @Override
-    public void degrees( RelationshipSelection selection, Degrees.Mutator degrees )
+    public void degrees( RelationshipSelection selection, Degrees.Mutator degrees, boolean allowFastDegreeLookup )
     {
+        //TODO what do we do about allowFastDegreeLookup?
         // Dense
         if ( data.isDense )
         {
@@ -147,7 +149,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
             // Sparse
             if ( relationshipsCursor == null )
             {
-                relationshipsCursor = new FrekiRelationshipTraversalCursor( stores, cursorAccessPatternTracer, cursorTracer );
+                relationshipsCursor = new FrekiRelationshipTraversalCursor( stores, cursorAccessPatternTracer, cursorTracer, memoryTracker );
             }
             relationshipsCursor.init( this, selection );
             // TODO If the selection is for any direction then this can be made more efficient by simply looking at the vbyte relationship array length

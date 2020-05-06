@@ -41,6 +41,7 @@ import org.neo4j.internal.kernel.api.exceptions.ConstraintViolationTransactionFa
 import org.neo4j.internal.kernel.api.exceptions.DeletedNodeStillHasRelationships;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.RelationshipDirection;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageProperty;
@@ -64,6 +65,7 @@ import static org.neo4j.internal.freki.StreamVByte.SINGLE_VLONG_MAX_SIZE;
 class GraphUpdates
 {
     private final Collection<StorageCommand> bigValueCommands;
+    private final MemoryTracker memoryTracker;
     private final Consumer<StorageCommand> bigValueCommandConsumer;
     private final MutableLongObjectMap<NodeUpdates> mutations = LongObjectMaps.mutable.empty();
     private final MainStores stores;
@@ -79,17 +81,18 @@ class GraphUpdates
     static final int LABELS = NEXT_INTERNAL_RELATIONSHIP_ID + 1;
     static final int NUM_BUFFERS = LABELS + 1;
 
-    GraphUpdates( MainStores stores, PageCursorTracer cursorTracer )
+    GraphUpdates( MainStores stores, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
-        this( stores, new ArrayList<>(), null, cursorTracer );
+        this( stores, new ArrayList<>(), null, cursorTracer, memoryTracker );
     }
 
     GraphUpdates( MainStores stores, Collection<StorageCommand> bigValueCommands,
-            Consumer<StorageCommand> bigValueCommandConsumer, PageCursorTracer cursorTracer )
+            Consumer<StorageCommand> bigValueCommandConsumer, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
         this.stores = stores;
         this.cursorTracer = cursorTracer;
         this.bigValueCommands = bigValueCommands;
+        this.memoryTracker = memoryTracker;
         this.bigValueCommandConsumer = bigValueCommandConsumer != null ? bigValueCommandConsumer : bigValueCommands::add;
     }
 

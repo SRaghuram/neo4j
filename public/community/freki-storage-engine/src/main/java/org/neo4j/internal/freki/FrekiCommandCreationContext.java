@@ -28,6 +28,7 @@ import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.CommandCreationContext;
 
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
@@ -51,9 +52,10 @@ class FrekiCommandCreationContext implements CommandCreationContext
     private final IdGenerator propertyKeyTokens;
     private final IdGenerator schema;
     private final PageCursorTracer cursorTracer;
+    private final MemoryTracker memoryTracker; //TODO we should probably track some memory
     private MutableLongObjectMap<MutableInt> sourceNodeNextRelationshipIds = LongObjectMaps.mutable.empty();
 
-    FrekiCommandCreationContext( MainStores stores, IdGeneratorFactory idGeneratorFactory, PageCursorTracer cursorTracer )
+    FrekiCommandCreationContext( MainStores stores, IdGeneratorFactory idGeneratorFactory, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
         this.stores = stores;
         nodes = idGeneratorFactory.get( IdType.NODE );
@@ -62,6 +64,7 @@ class FrekiCommandCreationContext implements CommandCreationContext
         propertyKeyTokens = idGeneratorFactory.get( IdType.PROPERTY_KEY_TOKEN );
         schema = idGeneratorFactory.get( IdType.SCHEMA );
         this.cursorTracer = cursorTracer;
+        this.memoryTracker = memoryTracker;
     }
 
     @Override

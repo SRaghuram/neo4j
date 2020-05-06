@@ -22,6 +22,7 @@ package org.neo4j.internal.freki;
 import java.util.Iterator;
 
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.StorageRelationshipCursor;
 
@@ -29,9 +30,10 @@ abstract class FrekiRelationshipCursor extends FrekiMainStoreCursor implements S
 {
     Iterator<StorageProperty> densePropertiesItr;
 
-    FrekiRelationshipCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer )
+    FrekiRelationshipCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer,
+            MemoryTracker memoryTracker )
     {
-        super( stores, cursorAccessPatternTracer, cursorTracer );
+        super( stores, cursorAccessPatternTracer, cursorTracer, memoryTracker );
     }
 
     abstract int currentRelationshipPropertiesOffset();

@@ -44,6 +44,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.ConstraintRuleAccessor;
 import org.neo4j.storageengine.api.TransactionMetaDataStore;
 import org.neo4j.token.api.NamedToken;
@@ -64,13 +65,15 @@ public class Stores extends MainStores
     public final GBPTreeTokenStore propertyKeyTokenStore;
     public final GBPTreeTokenStore relationshipTypeTokenStore;
     public final GBPTreeTokenStore labelTokenStore;
+    private final MemoryTracker memoryTracker;
 
     public Stores( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache, IdGeneratorFactory idGeneratorFactory,
             PageCacheTracer pageCacheTracer, RecoveryCleanupWorkCollector recoveryCleanupWorkCollector,
-            boolean createStoreIfNotExists, ConstraintRuleAccessor constraintSemantics, IndexConfigCompleter indexConfigCompleter )
+            boolean createStoreIfNotExists, ConstraintRuleAccessor constraintSemantics, IndexConfigCompleter indexConfigCompleter, MemoryTracker memoryTracker )
             throws IOException
     {
         super( fs, databaseLayout, pageCache, idGeneratorFactory, pageCacheTracer, recoveryCleanupWorkCollector, createStoreIfNotExists );
+        this.memoryTracker = memoryTracker;
         GBPTreeMetaDataStore metaDataStore = null;
         GBPTreeCountsStore countsStore = null;
         GBPTreeSchemaStore schemaStore = null;
@@ -119,7 +122,8 @@ public class Stores extends MainStores
 
     Stores( SimpleStore[] mainStores, BigPropertyValueStore bigPropertyValueStore, DenseRelationshipStore denseStore,
             TransactionMetaDataStore metaDataStore, GBPTreeCountsStore countsStore, GBPTreeSchemaStore schemaStore, SchemaCache schemaCache,
-            GBPTreeTokenStore propertyKeyTokenStore, GBPTreeTokenStore relationshipTypeTokenStore, GBPTreeTokenStore labelTokenStore )
+            GBPTreeTokenStore propertyKeyTokenStore, GBPTreeTokenStore relationshipTypeTokenStore, GBPTreeTokenStore labelTokenStore,
+            MemoryTracker memoryTracker )
     {
         super( mainStores, bigPropertyValueStore, denseStore );
         this.metaDataStore = metaDataStore;
@@ -129,6 +133,7 @@ public class Stores extends MainStores
         this.propertyKeyTokenStore = propertyKeyTokenStore;
         this.relationshipTypeTokenStore = relationshipTypeTokenStore;
         this.labelTokenStore = labelTokenStore;
+        this.memoryTracker = memoryTracker;
         addStoresToLife();
     }
 
@@ -140,7 +145,7 @@ public class Stores extends MainStores
             @Override
             public void start() throws Exception
             {
-                countsStore.start( PageCursorTracer.NULL );
+                countsStore.start( PageCursorTracer.NULL, memoryTracker );
             }
 
             @Override
@@ -172,7 +177,7 @@ public class Stores extends MainStores
         return new CountsBuilder()
         {
             @Override
-            public void initialize( CountsAccessor.Updater updater, PageCursorTracer tracer )
+            public void initialize( CountsAccessor.Updater updater, PageCursorTracer tracer, MemoryTracker memoryTracker )
             {
                 // TODO rebuild from store, right?
             }

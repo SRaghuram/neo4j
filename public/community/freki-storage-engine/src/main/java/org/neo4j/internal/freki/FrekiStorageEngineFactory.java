@@ -40,6 +40,7 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.lock.LockService;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.CommandReaderFactory;
@@ -80,7 +81,7 @@ public class FrekiStorageEngineFactory implements StorageEngineFactory
 
     @Override
     public List<StoreMigrationParticipant> migrationParticipants( FileSystemAbstraction fs, Config config, PageCache pageCache, JobScheduler jobScheduler,
-            LogService logService, PageCacheTracer pageCacheTracer )
+            LogService logService, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
     {
         return Collections.emptyList();
     }
@@ -89,11 +90,12 @@ public class FrekiStorageEngineFactory implements StorageEngineFactory
     public FrekiStorageEngine instantiate( FileSystemAbstraction fs, DatabaseLayout databaseLayout, Config config, PageCache pageCache,
             TokenHolders tokenHolders, SchemaState schemaState, ConstraintRuleAccessor constraintSemantics, IndexConfigCompleter indexConfigCompleter,
             LockService lockService, IdGeneratorFactory idGeneratorFactory, IdController idController, DatabaseHealth databaseHealth, LogProvider logProvider,
-            RecoveryCleanupWorkCollector recoveryCleanupWorkCollector, PageCacheTracer pageCacheTracer, boolean createStoreIfNotExists ) throws IOException
+            RecoveryCleanupWorkCollector recoveryCleanupWorkCollector, PageCacheTracer pageCacheTracer, boolean createStoreIfNotExists,
+            MemoryTracker memoryTracker ) throws IOException
     {
         return new FrekiStorageEngine( fs, databaseLayout, config, pageCache, tokenHolders, schemaState, constraintSemantics, indexConfigCompleter, lockService,
                 idGeneratorFactory, idController, databaseHealth, logProvider, recoveryCleanupWorkCollector, createStoreIfNotExists, pageCacheTracer,
-                CursorAccessPatternTracer.decidedByFeatureToggle() );
+                CursorAccessPatternTracer.decidedByFeatureToggle(), memoryTracker );
     }
 
     @Override

@@ -25,6 +25,7 @@ import java.util.Iterator;
 
 import org.neo4j.graphdb.Direction;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.Reference;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StorageProperty;
@@ -56,9 +57,9 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     private Iterator<StorageProperty> denseProperties;
     private StorageProperty currentDenseProperty;
 
-    FrekiPropertyCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer )
+    FrekiPropertyCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
-        super( stores, cursorAccessPatternTracer, cursorTracer );
+        super( stores, cursorAccessPatternTracer, cursorTracer, memoryTracker );
     }
 
     @Override
