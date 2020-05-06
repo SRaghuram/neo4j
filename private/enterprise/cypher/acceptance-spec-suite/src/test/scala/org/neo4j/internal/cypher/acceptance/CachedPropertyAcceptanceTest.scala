@@ -286,7 +286,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       "PROFILE MATCH (n)-[r]->(m) WHERE r.prop > 10 RETURN r.prop",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
         aPlan("Projection")
-        .containingArgumentForProjection(Map("r.prop" -> "cache[r.prop]"))
+        .containingArgumentForProjection(Map("`r.prop`" -> "cache[r.prop]"))
         .withDBHits(0)
         .onTopOf(
           aPlan("Filter").containingArgumentRegex("cache\\[r.prop\\] > .*".r)
