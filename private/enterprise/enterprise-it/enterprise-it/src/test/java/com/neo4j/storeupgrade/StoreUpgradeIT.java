@@ -105,6 +105,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeFalse;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.allow_upgrade;
@@ -521,6 +522,7 @@ public class StoreUpgradeIT
                         var writableChannel = new PositionAwarePhysicalFlushableChecksumChannel( channel, buffer );
                         var entryWriter = new LogEntryWriter( writableChannel );
                         entryWriter.writeCheckPointEntry( new LogPosition( version, channel.position() ) );
+                        writableChannel.prepareForFlush().flush();
                     }
                 }
             }
@@ -561,7 +563,7 @@ public class StoreUpgradeIT
         }
 
         @Test
-        public void upgradeMustInjectEmptyTransactionIfTransactionLogsAreMissing() throws Exception
+        public void upgradeMustInjectEmptyTransactionIfTransactionLogsAreAllowedToBeMissing() throws Exception
         {
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
             DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
@@ -581,9 +583,20 @@ public class StoreUpgradeIT
             DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( databaseLayout );
             builder.setConfig( allow_upgrade, true );
             builder.setConfig( transaction_logs_root_path, transactionLogsRoot.toPath().toAbsolutePath() );
+
+            // Important configuration: explicitly allow log files to be missing!
+            builder.setConfig( fail_on_missing_files, false );
+
             DatabaseManagementService managementService = builder.build();
-            managementService.database( DEFAULT_DATABASE_NAME );
-            managementService.shutdown();
+            try
+            {
+                GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
+                database.beginTx().close(); // Check the database really started.
+            }
+            finally
+            {
+                managementService.shutdown();
+            }
 
             Config config = Config.defaults( Map.of(
                     neo4j_home, testDir.homeDir().toPath(),
@@ -610,6 +623,48 @@ public class StoreUpgradeIT
                 }
                 assertTrue( "Expected to find a transaction start entry. Actual entries: " + entries, foundStartEntry );
                 assertTrue( "Expected to find a transaction commit entry. Actual entries: " + entries, foundCommitEntry );
+            }
+        }
+
+        @Test
+        public void mustRefuseUpgradeByDefaultIfLogFilesAreMissing() throws Exception
+        {
+            FileSystemAbstraction fileSystem = testDir.getFileSystem();
+            DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
+            File databaseDir = databaseLayout.databaseDirectory();
+            File transactionLogsRoot = testDir.directory( "transactionLogsRoot" );
+            store.prepareDirectory( databaseDir );
+
+            // Remove all log files.
+            TransactionLogFilesHelper helper = new TransactionLogFilesHelper( fileSystem, databaseDir );
+            File[] logs = helper.getLogFiles();
+            assertNotNull( "Expected some log files to exist.", logs );
+            for ( File logFile : logs )
+            {
+                fileSystem.deleteFile( logFile );
+            }
+
+            DatabaseManagementServiceBuilder builder = new TestDatabaseManagementServiceBuilder( databaseLayout );
+            builder.setConfig( allow_upgrade, true );
+            builder.setConfig( transaction_logs_root_path, transactionLogsRoot.toPath().toAbsolutePath() );
+
+            // Note: we don't set 'fail_on_missing_files' to 'false'.
+            // It is 'true' by default, so upgrade should fail when log files are missing.
+
+            DatabaseManagementService managementService = builder.build();
+            GraphDatabaseService database = managementService.database( DEFAULT_DATABASE_NAME );
+            try
+            {
+                database.beginTx().close();
+                fail( "Expected 'beginTx' to fail." );
+            }
+            catch ( Exception e )
+            {
+                assertThat( e.getCause() ).isInstanceOf( StoreUpgrader.DatabaseNotCleanlyShutDownException.class );
+            }
+            finally
+            {
+                managementService.shutdown();
             }
         }
 
