@@ -13,7 +13,6 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -38,8 +37,8 @@ import static org.neo4j.internal.helpers.collection.MapUtil.store;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.server.WebContainerTestUtils.getDefaultRelativeProperties;
 import static org.neo4j.server.WebContainerTestUtils.getRelativePath;
-import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 
 public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
 {
@@ -53,7 +52,7 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
     }
 
     @Override
-    protected String[] getAdditionalArguments() throws IOException
+    protected String[] getAdditionalArguments()
     {
         String[] args = new String[]{"-c", OnlineBackupSettings.online_backup_enabled.name() + "=false"};
         return ArrayUtils.addAll( super.getAdditionalArguments(), args );
