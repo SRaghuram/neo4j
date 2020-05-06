@@ -114,12 +114,8 @@ object ValueHashJoinOperator {
       new ConcurrentHashTable(argumentRowId, argumentRowIdsForReducers, expression, state)
   }
 
-  /**
-   * MorselAccumulator which groups rows by a tuple of node ids.
-   */
   abstract class HashTable extends MorselAccumulator[Morsel] {
     def lhsRows(key: AnyValue): java.util.Iterator[Morsel]
-
   }
 
   class StandardHashTable(override val argumentRowId: Long,
