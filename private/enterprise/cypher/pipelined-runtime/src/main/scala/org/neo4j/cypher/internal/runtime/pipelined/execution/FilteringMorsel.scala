@@ -120,6 +120,12 @@ class FilteringMorsel(longs: Array[Long],
       }
       nextValidRow
     }
+
+    override def shallowInstanceHeapUsage: Long = FilteringCursor.SHALLOW_SIZE
+  }
+
+  object FilteringCursor {
+    final val SHALLOW_SIZE = shallowSizeOfInstance(classOf[Cursor])
   }
 
   override def shallowCopy(): FilteringMorsel =

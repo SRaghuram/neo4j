@@ -268,6 +268,12 @@ class Morsel(private[execution] final val longs: Array[Long],
       }
       sb.result()
     }
+
+    override def shallowInstanceHeapUsage: Long = Cursor.SHALLOW_SIZE
+  }
+
+  object Cursor {
+    final val SHALLOW_SIZE = shallowSizeOfInstance(classOf[Cursor])
   }
 
   // ====================
