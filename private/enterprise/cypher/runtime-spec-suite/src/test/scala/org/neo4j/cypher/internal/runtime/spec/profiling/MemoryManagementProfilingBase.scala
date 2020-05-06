@@ -26,7 +26,7 @@ import org.neo4j.cypher.internal.RuntimeEnvironment
 import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.runtime.CUSTOM_MEMORY_TRACKING_CONTROLLER
 import org.neo4j.cypher.internal.runtime.InputDataStream
-import org.neo4j.cypher.internal.runtime.MemoryTrackingController.MemoryTrackerFactory
+import org.neo4j.cypher.internal.runtime.MemoryTrackingController.MemoryTrackerDecorator
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
 import org.neo4j.cypher.internal.runtime.spec.COMMUNITY
 import org.neo4j.cypher.internal.runtime.spec.Edition
@@ -38,7 +38,7 @@ import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilin
 import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase.HEAP_DUMP_PATH
 import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase.LOG_HEAP_DUMP_ACTIVITY
 import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase.LOG_HEAP_DUMP_STACK_TRACE
-import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase.OVERWRITE_EXISTING_HEAP_DUMPS
+import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase.doHeapDump
 import org.neo4j.cypher.internal.runtime.spec.tests.InputStreams
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.util.test_helpers.TimeLimitedCypherTest
@@ -72,6 +72,29 @@ object MemoryManagementProfilingBase {
   val LOG_HEAP_DUMP_ACTIVITY: Boolean = true
   val LOG_HEAP_DUMP_STACK_TRACE: Boolean = true
 
+  private val heapDumper = new HeapDumper
+
+  if (HEAP_DUMP_ENABLED) {
+    if (Files.notExists(Path.of(HEAP_DUMP_PATH))) {
+      Files.createDirectory(Path.of(HEAP_DUMP_PATH))
+    }
+  }
+
+  def doHeapDump(fileName: String, heapDumpLiveObjectsOnly: Boolean = true): Unit = {
+    val path = Path.of(fileName)
+    val alreadyExists = Files.exists(path)
+    if (alreadyExists && OVERWRITE_EXISTING_HEAP_DUMPS) {
+      if (LOG_HEAP_DUMP_ACTIVITY) println(s"""Overwriting existing heap dump "$fileName"""")
+      Files.delete(path)
+      heapDumper.createHeapDump(fileName, heapDumpLiveObjectsOnly)
+    } else if (alreadyExists) {
+      if (LOG_HEAP_DUMP_ACTIVITY) println(s"""Skipping already existing heap dump "$fileName"""")
+    } else {
+      if (LOG_HEAP_DUMP_ACTIVITY) println(s"""Creating new heap dump "$fileName"""")
+      heapDumper.createHeapDump(fileName, heapDumpLiveObjectsOnly)
+    }
+  }
+
   // Edition
   private val enterpriseProfilingEdition = new Edition[EnterpriseRuntimeContext](
     () => new TestEnterpriseDatabaseManagementServiceBuilder(),
@@ -101,29 +124,6 @@ object MemoryManagementProfilingBase {
 
 trait ProfilingInputStreams[CONTEXT <: RuntimeContext] extends InputStreams[CONTEXT] {
   self: RuntimeTestSuite[CONTEXT] =>
-
-  private val heapDumper = new HeapDumper
-
-  if (HEAP_DUMP_ENABLED) {
-    if (Files.notExists(Path.of(HEAP_DUMP_PATH))) {
-      Files.createDirectory(Path.of(HEAP_DUMP_PATH))
-    }
-  }
-
-  def doHeapDump(fileName: String, heapDumpLiveObjectsOnly: Boolean = true): Unit = {
-    val path = Path.of(fileName)
-    val alreadyExists = Files.exists(path)
-    if (alreadyExists && OVERWRITE_EXISTING_HEAP_DUMPS) {
-      if (LOG_HEAP_DUMP_ACTIVITY) println(s"""Overwriting existing heap dump "$fileName"""")
-      Files.delete(path)
-      heapDumper.createHeapDump(fileName, heapDumpLiveObjectsOnly)
-    } else if (alreadyExists) {
-      if (LOG_HEAP_DUMP_ACTIVITY) println(s"""Skipping already existing heap dump "$fileName"""")
-    } else {
-      if (LOG_HEAP_DUMP_ACTIVITY) println(s"""Creating new heap dump "$fileName"""")
-      heapDumper.createHeapDump(fileName, heapDumpLiveObjectsOnly)
-    }
-  }
 
   /**
    * Finite iterator that creates periodic heap dumps at the given input row interval.
@@ -510,6 +510,15 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
   }
 
   /**
+   * Convenience method when you have an Array of input data
+   */
+  private def runPeakMemoryUsageProfiling(logicalQuery: LogicalQuery, inputArray: Array[Array[Any]], heapDumpFileNamePrefix: String): Unit = {
+    val input1 = finiteInput(inputArray.length, Some(i => inputArray(i.toInt - 1)))
+    val input2 = finiteInput(inputArray.length, Some(i => inputArray(i.toInt - 1)))
+    runPeakMemoryUsageProfiling(logicalQuery, input1, input2, heapDumpFileNamePrefix)
+  }
+
+  /**
    * Run query once to determine estimated peak usage, then run again with the same data (we trust the user here ;)
    * and heap dump when that estimated peak usage is reached.
    *
@@ -537,7 +546,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
     var lastAllocation: Long = 0L
     var stackTrace: Option[String] = None
 
-    val memoryTrackerFactory: MemoryTrackerFactory = (transactionMemoryTracker: MemoryTracker) => {
+    val memoryTrackerDecorator: MemoryTrackerDecorator = (transactionMemoryTracker: MemoryTracker) => {
       val heapDumpingMemoryTracker = new HeapDumpingMemoryTracker(transactionMemoryTracker)
 
       heapDumpingMemoryTracker.setHeapDumpAtHighWaterMark(estimatedPeakHeapUsage, heapDumpFileName, true, true,
@@ -553,7 +562,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
     }
 
     try {
-      runtime.setMemoryTrackingController(CUSTOM_MEMORY_TRACKING_CONTROLLER(memoryTrackerFactory))
+      runtime.setMemoryTrackingController(CUSTOM_MEMORY_TRACKING_CONTROLLER(memoryTrackerDecorator))
 
       // Do the second run. If everything is detereministic this should trigger the heap dump
       val result2 = profileNonRecording(logicalQuery, runtime, inputStream2)
@@ -563,14 +572,5 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
     } finally {
        runtime.resetMemoryTrackingController()
     }
-  }
-
-  /**
-   * Convenience method when you have an Array of input data
-   */
-  private def runPeakMemoryUsageProfiling(logicalQuery: LogicalQuery, inputArray: Array[Array[Any]], heapDumpFileNamePrefix: String): Unit = {
-    val input1 = finiteInput(inputArray.length, Some(i => inputArray(i.toInt - 1)))
-    val input2 = finiteInput(inputArray.length, Some(i => inputArray(i.toInt - 1)))
-    runPeakMemoryUsageProfiling(logicalQuery, input1, input2, heapDumpFileNamePrefix)
   }
 }
