@@ -17,6 +17,7 @@ import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.configuration.helpers.NormalizedGraphName
 import org.neo4j.configuration.helpers.SocketAddress
 import org.neo4j.cypher.internal.ast.CatalogName
+import org.neo4j.dbms.api.DatabaseManagementService
 import org.neo4j.fabric.FabricTest
 import org.neo4j.fabric.config.FabricConfig
 import org.neo4j.fabric.eval.Catalog.ExternalGraph
@@ -26,6 +27,7 @@ import org.neo4j.fabric.executor.Location
 import org.neo4j.kernel.database.DatabaseIdFactory
 import org.neo4j.kernel.database.NamedDatabaseId
 import org.neo4j.values.storable.Values
+import org.scalatest.mockito.MockitoSugar
 
 import scala.collection.JavaConverters.seqAsJavaListConverter
 
@@ -56,12 +58,14 @@ class ClusterCatalogManagerTest extends FabricTest {
   private val remoteId = new MemberId(UUID.randomUUID())
   private val remoteAddress = new SocketAddress("remote", 1234)
   private val remoteAddresses = Map(remoteId -> remoteAddress)
+  private val databaseManagementService = MockitoSugar.mock[DatabaseManagementService]
 
   def createManager(leaderMapping: Map[NamedDatabaseId, MemberId]) = new ClusterCatalogManager(
     databaseLookup = new DatabaseLookup {
       def databaseIds: Set[NamedDatabaseId] = internalDbs
       def databaseId(databaseName: NormalizedDatabaseName): Option[NamedDatabaseId] = internalDbs.find(_.name() == databaseName.name())
     },
+    databaseManagementService,
     leaderLookup = new LeaderLookup {
       def memberId: MemberId = myId
       def leaderId(databaseId: NamedDatabaseId): Option[MemberId] = leaderMapping.get(databaseId)

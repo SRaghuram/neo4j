@@ -15,6 +15,7 @@ import com.neo4j.fabric.config.FabricEnterpriseConfig.Graph
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.configuration.helpers.NormalizedGraphName
 import org.neo4j.cypher.internal.ast.CatalogName
+import org.neo4j.dbms.api.DatabaseManagementService
 import org.neo4j.fabric.FabricTest
 import org.neo4j.fabric.config.FabricConfig
 import org.neo4j.fabric.eval.Catalog.ExternalGraph
@@ -24,6 +25,7 @@ import org.neo4j.fabric.executor.Location
 import org.neo4j.kernel.database.DatabaseIdFactory
 import org.neo4j.kernel.database.NamedDatabaseId
 import org.neo4j.values.storable.Values
+import org.scalatest.mockito.MockitoSugar
 
 class SingleCatalogManagerTest extends FabricTest {
 
@@ -55,14 +57,18 @@ class SingleCatalogManagerTest extends FabricTest {
     override def databaseId(databaseName: NormalizedDatabaseName): Option[NamedDatabaseId] =
       internalDbs.find(_.name() == databaseName.name())
   }
+  
+  private val databaseManagementService = MockitoSugar.mock[DatabaseManagementService]
 
   private val managerWithFabricDatabase = new EnterpriseSingleCatalogManager(
     databaseLookup = databaseLookup,
+    databaseManagementService,
     fabricConfig = config,
   )
 
   private val managerWithoutFabricDatabase = new EnterpriseSingleCatalogManager(
     databaseLookup,
+    databaseManagementService,
     fabricConfig = new FabricEnterpriseConfig(null, util.List.of(), null, null, null, null),
   )
 

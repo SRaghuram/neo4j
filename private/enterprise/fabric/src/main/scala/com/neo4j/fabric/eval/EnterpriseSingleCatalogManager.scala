@@ -8,6 +8,7 @@ package com.neo4j.fabric.eval
 import java.util.UUID
 
 import com.neo4j.fabric.config.FabricEnterpriseConfig
+import org.neo4j.dbms.api.DatabaseManagementService
 import org.neo4j.fabric.eval.Catalog
 import org.neo4j.fabric.eval.Catalog.ExternalGraph
 import org.neo4j.fabric.eval.CommunityCatalogManager
@@ -19,8 +20,9 @@ import scala.collection.JavaConverters.asScalaSetConverter
 
 class EnterpriseSingleCatalogManager(
                             databaseLookup: DatabaseLookup,
-                            fabricConfig: FabricEnterpriseConfig,
-) extends CommunityCatalogManager(databaseLookup) {
+                            databaseManagementService: DatabaseManagementService,
+                            fabricConfig: FabricEnterpriseConfig
+) extends CommunityCatalogManager(databaseLookup, databaseManagementService) {
 
   private val graphsById: Map[Long, FabricEnterpriseConfig.Graph] =
     Option(fabricConfig.getDatabase)
@@ -28,9 +30,9 @@ class EnterpriseSingleCatalogManager(
       .map(graphs => graphs.map(graph => graph.getId -> graph))
       .map(_.toMap).getOrElse(Map.empty)
 
-  override def currentCatalog(): Catalog = {
+  override def createCatalog(): Catalog = {
     if (fabricConfig.getDatabase == null) {
-      super.currentCatalog()
+      super.createCatalog()
     } else {
       val fabricNamespace = fabricConfig.getDatabase.getName.name()
       val fabricGraphs = fabricConfig.getDatabase.getGraphs.asScala.toSet

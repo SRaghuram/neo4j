@@ -26,6 +26,7 @@ import java.time.Clock;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.exceptions.KernelException;
@@ -119,7 +120,8 @@ public abstract class EnterpriseFabricServicesBootstrap extends FabricServicesBo
         @Override
         protected CatalogManager createCatalogManger()
         {
-            return new EnterpriseSingleCatalogManager( createDatabaseLookup(), getFabricConfig() );
+            var databaseManagementService = resolve( DatabaseManagementService.class);
+            return new EnterpriseSingleCatalogManager( createDatabaseLookup(), databaseManagementService, getFabricConfig() );
         }
 
         @Override
@@ -179,11 +181,12 @@ public abstract class EnterpriseFabricServicesBootstrap extends FabricServicesBo
         @Override
         protected CatalogManager createCatalogManger()
         {
+            var databaseManagementService = resolve( DatabaseManagementService.class);
             var topologyService = resolve( TopologyService.class );
             var fabricConfig = getFabricConfig();
             var leaderLookup = leaderLookup( topologyService );
 
-            return new ClusterCatalogManager( createDatabaseLookup(), leaderLookup, fabricConfig );
+            return new ClusterCatalogManager( createDatabaseLookup(), databaseManagementService, leaderLookup, fabricConfig );
         }
 
         protected abstract LeaderLookup leaderLookup( TopologyService topologyService );

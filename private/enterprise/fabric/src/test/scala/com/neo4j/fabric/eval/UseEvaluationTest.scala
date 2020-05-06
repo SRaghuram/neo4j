@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.ast.UseGraph
 import org.neo4j.cypher.internal.parser.Clauses
 import org.neo4j.cypher.internal.parser.Query
 import org.neo4j.cypher.internal.util.test_helpers.TestName
+import org.neo4j.dbms.api.DatabaseManagementService
 import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.exceptions.EntityNotFoundException
 import org.neo4j.exceptions.SyntaxException
@@ -37,6 +38,7 @@ import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.MapValue
 import org.parboiled.scala.ReportingParseRunner
+import org.scalatest.mockito.MockitoSugar
 
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.mutable
@@ -110,7 +112,8 @@ class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport wit
 
       override def databaseId(databaseName: NormalizedDatabaseName): Option[NamedDatabaseId] = ???
     }
-    private val catalogManager = new EnterpriseSingleCatalogManager(databaseLookup, config)
+    private val databaseManagementService = MockitoSugar.mock[DatabaseManagementService]
+    private val catalogManager = new EnterpriseSingleCatalogManager(databaseLookup, databaseManagementService, config)
     private val catalog = catalogManager.currentCatalog()
     private val signatures = new SignatureResolver(() => procedures)
     private val staticEvaluator = new StaticEvaluation.StaticEvaluator(() => procedures)
