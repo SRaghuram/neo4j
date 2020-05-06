@@ -11,6 +11,7 @@ import java.util.function.Consumer;
 
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.DIRTY;
@@ -64,8 +65,9 @@ class ReconcilerTransitions
     private Transition dropFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager, boolean dumpData )
     {
         var succeededState = dumpData ? DROPPED_DUMPED : DROPPED;
+        Consumer<NamedDatabaseId> transition = dumpData ? databaseManager::dropDatabaseDumpData : databaseManager::dropDatabase;
         return Transition.from( STOPPED, DIRTY )
-                         .doTransition( id -> databaseManager.dropDatabase( id, dumpData ) )
+                         .doTransition( transition )
                          .ifSucceeded( succeededState )
                          .ifFailedThenDo( nothing, DIRTY );
     }

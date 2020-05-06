@@ -284,7 +284,17 @@ public final class CausalClusteringTestHelpers
         } );
     }
 
-    public static void dropDatabase( String databaseName, Cluster cluster, boolean keepData ) throws Exception
+    public static void dropDatabaseDumpData( String databaseName, Cluster cluster ) throws Exception
+    {
+        dropDatabase( databaseName, cluster, true );
+    }
+
+    public static void dropDatabase( String databaseName, Cluster cluster ) throws Exception
+    {
+        dropDatabase( databaseName, cluster, false );
+    }
+
+    private static void dropDatabase( String databaseName, Cluster cluster, boolean keepData ) throws Exception
     {
         cluster.systemTx( ( sys, tx ) ->
         {

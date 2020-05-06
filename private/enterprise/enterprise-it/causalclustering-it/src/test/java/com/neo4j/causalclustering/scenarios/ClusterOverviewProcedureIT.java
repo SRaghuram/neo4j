@@ -79,7 +79,7 @@ class ClusterOverviewProcedureIT
         {
             if ( !defaultDatabases.contains( databaseName ) )
             {
-                dropDatabase( databaseName, cluster, false );
+                dropDatabase( databaseName, cluster );
             }
         }
     }

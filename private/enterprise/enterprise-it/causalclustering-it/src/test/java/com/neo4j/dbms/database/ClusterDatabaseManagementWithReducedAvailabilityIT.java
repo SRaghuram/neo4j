@@ -157,7 +157,7 @@ class ClusterDatabaseManagementWithReducedAvailabilityIT
         Set<ClusterMember> aliveMembers = aliveMembers( cluster, deadMembers );
 
         // when: dropping the database
-        dropDatabase( "foo", cluster, false );
+        dropDatabase( "foo", cluster );
 
         // then: it should be dropped on the alive members
         assertDatabaseEventuallyDoesNotExist( "foo", aliveMembers );

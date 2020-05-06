@@ -129,8 +129,8 @@ class MultiDatabaseManagerTest
         initDatabaseManager();
 
         // when
-        databaseManager.dropDatabase( neoId, false );
-        databaseManager.dropDatabase( customId, true );
+        databaseManager.dropDatabaseDumpData( neoId );
+        databaseManager.dropDatabaseDumpData( customId );
 
         // then
         verify( neo.database() ).drop();

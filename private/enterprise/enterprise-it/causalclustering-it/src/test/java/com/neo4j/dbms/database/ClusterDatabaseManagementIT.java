@@ -41,6 +41,7 @@ import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.asse
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStopped;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.createDatabase;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.dropDatabase;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.dropDatabaseDumpData;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.startDatabase;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.stopDatabase;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
@@ -236,7 +237,7 @@ class ClusterDatabaseManagementIT
         assertDatabaseEventuallyStarted( "foo", cluster );
 
         // when
-        dropDatabase( "foo", cluster, false );
+        dropDatabase( "foo", cluster );
 
         // then
         assertDatabaseEventuallyDoesNotExist( "foo", cluster );
@@ -254,7 +255,7 @@ class ClusterDatabaseManagementIT
         assertDatabaseEventuallyStopped( "foo", cluster );
 
         // when
-        dropDatabase( "foo", cluster, false );
+        dropDatabase( "foo", cluster );
 
         // then
         assertDatabaseEventuallyDoesNotExist( "foo", cluster );
@@ -269,7 +270,7 @@ class ClusterDatabaseManagementIT
         assertDatabaseEventuallyStarted( "foo", cluster );
 
         // when
-        dropDatabase( "foo", cluster, false );
+        dropDatabase( "foo", cluster );
 
         // then
         assertDatabaseEventuallyDoesNotExist( "foo", cluster );
@@ -297,7 +298,7 @@ class ClusterDatabaseManagementIT
         } );
 
         // when
-        dropDatabase( "foo", cluster, true );
+        dropDatabaseDumpData( "foo", cluster );
 
         // then
         assertDatabaseEventuallyDoesNotExist( "foo", cluster );
@@ -321,7 +322,7 @@ class ClusterDatabaseManagementIT
 
         assertDatabaseEventuallyStarted( "foo", cluster );
 
-        dropDatabase( "foo", cluster, false );
+        dropDatabase( "foo", cluster );
         assertDatabaseEventuallyDoesNotExist( "foo", cluster );
 
         var someMembers = oneCoreAndOneReadReplica( cluster );
@@ -346,8 +347,8 @@ class ClusterDatabaseManagementIT
         assertDatabaseEventuallyStarted( "foo", cluster );
         assertDatabaseEventuallyStarted( "bar", cluster );
 
-        dropDatabase( "foo", cluster, false );
-        dropDatabase( "bar", cluster, false );
+        dropDatabase( "foo", cluster );
+        dropDatabase( "bar", cluster );
 
         assertDatabaseEventuallyDoesNotExist( "foo", cluster );
         assertDatabaseEventuallyDoesNotExist( "bar", cluster );
@@ -377,7 +378,7 @@ class ClusterDatabaseManagementIT
         rejoiningMembers.forEach( ClusterMember::shutdown );
 
         // when
-        dropDatabase( "foo", cluster, false );
+        dropDatabase( "foo", cluster );
         assertDatabaseEventuallyDoesNotExist( "foo", remainingMembers );
 
         rejoiningMembers.forEach( ClusterMember::start );
@@ -420,7 +421,7 @@ class ClusterDatabaseManagementIT
 
         // Drop and recreate database
         cluster.awaitLeader( databaseName );
-        dropDatabase( databaseName, cluster, false );
+        dropDatabase( databaseName, cluster );
         assertDatabaseEventuallyDoesNotExist( databaseName, remaining );
         createDatabase( databaseName, cluster );
         assertDatabaseEventuallyStarted( databaseName, remaining );
@@ -467,7 +468,7 @@ class ClusterDatabaseManagementIT
         }
 
         assertDatabaseEventuallyStarted( databaseName, cluster );
-        dropDatabase( databaseName, cluster, false );
+        dropDatabase( databaseName, cluster );
 
         for ( DatabaseIdRepository.Caching dbIdRepo : dbIdRepos )
         {
