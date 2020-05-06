@@ -18,7 +18,6 @@ import org.neo4j.cypher.internal.CommunityRuntimeContext
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.EnterpriseRuntimeContextManager
-import org.neo4j.cypher.internal.HasCustomMemoryTrackingController
 import org.neo4j.cypher.internal.LogicalQuery
 import org.neo4j.cypher.internal.PipelinedRuntime
 import org.neo4j.cypher.internal.RuntimeContext
@@ -38,6 +37,7 @@ import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilin
 import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase.HEAP_DUMP_PATH
 import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase.LOG_HEAP_DUMP_ACTIVITY
 import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase.LOG_HEAP_DUMP_STACK_TRACE
+import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase.OVERWRITE_EXISTING_HEAP_DUMPS
 import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilingBase.doHeapDump
 import org.neo4j.cypher.internal.runtime.spec.tests.InputStreams
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
@@ -95,6 +95,20 @@ object MemoryManagementProfilingBase {
     }
   }
 
+  // Custom memory tracking. NOTE: It is not safe to run profiling test cases using this concurrently!
+  private final val dynamicMemoryTrackerDecorator: MemoryTrackerDecorator = (m: MemoryTracker) => {
+    if (memoryTrackerDecorator != null) {
+      memoryTrackerDecorator.apply(m)
+    } else {
+      m
+    }
+  }
+  private var memoryTrackerDecorator: MemoryTrackerDecorator = _
+  private val memoryTrackingController = CUSTOM_MEMORY_TRACKING_CONTROLLER(dynamicMemoryTrackerDecorator)
+
+  def setMemoryTrackingDecorator(decorator: MemoryTrackerDecorator): Unit = memoryTrackerDecorator = decorator
+  def resetMemoryTrackingDecorator(): Unit = memoryTrackerDecorator = null
+
   // Edition
   private val enterpriseProfilingEdition = new Edition[EnterpriseRuntimeContext](
     () => new TestEnterpriseDatabaseManagementServiceBuilder(),
@@ -102,13 +116,14 @@ object MemoryManagementProfilingBase {
       val kernel = resolver.resolveDependency(classOf[Kernel])
       val jobScheduler = resolver.resolveDependency(classOf[JobScheduler])
       val workerManager = resolver.resolveDependency(classOf[WorkerManagement])
+      val augmentedRuntimeConfig = runtimeConfig.copy(memoryTrackingController = memoryTrackingController)
 
-      val runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, kernel.cursors(), lifeSupport, workerManager)
+      val runtimeEnvironment = RuntimeEnvironment.of(augmentedRuntimeConfig, jobScheduler, kernel.cursors(), lifeSupport, workerManager)
 
       EnterpriseRuntimeContextManager(
         GeneratedQueryStructure,
         logProvider.getLog("test"),
-        runtimeConfig,
+        augmentedRuntimeConfig,
         runtimeEnvironment
       )
     },
@@ -193,7 +208,7 @@ trait ProfilingInputStreams[CONTEXT <: RuntimeContext] extends InputStreams[CONT
 
 abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
                                                                         edition: Edition[CONTEXT],
-                                                                        runtime: CypherRuntime[CONTEXT] with HasCustomMemoryTrackingController,
+                                                                        runtime: CypherRuntime[CONTEXT],
                                                                         morselSize: Int = MemoryManagementProfilingBase.DEFAULT_MORSEL_SIZE_BIG,
                                                                         runtimeSuffix: String = ""
                                                                        )
@@ -514,7 +529,12 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
    */
   private def runPeakMemoryUsageProfiling(logicalQuery: LogicalQuery, inputArray: Array[Array[Any]], heapDumpFileNamePrefix: String): Unit = {
     val input1 = finiteInput(inputArray.length, Some(i => inputArray(i.toInt - 1)))
-    val input2 = finiteInput(inputArray.length, Some(i => inputArray(i.toInt - 1)))
+    val input2 = finiteInput(inputArray.length, Some(i => {
+      val index = i.toInt - 1
+      val record = inputArray(index)
+      inputArray(index) = null // Clear the reference to the data in the last run over it to avoid retaining heap in the test case
+      record
+    }))
     runPeakMemoryUsageProfiling(logicalQuery, input1, input2, heapDumpFileNamePrefix)
   }
 
@@ -549,7 +569,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
     val memoryTrackerDecorator: MemoryTrackerDecorator = (transactionMemoryTracker: MemoryTracker) => {
       val heapDumpingMemoryTracker = new HeapDumpingMemoryTracker(transactionMemoryTracker)
 
-      heapDumpingMemoryTracker.setHeapDumpAtHighWaterMark(estimatedPeakHeapUsage, heapDumpFileName, true, true,
+      heapDumpingMemoryTracker.setHeapDumpAtHighWaterMark(estimatedPeakHeapUsage, heapDumpFileName, OVERWRITE_EXISTING_HEAP_DUMPS, true,
                                                           (_: HeapDumpingMemoryTracker) => {
         lastAllocation = heapDumpingMemoryTracker.lastAllocatedBytes()
         if (LOG_HEAP_DUMP_STACK_TRACE) {
@@ -562,7 +582,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
     }
 
     try {
-      runtime.setMemoryTrackingController(CUSTOM_MEMORY_TRACKING_CONTROLLER(memoryTrackerDecorator))
+      MemoryManagementProfilingBase.setMemoryTrackingDecorator(memoryTrackerDecorator)
 
       // Do the second run. If everything is detereministic this should trigger the heap dump
       val result2 = profileNonRecording(logicalQuery, runtime, inputStream2)
@@ -570,7 +590,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
 
       printQueryProfile(heapDumpFileNamePrefix + "-peak.profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY, lastAllocation, stackTrace)
     } finally {
-       runtime.resetMemoryTrackingController()
+      MemoryManagementProfilingBase.resetMemoryTrackingDecorator()
     }
   }
 }
