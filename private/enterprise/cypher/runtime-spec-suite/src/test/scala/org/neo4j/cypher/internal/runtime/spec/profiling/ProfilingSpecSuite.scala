@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.profiling
 
+import org.neo4j.cypher.internal.CommunityRuntimeContext
+import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.InterpretedRuntime
 import org.neo4j.cypher.internal.PipelinedRuntime.PIPELINED
 import org.neo4j.cypher.internal.SlottedRuntime
@@ -20,8 +22,10 @@ import org.neo4j.cypher.internal.runtime.spec.profiling.MemoryManagementProfilin
 // Run these to get heap dumps and memory usage estimates
 
 class InterpretedMemoryManagementProfiling extends MemoryManagementProfilingBase(MemoryManagementProfilingBase.COMMUNITY_PROFILING, InterpretedRuntime)
+                                              with FullSupportMemoryManagementProfilingBase[CommunityRuntimeContext]
 
 class SlottedMemoryManagementProfiling extends MemoryManagementProfilingBase(MemoryManagementProfilingBase.ENTERPRISE_PROFILING, SlottedRuntime)
+                                          with FullSupportMemoryManagementProfilingBase[EnterpriseRuntimeContext]
 
 class PipelinedMemoryManagementBigMorselProfiling extends MemoryManagementProfilingBase(ENTERPRISE_PROFILING,
                                                                                         PIPELINED,

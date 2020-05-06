@@ -222,6 +222,8 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
   private val runtimeName = (if (runtime.isInstanceOf[PipelinedRuntime]) s"${runtime.name}_$morselSize" else runtime.name) +
     (if (runtimeSuffix.nonEmpty) s"_$runtimeSuffix" else "")
 
+  def heapDumpFileNamePrefixForTestName(testName: String) = s"$HEAP_DUMP_PATH/${testName}_${runtimeName}"
+
   if (HEAP_DUMP_ENABLED) {
     if (Files.notExists(Path.of(HEAP_DUMP_PATH))) {
       Files.createDirectory(Path.of(HEAP_DUMP_PATH))
@@ -230,7 +232,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
 
   test("measure grouping aggregation 1") {
     val testName = "agg_grp1"
-    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_${runtimeName}"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
 
     // given
     val logicalQuery = new LogicalQueryBuilder(this)
@@ -253,7 +255,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
 
   test("measure sort 1 column") {
     val testName = "sort1"
-    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_${runtimeName}"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
 
     // given
     val logicalQuery = new LogicalQueryBuilder(this)
@@ -278,7 +280,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
 
   test("measure sort 1 column with payload") {
     val testName = "sort1-pay"
-    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_${runtimeName}"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
 
     // given
     val logicalQuery = new LogicalQueryBuilder(this)
@@ -307,7 +309,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
 
   test("measure distinct 1 pct") {
     val testName = "distinct1pct"
-    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_${runtimeName}"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
 
     // given
     val logicalQuery = new LogicalQueryBuilder(this)
@@ -335,7 +337,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
 
   test("measure distinct 100 pct") {
     val testName = "distinct100pct"
-    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_${runtimeName}"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
 
     // given
     val logicalQuery = new LogicalQueryBuilder(this)
@@ -363,7 +365,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
 
   test("measure hash join 1-1 - single node") {
     val testName = "nodehashjoin1-1"
-    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_${runtimeName}"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
 
     // given
     var nodes = given { nodeGraph(DEFAULT_INPUT_LIMIT.toInt) }
@@ -396,7 +398,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
 
   test("measure hash join 1-1 - multiple nodes") {
     val testName = "nodehashjoin-multi1-1"
-    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_${runtimeName}"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
 
     // given
     val n = DEFAULT_INPUT_LIMIT.toInt
@@ -431,7 +433,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
 
   test("measure hash join 1-1 - single node with payload") {
     val testName = "nodehashjoin1-1-pay"
-    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_${runtimeName}"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
     val random = new Random(seed = 1337)
 
     // given
@@ -467,7 +469,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
 
   test("measure hash join 1-1 - single node with payload under limit") { // Force use of FilteringMorsel by adding a (otherwise useless) limit
     val testName = "nodehashjoin1-1-pay2"
-    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_${runtimeName}"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
     val random = new Random(seed = 1337)
 
     // given
@@ -504,7 +506,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
 
   test("measure pruning-var-expand 1") {
     val testName = "prunvarexp-starc1"
-    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_${runtimeName}"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
 
     val (center, _) = nestedStarGraphCenterOnly(6, 10, "C", "A")
 
@@ -524,45 +526,10 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
     runPeakMemoryUsageProfiling(logicalQuery, inputArray, heapDumpFileNamePrefix)
   }
 
-  test("measure eager - single node with payload") {
-    val testName = "eager-1-pay"
-    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_${runtimeName}"
-    val random = new Random(seed = 1337)
-
-    // given
-    val n = DEFAULT_INPUT_LIMIT.toInt
-    var payload = (1L to n).map { _ => VirtualValues.list((1 to 8).map(Values.longValue(_)).toArray: _*)}.toArray
-    var nodes = given { nodeGraph(n) }.toArray[Any]
-    val logicalQuery = new LogicalQueryBuilder(this)
-      .produceResults("x", "payload")
-      .eager()
-      .input(nodes = Seq("x"), variables = Seq("payload"))
-      .build()
-
-    // when
-    var data = (0 until n).map { i => Array[Any](nodes(i), payload(i)) }
-    val shuffledData = random.shuffle(data).toArray
-
-    // Make sure to clear out all unnecessary references to get a clean dominator tree in the heap dump
-    // (The elements of shuffledData will be cleared as they are streamed by finiteCyclicInputWithPeriodicHeapDump)
-    nodes = null
-    payload = null
-    data = null
-
-    val input = finiteCyclicInputWithPeriodicHeapDump(shuffledData, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
-
-    // then
-    val result = profileNonRecording(logicalQuery, runtime, input)
-    consumeNonRecording(result)
-
-    val queryProfile = result.runtimeResult.queryProfile()
-    printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
-  }
-
   /**
    * Convenience method when you have an Array of input data
    */
-  private def runPeakMemoryUsageProfiling(logicalQuery: LogicalQuery, inputArray: Array[Array[Any]], heapDumpFileNamePrefix: String): Unit = {
+  protected def runPeakMemoryUsageProfiling(logicalQuery: LogicalQuery, inputArray: Array[Array[Any]], heapDumpFileNamePrefix: String): Unit = {
     val input1 = finiteInput(inputArray.length, Some(i => inputArray(i.toInt - 1)))
     val input2 = finiteInput(inputArray.length, Some(i => {
       val index = i.toInt - 1
@@ -583,8 +550,8 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
    * @param inputStream1 Input data stream for the first run, to determine max allocated memory
    * @param inputStream2 Input data stream for the second run, to create a heap when the target is reached
    */
-  private def runPeakMemoryUsageProfiling(logicalQuery: LogicalQuery, inputStream1: InputDataStream, inputStream2: InputDataStream,
-                                          heapDumpFileNamePrefix: String): Unit = {
+  protected def runPeakMemoryUsageProfiling(logicalQuery: LogicalQuery, inputStream1: InputDataStream, inputStream2: InputDataStream,
+                                            heapDumpFileNamePrefix: String): Unit = {
     val heapDumpFileName = heapDumpFileNamePrefix + "-peak.hprof"
 
     // Run query once to determine estimated peak usage
@@ -627,5 +594,71 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
     } finally {
       MemoryManagementProfilingBase.resetMemoryTrackingDecorator()
     }
+  }
+}
+
+/**
+ * Profiling for runtimes with full language support
+ */
+trait FullSupportMemoryManagementProfilingBase [CONTEXT <: RuntimeContext] {
+  self: MemoryManagementProfilingBase[CONTEXT] =>
+
+  test("measure eager - single node with payload") {
+    val testName = "eager-1-pay"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
+
+    // given
+    val n = DEFAULT_INPUT_LIMIT.toInt
+    var payload = (1L to n).map { _ => VirtualValues.list((1 to 8).map(Values.longValue(_)).toArray: _*)}.toArray
+    var nodes = given { nodeGraph(n) }.toArray[Any]
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x", "payload")
+      .eager()
+      .input(nodes = Seq("x"), variables = Seq("payload"))
+      .build()
+
+    // when
+    val data = (0 until n).map { i => Array[Any](nodes(i), payload(i)) }.toArray
+
+    // Make sure to clear out all unnecessary references to get a clean dominator tree in the heap dump
+    // (The elements of shuffledData will be cleared as they are streamed by finiteCyclicInputWithPeriodicHeapDump)
+    nodes = null
+    payload = null
+
+    val input = finiteCyclicInputWithPeriodicHeapDump(data, DEFAULT_INPUT_LIMIT, DEFAULT_HEAP_DUMP_INTERVAL, heapDumpFileNamePrefix)
+
+    // then
+    val result = profileNonRecording(logicalQuery, runtime, input)
+    consumeNonRecording(result)
+
+    val queryProfile = result.runtimeResult.queryProfile()
+    printQueryProfile(heapDumpFileNamePrefix + ".profile", queryProfile, LOG_HEAP_DUMP_ACTIVITY)
+  }
+
+  test("measure peak of two sequential eagers - single node with payload") {
+    val testName = "eager-2-pay"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
+
+    // given
+    val n = DEFAULT_INPUT_LIMIT.toInt
+    var payload = (1L to n).map { _ => VirtualValues.list((1 to 8).map(Values.longValue(_)).toArray: _*)}.toArray
+    var nodes = given { nodeGraph(n) }.toArray[Any]
+
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x", "payload")
+      .eager()
+      .eager()
+      .input(nodes = Seq("x"), variables = Seq("payload"))
+      .build()
+
+    // when
+    val data = (0 until n).map { i => Array[Any](nodes(i), payload(i)) }.toArray
+
+    // Make sure to clear out all unnecessary references to get a clean dominator tree in the heap dump
+    // (The elements of shuffledData will be cleared as they are streamed by finiteCyclicInputWithPeriodicHeapDump)
+    nodes = null
+    payload = null
+
+    runPeakMemoryUsageProfiling(logicalQuery, data, heapDumpFileNamePrefix)
   }
 }
