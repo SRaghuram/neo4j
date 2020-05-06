@@ -3,13 +3,14 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.common.tool.micro;
+package com.neo4j.bench.micro;
 
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.AllowedEnumValues;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.common.tool.micro.RunMicroWorkloadParams;
 import com.neo4j.bench.common.util.ErrorReporter;
 
 import java.io.File;

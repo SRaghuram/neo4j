@@ -10,7 +10,6 @@ import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
-import com.neo4j.bench.common.tool.micro.BaseRunWorkloadCommand;
 import com.neo4j.bench.common.tool.micro.RunMicroWorkloadParams;
 import com.neo4j.bench.infra.AWSCredentials;
 import com.neo4j.bench.infra.ArtifactStoreException;
@@ -21,7 +20,6 @@ import com.neo4j.bench.infra.JobParams;
 import com.neo4j.bench.infra.Workspace;
 import com.neo4j.bench.infra.micro.MicroToolRunner;
 import com.neo4j.bench.infra.scheduler.BenchmarkJobScheduler;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
