@@ -56,13 +56,13 @@ public class ReplicatedContentCodec implements Codec<ReplicatedContent>
         @Override
         public void handle( ByteArrayReplicatedTransaction replicatedTransaction )
         {
-            output.add( ChunkedReplicatedContent.chunked( ContentCodes.TX_CONTENT_TYPE, new MaxTotalSize( replicatedTransaction.encode() ) ) );
+            output.add( ChunkedReplicatedContent.chunked( ContentCodes.TX_CONTENT_TYPE, replicatedTransaction.encode() ) );
         }
 
         @Override
         public void handle( TransactionRepresentationReplicatedTransaction replicatedTransaction )
         {
-            output.add( ChunkedReplicatedContent.chunked( ContentCodes.TX_CONTENT_TYPE, new MaxTotalSize( replicatedTransaction.encode() ) ) );
+            output.add( ChunkedReplicatedContent.chunked( ContentCodes.TX_CONTENT_TYPE, replicatedTransaction.encode() ) );
         }
 
         @Override
