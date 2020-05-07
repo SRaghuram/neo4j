@@ -213,6 +213,7 @@ public class EnterpriseBuiltInDbmsProcedures
         securityContext.assertCredentialsNotExpired();
         GlobalProcedures globalProcedures = resolver.resolveDependency( GlobalProcedures.class );
         return globalProcedures.getAllProcedures().stream()
+                .filter( proc -> !proc.internal() )
                 .sorted( Comparator.comparing( a -> a.name().toString() ) )
                 .map( ProcedureResult::new );
     }
