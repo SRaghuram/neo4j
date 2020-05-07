@@ -85,7 +85,6 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-@SuppressWarnings( "deprecation" )
 @RunWith( FrameworkRunner.class )
 @CreateDS(
         name = "LdapAuthTest",

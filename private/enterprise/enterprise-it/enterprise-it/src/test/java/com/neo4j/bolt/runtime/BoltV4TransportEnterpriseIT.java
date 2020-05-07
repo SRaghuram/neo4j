@@ -34,6 +34,8 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.HostnamePort;
+import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
+import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.virtual.MapValue;
 import org.neo4j.values.virtual.VirtualValues;
@@ -61,7 +63,8 @@ public class BoltV4TransportEnterpriseIT
     private static final String USER_AGENT = "TestClient/4.0";
 
     @Rule
-    public final Neo4jWithSocket server = new Neo4jWithSocket( getClass(), new TestEnterpriseDatabaseManagementServiceBuilder(), withOptionalBoltEncryption() );
+    public final Neo4jWithSocket server = new Neo4jWithSocket( new TestEnterpriseDatabaseManagementServiceBuilder(),
+            () -> TestDirectory.testDirectory( getClass(), new EphemeralFileSystemAbstraction() ), withOptionalBoltEncryption() );
 
     private HostnamePort address;
     private TransportConnection connection;

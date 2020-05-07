@@ -13,6 +13,8 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import org.neo4j.bolt.packstream.Neo4jPack;
+import org.neo4j.bolt.testing.client.TransportConnection;
 import org.neo4j.bolt.transport.AuthenticationIT;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.config.Setting;
@@ -47,7 +49,7 @@ public class EnterpriseAuthenticationIT extends AuthenticationIT
     }
 
     @Override
-    public void shouldFailIfMalformedAuthTokenUnknownScheme()
+    public void shouldFailIfMalformedAuthTokenUnknownScheme( Class<? extends TransportConnection> connectionClass, Neo4jPack neo4jPack, String name )
     {
         // Ignore this test in enterprise since custom schemes may be allowed
     }

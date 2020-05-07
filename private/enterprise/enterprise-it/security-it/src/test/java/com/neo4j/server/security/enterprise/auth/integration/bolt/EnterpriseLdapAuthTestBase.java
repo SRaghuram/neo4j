@@ -41,7 +41,6 @@ import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.D
 public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
 {
     private final TestDirectory testDirectory = TestDirectory.testDirectory();
-    static final String ACCESS_DENIED = "Database access is not allowed for user";
 
     DbmsRule dbRule = new EnterpriseDbmsRule( testDirectory ).startLazily();
 

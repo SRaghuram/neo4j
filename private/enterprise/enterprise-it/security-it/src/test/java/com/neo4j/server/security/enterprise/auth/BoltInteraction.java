@@ -42,6 +42,7 @@ import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.query.clientconnection.BoltConnectionInfo;
 import org.neo4j.kernel.impl.util.ValueUtils;
+import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Values;
@@ -73,20 +74,14 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
 
     BoltInteraction( Map<Setting<?>,String> config )
     {
-        this( config, EphemeralFileSystemAbstraction::new );
-    }
-
-    BoltInteraction( Map<Setting<?>,String> config, Supplier<FileSystemAbstraction> fileSystemSupplier )
-    {
         TestEnterpriseDatabaseManagementServiceBuilder factory = new TestEnterpriseDatabaseManagementServiceBuilder().impermanent();
-        fileSystem = fileSystemSupplier.get();
-        server = new Neo4jWithSocket( getClass(),
-                factory,
-                () -> fileSystem,
+        fileSystem = new EphemeralFileSystemAbstraction();
+        server = new Neo4jWithSocket( factory,
+                () -> TestDirectory.testDirectory( getClass(), fileSystem ),
                 settings ->
                 {
                     settings.put( GraphDatabaseSettings.auth_enabled, true );
-                    config.forEach( ( setting, value ) -> settings.put( setting, ((SettingImpl<Object>) setting ).parse( value ) )  );
+                    config.forEach( ( setting, value ) -> settings.put( setting, ((SettingImpl<Object>) setting).parse( value ) ) );
                 } );
         server.ensureDatabase( r ->
         {

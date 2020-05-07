@@ -7,12 +7,13 @@ package com.neo4j.server.security.enterprise.auth.integration.bolt;
 
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
+import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +23,7 @@ import org.neo4j.bolt.testing.TransportTestUtil;
 import org.neo4j.bolt.testing.client.SecureSocketConnection;
 import org.neo4j.bolt.testing.client.TransportConnection;
 import org.neo4j.bolt.transport.Neo4jWithSocket;
+import org.neo4j.bolt.transport.Neo4jWithSocketExtension;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.function.Factory;
 import org.neo4j.graphdb.config.Setting;
@@ -29,6 +31,8 @@ import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.string.SecureString;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.EphemeralTestDirectoryExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.bolt.testing.MessageConditions.msgFailure;
@@ -48,12 +52,21 @@ import static org.neo4j.internal.helpers.collection.MapUtil.map;
  * code. Testing against a real Active Directory is not possible during a build phase, and therefor
  * we keep this disabled by default.
  */
-@Ignore
+@Disabled
+@EphemeralTestDirectoryExtension
+@Neo4jWithSocketExtension
 public class ActiveDirectoryAuthenticationIT
 {
-    @Rule
-    public Neo4jWithSocket server =
-            new Neo4jWithSocket( getClass(), getTestGraphDatabaseFactory(), asSettings( getSettingsFunction() ) );
+    @Inject
+    public Neo4jWithSocket server;
+
+    @BeforeEach
+    public void setup( TestInfo testInfo ) throws IOException
+    {
+        server.setGraphDatabaseFactory( getTestGraphDatabaseFactory() );
+        server.setConfigure( getSettingsFunction() );
+        server.init( testInfo );
+    }
 
     private void restartNeo4jServerWithOverriddenSettings( Consumer<Map<Setting<?>,Object>> overrideSettingsFunction )
     {
@@ -67,7 +80,7 @@ public class ActiveDirectoryAuthenticationIT
         {
             Map<Setting<?>,Object> o = new LinkedHashMap<>();
             overrideSettingsFunction.accept( o );
-            for ( Setting key : o.keySet() )
+            for ( Setting<?> key : o.keySet() )
             {
                 settings.put( key, o.get( key ) );
             }
@@ -100,7 +113,7 @@ public class ActiveDirectoryAuthenticationIT
         };
     }
 
-    private Consumer<Map<Setting<?>,Object>> useSystemAccountSettings = settings ->
+    private final Consumer<Map<Setting<?>,Object>> useSystemAccountSettings = settings ->
     {
         settings.put( SecuritySettings.ldap_authorization_use_system_account, true );
         settings.put( SecuritySettings.ldap_authorization_system_username, "Neo4j System" );
@@ -113,7 +126,7 @@ public class ActiveDirectoryAuthenticationIT
     private TransportConnection client;
     private TransportTestUtil util;
 
-    @Before
+    @BeforeEach
     public void setup()
     {
         this.client = cf.newInstance();
@@ -121,7 +134,7 @@ public class ActiveDirectoryAuthenticationIT
         this.util = new TransportTestUtil();
     }
 
-    @After
+    @AfterEach
     public void teardown() throws Exception
     {
         if ( client != null )

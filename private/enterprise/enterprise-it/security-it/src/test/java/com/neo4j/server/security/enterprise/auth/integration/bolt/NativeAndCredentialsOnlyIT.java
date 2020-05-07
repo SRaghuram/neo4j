@@ -20,7 +20,6 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.ExtensionCallback;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertAuth;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
@@ -28,8 +27,6 @@ import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.D
 @EnterpriseDbmsExtension( configurationCallback = "configure" )
 class NativeAndCredentialsOnlyIT
 {
-    @Inject
-    private TestDirectory testDirectory;
     @Inject
     private ConnectorPortRegister portRegister;
 
