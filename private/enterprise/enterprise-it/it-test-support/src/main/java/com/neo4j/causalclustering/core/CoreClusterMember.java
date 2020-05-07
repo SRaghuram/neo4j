@@ -12,7 +12,6 @@ import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.io.File;
@@ -107,7 +106,7 @@ public class CoreClusterMember implements ClusterMember
         raftListenAddress = format( listenAddress, raftPort );
 
         config.set( default_database, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
-        config.set( EnterpriseEditionSettings.mode, EnterpriseEditionSettings.Mode.CORE );
+        config.set( GraphDatabaseSettings.mode, GraphDatabaseSettings.Mode.CORE );
         config.set( GraphDatabaseSettings.default_advertised_address, new SocketAddress( advertisedAddress ) );
         config.set( CausalClusteringSettings.initial_discovery_members, addresses );
         config.set( CausalClusteringSettings.discovery_listen_address, new SocketAddress( listenAddress, discoveryPort ) );

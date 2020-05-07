@@ -33,15 +33,4 @@ public class EnterpriseEditionSettings implements SettingsDeclaration
             "If this setting is left empty all dynamic settings updates will be blocked." )
     public static final Setting<List<String>> dynamic_setting_whitelist =
             newBuilder( "dbms.dynamic.setting.whitelist", listOf( STRING ), List.of( "*" ) ).build();
-
-    @Description( "Configure the operating mode of the database -- 'SINGLE' for stand-alone operation, " +
-            "'CORE' for operating as a core member of a Causal Cluster, " + "or 'READ_REPLICA' for operating as a read replica member of a Causal Cluster." )
-    public static final Setting<Mode> mode = newBuilder( "dbms.mode", ofEnum( Mode.class ), Mode.SINGLE ).build();
-
-    public enum Mode
-    {
-        SINGLE,
-        CORE,
-        READ_REPLICA
-    }
 }

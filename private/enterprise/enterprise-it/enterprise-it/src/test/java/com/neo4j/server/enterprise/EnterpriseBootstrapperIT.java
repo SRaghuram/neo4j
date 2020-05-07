@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.enterprise;
 
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.apache.commons.lang3.ArrayUtils;
@@ -70,7 +69,7 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
         // When
         int resultCode = NeoBootstrapper.start( bootstrapper, withConnectorsOnRandomPortsConfig(
                 "--home-dir", testDirectory.directory( "home-dir" ).getAbsolutePath(),
-                "-c", configOption( EnterpriseEditionSettings.mode, "SINGLE" ),
+                "-c", configOption( GraphDatabaseSettings.mode, "SINGLE" ),
                 "-c", configOption( data_directory, getRelativePath( folder.homeDir(), data_directory ).toString() ),
                 "-c", configOption( logs_directory, testDirectory.homeDir().getAbsolutePath() ),
                 "-c", "dbms.connector.bolt.listen_address=:0" ) );

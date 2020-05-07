@@ -8,7 +8,6 @@ package com.neo4j.harness.internal;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.helper.ErrorHandler;
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.io.File;
@@ -271,7 +270,7 @@ public class CausalClusterInProcessBuilder
                 builder.withConfig( GraphDatabaseSettings.neo4j_home, homePath );
                 builder.withConfig( GraphDatabaseSettings.pagecache_memory, "8m" );
 
-                builder.withConfig( EnterpriseEditionSettings.mode, EnterpriseEditionSettings.Mode.CORE );
+                builder.withConfig( GraphDatabaseSettings.mode, GraphDatabaseSettings.Mode.CORE );
                 builder.withConfig( CausalClusteringSettings.multi_dc_license, true );
                 builder.withConfig( CausalClusteringSettings.initial_discovery_members, initialMembers );
 
@@ -316,7 +315,7 @@ public class CausalClusterInProcessBuilder
                 builder.withConfig( GraphDatabaseSettings.neo4j_home, homePath );
                 builder.withConfig( GraphDatabaseSettings.pagecache_memory, "8m" );
 
-                builder.withConfig( EnterpriseEditionSettings.mode, EnterpriseEditionSettings.Mode.READ_REPLICA );
+                builder.withConfig( GraphDatabaseSettings.mode, GraphDatabaseSettings.Mode.READ_REPLICA );
                 builder.withConfig( CausalClusteringSettings.initial_discovery_members, initialMembers );
                 builder.withConfig( CausalClusteringSettings.discovery_listen_address, specifyPortOnly( discoveryPort ) );
                 builder.withConfig( CausalClusteringSettings.transaction_listen_address, specifyPortOnly( txPort ) );

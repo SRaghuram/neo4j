@@ -5,7 +5,6 @@
  */
 package com.neo4j.server;
 
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
@@ -30,7 +29,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.server.HTTP;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.mode;
+import static org.neo4j.configuration.GraphDatabaseSettings.mode;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.server.http.cypher.integration.TransactionConditions.hasErrors;
@@ -90,7 +89,7 @@ class MultiDatabaseHttpIT
     {
         Config custom = Config.newBuilder()
                 .setDefaults( GraphDatabaseSettings.SERVER_DEFAULTS )
-                .set( mode, EnterpriseEditionSettings.Mode.SINGLE )
+                .set( mode, GraphDatabaseSettings.Mode.SINGLE )
                 .set( GraphDatabaseSettings.neo4j_home, testDirectory.homeDir().toPath().toAbsolutePath() )
                 .set( GraphDatabaseSettings.auth_enabled, false )
                 .set( OnlineBackupSettings.online_backup_enabled, false )

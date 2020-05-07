@@ -6,8 +6,8 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingPluginLoader;
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.Mode;
+
+import org.neo4j.configuration.GraphDatabaseSettings.Mode;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
 
@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.GroupSettingValidator;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.graphdb.config.Setting;
@@ -42,8 +43,8 @@ public class CausalClusterConfigurationValidator implements GroupSettingValidato
     @Override
     public void validate( Map<Setting<?>,Object> values, Config config )
     {
-        Mode mode = config.get( EnterpriseEditionSettings.mode );
-        if ( mode.equals( Mode.CORE ) || mode.equals( Mode.READ_REPLICA ) )
+        Mode mode = config.get( GraphDatabaseSettings.mode );
+        if ( mode.equals( GraphDatabaseSettings.Mode.CORE ) || mode.equals( GraphDatabaseSettings.Mode.READ_REPLICA ) )
         {
             validateInitialDiscoveryMembers( config );
             validateBoltConnector( config );

@@ -9,7 +9,6 @@ import com.github.benmanes.caffeine.cache.Ticker;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import com.neo4j.server.security.enterprise.auth.FileRoleRepository;
 import com.neo4j.server.security.enterprise.auth.InClusterAuthManager;
 import com.neo4j.server.security.enterprise.auth.LdapRealm;
@@ -112,8 +111,8 @@ public class EnterpriseSecurityModule extends SecurityModule
                     () -> new RuntimeException( "No database called `" + SYSTEM_DATABASE_NAME + "` was found." ) ).databaseFacade();
         };
 
-        boolean isClustered = config.get( EnterpriseEditionSettings.mode ) == EnterpriseEditionSettings.Mode.CORE ||
-                              config.get( EnterpriseEditionSettings.mode ) == EnterpriseEditionSettings.Mode.READ_REPLICA;
+        boolean isClustered = config.get( GraphDatabaseSettings.mode ) == GraphDatabaseSettings.Mode.CORE ||
+                              config.get( GraphDatabaseSettings.mode ) == GraphDatabaseSettings.Mode.READ_REPLICA;
 
         authManager = newAuthManager( securityLog, systemSupplier );
         dependencySatisfier.satisfyDependency( authManager );

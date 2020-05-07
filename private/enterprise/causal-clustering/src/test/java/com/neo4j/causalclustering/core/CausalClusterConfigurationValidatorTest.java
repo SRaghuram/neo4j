@@ -5,8 +5,7 @@
  */
 package com.neo4j.causalclustering.core;
 
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.Mode;
+import org.neo4j.configuration.GraphDatabaseSettings.Mode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -17,6 +16,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
 
@@ -40,7 +40,7 @@ class CausalClusterConfigurationValidatorTest
     {
         // when
         Config config = Config.newBuilder()
-                .set( EnterpriseEditionSettings.mode, Mode.SINGLE )
+                .set( GraphDatabaseSettings.mode, GraphDatabaseSettings.Mode.SINGLE )
                 .set( initial_discovery_members, Collections.emptyList() )
                 .addValidator( CausalClusterConfigurationValidator.class )
                 .build();
@@ -56,7 +56,7 @@ class CausalClusterConfigurationValidatorTest
     {
         // when
         Config config = Config.newBuilder()
-                .set( EnterpriseEditionSettings.mode, mode )
+                .set( GraphDatabaseSettings.mode, mode )
                 .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
                 .set( BoltConnector.enabled, true )
                 .addValidator( CausalClusterConfigurationValidator.class )
@@ -74,7 +74,7 @@ class CausalClusterConfigurationValidatorTest
     {
         // when
         Config.newBuilder()
-                .set( EnterpriseEditionSettings.mode, mode )
+                .set( GraphDatabaseSettings.mode, mode )
                 .set( discovery_type, DiscoveryType.K8S )
                 .set( kubernetes_label_selector, "waldo=fred" )
                 .set( kubernetes_service_port_name, "default" )
@@ -91,7 +91,7 @@ class CausalClusterConfigurationValidatorTest
     {
         // when
         var exception = assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
-                .set( EnterpriseEditionSettings.mode, mode )
+                .set( GraphDatabaseSettings.mode, mode )
                 .set( initial_discovery_members, Collections.emptyList() )
                 .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
                 .addValidator( CausalClusterConfigurationValidator.class ).build() );
@@ -104,7 +104,7 @@ class CausalClusterConfigurationValidatorTest
     void missingInitialMembersDNS( Mode mode )
     {
         var exception = assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
-                .set( EnterpriseEditionSettings.mode, mode )
+                .set( GraphDatabaseSettings.mode, mode )
                 .set( discovery_type, DiscoveryType.DNS )
                 .addValidator( CausalClusterConfigurationValidator.class ).build() );
 
@@ -117,7 +117,7 @@ class CausalClusterConfigurationValidatorTest
     void missingInitialMembersLIST( Mode mode )
     {
         var exception = assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
-                .set( EnterpriseEditionSettings.mode, mode )
+                .set( GraphDatabaseSettings.mode, mode )
                 .set( discovery_type, DiscoveryType.LIST )
                 .addValidator( CausalClusterConfigurationValidator.class ).build() );
 
@@ -130,7 +130,7 @@ class CausalClusterConfigurationValidatorTest
     void missingInitialMembersSRV( Mode mode )
     {
         var exception = assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
-                .set( EnterpriseEditionSettings.mode, mode )
+                .set( GraphDatabaseSettings.mode, mode )
                 .set( discovery_type, DiscoveryType.SRV )
                 .addValidator( CausalClusterConfigurationValidator.class ).build() );
 
@@ -143,7 +143,7 @@ class CausalClusterConfigurationValidatorTest
     void missingKubernetesLabelSelector( Mode mode )
     {
         var exception = assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
-                .set( EnterpriseEditionSettings.mode, mode )
+                .set( GraphDatabaseSettings.mode, mode )
                 .set( discovery_type, DiscoveryType.K8S )
                 .set( kubernetes_service_port_name, "default" )
                 .set( BoltConnector.enabled, true )
@@ -158,7 +158,7 @@ class CausalClusterConfigurationValidatorTest
     void missingKubernetesPortName( Mode mode )
     {
         var exception = assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
-                .set( EnterpriseEditionSettings.mode, mode )
+                .set( GraphDatabaseSettings.mode, mode )
                 .set( discovery_type, DiscoveryType.K8S )
                 .set( kubernetes_label_selector, "waldo=fred" )
                 .set( BoltConnector.enabled, true )
@@ -174,7 +174,7 @@ class CausalClusterConfigurationValidatorTest
     {
         var exception = assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
                 .set( middleware_akka_external_config, Path.of( "this isnt a real file" ).toAbsolutePath() )
-                .set( EnterpriseEditionSettings.mode, mode )
+                .set( GraphDatabaseSettings.mode, mode )
                 .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
                 .set( BoltConnector.enabled, true )
                 .addValidator( CausalClusterConfigurationValidator.class )
@@ -189,7 +189,7 @@ class CausalClusterConfigurationValidatorTest
     {
         var exception = assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
                 .set( middleware_akka_external_config, Path.of( "" ).toAbsolutePath() )
-                .set( EnterpriseEditionSettings.mode, mode )
+                .set( GraphDatabaseSettings.mode, mode )
                 .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
                 .set( BoltConnector.enabled, true )
                 .addValidator( CausalClusterConfigurationValidator.class )
@@ -205,7 +205,7 @@ class CausalClusterConfigurationValidatorTest
         File conf = new File( getClass().getResource( "/akka.external.config/illegal.conf" ).toURI() );
         var exception = assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
                 .set( middleware_akka_external_config, conf.toPath() )
-                .set( EnterpriseEditionSettings.mode, mode )
+                .set( GraphDatabaseSettings.mode, mode )
                 .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
                 .set( BoltConnector.enabled, true )
                 .addValidator( CausalClusterConfigurationValidator.class )
@@ -223,7 +223,7 @@ class CausalClusterConfigurationValidatorTest
         // when
         assertDoesNotThrow( () -> Config.newBuilder()
                 .set( middleware_akka_external_config, conf.toPath() )
-                .set( EnterpriseEditionSettings.mode, mode )
+                .set( GraphDatabaseSettings.mode, mode )
                 .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
                 .set( BoltConnector.enabled, true )
                 .addValidator( CausalClusterConfigurationValidator.class )

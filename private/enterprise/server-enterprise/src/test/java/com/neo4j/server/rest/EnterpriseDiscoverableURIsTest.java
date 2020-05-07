@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.rest;
 
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
@@ -13,12 +12,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.server.configuration.ServerSettings;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.Mode.CORE;
-import static com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.Mode.READ_REPLICA;
-import static com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.Mode.SINGLE;
+import static org.neo4j.configuration.GraphDatabaseSettings.Mode.CORE;
+import static org.neo4j.configuration.GraphDatabaseSettings.Mode.READ_REPLICA;
+import static org.neo4j.configuration.GraphDatabaseSettings.Mode.SINGLE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -29,7 +29,7 @@ class EnterpriseDiscoverableURIsTest
     void shouldNotExposeCausalClusteringManagementApiOnStandalone()
     {
         // Given
-        var config = Config.defaults( EnterpriseEditionSettings.mode, SINGLE );
+        var config = Config.defaults( GraphDatabaseSettings.mode, SINGLE );
 
         // When
         var discoverableURIs = findEnterpriseDiscoverableURIs( config );
@@ -42,7 +42,7 @@ class EnterpriseDiscoverableURIsTest
     void shouldExposeCausalClusteringManagementApiOnCore()
     {
         // Given
-        var config = Config.defaults( EnterpriseEditionSettings.mode, CORE );
+        var config = Config.defaults( GraphDatabaseSettings.mode, CORE );
 
         // When
         var discoverableURIs = findEnterpriseDiscoverableURIs( config );
@@ -55,7 +55,7 @@ class EnterpriseDiscoverableURIsTest
     void shouldExposeCausalClusteringManagementApiOnReadReplica()
     {
         // Given
-        var config = Config.defaults( EnterpriseEditionSettings.mode, READ_REPLICA );
+        var config = Config.defaults( GraphDatabaseSettings.mode, READ_REPLICA );
 
         // When
         var discoverableURIs = findEnterpriseDiscoverableURIs( config );
@@ -69,7 +69,7 @@ class EnterpriseDiscoverableURIsTest
     {
         // Given
         var config = Config.newBuilder()
-                .set( EnterpriseEditionSettings.mode, CORE )
+                .set( GraphDatabaseSettings.mode, CORE )
                 .set( ServerSettings.db_api_path, URI.create( "/a/new/core/db/path" ) )
                 .build();
 
@@ -85,7 +85,7 @@ class EnterpriseDiscoverableURIsTest
     {
         // Given
         var config = Config.newBuilder()
-                .set( EnterpriseEditionSettings.mode, READ_REPLICA )
+                .set( GraphDatabaseSettings.mode, READ_REPLICA )
                 .set( ServerSettings.db_api_path, URI.create( "/a/new/read_replica/db/path" ) )
                 .build();
 

@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.io.File;
@@ -78,7 +77,7 @@ public class ReadReplica implements ClusterMember
         intraClusterBoltSocketAddress = format( advertisedAddress, intraClusterBoltPort);
 
         Config.Builder config = Config.newBuilder();
-        config.set( EnterpriseEditionSettings.mode, EnterpriseEditionSettings.Mode.READ_REPLICA );
+        config.set( GraphDatabaseSettings.mode, GraphDatabaseSettings.Mode.READ_REPLICA );
         config.set( CausalClusteringSettings.initial_discovery_members, coreMemberDiscoveryAddresses );
         config.set( CausalClusteringSettings.discovery_listen_address, new SocketAddress( listenAddress, discoveryPort ) );
         config.set( CausalClusteringSettings.discovery_advertised_address, new SocketAddress( advertisedAddress, discoveryPort ) );

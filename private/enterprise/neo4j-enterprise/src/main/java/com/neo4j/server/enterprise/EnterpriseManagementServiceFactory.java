@@ -11,9 +11,9 @@ import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
 import com.neo4j.causalclustering.readreplica.ReadReplicaEditionModule;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.enterprise.edition.EnterpriseEditionModule;
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.ExternalDependencies;
@@ -27,7 +27,7 @@ public class EnterpriseManagementServiceFactory
 
     public static DatabaseManagementService createManagementService( Config config, ExternalDependencies dependencies )
     {
-        EnterpriseEditionSettings.Mode mode = config.get( EnterpriseEditionSettings.mode );
+        GraphDatabaseSettings.Mode mode = config.get( GraphDatabaseSettings.mode );
         switch ( mode )
         {
         case CORE:
