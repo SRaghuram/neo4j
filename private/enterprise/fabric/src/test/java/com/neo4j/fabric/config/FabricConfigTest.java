@@ -228,27 +228,28 @@ class FabricConfigTest
     void testBufferSizeConstraint()
     {
         doTestStreamConstraint( "fabric.stream.buffer.size", "0",
-                "Error evaluating value for setting 'fabric.stream.buffer.size'. minimum allowed value is 1" );
+                "Failed to validate '0' for 'fabric.stream.buffer.size': minimum allowed value is 1" );
     }
 
     @Test
     void testBufferLowWatermarkConstraint()
     {
         doTestStreamConstraint( "fabric.stream.buffer.low_watermark", "-1",
-                "Error evaluating value for setting 'fabric.stream.buffer.low_watermark'. minimum allowed value is 0" );
+                "Failed to validate '-1' for 'fabric.stream.buffer.low_watermark': minimum allowed value is 0" );
     }
 
     @Test
     void testBatchSizeConstraint()
     {
-        doTestStreamConstraint( "fabric.stream.batch_size", "0", "Error evaluating value for setting 'fabric.stream.batch_size'. minimum allowed value is 1" );
+        doTestStreamConstraint( "fabric.stream.batch_size", "0",
+                "Failed to validate '0' for 'fabric.stream.batch_size': minimum allowed value is 1" );
     }
 
     @Test
     void testConcurrencyConstraint()
     {
         doTestStreamConstraint( "fabric.stream.concurrency", "0",
-                "Error evaluating value for setting 'fabric.stream.concurrency'. minimum allowed value is 1" );
+                "Failed to validate '0' for 'fabric.stream.concurrency': minimum allowed value is 1" );
     }
 
     @Test
