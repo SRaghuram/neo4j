@@ -18,6 +18,8 @@ import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.memory.NativeScopedBuffer;
 import org.neo4j.memory.MemoryTracker;
 
+import static org.neo4j.io.fs.ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE;
+
 class RelationshipTypeDistributionStorage
 {
     private final FileSystemAbstraction fs;
@@ -50,8 +52,7 @@ class RelationshipTypeDistributionStorage
 
     DataStatistics load() throws IOException
     {
-        try ( NativeScopedBuffer bufferScope = new NativeScopedBuffer( ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE, memoryTracker );
-              ReadableChannel channel = new ReadAheadChannel<>( fs.read( file ), bufferScope.getBuffer() ) )
+        try ( ReadableChannel channel = new ReadAheadChannel<>( fs.read( file ), new NativeScopedBuffer( DEFAULT_READ_AHEAD_SIZE, memoryTracker ) ) )
         {
             long nodeCount = channel.getLong();
             long propertyCount = channel.getLong();

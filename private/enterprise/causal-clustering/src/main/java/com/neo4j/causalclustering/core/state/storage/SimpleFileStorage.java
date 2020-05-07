@@ -22,6 +22,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.memory.MemoryTracker;
 
 import static org.neo4j.io.ByteUnit.kibiBytes;
+import static org.neo4j.io.fs.ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE;
 
 public class SimpleFileStorage<T> implements SimpleStorage<T>
 {
@@ -49,8 +50,7 @@ public class SimpleFileStorage<T> implements SimpleStorage<T>
     @Override
     public T readState() throws IOException
     {
-        try ( NativeScopedBuffer bufferScope = new NativeScopedBuffer( ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE, memoryTracker );
-              ReadableChannel channel = new ReadAheadChannel<>( fileSystem.read( file ), bufferScope.getBuffer() ) )
+        try ( ReadableChannel channel = new ReadAheadChannel<>( fileSystem.read( file ), new NativeScopedBuffer( DEFAULT_READ_AHEAD_SIZE, memoryTracker ) ) )
         {
             return marshal.unmarshal( channel );
         }

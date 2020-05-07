@@ -12,7 +12,6 @@ import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -91,7 +90,7 @@ class RecoveryProtocol
 
             try
             {
-                header = loadHeader( fileSystem, file );
+                header = loadHeader( fileSystem, file, memoryTracker );
                 checkSegmentNumberMatches( header.segmentNumber(), fileSegmentNumber );
             }
             catch ( EndOfStreamException e )
@@ -167,12 +166,12 @@ class RecoveryProtocol
 
     private static SegmentHeader loadHeader(
             FileSystemAbstraction fileSystem,
-            File file ) throws IOException, EndOfStreamException
+            File file,
+            MemoryTracker memoryTracker ) throws IOException, EndOfStreamException
     {
         try ( StoreChannel channel = fileSystem.read( file ) )
         {
-            ByteBuffer buffer = ByteBuffer.allocate( CURRENT_RECORD_OFFSET );
-            return headerMarshal.unmarshal( new ReadAheadChannel<>( channel, buffer ) );
+            return headerMarshal.unmarshal( new ReadAheadChannel<>( channel, new HeapScopedBuffer( CURRENT_RECORD_OFFSET, memoryTracker ) ) );
         }
     }
 

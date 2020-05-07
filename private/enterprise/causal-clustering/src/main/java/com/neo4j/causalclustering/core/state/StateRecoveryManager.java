@@ -17,6 +17,8 @@ import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.memory.NativeScopedBuffer;
 import org.neo4j.memory.MemoryTracker;
 
+import static org.neo4j.io.fs.ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE;
+
 public class StateRecoveryManager<STATE>
 {
     public static class RecoveryStatus<STATE>
@@ -90,8 +92,7 @@ public class StateRecoveryManager<STATE>
 
     private STATE readLastEntryFrom( File file, MemoryTracker memoryTracker ) throws IOException
     {
-        try ( NativeScopedBuffer bufferScope = new NativeScopedBuffer( ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE, memoryTracker );
-              ReadableChannel channel = new ReadAheadChannel<>( fileSystem.read( file ), bufferScope.getBuffer() ) )
+        try ( ReadableChannel channel = new ReadAheadChannel<>( fileSystem.read( file ), new NativeScopedBuffer( DEFAULT_READ_AHEAD_SIZE, memoryTracker ) ) )
         {
             STATE result = null;
             STATE lastRead;

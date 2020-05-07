@@ -22,6 +22,7 @@ import org.neo4j.memory.MemoryTracker;
 import static com.neo4j.internal.batchimport.ChannelUtils.readString;
 import static com.neo4j.internal.batchimport.ChannelUtils.writeString;
 import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
+import static org.neo4j.io.fs.ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE;
 import static org.neo4j.kernel.impl.store.PropertyType.EMPTY_BYTE_ARRAY;
 
 public class StateStorage
@@ -48,8 +49,7 @@ public class StateStorage
         {
             return Pair.of( NO_STATE, EMPTY_BYTE_ARRAY );
         }
-        try ( NativeScopedBuffer bufferScope = new NativeScopedBuffer( ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE, memoryTracker );
-              ReadableChannel channel = new ReadAheadChannel<>( fs.read( stateFile ), bufferScope.getBuffer() ) )
+        try ( ReadableChannel channel = new ReadAheadChannel<>( fs.read( stateFile ), new NativeScopedBuffer( DEFAULT_READ_AHEAD_SIZE, memoryTracker ) ) )
         {
             String name = readString( channel );
             byte[] checkPoint = new byte[channel.getInt()];
