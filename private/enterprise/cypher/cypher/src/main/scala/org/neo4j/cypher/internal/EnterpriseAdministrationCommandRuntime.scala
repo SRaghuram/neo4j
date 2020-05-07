@@ -84,7 +84,7 @@ import org.neo4j.cypher.internal.logical.plans.ShowRoles
 import org.neo4j.cypher.internal.logical.plans.ShowUsers
 import org.neo4j.cypher.internal.logical.plans.StartDatabase
 import org.neo4j.cypher.internal.logical.plans.StopDatabase
-import org.neo4j.cypher.internal.procs.AdminActionMapper
+import org.neo4j.cypher.internal.procs.ActionMapper
 import org.neo4j.cypher.internal.procs.LoggingSystemCommandExecutionPlan
 import org.neo4j.cypher.internal.procs.QueryHandler
 import org.neo4j.cypher.internal.procs.SystemCommandExecutionPlan
@@ -333,49 +333,49 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // GRANT/DENY/REVOKE _ ON DBMS TO role
     case GrantDbmsAction(source, action, roleName) => (context, parameterMapping) =>
-      val dbmsAction = AdminActionMapper.asKernelAction(action).toString
+      val dbmsAction = ActionMapper.asKernelAction(action).toString
       makeGrantOrDenyExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), AllQualifier()(InputPosition.NONE), roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant $dbmsAction privilege to role '${runtimeValue(roleName, params)}'")
 
     case DenyDbmsAction(source, action, roleName) => (context, parameterMapping) =>
-      val dbmsAction = AdminActionMapper.asKernelAction(action).toString
+      val dbmsAction = ActionMapper.asKernelAction(action).toString
       makeGrantOrDenyExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), AllQualifier()(InputPosition.NONE), roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny $dbmsAction privilege to role '${runtimeValue(roleName, params)}'")
 
     case RevokeDbmsAction(source, action, roleName, revokeType) => (context, parameterMapping) =>
-      val dbmsAction = AdminActionMapper.asKernelAction(action).toString
+      val dbmsAction = ActionMapper.asKernelAction(action).toString
       makeRevokeExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), AllQualifier()(InputPosition.NONE), roleName, revokeType,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke $dbmsAction privilege from role '${runtimeValue(roleName, params)}'")
 
     // GRANT/DENY/REVOKE _ ON DATABASE foo TO role
     case GrantDatabaseAction(source, action, database, qualifier, roleName) => (context, parameterMapping) =>
-      val databaseAction = AdminActionMapper.asKernelAction(action).toString
+      val databaseAction = ActionMapper.asKernelAction(action).toString
       makeGrantOrDenyExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, qualifier, roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant $databaseAction privilege to role '${runtimeValue(roleName, params)}'")
 
     case DenyDatabaseAction(source, action, database, qualifier, roleName) => (context, parameterMapping) =>
-      val databaseAction = AdminActionMapper.asKernelAction(action).toString
+      val databaseAction = ActionMapper.asKernelAction(action).toString
       makeGrantOrDenyExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, qualifier, roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny $databaseAction privilege to role '${runtimeValue(roleName, params)}'")
 
     case RevokeDatabaseAction(source, action, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
-      val databaseAction = AdminActionMapper.asKernelAction(action).toString
+      val databaseAction = ActionMapper.asKernelAction(action).toString
       makeRevokeExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke $databaseAction privilege from role '${runtimeValue(roleName, params)}'")
 
     // GRANT/DENY/REVOKE _ ON DATABASE foo TO role
     case GrantGraphAction(source, action, resource, database, qualifier, roleName) => (context, parameterMapping) =>
-      val graphAction = AdminActionMapper.asKernelAction(action).toString
+      val graphAction = ActionMapper.asKernelAction(action).toString
       makeGrantOrDenyExecutionPlan(graphAction, resource, database, qualifier, roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant $graphAction privilege to role '${runtimeValue(roleName, params)}'")
 
     case DenyGraphAction(source, action, resource, database, qualifier, roleName) => (context, parameterMapping) =>
-      val graphAction = AdminActionMapper.asKernelAction(action).toString
+      val graphAction = ActionMapper.asKernelAction(action).toString
       makeGrantOrDenyExecutionPlan(graphAction, resource, database, qualifier, roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny $graphAction privilege to role '${runtimeValue(roleName, params)}'")
 
     case RevokeGraphAction(source, action, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
-      val graphAction = AdminActionMapper.asKernelAction(action).toString
+      val graphAction = ActionMapper.asKernelAction(action).toString
       makeRevokeExecutionPlan(graphAction, resource, database, qualifier, roleName, revokeType,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke $graphAction privilege from role '${runtimeValue(roleName, params)}'")
 

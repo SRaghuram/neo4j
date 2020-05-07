@@ -215,7 +215,10 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
 
     def property(property: String) = PrivilegeMapBuilder(map + ("resource" -> s"property($property)"))
 
-    def label(label: String) = PrivilegeMapBuilder(map + ("resource" -> s"label($label)"))
+    def label(label: String) = {
+      val labelResource = if (label.equals("*"))  "all_labels" else s"label($label)"
+      PrivilegeMapBuilder(map + ("resource" -> labelResource))
+    }
   }
 
   private val baseMap: Map[String, String] = Map("graph" -> "*", "segment" -> "database")
@@ -250,8 +253,8 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val write: Map[String, String] = baseMap + ("resource" -> "graph", "action" -> "write")
   val create: Map[String, String] = baseMap + ("resource" -> "graph", "action" -> "create_element")
   val delete: Map[String, String] = baseMap + ("resource" -> "graph", "action" -> "delete_element")
-  val setLabel: Map[String, String] = baseMap + ("resource" -> "all_labels", "action" -> "set_label", "segment" -> "NODE(*)")
-  val removeLabel: Map[String, String] = baseMap + ("resource" -> "all_labels", "action" -> "remove_label", "segment" -> "NODE(*)")
+  val setLabel: Map[String, String] = baseMap + ("action" -> "set_label", "segment" -> "NODE(*)")
+  val removeLabel: Map[String, String] = baseMap + ("action" -> "remove_label", "segment" -> "NODE(*)")
 
   val allDatabasePrivilege: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "database_actions")
   val adminPrivilege:  Map[String, String] = baseMap + ("resource" -> "database", "action" -> "admin")

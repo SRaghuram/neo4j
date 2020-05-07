@@ -62,7 +62,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
           // THEN
           execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-            grantedOrDenied(action).role("custom").database("foo").map,
+            grantedOrDenied(action).role("custom").database("foo").label("*").map,
           ))
         }
 
@@ -93,7 +93,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
           // THEN
           execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-            grantedOrDenied(action).database(DEFAULT_DATABASE_NAME).role("custom").map,
+            grantedOrDenied(action).database(DEFAULT_DATABASE_NAME).role("custom").label("*").map,
           ))
         }
 
@@ -133,8 +133,8 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
           // THEN
           execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-            grantedOrDenied(action).role("custom").map,
-            grantedOrDenied(action).role("custom").database("bar").map,
+            grantedOrDenied(action).role("custom").label("*").map,
+            grantedOrDenied(action).role("custom").database("bar").label("*").map,
           ))
 
           // WHEN
@@ -142,7 +142,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
           // THEN
           execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-            grantedOrDenied(action).role("custom").database("bar").map,
+            grantedOrDenied(action).role("custom").database("bar").label("*").map,
           ))
         }
 
@@ -190,7 +190,7 @@ class LabelPrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
           // THEN
           execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-            grantedOrDenied(action).role("custom").map,
+            grantedOrDenied(action).role("custom").label("*").map,
           ))
         }
 
