@@ -55,8 +55,9 @@ class ConfiguredQueryLogger implements QueryLogger
         {
             QuerySnapshot snapshot = query.snapshot();
             boolean alreadyLoggedStart = this.rawLogging && snapshot.obfuscatedQueryText().isPresent();
+            boolean canLogStart = canCreateLogEntry( snapshot, false );
 
-            if ( !alreadyLoggedStart )
+            if ( !alreadyLoggedStart && canLogStart )
             {
                 log.info( "Query started: " + logEntry( snapshot, false ) );
             }
@@ -89,11 +90,16 @@ class ConfiguredQueryLogger implements QueryLogger
         return logEntry( query, fallbackToRaw ) + " - " + reason.split( System.getProperty( "line.separator" ) )[0];
     }
 
+    private boolean canCreateLogEntry( QuerySnapshot query, Boolean fallbackToRaw )
+    {
+        return query.obfuscatedQueryText().isPresent() || rawLogging || fallbackToRaw;
+    }
+
     private String logEntry( QuerySnapshot query, Boolean fallbackToRaw )
     {
         String sourceString = query.clientConnection().asConnectionDetails();
         String username = query.username();
-        NamedDatabaseId namedDatabaseId = query.databaseId();
+        String databaseName = query.databaseId().map( NamedDatabaseId::name ).orElse( "<none>" );
 
         boolean shouldUseRawText = rawLogging || (query.obfuscatedQueryText().isEmpty() && fallbackToRaw);
 
@@ -118,7 +124,7 @@ class ConfiguredQueryLogger implements QueryLogger
         {
             QueryLogFormatter.formatPageDetails( result, query );
         }
-        result.append( sourceString ).append( "\t" ).append( namedDatabaseId.name() ).append( " - " ).append( username ).append( " - " ).append( queryText );
+        result.append( sourceString ).append( "\t" ).append( databaseName ).append( " - " ).append( username ).append( " - " ).append( queryText );
         if ( logQueryParameters )
         {
             MapValue params = shouldUseRawText ? query.rawQueryParameters()

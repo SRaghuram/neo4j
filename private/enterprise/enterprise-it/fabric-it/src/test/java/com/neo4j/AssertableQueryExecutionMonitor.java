@@ -5,6 +5,7 @@
  */
 package com.neo4j;
 
+import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.apache.commons.lang3.tuple.Triple;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
@@ -23,7 +24,8 @@ public class AssertableQueryExecutionMonitor
 {
     enum EventType
     {
-        Start,
+        StartProcessing,
+        StartExecution,
         EndFailure,
         EndSuccess
     }
@@ -42,6 +44,12 @@ public class AssertableQueryExecutionMonitor
             this.snapshot = snapshot;
             this.failure = failure;
         }
+
+        @Override
+        public String toString()
+        {
+            return ReflectionToStringBuilder.toString( this );
+        }
     }
 
     public static CompositeMatcher<ExecutingQuery> query()
@@ -56,10 +64,16 @@ public class AssertableQueryExecutionMonitor
                 .where( "message", Throwable::getMessage, message );
     }
 
-    public static CompositeMatcher<Event> start()
+    public static CompositeMatcher<Event> startProcessing()
     {
         return new CompositeMatcher<>( Event.class )
-                .where( "type", e -> e.type, Matchers.is( EventType.Start ) );
+                .where( "type", e -> e.type, Matchers.is( EventType.StartProcessing ) );
+    }
+
+    public static CompositeMatcher<Event> startExecution()
+    {
+        return new CompositeMatcher<>( Event.class )
+                .where( "type", e -> e.type, Matchers.is( EventType.StartExecution ) );
     }
 
     public static CompositeMatcher<Event> endSuccess()
@@ -126,9 +140,15 @@ public class AssertableQueryExecutionMonitor
         public final List<Event> events = new ArrayList<>();
 
         @Override
-        public void start( ExecutingQuery query )
+        public void startProcessing( ExecutingQuery query )
         {
-            events.add( new Event( EventType.Start, query, query.snapshot(), null ) );
+            events.add( new Event( EventType.StartProcessing, query, query.snapshot(), null ) );
+        }
+
+        @Override
+        public void startExecution( ExecutingQuery query )
+        {
+            events.add( new Event( EventType.StartExecution, query, query.snapshot(), null ) );
         }
 
         @Override

@@ -214,7 +214,13 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
     }
 
     @Override
-    public void start( ExecutingQuery query )
+    public void startProcessing( ExecutingQuery query )
+    {
+        currentLog.start( query );
+    }
+
+    @Override
+    public void startExecution( ExecutingQuery query )
     {
         currentLog.start( query );
     }

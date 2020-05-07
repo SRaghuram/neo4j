@@ -19,12 +19,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.net.URI;
-import java.nio.file.Path;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Consumer;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
@@ -44,7 +40,6 @@ import org.neo4j.driver.summary.Plan;
 import org.neo4j.driver.summary.QueryType;
 import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.fabric.bookmark.RemoteBookmark;
-import org.neo4j.fabric.executor.FabricException;
 import org.neo4j.fabric.executor.FabricExecutor;
 import org.neo4j.fabric.stream.Records;
 import org.neo4j.fabric.stream.StatementResult;
@@ -52,7 +47,6 @@ import org.neo4j.fabric.stream.summary.PartialSummary;
 import org.neo4j.graphdb.InputPosition;
 import org.neo4j.graphdb.QueryStatistics;
 import org.neo4j.graphdb.impl.notification.NotificationCode;
-import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.SimpleLogService;
@@ -63,20 +57,10 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.Values;
 
-import static com.neo4j.AssertableQueryExecutionMonitor.endFailure;
-import static com.neo4j.AssertableQueryExecutionMonitor.endSuccess;
-import static com.neo4j.AssertableQueryExecutionMonitor.query;
-import static com.neo4j.AssertableQueryExecutionMonitor.start;
-import static com.neo4j.AssertableQueryExecutionMonitor.throwable;
-import static java.nio.file.Files.readAllLines;
-import static java.util.concurrent.TimeUnit.MINUTES;
-import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.containsInRelativeOrder;
 import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -89,8 +73,6 @@ import static org.mockito.Mockito.when;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 import static org.neo4j.logging.AssertableLogProvider.Level.DEBUG;
 import static org.neo4j.logging.LogAssertions.assertThat;
-import static org.neo4j.test.assertion.Assert.assertEventually;
-import static org.neo4j.test.conditions.Conditions.TRUE;
 
 @TestDirectoryExtension
 class FabricExecutorTest
@@ -570,104 +552,6 @@ class FabricExecutorTest
                                          .containsMessages( "remote 1: CYPHER debug=fabriclogrecords RETURN 2 AS `y`" )
                                          .containsMessages( "local 2: InputDataStream(Vector(Variable(s), Variable(y))) " +
                                                                     "RETURN s AS s, y AS y ORDER BY s ASCENDING, y ASCENDING" );
-    }
-
-    @Test
-    void testQueryLogging()
-    {
-        when( graph0Result.records() ).thenReturn(
-                recs( rec( Values.stringValue( "a" ) ), rec( Values.stringValue( "b" ) ) )
-        );
-
-        when( graph1Result.records() ).thenReturn(
-                recs( rec( Values.stringValue( "k" ) ), rec( Values.stringValue( "l" ) ) )
-        );
-
-        String query = joinAsLines(
-                "UNWIND [0, 1] AS s",
-                "CALL { USE mega.graph(s) RETURN 2 AS y }",
-                "RETURN s, y ORDER BY s, y"
-        );
-
-        doInMegaTx( AccessMode.READ, tx -> tx.run( query ).consume() );
-
-        assertThat( queryExecutionMonitor.events, containsInRelativeOrder(
-                start()
-                        .where( "query", e -> e.query, query()
-                                .where( "queryText", ExecutingQuery::rawQueryText, is( query ) )
-                                .where( "dbName", q -> q.databaseId().name(), is( "mega" ) ) )
-                        .where( "status", e -> e.snapshot.status(), is( "running" ) ),
-                endSuccess()
-                        .where( "query", e -> e.query, query()
-                                .where( "queryText", ExecutingQuery::rawQueryText, is( query ) )
-                                .where( "dbName", q -> q.databaseId().name(), is( "mega" ) ) )
-                        .where( "status", e -> e.snapshot.status(), is( "running" ) )
-        ) );
-    }
-
-    @Test
-    void testFullQueryLogging() throws Exception
-    {
-        when( graph0Result.records() ).thenReturn(
-                recs( rec( Values.stringValue( "a" ) ), rec( Values.stringValue( "b" ) ) )
-        );
-
-        when( graph1Result.records() ).thenReturn(
-                recs( rec( Values.stringValue( "k" ) ), rec( Values.stringValue( "l" ) ) )
-        );
-
-        //This query will turn into 1 Fabric query (parent) with 2 child queries
-        String query = "UNWIND [0, 1] AS s CALL { USE mega.graph(s) RETURN 2 AS y } RETURN s, y ORDER BY s, y";
-
-        doInMegaTx( AccessMode.READ, tx -> tx.run( query ).consume() );
-
-        Path logFile = config.get( GraphDatabaseSettings.logs_directory ).resolve( "query.log" );
-        assertEventually( () -> testDirectory.getFileSystem().fileExists( logFile.toFile() ), TRUE, 1, MINUTES );
-        List<String> logLines = readAllLines( logFile );
-        assertEquals( 6, logLines.size() ); //3 queries logged, start + end of each
-
-        Pattern compile = Pattern.compile( "Query started: id:((Fabric-)?[0-9]+)" );
-        Set<String> ids = logLines.stream()
-                .map( compile::matcher )
-                .filter( Matcher::find )
-                .map( m -> m.group( 1 ) )
-                .collect( Collectors.toSet() );
-        assertThat( ids, hasSize( 3 ) ); //has 3 started queries with unique ids
-    }
-
-    @Test
-    void testQueryLoggingFailure()
-    {
-        when( graph0Result.records() ).thenReturn(
-                recs( rec( Values.stringValue( "a" ) ), rec( Values.stringValue( "b" ) ) )
-        );
-
-        when( graph1Result.records() ).thenReturn(
-                Flux.error( new Exception( "my failure!" ) )
-        );
-
-        String query = joinAsLines(
-                "UNWIND [0, 1] AS s",
-                "CALL { USE mega.graph(s) RETURN 2 AS y }",
-                "RETURN s, y ORDER BY s, y"
-        );
-
-        assertThat( catchThrowable( () -> doInMegaTx( AccessMode.READ, tx -> tx.run( query ).consume() ) ))
-                .hasMessageContaining( "my failure!" );
-
-        assertThat( queryExecutionMonitor.events, containsInRelativeOrder(
-                start()
-                        .where( "query", e -> e.query, query()
-                                .where( "queryText", ExecutingQuery::rawQueryText, is( query ) )
-                                .where( "dbName", q -> q.databaseId().name(), is( "mega" ) ) )
-                        .where( "status", e -> e.snapshot.status(), is( "running" ) ),
-                endFailure()
-                        .where( "query", e -> e.query, query()
-                                .where( "queryText", ExecutingQuery::rawQueryText, is( query ) )
-                                .where( "dbName", q -> q.databaseId().name(), is( "mega" ) ) )
-                        .where( "failure", e -> e.failure, throwable( is( FabricException.class ), containsString( "my failure!" ) ) )
-                        .where( "status", e -> e.snapshot.status(), is( "running" ) )
-        ) );
     }
 
     private String codeOf( NotificationCode notificationCode )
