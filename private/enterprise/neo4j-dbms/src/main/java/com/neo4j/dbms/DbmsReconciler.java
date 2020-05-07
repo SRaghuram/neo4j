@@ -129,11 +129,16 @@ public class DbmsReconciler implements DatabaseStateService
 
     private void reportFailedDatabases()
     {
-        var failedDbs = currentStates.values().stream().filter( EnterpriseDatabaseState::hasFailed )
-                .map( db -> db.databaseId().name() ).collect( Collectors.joining( ",", "[", "]" ) );
+        var failedDbs = currentStates.values().stream()
+                .filter( EnterpriseDatabaseState::hasFailed )
+                .map( db -> db.databaseId().name() )
+                .collect( Collectors.joining( ",", "[", "]" ) );
 
-        log.warn( "Reconciler triggered but the following databases are currently failed and may be ignored: %s. " +
-                "Run `SHOW DATABASES` for further information.", failedDbs );
+        if ( failedDbs.length() > 2 )
+        {
+            log.warn( "Reconciler triggered but the following databases are currently failed and may be ignored: %s. " +
+                    "Run `SHOW DATABASES` for further information.", failedDbs );
+        }
     }
 
     private void validatedAndWarn( ReconcilerRequest request, Set<String> namesOfDbsToReconcile )
