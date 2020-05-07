@@ -11,6 +11,8 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DATABASE_ACTIONS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.GRAPH_ACTIONS;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_LABEL;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_LABEL;
 
 public interface Resource
 {
@@ -33,7 +35,7 @@ public interface Resource
         @Override
         public void assertValidCombination( PrivilegeAction action ) throws InvalidArgumentsException
         {
-            if ( !(GRAPH_ACTIONS.satisfies( action )) )
+            if ( SET_LABEL.satisfies( action ) || REMOVE_LABEL.satisfies( action ) || !(GRAPH_ACTIONS.satisfies( action )) )
             {
                 throw new InvalidArgumentsException( String.format( "Graph resource cannot be combined with action '%s'", action.toString() ) );
             }

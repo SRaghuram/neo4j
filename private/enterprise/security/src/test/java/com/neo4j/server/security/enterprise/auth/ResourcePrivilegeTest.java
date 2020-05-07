@@ -65,21 +65,19 @@ class ResourcePrivilegeTest
                     assertOk( privilegeType, action, new AllPropertiesResource() );
                     assertOk( privilegeType, action, new PropertyResource( "foo" ) );
                 }
-                else if ( WRITE.satisfies( action ) )
-                {
-                    assertOk( privilegeType, action, new GraphResource() );
-                }
                 else if ( SET_LABEL.satisfies( action ) )
                 {
-                    assertOk( privilegeType, action, new GraphResource() );
                     assertOk( privilegeType, action, new AllLabelsResource() );
                     assertOk( privilegeType, action, new LabelResource( "foo" ) );
                 }
                 else if ( REMOVE_LABEL.satisfies( action ) )
                 {
-                    assertOk( privilegeType, action, new GraphResource() );
                     assertOk( privilegeType, action, new AllLabelsResource() );
                     assertOk( privilegeType, action, new LabelResource( "foo" ) );
+                }
+                else if ( WRITE.satisfies( action ) )
+                {
+                    assertOk( privilegeType, action, new GraphResource() );
                 }
                 else if ( ADMIN.satisfies( action ) )
                 {
@@ -156,12 +154,30 @@ class ResourcePrivilegeTest
                     assertFail( privilegeType, action, new LabelResource( "foo" ) );
                     assertFail( privilegeType, action, new AllLabelsResource() );
                 }
+                else if ( SET_LABEL.satisfies( action ) )
+                {
+                    assertFail( privilegeType, action, new ProcedureResource( "", "" ) );
+                    assertFail( privilegeType, action, new GraphResource() );
+                    assertFail( privilegeType, action, new PropertyResource( "foo" ) );
+                    assertFail( privilegeType, action, new AllPropertiesResource() );
+                    assertFail( privilegeType, action, new DatabaseResource() );
+                }
+                else if ( REMOVE_LABEL.satisfies( action ) )
+                {
+                    assertFail( privilegeType, action, new ProcedureResource( "", "" ) );
+                    assertFail( privilegeType, action, new GraphResource() );
+                    assertFail( privilegeType, action, new PropertyResource( "foo" ) );
+                    assertFail( privilegeType, action, new AllPropertiesResource() );
+                    assertFail( privilegeType, action, new DatabaseResource() );
+                }
                 else if ( WRITE.satisfies( action ) )
                 {
                     assertFail( privilegeType, action, new ProcedureResource( "", "" ) );
                     assertFail( privilegeType, action, new PropertyResource( "foo" ) );
                     assertFail( privilegeType, action, new AllPropertiesResource() );
                     assertFail( privilegeType, action, new DatabaseResource() );
+                    assertFail( privilegeType, action, new LabelResource( "foo" ) );
+                    assertFail( privilegeType, action, new AllLabelsResource() );
                 }
                 else if ( ADMIN.satisfies( action ) )
                 {
