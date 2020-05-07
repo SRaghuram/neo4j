@@ -28,8 +28,8 @@ import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith( FabricEverywhereExtension.class )
 class CatalogManagementTest
@@ -143,11 +143,9 @@ class CatalogManagementTest
 
     private void verifyEntryNotPresent( String graphName, String expectedMessage )
     {
-        var e = assertThrows(
-                Exception.class,
+        assertThat( catchThrowable(
                 () -> driverUtils.doInSession( clientDriver, session -> session.run( "USE " + graphName + " RETURN 1" ).list() )
-        );
-        assertThat( e.getMessage() ).contains( expectedMessage );
+        ) ).hasMessageContaining( expectedMessage );
     }
 
     private void runSystemCommand( String command )
