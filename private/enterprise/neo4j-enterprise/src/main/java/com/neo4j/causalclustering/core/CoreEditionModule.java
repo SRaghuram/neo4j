@@ -98,6 +98,7 @@ import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseComponent
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
+import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -153,6 +154,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     private DatabaseStartAborter databaseStartAborter;
     private ClusteredDbmsReconcilerModule reconcilerModule;
     private LeaderService leaderService;
+    private AuthManager inClusterAuthManager;
 
     public CoreEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory )
     {
@@ -416,10 +418,12 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
             securityModule.getDatabaseInitializer().ifPresent( dbInit -> databaseInitializerMap.put( NAMED_SYSTEM_DATABASE_ID, dbInit ) );
             globalModule.getGlobalLife().add( securityModule );
             securityProvider = securityModule;
+            inClusterAuthManager = securityModule.getInClusterAuthManager();
         }
         else
         {
             securityProvider = EnterpriseNoAuthSecurityProvider.INSTANCE;
+            inClusterAuthManager = EnterpriseNoAuthSecurityProvider.INSTANCE.authManager();
         }
         setSecurityProvider( securityProvider );
     }
@@ -497,6 +501,12 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     {
         var kernelDatabaseManagementService = super.createBoltDatabaseManagementServiceProvider(dependencies, managementService, monitors, clock, logService);
         return fabricServicesBootstrap.createBoltDatabaseManagementServiceProvider( kernelDatabaseManagementService, managementService, monitors, clock );
+    }
+
+    @Override
+    public AuthManager getBoltInClusterAuthManager()
+    {
+        return inClusterAuthManager;
     }
 
 }
