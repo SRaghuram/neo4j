@@ -83,6 +83,25 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       )))
     }
 
+    test(s"$cypherToken: Label scan") {
+      val result = executeWith(Configs.All,
+        s"MATCH (n:DateString) RETURN n.ds ORDER BY n $cypherToken",
+        executeBefore = createSomeNodes)
+
+      result.executionPlanDescription() should not(includeSomewhere.aPlan("Sort"))
+
+      result.toList should be(expectedOrder(List(
+        Map("n.ds" -> "2018-01-01"),
+        Map("n.ds" -> "2018-02-01"),
+        Map("n.ds" -> "2018-04-01"),
+        Map("n.ds" -> "2017-03-01"),
+        Map("n.ds" -> "2018-01-01"),
+        Map("n.ds" -> "2018-02-01"),
+        Map("n.ds" -> "2018-04-01"),
+        Map("n.ds" -> "2017-03-01"),
+      )))
+    }
+
     test(s"$cypherToken: Order by index backed property renamed in an earlier WITH") {
       val result = executeWith(Configs.CachedProperty,
         s"""MATCH (n:Awesome) WHERE n.prop3 STARTS WITH 'foo'
