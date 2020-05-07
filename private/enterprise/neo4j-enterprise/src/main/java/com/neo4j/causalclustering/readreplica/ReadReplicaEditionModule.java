@@ -80,6 +80,7 @@ import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.SystemNanoClock;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.status_throughput_window;
+import static java.util.UUID.randomUUID;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 /**
@@ -108,7 +109,12 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     private final EnterpriseFabricServicesBootstrap fabricServicesBootstrap;
     private AuthManager inClusterAuthManager;
 
-    public ReadReplicaEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory, MemberId myIdentity )
+    public ReadReplicaEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory )
+    {
+        this( globalModule, discoveryServiceFactory, new MemberId( randomUUID() ) );
+    }
+
+    public ReadReplicaEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory, final MemberId myIdentity )
     {
         super( globalModule );
 

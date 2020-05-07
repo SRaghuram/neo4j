@@ -217,7 +217,7 @@ class InternalClusterAuthenticationTest
         }
 
         @Override
-        protected Function<GlobalModule,AbstractEditionModule> getEditionFactory()
+        protected Function<GlobalModule,AbstractEditionModule> getEditionFactory( Config config )
         {
             return globalModule ->
             {

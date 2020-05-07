@@ -68,8 +68,9 @@ class BackupServiceStressTesting
         File backupsDir = testDirectory.directory( "backups" );
 
         DatabaseManagementServiceBuilder databaseManagementServiceBuilder =
-                new EnterpriseDatabaseManagementServiceBuilder( storeDir ).setConfig( online_backup_enabled, true )
-                        .setConfig( auth_enabled, true )
+                new EnterpriseDatabaseManagementServiceBuilder( storeDir )
+                .setConfig( online_backup_enabled, true )
+                .setConfig( auth_enabled, true )
                 .setConfig( online_backup_listen_address, new SocketAddress( backupHostname, backupPort ) )
                 .setConfig( keep_logical_logs, txPrune )
                 .setConfig( logical_log_rotation_threshold, ByteUnit.mebiBytes( 1 ) );

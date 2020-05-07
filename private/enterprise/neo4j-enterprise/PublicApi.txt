@@ -1,6 +1,26 @@
+com.neo4j.dbms.api.ClusterDatabaseManagementService public class extends java.lang.Object implements org.neo4j.dbms.api.DatabaseManagementService
+com.neo4j.dbms.api.ClusterDatabaseManagementService::ClusterDatabaseManagementService(org.neo4j.dbms.api.DatabaseManagementService) void public
+com.neo4j.dbms.api.ClusterDatabaseManagementService::createDatabase(java.lang.String) void public throws org.neo4j.dbms.api.DatabaseExistsException
+com.neo4j.dbms.api.ClusterDatabaseManagementService::database(java.lang.String) org.neo4j.graphdb.GraphDatabaseService public throws org.neo4j.dbms.api.DatabaseNotFoundException
+com.neo4j.dbms.api.ClusterDatabaseManagementService::dropDatabase(java.lang.String) void public throws org.neo4j.dbms.api.DatabaseNotFoundException
+com.neo4j.dbms.api.ClusterDatabaseManagementService::isWritable(java.lang.String) boolean public
+com.neo4j.dbms.api.ClusterDatabaseManagementService::listDatabases() java.util.List<java.lang.String> public
+com.neo4j.dbms.api.ClusterDatabaseManagementService::registerDatabaseEventListener(org.neo4j.graphdb.event.DatabaseEventListener) void public
+com.neo4j.dbms.api.ClusterDatabaseManagementService::registerTransactionEventListener(java.lang.String, org.neo4j.graphdb.event.TransactionEventListener<?>) void public
+com.neo4j.dbms.api.ClusterDatabaseManagementService::shutdown() void public
+com.neo4j.dbms.api.ClusterDatabaseManagementService::shutdownDatabase(java.lang.String) void public throws org.neo4j.dbms.api.DatabaseNotFoundException
+com.neo4j.dbms.api.ClusterDatabaseManagementService::startDatabase(java.lang.String) void public throws org.neo4j.dbms.api.DatabaseNotFoundException
+com.neo4j.dbms.api.ClusterDatabaseManagementService::unregisterDatabaseEventListener(org.neo4j.graphdb.event.DatabaseEventListener) void public
+com.neo4j.dbms.api.ClusterDatabaseManagementService::unregisterTransactionEventListener(java.lang.String, org.neo4j.graphdb.event.TransactionEventListener<?>) void public
+com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder public class extends com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder
+com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::ClusterDatabaseManagementServiceBuilder(java.io.File) void public
+com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::build() com.neo4j.dbms.api.ClusterDatabaseManagementService public
+com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::getDatabaseInfo(org.neo4j.configuration.Config) org.neo4j.kernel.impl.factory.DatabaseInfo protected
+com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::getEditionFactory(org.neo4j.configuration.Config) java.util.function.Function<org.neo4j.graphdb.factory.module.GlobalModule,org.neo4j.graphdb.factory.module.edition.AbstractEditionModule> protected
+com.neo4j.dbms.api.ClusterDatabaseManagementServiceBuilder::newDatabaseManagementService(org.neo4j.configuration.Config, org.neo4j.graphdb.facade.ExternalDependencies) com.neo4j.dbms.api.ClusterDatabaseManagementService protected
 com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder public class extends org.neo4j.dbms.api.DatabaseManagementServiceBuilder
 com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder::EnterpriseDatabaseManagementServiceBuilder(java.io.File) void public
 com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder::databaseDependencies() org.neo4j.graphdb.facade.ExternalDependencies protected
-com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder::getDatabaseInfo() org.neo4j.kernel.impl.factory.DatabaseInfo protected
+com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder::getDatabaseInfo(org.neo4j.configuration.Config) org.neo4j.kernel.impl.factory.DatabaseInfo protected
 com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder::getEdition() java.lang.String public
-com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder::getEditionFactory() java.util.function.Function<org.neo4j.graphdb.factory.module.GlobalModule,org.neo4j.graphdb.factory.module.edition.AbstractEditionModule> protected
+com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder::getEditionFactory(org.neo4j.configuration.Config) java.util.function.Function<org.neo4j.graphdb.factory.module.GlobalModule,org.neo4j.graphdb.factory.module.edition.AbstractEditionModule> protected

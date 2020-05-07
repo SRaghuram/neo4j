@@ -66,7 +66,7 @@ public class TestEnterpriseDatabaseManagementServiceBuilder extends TestDatabase
         if ( fabricInEmbeddedTestTransactionsEnabled() )
         {
             var factory = new TestFabricDatabaseManagementServiceFactory(
-                    getDatabaseInfo(), getEditionFactory(), impermanent, fileSystem, clock, internalLogProvider, config
+                    getDatabaseInfo( config ), getEditionFactory( config ), impermanent, fileSystem, clock, internalLogProvider, config
             );
             return factory.build( augmentConfig( config ), GraphDatabaseDependencies.newDependencies( dependencies ) );
         }
@@ -91,13 +91,13 @@ public class TestEnterpriseDatabaseManagementServiceBuilder extends TestDatabase
     }
 
     @Override
-    protected DatabaseInfo getDatabaseInfo()
+    protected DatabaseInfo getDatabaseInfo( Config config )
     {
         return DatabaseInfo.ENTERPRISE;
     }
 
     @Override
-    protected Function<GlobalModule,AbstractEditionModule> getEditionFactory()
+    protected Function<GlobalModule,AbstractEditionModule> getEditionFactory( Config config )
     {
         return EnterpriseEditionModule::new;
     }

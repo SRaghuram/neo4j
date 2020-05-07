@@ -38,6 +38,7 @@
         <module>index-it</module>
         <module>enterprise-it</module>
         <module>fabric-it</module>
+        <module>embedded-cluster-it</module>
     </modules>
 
     <profiles>

@@ -6,6 +6,7 @@
 package com.neo4j.enterprise.edition.factory;
 
 import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
+import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.jupiter.api.Test;
 
@@ -23,7 +24,10 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.Mode.CORE;
+import static com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.Mode.READ_REPLICA;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
@@ -79,6 +83,28 @@ class EnterpriseDatabaseManagementServiceBuilderIT
         {
             managementService.shutdown();
         }
+    }
+
+    @Test
+    void shouldFailForCore()
+    {
+        File homeDir = testDirectory.homeDir();
+
+        DatabaseManagementServiceBuilder builder = createDbmsBuilder( homeDir )
+                .setConfig( EnterpriseEditionSettings.mode, CORE );
+
+        assertThrows( IllegalArgumentException.class, builder::build, "Unsupported mode: CORE" );
+    }
+
+    @Test
+    void shouldFailForReadReplica()
+    {
+        File homeDir = testDirectory.homeDir();
+
+        DatabaseManagementServiceBuilder builder = createDbmsBuilder( homeDir )
+                .setConfig( EnterpriseEditionSettings.mode, READ_REPLICA );
+
+        assertThrows( IllegalArgumentException.class, builder::build, "Unsupported mode: READ_REPLICA" );
     }
 
     private static DatabaseManagementServiceBuilder createDbmsBuilder( File homeDirectory )
