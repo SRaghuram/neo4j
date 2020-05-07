@@ -209,7 +209,7 @@ public final class CausalClusteringTestHelpers
             // trigger an election and await until a new leader is elected
             var follower = randomClusterMember( cluster, leader );
             follower.resolveDependency( databaseName, RaftMachine.class ).triggerElection();
-            assertEventually( "Leader re-election did not happen", cluster::awaitLeader,
+            assertEventually( "Leader re-election did not happen", () -> cluster.awaitLeader( databaseName ),
                     new HamcrestCondition<>( not( equalTo( leader ) ) ), 2, MINUTES );
             return disabledMemberAction.execute( leader, otherMembers );
         }

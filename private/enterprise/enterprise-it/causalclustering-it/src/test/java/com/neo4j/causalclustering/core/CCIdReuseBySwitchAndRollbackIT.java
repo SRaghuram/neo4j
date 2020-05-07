@@ -6,6 +6,8 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.ClusterMonitors;
+import com.neo4j.causalclustering.core.consensus.log.monitoring.RaftLogCommitIndexMonitor;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -13,10 +15,13 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.function.LongConsumer;
 import java.util.function.Predicate;
 
@@ -32,10 +37,12 @@ import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.forceReelection;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.test.assertion.Assert.assertEventually;
 
 /**
  * <ol>
@@ -74,8 +81,15 @@ class CCIdReuseBySwitchAndRollbackIT
     void shouldTryToReproduceIt() throws Exception
     {
         // given
-        Cluster cluster = clusterFactory.createCluster( clusterConfig().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 0 ) );
+        Cluster cluster = clusterFactory.createCluster( clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 0 )
+                .withSharedCoreParam( CausalClusteringSettings.failure_detection_window, "2s-3s" )
+                .withSharedCoreParam( CausalClusteringSettings.failure_resolution_window, "2s-3s" ) );
         cluster.start();
+        //add monitors
+        List<StubRaftLogCommitIndexMonitor> monitors = registerMonitors( cluster );
+
         // Instance A is leader
         CoreClusterMember instanceA = cluster.awaitLeader();
         Set<CoreClusterMember> allMembers = cluster.coreMembers();
@@ -97,11 +111,11 @@ class CCIdReuseBySwitchAndRollbackIT
         barrier.await();
         // Do a leader switch, so that instance B is now leader
         // Instance B performs a transaction that creates a relationship, which will also be R (assert this)
-        CoreClusterMember instanceB = switchLeader( cluster, instanceA );
+        CoreClusterMember instanceB = switchLeaderFrom( cluster, monitors, instanceA );
         doIdMaintenance( allMembers );
         createRelationship( instanceB, node, null, id -> assertEquals( relationship, id ) );
         // Now do a leader switch back to instance A
-        transferLeader( cluster, instanceA );
+        switchLeaderTo( cluster, monitors, instanceA );
         // Let T continue and fail, which will then mark R as deleted when it's rolling back     <---- this is the bug, right there
         barrier.release();
         assertThrows( Exception.class, t::get );
@@ -115,14 +129,18 @@ class CCIdReuseBySwitchAndRollbackIT
         }
     }
 
-    private CoreClusterMember switchLeader( Cluster cluster, CoreClusterMember expectedCurrentLeader ) throws Exception
+    private CoreClusterMember switchLeaderFrom( Cluster cluster,
+            List<StubRaftLogCommitIndexMonitor> monitors,
+            CoreClusterMember expectedCurrentLeader ) throws Exception
     {
-        return switchLeader( cluster, memberId -> expectedCurrentLeader.id().equals( memberId ) );
+        return switchLeader( cluster, monitors, memberId -> expectedCurrentLeader.id().equals( memberId ) );
     }
 
-    private void transferLeader( Cluster cluster, CoreClusterMember expectedNewLeader ) throws Exception
+    private void switchLeaderTo( Cluster cluster,
+            List<StubRaftLogCommitIndexMonitor> monitors,
+            CoreClusterMember expectedNewLeader ) throws Exception
     {
-        switchLeader( cluster, memberId -> !memberId.equals( expectedNewLeader.id() ) );
+        switchLeader( cluster, monitors, memberId -> !memberId.equals( expectedNewLeader.id() ) );
     }
 
     private void doIdMaintenance( Iterable<CoreClusterMember> members )
@@ -136,15 +154,17 @@ class CCIdReuseBySwitchAndRollbackIT
         db.getDependencyResolver().resolveDependency( IdController.class ).maintenance();
     }
 
-    private CoreClusterMember switchLeader( Cluster cluster, Predicate<MemberId> shouldRetry ) throws Exception
+    private CoreClusterMember switchLeader( Cluster cluster,
+            List<StubRaftLogCommitIndexMonitor> monitors,
+            Predicate<MemberId> shouldRetry ) throws Exception
     {
-        CoreClusterMember newLeader;
-        do
+        forceReelection( cluster, DEFAULT_DATABASE_NAME );
+        var newLeader = cluster.awaitLeader();
+        if ( shouldRetry.test( newLeader.id() ) )
         {
-            forceReelection( cluster, DEFAULT_DATABASE_NAME );
-            newLeader = cluster.awaitLeader();
+            assertEventually( "Members could not catch up", () -> allMonitorsHaveSameIndex( monitors ), same -> same, 30, TimeUnit.SECONDS );
+            return switchLeader( cluster, monitors, shouldRetry );
         }
-        while ( shouldRetry.test( newLeader.id() ) );
         return newLeader;
     }
 
@@ -186,6 +206,41 @@ class CCIdReuseBySwitchAndRollbackIT
             Node node = tx.createNode();
             tx.commit();
             return node.getId();
+        }
+    }
+
+    private List<StubRaftLogCommitIndexMonitor> registerMonitors( Cluster cluster )
+    {
+        List<StubRaftLogCommitIndexMonitor> monitors = new ArrayList<>();
+        cluster.coreMembers().forEach( coreClusterMember -> {
+            var monitor = new StubRaftLogCommitIndexMonitor();
+            var clusterMonitors = coreClusterMember.defaultDatabase().getDependencyResolver().resolveDependency( ClusterMonitors.class );
+            clusterMonitors.addMonitorListener( monitor );
+            monitors.add( monitor );
+        } );
+        return monitors;
+    }
+
+    private boolean allMonitorsHaveSameIndex( List<StubRaftLogCommitIndexMonitor> monitors )
+    {
+        long maxCommitIndex = monitors.stream().map( StubRaftLogCommitIndexMonitor::commitIndex ).max(Long::compare).orElse( 0L );
+        return monitors.stream().map( StubRaftLogCommitIndexMonitor::commitIndex ).allMatch( commitIndex -> commitIndex == maxCommitIndex );
+    }
+
+    private static class StubRaftLogCommitIndexMonitor implements RaftLogCommitIndexMonitor
+    {
+        private long commitIndex;
+
+        @Override
+        public long commitIndex()
+        {
+            return commitIndex;
+        }
+
+        @Override
+        public void commitIndex( long commitIndex )
+        {
+            this.commitIndex = commitIndex;
         }
     }
 }
