@@ -131,7 +131,7 @@ public class ScheduleMicroCommand extends BaseRunWorkloadCommand
             Workspace workspace = Workspace.defaultMicroWorkspace( workspacePath );
             workspace.assertArtifactsExist();
             // first store job params as JSON
-            AWSCredentials awsCredentials = new AWSCredentials( awsSecret, awsKey, awsRegion );
+            AWSCredentials awsCredentials = new AWSCredentials( awsKey, awsSecret, awsRegion );
             InfraParams infraParams = new InfraParams( awsCredentials,
                                                        resultsStoreUsername,
                                                        resultsStorePasswordSecretName,

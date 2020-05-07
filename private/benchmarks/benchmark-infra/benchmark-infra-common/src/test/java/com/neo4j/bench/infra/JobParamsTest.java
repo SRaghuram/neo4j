@@ -43,8 +43,8 @@ public class JobParamsTest
         // given
         JobParams jobParams = new JobParams(
                 new InfraParams(
-                        new AWSCredentials( "awsSecret",
-                                            "awsKey",
+                        new AWSCredentials( "awsKey",
+                                            "awsSecret",
                                             "awsRegion" ),
                         "resultsStoreUsername",
                         "resultsStorePassword",
@@ -97,8 +97,8 @@ public class JobParamsTest
         // given
         JobParams jobParams = new JobParams(
                 new InfraParams(
-                        new AWSCredentials( "awsSecret",
-                                            "awsKey",
+                        new AWSCredentials( "awsKey",
+                                            "awsSecret",
                                             "awsRegion" ),
                         "resultsStoreUsername",
                         "resultsStorePassword",

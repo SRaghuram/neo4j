@@ -28,8 +28,8 @@ public class InfraParamsTest
     @Test
     public void serializationTest() throws IOException
     {
-        InfraParams infraParams = new InfraParams( new AWSCredentials( "awsSecret",
-                                                                       "awsKey",
+        InfraParams infraParams = new InfraParams( new AWSCredentials( "awsKey",
+                                                                       "awsSecret",
                                                                        "awsRegion" ),
                                                    "resultStoreUsername",
                                                    "resultStorePasswordSecretName",

@@ -157,7 +157,7 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                 workspace = Workspace.defaultMacroEmbeddedWorkspace( workspacePath );
             }
 
-            AWSCredentials awsCredentials = new AWSCredentials( awsSecret, awsKey, awsRegion );
+            AWSCredentials awsCredentials = new AWSCredentials( awsKey, awsSecret, awsRegion );
             BenchmarkJobScheduler benchmarkJobScheduler = BenchmarkJobScheduler.create( jobQueue, jobDefinition, batchStack, awsCredentials );
             try ( Resources resources = new Resources( Paths.get( "." ) ) )
             {
