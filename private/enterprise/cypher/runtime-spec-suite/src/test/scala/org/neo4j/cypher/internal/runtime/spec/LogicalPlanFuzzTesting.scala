@@ -97,17 +97,30 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with 
 
     val cost = CardinalityCostModel(logicalQuery.logicalPlan, QueryGraphSolverInput.empty, logicalQuery.cardinalities)
 
-    withCluesFailAfter(maxIterationTimeSpan,
+    val clues = Seq(
       s"plan = ${logicalQuery.logicalPlan}",
       s"parameters = $parameters",
       s"cost = $cost",
-      s"seed = $seed") {
+      s"seed = $seed"
+    )
 
+    withClue(clues.mkString("", "\n", "\n")) {
       runtimeTestSupport.startTx()
 
       try {
-        val results = runtimes.map {
-          runtime => Try(runtimeTestSupport.executeAndConsumeTransactionally(logicalQuery, runtime, parameters))
+        val results = Try {
+          // If the reference runtime does not finish in time, let's just ignore this case.
+          withCluesCancelAfter(maxIterationTimeSpan, s"runtime = ${runtimes.head.name}") {
+            runtimeTestSupport.executeAndConsumeTransactionally(logicalQuery, runtimes.head, parameters)
+          }
+        } +: runtimes.tail.map {
+          runtime =>
+            // If other runtimes do not finish in time, but the reference runtime did, let's fail.
+            Try {
+              withCluesFailAfter(maxIterationTimeSpan, s"runtime = $runtime") {
+                runtimeTestSupport.executeAndConsumeTransactionally(logicalQuery, runtime, parameters)
+              }
+            }
         }
 
         results.zip(runtimes).foreach {
@@ -124,7 +137,8 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with 
 
         results.zip(runtimes).tail.foreach {
           case (Success(result), runtime) if referenceResult.isSuccess =>
-            withClue(s"Comparing ${runtime.name} against ${runtimes.head.name}, result.size = ${result.size}") {
+            // Comparing results can take very long. We should cancel if that is the case.
+            withCluesCancelAfter(maxIterationTimeSpan, s"Comparing ${runtime.name} against ${runtimes.head.name}, result.size = ${result.size}") {
               result should (contain theSameElementsAs referenceResult.get)
             }
           case (Success(_), runtime) if referenceResult.isFailure =>
@@ -138,8 +152,15 @@ class LogicalPlanFuzzTesting extends CypherFunSuite with BeforeAndAfterAll with 
   }
 
   private def withCluesFailAfter[T](span: Span, clues: Any*)(f: => T): T =
-    withClue(clues.mkString("", "\n","\n")) {
+    withClue(clues.mkString("", "\n", "\n")) {
       failAfter(span) {
+        f
+      }
+    }
+
+  private def withCluesCancelAfter[T](span: Span, clues: Any*)(f: => T): T =
+    withClue(clues.mkString("", "\n", "\n")) {
+      cancelAfter(span) {
         f
       }
     }
