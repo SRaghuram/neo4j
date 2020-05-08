@@ -109,7 +109,6 @@ class GraphUpdates
     void create( long nodeId )
     {
         NodeUpdates updates = new NodeUpdates( nodeId, stores, bigValueCommandConsumer, cursorTracer );
-        updates.create();
         mutations.put( nodeId, updates );
     }
 
@@ -192,38 +191,25 @@ class GraphUpdates
                 throw new IllegalStateException( "Node[" + nodeId + "] should have existed" );
             }
 
-            MutableNodeData x1Data = sparse.add( x1 );
+            MutableNodeData data = sparse.add( x1 );
             firstBeforeRecord = lastBeforeRecord = new RecordChain( x1 );
-
-            long[] recordPointers = x1Data.getRecordPointers();
-            if ( recordPointers != null )
+            long fwPointer;
+            while ( (fwPointer = data.getLastLoadedForwardPointer()) != NULL )
             {
-                long fwPointer = recordPointers[0];
-                do
+                Record xL = readRecord( stores, sizeExponentialFromRecordPointer( fwPointer ), idFromRecordPointer( fwPointer ), cursorTracer );
+                if ( xL == null )
                 {
-                    Record xL = readRecord( stores, sizeExponentialFromRecordPointer( fwPointer ), idFromRecordPointer( fwPointer ), cursorTracer );
-                    if ( xL == null )
-                    {
-                        throw new IllegalStateException( x1 + " points to " + recordPointerToString( fwPointer ) + " that isn't in use" );
-                    }
-                    recordPointers = sparse.add( xL ).getRecordPointers();
-                    RecordChain chain = new RecordChain( xL );
-                    chain.next = firstBeforeRecord;
-                    firstBeforeRecord = chain;
-
-                    fwPointer = recordPointers.length > 1 ? recordPointers[1] : NULL;
+                    throw new IllegalStateException( x1 + " points to " + recordPointerToString( fwPointer ) + " that isn't in use" );
                 }
-                while ( fwPointer != NULL );
+                sparse.add( xL );
+                RecordChain chain = new RecordChain( xL );
+                chain.next = firstBeforeRecord;
+                firstBeforeRecord = chain;
             }
-            if ( x1Data.isDense() )
+            if ( data.isDense() )
             {
                 dense = new DenseRecordAndData( sparse, stores.denseStore, stores.bigPropertyValueStore, bigValueCommandConsumer, cursorTracer );
             }
-        }
-
-        void create()
-        {
-            sparse.addEmpty();
         }
 
         private NodeDataModifier forLabels()
@@ -317,11 +303,7 @@ class GraphUpdates
                 buffer.clear();
             }
 
-            boolean isDense = false;
-            for ( MutableNodeData data : sparse.datas )
-            {
-                isDense |= data.serializeMainData( intermediateBuffers, stores.bigPropertyValueStore, bigValueCommandConsumer );
-            }
+            boolean isDense = sparse.data.serializeMainData( intermediateBuffers, stores.bigPropertyValueStore, bigValueCommandConsumer );
 
             intermediateBuffers[LABELS].flip();
             intermediateBuffers[PROPERTIES].flip();
@@ -346,7 +328,7 @@ class GraphUpdates
                     intermediateBuffers[RELATIONSHIPS].clear().flip();
                     relsSize = 0;
 
-                    sparse.dataFor( Header.OFFSET_DEGREES ).serializeDegrees( intermediateBuffers[DEGREES].clear() );
+                    sparse.data.serializeDegrees( intermediateBuffers[DEGREES].clear() );
                     intermediateBuffers[DEGREES].flip();
                     degreesSize = intermediateBuffers[DEGREES].limit();
                 }
@@ -365,7 +347,7 @@ class GraphUpdates
                 x1Header.mark( Header.FLAG_HAS_DENSE_RELATIONSHIPS, true );
                 x1Header.mark( Header.OFFSET_DEGREES, true );
                 x1Header.mark( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID, true );
-                sparse.dataFor( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID ).serializeNextInternalRelationshipId(
+                sparse.data.serializeNextInternalRelationshipId(
                         intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID] );
                 intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].flip();
                 nextInternalRelIdSize = intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].limit();
@@ -703,54 +685,25 @@ class GraphUpdates
 
     private static class SparseRecordAndData extends NodeDataModifier
     {
-        private List<MutableNodeData> datas;
+        private MutableNodeData data;
         private boolean deleted;
         private long nodeId;
-        private final MainStores stores;
-        private final PageCursorTracer cursorTracer;
 
         SparseRecordAndData( long nodeId, MainStores stores, PageCursorTracer cursorTracer )
         {
             this.nodeId = nodeId;
-            this.stores = stores;
-            this.cursorTracer = cursorTracer;
-            this.datas = new ArrayList<>();
+            data = new MutableNodeData( nodeId, stores.bigPropertyValueStore, cursorTracer );
         }
 
         MutableNodeData add( Record record )
         {
-            MutableNodeData data = new MutableNodeData( nodeId, stores.bigPropertyValueStore, cursorTracer, record.data() );
-            datas.add( data );
+            data.deserialize( record );
             return data;
-        }
-
-        void addEmpty()
-        {
-            datas.add( new MutableNodeData( nodeId, stores.bigPropertyValueStore, cursorTracer ) );
-        }
-
-        private MutableNodeData dataFor( int headerMark )
-        {
-            MutableNodeData first = datas.get( 0 );
-            if ( first.hasHeaderMark( headerMark ) || !first.hasHeaderReferenceMark( headerMark ) )
-            {
-                return first;
-            }
-            for ( int i = 1; i < datas.size(); i++ )
-            {
-                MutableNodeData data = datas.get( i );
-                if ( data.hasHeaderMark( headerMark ) )
-                {
-                    return data;
-                }
-            }
-            throw new UnsupportedOperationException( "X1 had reference marker for " + headerMark + ", but none had it" );
         }
 
         @Override
         public void updateLabels( LongSet added, LongSet removed )
         {
-            MutableNodeData data = dataFor( Header.FLAG_LABELS );
             added.forEach( label -> data.addLabel( toIntExact( label ) ) );
             removed.forEach( label -> data.removeLabel( toIntExact( label ) ) );
         }
@@ -758,7 +711,7 @@ class GraphUpdates
         @Override
         public void createRelationship( long internalId, long targetNode, int type, boolean outgoing, Iterable<StorageProperty> properties )
         {
-            MutableNodeData.Relationship relationship = dataFor( Header.OFFSET_RELATIONSHIPS ).createRelationship( internalId, targetNode, type, outgoing );
+            MutableNodeData.Relationship relationship = data.createRelationship( internalId, targetNode, type, outgoing );
             for ( StorageProperty property : properties )
             {
                 relationship.addProperty( property.propertyKeyId(), property.value() );
@@ -768,7 +721,6 @@ class GraphUpdates
         @Override
         public void updateNodeProperties( Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
         {
-            MutableNodeData data = dataFor( Header.OFFSET_PROPERTIES );
             added.forEach( p -> data.setNodeProperty( p.propertyKeyId(), p.value() ) );
             changed.forEach( p -> data.setNodeProperty( p.propertyKeyId(), p.value() ) );
             removed.forEach( data::removeNodeProperty );
@@ -777,14 +729,14 @@ class GraphUpdates
         @Override
         public void deleteRelationship( long internalId, int type, long otherNode, boolean outgoing )
         {
-            dataFor( Header.OFFSET_RELATIONSHIPS ).deleteRelationship( internalId, type, otherNode, outgoing );
+            data.deleteRelationship( internalId, type, otherNode, outgoing );
         }
 
         @Override
         void updateRelationshipProperties( long internalId, int type, long otherNode, boolean outgoing, Iterable<StorageProperty> added,
                 Iterable<StorageProperty> changed, IntIterable removed )
         {
-            dataFor( Header.OFFSET_RELATIONSHIPS ).updateRelationshipProperties( internalId, type, nodeId, otherNode, outgoing, added, changed, removed );
+            data.updateRelationshipProperties( internalId, type, nodeId, otherNode, outgoing, added, changed, removed );
         }
 
         @Override
@@ -798,7 +750,6 @@ class GraphUpdates
             // Sanity-check so that, if this node has been deleted it cannot have any relationships left in it
             if ( deleted )
             {
-                MutableNodeData data = dataFor( Header.OFFSET_RELATIONSHIPS );
                 if ( data.hasRelationships() )
                 {
                     throw new DeletedNodeStillHasRelationships( data.nodeId );
@@ -819,7 +770,7 @@ class GraphUpdates
 
         // changes
         // TODO it feels like we've simply moving tx-state data from one form to another and that's probably true and can probably be improved on later
-        private MutableIntObjectMap<DenseRelationships> relationshipUpdates = IntObjectMaps.mutable.empty();
+        private final MutableIntObjectMap<DenseRelationships> relationshipUpdates = IntObjectMaps.mutable.empty();
 
         DenseRecordAndData( SparseRecordAndData sparse, DenseRelationshipStore store, SimpleBigValueStore bigValueStore,
                 Consumer<StorageCommand> bigValueConsumer, PageCursorTracer cursorTracer )
@@ -853,8 +804,8 @@ class GraphUpdates
             // For sparse representation the high internal relationship ID counter is simply the highest of the existing relationships,
             // decided when loading the node. But for dense nodes we won't load all relationships and will therefore need to keep
             // this counter in an explicit field in the small record. This call keeps that counter updated.
-            sparse.dataFor( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID ).registerInternalRelationshipId( internalId );
-            sparse.dataFor( Header.OFFSET_DEGREES ).addDegree( type, calculateDirection( targetNode, outgoing ), 1 );
+            sparse.data.registerInternalRelationshipId( internalId );
+            sparse.data.addDegree( type, calculateDirection( targetNode, outgoing ), 1 );
             relationshipUpdatesForType( type ).insert( new DenseRelationships.DenseRelationship( internalId, targetNode, outgoing, properties ) );
         }
 
@@ -872,7 +823,7 @@ class GraphUpdates
         public void deleteRelationship( long internalId, int type, long otherNode, boolean outgoing )
         {
             // TODO have some way of at least saying whether or not this relationship had properties, so that this loading can be skipped completely
-            sparse.dataFor( Header.OFFSET_DEGREES ).addDegree( type, calculateDirection( otherNode, outgoing ), -1 );
+            sparse.data.addDegree( type, calculateDirection( otherNode, outgoing ), -1 );
             relationshipUpdatesForType( type ).delete( new DenseRelationships.DenseRelationship( internalId, otherNode, outgoing,
                     store.loadRelationshipProperties( nodeId(), internalId, type, otherNode, outgoing, PropertyUpdate::remove, cursorTracer ) ) );
         }
@@ -926,7 +877,7 @@ class GraphUpdates
             if ( deleted )
             {
                 // This dense node has now been deleted, verify that all its relationships have also been removed in this transaction
-                if ( sparse.dataFor( Header.OFFSET_DEGREES ).hasAnyDegrees() )
+                if ( sparse.data.hasAnyDegrees() )
                 {
                     throw new DeletedNodeStillHasRelationships( nodeId() );
                 }
@@ -946,14 +897,13 @@ class GraphUpdates
         {
             // We're moving to the dense store, which from its POV all relationships will be created so therefore
             // start at 0 degrees and all creations will increment those degrees.
-            sparseData.dataFor( Header.OFFSET_RELATIONSHIPS ).visitRelationships( ( type, fromRelationships ) -> fromRelationships.relationships.forEach(
+            sparseData.data.visitRelationships( ( type, fromRelationships ) -> fromRelationships.relationships.forEach(
                     from -> createRelationship( from.internalId, from.otherNode, from.type, from.outgoing,
                             serializeAddedProperties( from.properties, IntObjectMaps.mutable.empty() ) ) ) );
-            MutableNodeData nextRelationshipIdData = sparseData.dataFor( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID );
+            MutableNodeData nextRelationshipIdData = sparseData.data;
             nextRelationshipIdData.setNextInternalRelationshipId( nextRelationshipIdData.getNextInternalRelationshipId() );
-            MutableNodeData relationshipsData = sparseData.dataFor( Header.OFFSET_RELATIONSHIPS );
+            MutableNodeData relationshipsData = sparseData.data;
             relationshipsData.clearRelationships();
-            sparseData.datas.forEach( data -> data.setDense( true ) );
         }
 
         private IntObjectMap<PropertyUpdate> serializeAddedProperties( IntObjectMap<Value> properties, MutableIntObjectMap<PropertyUpdate> target )

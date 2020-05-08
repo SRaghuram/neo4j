@@ -73,15 +73,35 @@ class MutableNodeData
     static final int ARRAY_ENTRIES_PER_RELATIONSHIP = 2;
     static final int FIRST_RELATIONSHIP_ID = 1;
 
-    private Header header = new Header();
-    private ByteBuffer buffer;
     long nodeId;
+
     private MutableIntSet labels;
+    private ByteBuffer labelsBuffer;
+    private int labelsOffset;
+    private int labelsLength;
+
     private MutableIntObjectMap<Value> properties;
+    private ByteBuffer propertiesBuffer;
+    private int propertiesOffset;
+    private int propertiesLength;
+
     private MutableIntObjectMap<Relationships> relationships;
+    private ByteBuffer relationshipsBuffer;
+    private int relationshipsOffset;
+    private int relationshipsLength;
+    private int relationshipsTypesOffset;
+    private int relationshipsTypesLength;
+
+    private boolean isDense;
+
     private EagerDegrees degrees;
+    private ByteBuffer degreesBuffer;
+    private int degreesOffset;
+    private int degreesLength;
+
     private long nextInternalRelationshipId = FIRST_RELATIONSHIP_ID;
-    private long[] recordPointers;
+    private long forwardPointer = NULL;
+    private long backwardPointer = NULL;
 
     private final SimpleBigValueStore bigValueStore;
     private final PageCursorTracer cursorTracer;
@@ -91,12 +111,6 @@ class MutableNodeData
         this.nodeId = nodeId;
         this.bigValueStore = bigValueStore;
         this.cursorTracer = cursorTracer;
-    }
-
-    MutableNodeData( long nodeId, SimpleBigValueStore bigValueStore, PageCursorTracer cursorTracer, ByteBuffer bufferToDeserialize )
-    {
-        this( nodeId, bigValueStore, cursorTracer );
-        deserialize( bufferToDeserialize );
     }
 
     @Override
@@ -113,29 +127,22 @@ class MutableNodeData
         MutableNodeData that = (MutableNodeData) o;
         return nodeId == that.nodeId && nextInternalRelationshipId == that.nextInternalRelationshipId && Objects.equals( labels, that.labels ) &&
                 Objects.equals( properties, that.properties ) && Objects.equals( relationships, that.relationships ) &&
-                Objects.equals( degrees, that.degrees ) && Arrays.equals( recordPointers, that.recordPointers );
+                Objects.equals( degrees, that.degrees ) && forwardPointer == that.forwardPointer && backwardPointer == that.backwardPointer;
     }
 
     @Override
     public int hashCode()
     {
-        int result = Objects.hash( nodeId, labels, properties, relationships, degrees, nextInternalRelationshipId );
-        result = 31 * result + Arrays.hashCode( recordPointers );
+        int result = Objects.hash( nodeId, labels, properties, relationships, degrees, nextInternalRelationshipId, forwardPointer, backwardPointer );
         return result;
     }
 
     @Override
     public String toString()
     {
-        long p1 = recordPointers != null ? recordPointers[0] : NULL;
-        long p2 = recordPointers != null && recordPointers.length > 1 ? recordPointers[1] : NULL;
-        return format( "ID:%s, labels:%s, properties:%s, relationships:%s, degrees:%s, pointer[0]:%s, pointer[1]:%s, dense:%b, nextRelId:%d", nodeId, labels,
-                properties, relationships, degrees, recordPointerToString( p1 ), recordPointerToString( p2 ), isDense(), nextInternalRelationshipId );
-    }
-
-    boolean isDense()
-    {
-        return header.hasMark( Header.FLAG_HAS_DENSE_RELATIONSHIPS );
+        return format( "ID:%s, labels:%s, properties:%s, relationships:%s, degrees:%s, fw:%s, bw:%s, dense:%b, nextRelId:%d", nodeId, labels,
+                properties, relationships, degrees, recordPointerToString( forwardPointer ), recordPointerToString( backwardPointer ), isDense,
+                nextInternalRelationshipId );
     }
 
     void clearRelationships()
@@ -170,7 +177,7 @@ class MutableNodeData
         {
             return !relationships.isEmpty();
         }
-        return header.hasMark( Header.OFFSET_RELATIONSHIPS );
+        return relationshipsBuffer != null;
     }
 
     void addLabel( int labelId )
@@ -189,10 +196,16 @@ class MutableNodeData
     {
         if ( labels == null )
         {
-            labels = buffer != null && header.hasMark( Header.FLAG_LABELS )
-                     ? IntSets.mutable.of( readIntDeltas( buffer.position( header.getOffset( Header.FLAG_LABELS ) ) ) )
-                     : IntSets.mutable.empty();
+            labels = IntSets.mutable.empty();
+            if ( labelsBuffer != null && labelsOffset > 0 )
+            {
+                addLabels( labelsBuffer.position( labelsOffset ) );
+            }
         }
+    }
+    private void addLabels( ByteBuffer from )
+    {
+        labels.addAll( readIntDeltas( from ) );
     }
 
     void addDegree( int type, RelationshipDirection calculateDirection, int count )
@@ -218,9 +231,9 @@ class MutableNodeData
         if ( degrees == null )
         {
             degrees = new EagerDegrees();
-            if ( buffer != null && header.hasMark( Header.OFFSET_DEGREES ) )
+            if ( degreesBuffer != null && degreesOffset > 0 )
             {
-                readDegrees( buffer.position( header.getOffset( Header.OFFSET_DEGREES ) ) );
+                readDegrees( degreesBuffer.position( degreesOffset ) );
             }
         }
     }
@@ -237,9 +250,9 @@ class MutableNodeData
         if ( relationships == null )
         {
             relationships = IntObjectMaps.mutable.empty();
-            if ( buffer != null && header.hasMark( Header.OFFSET_RELATIONSHIPS ) )
+            if ( relationshipsBuffer != null && relationshipsOffset > 0 )
             {
-                readRelationships( buffer.position( header.getOffset( Header.OFFSET_RELATIONSHIPS ) ) );
+                readRelationships( relationshipsBuffer.position( relationshipsOffset ) );
             }
         }
     }
@@ -251,21 +264,11 @@ class MutableNodeData
 
     long getNextInternalRelationshipId()
     {
-        if ( !isDense() )
+        if ( !isDense )
         {
             ensureRelationshipsDeserialized();
         }
         return this.nextInternalRelationshipId;
-    }
-
-    boolean hasHeaderMark( int headerMark )
-    {
-        return header.hasMark( headerMark );
-    }
-
-    boolean hasHeaderReferenceMark( int headerMark )
-    {
-        return header.hasReferenceMark( headerMark );
     }
 
     void updateRelationshipProperties( long internalId, int type, long sourceNode, long otherNode, boolean outgoing, Iterable<StorageProperty> added,
@@ -273,6 +276,11 @@ class MutableNodeData
     {
         ensureRelationshipsDeserialized();
         relationships.get( type ).update( internalId, sourceNode, otherNode, outgoing, added, changed, removed );
+    }
+
+    boolean isDense()
+    {
+        return isDense;
     }
 
     static class Relationship
@@ -463,9 +471,9 @@ class MutableNodeData
         if ( properties == null )
         {
             properties = IntObjectMaps.mutable.empty();
-            if ( buffer != null && header.hasMark( Header.OFFSET_PROPERTIES ) )
+            if ( propertiesBuffer != null && propertiesOffset > 0 )
             {
-                readProperties( properties, buffer.position( header.getOffset( Header.OFFSET_PROPERTIES ) ) );
+                readProperties( properties, propertiesBuffer.position( propertiesOffset ) );
             }
         }
     }
@@ -482,22 +490,14 @@ class MutableNodeData
         return relationships.getIfAbsentPut( type, () -> new MutableNodeData.Relationships( type ) ).add( internalId, nodeId, otherNode, type, outgoing );
     }
 
-    // [ssff,ffff][ffff,ffff][ffff,ffff][ffff,ffff] [ffff,ffff][ffff,ffff][ffff,ffff][ffff,ffff]
-    // s: sizeExp
-    // f: record pointer id
-    void setRecordPointers( long... recordPointers )
+    long getLastLoadedForwardPointer()
     {
-        this.recordPointers = recordPointers;
+        return forwardPointer;
     }
 
-    long[] getRecordPointers()
+    long getLastLoadedBackwardPointer()
     {
-        return this.recordPointers;
-    }
-
-    void setDense( boolean isDense )
-    {
-        header.mark( Header.FLAG_HAS_DENSE_RELATIONSHIPS, isDense );
+        return backwardPointer;
     }
 
     boolean serializeMainData( ByteBuffer[] intermediateBuffers, SimpleBigValueStore bigPropertyValueStore, Consumer<StorageCommand> bigValueCommandConsumer )
@@ -509,9 +509,10 @@ class MutableNodeData
                 writeLabels( intermediateBuffers[GraphUpdates.LABELS] );
             }
         }
-        else if ( header.hasMark( Header.FLAG_LABELS ) )
+        else if ( labelsBuffer != null )
         {
-            copyFromSerializedBuffer( intermediateBuffers[GraphUpdates.LABELS], Header.FLAG_LABELS );
+            assert labelsOffset > 0;
+            copyFromSerializedBuffer( labelsBuffer, intermediateBuffers[GraphUpdates.LABELS], labelsOffset, labelsLength );
         }
 
         if ( properties != null )
@@ -521,9 +522,10 @@ class MutableNodeData
                 writeProperties( properties, intermediateBuffers[GraphUpdates.PROPERTIES], bigPropertyValueStore, bigValueCommandConsumer );
             }
         }
-        else if ( header.hasMark( Header.OFFSET_PROPERTIES ) )
+        else if ( propertiesBuffer != null )
         {
-            copyFromSerializedBuffer( intermediateBuffers[GraphUpdates.PROPERTIES], Header.OFFSET_PROPERTIES );
+            assert propertiesOffset > 0;
+            copyFromSerializedBuffer( propertiesBuffer, intermediateBuffers[GraphUpdates.PROPERTIES], propertiesOffset, propertiesLength );
         }
 
         if ( relationships != null )
@@ -544,10 +546,12 @@ class MutableNodeData
                 }
             }
         }
-        else if ( header.hasMark( Header.OFFSET_RELATIONSHIPS ) )
+        else if ( relationshipsBuffer != null )
         {
-            copyFromSerializedBuffer( intermediateBuffers[GraphUpdates.RELATIONSHIPS], Header.OFFSET_RELATIONSHIPS );
-            copyFromSerializedBuffer( intermediateBuffers[GraphUpdates.RELATIONSHIPS_OFFSETS], Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
+            assert relationshipsOffset > 0 && relationshipsTypesOffset > 0;
+            copyFromSerializedBuffer( relationshipsBuffer, intermediateBuffers[GraphUpdates.RELATIONSHIPS], relationshipsOffset, relationshipsLength );
+            copyFromSerializedBuffer( relationshipsBuffer, intermediateBuffers[GraphUpdates.RELATIONSHIPS_OFFSETS], relationshipsTypesOffset,
+                    relationshipsTypesLength );
         }
 
         if ( degrees != null )
@@ -557,21 +561,21 @@ class MutableNodeData
                 writeDegrees( intermediateBuffers[GraphUpdates.DEGREES] );
             }
         }
-        else if ( header.hasMark( Header.OFFSET_DEGREES ) )
+        else if ( degreesBuffer != null )
         {
-            copyFromSerializedBuffer( intermediateBuffers[GraphUpdates.DEGREES], Header.OFFSET_DEGREES );
+            assert degreesOffset > 0;
+            copyFromSerializedBuffer( degreesBuffer, intermediateBuffers[GraphUpdates.DEGREES], degreesOffset, degreesLength );
         }
-        return isDense();
+        return isDense;
     }
 
-    private void copyFromSerializedBuffer( ByteBuffer to, int headerSlot )
+    private void copyFromSerializedBuffer( ByteBuffer from, ByteBuffer to, int position, int length )
     {
-        to.put( buffer.array(), header.getOffset( headerSlot ), header.sizeOf( headerSlot ) );
+        to.put( from.array(), position, length );
     }
 
     void serializeDegrees( ByteBuffer degreesBuffer )
     {
-        assert isDense();
         writeDegrees( degreesBuffer );
     }
 
@@ -713,31 +717,93 @@ class MutableNodeData
         return relationshipOtherNodeRawLong >>> 2;
     }
 
-    void deserialize( ByteBuffer buffer )
+    Header deserialize( Record record )
     {
+        ByteBuffer buffer = record.data();
         assert buffer.position() == 0 : buffer.position();
+
+        Header header = new Header();
         header.deserializeWithSizes( buffer );
+
         // Reading a record from storage we have no idea how much of the record capacity is actually used before looking at the header
         // Now that we're read the header this is a good time to do limit the buffer to the effective end offset of the data
         // so that we can write only the effective parts to log/store upon writing.
         buffer.limit( header.getOffset( Header.OFFSET_END ) );
 
-        this.buffer = buffer;
-        labels = null;
-        properties = null;
-        relationships = null;
-        degrees = null;
+        isDense |= header.hasMark( Header.FLAG_HAS_DENSE_RELATIONSHIPS );
+
+        if ( header.hasMark( Header.FLAG_LABELS ) )
+        {
+            if ( !header.hasReferenceMark( Header.FLAG_LABELS ) )
+            {
+                //Exists only here, lazy loading
+                labelsBuffer = buffer;
+                labelsOffset = header.getOffset( Header.FLAG_LABELS );
+                labelsLength = header.sizeOf( Header.FLAG_LABELS );
+            }
+            else
+            {
+                //Splitted, deserialize now!
+                ensureLabelsDeserialized();
+                addLabels( buffer.position( header.getOffset( Header.FLAG_LABELS ) ) );
+            }
+        }
+
+        if ( header.hasMark( Header.OFFSET_PROPERTIES ) )
+        {
+            if ( !header.hasReferenceMark( Header.OFFSET_PROPERTIES ) )
+            {
+                //Exists only here, lazy loading
+                propertiesBuffer = buffer;
+                propertiesOffset = header.getOffset( Header.OFFSET_PROPERTIES );
+                propertiesLength = header.sizeOf( Header.OFFSET_PROPERTIES );
+            }
+            else
+            {
+                //Splitted, deserialize now!
+                ensurePropertiesDeserialized();
+                readProperties( properties, buffer.position( header.getOffset( Header.OFFSET_PROPERTIES ) ) );
+            }
+        }
+
+        if ( header.hasMark( Header.OFFSET_DEGREES ) )
+        {
+            if ( !header.hasReferenceMark( Header.OFFSET_DEGREES ) )
+            {
+                //Exists only here, lazy loading
+                degreesBuffer = buffer;
+                degreesOffset = header.getOffset( Header.OFFSET_DEGREES );
+                degreesLength = header.sizeOf( Header.OFFSET_DEGREES );
+            }
+            else
+            {
+                //Splitted, deserialize now!
+                ensureDegreesDeserialized();
+                readDegrees( buffer.position( header.getOffset( Header.OFFSET_DEGREES ) ) );
+            }
+        }
+
+        if ( header.hasMark( Header.OFFSET_RELATIONSHIPS ) )
+        {
+            assert !header.hasReferenceMark( Header.OFFSET_RELATIONSHIPS );
+            relationshipsBuffer = buffer;
+            relationshipsOffset = header.getOffset( Header.OFFSET_RELATIONSHIPS );
+            relationshipsLength = header.sizeOf( Header.OFFSET_RELATIONSHIPS );
+            relationshipsTypesOffset = header.getOffset( Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
+            relationshipsTypesLength = header.sizeOf( Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
+        }
 
         if ( header.hasMark( Header.OFFSET_RECORD_POINTER ) )
         {
             buffer.position( header.getOffset( Header.OFFSET_RECORD_POINTER ) );
-            readRecordPointer( buffer );
+            readRecordPointer( buffer, record.sizeExp() > 0 );
         }
         if ( header.hasMark( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID ) )
         {
             buffer.position( header.getOffset( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID ) );
             readNextInternalRelationshipId( buffer );
         }
+        return header;
     }
 
     private void readNextInternalRelationshipId( ByteBuffer buffer )
@@ -745,9 +811,24 @@ class MutableNodeData
         nextInternalRelationshipId = readLongs( buffer )[0];
     }
 
-    private void readRecordPointer( ByteBuffer buffer )
+    private void readRecordPointer( ByteBuffer buffer, boolean xL )
     {
-        recordPointers = readLongs( buffer );
+        long[] pointers = readLongs( buffer );
+        assert pointers.length > 0;
+        backwardPointer = NULL;
+        forwardPointer = NULL;
+        if ( xL )
+        {
+            backwardPointer = pointers[0];
+            if ( pointers.length > 1 )
+            {
+                forwardPointer = pointers[1];
+            }
+        }
+        else
+        {
+            forwardPointer = pointers[0];
+        }
     }
 
     private void readRelationships( ByteBuffer buffer )

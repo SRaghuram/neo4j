@@ -32,7 +32,6 @@ import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.CommandCreationContext;
 
 import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
-import static org.neo4j.internal.freki.Header.FLAG_HAS_DENSE_RELATIONSHIPS;
 import static org.neo4j.internal.freki.Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID;
 import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIPS;
 import static org.neo4j.internal.freki.MutableNodeData.ARTIFICIAL_MAX_RELATIONSHIP_COUNTER;
@@ -79,53 +78,57 @@ class FrekiCommandCreationContext implements CommandCreationContext
         // This is a bit more complicated than simply asking an ID generator for a new ID. The relationship ids are associated with
         // their source node and therefore there's some loading of node data involved.
 
-        MutableInt nextRelationshipId = sourceNodeNextRelationshipIds.getIfAbsentPutWithKey( sourceNode, nodeId ->
-        {
-            MutableNodeData data = readAndDeserializeNode( sourceNode, 0, sourceNode, false );
-            if ( data == null )
-            {
-                // TODO This node is probably created in this transaction, can we verify that?
-                return new MutableInt( FIRST_RELATIONSHIP_ID );
-            }
-            int relevantMark = data.hasHeaderMark( FLAG_HAS_DENSE_RELATIONSHIPS ) ? OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID : OFFSET_RELATIONSHIPS;
-            return new MutableInt( traverseToCorrectChainLink( sourceNode, data, relevantMark ).getNextInternalRelationshipId() );
-        } );
+        MutableInt nextRelationshipId = sourceNodeNextRelationshipIds.getIfAbsentPutWithKey( sourceNode, this::getNextInternalRelationshipId );
 
         long internalRelationshipId = nextRelationshipId.getAndIncrement();
         checkState( internalRelationshipId < ARTIFICIAL_MAX_RELATIONSHIP_COUNTER, "Relationship counter exhausted for node %d", internalRelationshipId );
         return externalRelationshipId( sourceNode, internalRelationshipId );
     }
 
-    private MutableNodeData traverseToCorrectChainLink( long sourceNode, MutableNodeData x1, int mark )
+    private MutableInt getNextInternalRelationshipId( long nodeId )
     {
-        MutableNodeData chainLink = x1;
-        long forwardPointer = chainLink.getRecordPointers() != null ? chainLink.getRecordPointers()[0] : NULL;
-        while ( chainLink.hasHeaderReferenceMark( mark ) && forwardPointer != NULL )
-        {
-            chainLink = readAndDeserializeNode( sourceNode, sizeExponentialFromRecordPointer( forwardPointer ), idFromRecordPointer( forwardPointer ), true );
-            assert chainLink != null;
-            forwardPointer = chainLink.getRecordPointers().length > 1 ? chainLink.getRecordPointers()[1] : NULL;
-        }
-        assert x1 == chainLink || chainLink.hasHeaderMark( mark );
-        return chainLink;
-    }
+        int sizeExp = 0;
+        long id = nodeId;
+        MutableNodeData data = new MutableNodeData( nodeId, stores.bigPropertyValueStore, cursorTracer );
 
-    private MutableNodeData readAndDeserializeNode( long nodeId, int sizeExp, long id, boolean mustExist )
-    {
-        SimpleStore store = stores.mainStore( sizeExp );
-        try ( PageCursor cursor = store.openReadCursor( cursorTracer ) )
+        long nextInternalRelId = NULL;
+        while ( nextInternalRelId == NULL )
         {
-            Record record = store.newRecord();
-            if ( store.read( cursor, record, id ) && record.hasFlag( FLAG_IN_USE ) )
+            SimpleStore store = stores.mainStore( sizeExp );
+            try ( PageCursor cursor = store.openReadCursor( cursorTracer ) )
             {
-                return new MutableNodeData( nodeId, stores.bigPropertyValueStore, cursorTracer, record.data() );
+                boolean x1 = sizeExp == 0;
+                Record record = store.newRecord();
+                if ( store.read( cursor, record, id ) && record.hasFlag( FLAG_IN_USE ) )
+                {
+                    Header header = data.deserialize( record );
+                    int mark = data.isDense() ? OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID : OFFSET_RELATIONSHIPS;
+                    if ( header.hasMark( mark ) || !header.hasReferenceMark( mark ) )
+                    {
+                        nextInternalRelId = data.getNextInternalRelationshipId(); //either exists here or not at all
+                    }
+                    else
+                    {
+                        //load next
+                        long fw = data.getLastLoadedForwardPointer();
+                        sizeExp = sizeExponentialFromRecordPointer( fw );
+                        id = idFromRecordPointer( fw );
+                    }
+                }
+                else
+                {
+                    if ( x1 )
+                    {
+                        nextInternalRelId = FIRST_RELATIONSHIP_ID;
+                    }
+                    else
+                    {
+                        throw new IllegalStateException( String.format( "Broken node record. NodeId:%d SizeExp:%d Id:%d", nodeId, sizeExp, id ) );
+                    }
+                }
             }
-            if ( mustExist )
-            {
-                throw new IllegalStateException( String.format( "Broken node record. NodeId:%d SizeExp:%d Id:%d", nodeId, sizeExp, id ) );
-            }
-            return null;
         }
+        return new MutableInt( nextInternalRelId );
     }
 
     @Override

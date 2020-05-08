@@ -210,7 +210,9 @@ public class FrekiAnalysis extends Life implements AutoCloseable
     private void printRawRecordContents( Record record, long nodeId )
     {
         System.out.println( record );
-        System.out.println( "  " + new MutableNodeData( nodeId, stores.bigPropertyValueStore, PageCursorTracer.NULL,  record.data( 0 ) ) );
+        MutableNodeData data = new MutableNodeData( nodeId, stores.bigPropertyValueStore, PageCursorTracer.NULL );
+        data.deserialize( record );
+        System.out.println( "  " + data );
     }
 
     public void dumpLogicalRepresentation( FrekiNodeCursor nodeCursor, FrekiPropertyCursor propertyCursor,
@@ -393,10 +395,9 @@ public class FrekiAnalysis extends Life implements AutoCloseable
                             {
                                 stats.usedRecords++;
                                 var data = new MutableNodeData( id, stores.bigPropertyValueStore, PageCursorTracer.NULL );
-                                var buffer = record.data();
                                 try
                                 {
-                                    data.deserialize( buffer );
+                                    data.deserialize( record );
                                 }
                                 catch ( Exception e )
                                 {
@@ -404,6 +405,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
                                             recordXFactor( store.recordSizeExponential() ) );
                                     throw e;
                                 }
+                                var buffer = record.data();
                                 stats.bytesOccupiedInUsedRecords += Record.HEADER_SIZE + buffer.position();
                                 stats.bytesVacantInUsedRecords += recordDataSize - buffer.position();
                                 if ( data.isDense() )
