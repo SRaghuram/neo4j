@@ -121,13 +121,13 @@ public final class StoreMigration
             LogTailScanner tailScanner =
                     new LogTailScanner( logFiles, new VersionAwareLogEntryReader( storageEngineFactory.commandReaderFactory() ), monitors, memoryTracker );
 
-            DefaultIndexProviderMap indexProviderMap = life.add( new DefaultIndexProviderMap( databaseExtensions, config ) );
+            deps.satisfyDependency( life.add( new DefaultIndexProviderMap( databaseExtensions, config ) ) );
 
             // Add the kernel store migrator
             life.start();
 
             Stopwatch startTime = Stopwatch.start();
-            DatabaseMigrator migrator = new DatabaseMigrator( fs, config, logService, indexProviderMap, pageCache, tailScanner, jobScheduler, databaseLayout,
+            DatabaseMigrator migrator = new DatabaseMigrator( fs, config, logService, deps, pageCache,  jobScheduler, databaseLayout,
                     legacyLogsLocator, storageEngineFactory, pageCacheTracer, memoryTracker );
             migrator.migrate();
 
