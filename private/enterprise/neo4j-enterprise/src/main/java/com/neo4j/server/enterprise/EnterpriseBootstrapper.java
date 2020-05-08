@@ -5,11 +5,7 @@
  */
 package com.neo4j.server.enterprise;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GroupSettingValidator;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.server.CommunityBootstrapper;
@@ -22,11 +18,5 @@ public class EnterpriseBootstrapper extends CommunityBootstrapper
     protected DatabaseManagementService createNeo( Config config, GraphDatabaseDependencies dependencies )
     {
         return createManagementService( config, dependencies );
-    }
-
-    @Override
-    protected List<Class<? extends GroupSettingValidator>> configurationValidators()
-    {
-        return new ArrayList<>( super.configurationValidators() );
     }
 }
