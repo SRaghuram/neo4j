@@ -5,12 +5,12 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import java.util
 import java.util.Comparator
 
+import org.neo4j.collection.trackable.HeapTrackingAppendList
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
-import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
@@ -24,6 +24,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfNonEmptySt
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.MemoryTracker
+import org.neo4j.memory.ScopedMemoryTracker
 
 class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
                           val workIdentity: WorkIdentity,
@@ -31,7 +33,7 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
                           suffixComparator: Comparator[MorselRow])
                          (val id: Id = Id.INVALID_ID) extends Operator {
 
-  private type ResultsBuffer = util.ArrayList[MorselRow]
+  private type ResultsBuffer = HeapTrackingAppendList[MorselRow]
   private class ResultsBufferAndIndex(val buffer: ResultsBuffer, var currentIndex: Int)
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
@@ -39,16 +41,19 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
                            state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = {
     argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id), ordered = true)
-    new PartialSortState(stateFactory.memoryTracker)
+    new PartialSortState(stateFactory.newMemoryTracker(id.x))
   }
 
   override def toString: String = "PartialSortOperator"
 
-  private class PartialSortState(val memoryTracker: QueryMemoryTracker, // TODO: Use operator MemoryTracker directly
-                                 var lastSeen: MorselRow,
-                                 var resultsBuffer: ResultsBuffer,
-                                 var remainingResults: ResultsBufferAndIndex) extends OperatorState {
-    def this(memoryTracker: QueryMemoryTracker) = this(memoryTracker, null, new ResultsBuffer, null)
+  private class PartialSortState(val memoryTracker: MemoryTracker) extends OperatorState {
+    var lastSeen: MorselRow = _
+    var resultsBuffer: ResultsBuffer = HeapTrackingAppendList.newAppendList(memoryTracker)
+    var remainingResults: ResultsBufferAndIndex = _
+    var currentMorsel: Morsel = _
+
+    // Memory for morsels is released in one go after all output rows for completed chunk have been written
+    var morselMemoryTracker: ScopedMemoryTracker = new ScopedMemoryTracker(memoryTracker)
 
     override def nextTasks(state: PipelinedQueryState,
                            operatorInput: OperatorInput,
@@ -73,6 +78,11 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
 
     override def initialize(state: PipelinedQueryState, resources: QueryResources): Unit = ()
 
+    override def onNewInputMorsel(inputCursor: MorselReadCursor): Unit = {
+      taskState.currentMorsel = inputCursor.morsel
+      taskState.morselMemoryTracker.allocateHeap(taskState.currentMorsel.estimatedHeapUsage)
+    }
+
     override def processRow(outputCursor: MorselWriteCursor,
                             inputCursor: MorselReadCursor): Unit = {
       // if new chunk
@@ -82,12 +92,13 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
       }
       taskState.lastSeen = inputCursor.snapshot()
       taskState.resultsBuffer.add(taskState.lastSeen)
-      taskState.memoryTracker.allocated(taskState.lastSeen, id.x)
+      taskState.memoryTracker.allocateHeap(taskState.lastSeen.shallowInstanceHeapUsage)
     }
 
     override def processEndOfMorselData(outputCursor: MorselWriteCursor): Unit =
       morselData.argumentStream match {
         case EndOfNonEmptyStream =>
+          taskState.currentMorsel = null
           if (taskState.lastSeen != null)
             completeCurrentChunk()
         case _ =>
@@ -103,12 +114,18 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
       while (taskState.remainingResults != null && outputCursor.onValidRow()) {
         val resultsBufferAndIndex = taskState.remainingResults
         if (resultsBufferAndIndex.currentIndex >= resultsBufferAndIndex.buffer.size()) {
+          taskState.remainingResults.buffer.close()
           taskState.remainingResults = null
+
+          // current morsel might contain more chunks, so we don't know if it should be released just yet
+          taskState.morselMemoryTracker.reset()
+          if (taskState.currentMorsel != null)
+            taskState.morselMemoryTracker.allocateHeap(taskState.currentMorsel.estimatedHeapUsage)
         } else {
           val morselRow = resultsBufferAndIndex.buffer.get(resultsBufferAndIndex.currentIndex)
           outputCursor.copyFrom(morselRow)
 
-          taskState.memoryTracker.deallocated(morselRow, id.x)
+          taskState.memoryTracker.releaseHeap(morselRow.shallowInstanceHeapUsage)
           resultsBufferAndIndex.buffer.set(resultsBufferAndIndex.currentIndex, null)
           resultsBufferAndIndex.currentIndex += 1
           outputCursor.next()
@@ -119,13 +136,13 @@ class PartialSortOperator(val argumentStateMapId: ArgumentStateMapId,
     private def completeCurrentChunk(): Unit = {
       val buffer = taskState.resultsBuffer
 
-      if(buffer.size() > 1) {
+      if (buffer.size() > 1) {
         buffer.sort(suffixComparator)
       }
 
       taskState.remainingResults = new ResultsBufferAndIndex(buffer, 0)
       taskState.lastSeen = null
-      taskState.resultsBuffer = new ResultsBuffer
+      taskState.resultsBuffer = HeapTrackingAppendList.newAppendList(taskState.memoryTracker)
     }
   }
 }

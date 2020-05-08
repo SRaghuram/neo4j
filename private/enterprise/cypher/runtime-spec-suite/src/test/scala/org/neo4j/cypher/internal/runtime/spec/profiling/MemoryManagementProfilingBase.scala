@@ -43,10 +43,10 @@ import org.neo4j.cypher.internal.runtime.spec.tests.InputStreams
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.util.test_helpers.TimeLimitedCypherTest
 import org.neo4j.kernel.api.Kernel
+import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.HeapDumper
 import org.neo4j.memory.HeapDumpingMemoryTracker
 import org.neo4j.memory.MemoryTracker
-import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.scheduler.JobScheduler
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.ListValue
@@ -223,7 +223,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
   private val runtimeName = (if (runtime.isInstanceOf[PipelinedRuntime]) s"${runtime.name}_$morselSize" else runtime.name) +
     (if (runtimeSuffix.nonEmpty) s"_$runtimeSuffix" else "")
 
-  def heapDumpFileNamePrefixForTestName(testName: String) = s"$HEAP_DUMP_PATH/${testName}_${runtimeName}"
+  def heapDumpFileNamePrefixForTestName(testName: String) = s"$HEAP_DUMP_PATH/${testName}_$runtimeName"
 
   if (HEAP_DUMP_ENABLED) {
     if (Files.notExists(Path.of(HEAP_DUMP_PATH))) {
@@ -529,7 +529,7 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
 
   test("measure partial top - ordered column has one value") {
     val testName = "partial-top-one"
-    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_$runtimeName"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
 
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("y")
@@ -543,11 +543,40 @@ abstract class MemoryManagementProfilingBase[CONTEXT <: RuntimeContext](
 
   test("measure partial top - ordered column has distinct values") {
     val testName = "partial-top-distinct"
-    val heapDumpFileNamePrefix = s"$HEAP_DUMP_PATH/${testName}_$runtimeName"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
 
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("y")
       .partialTop(Seq(Ascending("x")), Seq(Ascending("y")), DEFAULT_INPUT_LIMIT)
+      .input(variables = Seq("x", "y"))
+      .build()
+
+    val inputRows = for (i <- 0L until DEFAULT_INPUT_LIMIT) yield Array[Any](i, i)
+    runPeakMemoryUsageProfiling(logicalQuery, inputRows.toArray, heapDumpFileNamePrefix)
+  }
+
+  test("measure partial sort - ordered column has one value") {
+    val testName = "partial-sort-one"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
+
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("y")
+      .partialSort(Seq(Ascending("x")), Seq(Ascending("y")))
+      .input(variables = Seq("x", "y"))
+      .build()
+
+    val inputRows = for (i <- 0L until DEFAULT_INPUT_LIMIT) yield Array[Any](1, DEFAULT_INPUT_LIMIT - i)
+    runPeakMemoryUsageProfiling(logicalQuery, inputRows.toArray, heapDumpFileNamePrefix)
+  }
+
+  // In this case no chunk spans multiple morsels, so we overestimate peak memory usage by 100% - the size of one morsel.
+  test("measure partial sort - ordered column has distinct values in spans of three") {
+    val testName = "partial-sort-distinct"
+    val heapDumpFileNamePrefix = heapDumpFileNamePrefixForTestName(testName)
+
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("y")
+      .partialSort(Seq(Ascending("x")), Seq(Ascending("y")))
       .input(variables = Seq("x", "y"))
       .build()
 

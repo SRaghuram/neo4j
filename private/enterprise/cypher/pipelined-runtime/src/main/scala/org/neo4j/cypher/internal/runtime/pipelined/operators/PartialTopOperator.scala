@@ -175,6 +175,8 @@ class PartialTopOperator(bufferAsmId: ArgumentStateMapId,
 
     override def canContinue: Boolean = super.canContinue || taskState.resultsIterator.hasNext
 
+    override def onNewInputMorsel(inputCursor: MorselReadCursor): Unit = ()
+
     private def tryWriteOutstandingResults(outputCursor: MorselWriteCursor): Unit = {
       while (taskState.resultsIterator.hasNext && outputCursor.onValidRow()) {
         val morselRow = taskState.resultsIterator.next()

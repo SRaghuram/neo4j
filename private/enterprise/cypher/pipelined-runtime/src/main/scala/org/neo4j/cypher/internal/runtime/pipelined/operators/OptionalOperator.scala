@@ -101,5 +101,7 @@ class OptionalOperator(val workIdentity: WorkIdentity,
     }
 
     override def processRemainingOutput(outputCursor: MorselWriteCursor): Unit = ()
+
+    override def onNewInputMorsel(inputCursor: MorselReadCursor): Unit = ()
   }
 }

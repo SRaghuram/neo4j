@@ -107,6 +107,8 @@ class AllOrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
 
     override def processRemainingOutput(outputCursor: MorselWriteCursor): Unit = ()
 
+    override def onNewInputMorsel(inputCursor: MorselReadCursor): Unit = ()
+
     private def writeRow(outputCursor: MorselWriteCursor, queryState: QueryState): Unit = {
       outputCursor.copyFrom(morselData.viewOfArgumentRow, argumentSize.nLongs, argumentSize.nReferences)
       orderedGroupings.project(outputCursor, taskState.lastSeenGrouping)

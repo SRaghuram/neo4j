@@ -128,6 +128,8 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
 
     override def canContinue: Boolean = super.canContinue || taskState.outstandingResults != null
 
+    override def onNewInputMorsel(inputCursor: MorselReadCursor): Unit = ()
+
     private def tryWriteOutstandingResults(outputCursor: MorselWriteCursor, queryState: QueryState): Unit = {
       while (taskState.outstandingResults != null && outputCursor.onValidRow()) {
         val result = taskState.outstandingResults

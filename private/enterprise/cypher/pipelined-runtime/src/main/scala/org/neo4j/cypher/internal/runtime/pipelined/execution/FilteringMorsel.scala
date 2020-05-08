@@ -125,7 +125,7 @@ class FilteringMorsel(longs: Array[Long],
   }
 
   object FilteringCursor {
-    final val SHALLOW_SIZE = shallowSizeOfInstance(classOf[Cursor])
+    private final val SHALLOW_SIZE = shallowSizeOfInstance(classOf[Cursor])
   }
 
   override def shallowCopy(): FilteringMorsel =
