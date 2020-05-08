@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2002-2020 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
 package com.neo4j.causalclustering.core;
 
 import com.typesafe.config.ConfigException;
@@ -14,7 +19,7 @@ import org.neo4j.graphdb.config.Setting;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.middleware_akka_external_config;
 import static java.lang.String.format;
 
-public class CausalClusterSettingConstraints
+class CausalClusterSettingConstraints
 {
     private CausalClusterSettingConstraints()
     {
@@ -22,7 +27,7 @@ public class CausalClusterSettingConstraints
 
     static SettingConstraint<Path> validateMiddlewareConfig()
     {
-        return SettingConstraints.ifCluster( new SettingConstraint<Path>()
+        return SettingConstraints.ifCluster( new SettingConstraint<>()
         {
             @Override
             public void validate( Path value, Configuration config )

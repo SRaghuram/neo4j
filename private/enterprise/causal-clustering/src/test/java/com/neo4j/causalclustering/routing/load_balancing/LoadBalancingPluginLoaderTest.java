@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.graphdb.config.Configuration;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -37,10 +38,12 @@ public class LoadBalancingPluginLoaderTest
     public static final class DummyPlugin extends LoadBalancingPluginGroup
     {
         public final Setting<Boolean> value = getBuilder( BOOL, true ).build();
+
         public static DummyPlugin group( String name )
         {
             return new DummyPlugin( name );
         }
+
         private DummyPlugin( String name )
         {
             super( name, DUMMY_PLUGIN_NAME );
@@ -131,9 +134,9 @@ public class LoadBalancingPluginLoaderTest
     @Test
     void shouldThrowOnInvalidPlugin()
     {
-        Config config = Config.defaults( CausalClusteringSettings.load_balancing_plugin, DOES_NOT_EXIST );
-
-        assertThrows( IllegalArgumentException.class, () -> LoadBalancingPluginLoader.validate( config, mock( Log.class ) ) );
+        assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
+                .set( GraphDatabaseSettings.mode, GraphDatabaseSettings.Mode.CORE )
+                .set( CausalClusteringSettings.load_balancing_plugin, DOES_NOT_EXIST ).build() );
     }
 
     @Test
@@ -162,12 +165,9 @@ public class LoadBalancingPluginLoaderTest
         }
 
         @Override
-        public void validate( Config config, Log log )
+        public void validate( Configuration configuration, Log log )
         {
-            if ( config.isExplicitlySet( settingFor( DUMMY_PLUGIN_NAME, DO_NOT_USE_THIS_CONFIG ) ) )
-            {
-                throw new IllegalArgumentException( "Do not use this setting" );
-            }
+            assertThrows( IllegalArgumentException.class, () -> configuration.get( settingFor( DUMMY_PLUGIN_NAME, DO_NOT_USE_THIS_CONFIG ) ) );
         }
 
         @Override

@@ -13,6 +13,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.SettingConstraint;
+import org.neo4j.graphdb.config.Configuration;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.service.Services;
@@ -29,14 +31,14 @@ public class LoadBalancingPluginLoader
 
     public static void validate( Config config, Log log )
     {
-        LoadBalancingPlugin plugin = findPlugin( config );
+        LoadBalancingPlugin plugin = findPlugin( getConfiguredName( config ) );
         plugin.validate( config, log );
     }
 
     public static LoadBalancingProcessor load( TopologyService topologyService, LeaderService leaderService, LogProvider logProvider, Config config )
             throws Throwable
     {
-        LoadBalancingPlugin plugin = findPlugin( config );
+        LoadBalancingPlugin plugin = findPlugin( getConfiguredName( config ) );
         plugin.init( topologyService, leaderService, logProvider, config );
 
         if ( config.get( CausalClusteringSettings.load_balancing_shuffle ) && !plugin.isShufflingPlugin() )
@@ -47,12 +49,15 @@ public class LoadBalancingPluginLoader
         return plugin;
     }
 
-    private static LoadBalancingPlugin findPlugin( Config config )
+    private static String getConfiguredName( Config config )
+    {
+        return config.get( CausalClusteringSettings.load_balancing_plugin );
+    }
+
+    private static LoadBalancingPlugin findPlugin( String configuredName )
     {
         Set<String> availableOptions = new HashSet<>();
         Iterable<LoadBalancingPlugin> allImplementationsOnClasspath = Services.loadAll( LoadBalancingPlugin.class );
-
-        String configuredName = config.get( CausalClusteringSettings.load_balancing_plugin );
 
         for ( LoadBalancingPlugin plugin : allImplementationsOnClasspath )
         {
@@ -64,6 +69,24 @@ public class LoadBalancingPluginLoader
         }
 
         throw new IllegalArgumentException( String.format( "Could not find load balancing plugin with name: '%s'" +
-                                                   " among available options: %s", configuredName, availableOptions ) );
+                                                           " among available options: %s", configuredName, availableOptions ) );
+    }
+
+    public static SettingConstraint<String> hasPlugin()
+    {
+        return new SettingConstraint<>()
+        {
+            @Override
+            public void validate( String configuredName, Configuration config )
+            {
+                findPlugin( configuredName );
+            }
+
+            @Override
+            public String getDescription()
+            {
+                return "specified load balancer plugin exist.";
+            }
+        };
     }
 }

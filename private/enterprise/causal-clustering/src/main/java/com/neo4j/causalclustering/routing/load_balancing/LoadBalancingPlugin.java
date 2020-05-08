@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.routing.load_balancing.plugins.ServerShuffling
 
 import org.neo4j.annotations.service.Service;
 import org.neo4j.configuration.Config;
+import org.neo4j.graphdb.config.Configuration;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -21,7 +22,7 @@ import org.neo4j.logging.LogProvider;
 @Service
 public interface LoadBalancingPlugin extends LoadBalancingProcessor
 {
-    void validate( Config config, Log log );
+    void validate( Configuration configuration, Log log );
 
     void init( TopologyService topologyService, LeaderService leaderService, LogProvider logProvider, Config config )
             throws Throwable;

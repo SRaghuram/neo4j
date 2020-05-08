@@ -27,16 +27,17 @@ import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.logging.Level;
 
-import static org.neo4j.configuration.SettingConstraints.ifCluster;
 import static com.neo4j.causalclustering.core.CausalClusterSettingConstraints.validateInitialDiscoveryMembers;
 import static com.neo4j.causalclustering.core.CausalClusterSettingConstraints.validateMiddlewareConfig;
 import static com.neo4j.causalclustering.core.ServerGroupName.SERVER_GROUP_NAME;
+import static com.neo4j.causalclustering.routing.load_balancing.LoadBalancingPluginLoader.hasPlugin;
 import static java.time.Duration.ofMinutes;
 import static java.time.Duration.ofSeconds;
 import static java.util.Collections.emptyList;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_advertised_address;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_listen_address;
 import static org.neo4j.configuration.SettingConstraints.greaterThanOrEqual;
+import static org.neo4j.configuration.SettingConstraints.ifCluster;
 import static org.neo4j.configuration.SettingConstraints.min;
 import static org.neo4j.configuration.SettingConstraints.range;
 import static org.neo4j.configuration.SettingImpl.newBuilder;
@@ -526,7 +527,7 @@ public class CausalClusteringSettings implements SettingsDeclaration
 
     @Description( "The load balancing plugin to use." )
     public static final Setting<String> load_balancing_plugin =
-            newBuilder( "causal_clustering.load_balancing.plugin", STRING, "server_policies" ).build();
+            newBuilder( "causal_clustering.load_balancing.plugin", STRING, "server_policies" ).addConstraint( ifCluster( hasPlugin() ) ).build();
 
     @Description( "Time out for protocol negotiation handshake" )
     public static final Setting<Duration> handshake_timeout =

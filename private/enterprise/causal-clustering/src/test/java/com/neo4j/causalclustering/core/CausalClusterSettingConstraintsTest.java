@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.core;
 
-import org.neo4j.configuration.GraphDatabaseSettings.Mode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -21,6 +20,7 @@ import java.util.List;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings.Mode;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
 
@@ -45,7 +45,6 @@ class CausalClusterSettingConstraintsTest
         Config config = Config.newBuilder()
                 .set( GraphDatabaseSettings.mode, GraphDatabaseSettings.Mode.SINGLE )
                 .set( initial_discovery_members, Collections.emptyList() )
-                .addValidator( CausalClusterConfigurationValidator.class )
                 .build();
 
         // then
@@ -61,7 +60,6 @@ class CausalClusterSettingConstraintsTest
                 .set( GraphDatabaseSettings.mode, mode )
                 .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
                 .set( BoltConnector.enabled, true )
-                .addValidator( CausalClusterConfigurationValidator.class )
                 .build();
 
         // then
@@ -80,7 +78,6 @@ class CausalClusterSettingConstraintsTest
                 .set( kubernetes_label_selector, "waldo=fred" )
                 .set( kubernetes_service_port_name, "default" )
                 .set( BoltConnector.enabled, true )
-                .addValidator( CausalClusterConfigurationValidator.class )
                 .build();
 
         // then no exception
@@ -93,8 +90,7 @@ class CausalClusterSettingConstraintsTest
         var exception = assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
                 .set( GraphDatabaseSettings.mode, mode )
                 .set( initial_discovery_members, Collections.emptyList() )
-                .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
-                .addValidator( CausalClusterConfigurationValidator.class ).build() );
+                .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) ).build() );
 
         assertThat( exception.getMessage() ).isEqualTo(
                 "Error evaluating value for setting 'dbms.connector.bolt.enabled'. Failed to validate 'false' for 'dbms.connector.bolt.enabled': is not `true`" );
@@ -106,8 +102,7 @@ class CausalClusterSettingConstraintsTest
         var exception = assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
                 .set( GraphDatabaseSettings.mode, mode )
                 .set( BoltConnector.enabled, true )
-                .set( discovery_type, DiscoveryType.DNS )
-                .addValidator( CausalClusterConfigurationValidator.class ).build() );
+                .set( discovery_type, DiscoveryType.DNS ).build() );
 
         assertThat( exception.getMessage() )
                 .endsWith( "Missing value for 'causal_clustering.initial_discovery_members', which is mandatory with 'causal_clustering.discovery_type=DNS'" );
@@ -119,8 +114,7 @@ class CausalClusterSettingConstraintsTest
         var exception = assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
                 .set( GraphDatabaseSettings.mode, mode )
                 .set( BoltConnector.enabled, true )
-                .set( discovery_type, DiscoveryType.LIST )
-                .addValidator( CausalClusterConfigurationValidator.class ).build() );
+                .set( discovery_type, DiscoveryType.LIST ).build() );
 
         assertThat( exception.getMessage() ).endsWith(
                 "Missing value for 'causal_clustering.initial_discovery_members', which is mandatory with 'causal_clustering.discovery_type=LIST'" );
@@ -132,8 +126,7 @@ class CausalClusterSettingConstraintsTest
         var exception = assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
                 .set( GraphDatabaseSettings.mode, mode )
                 .set( BoltConnector.enabled, true )
-                .set( discovery_type, DiscoveryType.SRV )
-                .addValidator( CausalClusterConfigurationValidator.class ).build() );
+                .set( discovery_type, DiscoveryType.SRV ).build() );
 
         assertThat( exception.getMessage() )
                 .endsWith( "Missing value for 'causal_clustering.initial_discovery_members', which is mandatory with 'causal_clustering.discovery_type=SRV'" );
@@ -146,8 +139,7 @@ class CausalClusterSettingConstraintsTest
                 .set( GraphDatabaseSettings.mode, mode )
                 .set( discovery_type, DiscoveryType.K8S )
                 .set( kubernetes_service_port_name, "default" )
-                .set( BoltConnector.enabled, true )
-                .addValidator( CausalClusterConfigurationValidator.class ).build() );
+                .set( BoltConnector.enabled, true ).build() );
 
         assertThat( exception.getMessage() )
                 .endsWith( "Missing value for 'causal_clustering.kubernetes.label_selector', which is mandatory with 'causal_clustering.discovery_type=K8S'" );
@@ -160,8 +152,7 @@ class CausalClusterSettingConstraintsTest
                 .set( GraphDatabaseSettings.mode, mode )
                 .set( discovery_type, DiscoveryType.K8S )
                 .set( kubernetes_label_selector, "waldo=fred" )
-                .set( BoltConnector.enabled, true )
-                .addValidator( CausalClusterConfigurationValidator.class ).build() );
+                .set( BoltConnector.enabled, true ).build() );
 
         assertThat( exception.getMessage() ).endsWith(
                 "Missing value for 'causal_clustering.kubernetes.service_port_name', which is mandatory with 'causal_clustering.discovery_type=K8S'" );
@@ -175,7 +166,6 @@ class CausalClusterSettingConstraintsTest
                 .set( GraphDatabaseSettings.mode, mode )
                 .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
                 .set( BoltConnector.enabled, true )
-                .addValidator( CausalClusterConfigurationValidator.class )
                 .build() );
 
         assertThat( exception.getMessage() ).endsWith( "'causal_clustering.middleware.akka.external_config' must be a file or empty" );
@@ -189,7 +179,6 @@ class CausalClusterSettingConstraintsTest
                 .set( GraphDatabaseSettings.mode, mode )
                 .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
                 .set( BoltConnector.enabled, true )
-                .addValidator( CausalClusterConfigurationValidator.class )
                 .build() );
 
         assertThat( exception.getMessage() ).endsWith( "'causal_clustering.middleware.akka.external_config' must be a file or empty" );
@@ -204,7 +193,6 @@ class CausalClusterSettingConstraintsTest
                 .set( GraphDatabaseSettings.mode, mode )
                 .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
                 .set( BoltConnector.enabled, true )
-                .addValidator( CausalClusterConfigurationValidator.class )
                 .build() );
 
         assertThat( exception.getMessage() ).endsWith( String.format( "'%s' could not be parsed", conf ) );
@@ -221,7 +209,6 @@ class CausalClusterSettingConstraintsTest
                 .set( GraphDatabaseSettings.mode, mode )
                 .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
                 .set( BoltConnector.enabled, true )
-                .addValidator( CausalClusterConfigurationValidator.class )
                 .build() );
     }
 

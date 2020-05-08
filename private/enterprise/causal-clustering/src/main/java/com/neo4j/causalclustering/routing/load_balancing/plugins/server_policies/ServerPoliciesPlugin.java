@@ -5,36 +5,19 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
-import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
-import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingPlugin;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Stream;
-
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.graphdb.config.Configuration;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.virtual.MapValue;
-
-import static java.util.Collections.emptyList;
-import static java.util.function.Predicate.not;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
 
 /**
  * The server policies plugin defines policies on the server-side which
@@ -51,9 +34,8 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     private Policies policies;
 
     @Override
-    public void validate( Config config, Log log )
+    public void validate( Configuration configuration, Log log )
     {
-        FilteringPolicyLoader.loadServerPolicies( config, log );
     }
 
     @Override
