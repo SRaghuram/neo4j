@@ -38,6 +38,7 @@ import org.neo4j.internal.schema.SchemaState;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.EntityTokenUpdate;
 import org.neo4j.storageengine.api.EntityUpdates;
 import org.neo4j.storageengine.api.IndexUpdateListener;
@@ -65,6 +66,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     private final DenseRelationshipsWorkSync denseRelationshipsWorkSync;
     private final PageCacheTracer pageCacheTracer;
     private final PageCursorTracer cursorTracer;
+    private final MemoryTracker memoryTracker;
     private List<IndexDescriptor> createdIndexes;
     private final IdGeneratorUpdatesWorkSync.Batch idUpdates;
     private final LabelIndexUpdatesWorkSync.Batch labelIndexUpdates;
@@ -81,7 +83,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     FrekiTransactionApplier( Stores stores, FrekiStorageReader reader, SchemaState schemaState, IndexUpdateListener indexUpdateListener,
             TransactionApplicationMode mode, IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync, LabelIndexUpdatesWorkSync labelIndexUpdatesWorkSync,
             IndexUpdatesWorkSync indexUpdatesWorkSync, DenseRelationshipsWorkSync denseRelationshipsWorkSync,
-            PageCacheTracer pageCacheTracer, PageCursorTracer cursorTracer )
+            PageCacheTracer pageCacheTracer, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
         this.stores = stores;
         this.reader = reader;
@@ -90,12 +92,13 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         this.denseRelationshipsWorkSync = denseRelationshipsWorkSync;
         this.pageCacheTracer = pageCacheTracer;
         this.cursorTracer = cursorTracer;
+        this.memoryTracker = memoryTracker;
         this.labelIndexUpdates = mode == REVERSE_RECOVERY || labelIndexUpdatesWorkSync == null ? null : labelIndexUpdatesWorkSync.newBatch();
         this.idUpdates = mode == REVERSE_RECOVERY ? null : idGeneratorUpdatesWorkSync.newBatch( pageCacheTracer );
         this.indexUpdates = mode == REVERSE_RECOVERY || indexUpdatesWorkSync == null ? null : indexUpdatesWorkSync.newBatch();
         this.nodeCursor = reader.allocateNodeCursor( cursorTracer );
-        this.propertyCursorBefore = reader.allocatePropertyCursor( cursorTracer );
-        this.propertyCursorAfter = reader.allocatePropertyCursor( cursorTracer );
+        this.propertyCursorBefore = reader.allocatePropertyCursor( cursorTracer, memoryTracker );
+        this.propertyCursorAfter = reader.allocatePropertyCursor( cursorTracer, memoryTracker );
     }
 
     void beginTx( long transactionId )
@@ -157,7 +160,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
             Set<IndexDescriptor> relatedIndexes = stores.schemaCache.getIndexesRelatedTo( entityUpdates, EntityType.NODE );
             if ( !relatedIndexes.isEmpty() )
             {
-                indexUpdates.add( entityUpdates.forIndexKeys( relatedIndexes, reader, EntityType.NODE, cursorTracer ) );
+                indexUpdates.add( entityUpdates.forIndexKeys( relatedIndexes, reader, EntityType.NODE, cursorTracer, memoryTracker ) );
             }
         }
         if ( labelIndexUpdates != null )

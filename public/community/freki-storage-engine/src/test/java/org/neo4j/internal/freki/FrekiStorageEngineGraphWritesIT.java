@@ -1054,7 +1054,7 @@ class FrekiStorageEngineGraphWritesIT
             // then
             try ( StorageReader storageReader = storageEngine.newReader();
                     StorageNodeCursor nodeCursor = storageReader.allocateNodeCursor( NULL );
-                    StoragePropertyCursor propertyCursor = storageReader.allocatePropertyCursor( NULL );
+                    StoragePropertyCursor propertyCursor = storageReader.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE );
                     StorageRelationshipTraversalCursor relationshipCursor = storageReader.allocateRelationshipTraversalCursor( NULL ) )
             {
                 List<Runnable> checks = new ArrayList<>();
@@ -1206,7 +1206,7 @@ class FrekiStorageEngineGraphWritesIT
         try ( var reader = storageEngine.newReader();
                 var nodeCursor = reader.allocateNodeCursor( NULL );
                 var relationshipCursor = reader.allocateRelationshipTraversalCursor( NULL );
-                var propertyCursor = reader.allocatePropertyCursor( NULL ) )
+                var propertyCursor = reader.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE ) )
         {
             nodeCursor.single( nodeId );
             nodeCursor.next();
@@ -1696,7 +1696,7 @@ class FrekiStorageEngineGraphWritesIT
     {
         try ( var storageReader = storageEngine.newReader();
                 var nodeCursor = storageReader.allocateNodeCursor( NULL );
-                var propertyCursor = storageReader.allocatePropertyCursor( NULL );
+                var propertyCursor = storageReader.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE );
                 var relationshipsCursor = storageReader.allocateRelationshipTraversalCursor( NULL ) )
         {
             nodeCursor.single( nodeId );
@@ -1762,7 +1762,7 @@ class FrekiStorageEngineGraphWritesIT
     {
         try ( StorageReader storageReader = storageEngine.newReader();
                 StorageNodeCursor nodeCursor = storageReader.allocateNodeCursor( NULL );
-                StoragePropertyCursor propertyCursor = storageReader.allocatePropertyCursor( NULL );
+                StoragePropertyCursor propertyCursor = storageReader.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE );
                 StorageRelationshipTraversalCursor relationshipCursor = storageReader.allocateRelationshipTraversalCursor( NULL ) )
         {
             assertContentsOfNode( nodeId, labelIds, nodeProperties, relationships, nodeCursor, propertyCursor, relationshipCursor );

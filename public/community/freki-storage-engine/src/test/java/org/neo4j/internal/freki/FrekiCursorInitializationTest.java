@@ -21,6 +21,7 @@ package org.neo4j.internal.freki;
 
 import org.junit.jupiter.api.Test;
 
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.storageengine.api.StorageCursor;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -55,7 +56,7 @@ class FrekiCursorInitializationTest extends FrekiCursorsTest
     @Test
     void propertyCursorShouldReturnFalseOnNextAfterReset()
     {
-        assertNextOnUninitializedCursor( cursorFactory.allocatePropertyCursor( NULL ) );
+        assertNextOnUninitializedCursor( cursorFactory.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE ) );
     }
 
     @Test
@@ -63,7 +64,7 @@ class FrekiCursorInitializationTest extends FrekiCursorsTest
     {
         // given
         var nodeCursor = node().property( 0, intValue( 10 ) ).storeAndPlaceNodeCursorAt();
-        var cursor = cursorFactory.allocatePropertyCursor( NULL );
+        var cursor = cursorFactory.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE );
         nodeCursor.properties( cursor );
 
         // when

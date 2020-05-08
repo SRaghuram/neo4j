@@ -144,7 +144,7 @@ public class FrekiStorageEngineFactory implements StorageEngineFactory
 
     @Override
     public SchemaRuleMigrationAccess schemaRuleMigrationAccess( FileSystemAbstraction fs, PageCache pageCache, Config config, DatabaseLayout databaseLayout,
-            LogService logService, String recordFormats, PageCacheTracer cacheTracer, PageCursorTracer cursorTracer )
+            LogService logService, String recordFormats, PageCacheTracer cacheTracer, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
         return null;
     }

@@ -20,9 +20,10 @@
 package org.neo4j.internal.freki;
 
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.AllRelationshipsScan;
 
-class FrekiCursorFactory
+class FrekiCursorFactory // almost implements CursorFactory
 {
     private final MainStores stores;
     private final CursorAccessPatternTracer cursorAccessPatternTracer;
@@ -43,9 +44,9 @@ class FrekiCursorFactory
         return new FrekiNodeCursor( stores, cursorAccessPatternTracer, cursorTracer, null ); //Awaiting next MT propagation PR.
     }
 
-    public FrekiPropertyCursor allocatePropertyCursor( PageCursorTracer cursorTracer )
+    public FrekiPropertyCursor allocatePropertyCursor( PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
-        return new FrekiPropertyCursor( stores, cursorAccessPatternTracer, cursorTracer, null ); //Awaiting next MT propagation PR.
+        return new FrekiPropertyCursor( stores, cursorAccessPatternTracer, cursorTracer, memoryTracker ); //Awaiting next MT propagation PR.
     }
 
     public FrekiRelationshipTraversalCursor allocateRelationshipTraversalCursor( PageCursorTracer cursorTracer )

@@ -34,6 +34,7 @@ import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.api.Kernel;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
@@ -177,7 +178,7 @@ public class SimpleBenchmark
         try ( KernelTransaction tx = kernel.beginTransaction( KernelTransaction.Type.EXPLICIT, LoginContext.AUTH_DISABLED );
                 NodeCursor nodeCursor = tx.cursors().allocateNodeCursor( NULL );
                 RelationshipTraversalCursor relationshipCursor = tx.cursors().allocateRelationshipTraversalCursor( NULL );
-                PropertyCursor propertyCursor = tx.cursors().allocatePropertyCursor( NULL ) )
+                PropertyCursor propertyCursor = tx.cursors().allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE ) )
         {
             tx.dataRead().singleNode( startCityID, nodeCursor );
             nodeCursor.next();
@@ -228,7 +229,7 @@ public class SimpleBenchmark
         try ( StorageReader reader = deps.resolveDependency( StorageEngine.class ).newReader();
                 StorageNodeCursor nodeCursor = reader.allocateNodeCursor( NULL );
                 StorageRelationshipTraversalCursor relationshipCursor = reader.allocateRelationshipTraversalCursor( NULL );
-                StoragePropertyCursor propertyCursor = reader.allocatePropertyCursor( NULL ) )
+                StoragePropertyCursor propertyCursor = reader.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE ) )
         {
             nodeCursor.single( startCityID );
             nodeCursor.next();

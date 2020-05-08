@@ -184,7 +184,7 @@ public class FrekiStorageEngine extends Life implements StorageEngine
         try ( LockGroup locks = new LockGroup();
                 FrekiTransactionApplier txApplier = new FrekiTransactionApplier( stores, singleReader, schemaState, indexUpdateListener, mode,
                         idGeneratorUpdatesWorkSync, labelIndexUpdatesWorkSync, indexUpdatesWorkSync, denseRelationshipsWorkSync,
-                        pageCacheTracer, batch.cursorTracer() ) )
+                        pageCacheTracer, batch.cursorTracer(), memoryTracker ) )
         {
             while ( batch != null )
             {

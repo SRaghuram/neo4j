@@ -217,7 +217,7 @@ class FrekiTransactionApplierTest
     private FrekiTransactionApplier applier()
     {
         return new FrekiTransactionApplier( stores, new FrekiStorageReader( stores, NO_TRACING, null /*should not be required*/ ), null, null, EXTERNAL,
-                idUpdates, null, null, null, PageCacheTracer.NULL, PageCursorTracer.NULL );
+                idUpdates, null, null, null, PageCacheTracer.NULL, PageCursorTracer.NULL, EmptyMemoryTracker.INSTANCE );
     }
 
     private static class RecordingIdGeneratorWorkSync extends IdGeneratorUpdatesWorkSync
