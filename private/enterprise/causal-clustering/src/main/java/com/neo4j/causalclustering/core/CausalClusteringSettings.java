@@ -27,12 +27,16 @@ import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.logging.Level;
 
+import static org.neo4j.configuration.SettingConstraints.ifCluster;
+import static com.neo4j.causalclustering.core.CausalClusterSettingConstraints.validateInitialDiscoveryMembers;
+import static com.neo4j.causalclustering.core.CausalClusterSettingConstraints.validateMiddlewareConfig;
 import static com.neo4j.causalclustering.core.ServerGroupName.SERVER_GROUP_NAME;
 import static java.time.Duration.ofMinutes;
 import static java.time.Duration.ofSeconds;
 import static java.util.Collections.emptyList;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_advertised_address;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_listen_address;
+import static org.neo4j.configuration.SettingConstraints.greaterThanOrEqual;
 import static org.neo4j.configuration.SettingConstraints.min;
 import static org.neo4j.configuration.SettingConstraints.range;
 import static org.neo4j.configuration.SettingImpl.newBuilder;
@@ -161,7 +165,9 @@ public class CausalClusteringSettings implements SettingsDeclaration
             "it can increase the number of instance failures which may be tolerated. " +
             "A majority of the voting set must be available before voting in or out members." )
     public static final Setting<Integer> minimum_core_cluster_size_at_runtime =
-            newBuilder( "causal_clustering.minimum_core_cluster_size_at_runtime", INT, 3 ).addConstraint( min( 2 ) ).build();
+            newBuilder( "causal_clustering.minimum_core_cluster_size_at_runtime", INT, 3 )
+                    .addConstraint( min( 2 ) )
+                    .addConstraint( ifCluster( greaterThanOrEqual( minimum_core_cluster_size_at_formation ) ) ).build();
 
     public static final int DEFAULT_DISCOVERY_PORT = 5000;
     public static final int DEFAULT_TRANSACTION_PORT = 6000;
@@ -279,7 +285,8 @@ public class CausalClusteringSettings implements SettingsDeclaration
 
     @Description( "Configure the discovery type used for cluster name resolution" )
     public static final Setting<DiscoveryType> discovery_type =
-            newBuilder( "causal_clustering.discovery_type", ofEnum( DiscoveryType.class ), DiscoveryType.LIST ).build();
+            newBuilder( "causal_clustering.discovery_type", ofEnum( DiscoveryType.class ), DiscoveryType.LIST )
+                    .addConstraint( validateInitialDiscoveryMembers() ).build();
 
     @Description( "The level of middleware logging" )
     public static final Setting<Level> middleware_logging_level =
@@ -288,7 +295,8 @@ public class CausalClusteringSettings implements SettingsDeclaration
     @Internal
     @Description( "External config file for Akka" )
     public static final Setting<Path> middleware_akka_external_config =
-            newBuilder( "causal_clustering.middleware.akka.external_config", PATH, null ).build();
+            newBuilder( "causal_clustering.middleware.akka.external_config", PATH, null )
+                    .addConstraint( validateMiddlewareConfig() ).build();
 
     @Internal
     @Description( "Parallelism level of default dispatcher used by Akka based cluster topology discovery, including cluster, replicator, and discovery actors" )

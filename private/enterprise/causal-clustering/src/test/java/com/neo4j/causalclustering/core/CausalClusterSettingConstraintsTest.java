@@ -10,6 +10,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import java.io.File;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -32,10 +36,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class CausalClusterConfigurationValidatorTest
+class CausalClusterSettingConstraintsTest
 {
-    @ParameterizedTest
-    @EnumSource( value = Mode.class, mode = EnumSource.Mode.EXCLUDE, names = {"SINGLE"} )
+    @TestClusterMode
     void validateOnlyIfModeIsCoreOrReplica( Mode mode )
     {
         // when
@@ -50,8 +53,7 @@ class CausalClusterConfigurationValidatorTest
         assertEquals( List.of(), config.get( initial_discovery_members ) );
     }
 
-    @ParameterizedTest
-    @EnumSource( value = Mode.class, mode = EnumSource.Mode.EXCLUDE, names = {"SINGLE"} )
+    @TestClusterMode
     void validateSuccessList( Mode mode )
     {
         // when
@@ -68,8 +70,7 @@ class CausalClusterConfigurationValidatorTest
                 config.get( initial_discovery_members ) );
     }
 
-    @ParameterizedTest
-    @EnumSource( value = Mode.class, mode = EnumSource.Mode.EXCLUDE, names = {"SINGLE"} )
+    @TestClusterMode
     void validateSuccessKubernetes( Mode mode )
     {
         // when
@@ -85,8 +86,7 @@ class CausalClusterConfigurationValidatorTest
         // then no exception
     }
 
-    @ParameterizedTest
-    @EnumSource( value = Mode.class, mode = EnumSource.Mode.EXCLUDE, names = {"SINGLE"} )
+    @TestClusterMode
     void missingBoltConnector( Mode mode )
     {
         // when
@@ -96,50 +96,50 @@ class CausalClusterConfigurationValidatorTest
                 .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) )
                 .addValidator( CausalClusterConfigurationValidator.class ).build() );
 
-        assertThat( exception.getMessage() ).isEqualTo( "A Bolt connector must be configured to run a cluster" );
+        assertThat( exception.getMessage() ).isEqualTo(
+                "Error evaluating value for setting 'dbms.connector.bolt.enabled'. Failed to validate 'false' for 'dbms.connector.bolt.enabled': is not `true`" );
     }
 
-    @ParameterizedTest
-    @EnumSource( value = Mode.class, mode = EnumSource.Mode.EXCLUDE, names = {"SINGLE"} )
+    @TestClusterMode
     void missingInitialMembersDNS( Mode mode )
     {
         var exception = assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
                 .set( GraphDatabaseSettings.mode, mode )
+                .set( BoltConnector.enabled, true )
                 .set( discovery_type, DiscoveryType.DNS )
                 .addValidator( CausalClusterConfigurationValidator.class ).build() );
 
         assertThat( exception.getMessage() )
-                .isEqualTo( "Missing value for 'causal_clustering.initial_discovery_members', which is mandatory with 'causal_clustering.discovery_type=DNS'" );
+                .endsWith( "Missing value for 'causal_clustering.initial_discovery_members', which is mandatory with 'causal_clustering.discovery_type=DNS'" );
     }
 
-    @ParameterizedTest
-    @EnumSource( value = Mode.class, mode = EnumSource.Mode.EXCLUDE, names = {"SINGLE"} )
+    @TestClusterMode
     void missingInitialMembersLIST( Mode mode )
     {
         var exception = assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
                 .set( GraphDatabaseSettings.mode, mode )
+                .set( BoltConnector.enabled, true )
                 .set( discovery_type, DiscoveryType.LIST )
                 .addValidator( CausalClusterConfigurationValidator.class ).build() );
 
-        assertThat( exception.getMessage() ).isEqualTo(
+        assertThat( exception.getMessage() ).endsWith(
                 "Missing value for 'causal_clustering.initial_discovery_members', which is mandatory with 'causal_clustering.discovery_type=LIST'" );
     }
 
-    @ParameterizedTest
-    @EnumSource( value = Mode.class, mode = EnumSource.Mode.EXCLUDE, names = {"SINGLE"} )
+    @TestClusterMode
     void missingInitialMembersSRV( Mode mode )
     {
         var exception = assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
                 .set( GraphDatabaseSettings.mode, mode )
+                .set( BoltConnector.enabled, true )
                 .set( discovery_type, DiscoveryType.SRV )
                 .addValidator( CausalClusterConfigurationValidator.class ).build() );
 
         assertThat( exception.getMessage() )
-                .isEqualTo( "Missing value for 'causal_clustering.initial_discovery_members', which is mandatory with 'causal_clustering.discovery_type=SRV'" );
+                .endsWith( "Missing value for 'causal_clustering.initial_discovery_members', which is mandatory with 'causal_clustering.discovery_type=SRV'" );
     }
 
-    @ParameterizedTest
-    @EnumSource( value = Mode.class, mode = EnumSource.Mode.EXCLUDE, names = {"SINGLE"} )
+    @TestClusterMode
     void missingKubernetesLabelSelector( Mode mode )
     {
         var exception = assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
@@ -150,11 +150,10 @@ class CausalClusterConfigurationValidatorTest
                 .addValidator( CausalClusterConfigurationValidator.class ).build() );
 
         assertThat( exception.getMessage() )
-                .isEqualTo( "Missing value for 'causal_clustering.kubernetes.label_selector', which is mandatory with 'causal_clustering.discovery_type=K8S'" );
+                .endsWith( "Missing value for 'causal_clustering.kubernetes.label_selector', which is mandatory with 'causal_clustering.discovery_type=K8S'" );
     }
 
-    @ParameterizedTest
-    @EnumSource( value = Mode.class, mode = EnumSource.Mode.EXCLUDE, names = {"SINGLE"} )
+    @TestClusterMode
     void missingKubernetesPortName( Mode mode )
     {
         var exception = assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
@@ -164,12 +163,11 @@ class CausalClusterConfigurationValidatorTest
                 .set( BoltConnector.enabled, true )
                 .addValidator( CausalClusterConfigurationValidator.class ).build() );
 
-        assertThat( exception.getMessage() ).isEqualTo(
+        assertThat( exception.getMessage() ).endsWith(
                 "Missing value for 'causal_clustering.kubernetes.service_port_name', which is mandatory with 'causal_clustering.discovery_type=K8S'" );
     }
 
-    @ParameterizedTest
-    @EnumSource( value = Mode.class, mode = EnumSource.Mode.EXCLUDE, names = {"SINGLE"} )
+    @TestClusterMode
     void nonExistingAkkaExternalConfig( Mode mode )
     {
         var exception = assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
@@ -180,11 +178,10 @@ class CausalClusterConfigurationValidatorTest
                 .addValidator( CausalClusterConfigurationValidator.class )
                 .build() );
 
-        assertThat( exception.getMessage() ).isEqualTo( "'causal_clustering.middleware.akka.external_config' must be a file or empty" );
+        assertThat( exception.getMessage() ).endsWith( "'causal_clustering.middleware.akka.external_config' must be a file or empty" );
     }
 
-    @ParameterizedTest
-    @EnumSource( value = Mode.class, mode = EnumSource.Mode.EXCLUDE, names = {"SINGLE"} )
+    @TestClusterMode
     void nonFileAkkaExternalConfig( Mode mode )
     {
         var exception = assertThrows( IllegalArgumentException.class, () -> Config.newBuilder()
@@ -195,11 +192,10 @@ class CausalClusterConfigurationValidatorTest
                 .addValidator( CausalClusterConfigurationValidator.class )
                 .build() );
 
-        assertThat( exception.getMessage() ).isEqualTo( "'causal_clustering.middleware.akka.external_config' must be a file or empty" );
+        assertThat( exception.getMessage() ).endsWith( "'causal_clustering.middleware.akka.external_config' must be a file or empty" );
     }
 
-    @ParameterizedTest
-    @EnumSource( value = Mode.class, mode = EnumSource.Mode.EXCLUDE, names = {"SINGLE"} )
+    @TestClusterMode
     void nonParseableAkkaExternalConfig( Mode mode ) throws URISyntaxException
     {
         File conf = new File( getClass().getResource( "/akka.external.config/illegal.conf" ).toURI() );
@@ -211,11 +207,10 @@ class CausalClusterConfigurationValidatorTest
                 .addValidator( CausalClusterConfigurationValidator.class )
                 .build() );
 
-        assertThat( exception.getMessage() ).isEqualTo( String.format( "'%s' could not be parsed", conf ) );
+        assertThat( exception.getMessage() ).endsWith( String.format( "'%s' could not be parsed", conf ) );
     }
 
-    @ParameterizedTest
-    @EnumSource( value = Mode.class, mode = EnumSource.Mode.EXCLUDE, names = {"SINGLE"} )
+    @TestClusterMode
     void parseableAkkaExternalConfig( Mode mode ) throws URISyntaxException
     {
         File conf = new File( getClass().getResource( "/akka.external.config/legal.conf" ).toURI() );
@@ -228,5 +223,13 @@ class CausalClusterConfigurationValidatorTest
                 .set( BoltConnector.enabled, true )
                 .addValidator( CausalClusterConfigurationValidator.class )
                 .build() );
+    }
+
+    @Target( ElementType.METHOD )
+    @Retention( RetentionPolicy.RUNTIME )
+    @ParameterizedTest
+    @EnumSource( value = Mode.class, mode = EnumSource.Mode.EXCLUDE, names = {"SINGLE"} )
+    @interface TestClusterMode
+    {
     }
 }
