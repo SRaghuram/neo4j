@@ -171,7 +171,8 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                 for ( Query query : workload.queries() )
                 {
 
-                    URI artifactBaseQueryRunURI = artifactBaseUri.resolve( appendIfMissing( query.name(), "/" ) );
+                    String sanitizedQueryName = query.name().replaceAll( "[^\\p{Alnum}]", "_" );
+                    URI artifactBaseQueryRunURI = artifactBaseUri.resolve( appendIfMissing( sanitizedQueryName, "/" ) );
                     URI artifactWorkerQueryRunURI = artifactBaseQueryRunURI.resolve( "benchmark-infra-worker.jar" );
                     // then store job params as JSON
                     InfraParams infraParams = new InfraParams( awsCredentials,
