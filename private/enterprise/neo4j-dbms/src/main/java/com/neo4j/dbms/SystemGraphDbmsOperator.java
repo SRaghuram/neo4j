@@ -7,16 +7,12 @@ package com.neo4j.dbms;
 
 import java.util.HashSet;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
-import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.graphdb.event.TransactionData;
-import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-import static com.neo4j.dbms.EnterpriseOperatorState.DIRTY;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
@@ -27,16 +23,13 @@ class SystemGraphDbmsOperator extends DbmsOperator
 {
     private final EnterpriseSystemGraphDbmsModel dbmsModel;
     private final ReconciledTransactionTracker reconciledTxTracker;
-    private final DatabaseStateService databaseStateService;
     private final Log log;
 
-    SystemGraphDbmsOperator( EnterpriseSystemGraphDbmsModel dbmsModel, ReconciledTransactionTracker reconciledTxTracker,
-            DatabaseStateService databaseStateService, LogProvider logProvider )
+    SystemGraphDbmsOperator( EnterpriseSystemGraphDbmsModel dbmsModel, ReconciledTransactionTracker reconciledTxTracker, LogProvider logProvider )
     {
         this.dbmsModel = dbmsModel;
         this.reconciledTxTracker = reconciledTxTracker;
         this.desired.put( NAMED_SYSTEM_DATABASE_ID.name(), new EnterpriseDatabaseState( NAMED_SYSTEM_DATABASE_ID, STARTED ) );
-        this.databaseStateService = databaseStateService;
         this.log = logProvider.getLog( getClass() );
     }
 
@@ -58,13 +51,12 @@ class SystemGraphDbmsOperator extends DbmsOperator
         {
             reconciledTxTracker.disable();
         }
-        var databasesForPriority = databasesToHandle.touched().stream().filter( this::mayDatabaseBeRetriedWithPriority ).collect( Collectors.toSet() );
-
-        var reconcilerResult = trigger( databasesForPriority.isEmpty() ? ReconcilerRequest.simple() : ReconcilerRequest.priority( databasesForPriority ) );
+        var databasesForExplicit = databasesToHandle.touched();
+        var reconcilerResult = trigger( databasesForExplicit.isEmpty() ? ReconcilerRequest.simple() : ReconcilerRequest.explicit( databasesForExplicit ) );
         reconcilerResult.whenComplete( () -> offerReconciledTransactionId( txId, asPartOfStoreCopy ) );
 
         var databasesToAwait = new HashSet<>( databasesToHandle.changed() );
-        databasesToAwait.addAll( databasesForPriority );
+        databasesToAwait.addAll( databasesForExplicit );
 
         // Note: only blocks for completed reconciliation on this machine. Global reconciliation (e.g. including other cluster members) is still asynchronous
         reconcilerResult.await( databasesToAwait );
@@ -89,12 +81,6 @@ class SystemGraphDbmsOperator extends DbmsOperator
             return DatabaseUpdates.EMPTY;
         }
         return dbmsModel.updatedDatabases( transactionData );
-    }
-
-    private boolean mayDatabaseBeRetriedWithPriority( NamedDatabaseId namedDatabaseId )
-    {
-        var state = databaseStateService.stateOfDatabase( namedDatabaseId );
-        return (state != null) && (state != DIRTY) && databaseStateService.causeOfFailure( namedDatabaseId ).isPresent();
     }
 
     private void offerReconciledTransactionId( long txId, boolean asPartOfStoreCopy )

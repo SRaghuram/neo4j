@@ -25,6 +25,7 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 public class ReconcilerExecutorsTest
 {
@@ -54,7 +55,7 @@ public class ReconcilerExecutorsTest
         var executors = new ReconcilerExecutors( jobScheduler, config );
 
         // when
-        var executor = executors.executor( ReconcilerRequest.simple(), SYSTEM_DATABASE_NAME );
+        var executor = executors.executor( ReconcilerRequest.simple(), NAMED_SYSTEM_DATABASE_ID );
         executor.execute( this::job );
 
         // then
@@ -70,9 +71,10 @@ public class ReconcilerExecutorsTest
         var config = Config.defaults( GraphDatabaseSettings.reconciler_maximum_parallelism, 2 );
         var executors = new ReconcilerExecutors( jobScheduler, config );
         var fooDb = DatabaseIdFactory.from( "foo", UUID.randomUUID() );
+        var unknownDb = DatabaseIdFactory.from( "unknown", UUID.randomUUID() );
 
         // when/then
-        var shouldBePriority = executors.executor( ReconcilerRequest.priority( fooDb ), fooDb.name() );
+        var shouldBePriority = executors.executor( ReconcilerRequest.priority( fooDb ), fooDb );
         shouldBePriority.execute( this::job );
 
         var activeGroups = jobScheduler.activeGroups().map( g -> g.group ).collect( Collectors.toSet() );
@@ -80,7 +82,7 @@ public class ReconcilerExecutorsTest
         assertThat( "Normal group shouldn't be active", activeGroups, not( hasItem( Group.DATABASE_RECONCILER ) ) );
 
         // when/then
-        var shouldNotBePriority = executors.executor( ReconcilerRequest.priority( fooDb ), "unknown" );
+        var shouldNotBePriority = executors.executor( ReconcilerRequest.priority( fooDb ), unknownDb );
         shouldNotBePriority.execute( this::job );
 
         activeGroups = jobScheduler.activeGroups().map( g -> g.group ).collect( Collectors.toSet() );

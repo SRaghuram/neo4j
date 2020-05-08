@@ -15,8 +15,6 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.neo4j.bolt.txtracking.DefaultReconciledTransactionTracker;
-import org.neo4j.dbms.DatabaseState;
-import org.neo4j.dbms.StubDatabaseStateService;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -24,13 +22,14 @@ import org.neo4j.logging.internal.NullLogService;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.DIRTY;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 
 class SystemGraphDbmsOperatorTest
 {
     private NamedDatabaseId databaseOne = DatabaseIdFactory.from( "one", UUID.randomUUID() );
-    private Map<NamedDatabaseId,DatabaseState> states = new HashMap<>();
+    private Map<NamedDatabaseId,EnterpriseDatabaseState> states = new HashMap<>();
 
     @Test
     void explicitRequestsForFailedDatabasesShouldBePriority()
@@ -42,28 +41,14 @@ class SystemGraphDbmsOperatorTest
         operator.connect( connector );
         operator.transactionCommitted( 1L, mock( TransactionData.class ) );
 
-        Assertions.assertTrue( connector.request.isPriorityRequestForDatabase( databaseOne.name() ) );
-    }
-
-    @Test
-    void explicitRequestsForDirtyFailedDatabasesShouldNotBePriority()
-    {
-        setState( databaseOne, DIRTY, true );
-
-        var operator = setup( Set.of(), Set.of( databaseOne ) );
-        var connector = new NoOperatorConnector();
-        operator.connect( connector );
-        operator.transactionCommitted( 1L, mock( TransactionData.class ) );
-
-        Assertions.assertTrue( connector.request.isSimple() );
+        Assertions.assertTrue( connector.request.specifiedDatabaseNames().contains( databaseOne.name() ) );
     }
 
     private SystemGraphDbmsOperator setup( Set<NamedDatabaseId> changed, Set<NamedDatabaseId> touched )
     {
         var dbmsModel = new NoEnterpriseSystemGraphDbmsModel( changed, touched );
-        var databaseStateService = new StubDatabaseStateService( states );
         var transactionTracker = new DefaultReconciledTransactionTracker( NullLogService.getInstance() );
-        return new SystemGraphDbmsOperator( dbmsModel, transactionTracker, databaseStateService, nullLogProvider() );
+        return new SystemGraphDbmsOperator( dbmsModel, transactionTracker, nullLogProvider() );
     }
 
     private void setState( NamedDatabaseId databaseId, EnterpriseOperatorState operatorState, boolean failed )

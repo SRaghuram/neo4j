@@ -5,7 +5,6 @@
  */
 package com.neo4j.dbms;
 
-
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;
@@ -24,11 +23,13 @@ class ReconcilerRequestTest
         // given
         var simple = ReconcilerRequest.simple();
         var priority = ReconcilerRequest.priority( DatabaseIdFactory.from( "foo", UUID.randomUUID() ) );
+        var explicit = ReconcilerRequest.explicit( Set.of( DatabaseIdFactory.from( "foo", UUID.randomUUID() ) ) );
         var panicked = ReconcilerRequest.forPanickedDatabase( DatabaseIdFactory.from( "bar", UUID.randomUUID() ), new RuntimeException() );
 
         // when/then
         assertTrue( simple.isSimple() );
         assertFalse( priority.isSimple() );
+        assertFalse( explicit.isSimple() );
         assertFalse( panicked.isSimple() );
     }
 
@@ -42,8 +43,56 @@ class ReconcilerRequestTest
         var priorityB = ReconcilerRequest.priority( bar );
 
         // when/then
-        assertTrue( priorityA.isPriorityRequestForDatabase( "foo" ) );
-        assertTrue( priorityA.isPriorityRequestForDatabase( "bar" ) );
-        assertFalse( priorityB.isPriorityRequestForDatabase( "foo" ) );
+        assertTrue( priorityA.specifiedDatabaseNames().contains( "foo" ) );
+        assertTrue( priorityA.specifiedDatabaseNames().contains( "bar" ) );
+        assertFalse( priorityB.specifiedDatabaseNames().contains(  "foo" ) );
+    }
+
+    @Test
+    void panicRequestDoNotUseCacheButHealAndUsePriority()
+    {
+        // given
+        var panicked = ReconcilerRequest.forPanickedDatabase( DatabaseIdFactory.from( "foo", UUID.randomUUID() ), new RuntimeException() );
+
+        // when/then
+        assertTrue( panicked.shouldBeExecutedAsPriorityFor( "foo" ) );
+        assertTrue( panicked.overridesPreviousFailuresFor( "foo" ) );
+        assertFalse( panicked.canUseCacheFor( "foo" ) );
+
+        assertFalse( panicked.shouldBeExecutedAsPriorityFor( "bar" ) );
+        assertFalse( panicked.overridesPreviousFailuresFor( "bar" ) );
+        assertTrue( panicked.canUseCacheFor( "bar" ) );
+    }
+
+    @Test
+    void priorityRequestDoNotUseCacheButHealAndUsePriority()
+    {
+        // given
+        var priority = ReconcilerRequest.priority( DatabaseIdFactory.from( "foo", UUID.randomUUID() ) );
+
+        // when/then
+        assertTrue( priority.shouldBeExecutedAsPriorityFor( "foo" ) );
+        assertTrue( priority.overridesPreviousFailuresFor( "foo" ) );
+        assertFalse( priority.canUseCacheFor( "foo" ) );
+
+        assertFalse( priority.shouldBeExecutedAsPriorityFor( "bar" ) );
+        assertFalse( priority.overridesPreviousFailuresFor( "bar" ) );
+        assertTrue( priority.canUseCacheFor( "bar" ) );
+    }
+
+    @Test
+    void explicitRequestDoNotUseCacheAndPriorityButHeal()
+    {
+        // given
+        var explicit = ReconcilerRequest.explicit( Set.of( DatabaseIdFactory.from( "foo", UUID.randomUUID() ) ) );
+
+        // when/then
+        assertFalse( explicit.shouldBeExecutedAsPriorityFor( "foo" ) );
+        assertTrue( explicit.overridesPreviousFailuresFor( "foo" ) );
+        assertFalse( explicit.canUseCacheFor( "foo" ) );
+
+        assertFalse( explicit.shouldBeExecutedAsPriorityFor( "bar" ) );
+        assertFalse( explicit.overridesPreviousFailuresFor( "bar" ) );
+        assertTrue( explicit.canUseCacheFor( "bar" ) );
     }
 }
