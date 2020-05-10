@@ -74,6 +74,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate.createAggregators
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate.createUpdaters
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.EXECUTION_STATE
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_RESOURCES
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.setMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
@@ -557,8 +558,8 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
   override protected def genProduce: IntermediateRepresentation = {
     block(
       invokeSideEffect(loadField(sinkField),
-        method[Sink[_], Unit, Any]("put"),
-        loadField(perArgsField)),
+        method[Sink[_], Unit, Any, QueryResources]("put"),
+        loadField(perArgsField), QUERY_RESOURCES),
       setField(perArgsField, newInstance(constructor[AggOut]))
     )
   }
