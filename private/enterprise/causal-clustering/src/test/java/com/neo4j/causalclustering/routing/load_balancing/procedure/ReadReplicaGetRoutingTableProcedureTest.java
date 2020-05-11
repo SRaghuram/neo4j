@@ -11,6 +11,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.logging.LogProvider;
 import org.neo4j.procedure.builtin.routing.SingleInstanceGetRoutingTableProcedure;
 import org.neo4j.procedure.builtin.routing.SingleInstanceGetRoutingTableProcedureTest;
 
@@ -21,9 +22,10 @@ import static org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller.
 class ReadReplicaGetRoutingTableProcedureTest extends SingleInstanceGetRoutingTableProcedureTest
 {
     @Override
-    protected SingleInstanceGetRoutingTableProcedure newProcedure( DatabaseManager<?> databaseManager, ConnectorPortRegister portRegister, Config config )
+    protected SingleInstanceGetRoutingTableProcedure newProcedure( DatabaseManager<?> databaseManager, ConnectorPortRegister portRegister, Config config,
+                                                                   LogProvider logProvider )
     {
-        return new ReadReplicaGetRoutingTableProcedure( DEFAULT_NAMESPACE, databaseManager, portRegister, config, nullLogProvider() );
+        return new ReadReplicaGetRoutingTableProcedure( DEFAULT_NAMESPACE, databaseManager, portRegister, config, logProvider );
     }
 
     @Override

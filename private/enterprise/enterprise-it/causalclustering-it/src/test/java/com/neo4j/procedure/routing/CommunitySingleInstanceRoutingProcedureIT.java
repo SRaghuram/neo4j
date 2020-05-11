@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -64,6 +65,18 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
         RoutingResult expectedResult = newRoutingResult( advertisedBoltAddress );
 
         assertRoutingProceduresAvailable( db, expectedResult );
+    }
+
+    @Test
+    void shouldUseClientProvidedAddressOverride()
+    {
+        SocketAddress advertisedBoltAddress = new SocketAddress( "neo4j.com", 7687 );
+        db = startDb( advertisedBoltAddress );
+        var clientProvidedAddress = new SocketAddress( "foo.com", 9999 );
+
+        RoutingResult expectedResult = newRoutingResult( clientProvidedAddress );
+
+        assertRoutingProceduresAvailable( db, expectedResult, Map.of( "address", clientProvidedAddress.toString() ) );
     }
 
     @Test

@@ -100,18 +100,28 @@ abstract class BaseRoutingProcedureIT
 
     static void assertRoutingProceduresAvailable( GraphDatabaseService db, RoutingResult expectedResult )
     {
-        Map<String,Object> params = paramsWithContext( Map.of() );
+        assertRoutingProceduresAvailable( db, expectedResult, Map.of() );
+    }
+
+    static void assertRoutingProceduresAvailable( GraphDatabaseService db, RoutingResult expectedResult, Map<String,Object> ctx )
+    {
+        Map<String,Object> params = paramsWithContext( ctx );
 
         assertAll( () -> assertRoutingProcedureAvailable( CALL_NEW_PROCEDURE_WITH_CONTEXT, params, db, expectedResult ),
-                () -> assertRoutingProcedureAvailable( CALL_OLD_PROCEDURE_WITH_CONTEXT, params, db, expectedResult ) );
+                   () -> assertRoutingProcedureAvailable( CALL_OLD_PROCEDURE_WITH_CONTEXT, params, db, expectedResult ) );
     }
 
     static void assertRoutingProceduresAvailable( String databaseName, GraphDatabaseService db, RoutingResult expectedResult )
     {
-        Map<String,Object> params = paramsWithContextAndDatabase( Map.of(), databaseName );
+        assertRoutingProceduresAvailable( databaseName, db, expectedResult, Map.of() );
+    }
+
+    static void assertRoutingProceduresAvailable( String databaseName, GraphDatabaseService db, RoutingResult expectedResult, Map<String,Object> ctx )
+    {
+        Map<String,Object> params = paramsWithContextAndDatabase( ctx, databaseName );
 
         assertAll( () -> assertRoutingProcedureAvailable( CALL_NEW_PROCEDURE_WITH_CONTEXT_AND_DATABASE, params, db, expectedResult ),
-                () -> assertRoutingProcedureAvailable( CALL_OLD_PROCEDURE_WITH_CONTEXT_AND_DATABASE, params, db, expectedResult ) );
+                   () -> assertRoutingProcedureAvailable( CALL_OLD_PROCEDURE_WITH_CONTEXT_AND_DATABASE, params, db, expectedResult ) );
     }
 
     static void assertRoutingProceduresFailForUnknownDatabase( String databaseName, GraphDatabaseService db )
