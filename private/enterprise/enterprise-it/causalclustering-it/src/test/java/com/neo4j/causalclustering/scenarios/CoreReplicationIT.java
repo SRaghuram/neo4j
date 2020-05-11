@@ -13,9 +13,9 @@ import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -37,15 +37,14 @@ import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventual
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.function.Predicates.await;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.assertion.Assert.assertEventually;
-import static org.neo4j.test.conditions.Conditions.condition;
 
+@TestInstance( TestInstance.Lifecycle.PER_METHOD )
 @ClusterExtension
 class CoreReplicationIT
 {
@@ -54,25 +53,17 @@ class CoreReplicationIT
 
     private Cluster cluster;
 
-    private long nodesBeforeTest;
-
     private final ClusterConfig clusterConfig = ClusterConfig
             .clusterConfig()
             .withNumberOfCoreMembers( 3 )
             .withSharedCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_formation, "3" )
             .withNumberOfReadReplicas( 0 );
 
-    @BeforeAll
+    @BeforeEach
     void setup() throws Exception
     {
         cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
-    }
-
-    @BeforeEach
-    void calculateNrOfNodes() throws TimeoutException
-    {
-        nodesBeforeTest = DataCreator.countNodes( cluster.awaitLeader() );
     }
 
     @Test
@@ -87,7 +78,7 @@ class CoreReplicationIT
         } );
 
         // then
-        assertEquals( nodesBeforeTest + 1, DataCreator.countNodes( leader ) );
+        assertEquals( 1, DataCreator.countNodes( leader ) );
         dataMatchesEventually( leader, cluster.coreMembers() );
     }
 
@@ -220,7 +211,7 @@ class CoreReplicationIT
         } );
 
         // then
-        assertEquals( nodesBeforeTest + 2, DataCreator.countNodes( last ) );
+        assertEquals( 2, DataCreator.countNodes( last ) );
         dataMatchesEventually( last, cluster.coreMembers() );
     }
 
@@ -247,7 +238,7 @@ class CoreReplicationIT
         } );
 
         // then
-        assertEquals( nodesBeforeTest + 2, DataCreator.countNodes( last ) );
+        assertEquals( 2, DataCreator.countNodes( last ) );
         dataMatchesEventually( last, cluster.coreMembers() );
     }
 
@@ -270,7 +261,7 @@ class CoreReplicationIT
         cluster.newCoreMember().start();
 
         // then
-        assertEquals( nodesBeforeTest + 15, DataCreator.countNodes( last ) );
+        assertEquals( 15, DataCreator.countNodes( last ) );
         dataMatchesEventually( last, cluster.coreMembers() );
     }
 
@@ -296,7 +287,7 @@ class CoreReplicationIT
         } );
 
         // then
-        assertEquals( nodesBeforeTest + 1, DataCreator.countNodes( leader ) );
+        assertEquals( 1, DataCreator.countNodes( leader ) );
         dataMatchesEventually( leader, cluster.coreMembers() );
     }
 
@@ -304,8 +295,6 @@ class CoreReplicationIT
     void shouldBeAbleToShutdownWhenTheLeaderIsTryingToReplicateTransaction() throws Exception
     {
         // given
-        Cluster cluster = clusterFactory.createCluster( clusterConfig );
-        cluster.start();
         cluster.coreTx( ( db, tx ) ->
         {
             Node node = tx.createNode( label( "boo" ) );
