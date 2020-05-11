@@ -14,9 +14,10 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.Aggre
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExecutionContextFactory
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.GroupingAggTable
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.kernel.impl.util.collection.HeapTrackingOrderedAppendMap
+import org.neo4j.memory.HeapEstimator
 
 /**
  * Slotted variant of [[GroupingAggTable]]
@@ -27,44 +28,43 @@ class SlottedGroupingAggTable(slots: SlotConfiguration,
                               state: QueryState,
                               operatorId: Id) extends AggregationTable {
 
-  private var resultMap: java.util.LinkedHashMap[groupingColumns.KeyType, Array[AggregationFunction]] = _
+  private var resultMap: HeapTrackingOrderedAppendMap[groupingColumns.KeyType, Array[AggregationFunction]] = _
   private val (aggregationOffsets: Array[Int], aggregationExpressions: Array[AggregationExpression]) = {
     val (a, b) = aggregations.unzip
     (a.toArray, b.toArray)
   }
+  private val memoryTracker = state.memoryTracker.memoryTrackerForOperator(operatorId.x)
+  private val nAggregations = aggregationExpressions.length
 
   override def clear(): Unit = {
-    // TODO: Use a heap tracking collection or ScopedMemoryTracker instead
     if (resultMap != null) {
-      resultMap.forEach { (key, functions) =>
-        state.memoryTracker.deallocated(key, operatorId.x)
-        functions.foreach(_.recordMemoryDeallocation())
-      }
+      resultMap.close()
     }
-    resultMap = new java.util.LinkedHashMap[groupingColumns.KeyType, Array[AggregationFunction]]()
+    resultMap = HeapTrackingOrderedAppendMap.createOrderedMap[groupingColumns.KeyType, Array[AggregationFunction]](memoryTracker)
   }
 
   override def processRow(row: CypherRow): Unit = {
     val groupingValue = groupingColumns.computeGroupingKey(row, state)
-    val functions = resultMap.computeIfAbsent(groupingValue, _ => {
-      state.memoryTracker.allocated(groupingValue, operatorId.x)
-      val functions = new Array[AggregationFunction](aggregationExpressions.length)
+    val functions = resultMap.getIfAbsentPutWithMemoryTracker(groupingValue, scopedMemoryTracker => {
+      val nAggregations = aggregationExpressions.length
+      scopedMemoryTracker.allocateHeap(groupingValue.estimatedHeapUsage() + HeapEstimator.shallowSizeOfObjectArray(nAggregations))
+      val functions = new Array[AggregationFunction](nAggregations)
       var i = 0
-      while (i < aggregationExpressions.length) {
-        functions(i) = aggregationExpressions(i).createAggregationFunction(operatorId)
+      while (i < nAggregations) {
+        functions(i) = aggregationExpressions(i).createAggregationFunction(scopedMemoryTracker)
         i += 1
       }
       functions
     })
     var i = 0
-    while (i < functions.length) {
+    while (i < nAggregations) {
       functions(i)(row, state)
       i += 1
     }
   }
 
   override def result(): Iterator[CypherRow] = {
-    val innerIterator = resultMap.entrySet().iterator()
+    val innerIterator = resultMap.autoClosingEntryIterator()
     new Iterator[CypherRow] {
       override def hasNext: Boolean = innerIterator.hasNext
 

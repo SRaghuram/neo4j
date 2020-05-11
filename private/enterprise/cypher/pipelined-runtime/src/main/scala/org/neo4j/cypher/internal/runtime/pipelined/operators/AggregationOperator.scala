@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import java.util.concurrent.ConcurrentHashMap
-import java.util.function
 
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
@@ -25,6 +24,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.getStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.isNull
 import org.neo4j.codegen.api.IntermediateRepresentation.lessThan
 import org.neo4j.codegen.api.IntermediateRepresentation.load
@@ -85,6 +85,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.SyntaxException
+import org.neo4j.kernel.impl.util.collection.HeapTrackingOrderedAppendMap
+import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.memory.ScopedMemoryTracker
 import org.neo4j.values.AnyValue
@@ -105,7 +107,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
                                aggregations: Array[Aggregator],
                                groupings: GroupingExpression) {
 
-  type AggPreMap = java.util.LinkedHashMap[groupings.KeyType, Array[Updater]]
+  type AggPreMap = HeapTrackingOrderedAppendMap[groupings.KeyType, Array[Updater]]
 
   private val newUpdaters: MemoryTracker => java.util.function.Function[ groupings.KeyType, Array[Updater]] =
     (memoryTracker: MemoryTracker) => (_: groupings.KeyType) => aggregations.map(_.newUpdater(memoryTracker))
@@ -142,8 +144,6 @@ case class AggregationOperator(workIdentity: WorkIdentity,
     }
 
     class State(sink: Sink[IndexedSeq[PerArgument[AggPreMap]]], memoryTracker: MemoryTracker) extends OutputOperatorState {
-      private val newUpdatersWithMemoryTracker: function.Function[groupings.KeyType, Array[Updater]] = newUpdaters(memoryTracker)
-
       override def trackTime: Boolean = true
 
       override def workIdentity: WorkIdentity = AggregationOperator.this.workIdentity
@@ -152,27 +152,29 @@ case class AggregationOperator(workIdentity: WorkIdentity,
                                  state: PipelinedQueryState,
                                  resources: QueryResources,
                                  operatorExecutionEvent: OperatorProfileEvent): PreAggregatedOutput = {
-        // TODO: TBD Is it really necessary to have individually tracking and closeable updaters or is it enough to have a scoped memory tracker here (and in AggregationMapperOperatorNoGrouping)?
-
+        val scopedMemoryTracker = new ScopedMemoryTracker(memoryTracker)
         val queryState = state.queryStateForExpressionEvaluation(resources)
 
         val preAggregated = ArgumentStateMap.map(argumentSlotOffset,
           morsel,
-          preAggregate(queryState))
+          preAggregate(queryState, scopedMemoryTracker))
 
-        new PreAggregatedOutput(preAggregated, sink)
+        new PreAggregatedOutput(preAggregated, sink, scopedMemoryTracker)
       }
 
-      private def preAggregate(queryState: QueryState)
+      private def preAggregate(queryState: QueryState, memoryTracker: MemoryTracker)
                               (morsel: Morsel): AggPreMap = {
 
-        val result = new AggPreMap()
+        val result = HeapTrackingOrderedAppendMap.createOrderedMap[groupings.KeyType, Array[Updater]](memoryTracker)
 
         //loop over the entire morsel view and apply the aggregation
         val readCursor = morsel.readCursor()
         while (readCursor.next()) {
           val groupingValue = groupings.computeGroupingKey(readCursor, queryState)
-          val updaters = result.computeIfAbsent(groupingValue, newUpdatersWithMemoryTracker)
+          val updaters = result.getIfAbsentPutWithMemoryTracker(groupingValue, scopedMemoryTracker => {
+            scopedMemoryTracker.allocateHeap(groupingValue.estimatedHeapUsage() + HeapEstimator.shallowSizeOfObjectArray(aggregations.length))
+            newUpdaters(scopedMemoryTracker)(groupingValue)
+          })
           var i = 0
           while (i < aggregations.length) {
             val value = expressionValues(i)(readCursor, queryState)
@@ -185,22 +187,12 @@ case class AggregationOperator(workIdentity: WorkIdentity,
     }
 
     class PreAggregatedOutput(preAggregated: IndexedSeq[PerArgument[AggPreMap]],
-                              sink: Sink[IndexedSeq[PerArgument[AggPreMap]]]) extends PreparedOutput {
+                              sink: Sink[IndexedSeq[PerArgument[AggPreMap]]],
+                              scopedMemoryTracker: ScopedMemoryTracker) extends PreparedOutput {
       override def produce(resources: QueryResources): Unit = sink.put(preAggregated, resources)
 
       override def close(): Unit = {
-        var i = 0
-        while (i < preAggregated.size) {
-          val perArgument = preAggregated(i)
-          perArgument.value.forEach((_, updaters) => {
-            var j = 0
-            while (j < updaters.length) {
-              updaters(j).close()
-              j += 1
-            }
-          })
-          i += 1
-        }
+        scopedMemoryTracker.close()
         super.close()
       }
     }
@@ -213,7 +205,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
     /**
      * Return the result of the reducer.
      */
-    def result(): java.util.Iterator[java.util.Map.Entry[groupings.KeyType, Array[Reducer]]]
+    def result(): java.util.Iterator[_ <: java.util.Map.Entry[groupings.KeyType, Array[Reducer]]]
 
     def argumentRow: MorselRow
   }
@@ -224,16 +216,15 @@ case class AggregationOperator(workIdentity: WorkIdentity,
                                        override val argumentRow: MorselRow,
                                        memoryTracker: MemoryTracker) extends AggregatingAccumulator {
 
-    val reducerMap = new java.util.LinkedHashMap[groupings.KeyType, Array[Reducer]] // TODO: Use a heap tracking ordered map
-    val scopedMemoryTracker = new ScopedMemoryTracker(memoryTracker)
+    private val reducerMap: HeapTrackingOrderedAppendMap[groupings.KeyType, Array[Reducer]] =
+      HeapTrackingOrderedAppendMap.createOrderedMap[groupings.KeyType, Array[Reducer]](memoryTracker)
 
     override def update(data: AggPreMap, resources: QueryResources): Unit = {
-      val iterator = data.entrySet().iterator()
+      val iterator = data.autoClosingEntryIterator()
       while (iterator.hasNext) {
         val entry = iterator.next()
-        val reducers = reducerMap.computeIfAbsent(entry.getKey, _ => {
-          // Note: this allocation is currently never de-allocated
-          scopedMemoryTracker.allocateHeap(entry.getKey.estimatedHeapUsage())
+        val reducers = reducerMap.getIfAbsentPutWithMemoryTracker(entry.getKey, scopedMemoryTracker => {
+          scopedMemoryTracker.allocateHeap(entry.getKey.estimatedHeapUsage() + HeapEstimator.shallowSizeOfObjectArray(aggregators.length))
           aggregators.map(_.newStandardReducer(memoryTracker))
         })
 
@@ -245,17 +236,11 @@ case class AggregationOperator(workIdentity: WorkIdentity,
       }
     }
 
-    def result(): java.util.Iterator[java.util.Map.Entry[groupings.KeyType, Array[Reducer]]] = reducerMap.entrySet().iterator()
+    def result(): java.util.Iterator[_ <: java.util.Map.Entry[groupings.KeyType, Array[Reducer]]] =
+      reducerMap.autoClosingEntryIterator()
 
     override def close(): Unit = {
-      reducerMap.forEach((_, reducers) => {
-        var i = 0
-        while(i < reducers.length) {
-          reducers(i).close()
-          i += 1
-        }
-      })
-      scopedMemoryTracker.close()
+      reducerMap.close()
       super.close()
     }
   }
@@ -268,7 +253,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
     val reducerMap = new ConcurrentHashMap[groupings.KeyType, Array[Reducer]]
 
     override def update(data: AggPreMap, resources: QueryResources): Unit = {
-      val iterator = data.entrySet().iterator()
+      val iterator = data.autoClosingEntryIterator()
       while (iterator.hasNext) {
         val entry = iterator.next()
         val reducers = reducerMap.computeIfAbsent(entry.getKey, key => aggregators.map(_.newConcurrentReducer))
@@ -395,7 +380,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
                                             aggregationExpressions: Array[expressions.Expression])
                                            (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
   type Agg = Array[Any]
-  type AggMap = java.util.LinkedHashMap[AnyValue, Agg]
+  type AggMap = HeapTrackingOrderedAppendMap[AnyValue, Agg]
   type AggOut = scala.collection.mutable.ArrayBuffer[PerArgument[AggMap]]
 
   override def toString: String = "AggregationMapperOperatorTaskTemplate"
@@ -494,7 +479,8 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
       condition(notEqual(load(currentArg), load(argVar)))(
         block(
           assign(argVar, load(currentArg)),
-          assign(aggPreMapVar, newInstance(constructor[AggMap])),
+          assign(aggPreMapVar, invokeStatic(method[HeapTrackingOrderedAppendMap[_,_], HeapTrackingOrderedAppendMap[_,_], MemoryTracker]("createOrderedMap"),
+                                            loadField(memoryTrackerField))),
           invokeSideEffect(loadField(perArgsField),
             method[ArrayBuffer[_], ArrayBuffer[_], Any]("$plus$eq"),
             newInstance(constructor[PerArgument[AggMap], Long, Any], load(argVar), load(aggPreMapVar)))
@@ -521,7 +507,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
         block(
           assign(updaters, createUpdaters(aggregators, load(aggregatorsVar), loadField(memoryTrackerField))),
           invokeSideEffect(load(aggPreMapVar),
-            method[AggMap, Any, Any, Any]("put"),
+            method[AggMap, Unit, Any, Any]("put"),
             load(groupingValue),
             load(updaters))
         )
@@ -571,14 +557,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
      *   var i = 0
      *   while (i < preAggregated.size) {
      *     val aggMap = preAggregated(i).value
-     *     val aggMapIter = aggMap.value().iterator()
-     *     while (aggMapIter.hasNext) {
-     *       val updaters = aggMapIter.next()
-     *       updaters[0].close()
-     *       updaters[1].close()
-     *       ...
-     *       updaters[n-1].close()
-     *     }
+     *     aggMap.close()
      *     i += 1
      *   }
      *   perArgs = new AggOut()
@@ -587,31 +566,18 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
     val i = codeGen.namer.nextVariableName()
     val iSize = codeGen.namer.nextVariableName()
     val aggMap = codeGen.namer.nextVariableName("aggMap")
-    val aggMapIter = codeGen.namer.nextVariableName("aggMapIter")
-    val updaters = codeGen.namer.nextVariableName("updaters")
 
     block(
       block(
         declareAndAssign(typeRefOf[Int], i, constant(0)),
         declareAndAssign(typeRefOf[Int], iSize, invoke(loadField(perArgsField), method[AggOut, Int]("size"))),
         declare(typeRefOf[AggMap], aggMap),
-        declare(typeRefOf[java.util.Iterator[Agg]], aggMapIter),
         loop(lessThan(load(i), load(iSize)))(block(
           assign(aggMap, cast[AggMap](invoke(cast[PerArgument[AggMap]](invoke(loadField(perArgsField),
                                                                               method[mutable.ResizableArray[Any], Any, Int]("apply"),
                                                                               load(i))),
                                              method[PerArgument[Any], Any]("value")))),
-          assign(aggMapIter, invoke(invoke(load(aggMap), method[AggMap, java.util.Collection[Agg]]("values")),
-                                    method[java.util.Collection[Agg], java.util.Iterator[Array[Any]]]("iterator"))),
-          loop(invoke(load(aggMapIter), method[java.util.Iterator[Array[Any]], Boolean]("hasNext")))(block(
-            declareAndAssign(typeRefOf[Array[Updater]], updaters, cast[Array[Updater]](invoke(load(aggMapIter),
-                                                                                              method[java.util.Iterator[Any], Any]("next")))),
-            block(
-              compiledAggregationExpressions.indices.map(i => {
-                invokeSideEffect(arrayLoad(load(updaters), i), method[Updater, Unit]("close"))
-              }): _ *
-            )
-          )),
+          invoke(load(aggMap), method[AggMap, Unit]("close")),
           assign(i, add(load(i), constant(1)))
         ))
       ),

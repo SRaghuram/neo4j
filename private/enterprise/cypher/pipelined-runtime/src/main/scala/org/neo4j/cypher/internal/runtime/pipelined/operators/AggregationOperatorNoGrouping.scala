@@ -60,6 +60,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.memory.MemoryTracker
+import org.neo4j.memory.ScopedMemoryTracker
 import org.neo4j.values.AnyValue
 
 import scala.collection.mutable
@@ -118,17 +119,17 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
                                  state: PipelinedQueryState,
                                  resources: QueryResources,
                                  operatorExecutionEvent: OperatorProfileEvent): PreAggregatedOutput = {
-
+        val scopedMemoryTracker = new ScopedMemoryTracker(memoryTracker)
         val queryState = state.queryStateForExpressionEvaluation(resources)
 
         val preAggregated = ArgumentStateMap.map(argumentSlotOffset,
           outputMorsel,
-          preAggregate(queryState))
+          preAggregate(queryState, scopedMemoryTracker))
 
-        new PreAggregatedOutput(preAggregated, sink)
+        new PreAggregatedOutput(preAggregated, sink, scopedMemoryTracker)
       }
 
-      private def preAggregate(queryState: QueryState)(morsel: Morsel): Array[Updater] = {
+      private def preAggregate(queryState: QueryState, memoryTracker: MemoryTracker)(morsel: Morsel): Array[Updater] = {
         val updaters = aggregations.map(_.newUpdater(memoryTracker))
         //loop over the entire morsel view and apply the aggregation
         val cursor = morsel.readCursor()
@@ -145,21 +146,12 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
     }
 
     class PreAggregatedOutput(preAggregated: IndexedSeq[PerArgument[Array[Updater]]],
-                              sink: Sink[IndexedSeq[PerArgument[Array[Updater]]]]) extends PreparedOutput {
+                              sink: Sink[IndexedSeq[PerArgument[Array[Updater]]]],
+                              scopedMemoryTracker: ScopedMemoryTracker) extends PreparedOutput {
       override def produce(resources: QueryResources): Unit = sink.put(preAggregated, resources)
 
       override def close(): Unit = {
-        var i = 0
-        while (i < preAggregated.size) {
-          val perArgument = preAggregated(i)
-          val updaters = perArgument.value
-          var j = 0
-          while (j < updaters.length) {
-            updaters(j).close()
-            j += 1
-          }
-          i += 1
-        }
+        scopedMemoryTracker.close()
         super.close()
       }
     }

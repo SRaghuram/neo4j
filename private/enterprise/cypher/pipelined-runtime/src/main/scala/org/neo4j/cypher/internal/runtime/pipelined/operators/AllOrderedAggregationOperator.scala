@@ -24,6 +24,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfNonEmptySt
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.ScopedMemoryTracker
 
 class AllOrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
                                     argumentSlotOffset: Int,
@@ -39,14 +40,19 @@ class AllOrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
                            state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = {
     argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id), ordered = true)
-    new AllOrderedAggregationState()
+    val memoryTracker = new ScopedMemoryTracker(stateFactory.newMemoryTracker(id.x))
+    // TODO: Separate state for parallel without memory tracking
+    new AllOrderedAggregationState(memoryTracker)
   }
 
   override def toString: String = "AllOrderedAggregationOperator"
 
   private class AllOrderedAggregationState(var lastSeenGrouping: orderedGroupings.KeyType,
-                                           val aggregationFunctions: Array[AggregationFunction]) extends OperatorState {
-    def this() = this(null.asInstanceOf[orderedGroupings.KeyType], aggregations.map(_.createAggregationFunction(id)))
+                                           val aggregationFunctions: Array[AggregationFunction],
+                                           val scopedMemoryTracker: ScopedMemoryTracker) extends OperatorState {
+    def this(memoryTracker: ScopedMemoryTracker) =
+      this(null.asInstanceOf[orderedGroupings.KeyType], aggregations.map(_.createAggregationFunction(memoryTracker)), memoryTracker)
+
 
     override def nextTasks(state: PipelinedQueryState,
                            operatorInput: OperatorInput,
@@ -107,9 +113,15 @@ class AllOrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
       orderedGroupings.project(outputCursor, taskState.lastSeenGrouping)
 
       var i = 0
-      while (i < aggregations.length) {
+      val nAggregations = aggregations.length
+      while (i < nAggregations) {
         outputCursor.setRefAt(outputSlots(i), taskState.aggregationFunctions(i).result(queryState))
-        taskState.aggregationFunctions(i) = aggregations(i).createAggregationFunction(id)
+        i += 1
+      }
+      taskState.scopedMemoryTracker.reset()
+      i = 0
+      while (i < nAggregations) {
+        taskState.aggregationFunctions(i) = aggregations(i).createAggregationFunction(taskState.scopedMemoryTracker)
         i += 1
       }
       outputCursor.next()

@@ -13,9 +13,9 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.Aggre
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExecutionContextFactory
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.NonGroupingAggTable
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.ScopedMemoryTracker
 
 /**
  * Slotted variant of [[NonGroupingAggTable]]
@@ -29,15 +29,13 @@ class SlottedNonGroupingAggTable(slots: SlotConfiguration,
     (a.toArray, b.toArray)
   }
   private val aggregationFunctions = new Array[AggregationFunction](aggregationExpressions.length)
+  private val scopedMemoryTracker: ScopedMemoryTracker = new ScopedMemoryTracker(state.memoryTracker.memoryTrackerForOperator(operatorId.x))
 
   override def clear(): Unit = {
-    // TODO: Use a ScopedMemoryTracker instead
+    scopedMemoryTracker.reset()
     var i = 0
     while (i < aggregationFunctions.length) {
-      if (aggregationFunctions(i) != null) {
-        aggregationFunctions(i).recordMemoryDeallocation()
-      }
-      aggregationFunctions(i) = aggregationExpressions(i).createAggregationFunction(operatorId)
+      aggregationFunctions(i) = aggregationExpressions(i).createAggregationFunction(scopedMemoryTracker)
       i += 1
     }
   }
@@ -51,7 +49,9 @@ class SlottedNonGroupingAggTable(slots: SlotConfiguration,
   }
 
   override def result(): Iterator[CypherRow] = {
-    Iterator.single(resultRow())
+    val row = resultRow()
+    scopedMemoryTracker.close()
+    Iterator.single(row)
   }
 
   protected def resultRow(): CypherRow = {
