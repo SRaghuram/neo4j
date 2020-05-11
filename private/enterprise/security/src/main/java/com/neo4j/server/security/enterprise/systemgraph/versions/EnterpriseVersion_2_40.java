@@ -8,6 +8,7 @@ package com.neo4j.server.security.enterprise.systemgraph.versions;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 
 import java.util.List;
 import java.util.Set;
@@ -20,7 +21,6 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.logging.Log;
-import org.neo4j.server.security.systemgraph.KnownSystemComponentVersion;
 
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;
@@ -261,6 +261,49 @@ public class EnterpriseVersion_2_40 extends SupportedEnterpriseVersion
     }
 
     // RUNTIME
+
+    @Override
+    public void assertUpdateWithAction( PrivilegeAction action, SpecialDatabase specialDatabase ) throws UnsupportedOperationException
+    {
+        if ( SpecialDatabase.DEFAULT == specialDatabase )
+        {
+            throw unsupportedAction();
+        }
+
+        switch ( action )
+        {
+        case CREATE_USER:
+        case DROP_USER:
+        case SHOW_USER:
+        case SET_USER_STATUS:
+        case SET_PASSWORDS:
+        case ALTER_USER:
+        case USER_MANAGEMENT:
+
+        case CREATE_DATABASE:
+        case DROP_DATABASE:
+        case DATABASE_MANAGEMENT:
+
+        case SHOW_PRIVILEGE:
+        case ASSIGN_PRIVILEGE:
+        case REMOVE_PRIVILEGE:
+        case PRIVILEGE_MANAGEMENT:
+
+        case DBMS_ACTIONS:
+
+        case TRANSACTION_MANAGEMENT:
+        case SHOW_TRANSACTION:
+        case TERMINATE_TRANSACTION:
+
+        case CREATE_ELEMENT:
+        case DELETE_ELEMENT:
+        case SET_LABEL:
+        case REMOVE_LABEL:
+            throw unsupportedAction();
+
+        default:
+        }
+    }
 
     @Override
     public Set<ResourcePrivilege> getPrivilegeForRoles( Transaction tx, List<String> roleNames, Cache<String,Set<ResourcePrivilege>> privilegeCache )

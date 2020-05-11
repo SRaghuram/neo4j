@@ -15,6 +15,8 @@ import com.neo4j.server.security.enterprise.auth.Resource
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.DENY
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent
 import org.neo4j.common.DependencyResolver
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.GraphDatabaseSettings
@@ -146,6 +148,10 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
   private lazy val authManager = {
     resolver.resolveDependency(classOf[EnterpriseAuthManager])
+  }
+
+  private lazy val enterpriseSecurityGraphComponent: EnterpriseSecurityGraphComponent = {
+    resolver.resolveDependency(classOf[EnterpriseSecurityGraphComponent])
   }
 
   // This allows both community and enterprise commands to be considered together, and chained together
@@ -333,89 +339,89 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     // GRANT/DENY/REVOKE _ ON DBMS TO role
     case GrantDbmsAction(source, action, roleName) => (context, parameterMapping) =>
-      val dbmsAction = ActionMapper.asKernelAction(action).toString
+      val dbmsAction = ActionMapper.asKernelAction(action)
       makeGrantOrDenyExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), AllQualifier()(InputPosition.NONE), roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant $dbmsAction privilege to role '${runtimeValue(roleName, params)}'")
 
     case DenyDbmsAction(source, action, roleName) => (context, parameterMapping) =>
-      val dbmsAction = ActionMapper.asKernelAction(action).toString
+      val dbmsAction = ActionMapper.asKernelAction(action)
       makeGrantOrDenyExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), AllQualifier()(InputPosition.NONE), roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny $dbmsAction privilege to role '${runtimeValue(roleName, params)}'")
 
     case RevokeDbmsAction(source, action, roleName, revokeType) => (context, parameterMapping) =>
-      val dbmsAction = ActionMapper.asKernelAction(action).toString
+      val dbmsAction = ActionMapper.asKernelAction(action)
       makeRevokeExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), AllQualifier()(InputPosition.NONE), roleName, revokeType,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke $dbmsAction privilege from role '${runtimeValue(roleName, params)}'")
 
     // GRANT/DENY/REVOKE _ ON DATABASE foo TO role
     case GrantDatabaseAction(source, action, database, qualifier, roleName) => (context, parameterMapping) =>
-      val databaseAction = ActionMapper.asKernelAction(action).toString
+      val databaseAction = ActionMapper.asKernelAction(action)
       makeGrantOrDenyExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, qualifier, roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant $databaseAction privilege to role '${runtimeValue(roleName, params)}'")
 
     case DenyDatabaseAction(source, action, database, qualifier, roleName) => (context, parameterMapping) =>
-      val databaseAction = ActionMapper.asKernelAction(action).toString
+      val databaseAction = ActionMapper.asKernelAction(action)
       makeGrantOrDenyExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, qualifier, roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny $databaseAction privilege to role '${runtimeValue(roleName, params)}'")
 
     case RevokeDatabaseAction(source, action, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
-      val databaseAction = ActionMapper.asKernelAction(action).toString
+      val databaseAction = ActionMapper.asKernelAction(action)
       makeRevokeExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke $databaseAction privilege from role '${runtimeValue(roleName, params)}'")
 
     // GRANT/DENY/REVOKE _ ON DATABASE foo TO role
     case GrantGraphAction(source, action, resource, database, qualifier, roleName) => (context, parameterMapping) =>
-      val graphAction = ActionMapper.asKernelAction(action).toString
+      val graphAction = ActionMapper.asKernelAction(action)
       makeGrantOrDenyExecutionPlan(graphAction, resource, database, qualifier, roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant $graphAction privilege to role '${runtimeValue(roleName, params)}'")
 
     case DenyGraphAction(source, action, resource, database, qualifier, roleName) => (context, parameterMapping) =>
-      val graphAction = ActionMapper.asKernelAction(action).toString
+      val graphAction = ActionMapper.asKernelAction(action)
       makeGrantOrDenyExecutionPlan(graphAction, resource, database, qualifier, roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny $graphAction privilege to role '${runtimeValue(roleName, params)}'")
 
     case RevokeGraphAction(source, action, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
-      val graphAction = ActionMapper.asKernelAction(action).toString
+      val graphAction = ActionMapper.asKernelAction(action)
       makeRevokeExecutionPlan(graphAction, resource, database, qualifier, roleName, revokeType,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke $graphAction privilege from role '${runtimeValue(roleName, params)}'")
 
     // GRANT/DENY/REVOKE TRAVERSE ON GRAPH foo NODES A (*) TO role
     case GrantTraverse(source, database, qualifier, roleName) => (context, parameterMapping) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.TRAVERSE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.TRAVERSE, NoResource()(InputPosition.NONE), database, qualifier, roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant traversal privilege to role '${runtimeValue(roleName, params)}'")
 
     case DenyTraverse(source, database, qualifier, roleName) => (context, parameterMapping) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.TRAVERSE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName,
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.TRAVERSE, NoResource()(InputPosition.NONE), database, qualifier, roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny traversal privilege to role '${runtimeValue(roleName, params)}'")
 
     case RevokeTraverse(source, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
-      makeRevokeExecutionPlan(PrivilegeAction.TRAVERSE.toString, NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
+      makeRevokeExecutionPlan(PrivilegeAction.TRAVERSE, NoResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke traversal privilege from role '${runtimeValue(roleName, params)}'")
 
     // GRANT/DENY/REVOKE READ {prop} ON GRAPH foo NODES A (*) TO role
     case GrantRead(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.READ.toString, resource, database, qualifier, roleName,
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.READ, resource, database, qualifier, roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant read privilege to role '${runtimeValue(roleName, params)}'")
 
     case DenyRead(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.READ.toString, resource, database, qualifier, roleName,
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.READ, resource, database, qualifier, roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny read privilege to role '${runtimeValue(roleName, params)}'")
 
     case RevokeRead(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
-      makeRevokeExecutionPlan(PrivilegeAction.READ.toString, resource, database, qualifier, roleName, revokeType,
+      makeRevokeExecutionPlan(PrivilegeAction.READ, resource, database, qualifier, roleName, revokeType,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke read privilege from role '${runtimeValue(roleName, params)}'")
 
     // GRANT/DENY/REVOKE MATCH {prop} ON GRAPH foo NODES A (*) TO role
     case GrantMatch(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.MATCH.toString, resource, database, qualifier, roleName,
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.MATCH, resource, database, qualifier, roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), GRANT, params => s"Failed to grant match privilege to role '${runtimeValue(roleName, params)}'")
 
     case DenyMatch(source, resource, database, qualifier, roleName) => (context, parameterMapping) =>
-      makeGrantOrDenyExecutionPlan(PrivilegeAction.MATCH.toString, resource, database, qualifier, roleName,
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.MATCH, resource, database, qualifier, roleName,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), DENY, params => s"Failed to deny match privilege to role '${runtimeValue(roleName, params)}'")
 
     case RevokeMatch(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping) =>
-      makeRevokeExecutionPlan(PrivilegeAction.MATCH.toString, resource, database, qualifier, roleName, revokeType,
+      makeRevokeExecutionPlan(PrivilegeAction.MATCH, resource, database, qualifier, roleName, revokeType,
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping)), params => s"Failed to revoke match privilege from role '${runtimeValue(roleName, params)}'")
 
     // SHOW [ALL | USER user | ROLE role] PRIVILEGES
@@ -762,7 +768,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
   }
 
   private val privilegeKeys = Seq("action", "resourceValue", "resource", "label").foldLeft(Map.empty[String, String])((a, k) => a + (k -> internalKey(k)))
-  private def makeGrantOrDenyExecutionPlan(actionName: String,
+  private def makeGrantOrDenyExecutionPlan(privilegeAction: PrivilegeAction,
                                            resource: ActionResource,
                                            database: GraphScope,
                                            qualifier: PrivilegeQualifier,
@@ -773,17 +779,17 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     val commandName = if (grant.isGrant) "GrantPrivilege" else "DenyPrivilege"
 
-    val action = Values.utf8Value(actionName)
+    val action = Values.utf8Value(privilegeAction.toString)
     val (roleKey, roleValue, roleConverter) = getNameFields("role", roleName)
     val roleMap = VirtualValues.map(Array(roleKey), Array(Values.utf8Value(escapeName(roleName))))
     val (resourceValue: Value, resourceType: Value, resourceMerge: String) = getResourcePart(resource, startOfErrorMessage(roleMap), grant.name, "MERGE")
     val (qualifierKey, qualifierValue, qualifierConverter, qualifierMerge) = getQualifierPart(qualifier, startOfErrorMessage(roleMap), grant.name, "MERGE")
-    val (databaseKey, databaseValue, databaseConverter, databaseMerge, scopeMerge) = database match {
+    val (databaseKey, databaseValue, databaseConverter, databaseMerge, scopeMerge, specialDatabase) = database match {
       case NamedGraphScope(name) =>
         val (key, value, converter) = getNameFields("nameScope", name, valueMapper = s => new NormalizedDatabaseName(s).name())
-        (key, value, converter, s"MATCH (d:Database {name: $$`$key`})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
-      case AllGraphsScope() => ("*", Values.utf8Value("*"), IdentityConverter, "MERGE (d:DatabaseAll {name: '*'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
-      case DefaultDatabaseScope() => ("DEFAULT_DATABASE", Values.utf8Value("DEFAULT DATABASE"), IdentityConverter, "MERGE (d:DatabaseDefault {name: 'DEFAULT'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
+        (key, value, converter, s"MATCH (d:Database {name: $$`$key`})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", null)
+      case AllGraphsScope() => ("*", Values.utf8Value("*"), IdentityConverter, "MERGE (d:DatabaseAll {name: '*'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", SpecialDatabase.ALL) // The name is just for later printout of results
+      case DefaultDatabaseScope() => ("DEFAULT_DATABASE", Values.utf8Value("DEFAULT DATABASE"), IdentityConverter, "MERGE (d:DatabaseDefault {name: 'DEFAULT'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", SpecialDatabase.DEFAULT) // The name is just for later printout of results
     }
     UpdatingSystemCommandExecutionPlan(commandName, normalExecutionEngine,
       s"""
@@ -828,25 +834,26 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           case (e, p) => new IllegalStateException(s"${startOfErrorMessage(p)}.", e)
         },
       source,
-      parameterConverter = p => databaseConverter(qualifierConverter(roleConverter(p)))
+      parameterConverter = p => databaseConverter(qualifierConverter(roleConverter(p))),
+      assertPrivilegeAction = tx => enterpriseSecurityGraphComponent.assertUpdateWithAction(tx, privilegeAction, specialDatabase)
     )
   }
 
-  private def makeRevokeExecutionPlan(actionName: String, resource: ActionResource, database: GraphScope, qualifier: PrivilegeQualifier,
+  private def makeRevokeExecutionPlan(privilegeAction: PrivilegeAction, resource: ActionResource, database: GraphScope, qualifier: PrivilegeQualifier,
                                       roleName: Either[String, Parameter], revokeType: String, source: Option[ExecutionPlan],
                                       startOfErrorMessage: MapValue => String) = {
-    val action = Values.utf8Value(actionName)
+    val action = Values.utf8Value(privilegeAction.toString)
     val (roleKey, roleValue, roleConverter) = getNameFields("role", roleName)
     val roleMap = VirtualValues.map(Array(roleKey), Array(Values.utf8Value(escapeName(roleName))))
 
     val (resourceValue: Value, resourceType: Value, resourceMatch: String) = getResourcePart(resource, startOfErrorMessage(roleMap), "revoke", "MATCH")
     val (qualifierKey, qualifierValue, qualifierConverter, qualifierMatch) = getQualifierPart(qualifier, startOfErrorMessage(roleMap), "revoke", "MATCH")
-    val (databaseKey, databaseValue, databaseConverter, scopeMatch) = database match {
+    val (databaseKey, databaseValue, databaseConverter, scopeMatch, specialDatabase) = database match {
       case NamedGraphScope(name) =>
         val (key, value, converter) = getNameFields("nameScope", name, valueMapper = s => new NormalizedDatabaseName(s).name())
-        (key, value, converter, s"MATCH (d:Database {name: $$`$key`})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
-      case AllGraphsScope() => ("", Values.NO_VALUE, IdentityConverter, "MATCH (d:DatabaseAll {name: '*'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
-      case DefaultDatabaseScope() => ("", Values.NO_VALUE, IdentityConverter, "MATCH (d:DatabaseDefault {name: 'DEFAULT'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
+        (key, value, converter, s"MATCH (d:Database {name: $$`$key`})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", null)
+      case AllGraphsScope() => ("", Values.NO_VALUE, IdentityConverter, "MATCH (d:DatabaseAll {name: '*'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", SpecialDatabase.ALL)
+      case DefaultDatabaseScope() => ("", Values.NO_VALUE, IdentityConverter, "MATCH (d:DatabaseDefault {name: 'DEFAULT'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)", SpecialDatabase.DEFAULT)
     }
     UpdatingSystemCommandExecutionPlan("RevokePrivilege", normalExecutionEngine,
       s"""
@@ -876,7 +883,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         case (e, p) => new IllegalStateException(s"${startOfErrorMessage(p)}.", e)
       },
       source,
-      parameterConverter = p => databaseConverter(qualifierConverter(roleConverter(p)))
+      parameterConverter = p => databaseConverter(qualifierConverter(roleConverter(p))),
+      assertPrivilegeAction = tx => enterpriseSecurityGraphComponent.assertUpdateWithAction(tx, privilegeAction, specialDatabase)
     )
   }
 

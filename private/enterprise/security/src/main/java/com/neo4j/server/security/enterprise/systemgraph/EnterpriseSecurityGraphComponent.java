@@ -7,6 +7,7 @@ package com.neo4j.server.security.enterprise.systemgraph;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import com.neo4j.server.security.enterprise.systemgraph.versions.EnterpriseVersion_0_35;
@@ -34,6 +35,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.AbstractSystemGraphComponent;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.systemgraph.KnownSystemComponentVersions;
@@ -120,6 +122,13 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
             }
         }
         return Optional.empty();
+    }
+
+    public void assertUpdateWithAction( Transaction tx, PrivilegeAction action, SpecialDatabase specialDatabase )
+            throws UnsupportedOperationException
+    {
+        KnownEnterpriseSecurityComponentVersion component = knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx );
+        component.assertUpdateWithAction( action, specialDatabase );
     }
 
     KnownEnterpriseSecurityComponentVersion findSecurityGraphComponentVersion( String substring )

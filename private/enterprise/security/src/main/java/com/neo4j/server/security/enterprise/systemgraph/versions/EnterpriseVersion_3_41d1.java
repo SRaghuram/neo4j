@@ -7,14 +7,15 @@ package com.neo4j.server.security.enterprise.systemgraph.versions;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 
 import java.util.List;
 import java.util.Set;
 
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.logging.Log;
-import org.neo4j.server.security.systemgraph.KnownSystemComponentVersion;
 
 public class EnterpriseVersion_3_41d1 extends SupportedEnterpriseVersion
 {
@@ -69,6 +70,24 @@ public class EnterpriseVersion_3_41d1 extends SupportedEnterpriseVersion
     }
 
     // RUNTIME
+
+    @Override
+    public void assertUpdateWithAction( PrivilegeAction action, SpecialDatabase specialDatabase ) throws UnsupportedOperationException
+    {
+        switch ( action )
+        {
+        case SET_USER_STATUS:
+        case SET_PASSWORDS:
+
+        case CREATE_ELEMENT:
+        case DELETE_ELEMENT:
+        case SET_LABEL:
+        case REMOVE_LABEL:
+            throw unsupportedAction();
+
+        default:
+        }
+    }
 
     @Override
     public Set<ResourcePrivilege> getPrivilegeForRoles( Transaction tx, List<String> roleNames, Cache<String,Set<ResourcePrivilege>> privilegeCache )

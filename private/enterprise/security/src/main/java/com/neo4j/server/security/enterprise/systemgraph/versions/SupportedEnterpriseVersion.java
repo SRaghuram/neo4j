@@ -54,6 +54,11 @@ abstract class SupportedEnterpriseVersion extends KnownEnterpriseSecurityCompone
         super( version, description, log, isCurrent );
     }
 
+    UnsupportedOperationException unsupportedAction()
+    {
+        return new UnsupportedOperationException( "This operation is not supported while running in compatibility mode with version " + this.description );
+    }
+
     abstract PrivilegeBuilder makePrivilegeBuilder( ResourcePrivilege.GrantOrDeny privilegeType, String action );
 
     @Override

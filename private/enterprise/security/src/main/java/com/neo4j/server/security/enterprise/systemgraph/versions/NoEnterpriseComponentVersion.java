@@ -5,10 +5,12 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph.versions;
 
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent;
 
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.logging.NullLog;
 
 public class NoEnterpriseComponentVersion extends KnownEnterpriseSecurityComponentVersion
@@ -28,6 +30,12 @@ public class NoEnterpriseComponentVersion extends KnownEnterpriseSecurityCompone
 
     @Override
     public void assignDefaultPrivileges( Node role, String predefinedRole )
+    {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void assertUpdateWithAction( PrivilegeAction action, SpecialDatabase specialDatabase ) throws UnsupportedOperationException
     {
         throw new UnsupportedOperationException();
     }

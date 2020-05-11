@@ -62,6 +62,8 @@ public interface AbstractEnterpriseEditionModule
         var enterpriseComponent = EnterpriseSecurityModule.createSecurityComponent( securityLog, config, fileSystem, logProvider );
 
         Dependencies dependencies = globalModule.getGlobalDependencies();
+        // TODO find a better way to provide a way to let the runtime check the version of the enterprise security graph
+        dependencies.satisfyDependency( enterpriseComponent );
         SystemGraphComponents systemGraphComponents = dependencies.resolveDependency( SystemGraphComponents.class );
         systemGraphComponents.register( communityComponent );
         systemGraphComponents.register( enterpriseComponent );

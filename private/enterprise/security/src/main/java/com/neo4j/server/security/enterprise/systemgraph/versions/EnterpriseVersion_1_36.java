@@ -5,6 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph.versions;
 
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -21,9 +23,9 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.logging.Log;
-import org.neo4j.server.security.systemgraph.KnownSystemComponentVersion;
 
 public class EnterpriseVersion_1_36 extends KnownEnterpriseSecurityComponentVersion
 {
@@ -45,6 +47,12 @@ public class EnterpriseVersion_1_36 extends KnownEnterpriseSecurityComponentVers
     {
         return nodesWithLabelExist( tx, dbRoleLabel ) &&
                componentNotInVersionNode( tx );
+    }
+
+    @Override
+    public void assertUpdateWithAction( PrivilegeAction action, SpecialDatabase specialDatabase ) throws UnsupportedOperationException
+    {
+        throw unsupported();
     }
 
     @Override

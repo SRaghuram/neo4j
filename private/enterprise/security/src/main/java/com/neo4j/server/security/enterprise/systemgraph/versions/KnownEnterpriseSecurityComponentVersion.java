@@ -7,6 +7,7 @@ package com.neo4j.server.security.enterprise.systemgraph.versions;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent;
 
 import java.util.ArrayList;
@@ -20,6 +21,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.systemgraph.KnownSystemComponentVersion;
@@ -59,6 +61,8 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
     {
         return getVersion( tx ) == NoEnterpriseComponentVersion.VERSION;
     }
+
+    public abstract void assertUpdateWithAction( PrivilegeAction action, SpecialDatabase specialDatabase ) throws UnsupportedOperationException;
 
     public abstract void setUpDefaultPrivileges( Transaction tx );
 

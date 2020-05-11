@@ -7,12 +7,14 @@ package com.neo4j.server.security.enterprise.systemgraph.versions;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 
 import java.util.List;
 import java.util.Set;
 
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.logging.Log;
 
 /**
@@ -48,6 +50,12 @@ public class EnterpriseVersion_4_41d2 extends SupportedEnterpriseVersion
     public void assignDefaultPrivileges( Node role, String predefinedRole )
     {
         super.assignDefaultPrivileges( role, predefinedRole );
+    }
+
+    @Override
+    public void assertUpdateWithAction( PrivilegeAction action, SpecialDatabase specialDatabase ) throws UnsupportedOperationException
+    {
+        // Current version supports all current commands
     }
 
     @Override
