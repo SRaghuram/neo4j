@@ -93,7 +93,8 @@ class CausalClusterSettingConstraintsTest
                 .set( initial_discovery_members, List.of( new SocketAddress( "localhost", 99 ), new SocketAddress( "remotehost", 2 ) ) ).build() );
 
         assertThat( exception.getMessage() ).isEqualTo(
-                "Error evaluating value for setting 'dbms.connector.bolt.enabled'. Failed to validate 'false' for 'dbms.connector.bolt.enabled': is not `true`" );
+                "Error evaluating value for setting 'dbms.connector.bolt.enabled'. Failed to validate" +
+                " 'false' for 'dbms.connector.bolt.enabled': is not `true`" );
     }
 
     @TestClusterMode
