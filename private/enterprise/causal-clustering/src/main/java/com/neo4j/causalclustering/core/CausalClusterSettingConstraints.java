@@ -10,6 +10,8 @@ import com.typesafe.config.ConfigFactory;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 import org.neo4j.configuration.SettingConstraint;
 import org.neo4j.configuration.SettingConstraints;
@@ -18,6 +20,7 @@ import org.neo4j.graphdb.config.Setting;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.middleware_akka_external_config;
 import static java.lang.String.format;
+import static java.util.stream.Collectors.toList;
 
 class CausalClusterSettingConstraints
 {
@@ -54,7 +57,7 @@ class CausalClusterSettingConstraints
             @Override
             public String getDescription()
             {
-                return "must be parsable file or empty";
+                return "must be a parsable file or empty";
             }
         } );
     }
@@ -94,7 +97,10 @@ class CausalClusterSettingConstraints
             @Override
             public String getDescription()
             {
-                return "Different discovery types requires may require different settings.";
+                return "may require different settings depending on the discovery type: `" + Arrays.stream( DiscoveryType.values() )
+                        .map( discoveryType -> discoveryType.name() + " requires " +
+                                               discoveryType.requiredSettings().stream().map( Setting::name ).collect( toList() ) )
+                        .collect( Collectors.joining( ", " ) ) + "`";
             }
         } );
     }
