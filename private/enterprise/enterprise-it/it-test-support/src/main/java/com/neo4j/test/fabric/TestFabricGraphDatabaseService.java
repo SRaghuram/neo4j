@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -24,6 +25,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.KernelTransaction;
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 
@@ -50,7 +52,8 @@ public class TestFabricGraphDatabaseService extends GraphDatabaseFacade
     protected InternalTransaction beginTransactionInternal( KernelTransaction.Type type,
                                                             LoginContext loginContext,
                                                             ClientConnectionInfo connectionInfo,
-                                                            long timeoutMillis )
+                                                            long timeoutMillis,
+                                                            Consumer<Status> terminationCallback )
     {
 
         var fabricTxId = TRANSACTION_COUNTER.incrementAndGet();

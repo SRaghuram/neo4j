@@ -7,6 +7,7 @@ package com.neo4j.test.fabric;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import org.neo4j.bolt.dbapi.BoltQueryExecution;
 import org.neo4j.bolt.dbapi.BoltTransaction;
@@ -343,6 +344,12 @@ public class TestFabricTransaction implements InternalTransaction
     public boolean isOpen()
     {
         return kernelInternalTransaction.isOpen();
+    }
+
+    @Override
+    public Consumer<Status> getTerminationCallback()
+    {
+        return kernelInternalTransaction.getTerminationCallback();
     }
 
     @Override

@@ -87,12 +87,19 @@ public abstract class PooledDriver
 
     protected TransactionConfig getTransactionConfig( FabricTransactionInfo transactionInfo )
     {
-        if ( transactionInfo.getTxTimeout().equals( Duration.ZERO ) )
+        var builder = TransactionConfig.builder();
+
+        if ( !transactionInfo.getTxTimeout().equals( Duration.ZERO ) )
         {
-            return TransactionConfig.empty();
+            builder.withTimeout( transactionInfo.getTxTimeout() );
         }
 
-        return TransactionConfig.builder().withTimeout( transactionInfo.getTxTimeout() ).build();
+        if ( transactionInfo.getTxMetadata() != null )
+        {
+            builder.withMetadata( transactionInfo.getTxMetadata() );
+        }
+
+        return builder.build();
     }
 
     private org.neo4j.driver.AccessMode translateAccessMode( AccessMode accessMode )

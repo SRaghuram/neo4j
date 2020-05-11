@@ -162,6 +162,13 @@ public class FabricRemoteExecutorImpl implements FabricRemoteExecutor
         }
 
         @Override
+        public Mono<Void> terminate()
+        {
+            // driver does not have 'terminate' operation
+            return rollback();
+        }
+
+        @Override
         public Location getLocation()
         {
             return location;
