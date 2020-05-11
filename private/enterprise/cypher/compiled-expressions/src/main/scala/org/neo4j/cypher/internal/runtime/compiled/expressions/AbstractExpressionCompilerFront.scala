@@ -1662,7 +1662,9 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       Some(IntermediateExpression(ternary(equal(getLongAt(offset), constant(-1L)), trueValue, falseValue),
                                   Seq.empty, Seq.empty, Set.empty))
 
-    case _ => None
+    case e =>
+      println(e)
+      None
   }
 
   private def tokenFieldsForLabels(labels: Seq[String]): (Seq[InstanceField], Seq[IntermediateRepresentation]) = {
@@ -2084,16 +2086,16 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
 
   override def compileProjection(projections: Map[String, Expression]): Option[IntermediateExpression] = {
     val removed = projections.keys.count(slots(_).isLongSlot)
-    val compiled = for {(k, v) <- projections
+    val compiled = for {(k, v) <- projections.toSeq
                         c <- compileExpression(v) if !slots(k).isLongSlot}
       yield slots(k).offset -> c
     if (compiled.size + removed < projections.size) None
     else {
-      val all = compiled.toSeq.map {
+      val all = compiled.map {
         case (slot, value) => setRefAt(slot, nullCheckIfRequired(value))
       }
-      Some(IntermediateExpression(block(all: _*), compiled.values.flatMap(_.fields).toSeq,
-                             compiled.values.flatMap(_.variables).toSeq, Set.empty))
+      Some(IntermediateExpression(block(all: _*), compiled.flatMap(_._2.fields),
+                             compiled.flatMap(_._2.variables), Set.empty))
     }
   }
 

@@ -445,7 +445,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
           ctx: TemplateContext =>
             new FilterOperatorTemplate(ctx.inner, plan.id, ctx.compileExpression(predicate))(ctx.expressionCompiler)
 
-        case plan@plans.Projection(_, projections) if plan.aliases.isEmpty =>
+        case plan@plans.Projection(_, projections) =>
           ctx: TemplateContext =>
             new ProjectOperatorTemplate(ctx.inner, plan.id, projections)(ctx.expressionCompiler)
 
@@ -517,7 +517,7 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
               ctx.argumentSizes(plan.id))(ctx.expressionCompiler)
 
         // Special case for limit when not nested under an apply and with serial execution
-        case plan@Distinct(_, grouping) if hasNoNestedArguments && serialExecutionOnly && plan.aliases.isEmpty =>
+        case plan@Distinct(_, grouping) if hasNoNestedArguments && serialExecutionOnly =>
           ctx: TemplateContext =>
             val argumentStateMapId = ctx.executionGraphDefinition.findArgumentStateMapForPlan(plan.id)
             val groupMapping = SlottedExpressionConverters.orderGroupingKeyExpressions(grouping, Seq.empty)(ctx.slots).map {

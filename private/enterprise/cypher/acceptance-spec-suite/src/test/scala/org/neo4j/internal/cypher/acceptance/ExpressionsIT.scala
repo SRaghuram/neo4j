@@ -1965,6 +1965,26 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     context.getRefAt(1) should equal(NO_VALUE)
   }
 
+  test("should project aliases") {
+    //given
+    val slots = SlotConfiguration.empty
+      .newReference("a", nullable = true, symbols.CTAny)
+      .addAlias("b", "a")
+    SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
+    val context = new SlottedRow(slots)
+    context.setRefAt(0, stringValue("A"))
+
+    val projections = Map("a" -> ReferenceFromSlot(0, "a"), "b" -> ReferenceFromSlot(0, "a"))
+    val compiled = compileProjection(projections, slots)
+
+    //when
+    compiled.project(context, query, params(NO_VALUE), cursors, expressionVariables)
+
+    //then
+    context.getRefAt(0) should equal(stringValue("A"))
+    context.getByName("b") should equal(stringValue("A"))
+  }
+
   test("single in list basic") {
     //When
     val bar = ExpressionVariable(0, "bar")
