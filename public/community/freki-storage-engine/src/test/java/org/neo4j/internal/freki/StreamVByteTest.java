@@ -118,20 +118,24 @@ class StreamVByteTest
         ByteBuffer buffer = newTargetBuffer( 10_000, randomExistingData );
         int numValuesToWrite = random.nextInt( 0, values.length - 1 );
         long[] subset = Arrays.copyOf( values, numValuesToWrite );
-        writeLongs( subset, buffer );
+        StreamVByte.Writer writer = new StreamVByte.Writer();
+        // numValuesToWrite+1, the +1 here is to ensure that they both write the header in the same style
+        writeLongs( writer, buffer, numValuesToWrite + 1 );
+        for ( int i = 0; i < numValuesToWrite; i++ )
+        {
+            writer.writeNext( values[i] );
+        }
+        writer.done();
         int expectedOffset = buffer.position();
         buffer.position( 0 );
 
-        StreamVByte.Writer writer = new StreamVByte.Writer();
-        writeLongs( writer, buffer, values.length );
+        writer = new StreamVByte.Writer();
+        writeLongs( writer, buffer, numValuesToWrite + 1 );
         for ( int i = 0; i < numValuesToWrite + 1; i++ )
         {
             writer.writeNext( values[i] );
         }
-        if ( numValuesToWrite > 0 )
-        {
-            writer.undoLastWrite();
-        }
+        writer.undoLastWrite();
         writer.done();
 
         // then
@@ -169,6 +173,7 @@ class StreamVByteTest
         {
             random.nextBytes( data.array() );
         }
+        data.limit( data.capacity() - 20 );
         return data;
     }
 }

@@ -21,13 +21,13 @@ package org.neo4j.internal.freki;
 
 import org.eclipse.collections.api.iterator.LongIterator;
 
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 
 import org.neo4j.io.pagecache.PageCursor;
 
 class StreamVByte
 {
-    static final int SINGLE_VLONG_MAX_SIZE = 8;
     private static final int[] INT_RELATIVE_OFFSETS = new int[256];
     private static final int[] LONG_RELATIVE_OFFSETS = new int[256];
     private static final int[] INT_CODE_SIZES = {1, 2, 3, 4};
@@ -36,6 +36,8 @@ class StreamVByte
     private static final long LONG_BYTE_SIZE_1 = 1L << (LONG_CODE_SIZES[1] * Byte.SIZE);
     private static final long LONG_BYTE_SIZE_2 = 1L << (LONG_CODE_SIZES[2] * Byte.SIZE);
     private static final long LONG_BYTE_SIZE_3 = 1L << (LONG_CODE_SIZES[3] * Byte.SIZE);
+    static final int SINGLE_VLONG_MAX_SIZE = LONG_CODE_SIZES[LONG_CODE_SIZES.length - 1] + 1;
+    static final int DUAL_VLONG_MAX_SIZE = LONG_CODE_SIZES[LONG_CODE_SIZES.length - 1] * 2 + 1;
 
     static
     {
@@ -67,7 +69,10 @@ class StreamVByte
         writer.initialize( buffer, deltas, INT_CODE_SIZES, INT_ENCODER, values.length );
         for ( int value : values )
         {
-            writer.writeNext( value );
+            if ( !writer.writeNext( value ) )
+            {
+                throw new BufferOverflowException();
+            }
         }
         writer.done();
         return buffer.position();
@@ -106,26 +111,44 @@ class StreamVByte
         return header > 0;
     }
 
-    private static byte encodeIntValue( int value, byte[] bytes, int offset )
+    private static byte intValueSizeCode( int value )
     {
         byte code;
         if ( value < (1 << 8) )
         {   // 1 byte
-            bytes[offset] = (byte) value;
             code = 0;
         }
         else if ( value < (1 << 16) )
         {   // 2 bytes
-            bytes[offset] = (byte) value;
-            bytes[offset + 1] = (byte) (value >> 8);
             code = 1;
         }
         else if ( value < (1 << 24) )
         {   // 3 bytes
+            code = 2;
+        }
+        else
+        {   // 4 bytes
+            code = 3;
+        }
+        return code;
+    }
+
+    private static void encodeIntValue( int value, byte sizeCode, byte[] bytes, int offset )
+    {
+        if ( sizeCode == 0 )
+        {   // 1 byte
+            bytes[offset] = (byte) value;
+        }
+        else if ( sizeCode == 1 )
+        {   // 2 bytes
+            bytes[offset] = (byte) value;
+            bytes[offset + 1] = (byte) (value >> 8);
+        }
+        else if ( sizeCode == 2 )
+        {   // 3 bytes
             bytes[offset] = (byte) value;
             bytes[offset + 1] = (byte) (value >> 8);
             bytes[offset + 2] = (byte) (value >> 16);
-            code = 2;
         }
         else
         {   // 4 bytes
@@ -133,9 +156,7 @@ class StreamVByte
             bytes[offset + 1] = (byte) (value >> 8);
             bytes[offset + 2] = (byte) (value >> 16);
             bytes[offset + 3] = (byte) (value >> 24);
-            code = 3;
         }
-        return code;
     }
 
     private static int decodeIntValue( int code, byte[] bytes, int dataOffset )
@@ -174,7 +195,10 @@ class StreamVByte
         writeLongs( writer, buffer, values.length );
         for ( long value : values )
         {
-            writer.writeNext( value );
+            if ( !writer.writeNext( value ) )
+            {
+                throw new BufferOverflowException();
+            }
         }
         writer.done();
         return buffer.position();
@@ -198,7 +222,12 @@ class StreamVByte
         reader.initialize( buffer, false, LONG_CODE_SIZES, LONG_DECODER );
     }
 
-    static int calculateLongSizeIndex( long value )
+    static int sizeOfLongSizeIndex( int code )
+    {
+        return LONG_CODE_SIZES[code];
+    }
+
+    static byte longValueSizeCode( long value )
     {
         if ( value < LONG_BYTE_SIZE_0 )
         {
@@ -215,37 +244,28 @@ class StreamVByte
         return 3;
     }
 
-    static int sizeOfLongSizeIndex( int code )
+    private static void encodeLongValue( long value, byte sizeCode, byte[] bytes, int offset )
     {
-        return LONG_CODE_SIZES[code];
-    }
-
-    private static byte encodeLongValue( long value, byte[] bytes, int offset )
-    {
-        byte code;
-        if ( value < LONG_BYTE_SIZE_0 )
-        {   // 1 byte
+        if ( sizeCode == 0 )
+        {
             bytes[offset] = (byte) value;
-            code = 0;
         }
-        else if ( value < LONG_BYTE_SIZE_1 )
-        {   // 3 bytes
+        else if ( sizeCode == 1 )
+        {
             bytes[offset] = (byte) value;
             bytes[offset + 1] = (byte) (value >> 8);
             bytes[offset + 2] = (byte) (value >> 16);
-            code = 1;
         }
-        else if ( value < LONG_BYTE_SIZE_2 )
-        {   // 5 bytes
+        else if ( sizeCode == 2 )
+        {
             bytes[offset] = (byte) value;
             bytes[offset + 1] = (byte) (value >> 8);
             bytes[offset + 2] = (byte) (value >> 16);
             bytes[offset + 3] = (byte) (value >> 24);
             bytes[offset + 4] = (byte) (value >> 32);
-            code = 2;
         }
         else
-        {   // 7 bytes
+        {
             bytes[offset] = (byte) value;
             bytes[offset + 1] = (byte) (value >> 8);
             bytes[offset + 2] = (byte) (value >> 16);
@@ -253,9 +273,7 @@ class StreamVByte
             bytes[offset + 4] = (byte) (value >> 32);
             bytes[offset + 5] = (byte) (value >> 40);
             bytes[offset + 6] = (byte) (value >> 48);
-            code = 3;
         }
-        return code;
     }
 
     private static long decodeLongValue( int code, byte[] bytes, int dataOffset )
@@ -377,14 +395,13 @@ class StreamVByte
         {
             // [1_cc,bbaa]
             byte countAndMark = (byte) ((count << 4) | 0x80);
-            bytes[offset] = additive
-                    ? (byte) (bytes[offset] | countAndMark)
-                    : countAndMark;
+            byte existingHeaderMarks = (byte) (additive ? bytes[offset] & 0xF : 0);
+            bytes[offset] = (byte) (existingHeaderMarks | countAndMark);
         }
         else
         {
             bytes[offset++] = (byte) (count & 0x3F);
-            if ( count > 63 )
+            if ( style == 2 )
             {
                 // [_Mcc,cccc][cccc,cccc]
                 bytes[offset - 1] |= 0x40;
@@ -479,6 +496,7 @@ class StreamVByte
         private byte header;
         private int headerShift;
         private ByteBuffer buffer;
+        private int limit;
 
         private void initialize( ByteBuffer buffer, boolean deltas, int[] codeSizes, Encoder encoder, int worstCaseCount )
         {
@@ -491,6 +509,9 @@ class StreamVByte
             this.count = 0;
             this.countHeaderOffset = buffer.position();
             this.countHeaderSize = figureOutCountHeaderSize( worstCaseCount );
+            this.limit = buffer.limit();
+//            assert buffer.limit() <= buffer.capacity() - codeSizes[codeSizes.length - 1] :
+//                    "Please set proper limit to avoid exceptions in serialization " + buffer;
 
             writeCountHeader( worstCaseCount, data, countHeaderOffset, countHeaderSize, false );
             this.header = 0;
@@ -504,8 +525,6 @@ class StreamVByte
          */
         boolean writeNext( long value )
         {
-            // TODO figure out size before writing and return false if it wouldn't fit
-
             if ( headerShift == 8 )
             {
                 if ( count > 0 )
@@ -513,13 +532,25 @@ class StreamVByte
                     data[headerOffset] = header;
                     header = 0;
                 }
+                if ( offset + 1 >= limit )
+                {
+                    return false;
+                }
                 headerOffset = offset++;
                 headerShift = 0;
             }
 
-            int sizeCode = encoder.encodeNext( data, offset, value - prevValue );
+            long valueToWrite = value - prevValue;
+            byte sizeCode = encoder.sizeCodeOf( valueToWrite );
+            int valueSize = codeSizes[sizeCode];
+            if ( offset + valueSize >= limit )
+            {
+                return false;
+            }
+
+            encoder.encodeNext( data, offset, valueToWrite, sizeCode );
             header |= sizeCode << headerShift;
-            offset += codeSizes[sizeCode];
+            offset += valueSize;
             if ( deltas )
             {
                 prevValue = value;
@@ -534,6 +565,7 @@ class StreamVByte
             assert count > 0;
             headerShift -= 2;
             int sizeCode = (header >>> headerShift) & 0x3;
+            header &= ~(0x3 << headerShift);
             offset -= codeSizes[sizeCode];
             if ( headerShift == 0 )
             {
@@ -564,11 +596,40 @@ class StreamVByte
 
     private interface Encoder
     {
-        int encodeNext( byte[] data, int offset, long value );
+        byte sizeCodeOf( long value );
+
+        void encodeNext( byte[] data, int offset, long value, byte sizeCode );
     }
 
-    private static final Encoder INT_ENCODER = ( data, offset, value ) -> encodeIntValue( (int) value, data, offset );
-    private static final Encoder LONG_ENCODER = ( data, offset, value ) -> encodeLongValue( value, data, offset );
+    private static final Encoder INT_ENCODER = new Encoder()
+    {
+        @Override
+        public byte sizeCodeOf( long value )
+        {
+            return intValueSizeCode( (int) value );
+        }
+
+        @Override
+        public void encodeNext( byte[] data, int offset, long value, byte sizeCode )
+        {
+            encodeIntValue( (int) value, sizeCode, data, offset );
+        }
+    };
+
+    private static final Encoder LONG_ENCODER = new Encoder()
+    {
+        @Override
+        public byte sizeCodeOf( long value )
+        {
+            return longValueSizeCode( value );
+        }
+
+        @Override
+        public void encodeNext( byte[] data, int offset, long value, byte sizeCode )
+        {
+            encodeLongValue( value, sizeCode, data, offset );
+        }
+    };
 
     static class Reader implements LongIterator
     {
