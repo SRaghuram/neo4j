@@ -29,7 +29,7 @@ public class RaftMessageApplier implements LifecycleMessageHandler<RaftMessages.
     private final RaftMachine raftMachine;
     private final CoreDownloaderService downloadService;
     private final CommandApplicationProcess applicationProcess;
-    private CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider;
+    private final CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider;
     private final DatabasePanicker panicker;
     private boolean stopped;
 
@@ -75,7 +75,7 @@ public class RaftMessageApplier implements LifecycleMessageHandler<RaftMessages.
         {
             log.error( "Error handling message", e );
             panicker.panic( e );
-            stop();
+            stopped = true;
         }
     }
 

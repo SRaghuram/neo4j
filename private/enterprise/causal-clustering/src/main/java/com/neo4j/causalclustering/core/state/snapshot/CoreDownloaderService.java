@@ -80,6 +80,9 @@ public class CoreDownloaderService extends LifecycleAdapter
     @Override
     public synchronized void start() throws Exception
     {
+        /* We prevent aborts while running so that the kernel cannot abort recovering
+           the database. This can otherwise happen during the restart of the kernel database
+           in the PersistentSnapshotDownloader and will cause subsequent issues. */
         databaseStartAborter.setAbortable( context.databaseId(), STORE_COPY, false );
     }
 

@@ -92,6 +92,7 @@ class CoreBootstrap
             }
             catch ( Exception e )
             {
+                downloadService.stop(); // The handler might be blocked doing a download, so we need to stop it.
                 raftMessageHandler.stop();
                 throw e;
             }
