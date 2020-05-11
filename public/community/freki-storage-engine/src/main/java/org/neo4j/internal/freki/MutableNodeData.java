@@ -131,8 +131,7 @@ class MutableNodeData
     @Override
     public int hashCode()
     {
-        int result = Objects.hash( nodeId, labels, properties, relationships, degrees, nextInternalRelationshipId, forwardPointer, backwardPointer );
-        return result;
+        return Objects.hash( nodeId, labels, properties, relationships, degrees, nextInternalRelationshipId, forwardPointer, backwardPointer );
     }
 
     @Override
@@ -499,7 +498,8 @@ class MutableNodeData
         return backwardPointer;
     }
 
-    boolean serializeMainData( ByteBuffer[] intermediateBuffers, SimpleBigValueStore bigPropertyValueStore, Consumer<StorageCommand> bigValueCommandConsumer )
+    boolean serializeMainData( IntermediateBuffer[] intermediateBuffers, SimpleBigValueStore bigPropertyValueStore,
+            Consumer<StorageCommand> bigValueCommandConsumer )
     {
         if ( labels != null )
         {
@@ -511,20 +511,20 @@ class MutableNodeData
         else if ( labelsBuffer != null )
         {
             assert labelsOffset > 0;
-            copyFromSerializedBuffer( labelsBuffer, intermediateBuffers[GraphUpdates.LABELS], labelsOffset, labelsLength );
+            copyFromSerializedBuffer( labelsBuffer, intermediateBuffers[GraphUpdates.LABELS].add(), labelsOffset, labelsLength );
         }
 
         if ( properties != null )
         {
             if ( properties.notEmpty() )
             {
-                writeProperties( properties, intermediateBuffers[GraphUpdates.PROPERTIES], bigPropertyValueStore, bigValueCommandConsumer );
+                writeNodeProperties( properties, intermediateBuffers[GraphUpdates.PROPERTIES], bigPropertyValueStore, bigValueCommandConsumer );
             }
         }
         else if ( propertiesBuffer != null )
         {
             assert propertiesOffset > 0;
-            copyFromSerializedBuffer( propertiesBuffer, intermediateBuffers[GraphUpdates.PROPERTIES], propertiesOffset, propertiesLength );
+            copyFromSerializedBuffer( propertiesBuffer, intermediateBuffers[GraphUpdates.PROPERTIES].add(), propertiesOffset, propertiesLength );
         }
 
         if ( relationships != null )
@@ -534,11 +534,12 @@ class MutableNodeData
                 // TODO cheaper pre-check if best case cannot fit
                 try
                 {
-                    int[] typeOffsets = writeRelationships( intermediateBuffers[GraphUpdates.RELATIONSHIPS], bigPropertyValueStore, bigValueCommandConsumer );
-                    writeTypeOffsets( intermediateBuffers[GraphUpdates.RELATIONSHIPS_OFFSETS], typeOffsets );
+                    int[] typeOffsets = writeRelationships( intermediateBuffers[GraphUpdates.RELATIONSHIPS].add(),
+                            bigPropertyValueStore, bigValueCommandConsumer );
+                    writeTypeOffsets( intermediateBuffers[GraphUpdates.RELATIONSHIPS_OFFSETS].add(), typeOffsets );
                     return false;
                 }
-                catch ( BufferOverflowException | ArrayIndexOutOfBoundsException e )
+                catch ( BufferOverflowException | ArrayIndexOutOfBoundsException | IllegalArgumentException e )
                 {
                     //TODO this is slow, better check after each serialized rel for overflow.
                     return true;
@@ -548,8 +549,8 @@ class MutableNodeData
         else if ( relationshipsBuffer != null )
         {
             assert relationshipsOffset > 0 && relationshipsTypesOffset > 0;
-            copyFromSerializedBuffer( relationshipsBuffer, intermediateBuffers[GraphUpdates.RELATIONSHIPS], relationshipsOffset, relationshipsLength );
-            copyFromSerializedBuffer( relationshipsBuffer, intermediateBuffers[GraphUpdates.RELATIONSHIPS_OFFSETS], relationshipsTypesOffset,
+            copyFromSerializedBuffer( relationshipsBuffer, intermediateBuffers[GraphUpdates.RELATIONSHIPS].add(), relationshipsOffset, relationshipsLength );
+            copyFromSerializedBuffer( relationshipsBuffer, intermediateBuffers[GraphUpdates.RELATIONSHIPS_OFFSETS].add(), relationshipsTypesOffset,
                     relationshipsTypesLength );
         }
 
@@ -563,17 +564,17 @@ class MutableNodeData
         else if ( degreesBuffer != null )
         {
             assert degreesOffset > 0;
-            copyFromSerializedBuffer( degreesBuffer, intermediateBuffers[GraphUpdates.DEGREES], degreesOffset, degreesLength );
+            copyFromSerializedBuffer( degreesBuffer, intermediateBuffers[GraphUpdates.DEGREES].add(), degreesOffset, degreesLength );
         }
         return isDense;
     }
 
-    private void copyFromSerializedBuffer( ByteBuffer from, ByteBuffer to, int position, int length )
+    private static void copyFromSerializedBuffer( ByteBuffer from, ByteBuffer to, int position, int length )
     {
         to.put( from.array(), position, length );
     }
 
-    void serializeDegrees( ByteBuffer degreesBuffer )
+    void serializeDegrees( IntermediateBuffer degreesBuffer )
     {
         writeDegrees( degreesBuffer );
     }
@@ -591,9 +592,24 @@ class MutableNodeData
         writeLongs( recordPointers, buffer );
     }
 
-    private void writeLabels( ByteBuffer buffer )
+    private void writeLabels( IntermediateBuffer intermediateBuffer )
     {
-        writeInts( labels.toSortedArray(), buffer, true );
+        StreamVByte.Writer writer = new StreamVByte.Writer();
+        int[] labels = this.labels.toSortedArray();
+        writeInts( writer, intermediateBuffer.add(), true, labels.length );
+        for ( int i = 0; i < labels.length; )
+        {
+            if ( writer.writeNext( labels[i] ) )
+            {
+                i++;
+            }
+            else
+            {
+                writer.done();
+                writeInts( writer, intermediateBuffer.add(), true, labels.length - i );
+            }
+        }
+        writer.done();
     }
 
     private int[] writeRelationships( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore, Consumer<StorageCommand> commandConsumer )
@@ -622,7 +638,7 @@ class MutableNodeData
                     // this to efficiently be able to skip through to a specific properties set
                     int blockSizeHeaderOffset = buffer.position();
                     buffer.put( (byte) 0 );
-                    writeProperties( relationship.properties, buffer, bigPropertyValueStore, commandConsumer );
+                    writeRelationshipProperties( relationship.properties, buffer, bigPropertyValueStore, commandConsumer );
                     int blockSize = buffer.position() - blockSizeHeaderOffset;
                     buffer.put( blockSizeHeaderOffset, safeCastIntToUnsignedByte( blockSize ) );
                 }
@@ -642,8 +658,9 @@ class MutableNodeData
         writeInts( typeOffsets, buffer, true );
     }
 
-    private void writeDegrees( ByteBuffer buffer )
+    private void writeDegrees( IntermediateBuffer intermediateBuffer )
     {
+        // TODO rewrite with vbyte writer and intermediate buffer
         int[] types = degrees.types();
         int typesLength = types.length;
         for ( int i = 0; i < typesLength; i++ )
@@ -677,11 +694,12 @@ class MutableNodeData
                 degreesArray[degreesArrayIndex++] = loop;
             }
         }
+        ByteBuffer buffer = intermediateBuffer.add();
         writeInts( types, buffer, true );
         writeInts( Arrays.copyOf( degreesArray, degreesArrayIndex ), buffer, false );
     }
 
-    private static void writeProperties( MutableIntObjectMap<Value> properties, ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore,
+    private static void writeRelationshipProperties( MutableIntObjectMap<Value> properties, ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore,
             Consumer<StorageCommand> commandConsumer )
     {
         int[] propertyKeys = properties.keySet().toSortedArray();
@@ -691,6 +709,44 @@ class MutableNodeData
         {
             properties.get( propertyKey ).writeTo( writer );
         }
+    }
+
+    private static void writeNodeProperties( MutableIntObjectMap<Value> properties, IntermediateBuffer intermediateBuffer,
+            SimpleBigValueStore bigPropertyValueStore, Consumer<StorageCommand> commandConsumer )
+    {
+        StreamVByte.Writer keyWriter = new StreamVByte.Writer();
+        int[] propertyKeys = properties.keySet().toSortedArray();
+        ByteBuffer buffer = intermediateBuffer.add();
+        writeInts( keyWriter, buffer, true, propertyKeys.length );
+        ByteBuffer valueBuffer = intermediateBuffer.temp();
+        PropertyValueFormat valueWriter = new PropertyValueFormat( bigPropertyValueStore, commandConsumer, valueBuffer );
+        int completedValuePos = 0;
+        for ( int i = 0; i < propertyKeys.length; )
+        {
+            int propertyKey = propertyKeys[i];
+            boolean couldWriteKey = keyWriter.writeNext( propertyKey );
+            assert couldWriteKey;
+            properties.get( propertyKey ).writeTo( valueWriter );
+            if ( buffer.position() + valueBuffer.position() <= buffer.limit() )
+            {
+                i++;
+                completedValuePos = valueBuffer.position();
+            }
+            else
+            {
+                keyWriter.undoLastWrite();
+                keyWriter.done();
+                copyFromSerializedBuffer( valueBuffer, buffer, 0, completedValuePos );
+
+                buffer = intermediateBuffer.add();
+                writeInts( keyWriter, buffer, true, propertyKeys.length );
+                valueBuffer = intermediateBuffer.temp();
+                valueWriter = new PropertyValueFormat( bigPropertyValueStore, commandConsumer, valueBuffer );
+            }
+        }
+
+        keyWriter.done();
+        copyFromSerializedBuffer( valueBuffer, buffer, 0, completedValuePos );
     }
 
     private void readProperties( MutableIntObjectMap<Value> into, ByteBuffer buffer )

@@ -224,6 +224,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         long[] labels = EMPTY_LONG_ARRAY;
         boolean labelsLoaded = false;
         boolean propertiesLoaded = skipProperties;
+        propertyCursor.reset();
         for ( FrekiCommand.RecordChange change : node )
         {
             Record record = recordFunction.apply( change );
@@ -285,11 +286,6 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
                     propertiesLoaded = true;
                 }
             }
-        }
-
-        if ( !propertiesLoaded )
-        {
-            propertyCursor.reset();
         }
         return labels;
     }

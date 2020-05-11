@@ -26,6 +26,14 @@ import static java.lang.Integer.numberOfTrailingZeros;
 
 class Header
 {
+    static final int WORST_CASE_SIZE;
+    static
+    {
+        Header header = new Header();
+        header.markers = Integer.MAX_VALUE;
+        WORST_CASE_SIZE = header.spaceNeeded();
+    }
+
     static final int NUM_OFFSETS = 7;
     private static final int MASK_OFFSET_MARKERS = (1 << NUM_OFFSETS) - 1;
     private static final int BITS_PER_OFFSET = 10;

@@ -60,9 +60,9 @@ import org.neo4j.values.storable.Value;
 import static java.lang.String.format;
 import static org.neo4j.internal.freki.MutableNodeData.externalRelationshipId;
 import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValueSizeIncludingTypeHeader;
-import static org.neo4j.internal.freki.StreamVByte.calculateLongSizeIndex;
 import static org.neo4j.internal.freki.StreamVByte.decodeLongValue;
 import static org.neo4j.internal.freki.StreamVByte.encodeLongValue;
+import static org.neo4j.internal.freki.StreamVByte.longValueSizeCode;
 import static org.neo4j.internal.freki.StreamVByte.readInts;
 import static org.neo4j.internal.freki.StreamVByte.sizeOfLongSizeIndex;
 import static org.neo4j.internal.freki.StreamVByte.writeInts;
@@ -520,10 +520,10 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         {
             if ( cachedKeySize == 0 )
             {
-                int nodeIdSize = calculateLongSizeIndex( nodeId );
-                int tokenAndDirectionSize = calculateLongSizeIndex( tokenAndDirectionInt() );
-                int neighbourIdSize = calculateLongSizeIndex( neighbourNodeId );
-                int internalRelationshipIdSize = calculateLongSizeIndex( internalRelationshipId );
+                int nodeIdSize = longValueSizeCode( nodeId );
+                int tokenAndDirectionSize = longValueSizeCode( tokenAndDirectionInt() );
+                int neighbourIdSize = longValueSizeCode( neighbourNodeId );
+                int internalRelationshipIdSize = longValueSizeCode( internalRelationshipId );
                 cachedKeySize = 1 + sizeOfLongSizeIndex( nodeIdSize ) + sizeOfLongSizeIndex( tokenAndDirectionSize ) +
                         sizeOfLongSizeIndex( neighbourIdSize ) + sizeOfLongSizeIndex( internalRelationshipIdSize );
                 cachedSizesByte = (byte) (nodeIdSize | (tokenAndDirectionSize << 2) | (neighbourIdSize << 4) | (internalRelationshipIdSize << 6));
