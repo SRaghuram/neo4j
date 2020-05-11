@@ -86,7 +86,7 @@ import static org.neo4j.test.conditions.Conditions.TRUE;
 
 @TestDirectoryExtension
 @ExtendWith( FabricEverywhereExtension.class )
-class FabricQueryMonitoringTest
+class FabricQueryLoggingTest
 {
     @Inject
     TestDirectory testDirectory;
