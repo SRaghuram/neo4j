@@ -193,28 +193,42 @@ class Morsel(private[execution] final val longs: Array[Long],
       slots.setter(key2)(this, value2)
     }
 
-    override def copyFrom(input: ReadableRow, nLongs: Int, nRefs: Int): Unit =
-      input match {
-        case other: MorselDerivedRow =>
-          if (nLongs > longsPerRow || nRefs > refsPerRow) {
-            throw new InternalException("A bug has occurred in the morsel runtime: The target morsel cannot hold the data to copy.")
-          } else {
-            val m = other.morsel
-            System.arraycopy(m.longs, m.longsPerRow * other.row, longs, currentRow * longsPerRow, nLongs)
-            System.arraycopy(m.refs, m.refsPerRow * other.row, refs, currentRow * refsPerRow, nRefs)
-          }
+    override def copyFrom(from: ReadableRow, nLongs: Int, nRefs: Int): Unit = from match {
+      case other: MorselDerivedRow =>
+        copyFromMorselRow(other, nLongs, nRefs)
+      case other: SlottedRow =>
+        copyFromSlottedRow(other, nLongs, nRefs)
+      case _ => fail()
+    }
 
-        case other: SlottedRow =>
-          if (nLongs > longsPerRow || nRefs > refsPerRow) {
-            throw new InternalException("A bug has occurred in the morsel runtime: The target morsel cannot hold the data to copy.")
-          } else {
-            System.arraycopy(other.longs, 0, longs, currentRow * longsPerRow, nLongs)
-            System.arraycopy(other.refs, 0, refs, currentRow * refsPerRow, nRefs)
-          }
-        case _ => fail()
+    override def copyFrom(from: MorselDerivedRow): Unit = copyFromMorselRow(from, from.morsel.longsPerRow, from.morsel.refsPerRow)
+
+    override def copyFromSlottedRowOrCursor(from: ReadableRow): Unit = from match {
+      case other: SlottedRow =>
+        copyFromSlottedRow(other, other.longs.length, other.refs.length)
+      case other: MorselRow =>
+        copyFromMorselRow(other, other.morsel.longsPerRow, other.morsel.refsPerRow)
+      case _ => fail()
+    }
+
+    private def copyFromSlottedRow(other: SlottedRow, nLongs: Int, nRefs: Int): Unit = {
+      if (nLongs > longsPerRow || nRefs > refsPerRow) {
+        throw new InternalException("A bug has occurred in the morsel runtime: The target morsel cannot hold the data to copy.")
+      } else {
+        System.arraycopy(other.longs, 0, longs, currentRow * longsPerRow, nLongs)
+        System.arraycopy(other.refs, 0, refs, currentRow * refsPerRow, nRefs)
       }
+    }
 
-    override def copyFrom(from: MorselRow): Unit = copyFrom(from, from.morsel.longsPerRow, from.morsel.refsPerRow)
+    private def copyFromMorselRow(other: MorselDerivedRow, nLongs: Int, nRefs: Int): Unit = {
+      if (nLongs > longsPerRow || nRefs > refsPerRow) {
+        throw new InternalException("A bug has occurred in the morsel runtime: The target morsel cannot hold the data to copy.")
+      } else {
+        val m = other.morsel
+        System.arraycopy(m.longs, m.longsPerRow * other.row, longs, currentRow * longsPerRow, nLongs)
+        System.arraycopy(m.refs, m.refsPerRow * other.row, refs, currentRow * refsPerRow, nRefs)
+      }
+    }
 
     override def morsel: Morsel = morselSelf
 
@@ -233,7 +247,7 @@ class Morsel(private[execution] final val longs: Array[Long],
           System.arraycopy(refs, refOffset(sourceRefOffset), other.refs, targetRefOffset, refsPerRow - sourceRefOffset)
       }
 
-    override def copyToSlottedExecutionContext(target: SlottedRow, nLongs: Int, nRefs: Int): Unit = {
+    override def copyToSlottedRow(target: SlottedRow, nLongs: Int, nRefs: Int): Unit = {
       System.arraycopy(longs, longOffset(0), target.longs, 0, nLongs)
       System.arraycopy(refs, refOffset(0), target.refs, 0, nRefs)
     }
@@ -409,5 +423,5 @@ class Morsel(private[execution] final val longs: Array[Long],
   }
 
   private def fail(): Nothing =
-    throw new InternalException("Tried using a wrong context.")
+    throw new InternalException("Tried using a wrong row.")
 }

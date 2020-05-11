@@ -10,16 +10,16 @@ import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreE
 import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.EntityById
-import org.neo4j.cypher.internal.runtime.CypherRow
-import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
-import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotWithKeyAndAliases
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
+import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.EntityById
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.WritableRow
+import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
+import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.symbols.CTRelationship
 import org.neo4j.exceptions.InternalException
 import org.neo4j.graphdb.NotFoundException
@@ -39,7 +39,7 @@ object SlottedRow {
 }
 
 trait SlottedCompatible {
-  def copyToSlottedExecutionContext(target: SlottedRow, nLongs: Int, nRefs: Int): Unit
+  def copyToSlottedRow(target: SlottedRow, nLongs: Int, nRefs: Int): Unit
 }
 
 /**
@@ -93,7 +93,7 @@ case class SlottedRow(slots: SlotConfiguration) extends CypherRow {
         setLinenumber(other.getLinenumber)
 
       case other: SlottedCompatible =>
-        other.copyToSlottedExecutionContext(this, nLongs, nRefs)
+        other.copyToSlottedRow(this, nLongs, nRefs)
 
       case _ => fail()
     }

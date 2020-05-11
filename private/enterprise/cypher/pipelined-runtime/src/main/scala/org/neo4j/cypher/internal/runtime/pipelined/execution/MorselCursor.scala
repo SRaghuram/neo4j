@@ -125,7 +125,12 @@ trait MorselWriteCursor extends MorselCursor with WritableRow {
   /**
     * Copy all data from the provided row into the cursor row.
     */
-  def copyFrom(from: MorselRow): Unit
+  def copyFrom(from: MorselDerivedRow): Unit
+
+  /**
+    * Copy all data from the provided row into the cursor row.
+    */
+  def copyFromSlottedRowOrCursor(from: ReadableRow): Unit
 }
 
 /**

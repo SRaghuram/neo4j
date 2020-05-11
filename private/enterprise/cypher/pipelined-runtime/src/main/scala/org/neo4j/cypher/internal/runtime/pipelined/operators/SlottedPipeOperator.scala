@@ -154,7 +154,7 @@ class SlottedPipeHeadOperator(workIdentity: WorkIdentityMutableDescription,
       val outputCursor = outputMorsel.writeCursor()
       while (outputCursor.next() && resultIterator.hasNext) {
         val resultRow = resultIterator.next()
-        outputCursor.copyFrom(resultRow, outputMorsel.longsPerRow, outputMorsel.refsPerRow)
+        outputCursor.copyFromSlottedRowOrCursor(resultRow)
       }
       outputCursor.truncate()
     }
@@ -205,7 +205,7 @@ class SlottedPipeMiddleOperator(workIdentity: WorkIdentityMutableDescription,
       val outputCursor = outputMorsel.writeCursor(onFirstRow = true)
       while (_canContinue) {
         val resultRow = resultIterator.next() // This may advance feedRow
-        outputCursor.copyFrom(resultRow, outputMorsel.longsPerRow, outputMorsel.refsPerRow)
+        outputCursor.copyFromSlottedRowOrCursor(resultRow)
         outputCursor.next()
         _canContinue = resultIterator.hasNext
       }
