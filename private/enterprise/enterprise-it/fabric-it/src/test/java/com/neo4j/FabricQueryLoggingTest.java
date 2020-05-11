@@ -15,7 +15,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -29,7 +28,6 @@ import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -47,9 +45,6 @@ import org.neo4j.fabric.stream.Records;
 import org.neo4j.fabric.stream.StatementResult;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.database.NamedDatabaseId;
-import org.neo4j.logging.AssertableLogProvider;
-import org.neo4j.logging.NullLogProvider;
-import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -94,16 +89,14 @@ class FabricQueryLoggingTest
     private Config config;
     private TestServer testServer;
     private Driver clientDriver;
-    private DriverPool driverPool = mock( DriverPool.class );
+    private final DriverPool driverPool = mock( DriverPool.class );
 
-    private ArgumentCaptor<org.neo4j.bolt.runtime.AccessMode> accessModeArgument = ArgumentCaptor.forClass( org.neo4j.bolt.runtime.AccessMode.class );
     private final AutoCommitStatementResult graph0Result = mock( AutoCommitStatementResult.class );
     private final AutoCommitStatementResult graph1Result = mock( AutoCommitStatementResult.class );
-    private AssertableLogProvider internalLogProvider;
     private AssertableQueryExecutionMonitor.Monitor queryExecutionMonitor;
 
-    private DriverUtils mega = new DriverUtils( "mega" );
-    private DriverUtils neo4j = new DriverUtils( "neo4j" );
+    private final DriverUtils mega = new DriverUtils( "mega" );
+    private final DriverUtils neo4j = new DriverUtils( "neo4j" );
 
     @AfterEach
     void afterAll()
@@ -128,8 +121,6 @@ class FabricQueryLoggingTest
         testServer = new TestServer( config, config.get( GraphDatabaseSettings.neo4j_home ) );
 
         testServer.addMocks( driverPool );
-        internalLogProvider = new AssertableLogProvider();
-        testServer.setLogService( new SimpleLogService( NullLogProvider.getInstance(), internalLogProvider ) );
         testServer.start();
 
         queryExecutionMonitor = new AssertableQueryExecutionMonitor.Monitor();
@@ -146,8 +137,6 @@ class FabricQueryLoggingTest
 
         mockResult( graph0Result );
         mockResult( graph1Result );
-
-        internalLogProvider.clear();
 
         mockDriverPool( createMockDriver( graph0Result ), createMockDriver( graph1Result ) );
     }
@@ -177,7 +166,7 @@ class FabricQueryLoggingTest
         when( tx.commit() ).thenReturn( Mono.just( new RemoteBookmark( "BB" ) ) );
         when( tx.rollback() ).thenReturn( Mono.empty() );
 
-        when( mockDriver.beginTransaction( any(), accessModeArgument.capture(), any(), any() ) ).thenReturn( Mono.just( tx ) );
+        when( mockDriver.beginTransaction( any(), any(), any(), any() ) ).thenReturn( Mono.just( tx ) );
         return mockDriver;
     }
 
@@ -449,11 +438,12 @@ class FabricQueryLoggingTest
         return Flux.just( records );
     }
 
-    private Record rec( AnyValue... vals )
+    private Record rec( AnyValue... values )
     {
-        return Records.of( vals );
+        return Records.of( values );
     }
 
+    @SuppressWarnings( "SameParameterValue" )
     private void doInTx( DriverUtils driverUtils, AccessMode mode, Consumer<Transaction> workload )
     {
         driverUtils.doInTx( clientDriver, mode, workload );
