@@ -116,7 +116,7 @@ class CoreBootstrap
     {
         var waitTime = Duration.ofSeconds( 1 );
         snapshotService.awaitState( databaseStartAborter, waitTime );
-        Optional<JobHandle> downloadJob = downloadService.downloadJob();
+        Optional<JobHandle<?>> downloadJob = downloadService.downloadJob();
         if ( downloadJob.isPresent() )
         {
             downloadJob.get().waitTermination();

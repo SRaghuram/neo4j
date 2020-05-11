@@ -40,7 +40,7 @@ public class CoreDownloaderService extends LifecycleAdapter
     private final ReplicatedDatabaseEventService databaseEventService;
 
     private PersistentSnapshotDownloader currentJob;
-    private JobHandle jobHandle;
+    private JobHandle<?> jobHandle;
     private boolean stopped;
 
     public CoreDownloaderService( JobScheduler jobScheduler, CoreDownloader downloader, StoreDownloadContext context, CoreSnapshotService snapshotService,
@@ -60,7 +60,7 @@ public class CoreDownloaderService extends LifecycleAdapter
         this.databaseStartAborter = databaseStartAborter;
     }
 
-    public synchronized Optional<JobHandle> scheduleDownload( CatchupAddressProvider addressProvider )
+    public synchronized Optional<JobHandle<?>> scheduleDownload( CatchupAddressProvider addressProvider )
     {
         if ( stopped )
         {
@@ -99,7 +99,7 @@ public class CoreDownloaderService extends LifecycleAdapter
         databaseStartAborter.setAbortable( context.databaseId(), STORE_COPY, true );
     }
 
-    public synchronized Optional<JobHandle> downloadJob()
+    public synchronized Optional<JobHandle<?>> downloadJob()
     {
         return Optional.ofNullable( jobHandle );
     }

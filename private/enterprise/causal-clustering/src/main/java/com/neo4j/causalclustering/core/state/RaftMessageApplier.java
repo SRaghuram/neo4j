@@ -60,7 +60,7 @@ public class RaftMessageApplier implements LifecycleMessageHandler<RaftMessages.
             {
                 SnapshotRequirement snapshotRequirement = outcome.snapshotRequirement().get();
                 log.info( format( "Scheduling download because of %s", snapshotRequirement ) );
-                Optional<JobHandle> downloadJob = downloadService.scheduleDownload( catchupAddressProvider );
+                Optional<JobHandle<?>> downloadJob = downloadService.scheduleDownload( catchupAddressProvider );
                 if ( downloadJob.isPresent() )
                 {
                     downloadJob.get().waitTermination();
