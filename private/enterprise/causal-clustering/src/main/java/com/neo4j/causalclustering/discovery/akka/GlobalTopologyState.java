@@ -213,13 +213,16 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         var newMembers = new HashMap<>( newTopology.members() );
         newMembers.keySet().removeAll( oldTopology.members().keySet() );
 
-        String logLine =
-                format( "%s for database %s is now: %s", topologyDescription, databaseId, allMembers.isEmpty() ? "empty" : allMembers )
-                        + lineSeparator() +
-                        (lostMembers.isEmpty() ? "No members where lost" : format( "Lost members :%s", lostMembers ))
-                        + lineSeparator() +
-                        (newMembers.isEmpty() ? "No new members" : format( "New members: %s%s", newPaddedLine(), printMap( newMembers, newPaddedLine() ) ));
-        log.info( logLine );
+        if ( !newMembers.isEmpty() || !lostMembers.isEmpty() )
+        {
+            String logLine =
+                    format( "%s for database %s is now: %s", topologyDescription, databaseId, allMembers.isEmpty() ? "empty" : allMembers )
+                    + lineSeparator() +
+                    (lostMembers.isEmpty() ? "No members where lost" : format( "Lost members :%s", lostMembers ))
+                    + lineSeparator() +
+                    (newMembers.isEmpty() ? "No new members" : format( "New members: %s%s", newPaddedLine(), printMap( newMembers, newPaddedLine() ) ));
+            log.info( logLine );
+        }
     }
 
     public RoleInfo role( NamedDatabaseId namedDatabaseId, MemberId memberId )
