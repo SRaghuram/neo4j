@@ -16,6 +16,7 @@ import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -60,11 +61,7 @@ public class RaftMessageApplier implements LifecycleMessageHandler<RaftMessages.
             {
                 SnapshotRequirement snapshotRequirement = outcome.snapshotRequirement().get();
                 log.info( format( "Scheduling download because of %s", snapshotRequirement ) );
-                Optional<JobHandle<?>> downloadJob = downloadService.scheduleDownload( catchupAddressProvider );
-                if ( downloadJob.isPresent() )
-                {
-                    downloadJob.get().waitTermination();
-                }
+                scheduleAndAwaitDownload();
             }
             else
             {
@@ -76,6 +73,15 @@ public class RaftMessageApplier implements LifecycleMessageHandler<RaftMessages.
             log.error( "Error handling message", e );
             panicker.panic( e );
             stopped = true;
+        }
+    }
+
+    private void scheduleAndAwaitDownload() throws InterruptedException, ExecutionException
+    {
+        Optional<JobHandle<?>> downloadJob = downloadService.scheduleDownload( catchupAddressProvider );
+        if ( downloadJob.isPresent() )
+        {
+            downloadJob.get().waitTermination();
         }
     }
 
