@@ -18,17 +18,18 @@ import org.neo4j.graphdb.impl.notification.NotificationCode.DEPRECATED_BINDING_V
 import org.neo4j.graphdb.impl.notification.NotificationCode.DEPRECATED_COMPILED_RUNTIME
 import org.neo4j.graphdb.impl.notification.NotificationCode.DEPRECATED_PROCEDURE
 import org.neo4j.graphdb.impl.notification.NotificationCode.DEPRECATED_PROCEDURE_RETURN_FIELD
-import org.neo4j.graphdb.impl.notification.NotificationCode.DEPRECATED_RELATIONSHIP_TYPE_SEPARATOR
 import org.neo4j.graphdb.impl.notification.NotificationCode.INDEX_HINT_UNFULFILLABLE
 import org.neo4j.graphdb.impl.notification.NotificationCode.INDEX_LOOKUP_FOR_DYNAMIC_PROPERTY
 import org.neo4j.graphdb.impl.notification.NotificationCode.MISSING_LABEL
 import org.neo4j.graphdb.impl.notification.NotificationCode.MISSING_PROPERTY_NAME
 import org.neo4j.graphdb.impl.notification.NotificationCode.MISSING_REL_TYPE
+import org.neo4j.graphdb.impl.notification.NotificationCode.REPEATED_REL_IN_PATTERN_EXPRESSION
 import org.neo4j.graphdb.impl.notification.NotificationCode.RUNTIME_UNSUPPORTED
 import org.neo4j.graphdb.impl.notification.NotificationCode.SUBOPTIMAL_INDEX_FOR_CONTAINS_QUERY
 import org.neo4j.graphdb.impl.notification.NotificationCode.SUBOPTIMAL_INDEX_FOR_ENDS_WITH_QUERY
 import org.neo4j.graphdb.impl.notification.NotificationCode.UNBOUNDED_SHORTEST_PATH
 import org.neo4j.graphdb.impl.notification.NotificationDetail
+import org.neo4j.graphdb.impl.notification.NotificationDetail.Factory
 import org.neo4j.graphdb.impl.notification.NotificationDetail.Factory.bindingVarLengthRelationship
 import org.neo4j.graphdb.impl.notification.NotificationDetail.Factory.cartesianProduct
 import org.neo4j.graphdb.impl.notification.NotificationDetail.Factory.deprecatedField
@@ -116,7 +117,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     result.notifications.toList should equal(List(
       DEPRECATED_COMPILED_RUNTIME.notification(graphdb.InputPosition.empty),
       CARTESIAN_PRODUCT.notification(new graphdb.InputPosition(39, 1, 40), cartesianProduct(Set("c", "d").asJava)),
-      RUNTIME_UNSUPPORTED.notification(graphdb.InputPosition.empty, NotificationDetail.Factory.message("Runtime unsupported", "CountStar() is not supported"))))
+      RUNTIME_UNSUPPORTED.notification(graphdb.InputPosition.empty, Factory.message("Runtime unsupported", "CountStar() is not supported"))))
   }
 
   test("Warn unsupported runtime with explain and runtime=legacy_compiled") {
@@ -127,7 +128,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     result.notifications.toList should equal(List(
       DEPRECATED_COMPILED_RUNTIME.notification(graphdb.InputPosition.empty),
       RUNTIME_UNSUPPORTED.notification(graphdb.InputPosition.empty,
-        NotificationDetail.Factory.message("Runtime unsupported",
+        Factory.message("Runtime unsupported",
           "Expression of ReduceExpression(ReduceScope(Variable(y),Variable(x),Variable(x)),Parameter(  AUTOINT0,Integer),Parameter(  AUTOLIST1,List<Any>)) not yet supported"))))
   }
 
@@ -147,7 +148,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
   test("warn when requesting runtime=legacy_compiled on an unsupported query") {
     val result = executeSingle("EXPLAIN CYPHER runtime=legacy_compiled MATCH (a)-->(b), (c)-->(d) RETURN count(*)", Map.empty)
     result.notifications should contain(RUNTIME_UNSUPPORTED.notification(graphdb.InputPosition.empty,
-      NotificationDetail.Factory.message("Runtime unsupported", "CountStar() is not supported")))
+      Factory.message("Runtime unsupported", "CountStar() is not supported")))
   }
 
   test("warn once when a single index hint cannot be fulfilled") {
@@ -679,6 +680,23 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val result = executeSingle(query, Map.empty)
     result.notifications should not contain SUBOPTIMAL_INDEX_FOR_CONTAINS_QUERY.notification(graphdb.InputPosition.empty, suboptimalIndex("Person", "name"))
     result.notifications should not contain SUBOPTIMAL_INDEX_FOR_ENDS_WITH_QUERY.notification(graphdb.InputPosition.empty, suboptimalIndex("Person", "name"))
+  }
+
+  test("Should warn about repeated rel variable in pattern expression") {
+    val query = "EXPLAIN MATCH ()-[r]-() RETURN size( ()-[r]-()-[r]-() ) AS size"
+
+    val result = executeSingle(query, Map.empty)
+    result.notifications should contain(REPEATED_REL_IN_PATTERN_EXPRESSION.notification(
+      new graphdb.InputPosition(41, 1, 42),
+      Factory.repeatedRel("r")))
+  }
+
+  test("Should warn about repeated rel variable in pattern comprehension") {
+    val query = "EXPLAIN MATCH ()-[r]-() RETURN [ ()-[r]-()-[r]-() | r ] AS rs"
+    val result = executeSingle(query, Map.empty)
+    result.notifications should contain(REPEATED_REL_IN_PATTERN_EXPRESSION.notification(
+      new graphdb.InputPosition(37, 1, 38),
+      Factory.repeatedRel("r")))
   }
 }
 
