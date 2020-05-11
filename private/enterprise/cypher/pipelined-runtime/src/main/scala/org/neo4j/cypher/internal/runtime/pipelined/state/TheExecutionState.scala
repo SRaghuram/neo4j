@@ -76,14 +76,14 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     while (i >= 0) {
       val pipeline = pipelines(i)
       pipeline.outputOperator.outputBuffer.foreach(bufferId =>
-        buffers.constructBuffer(executionGraphDefinition.buffers(bufferId.x)))
+        buffers.constructBuffer(executionGraphDefinition.buffers(bufferId.x), queryState))
       states(i) = pipeline.createState(this, queryState, initializationResources, stateFactory)
-      buffers.constructBuffer(pipeline.inputBuffer)
+      buffers.constructBuffer(pipeline.inputBuffer, queryState)
       i -= 1
     }
     // We don't reach the first apply buffer because it is not the output buffer of any pipeline, and also
     // not the input buffer, because all apply buffers are consumed through delegates.
-    buffers.constructBuffer(executionGraphDefinition.buffers(0))
+    buffers.constructBuffer(executionGraphDefinition.buffers(0), queryState)
     states
   }
 

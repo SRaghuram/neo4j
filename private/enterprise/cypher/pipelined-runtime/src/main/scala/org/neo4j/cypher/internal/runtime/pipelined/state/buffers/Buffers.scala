@@ -15,6 +15,7 @@ import org.neo4j.cypher.internal.physicalplanning.ArgumentStreamType
 import org.neo4j.cypher.internal.physicalplanning.AttachBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
 import org.neo4j.cypher.internal.physicalplanning.BufferId
+import org.neo4j.cypher.internal.physicalplanning.ConditionalBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.Initialization
 import org.neo4j.cypher.internal.physicalplanning.LHSAccumulatingBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.LHSAccumulatingRHSStreamingBufferVariant
@@ -24,6 +25,7 @@ import org.neo4j.cypher.internal.physicalplanning.RegularBufferVariant
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
@@ -107,15 +109,16 @@ class Buffers(numBuffers: Int,
     throw new IllegalStateException(s"Could not find downstream argumentStateBuffer with id $argumentStateMapId")
   }
 
-  private[state] def constructBuffer(bufferDefinition: BufferDefinition): Unit = {
+  private[state] def constructBuffer(bufferDefinition: BufferDefinition, queryState: PipelinedQueryState): Unit = {
     val i = bufferDefinition.id.x
 
     // Since apply buffers delegate, the output buffer of the producing pipeline and the input
     // buffer of the consuming pipeline(s) will not be logically the same. Therefore we explicitly
     // construct both the output and input buffers of all pipelines, but since they are still mostly
     // the same, we need to idempotently ignore the construct call if the buffer is already constructed.
-    if (buffers(i) != null)
+    if (buffers(i) != null) {
       return
+    }
 
     val reducers = findRHSAccumulatingStateBuffers(i, bufferDefinition.reducers)
 
@@ -127,7 +130,7 @@ class Buffers(numBuffers: Int,
           (1) during Execution State initialization only the buffers that are pipeline outputs are initialized
           (2) when solving Cartesian Product, the delegating Apply Buffer used by Attach Buffer is not an output of any pipeline, so would never be initialized
            */
-          constructBuffer(x.applyBuffer)
+          constructBuffer(x.applyBuffer, queryState)
           new MorselAttachBuffer(bufferDefinition.id,
             applyBuffer(x.applyBuffer.id),
             x.outputSlots,
@@ -170,8 +173,8 @@ class Buffers(numBuffers: Int,
           (1) pipelines (and their output buffers) are initialized in reverse order
           (2) when solving Cartesian Product, LHS Sink of Join Buffer is not an output of any pipeline, so would never be initialized
            */
-          constructBuffer(x.lhsSink)
-          constructBuffer(x.rhsSink)
+          constructBuffer(x.lhsSink, queryState)
+          constructBuffer(x.rhsSink, queryState)
           new LHSAccumulatingRHSStreamingSource(tracker,
                                                 reducers,
                                                 argumentStateMaps,
@@ -193,6 +196,11 @@ class Buffers(numBuffers: Int,
             argumentStateMaps,
             argumentStateMapId,
             morselSize)
+
+        case ConditionalBufferVariant(onTrue, onFalse, expression) =>
+          constructBuffer(onTrue, queryState)
+          constructBuffer(onFalse, queryState)
+          new ConditionalSink(expression, sink(onTrue.id), sink(onFalse.id), queryState)
 
         case RegularBufferVariant =>
           new MorselBuffer(bufferDefinition.id,

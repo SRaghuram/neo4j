@@ -198,7 +198,8 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                                                   queryIndexRegistrator,
                                                   parallelExecution,
                                                   codeGenerationMode),
-        physicalPlan)
+                                                  physicalPlan,
+                                                  converters)
 
     if (context.debugOptions.contains("visualizepipelines")) {
       return ExecutionGraphVisualizer.getExecutionPlan(executionGraphDefinition)

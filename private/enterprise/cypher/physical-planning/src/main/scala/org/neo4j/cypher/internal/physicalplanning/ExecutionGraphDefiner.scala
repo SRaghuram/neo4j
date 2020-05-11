@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.physicalplanning
 
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.ExecutionStateDefiner
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 
 object ExecutionGraphDefiner {
 
@@ -14,7 +15,8 @@ object ExecutionGraphDefiner {
    */
   def defineFrom(breakingPolicy: PipelineBreakingPolicy,
                  operatorFuserFactory: OperatorFuserFactory,
-                 physicalPlan: PhysicalPlan): ExecutionGraphDefinition = {
+                 physicalPlan: PhysicalPlan,
+                 converters: ExpressionConverters): ExecutionGraphDefinition = {
 
     val executionStateDefiner = new ExecutionStateDefiner(physicalPlan)
     val pipelineTreeBuilder = new PipelineTreeBuilder(breakingPolicy,
@@ -22,7 +24,8 @@ object ExecutionGraphDefiner {
                                                       executionStateDefiner,
                                                       physicalPlan.slotConfigurations,
                                                       physicalPlan.argumentSizes,
-                                                      physicalPlan.applyPlans)
+                                                      physicalPlan.applyPlans,
+                                                      converters)
 
     pipelineTreeBuilder.build(physicalPlan.logicalPlan)
     ExecutionGraphDefinition(physicalPlan,

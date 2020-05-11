@@ -13,6 +13,8 @@ import org.neo4j.cypher.internal.logical.plans.ProcedureSignature
 import org.neo4j.cypher.internal.logical.plans.QualifiedName
 import org.neo4j.cypher.internal.logical.plans.UserFunctionSignature
 import org.neo4j.cypher.internal.planner.spi.TokenContext
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.util.attribution.Id
 
 import scala.collection.mutable.ArrayBuffer
@@ -50,7 +52,8 @@ class ExecutionGraphDefinitionBuilder(operatorFuserFactory: OperatorFuserFactory
       semanticTable,
       breakingPolicy,
       allocateArgumentSlots = true)
-    ExecutionGraphDefiner.defineFrom(breakingPolicy, operatorFuserFactory, physicalPlan)
+    val converters: ExpressionConverters = new ExpressionConverters(CommunityExpressionConverter(tokenContext))
+    ExecutionGraphDefiner.defineFrom(breakingPolicy, operatorFuserFactory, physicalPlan, converters)
   }
 }
 

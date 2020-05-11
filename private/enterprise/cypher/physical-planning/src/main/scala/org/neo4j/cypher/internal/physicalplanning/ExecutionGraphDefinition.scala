@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.physicalplanning
 
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
@@ -125,6 +126,8 @@ case class AttachBufferVariant(applyBuffer: BufferDefinition,
                                outputSlots: SlotConfiguration,
                                argumentSlotOffset: Int,
                                argumentSize: SlotConfiguration.Size) extends BufferVariant
+
+case class ConditionalBufferVariant(onTrue: BufferDefinition, onFalse: BufferDefinition, expression: Expression) extends BufferVariant
 
 /**
  * This buffer groups data by argument row and sits between a pre-reduce and a reduce operator.
