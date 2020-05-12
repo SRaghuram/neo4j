@@ -30,7 +30,7 @@ class IntermediateBuffer
 
     private final MutableList<ByteBuffer> buffers = Lists.mutable.empty();
     private final int bufferCapacity;
-    private int index;
+    private int count;
     private int readIndex;
     private ByteBuffer tempBuffer;
 
@@ -41,31 +41,59 @@ class IntermediateBuffer
 
     ByteBuffer add()
     {
-        assert index <= buffers.size();
-        if ( index == buffers.size() )
+        assert count <= buffers.size();
+        if ( count == buffers.size() )
         {
             buffers.add( newBuffer() );
         }
-        return buffers.get( index++ ).clear().limit( bufferCapacity );
+        return buffers.get( count++ ).clear().limit( bufferCapacity );
+    }
+
+    void seekFromEnd()
+    {
+        readIndex = count - 1;
+    }
+
+    /**
+     * @return {@code true} if there are more buffers after this one, otherwise {@code false} if there were no more buffers to go to.
+     */
+    boolean next()
+    {
+        assert readIndex < count;
+        return ++readIndex < count;
+    }
+
+    /**
+     * @return {@code true} if there are more buffers before this one, otherwise {@code false} if there were no more buffers to go to.
+     */
+    boolean prev()
+    {
+        if ( readIndex > 0 )
+        {
+            readIndex--;
+            return true;
+        }
+        return false;
     }
 
     ByteBuffer get()
     {
         // We iterate over the buffers backwards because the last one will likely be the smallest and so has a higher
         // chance to be packed together with other small parts in the same record.
-        assert readIndex < index;
-        return buffers.get( index - readIndex++ - 1 );
+        int readIndex = this.readIndex;
+        assert readIndex <= count;
+        return buffers.get( readIndex );
     }
 
     int currentSize()
     {
-        return index > 0 ? buffers.get( index - readIndex - 1 ).limit() : 0;
+        return this.count > 0 && readIndex < count && readIndex >= 0 ? buffers.get( readIndex ).limit() : 0;
     }
 
     int totalSize()
     {
         int size = 0;
-        for ( int i = 0; i < index; i++ )
+        for ( int i = 0; i < count; i++ )
         {
             size += buffers.get( i ).limit();
         }
@@ -88,14 +116,14 @@ class IntermediateBuffer
 
     IntermediateBuffer clear()
     {
-        index = 0;
+        count = 0;
         readIndex = 0;
         return this;
     }
 
     void flip()
     {
-        for ( int i = 0; i < index; i++ )
+        for ( int i = 0; i < count; i++ )
         {
             buffers.get( i ).flip();
         }
@@ -104,7 +132,7 @@ class IntermediateBuffer
     int limit()
     {
         int limit = 0;
-        for ( int i = 0; i < index; i++ )
+        for ( int i = 0; i < count; i++ )
         {
             limit += buffers.get( i ).limit();
         }
