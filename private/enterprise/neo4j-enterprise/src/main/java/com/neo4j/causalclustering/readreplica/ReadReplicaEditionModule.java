@@ -187,7 +187,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         globalProcedures.register( new ReadReplicaRoleProcedure( databaseManager ) );
         globalProcedures.register( new ClusterOverviewProcedure( topologyService, databaseManager.databaseIdRepository() ) );
         globalProcedures.register( new ClusteredDatabaseStateProcedure( databaseManager.databaseIdRepository(), topologyService,
-                reconcilerModule.reconciler() ) );
+                reconcilerModule.databaseStateService() ) );
     }
 
     @Override
@@ -236,8 +236,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager,
                 databaseEventService, storageFactory, reconciledTxTracker, dbmsModel );
 
-        topologyService = createTopologyService( databaseManager, reconcilerModule.reconciler(), globalLogService );
-        reconcilerModule.reconciler().registerListener( topologyService );
+        topologyService = createTopologyService( databaseManager, reconcilerModule.databaseStateService(), globalLogService );
+        reconcilerModule.registerDatabaseStateChangedListener( topologyService );
         globalLife.add( dependencies.satisfyDependency( topologyService ) );
 
         int maxChunkSize = globalConfig.get( CausalClusteringSettings.store_copy_chunk_size );

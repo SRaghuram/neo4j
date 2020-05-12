@@ -5,6 +5,10 @@
  */
 package com.neo4j.dbms.database;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Consumer;
+
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseContext;
@@ -29,6 +33,8 @@ import static org.mockito.Mockito.when;
 //TODO: Merge this and StubClusteredDatabasemanager into a single class heirarchy
 public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseContext>
 {
+    private Map<NamedDatabaseId, Consumer<Database>> onContextCreationActions = new HashMap<>();
+
     public StubMultiDatabaseManager()
     {
         this( new CallingThreadJobScheduler() );
@@ -50,7 +56,7 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseConte
         return globalModule;
     }
 
-    private static DatabaseContext mockDatabaseContext( NamedDatabaseId namedDatabaseId )
+    private DatabaseContext mockDatabaseContext( NamedDatabaseId namedDatabaseId )
     {
         var facade = mock( GraphDatabaseFacade.class );
         Dependencies deps = new Dependencies();
@@ -59,7 +65,17 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseConte
         Database db = mock( Database.class );
         when( db.getNamedDatabaseId() ).thenReturn( namedDatabaseId );
         when( db.getDatabaseFacade() ).thenReturn( facade );
+        var action = onContextCreationActions.get( namedDatabaseId );
+        if ( action != null )
+        {
+            action.accept( db );
+        }
         return spy( new StandaloneDatabaseContext( db ) );
+    }
+
+    public void addOnCreationAction( NamedDatabaseId id, Consumer<Database> action )
+    {
+        onContextCreationActions.put( id, action );
     }
 
     static GlobalModule mockGlobalModule( JobScheduler jobScheduler )

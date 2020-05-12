@@ -47,7 +47,10 @@ public class ClusteredDbmsReconciler extends DbmsReconciler
             var previousDatabaseId = DatabaseIdFactory.from( namedDatabaseId.name(), raftId.uuid() );
             if ( !Objects.equals( namedDatabaseId, previousDatabaseId ) )
             {
-                return EnterpriseDatabaseState.unknown( previousDatabaseId );
+                log.warn( format( "Pre-existing cluster state found with an unexpected id %s (should be %s). This may indicate a previous " +
+                                  "DROP operation for %s did not complete. Cleanup of both the database and cluster-state will be attempted. " +
+                                  "You may need to re-seed", raftId.uuid(), namedDatabaseId.databaseId().uuid(), namedDatabaseId.name() ) );
+                return new EnterpriseDatabaseState( previousDatabaseId, EnterpriseOperatorState.DIRTY );
             }
         }
         return EnterpriseDatabaseState.initial( namedDatabaseId );

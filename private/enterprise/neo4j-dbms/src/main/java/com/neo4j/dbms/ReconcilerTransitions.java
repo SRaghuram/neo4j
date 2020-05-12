@@ -19,7 +19,6 @@ import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
-import static com.neo4j.dbms.EnterpriseOperatorState.UNKNOWN;
 
 /**
  * The class defines the functions that can be combined to perform state transitions in a {@link TransitionsTable}.
@@ -72,7 +71,7 @@ class ReconcilerTransitions
 
     private static Transition dropFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager )
     {
-        return Transition.from( STOPPED )
+        return Transition.from( STOPPED, DIRTY )
                          .doTransition( databaseManager::dropDatabase )
                          .ifSucceeded( DROPPED )
                          .ifFailedThenDo( nothing, DIRTY );
@@ -87,7 +86,7 @@ class ReconcilerTransitions
         return Transition.from( STARTED )
                          .doTransition( transition )
                          .ifSucceeded( STARTED )
-                         .ifFailedThenDo( nothing, UNKNOWN );
+                         .ifFailedThenDo( databaseManager::stopDatabase, DIRTY );
     }
 
     final Transition stop()

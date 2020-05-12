@@ -25,6 +25,7 @@ import java.util.stream.Stream;
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementException;
+import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -36,6 +37,8 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
+import static com.neo4j.dbms.EnterpriseOperatorState.DIRTY;
+import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
@@ -288,13 +291,14 @@ class DbmsReconcilerModuleTest
         var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
 
         var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), nullLogProvider(), jobScheduler, transitionsTable );
+        var databaseStateService = new LocalDatabaseStateService( reconciler );
 
         // when
         var operator = new LocalDbmsOperator( idRepository );
         operator.startDatabase( "foo" );
 
         reconciler.reconcile( singletonList( operator ), ReconcilerRequest.simple() ).awaitAll();
-        var startFailure = reconciler.causeOfFailure( foo );
+        var startFailure = databaseStateService.causeOfFailure( foo );
 
         // then
         assertTrue( startFailure.isPresent() );
@@ -320,13 +324,14 @@ class DbmsReconcilerModuleTest
                 .build();
 
         var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), nullLogProvider(), jobScheduler, transitionsTable );
+        var databaseStateService = new LocalDatabaseStateService( reconciler );
 
         // when
         var operator = new LocalDbmsOperator( idRepository );
         operator.startDatabase( "foo" );
 
         reconciler.reconcile( singletonList( operator ), ReconcilerRequest.simple() ).awaitAll();
-        var startFailure = reconciler.causeOfFailure( foo );
+        var startFailure = databaseStateService.causeOfFailure( foo );
 
         // then
         assertTrue( startFailure.isPresent() );
@@ -350,12 +355,14 @@ class DbmsReconcilerModuleTest
         var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
 
         var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), nullLogProvider(), jobScheduler, transitionsTable );
+        var databaseStateService = new LocalDatabaseStateService( reconciler );
+
         var operator = new LocalDbmsOperator( idRepository );
         operator.startDatabase( "foo" );
 
         // when/then
         assertThrows( DatabaseManagementException.class, () -> reconciler.reconcile( List.of( operator ), ReconcilerRequest.simple() ).join( foo ) );
-        var startFailure = reconciler.causeOfFailure( foo );
+        var startFailure = databaseStateService.causeOfFailure( foo );
         assertTrue( startFailure.isPresent() );
         assertEquals( failure, startFailure.get() );
 
@@ -371,8 +378,134 @@ class DbmsReconcilerModuleTest
         reconciler.reconcile( List.of( operator ), ReconcilerRequest.priority( foo ) ).join( foo );
 
         // then
-        startFailure = reconciler.causeOfFailure( foo );
+        startFailure = databaseStateService.causeOfFailure( foo );
         assertTrue( startFailure.isEmpty() );
         verify( databaseManager, times( 2 ) ).startDatabase( foo );
+    }
+
+    @Test
+    void onlyDropIsAvailableFromInitialDirty() throws Exception
+    {
+        // given
+        var ex = new RuntimeException( "Cause of dirty" );
+        var fooId = idRepository.getRaw( "foo" );
+        var desiredDbStates = Map.of( fooId.name(), new EnterpriseDatabaseState( fooId, STARTED ) );
+        when( dbmsModel.getDatabaseStates() ).thenReturn( desiredDbStates );
+        databaseManager.addOnCreationAction( fooId, ignored ->
+        {
+            throw ex;
+        } );
+
+        var reconcilerModule = new StandaloneDbmsReconcilerModule( databaseManager.globalModule(), databaseManager,
+                mock( ReconciledTransactionTracker.class ), dbmsModel );
+        // when
+        reconcilerModule.start();
+
+        // then DB cannot created > its state should be DIRTY with given exception
+        assertTrue( reconcilerModule.databaseStateService().causeOfFailure( fooId ).get().getCause() == ex );
+        assertTrue( reconcilerModule.databaseStateService().stateOfDatabase( fooId ) == DIRTY );
+
+        // when
+        var startOperator = new LocalDbmsOperator( idRepository );
+        startOperator.startDatabase( fooId.name() );
+        var startException = assertThrows( Exception.class,
+                () -> reconcilerModule.reconciler.reconcile( List.of( startOperator ), ReconcilerRequest.priority( fooId ) ).awaitAll(),
+                "dirty to not dropped not allowed" );
+        // then DIRTY state DB should not able to start
+        assertTrue( startException.getMessage().contains( "unsupported state transition" ) );
+
+        // when
+        dropDatabase( fooId, reconcilerModule );
+
+        // then DIRTY DB should be possible to drop always - even if drop itself fails with DatabaseNotFoundException
+        assertTrue( reconcilerModule.databaseStateService().stateOfDatabase( fooId ) == DIRTY );
+        assertTrue( reconcilerModule.databaseStateService().causeOfFailure( fooId ).get() instanceof DatabaseNotFoundException );
+
+        reconcilerModule.stop();
+    }
+
+    @Test
+    void onlyDropIsAvailableFromDroppedDirty() throws Exception
+    {
+        // given
+        var ex = new RuntimeException( "Cause of dirty" );
+        var barId = idRepository.getRaw( "foo" );
+        var desiredDbStates = Map.of( barId.name(), new EnterpriseDatabaseState( barId, STARTED ) );
+        when( dbmsModel.getDatabaseStates() ).thenReturn( desiredDbStates );
+        databaseManager.addOnCreationAction( barId, database ->
+        {
+            doThrow( ex ).when( database ).prepareToDrop();
+        } );
+
+        var reconcilerModule = new StandaloneDbmsReconcilerModule( databaseManager.globalModule(), databaseManager,
+                mock( ReconciledTransactionTracker.class ), dbmsModel );
+
+        // when
+        reconcilerModule.start();
+        dropDatabase( barId, reconcilerModule );
+
+        // then DB cannot be dropped > since prepareDrop fails it should end up in DIRTY with given exception but stopDatabase must have been called
+        assertTrue( reconcilerModule.databaseStateService().causeOfFailure( barId ).get() == ex );
+        assertTrue( reconcilerModule.databaseStateService().stateOfDatabase( barId ) == DIRTY );
+        verify( databaseManager.getDatabaseContext( barId ).get().database(), times( 1 ) ).stop();
+
+        // when
+        dropDatabase( barId, reconcilerModule );
+
+        // then DIRTY DB should be possible to drop always, this time without error
+        assertTrue( reconcilerModule.databaseStateService().stateOfDatabase( barId ) == DROPPED );
+        assertTrue( reconcilerModule.databaseStateService().causeOfFailure( barId ).isEmpty() );
+
+        reconcilerModule.stop();
+    }
+
+    @Test
+    void dirtyDatabaseCanBeStoppedAtShutdown() throws Exception
+    {
+        // given
+        var ex = new RuntimeException( "Cause of dirty" );
+        var fooId = idRepository.getRaw( "foo" );
+        var barId = idRepository.getRaw( "bar" );
+        var desiredDbStates = Map.of( fooId.name(), new EnterpriseDatabaseState( fooId, STARTED ),
+                barId.name(), new EnterpriseDatabaseState( barId, STARTED ) );
+        when( dbmsModel.getDatabaseStates() ).thenReturn( desiredDbStates );
+        databaseManager.addOnCreationAction( fooId, ignored ->
+        {
+            throw ex;
+        } );
+        databaseManager.addOnCreationAction( barId, database ->
+        {
+            doThrow( ex ).when( database ).prepareToDrop();
+        } );
+
+        var reconcilerModule = new StandaloneDbmsReconcilerModule( databaseManager.globalModule(), databaseManager,
+                mock( ReconciledTransactionTracker.class ), dbmsModel );
+
+        // when
+        reconcilerModule.start();
+        dropDatabase( barId, reconcilerModule );
+
+        // then stop is already called once
+        verify( databaseManager.getDatabaseContext( barId ).get().database(), times( 1 ) ).stop();
+
+        // when
+        reconcilerModule.stop();
+
+        // then DIRTY DB from create failure should be remain - DBManager does not know about it
+        assertTrue( reconcilerModule.databaseStateService().stateOfDatabase( fooId ) == DIRTY );
+        assertTrue( reconcilerModule.databaseStateService().causeOfFailure( fooId ).get().getCause() == ex );
+        assertTrue( databaseManager.getDatabaseContext( fooId ).isEmpty() );
+
+        // then DIRTY DB from prepareDrop failure should be STOPPED - but with no op (stop is not called again)
+        assertTrue( reconcilerModule.databaseStateService().stateOfDatabase( barId ) == STOPPED );
+        assertTrue( reconcilerModule.databaseStateService().causeOfFailure( barId ).isEmpty() );
+        verify( databaseManager.getDatabaseContext( barId ).get().database(), times( 1 ) ).stop();
+    }
+
+    private void dropDatabase( NamedDatabaseId fooId, StandaloneDbmsReconcilerModule reconcilerModule )
+    {
+        var dropOperator = new LocalDbmsOperator( idRepository );
+        dropOperator.dropDatabase( fooId.name() );
+        reconcilerModule.reconciler.reconcile( List.of( dropOperator ), ReconcilerRequest.priority( fooId ) ).awaitAll();
     }
 }

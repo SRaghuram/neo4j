@@ -20,9 +20,6 @@ import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.fabric.auth.FabricAuthManagerWrapper;
 import com.neo4j.fabric.bootstrap.EnterpriseFabricServicesBootstrap;
 import com.neo4j.fabric.config.FabricEnterpriseConfig;
-
-import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
-import org.neo4j.fabric.FabricDatabaseManager;
 import com.neo4j.fabric.localdb.FabricSystemGraphInitializer;
 import com.neo4j.fabric.routing.FabricRoutingProcedureInstaller;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
@@ -43,6 +40,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
 import org.neo4j.bolt.txtracking.DefaultReconciledTransactionTracker;
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.collection.Dependencies;
@@ -57,6 +55,7 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.fabric.FabricDatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
@@ -191,7 +190,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
                 .databaseFacade();
         var dbmsModel = new EnterpriseSystemGraphDbmsModel( systemDbSupplier );
         StandaloneDbmsReconcilerModule reconcilerModule = new StandaloneDbmsReconcilerModule( globalModule, databaseManager, reconciledTxTracker, dbmsModel );
-        databaseStateService = reconcilerModule.reconciler();
+        databaseStateService = reconcilerModule.databaseStateService();
         databaseStartAborter = new DatabaseStartAborter( globalModule.getGlobalAvailabilityGuard(), dbmsModel, globalModule.getGlobalClock(),
                 Duration.ofSeconds( 5 ) );
         globalModule.getGlobalLife().add( reconcilerModule );

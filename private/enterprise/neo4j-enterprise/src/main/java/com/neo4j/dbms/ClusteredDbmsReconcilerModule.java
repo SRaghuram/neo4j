@@ -17,7 +17,6 @@ import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
-import static com.neo4j.dbms.EnterpriseOperatorState.UNKNOWN;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 public final class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcilerModule
@@ -35,6 +34,11 @@ public final class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcile
         this.databaseEventService = databaseEventService;
         this.internalOperator = databaseManager.internalDbmsOperator();
         this.operatorEventListener = new SystemOperatingDatabaseEventListener( systemOperator );
+    }
+
+    public void registerDatabaseStateChangedListener( DatabaseStateChangedListener databaseStateChangedListener )
+    {
+        reconciler.registerDatabaseStateChangedListener( databaseStateChangedListener );
     }
 
     @Override
@@ -59,9 +63,6 @@ public final class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcile
     {
         var standaloneTransitionsTable = StandaloneDbmsReconcilerModule.createTransitionsTable( t );
         TransitionsTable clusteredTransitionsTable = TransitionsTable.builder()
-                // All transitions from UNKNOWN to $X get deconstructed into UNKNOWN -> DROPPED -> $X
-                //     inside Transitions so only actions for this from/to pair need to be specified
-                .from( UNKNOWN ).to( DROPPED ).doTransitions( t.logCleanupAndDrop() )
                 // No prepareDrop step needed here as the database will be stopped for store copying anyway
                 .from( STORE_COPYING ).to( DROPPED ).doTransitions( t.stop(), t.drop() )
                 // Some Cluster components still need stopped when store copying.

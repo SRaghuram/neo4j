@@ -47,6 +47,7 @@ public class CausalClusteringStatusFactory
                                                  .build() );
         case STOPPED:
         case DROPPED:
+        case DIRTY:
         case UNKNOWN:
             return new FixedResponse( status( SERVICE_UNAVAILABLE ).entity( "Database " + databaseName + " is " + operatorState.description() ).build() );
         default:

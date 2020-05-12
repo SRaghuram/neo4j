@@ -5,6 +5,7 @@
  */
 package com.neo4j.dbms;
 
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -35,9 +36,9 @@ public class EnterpriseDatabaseState implements DatabaseState
         return new EnterpriseDatabaseState( id, UNKNOWN, null );
     }
 
-    static EnterpriseDatabaseState failedUnknownId( Throwable failure )
+    public static EnterpriseDatabaseState initialUnknownId()
     {
-        return new EnterpriseDatabaseState( null, UNKNOWN, failure );
+        return new EnterpriseDatabaseState( null, INITIAL, null );
     }
 
     public EnterpriseDatabaseState( NamedDatabaseId namedDatabaseId, EnterpriseOperatorState operationalState )

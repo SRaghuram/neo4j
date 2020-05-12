@@ -259,7 +259,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         globalProcedures.register( new ClusterOverviewProcedure( topologyService, databaseManager.databaseIdRepository() ) );
         globalProcedures.register( new CoreRoleProcedure( databaseManager ) );
         globalProcedures.register( new ClusteredDatabaseStateProcedure( databaseManager.databaseIdRepository(), topologyService,
-                reconcilerModule.reconciler() ) );
+                reconcilerModule.databaseStateService() ) );
         globalProcedures.register( new InstalledProtocolsProcedure( clientInstalledProtocols, serverInstalledProtocols ) );
         // TODO: Figure out how the replication benchmark procedure should work.
 //        globalProcedures.registerComponent( Replicator.class, x -> replicationModule.getReplicator(), false );
@@ -312,9 +312,9 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         dependencies.satisfyDependencies( databaseEventService );
         dependencies.satisfyDependency( reconciledTxTracker );
 
-        topologyService = createTopologyService( myIdentity, databaseManager, reconcilerModule.reconciler() );
+        topologyService = createTopologyService( myIdentity, databaseManager, reconcilerModule.databaseStateService() );
         dependencies.satisfyDependency( new GlobalTopologyStateDiagnosticProvider( topologyService ) );
-        reconcilerModule.reconciler().registerListener( topologyService );
+        reconcilerModule.registerDatabaseStateChangedListener( topologyService );
 
         leaderService = new DefaultLeaderService( topologyService, logProvider );
         dependencies.satisfyDependencies( leaderService );

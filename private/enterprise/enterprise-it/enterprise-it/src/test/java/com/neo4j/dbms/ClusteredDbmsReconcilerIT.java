@@ -14,6 +14,8 @@ import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.test.extension.Inject;
 
@@ -54,7 +56,7 @@ public class ClusteredDbmsReconcilerIT
         var fooDb = follower.database("foo");
 
         var panicService = fooDb.getDependencyResolver().resolveDependency( PanicService.class );
-        var reconciler = fooDb.getDependencyResolver().resolveDependency( DbmsReconciler.class );
+        var databaseStateService = fooDb.getDependencyResolver().resolveDependency( DatabaseStateService.class );
 
         var fooPanicker = panicService.panickerFor( fooDb.databaseId() );
         var err = new Exception( "Panic cause" );
@@ -64,8 +66,8 @@ public class ClusteredDbmsReconcilerIT
 
         // then
         assertEventually( "Reconciler should eventually stop",
-                () -> reconciler.stateOfDatabase( fooDb.databaseId() ), equalityCondition( STOPPED ), 10, SECONDS );
-        assertEquals( err, reconciler.causeOfFailure( fooDb.databaseId() ).orElse( null ) );
+                () -> databaseStateService.stateOfDatabase( fooDb.databaseId() ), equalityCondition( STOPPED ), 10, SECONDS );
+        assertEquals( err, databaseStateService.causeOfFailure( fooDb.databaseId() ).orElse( null ) );
     }
 
 }

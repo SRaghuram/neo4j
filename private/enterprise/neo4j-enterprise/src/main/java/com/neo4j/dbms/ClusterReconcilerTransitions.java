@@ -7,18 +7,11 @@ package com.neo4j.dbms;
 
 import com.neo4j.dbms.database.ClusteredMultiDatabaseManager;
 
-import java.util.function.Consumer;
-
-import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.LogProvider;
 
-import static com.neo4j.dbms.EnterpriseOperatorState.DIRTY;
-import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
-import static com.neo4j.dbms.EnterpriseOperatorState.UNKNOWN;
-import static java.lang.String.format;
 
 /**
  * {@inheritDoc}
@@ -29,14 +22,12 @@ final class ClusterReconcilerTransitions extends ReconcilerTransitions
 {
     private final Transition startAfterStoreCopy;
     private final Transition stopBeforeStoreCopy;
-    private final Transition logCleanupAndDrop;
 
     ClusterReconcilerTransitions( ClusteredMultiDatabaseManager databaseManager, LogProvider logProvider )
     {
         super( databaseManager );
         this.startAfterStoreCopy = startAfterStoreCopyFactory( databaseManager );
         this.stopBeforeStoreCopy = stopBeforeStoreCopyFactory( databaseManager );
-        this.logCleanupAndDrop = logCleanupAndDropFactory( databaseManager, logProvider );
     }
 
     private static Transition startAfterStoreCopyFactory( ClusteredMultiDatabaseManager databaseManager )
@@ -55,23 +46,6 @@ final class ClusterReconcilerTransitions extends ReconcilerTransitions
                          .ifFailedThenDo( databaseManager::stopDatabase, STOPPED );
     }
 
-    private static Transition logCleanupAndDropFactory( ClusteredMultiDatabaseManager databaseManager, LogProvider logProvider )
-    {
-        Consumer<NamedDatabaseId> transition = id ->
-        {
-            var log = logProvider.getLog( ClusterReconcilerTransitions.class );
-            log.warn( format( "Pre-existing cluster state found with an unexpected id %s. This may indicate a previous " +
-                              "DROP operation for %s did not complete. Cleanup of both the database and cluster-sate has been attempted. " +
-                              "You may need to re-seed", id.databaseId().uuid(), id.name() ) );
-            databaseManager.dropDatabase( id );
-        };
-
-        return Transition.from( UNKNOWN, DIRTY )
-                         .doTransition( transition )
-                         .ifSucceeded( DROPPED )
-                         .ifFailedThenDo( nothing, DIRTY );
-    }
-
     Transition startAfterStoreCopy()
     {
         return startAfterStoreCopy;
@@ -80,10 +54,5 @@ final class ClusterReconcilerTransitions extends ReconcilerTransitions
     Transition stopBeforeStoreCopy()
     {
         return stopBeforeStoreCopy;
-    }
-
-    Transition logCleanupAndDrop()
-    {
-        return logCleanupAndDrop;
     }
 }

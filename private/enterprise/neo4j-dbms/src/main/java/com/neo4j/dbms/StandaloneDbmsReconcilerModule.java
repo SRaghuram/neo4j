@@ -22,6 +22,7 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
+import static com.neo4j.dbms.EnterpriseOperatorState.DIRTY;
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
@@ -40,7 +41,8 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
     private final SystemDatabaseCommitEventListener systemCommitListener;
     protected final DatabaseIdRepository databaseIdRepository;
     private final ReconciledTransactionTracker reconciledTxTracker;
-    private final DbmsReconciler reconciler;
+    private final LocalDatabaseStateService databaseStateService;
+    protected final DbmsReconciler reconciler;
 
     public StandaloneDbmsReconcilerModule( GlobalModule globalModule, MultiDatabaseManager<?> databaseManager, ReconciledTransactionTracker reconciledTxTracker,
             EnterpriseSystemGraphDbmsModel dbmsModel )
@@ -63,12 +65,14 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
         this.internalDbmsOperator = new StandaloneInternalDbmsOperator( globalModule.getLogService().getInternalLogProvider() );
         this.reconciler = reconciler;
         this.systemCommitListener = new SystemDatabaseCommitEventListener( systemOperator );
+        this.databaseStateService = new LocalDatabaseStateService( reconciler );
 
         globalModule.getGlobalDependencies().satisfyDependency( reconciler );
+        globalModule.getGlobalDependencies().satisfyDependency( databaseStateService );
         globalModule.getGlobalDependencies().satisfyDependencies( localOperator, systemOperator );
 
         var operationCounts = globalModule.getGlobalDependencies().resolveDependency( DatabaseOperationCounts.Counter.class );
-        reconciler.registerListener( new DatabaseOperationCountsListener( operationCounts ) );
+        reconciler.registerDatabaseStateChangedListener( new DatabaseOperationCountsListener( operationCounts ) );
     }
 
     @Override
@@ -118,9 +122,9 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
         unregisterWithListenerService( globalModule );
     }
 
-    public DbmsReconciler reconciler()
+    public LocalDatabaseStateService databaseStateService()
     {
-        return reconciler;
+        return databaseStateService;
     }
 
     protected Stream<DbmsOperator> operators()
@@ -154,6 +158,8 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
                 .from( STARTED ).to( STOPPED ).doTransitions( t.stop() )
                 .from( STOPPED ).to( DROPPED ).doTransitions( t.drop() )
                 .from( STARTED ).to( DROPPED ).doTransitions( t.prepareDrop(), t.stop(), t.drop() )
+                .from( DIRTY ).to( STOPPED ).doNothing()
+                .from( DIRTY ).to( DROPPED ).doTransitions( t.drop() )
                 .build();
     }
 

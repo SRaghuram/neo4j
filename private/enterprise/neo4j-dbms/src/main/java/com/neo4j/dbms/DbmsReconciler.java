@@ -29,8 +29,6 @@ import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.dbms.DatabaseStateService;
-import org.neo4j.dbms.OperatorState;
 import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
@@ -76,7 +74,7 @@ import static java.util.concurrent.CompletableFuture.delayedExecutor;
  *
  * Note: With the exception of short lived instances, sometimes created as a side effect of creating a database, reconcilers are global singletons.
  */
-public class DbmsReconciler implements DatabaseStateService
+public class DbmsReconciler
 {
     private final ExponentialBackoffStrategy backoffStrategy;
     private final ReconcilerExecutors executors;
@@ -84,9 +82,9 @@ public class DbmsReconciler implements DatabaseStateService
 
     private final MultiDatabaseManager<? extends DatabaseContext> databaseManager;
     private final BinaryOperator<EnterpriseDatabaseState> precedence;
-    private final Log log;
+    protected final Log log;
     private final boolean canRetry;
-    protected final Map<String,EnterpriseDatabaseState> currentStates;
+    private final Map<String,EnterpriseDatabaseState> currentStates;
     private final TransitionsTable transitionsTable;
     private final List<DatabaseStateChangedListener> listeners;
     private final ReconcilerLocks locks;
@@ -170,7 +168,7 @@ public class DbmsReconciler implements DatabaseStateService
                 .reduce( new HashMap<>(), ( l, r ) -> DbmsReconciler.combineDesiredStates( l, r, precedence ) );
     }
 
-    private EnterpriseDatabaseState getReconcilerEntryOrDefault( NamedDatabaseId namedDatabaseId, EnterpriseDatabaseState initial )
+    EnterpriseDatabaseState getReconcilerEntryOrDefault( NamedDatabaseId namedDatabaseId, EnterpriseDatabaseState initial )
     {
         return currentStates.getOrDefault( namedDatabaseId.name(), initial );
     }
@@ -445,19 +443,7 @@ public class DbmsReconciler implements DatabaseStateService
     {
         if ( throwable != null )
         {
-            // An exception which was not wrapped in a DatabaseManagementException has occurred. E.g. we looked up an unknown state transition or there was
-            // an InterruptedException in the reconciler job itself
-            var message = format( "Encountered unexpected error when attempting to reconcile database %s", databaseName );
-            if ( previousState == null )
-            {
-                log.error( message, throwable );
-                return Optional.of( EnterpriseDatabaseState.failedUnknownId( throwable ) ) ;
-            }
-            else
-            {
-                log.error( message, throwable );
-                return Optional.of( previousState.failed( throwable ) );
-            }
+            return handleReconciliationException( throwable, result, databaseName, previousState );
         }
         else if ( result.error() != null && Exceptions.contains( result.error(), e -> e instanceof DatabaseStartAbortedException ) )
         {
@@ -483,6 +469,25 @@ public class DbmsReconciler implements DatabaseStateService
             var failure =  shouldFailDatabaseWithCausePostSuccessfulReconcile( nextState.databaseId(), previousState, request );
             return failure.map( nextState::failed );
         }
+    }
+
+    private Optional<EnterpriseDatabaseState> handleReconciliationException( Throwable throwable, ReconcilerStepResult result, String databaseName,
+            EnterpriseDatabaseState previousState )
+    {
+        // An exception which was not wrapped in a DatabaseManagementException has occurred. E.g. we looked up an unknown state transition or there was
+        // an InterruptedException in the reconciler job itself
+        EnterpriseDatabaseState state;
+        if ( result == null )
+        {
+            state = (previousState == null ) ? EnterpriseDatabaseState.initialUnknownId() : previousState;
+        }
+        else
+        {
+            state = result.state();
+        }
+        state.failure().ifPresent( throwable::addSuppressed );
+        log.error( format( "Encountered unexpected error when attempting to reconcile database %s", databaseName ), throwable );
+        return Optional.of( state.failed( throwable ) );
     }
 
     private static Optional<Throwable> shouldFailDatabaseWithCausePostSuccessfulReconcile( NamedDatabaseId namedDatabaseId,
@@ -524,20 +529,7 @@ public class DbmsReconciler implements DatabaseStateService
         return transitionsTable.fromCurrent( currentState ).toDesired( desiredState );
     }
 
-    /* DatabaseStateService implementation */
-    @Override
-    public OperatorState stateOfDatabase( NamedDatabaseId namedDatabaseId )
-    {
-        return currentStates.getOrDefault( namedDatabaseId.name(), EnterpriseDatabaseState.unknown( namedDatabaseId ) ).operatorState();
-    }
-
-    @Override
-    public Optional<Throwable> causeOfFailure( NamedDatabaseId namedDatabaseId )
-    {
-        return currentStates.getOrDefault( namedDatabaseId.name(), EnterpriseDatabaseState.unknown( namedDatabaseId ) ).failure();
-    }
-
-    public final void registerListener( DatabaseStateChangedListener listener )
+    protected final void registerDatabaseStateChangedListener( DatabaseStateChangedListener listener )
     {
         listeners.add( listener );
     }
