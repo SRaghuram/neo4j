@@ -233,7 +233,7 @@ public class StoreUpgradeIT
         @Test
         public void embeddedDatabaseShouldStartOnOlderStoreWhenUpgradeIsEnabledDynamically() throws Throwable
         {
-            assumeFalse( STORES40.stream().flatMap( Stream::of ).anyMatch( s -> s == store ) );
+            assumeStoreNot4_0();
             var layout = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
             store.prepareDirectory( layout.databaseDirectory() );
 
@@ -420,7 +420,7 @@ public class StoreUpgradeIT
         @Test
         public void transactionLogsMovedToConfiguredLocationAfterUpgrade() throws IOException
         {
-            assumeFalse( STORES40.stream().flatMap( Stream::of ).anyMatch( s -> s == store ) );
+            assumeStoreNot4_0();
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
             DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
             File databaseDir = databaseLayout.databaseDirectory();
@@ -443,10 +443,15 @@ public class StoreUpgradeIT
             assertEquals( transactionLogFilesBeforeMigration, transactionLogFilesAfterMigration );
         }
 
+        private void assumeStoreNot4_0()
+        {
+            assumeFalse( STORES40.stream().flatMap( Stream::of ).anyMatch( s -> s == store ) );
+        }
+
         @Test
         public void transactionLogsMovedToConfiguredLocationAfterUpgradeFromCustomLocation() throws IOException
         {
-            assumeFalse( STORES40.stream().flatMap( Stream::of ).anyMatch( s -> s == store ) );
+            assumeStoreNot4_0();
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
             DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
             File databaseDir = databaseLayout.databaseDirectory();
@@ -475,6 +480,7 @@ public class StoreUpgradeIT
         @Test
         public void upgradeMustInjectEmptyTransactionIfTransactionLogsAreEmpty() throws Exception
         {
+            assumeStoreNot4_0();
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
             DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
             File databaseDir = databaseLayout.databaseDirectory();
@@ -565,6 +571,7 @@ public class StoreUpgradeIT
         @Test
         public void upgradeMustInjectEmptyTransactionIfTransactionLogsAreAllowedToBeMissing() throws Exception
         {
+            assumeStoreNot4_0();
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
             DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
             File databaseDir = databaseLayout.databaseDirectory();
@@ -629,6 +636,7 @@ public class StoreUpgradeIT
         @Test
         public void mustRefuseUpgradeByDefaultIfLogFilesAreMissing() throws Exception
         {
+            assumeStoreNot4_0();
             FileSystemAbstraction fileSystem = testDir.getFileSystem();
             DatabaseLayout databaseLayout  = Neo4jLayout.of( testDir.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
             File databaseDir = databaseLayout.databaseDirectory();
