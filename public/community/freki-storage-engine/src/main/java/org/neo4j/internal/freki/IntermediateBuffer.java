@@ -143,4 +143,9 @@ class IntermediateBuffer
     {
         return bufferCapacity;
     }
+
+    boolean isSplit()
+    {
+        return count > 1;
+    }
 }

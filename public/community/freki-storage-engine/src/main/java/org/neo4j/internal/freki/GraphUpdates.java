@@ -552,6 +552,13 @@ class GraphUpdates
                             chainHeader.mark( slot, false );
                         }
                     }
+                    if ( intermediateBuffer.isSplit() )
+                    {
+                        for ( int slot : slots )
+                        {
+                            linkHeader.markReference( slot, true );
+                        }
+                    }
                 }
                 else
                 {

@@ -65,7 +65,17 @@ class Header
 
     void mark( int slot, boolean marked )
     {
-        markers = marked
+        markers = mark( markers, slot, marked );
+    }
+
+    void markReference( int slot, boolean marked )
+    {
+        referenceMarkers = mark( referenceMarkers, slot, marked );
+    }
+
+    private int mark( int markers, int slot, boolean marked )
+    {
+        return marked
                   ? markers | slotBit( slot )
                   : markers & ~slotBit( slot );
     }
@@ -155,7 +165,7 @@ class Header
 
     void setReference( Header referenceHeader )
     {
-        referenceMarkers = (referenceHeader.markers | referenceHeader.referenceMarkers) & ~markers; //what is found in reference, or elsewhere, but not here
+        referenceMarkers |= (referenceHeader.markers | referenceHeader.referenceMarkers) & ~markers; //what is found in reference, or elsewhere, but not here
     }
 
     void deserialize( ByteBuffer buffer )
