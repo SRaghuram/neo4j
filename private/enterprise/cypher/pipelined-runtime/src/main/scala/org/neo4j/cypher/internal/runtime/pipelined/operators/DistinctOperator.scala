@@ -109,9 +109,7 @@ object DistinctOperator {
 
   class DistinctStateFactory(memoryTracker: MemoryTracker) extends ArgumentStateFactory[DistinctState] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): DistinctState = {
-      val state = new StandardDistinctState(argumentRowId, argumentRowIdsForReducers)
-      state.setMemoryTracker(memoryTracker)
-      state
+      new StandardDistinctState(argumentRowId, argumentRowIdsForReducers, memoryTracker)
     }
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): DistinctState = {
@@ -133,11 +131,18 @@ object DistinctOperator {
   class StandardDistinctState(override val argumentRowId: Long, override val argumentRowIdsForReducers: Array[Long])
     extends DistinctState {
 
+    def this(argumentRowId: Long, argumentRowIdsForReducers: Array[Long], memoryTracker: MemoryTracker) = {
+      this(argumentRowId, argumentRowIdsForReducers)
+      setMemoryTracker(memoryTracker)
+    }
+
     private var seenSet: DistinctSet[AnyValue] = _
 
     // This is called from generated code by genCreateState
     override def setMemoryTracker(memoryTracker: MemoryTracker): Unit = {
-      seenSet = DistinctSet.createDistinctSet[AnyValue](memoryTracker)
+      if (seenSet == null) {
+        seenSet = DistinctSet.createDistinctSet[AnyValue](memoryTracker)
+      }
     }
 
     override def seen(key: AnyValue): Boolean =
@@ -194,7 +199,7 @@ class SerialTopLevelDistinctOperatorTaskTemplate(val inner: OperatorTaskTemplate
 
     /**
       * val key = [computeKey]
-      * if (distinctState.seen(key, memoryTracker)) {
+      * if (distinctState.seen(key)) {
       *   [project key]
       *   <<inner.generate>>
       * }

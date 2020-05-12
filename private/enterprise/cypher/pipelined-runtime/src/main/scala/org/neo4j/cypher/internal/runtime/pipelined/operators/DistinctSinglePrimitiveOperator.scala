@@ -79,9 +79,7 @@ class DistinctSinglePrimitiveOperator(argumentStateMapId: ArgumentStateMapId,
 object DistinctSinglePrimitiveOperator {
   class DistinctSinglePrimitiveStateFactory(memoryTracker: MemoryTracker) extends ArgumentStateFactory[DistinctSinglePrimitiveState] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): DistinctSinglePrimitiveState = {
-      val state = new StandardDistinctSinglePrimitiveState(argumentRowId, argumentRowIdsForReducers)
-      state.setMemoryTracker(memoryTracker)
-      state
+      new StandardDistinctSinglePrimitiveState(argumentRowId, argumentRowIdsForReducers, memoryTracker)
     }
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): DistinctSinglePrimitiveState = {
@@ -103,11 +101,18 @@ object DistinctSinglePrimitiveOperator {
   class StandardDistinctSinglePrimitiveState(override val argumentRowId: Long, override val argumentRowIdsForReducers: Array[Long])
     extends DistinctSinglePrimitiveState {
 
+    def this(argumentRowId: Long, argumentRowIdsForReducers: Array[Long], memoryTracker: MemoryTracker) = {
+      this(argumentRowId, argumentRowIdsForReducers)
+      setMemoryTracker(memoryTracker)
+    }
+
     private var seenSet: HeapTrackingLongHashSet = _
 
     // This is called from generated code by genCreateState
     override def setMemoryTracker(memoryTracker: MemoryTracker): Unit = {
-      seenSet = HeapTrackingCollections.newLongSet(memoryTracker)
+      if (seenSet == null) {
+        seenSet = HeapTrackingCollections.newLongSet(memoryTracker)
+      }
     }
 
     override def seen(key: Long): Boolean =
