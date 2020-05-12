@@ -121,7 +121,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         }
         else if ( sizeExp > 0 && data.xLChainNextLinkPointer != data.xLChainStartPointer )
         {
-            //We cant reuse records when loading chains, just create a new one.
+            //We cant reuse records when loading chains because we only have a one slot per sizeExp, just create a new one
             //TODO reuse up to 2 or 3 first in chain?
             data.records[sizeExp] = stores.mainStore( sizeExp ).newRecord();
         }

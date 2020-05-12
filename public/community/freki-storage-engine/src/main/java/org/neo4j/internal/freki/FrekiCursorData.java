@@ -74,7 +74,7 @@ class FrekiCursorData
         if ( header.hasMark( OFFSET_RECORD_POINTER ) )
         {
             xLChainStartPointer = readRecordPointers( buffer )[0];
-            xLChainNextLinkPointer = readRecordPointers( buffer )[0];
+            xLChainNextLinkPointer = xLChainStartPointer;
             // xL can be loaded lazily when/if needed
         }
         else
