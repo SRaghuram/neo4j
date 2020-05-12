@@ -62,14 +62,19 @@ public class CausalClusteringSettings implements SettingsDeclaration
     public static final Setting<Duration> join_catch_up_timeout =
             newBuilder( "causal_clustering.join_catch_up_timeout", DURATION, ofMinutes( 10 ) ).build();
 
+    @Description( "Maximum amount of lag accepted for a new follower to join the Raft group" )
+    public static final Setting<Duration> join_catch_up_max_lag =
+            newBuilder( "causal_clustering.join_catch_up_max_lag", DURATION, ofSeconds( 10 ) ).build();
+
     @Deprecated
     @Description( "This setting is moved and enhanced into causal_clustering.failure_detection_window and causal_clustering.failure_resolution_window." )
     public static final Setting<Duration> leader_election_timeout =
             newBuilder( "causal_clustering.leader_election_timeout", DURATION, ofSeconds( 7 ) ).build();
 
-    @Description( "The time window within which the loss of the leader is detected and the first re-election attempt is held." )
+    @Description( "The time window within which the loss of the leader is detected and the first re-election attempt is held." +
+            "The window should be significantly larger than typical communication delays to make conflicts unlikely." )
     public static final Setting<DurationRange> failure_detection_window =
-            newBuilder( "causal_clustering.failure_detection_window", DURATION_RANGE, DurationRange.fromSeconds( 7, 10 ) ).build();
+            newBuilder( "causal_clustering.failure_detection_window", DURATION_RANGE, DurationRange.fromSeconds( 20, 23 ) ).build();
 
     @Description( "The rate at which leader elections happen. Note that due to election conflicts it might take several attempts to find a leader. " +
             "The window should be significantly larger than typical communication delays to make conflicts unlikely." )
@@ -120,6 +125,10 @@ public class CausalClusteringSettings implements SettingsDeclaration
     @Description( "The maximum lag allowed before log shipping pauses (in unit of entries)" )
     public static final Setting<Integer> log_shipping_max_lag =
             newBuilder( "causal_clustering.log_shipping_max_lag", INT, 256 ).build();
+
+    @Description( "Retry time for log shipping to followers after a stall" )
+    public static final Setting<Duration> log_shipping_retry_timeout =
+            newBuilder( "causal_clustering.log_shipping_retry_timeout", DURATION, ofSeconds( 5 ) ).build();
 
     @Internal
     @Description( "Maximum number of entries in the RAFT in-queue" )

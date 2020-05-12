@@ -26,12 +26,12 @@ public class RaftTimersConfigTest
         var clusterConfig = Config.newBuilder();
         var raftTimersConfig = new RaftTimersConfig( clusterConfig.build() );
 
-        assertEquals( raftTimersConfig.detectionWindowMinInMillis(), 7000 );
-        assertEquals( raftTimersConfig.detectionWindowMaxInMillis(), 10000 );
+        assertEquals( raftTimersConfig.detectionWindowMinInMillis(), 20000 );
+        assertEquals( raftTimersConfig.detectionWindowMaxInMillis(), 23000 );
         assertEquals( raftTimersConfig.detectionDeltaInMillis(), 3000 );
         assertEquals( raftTimersConfig.resolutionWindowMinInMillis(), 3000 );
         assertEquals( raftTimersConfig.resolutionWindowMaxInMillis(), 6000 );
-        assertEquals( raftTimersConfig.heartbeatIntervalInMillis(), 7000 / HEARTBEAT_COUNT_IN_FAILURE_DETECTION );
+        assertEquals( raftTimersConfig.heartbeatIntervalInMillis(), 20000 / HEARTBEAT_COUNT_IN_FAILURE_DETECTION );
     }
 
     @Test

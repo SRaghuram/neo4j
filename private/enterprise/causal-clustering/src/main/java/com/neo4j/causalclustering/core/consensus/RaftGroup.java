@@ -9,8 +9,8 @@ import com.neo4j.causalclustering.common.RaftLogImplementation;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.ServerGroupName;
-import com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferService;
 import com.neo4j.causalclustering.core.consensus.leader_transfer.ExpiringSet;
+import com.neo4j.causalclustering.core.consensus.leader_transfer.LeaderTransferService;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.MonitoredRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
@@ -58,8 +58,10 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.SystemNanoClock;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.catchup_batch_size;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.join_catch_up_max_lag;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.join_catch_up_timeout;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.log_shipping_max_lag;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.log_shipping_retry_timeout;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.refuse_to_be_leader;
 import static java.util.Set.copyOf;
 import static org.neo4j.time.Clocks.systemClock;
@@ -96,7 +98,7 @@ public class RaftGroup
         Integer minimumConsensusGroupSize = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_runtime );
         MemberIdSetBuilder memberSetBuilder = new MemberIdSetBuilder();
         raftMembershipManager = new RaftMembershipManager( leaderOnlyReplicator, myself, memberSetBuilder, raftLog, logProvider, minimumConsensusGroupSize,
-                raftTimersConfig.detectionWindowMinInMillis(), systemClock(), config.get( join_catch_up_timeout ).toMillis(), raftMembershipStorage );
+                config.get( join_catch_up_max_lag ).toMillis(), systemClock(), config.get( join_catch_up_timeout ).toMillis(), raftMembershipStorage );
 
         dependencies.satisfyDependency( raftMembershipManager );
         life.add( raftMembershipManager );
@@ -105,7 +107,7 @@ public class RaftGroup
         inFlightCache = InFlightCacheFactory.create( config, monitors );
         RaftLogShippingManager logShipping =
                 new RaftLogShippingManager( outbound, logProvider, raftLog, timerService, systemClock(), myself, raftMembershipManager,
-                                            raftTimersConfig.detectionWindowMinInMillis(), config.get( catchup_batch_size ),
+                                            config.get( log_shipping_retry_timeout ).toMillis(), config.get( catchup_batch_size ),
                                             config.get( log_shipping_max_lag ),
                                             inFlightCache );
 

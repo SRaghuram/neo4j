@@ -52,19 +52,19 @@ class RaftMembershipChanger
 
     private final ReadableRaftLog raftLog;
     private final Clock clock;
-    private final long electionTimeout;
+    private final long catchupLagTimeout;
 
     private final RaftMembershipManager membershipManager;
     private long catchupTimeout;
 
     private MemberId catchingUpMember;
 
-    RaftMembershipChanger( ReadableRaftLog raftLog, Clock clock, long electionTimeout,
+    RaftMembershipChanger( ReadableRaftLog raftLog, Clock clock, long catchupLagTimeout,
             LogProvider logProvider, long catchupTimeout, RaftMembershipManager membershipManager )
     {
         this.raftLog = raftLog;
         this.clock = clock;
-        this.electionTimeout = electionTimeout;
+        this.catchupLagTimeout = catchupLagTimeout;
         this.catchupTimeout = catchupTimeout;
         this.membershipManager = membershipManager;
         this.log = logProvider.getLog( getClass() );
@@ -230,7 +230,7 @@ class RaftMembershipChanger
 
         CatchingUp( MemberId member )
         {
-            this.catchupGoalTracker = new CatchupGoalTracker( raftLog, clock, electionTimeout, catchupTimeout );
+            this.catchupGoalTracker = new CatchupGoalTracker( raftLog, clock, catchupLagTimeout, catchupTimeout );
             catchingUpMember = member;
         }
 
