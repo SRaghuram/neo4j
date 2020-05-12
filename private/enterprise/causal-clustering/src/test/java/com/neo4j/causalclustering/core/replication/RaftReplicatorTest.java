@@ -209,7 +209,14 @@ class RaftReplicatorTest
         assertThat( replicationResult.outcome(), either( equalTo( NOT_REPLICATED ) ).or( equalTo( MAYBE_REPLICATED ) ) );
         assertThat( replicationResult.failure(), Matchers.instanceOf( UnavailableException.class ) );
 
-        verify( replicationMonitor ).notReplicated();
+        if ( replicationResult.outcome() == NOT_REPLICATED )
+        {
+            verify( replicationMonitor ).notReplicated();
+        }
+        else
+        {
+            verify( replicationMonitor ).maybeReplicated();
+        }
     }
 
     @Test
@@ -267,7 +274,7 @@ class RaftReplicatorTest
 
         // when
         ReplicationResult replicationResult = replicator.replicate( content );
-        assertEquals( NOT_REPLICATED , replicationResult.outcome() );
+        assertEquals( NOT_REPLICATED, replicationResult.outcome() );
     }
 
     @Test
@@ -424,6 +431,5 @@ class RaftReplicatorTest
             this.lastTo = to;
             this.count++;
         }
-
     }
 }
