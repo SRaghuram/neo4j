@@ -39,7 +39,9 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
+import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -74,7 +76,7 @@ class CommandApplicationProcessTest
     private final Monitors monitors = new Monitors();
     private final CoreState coreState = mock( CoreState.class );
     private final SinglePanic panicker = new SinglePanic();
-    private JobScheduler jobScheduler = new ThreadPoolJobScheduler();
+    private final JobScheduler jobScheduler = new ThreadPoolJobScheduler();
     private final CommandApplicationProcess applicationProcess =
             new CommandApplicationProcess( raftLog, batchSize, flushEvery, NullLogProvider.getInstance(), new ProgressTrackerImpl( globalSession ),
                                            sessionTracker, coreState, inFlightCache, monitors, panicker, jobScheduler );
@@ -328,6 +330,30 @@ class CommandApplicationProcessTest
 
         // then
         assertEquals( 2, applicationProcess.lastApplied() );
+    }
+
+    @Test
+    void pauseAndNotifyShouldBeThreadSafe() throws Exception
+    {
+        // given
+        raftLog.append( new RaftLogEntry( 0, operation( nullTx ) ) );
+        applicationProcess.start();
+
+        // when
+        for ( int i = 0; i < 1000; i++ )
+        {
+            final int current = i;
+            raftLog.append( new RaftLogEntry( 0, operation( nullTx ) ) );
+            var pauseFuture = runAsync( () -> applicationProcess.pauseApplier( "Testing" ) );
+            var notifyFuture = runAsync( () -> applicationProcess.notifyCommitted( current + 1 ) );
+
+            // then
+            assertThat(pauseFuture).succeedsWithin( 1, SECONDS );
+            assertThat(notifyFuture).succeedsWithin( 1, SECONDS );
+
+            // reset state
+            applicationProcess.resumeApplier( "Testing" );
+        }
     }
 
     private ReplicatedTransaction tx( byte dataValue )

@@ -52,7 +52,7 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
     private final StatUtil.StatContext batchStat;
 
     private long lastFlushed = NOTHING;
-    private int pauseCount = 1; // we are created in the paused state
+    private volatile int pauseCount = 1; // we are created in the paused state
     private final ApplierState applierState = new ApplierState();
     private volatile boolean hasPanicked;
 
@@ -84,7 +84,7 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
         }
     }
 
-    private void scheduleJob()
+    private synchronized void scheduleJob()
     {
         if ( pauseCount == 0 && !hasPanicked )
         {
