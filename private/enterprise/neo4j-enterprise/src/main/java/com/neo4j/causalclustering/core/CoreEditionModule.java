@@ -209,6 +209,16 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         editionInvariants( globalModule, globalDependencies );
 
         fabricServicesBootstrap = new EnterpriseFabricServicesBootstrap.Core( globalLife, globalDependencies, logService );
+
+        setGlobalRaftParallelism( globalModule, globalConfig );
+    }
+
+    private static void setGlobalRaftParallelism( GlobalModule globalModule, Config globalConfig )
+    {
+        globalModule.getJobScheduler().setParallelism( Group.CORE_STATE_APPLIER, globalConfig.get( CausalClusteringSettings.raft_applier_parallelism ) );
+        globalModule.getJobScheduler()
+                .setParallelism( Group.RAFT_BATCH_HANDLER, globalConfig.get( CausalClusteringSettings.raft_batching_outbound_parallelism ) );
+        globalModule.getJobScheduler().setParallelism( Group.RAFT_TIMER, globalConfig.get( CausalClusteringSettings.raft_timer_parallelism ) );
     }
 
     private void createCoreServers( LifeSupport life, DatabaseManager<?> databaseManager, FileSystemAbstraction fileSystem )

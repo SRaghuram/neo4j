@@ -256,16 +256,28 @@ public class CausalClusteringSettings implements SettingsDeclaration
     public static final Setting<Path> kubernetes_ca_crt =
             pathUnixAbsolute( "causal_clustering.kubernetes.ca_crt", "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt" );
 
+    @Description( "Limits amount of global threads shared by raft groups for batching outbound messages." )
+    public static Setting<Integer> raft_batching_outbound_parallelism = newBuilder( "causal_clustering.raft_batching_outbound_parallelism", INT, 16 )
+            .addConstraint( min( 1 ) ).build();
+
+    @Description( "Limits amount of global threads shared by raft groups for applying committed raft messages." )
+    public static Setting<Integer> raft_applier_parallelism = newBuilder( "causal_clustering.raft_applier_parallelism", INT, 16 )
+            .addConstraint( min( 1 ) ).build();
+
+    @Description( "Limits about of global threads shared by raft groups for handling timeouts." )
+    public static Setting<Integer> raft_timer_parallelism = newBuilder( "causal_clustering.raft_timer_parallelism", INT, 8 )
+            .addConstraint( min( 1 ) ).build();
+
     /**
-     * Creates absolute path on the first filesystem root. This will be `/` on Unix but arbitrary on Windows.
-     * If filesystem roots cannot be listed then `//` will be used - this will be resolved to `/` on Unix and `\\` (a UNC network path) on Windows.
-     * An absolute path is always needed for validation, even though we only care about a path on Linux.
+     * Creates absolute path on the first filesystem root. This will be `/` on Unix but arbitrary on Windows. If filesystem roots cannot be listed then `//`
+     * will be used - this will be resolved to `/` on Unix and `\\` (a UNC network path) on Windows. An absolute path is always needed for validation, even
+     * though we only care about a path on Linux.
      */
     private static Setting<Path> pathUnixAbsolute( String name, String path )
     {
         File[] roots = File.listRoots();
         Path root = roots.length > 0 ? roots[0].toPath() : Paths.get( "//" );
-        return newBuilder( name, PATH,  root.resolve( path  ) ).build();
+        return newBuilder( name, PATH, root.resolve( path ) ).build();
     }
 
     @Description( "LabelSelector for Kubernetes API" )
