@@ -22,6 +22,7 @@ import org.neo4j.fabric.stream.StatementResult;
 import org.neo4j.fabric.transaction.CompositeTransaction;
 import org.neo4j.fabric.transaction.FabricTransactionInfo;
 import org.neo4j.fabric.transaction.TransactionMode;
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.values.virtual.MapValue;
 
 public class FabricRemoteExecutorImpl implements FabricRemoteExecutor
@@ -162,7 +163,7 @@ public class FabricRemoteExecutorImpl implements FabricRemoteExecutor
         }
 
         @Override
-        public Mono<Void> terminate()
+        public Mono<Void> terminate( Status reason )
         {
             // driver does not have 'terminate' operation
             return rollback();

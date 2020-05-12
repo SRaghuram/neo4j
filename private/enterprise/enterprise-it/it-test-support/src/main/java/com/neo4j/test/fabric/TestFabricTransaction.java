@@ -83,7 +83,13 @@ public class TestFabricTransaction implements InternalTransaction
     @Override
     public void terminate()
     {
-        fabricTransaction.markForTermination( Terminated );
+        terminate( Terminated );
+    }
+
+    @Override
+    public void terminate( Status reason )
+    {
+        fabricTransaction.markForTermination( reason );
     }
 
     @Override
@@ -344,12 +350,6 @@ public class TestFabricTransaction implements InternalTransaction
     public boolean isOpen()
     {
         return kernelInternalTransaction.isOpen();
-    }
-
-    @Override
-    public Consumer<Status> getTerminationCallback()
-    {
-        return kernelInternalTransaction.getTerminationCallback();
     }
 
     @Override
