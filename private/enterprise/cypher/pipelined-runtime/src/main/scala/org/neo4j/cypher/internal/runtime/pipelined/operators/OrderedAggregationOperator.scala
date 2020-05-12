@@ -5,6 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
+import java.util
+import java.util.Map
+
 import org.eclipse.collections.api.block.function.Function
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
@@ -39,7 +42,8 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
                                 (val id: Id = Id.INVALID_ID) extends Operator {
 
   private type ResultsMap = HeapTrackingOrderedAppendMap[unorderedGroupings.KeyType, Array[AggregationFunction]]
-  private case class Result(orderedGroupingKey: orderedGroupings.KeyType, resultsMap: ResultsMap)
+  private type ResultsIterator = util.Iterator[Map.Entry[unorderedGroupings.KeyType, Array[AggregationFunction]]]
+  private case class Result(orderedGroupingKey: orderedGroupings.KeyType, resultsIterator: ResultsIterator)
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
@@ -127,7 +131,7 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
     private def tryWriteOutstandingResults(outputCursor: MorselWriteCursor, queryState: QueryState): Unit = {
       while (taskState.outstandingResults != null && outputCursor.onValidRow()) {
         val result = taskState.outstandingResults
-        val it = result.resultsMap.autoClosingEntryIterator()
+        val it = result.resultsIterator
         if (!it.hasNext) {
           taskState.outstandingResults = null
         } else {
@@ -143,14 +147,14 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
             outputCursor.setRefAt(outputSlots(i), aggResults(i).result(queryState))
             i += 1
           }
-          it.remove()
           outputCursor.next()
         }
       }
     }
 
     private def completeCurrentChunk(): Unit = {
-      taskState.outstandingResults = Result(taskState.lastSeenGroupingKey, taskState.resultsMap)
+      val outstandingResultsIterator = taskState.resultsMap.autoClosingEntryIterator()
+      taskState.outstandingResults = Result(taskState.lastSeenGroupingKey, outstandingResultsIterator)
       taskState.lastSeenGroupingKey = null.asInstanceOf[orderedGroupings.KeyType]
       taskState.resultsMap = HeapTrackingOrderedAppendMap.createOrderedMap(taskState.memoryTracker)
     }
