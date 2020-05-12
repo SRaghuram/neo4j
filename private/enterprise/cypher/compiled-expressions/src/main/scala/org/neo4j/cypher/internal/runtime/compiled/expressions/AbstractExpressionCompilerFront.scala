@@ -1662,9 +1662,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
       Some(IntermediateExpression(ternary(equal(getLongAt(offset), constant(-1L)), trueValue, falseValue),
                                   Seq.empty, Seq.empty, Set.empty))
 
-    case e =>
-      println(e)
-      None
+    case _ => None
   }
 
   private def tokenFieldsForLabels(labels: Seq[String]): (Seq[InstanceField], Seq[IntermediateRepresentation]) = {
