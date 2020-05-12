@@ -26,7 +26,7 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
 import static org.neo4j.internal.helpers.collection.Iterables.single;
 
-class PrivilegeBuilder
+public class PrivilegeBuilder
 {
     final ResourcePrivilege.GrantOrDeny privilegeType;
     Segment segment;
@@ -35,7 +35,7 @@ class PrivilegeBuilder
     String dbName = "";
     SpecialDatabase specialDatabase;
 
-    PrivilegeBuilder( ResourcePrivilege.GrantOrDeny privilegeType, String action )
+    public PrivilegeBuilder( ResourcePrivilege.GrantOrDeny privilegeType, String action )
     {
         this( privilegeType, action, a -> Collections.singleton( PrivilegeAction.valueOf( a ) ) );
     }

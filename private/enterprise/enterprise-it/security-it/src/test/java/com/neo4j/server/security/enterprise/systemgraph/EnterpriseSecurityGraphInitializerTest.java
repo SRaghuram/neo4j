@@ -5,10 +5,14 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import com.neo4j.server.security.enterprise.systemgraph.versions.KnownEnterpriseSecurityComponentVersion;
+import com.neo4j.server.security.enterprise.systemgraph.versions.PrivilegeBuilder;
+import com.neo4j.server.security.enterprise.systemgraph.versions.SupportedEnterpriseVersion;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +20,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -30,7 +35,9 @@ import org.neo4j.dbms.database.SystemGraphComponent;
 import org.neo4j.dbms.database.SystemGraphComponents;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -121,10 +128,28 @@ class EnterpriseSecurityGraphInitializerTest
     }
 
     @Test
+    void shouldInitializeWith41_Drop01_systemGraph() throws Exception
+    {
+        initEnterprise( "Neo4j 4.1.0-Drop01" );
+        assertCanUpgradeThisVersionAndThenUpgradeIt( SystemGraphComponent.Status.REQUIRES_UPGRADE );
+    }
+
+    @Test
     void shouldInitializeWith40_systemGraph() throws Exception
     {
         initEnterprise( "Neo4j 4.0" );
+        assertCanUpgradeThisVersionAndThenUpgradeIt( SystemGraphComponent.Status.REQUIRES_UPGRADE );
+    }
 
+    @Test
+    void shouldInitializeWith36_systemGraph() throws Exception
+    {
+        initEnterprise( "Neo4j 3.6" );
+        assertCanUpgradeThisVersionAndThenUpgradeIt( SystemGraphComponent.Status.UNSUPPORTED_BUT_CAN_UPGRADE );
+    }
+
+    private void assertCanUpgradeThisVersionAndThenUpgradeIt( SystemGraphComponent.Status requiresUpgrade )
+    {
         HashMap<String,SystemGraphComponent.Status> statuses = new HashMap<>();
         SystemGraphComponent.Status dbmsStatus;
         try ( Transaction tx = system.beginTx() )
@@ -134,8 +159,8 @@ class EnterpriseSecurityGraphInitializerTest
         }
         assertThat( "Expecting three components", statuses.size(), is( 3 ) );
         assertThat( "Users status", statuses.get( "security-users" ), is( SystemGraphComponent.Status.CURRENT ) );
-        assertThat( "Privileges status", statuses.get( "security-privileges" ), is( SystemGraphComponent.Status.REQUIRES_UPGRADE ) );
-        assertThat( "Overall status", dbmsStatus, is( SystemGraphComponent.Status.REQUIRES_UPGRADE ) );
+        assertThat( "Privileges status", statuses.get( "security-privileges" ), is( requiresUpgrade ) );
+        assertThat( "Overall status", dbmsStatus, is( requiresUpgrade ) );
 
         // When running dbms.upgrade
         try ( Transaction tx = system.beginTx() )
@@ -157,10 +182,9 @@ class EnterpriseSecurityGraphInitializerTest
     }
 
     @Test
-    void shouldInitializeWith36_systemGraph() throws Exception
+    void shouldNotSupportFutureVersions() throws Exception
     {
-        initEnterprise( "Neo4j 3.6" );
-
+        initEnterpriseFutureUnknown();
         HashMap<String,SystemGraphComponent.Status> statuses = new HashMap<>();
         SystemGraphComponent.Status dbmsStatus;
         try ( Transaction tx = system.beginTx() )
@@ -170,26 +194,8 @@ class EnterpriseSecurityGraphInitializerTest
         }
         assertThat( "Expecting three components", statuses.size(), is( 3 ) );
         assertThat( "Users status", statuses.get( "security-users" ), is( SystemGraphComponent.Status.CURRENT ) );
-        assertThat( "Privileges status", statuses.get( "security-privileges" ), is( SystemGraphComponent.Status.UNSUPPORTED_BUT_CAN_UPGRADE ) );
-        assertThat( "Overall status", dbmsStatus, is( SystemGraphComponent.Status.UNSUPPORTED_BUT_CAN_UPGRADE ) );
-
-        // When running dbms.upgrade
-        try ( Transaction tx = system.beginTx() )
-        {
-            systemGraphComponents.upgradeToCurrent( tx );
-            tx.commit();
-        }
-
-        // Then when looking at component statuses
-        try ( Transaction tx = system.beginTx() )
-        {
-            systemGraphComponents.forEach( component -> statuses.put( component.component(), component.detect( tx ) ) );
-            dbmsStatus = systemGraphComponents.detect( tx );
-        }
-        assertThat( "Expecting three components", statuses.size(), is( 3 ) );
-        assertThat( "Users status", statuses.get( "security-users" ), is( SystemGraphComponent.Status.CURRENT ) );
-        assertThat( "Privileges status", statuses.get( "security-privileges" ), is( SystemGraphComponent.Status.CURRENT ) );
-        assertThat( "Overall status", dbmsStatus, is( SystemGraphComponent.Status.CURRENT ) );
+        assertThat( "Privileges status", statuses.get( "security-privileges" ), is( SystemGraphComponent.Status.UNSUPPORTED_FUTURE ) );
+        assertThat( "Overall status", dbmsStatus, is( SystemGraphComponent.Status.UNSUPPORTED_FUTURE ) );
     }
 
     private void initEnterprise( String version ) throws Exception
@@ -199,6 +205,67 @@ class EnterpriseSecurityGraphInitializerTest
         {
             builder.initializePrivileges( tx, PredefinedRoles.roles, Map.of( PredefinedRoles.ADMIN, Set.of( "neo4j" ) ) );
             tx.commit();
+        }
+    }
+
+    private void initEnterpriseFutureUnknown() throws Exception
+    {
+        KnownEnterpriseSecurityComponentVersion builder = new EnterpriseVersionFake( mock(Log.class) );
+        try ( Transaction tx = system.beginTx() )
+        {
+            builder.initializePrivileges( tx, PredefinedRoles.roles, Map.of( PredefinedRoles.ADMIN, Set.of( "neo4j" ) ) );
+            tx.commit();
+        }
+    }
+
+    private static class EnterpriseVersionFake extends SupportedEnterpriseVersion
+    {
+        EnterpriseVersionFake( Log log )
+        {
+            super( 100, "Neo4j 8.8.88", log, true );
+        }
+
+        @Override
+        public boolean migrationSupported()
+        {
+            return true;
+        }
+
+        @Override
+        public boolean runtimeSupported()
+        {
+            return true;
+        }
+
+        @Override
+        public void setUpDefaultPrivileges( Transaction tx )
+        {
+            super.setUpDefaultPrivileges( tx );
+            this.setVersionProperty( tx, version );
+        }
+
+        @Override
+        public void assignDefaultPrivileges( Node role, String predefinedRole )
+        {
+            super.assignDefaultPrivileges( role, predefinedRole );
+        }
+
+        @Override
+        public void assertUpdateWithAction( PrivilegeAction action, ResourcePrivilege.SpecialDatabase specialDatabase ) throws UnsupportedOperationException
+        {
+            // Current version supports all current commands
+        }
+
+        @Override
+        public Set<ResourcePrivilege> getPrivilegeForRoles( Transaction tx, List<String> roleNames, Cache<String,Set<ResourcePrivilege>> privilegeCache )
+        {
+            return super.currentGetPrivilegeForRoles( tx, roleNames, privilegeCache );
+        }
+
+        @Override
+        public PrivilegeBuilder makePrivilegeBuilder( ResourcePrivilege.GrantOrDeny privilegeType, String action )
+        {
+            return new PrivilegeBuilder( privilegeType, action );
         }
     }
 

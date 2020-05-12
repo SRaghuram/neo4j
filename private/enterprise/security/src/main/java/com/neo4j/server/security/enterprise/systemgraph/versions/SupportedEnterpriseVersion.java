@@ -31,7 +31,7 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
 
-abstract class SupportedEnterpriseVersion extends KnownEnterpriseSecurityComponentVersion
+public abstract class SupportedEnterpriseVersion extends KnownEnterpriseSecurityComponentVersion
 {
     private Node matchNodePriv;
     private Node matchRelPriv;
@@ -49,7 +49,7 @@ abstract class SupportedEnterpriseVersion extends KnownEnterpriseSecurityCompone
         super( version, description, log );
     }
 
-    SupportedEnterpriseVersion( int version, String description, Log log, boolean isCurrent )
+    protected SupportedEnterpriseVersion( int version, String description, Log log, boolean isCurrent )
     {
         super( version, description, log, isCurrent );
     }
@@ -59,7 +59,7 @@ abstract class SupportedEnterpriseVersion extends KnownEnterpriseSecurityCompone
         return new UnsupportedOperationException( "This operation is not supported while running in compatibility mode with version " + this.description );
     }
 
-    abstract PrivilegeBuilder makePrivilegeBuilder( ResourcePrivilege.GrantOrDeny privilegeType, String action );
+    public abstract PrivilegeBuilder makePrivilegeBuilder( ResourcePrivilege.GrantOrDeny privilegeType, String action );
 
     @Override
     public void setUpDefaultPrivileges( Transaction tx )
@@ -192,7 +192,7 @@ abstract class SupportedEnterpriseVersion extends KnownEnterpriseSecurityCompone
         privNode.createRelationshipTo( resourceNode, APPLIES_TO );
     }
 
-    Set<ResourcePrivilege> currentGetPrivilegeForRoles( Transaction tx, List<String> roleNames, Cache<String,Set<ResourcePrivilege>> privilegeCache )
+    protected Set<ResourcePrivilege> currentGetPrivilegeForRoles( Transaction tx, List<String> roleNames, Cache<String,Set<ResourcePrivilege>> privilegeCache )
     {
         Set<ResourcePrivilege> privileges = new HashSet<>();
         for ( String roleName : roleNames )

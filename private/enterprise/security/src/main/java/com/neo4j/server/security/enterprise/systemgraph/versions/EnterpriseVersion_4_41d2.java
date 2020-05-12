@@ -65,7 +65,7 @@ public class EnterpriseVersion_4_41d2 extends SupportedEnterpriseVersion
     }
 
     @Override
-    PrivilegeBuilder makePrivilegeBuilder( ResourcePrivilege.GrantOrDeny privilegeType, String action )
+    public PrivilegeBuilder makePrivilegeBuilder( ResourcePrivilege.GrantOrDeny privilegeType, String action )
     {
         return new PrivilegeBuilder( privilegeType, action );
     }
