@@ -51,7 +51,6 @@ import org.neo4j.util.concurrent.AsyncApply;
 import org.neo4j.values.storable.Value;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_LONG_ARRAY;
-import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
 import static org.neo4j.internal.freki.Record.deletedRecord;
 import static org.neo4j.io.IOUtils.closeAll;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.REVERSE_RECOVERY;
@@ -221,73 +220,30 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     private long[] findLabelsAndInitializePropertyCursor( FrekiCommand.SparseNode node, FrekiPropertyCursor propertyCursor,
             Function<FrekiCommand.RecordChange,Record> recordFunction, boolean skipProperties )
     {
-        long[] labels = EMPTY_LONG_ARRAY;
-        boolean labelsLoaded = false;
-        boolean propertiesLoaded = skipProperties;
-        propertyCursor.reset();
-        for ( FrekiCommand.RecordChange change : node )
+        nodeCursor.single( node.nodeId, ( sizeExp, id ) ->
         {
-            Record record = recordFunction.apply( change );
-            boolean inUse = record != null;
-            if ( inUse )
+            FrekiCommand.RecordChange change = node.change( sizeExp, id );
+            if ( change != null )
             {
-                nodeCursor.initializeFromRecord( record );
-                if ( !labelsLoaded )
-                {
-                    if ( nodeCursor.data.header.hasMark( Header.FLAG_LABELS ) )
-                    {
-                        labels = nodeCursor.labels();
-                        labelsLoaded = true;
-                    }
-                    else if ( !nodeCursor.data.header.hasReferenceMark( Header.FLAG_LABELS ) )
-                    {
-                        labelsLoaded = true;
-                    }
-                }
-                if ( !propertiesLoaded )
-                {
-                    if ( nodeCursor.data.header.hasMark( Header.OFFSET_PROPERTIES ) )
-                    {
-                        nodeCursor.properties( propertyCursor );
-                        propertiesLoaded = true;
-                    }
-                    else if ( !nodeCursor.data.header.hasReferenceMark( Header.OFFSET_PROPERTIES ) )
-                    {
-                        propertyCursor.reset();
-                        propertiesLoaded = true;
-                    }
-                }
+                Record record = recordFunction.apply( change );
+                return record != null ? record : stores.deletedReferenceRecord( sizeExp );
             }
-
-            if ( change.sizeExp() == 0 && (!inUse || nodeCursor.data.xLChainStartPointer == NULL) )
-            {
-                // Either deleted or has no XL.
-                propertiesLoaded = true;
-                labelsLoaded = true;
-            }
-            if ( propertiesLoaded && labelsLoaded )
-            {
-                break; //no need to look further.
-            }
-        }
-
-        if ( !propertiesLoaded || !labelsLoaded )
+            return null;
+        } );
+        boolean inUse = nodeCursor.next();
+        if ( !inUse || skipProperties )
         {
-            nodeCursor.single( node.nodeId );
-            if ( nodeCursor.next() )
-            {
-                if ( !labelsLoaded )
-                {
-                    labels = nodeCursor.labels();
-                }
-                if ( !propertiesLoaded )
-                {
-                    nodeCursor.properties( propertyCursor );
-                    propertiesLoaded = true;
-                }
-            }
+            propertyCursor.reset();
         }
-        return labels;
+        if ( inUse )
+        {
+            if ( !skipProperties )
+            {
+                nodeCursor.properties( propertyCursor );
+            }
+            return nodeCursor.labels();
+        }
+        return EMPTY_LONG_ARRAY;
     }
 
     @Override

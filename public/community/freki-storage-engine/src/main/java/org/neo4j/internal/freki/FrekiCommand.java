@@ -159,9 +159,17 @@ abstract class FrekiCommand implements StorageCommand
                 {
                     return candidate;
                 }
-                else if ( candidate.sizeExp() > sizeExp )
+            }
+            return null;
+        }
+
+        RecordChange change( int sizeExp, long id )
+        {
+            for ( RecordChange candidate : this )
+            {
+                if ( candidate.sizeExp() == sizeExp && candidate.recordId() == id )
                 {
-                    break;
+                    return candidate;
                 }
             }
             return null;

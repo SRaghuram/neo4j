@@ -286,19 +286,10 @@ public class FrekiAnalysis extends Life implements AutoCloseable
 
     public void dumpRecord( Record record )
     {
-        try ( var nodeCursor = cursorFactory.allocateNodeCursor( PageCursorTracer.NULL  );
-              var propertyCursor = cursorFactory.allocatePropertyCursor( PageCursorTracer.NULL, EmptyMemoryTracker.INSTANCE );
-              var relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( PageCursorTracer.NULL  ) )
-        {
-            System.out.println( record );
-            if ( !nodeCursor.initializeFromRecord( record ) )
-            {
-                System.out.println( "Not in use" );
-                return;
-            }
-            dumpLogicalRepresentation( nodeCursor, propertyCursor, relationshipCursor );
-            System.out.println( nodeCursor );
-        }
+        System.out.println( record );
+        MutableNodeData data = new MutableNodeData( -1, stores.bigPropertyValueStore, PageCursorTracer.NULL );
+        data.deserialize( record );
+        System.out.println( data );
     }
 
     public void dumpStats()

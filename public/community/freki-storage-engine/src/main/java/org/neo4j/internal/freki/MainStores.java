@@ -50,6 +50,7 @@ class MainStores extends Life
     public final SimpleBigValueStore bigPropertyValueStore;
     public final DenseRelationshipStore denseStore;
     protected final List<Pair<IdGeneratorFactory,IdType>> idGeneratorsToRegisterOnTheWorkSync = new ArrayList<>();
+    private final Record[] deletedReferenceRecords;
 
     MainStores( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache, IdGeneratorFactory idGeneratorFactory,
             PageCacheTracer pageCacheTracer, RecoveryCleanupWorkCollector recoveryCleanupWorkCollector,
@@ -84,6 +85,7 @@ class MainStores extends Life
             this.mainStore = mainStores[0];
             this.bigPropertyValueStore = bigPropertyValueStore;
             this.denseStore = denseStore;
+            this.deletedReferenceRecords = constructDeletedReferenceRecords( mainStores );
             addMainStoresToLife();
         }
         finally
@@ -101,7 +103,21 @@ class MainStores extends Life
         this.mainStore = mainStores[0];
         this.bigPropertyValueStore = bigPropertyValueStore;
         this.denseStore = denseStore;
+        this.deletedReferenceRecords = constructDeletedReferenceRecords( mainStores );
         addMainStoresToLife();
+    }
+
+    private static Record[] constructDeletedReferenceRecords( SimpleStore[] mainStores )
+    {
+        Record[] records = new Record[mainStores.length];
+        for ( int i = 0; i < records.length; i++ )
+        {
+            if ( mainStores[i] != null )
+            {
+                records[i] = Record.deletedRecord( i, -1 );
+            }
+        }
+        return records;
     }
 
     private void addMainStoresToLife()
@@ -167,6 +183,11 @@ class MainStores extends Life
             candidate = nextLargerMainStore( candidate.recordSizeExponential() );
         }
         return null;
+    }
+
+    Record deletedReferenceRecord( int sizeExp )
+    {
+        return deletedReferenceRecords[sizeExp];
     }
 
     int getNumMainStores()

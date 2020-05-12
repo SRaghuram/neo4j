@@ -46,6 +46,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     final PageCursorTracer cursorTracer;
     final MemoryTracker memoryTracker;
     boolean forceLoad;
+    RecordLookup additionalRecordLookup;
 
     FrekiCursorData data;
     // State from relationship section, it's here because both relationship cursors as well as property cursor makes use of them
@@ -74,6 +75,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         relationshipTypeOffsets = null;
         relationshipTypesInNode = null;
         firstRelationshipTypeOffset = 0;
+        additionalRecordLookup = null;
     }
 
     /**
@@ -220,6 +222,18 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
 
     private Record loadRecord( int sizeExp, long id )
     {
+        if ( additionalRecordLookup != null )
+        {
+            // Let's look in the additional lookup before poking the store
+            Record record = additionalRecordLookup.lookup( sizeExp, id );
+            if ( record != null )
+            {
+                // The additional lookup had this record so we're going to return here w/o touching the store
+                // although do the same as below, i.e. return the record if it's in use, otherwise null
+                return record.hasFlag( FLAG_IN_USE ) ? record : null;
+            }
+        }
+
         SimpleStore store = stores.mainStore( sizeExp );
         Record record = xRecord( sizeExp );
         // TODO depending on whether we're strict about it we should throw instead of returning false perhaps?
@@ -248,32 +262,6 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         }
         otherCursor.data = data;
         data.refCount++;
-        return true;
-    }
-
-    boolean initializeFromRecord( Record record )
-    {
-        if ( !record.hasFlag( FLAG_IN_USE ) )
-        {
-            return false;
-        }
-
-        ensureFreshDataInstanceForLoadingNewNode();
-        if ( record.sizeExp() == 0 )
-        {
-            data.gatherDataFromX1( record );
-            data.nodeId = record.id;
-        }
-        else
-        {
-            //TODO what do we do when we have XL chains but initialize from a single record?
-            data.gatherDataFromXL( record );
-            data.nodeId = MutableNodeData.idFromRecordPointer( data.x1Pointer );
-        }
-        //TODO is this still true?
-        //When we initialize here, we dont wanna do additional loading, just look at this specific record.
-        data.x1Loaded = true;
-        data.xLChainLoaded = true;
         return true;
     }
 

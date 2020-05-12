@@ -230,7 +230,13 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public void single( long reference )
     {
+        single( reference, null );
+    }
+
+    void single( long reference, RecordLookup additionalRecordLookup )
+    {
         singleId = reference;
+        this.additionalRecordLookup = additionalRecordLookup;
     }
 
     @Override
