@@ -65,6 +65,7 @@ import org.neo4j.memory.ScopedMemoryPool;
 import org.neo4j.procedure.Admin;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
+import org.neo4j.procedure.Internal;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
 import org.neo4j.resources.Profiler;
@@ -78,7 +79,6 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.neo4j.dbms.database.SystemGraphComponent.Status.REQUIRES_UPGRADE;
-import static org.neo4j.dbms.database.SystemGraphComponent.Status.UNSUPPORTED_BUT_CAN_UPGRADE;
 import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 import static org.neo4j.io.ByteUnit.bytesToString;
 import static org.neo4j.procedure.Mode.DBMS;
@@ -656,27 +656,38 @@ public class EnterpriseBuiltInDbmsProcedures
     }
 
     @Admin
+    @Internal
     @SystemProcedure
-    @Description( "Report the current status of the system database sub-graph schema." )
-    @Procedure( name = "dbms.upgradeStatus", mode = DBMS )
-    public Stream<SystemGraphComponentStatusResult> systemSchemaVersions()
+    @Description( "Report the current status of the system database sub-graph schema, providing details for each sub-graph component." )
+    @Procedure( name = "dbms.upgradeStatusDetails", mode = DBMS )
+    public Stream<SystemGraphComponentStatusResultDetails> systemSchemaVersionDetails()
     {
         SystemGraphComponents versions = systemGraphComponents;
-        ArrayList<SystemGraphComponentStatusResult> results = new ArrayList<>();
-        versions.forEach( version -> results.add( new SystemGraphComponentStatusResult( version.component(), version.detect( transaction ) ) ) );
-        return Stream.concat( Stream.of( new SystemGraphComponentStatusResult( versions.component(), versions.detect( transaction ) ) ),
+        ArrayList<SystemGraphComponentStatusResultDetails> results = new ArrayList<>();
+        versions.forEach( version -> results.add( new SystemGraphComponentStatusResultDetails( version.component(), version.detect( transaction ) ) ) );
+        return Stream.concat( Stream.of( new SystemGraphComponentStatusResultDetails( versions.component(), versions.detect( transaction ) ) ),
                 results.stream() );
     }
 
     @Admin
     @SystemProcedure
-    @Description( "Upgrade the system database schema if it is not the current schema." )
-    @Procedure( name = "dbms.upgrade", mode = DBMS )
-    public Stream<SystemGraphComponentUpgradeResult> upgradeSystemSchema()
+    @Description( "Report the current status of the system database sub-graph schema." )
+    @Procedure( name = "dbms.upgradeStatus", mode = DBMS )
+    public Stream<SystemGraphComponentStatusResult> systemSchemaVersion()
+    {
+        return Stream.of( new SystemGraphComponentStatusResult( systemGraphComponents.detect( transaction ) ) );
+    }
+
+    @Admin
+    @Internal
+    @SystemProcedure
+    @Description( "Upgrade the system database schema if it is not the current schema, providing upgrade status results for each sub-graph component." )
+    @Procedure( name = "dbms.upgradeDetails", mode = DBMS )
+    public Stream<SystemGraphComponentUpgradeResultDetails> upgradeSystemSchemaDetails()
     {
         SystemGraphComponents versions = systemGraphComponents;
         SystemGraphComponent.Status status = versions.detect( transaction );
-        ArrayList<SystemGraphComponentUpgradeResult> results = new ArrayList<>();
+        ArrayList<SystemGraphComponentUpgradeResultDetails> results = new ArrayList<>();
         if ( status == REQUIRES_UPGRADE )
         {
             ArrayList<SystemGraphComponent> failed = new ArrayList<>();
@@ -689,30 +700,64 @@ public class EnterpriseBuiltInDbmsProcedures
                     if ( error.isPresent() )
                     {
                         failed.add( component );
-                        results.add( new SystemGraphComponentUpgradeResult( component.component(), initialStatus.name(), error.get().toString() ) );
+                        results.add( new SystemGraphComponentUpgradeResultDetails( component.component(), initialStatus.name(), error.get().toString() ) );
                     }
                     else
                     {
-                        results.add( new SystemGraphComponentUpgradeResult( component.component(), component.detect( transaction ).name(), "Upgraded" ) );
+                        results.add(
+                                new SystemGraphComponentUpgradeResultDetails( component.component(), component.detect( transaction ).name(), "Upgraded" ) );
                     }
                 }
                 else
                 {
-                    results.add( new SystemGraphComponentUpgradeResult( component.component(), initialStatus.name(), "" ) );
+                    results.add( new SystemGraphComponentUpgradeResultDetails( component.component(), initialStatus.name(), "" ) );
                 }
             } );
             String upgradeResult =
                     failed.isEmpty() ? "Success" : "Failed: " + failed.stream().map( SystemGraphComponent::component ).collect( Collectors.joining( ", " ) );
             return Stream.concat(
-                    Stream.of( new SystemGraphComponentUpgradeResult( versions.component(), versions.detect( transaction ).name(), upgradeResult ) ),
+                    Stream.of( new SystemGraphComponentUpgradeResultDetails( versions.component(), versions.detect( transaction ).name(), upgradeResult ) ),
                     results.stream() );
         }
         else
         {
             versions.forEach(
-                    version -> results.add( new SystemGraphComponentUpgradeResult( version.component(), version.detect( transaction ).name(), "" ) ) );
-            return Stream.concat( Stream.of( new SystemGraphComponentUpgradeResult( versions.component(), versions.detect( transaction ).name(), "" ) ),
+                    version -> results.add( new SystemGraphComponentUpgradeResultDetails( version.component(), version.detect( transaction ).name(), "" ) ) );
+            return Stream.concat( Stream.of( new SystemGraphComponentUpgradeResultDetails( versions.component(), versions.detect( transaction ).name(), "" ) ),
                     results.stream() );
+        }
+    }
+
+    @Admin
+    @SystemProcedure
+    @Description( "Upgrade the system database schema if it is not the current schema." )
+    @Procedure( name = "dbms.upgrade", mode = DBMS )
+    public Stream<SystemGraphComponentUpgradeResult> upgradeSystemSchema()
+    {
+        SystemGraphComponents versions = systemGraphComponents;
+        SystemGraphComponent.Status status = versions.detect( transaction );
+        if ( status == REQUIRES_UPGRADE )
+        {
+            ArrayList<SystemGraphComponent> failed = new ArrayList<>();
+            versions.forEach( component ->
+            {
+                SystemGraphComponent.Status initialStatus = component.detect( transaction );
+                if ( initialStatus == REQUIRES_UPGRADE )
+                {
+                    Optional<Exception> error = component.upgradeToCurrent( transaction );
+                    if ( error.isPresent() )
+                    {
+                        failed.add( component );
+                    }
+                }
+            } );
+            String upgradeResult =
+                    failed.isEmpty() ? "Success" : "Failed: " + failed.stream().map( SystemGraphComponent::component ).collect( Collectors.joining( ", " ) );
+            return Stream.of( new SystemGraphComponentUpgradeResult( versions.detect( transaction ).name(), upgradeResult ) );
+        }
+        else
+        {
+            return Stream.of( new SystemGraphComponentUpgradeResult( status.name(), status.resolution() ) );
         }
     }
 
@@ -813,14 +858,14 @@ public class EnterpriseBuiltInDbmsProcedures
         }
     }
 
-    public static class SystemGraphComponentStatusResult
+    public static class SystemGraphComponentStatusResultDetails
     {
         public final String component;
         public final String status;
         public final String description;
         public final String resolution;
 
-        SystemGraphComponentStatusResult( String component, SystemGraphComponent.Status status )
+        SystemGraphComponentStatusResultDetails( String component, SystemGraphComponent.Status status )
         {
             this.component = component;
             this.status = status.name();
@@ -829,15 +874,41 @@ public class EnterpriseBuiltInDbmsProcedures
         }
     }
 
-    public static class SystemGraphComponentUpgradeResult
+    public static class SystemGraphComponentStatusResult
+    {
+        public final String status;
+        public final String description;
+        public final String resolution;
+
+        SystemGraphComponentStatusResult( SystemGraphComponent.Status status )
+        {
+            this.status = status.name();
+            this.description = status.description();
+            this.resolution = status.resolution();
+        }
+    }
+
+    public static class SystemGraphComponentUpgradeResultDetails
     {
         public final String component;
         public final String status;
         public final String upgradeResult;
 
-        SystemGraphComponentUpgradeResult( String component, String status, String upgradeResult )
+        SystemGraphComponentUpgradeResultDetails( String component, String status, String upgradeResult )
         {
             this.component = component;
+            this.status = status;
+            this.upgradeResult = upgradeResult;
+        }
+    }
+
+    public static class SystemGraphComponentUpgradeResult
+    {
+        public final String status;
+        public final String upgradeResult;
+
+        SystemGraphComponentUpgradeResult( String status, String upgradeResult )
+        {
             this.status = status;
             this.upgradeResult = upgradeResult;
         }

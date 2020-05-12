@@ -2074,20 +2074,20 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     //---------- system graph initialization/migration -----------
 
     @Test
-    void shouldNotListDBMSComponentsIfNotAdmin()
+    void shouldNotListSystemGraphComponentDetailsIfNotAdmin()
     {
         setupFakeSystemComponents();
-        assertFail( noneSubject, "CALL dbms.upgradeStatus()", ACCESS_DENIED );
-        assertFail( readSubject, "CALL dbms.upgradeStatus()", PERMISSION_DENIED );
-        assertFail( writeSubject, "CALL dbms.upgradeStatus()", PERMISSION_DENIED );
-        assertFail( schemaSubject, "CALL dbms.upgradeStatus()", PERMISSION_DENIED );
+        assertFail( noneSubject, "CALL dbms.upgradeStatusDetails()", ACCESS_DENIED );
+        assertFail( readSubject, "CALL dbms.upgradeStatusDetails()", PERMISSION_DENIED );
+        assertFail( writeSubject, "CALL dbms.upgradeStatusDetails()", PERMISSION_DENIED );
+        assertFail( schemaSubject, "CALL dbms.upgradeStatusDetails()", PERMISSION_DENIED );
     }
 
     @Test
-    void shouldListDBMSComponentsIfAdmin()
+    void shouldListSystemGraphComponentDetailsIfAdmin()
     {
         setupFakeSystemComponents();
-        assertSuccess( adminSubject, "CALL dbms.upgradeStatus()", r ->
+        assertSuccess( adminSubject, "CALL dbms.upgradeStatusDetails()", r ->
         {
             HashMap<String, String> statuses = new HashMap<>();
             while ( r.hasNext() )
@@ -2106,20 +2106,20 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    void shouldNotUpgradeDBMSIfNotAdmin()
+    void shouldNotUpgradeSystemGraphWithDetailsIfNotAdmin()
     {
         setupFakeSystemComponents();
-        assertFail( noneSubject, "CALL dbms.upgrade()", ACCESS_DENIED );
-        assertFail( readSubject, "CALL dbms.upgrade()", PERMISSION_DENIED );
-        assertFail( writeSubject, "CALL dbms.upgrade()", PERMISSION_DENIED );
-        assertFail( schemaSubject, "CALL dbms.upgrade()", PERMISSION_DENIED );
+        assertFail( noneSubject, "CALL dbms.upgradeDetails()", ACCESS_DENIED );
+        assertFail( readSubject, "CALL dbms.upgradeDetails()", PERMISSION_DENIED );
+        assertFail( writeSubject, "CALL dbms.upgradeDetails()", PERMISSION_DENIED );
+        assertFail( schemaSubject, "CALL dbms.upgradeDetails()", PERMISSION_DENIED );
     }
 
     @Test
-    void shouldUpgradeDBMSIfAdmin()
+    void shouldUpgradeSystemGraphWithDetailsIfAdmin()
     {
         setupFakeSystemComponents();
-        assertSuccess( adminSubject,"CALL dbms.upgrade()", r ->
+        assertSuccess( adminSubject,"CALL dbms.upgradeDetails()", r ->
         {
             assertThat( "Expected at least one result", r.hasNext(), equalTo( true ) );
             HashMap<String,String> statuses = new HashMap<>();
@@ -2144,6 +2144,62 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         }  );
     }
 
+    @Test
+    void shouldNotListSystemGraphComponentsIfNotAdmin()
+    {
+        setupFakeSystemComponents();
+        assertFail( noneSubject, "CALL dbms.upgradeStatus()", ACCESS_DENIED );
+        assertFail( readSubject, "CALL dbms.upgradeStatus()", PERMISSION_DENIED );
+        assertFail( writeSubject, "CALL dbms.upgradeStatus()", PERMISSION_DENIED );
+        assertFail( schemaSubject, "CALL dbms.upgradeStatus()", PERMISSION_DENIED );
+    }
+
+    @Test
+    void shouldListSystemGraphComponentsIfAdmin()
+    {
+        setupFakeSystemComponents();
+        assertSuccess( adminSubject, "CALL dbms.upgradeStatus()", r ->
+        {
+            assertThat( "Expected one result", r.hasNext(), equalTo( true ) );
+            Map<String,Object> row = r.next();
+            String status = resultAsString( row, "status" );
+            String description = resultAsString( row, "description" );
+            String resolution = resultAsString( row, "resolution" );
+            assertThat( "Expected only one result", r.hasNext(), equalTo( false ) );
+            assertThat( status, containsString( SystemGraphComponent.Status.REQUIRES_UPGRADE.name() ) );
+            assertThat( description, containsString( SystemGraphComponent.Status.REQUIRES_UPGRADE.description() ) );
+            assertThat( resolution, containsString( SystemGraphComponent.Status.REQUIRES_UPGRADE.resolution() ) );
+            r.close();
+        } );
+    }
+
+    @Test
+    void shouldNotUpgradeSystemGraphIfNotAdmin()
+    {
+        setupFakeSystemComponents();
+        assertFail( noneSubject, "CALL dbms.upgrade()", ACCESS_DENIED );
+        assertFail( readSubject, "CALL dbms.upgrade()", PERMISSION_DENIED );
+        assertFail( writeSubject, "CALL dbms.upgrade()", PERMISSION_DENIED );
+        assertFail( schemaSubject, "CALL dbms.upgrade()", PERMISSION_DENIED );
+    }
+
+    @Test
+    void shouldUpgradeSystemGraphIfAdmin()
+    {
+        setupFakeSystemComponents();
+        assertSuccess( adminSubject,"CALL dbms.upgrade()", r ->
+        {
+            assertThat( "Expected one result", r.hasNext(), equalTo( true ) );
+            Map<String,Object> row = r.next();
+            String status = resultAsString( row, "status" );
+            String result = resultAsString( row, "upgradeResult" );
+            assertThat( "Expected only one result", r.hasNext(), equalTo( false ) );
+            assertThat( status, containsString( SystemGraphComponent.Status.REQUIRES_UPGRADE.name() ) );
+            assertThat( result, containsString( "Failed: component_D" ) );
+            r.close();
+        }  );
+    }
+
     /*
     ==================================================================================
      */
@@ -2152,10 +2208,10 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     {
         final String component;
         SystemGraphComponent.Status status;
-        Optional<Exception> onInit;
-        Optional<Exception> onMigrate;
+        Exception onInit;
+        Exception onMigrate;
 
-        TestSystemGraphComponent( String component, SystemGraphComponent.Status status, Optional<Exception> onInit, Optional<Exception> onMigrate )
+        TestSystemGraphComponent( String component, SystemGraphComponent.Status status, Exception onInit, Exception onMigrate )
         {
             this.component = component;
             this.status = status;
@@ -2180,16 +2236,16 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         {
             if ( status == Status.UNINITIALIZED )
             {
-                if ( onInit.isEmpty() )
+                if ( onInit == null )
                 {
                     status = Status.CURRENT;
                 }
-                return onInit;
+                else
+                {
+                    return Optional.of( onInit );
+                }
             }
-            else
-            {
-                return Optional.empty();
-            }
+            return Optional.empty();
         }
 
         @Override
@@ -2197,33 +2253,35 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         {
             if ( status == Status.REQUIRES_UPGRADE )
             {
-                if ( onMigrate.isEmpty() )
+                if ( onMigrate == null )
                 {
                     status = Status.CURRENT;
                 }
-                return onMigrate;
+                else
+                {
+                    return Optional.of( onMigrate );
+                }
             }
-            else
-            {
-                return Optional.empty();
-            }
+            return Optional.empty();
         }
     }
 
     private SystemGraphComponent makeSystemComponentCurrent( String component )
     {
-        return new TestSystemGraphComponent( component, SystemGraphComponent.Status.CURRENT, Optional.empty(), Optional.empty() );
+        return new TestSystemGraphComponent( component, SystemGraphComponent.Status.CURRENT, null, null );
     }
 
+    @SuppressWarnings( "SameParameterValue" )
     private SystemGraphComponent makeSystemComponentUpgradeSucceeds( String component )
     {
-        return new TestSystemGraphComponent( component, SystemGraphComponent.Status.REQUIRES_UPGRADE, Optional.empty(), Optional.empty() );
+        return new TestSystemGraphComponent( component, SystemGraphComponent.Status.REQUIRES_UPGRADE, null, null );
     }
 
+    @SuppressWarnings( "SameParameterValue" )
     private SystemGraphComponent makeSystemComponentUpgradeFails( String component )
     {
-        return new TestSystemGraphComponent( component, SystemGraphComponent.Status.REQUIRES_UPGRADE, Optional.empty(),
-                Optional.of( new RuntimeException( "Upgrade failed because this is a test" ) ) );
+        return new TestSystemGraphComponent( component, SystemGraphComponent.Status.REQUIRES_UPGRADE, null,
+                new RuntimeException( "Upgrade failed because this is a test" ) );
     }
 
     private void setupFakeSystemComponents()
