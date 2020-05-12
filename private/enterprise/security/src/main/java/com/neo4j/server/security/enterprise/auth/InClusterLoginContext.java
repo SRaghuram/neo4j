@@ -10,13 +10,11 @@ import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.function.Supplier;
 
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 
-import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.kernel.api.security.AuthenticationResult.FAILURE;
 import static org.neo4j.internal.kernel.api.security.AuthenticationResult.SUCCESS;
 
@@ -54,26 +52,8 @@ public class InClusterLoginContext implements EnterpriseLoginContext
         StandardAccessMode.Builder accessModeBuilder = new StandardAccessMode.Builder( true, false, roles, idLookup, dbName, defaultDatabase );
 
         Set<ResourcePrivilege> privileges = permissionsSupplier.get();
-        boolean isDefault = dbName.equals( defaultDatabase );
-        for ( ResourcePrivilege privilege : privileges )
-        {
-            if ( privilege.appliesTo( dbName ) || isDefault && privilege.appliesToDefault() )
-            {
-                accessModeBuilder.addPrivilege( privilege );
-            }
-        }
-        if ( dbName.equals( SYSTEM_DATABASE_NAME ) )
-        {
-            accessModeBuilder.withAccess();
-        }
 
-        StandardAccessMode mode = accessModeBuilder.build();
-        if ( !mode.allowsAccess() )
-        {
-            throw mode.onViolation(
-                    String.format( "Database access is not allowed for user '%s' with roles %s.", authSubject.username(), new TreeSet<>( roles ).toString() ) );
-        }
-
+        StandardAccessMode mode = StandardEnterpriseLoginContext.mode( accessModeBuilder, privileges, dbName, defaultDatabase, authSubject.username(), roles );
         return new EnterpriseSecurityContext( authSubject, mode, mode.roles(), mode.getAdminAccessMode() );
     }
 
