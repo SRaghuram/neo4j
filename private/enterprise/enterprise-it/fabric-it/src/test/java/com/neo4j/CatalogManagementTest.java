@@ -16,13 +16,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
-import org.neo4j.driver.Logging;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
@@ -75,7 +73,6 @@ class CatalogManagementTest
                 testServer.getBoltRoutingUri(),
                 AuthTokens.none(),
                 org.neo4j.driver.Config.builder()
-                                       .withLogging( Logging.console( Level.FINE ) )
                                        .withoutEncryption()
                                        .withMaxConnectionPoolSize( 3 )
                                        .build() );
