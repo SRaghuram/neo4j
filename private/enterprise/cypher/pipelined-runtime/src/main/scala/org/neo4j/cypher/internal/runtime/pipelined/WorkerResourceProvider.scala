@@ -13,8 +13,8 @@ import org.neo4j.kernel.lifecycle.Lifecycle
  * Get the resources for a worker by its id. The resources are bound to a Database, while a worker can work for different databases in a DBMS.
  */
 class WorkerResourceProvider(numberOfWorkers: Int,
-                             newWorkerResources: () => QueryResources) extends Lifecycle {
-  private val queryResourcesForWorkers = Array.fill(numberOfWorkers)(newWorkerResources())
+                             newWorkerResources: Int => QueryResources) extends Lifecycle {
+  private val queryResourcesForWorkers = (0 until numberOfWorkers).map(newWorkerResources).toArray
 
   /**
    * Get the resources for the worker with the given id.

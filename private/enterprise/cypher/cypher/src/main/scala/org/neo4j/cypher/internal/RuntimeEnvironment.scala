@@ -51,7 +51,7 @@ object RuntimeEnvironment {
                                           lifeSupport: LifeSupport,
                                           workerManager: WorkerManagement,
                                           memoryTracker: MemoryTracker): QueryExecutor = {
-    val resourceFactory = () => new QueryResources(cursors, PageCursorTracer.NULL, memoryTracker)
+    val resourceFactory = (workerId: Int) => new QueryResources(cursors, PageCursorTracer.NULL, memoryTracker, workerId, workerManager.numberOfWorkers)
     val workerResourceProvider = new WorkerResourceProvider(workerManager.numberOfWorkers, resourceFactory)
     lifeSupport.add(workerResourceProvider)
     val queryExecutor = new FixedWorkersQueryExecutor( workerResourceProvider, workerManager)

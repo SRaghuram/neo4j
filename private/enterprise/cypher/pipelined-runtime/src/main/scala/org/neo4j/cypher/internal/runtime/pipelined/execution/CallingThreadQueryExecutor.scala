@@ -67,7 +67,7 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
       }
 
     val transaction = queryContext.transactionalContext.transaction
-    val resources = new QueryResources(cursors: CursorFactory, transaction.pageCursorTracer(), transaction.memoryTracker())
+    val resources = new QueryResources(cursors: CursorFactory, transaction.pageCursorTracer(), transaction.memoryTracker(), -1, -1)
     val tracer = schedulerTracer.traceQuery()
     val tracker = stateFactory.newTracker(subscriber, queryContext, tracer)
     val queryState = PipelinedQueryState(queryContext,
@@ -101,7 +101,7 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
       }
 
     val worker = new Worker(0, null, Sleeper.noSleep)
-    val workerResourceProvider = new WorkerResourceProvider(1, () => resources)
+    val workerResourceProvider = new WorkerResourceProvider(1, workerId => resources)
     val executingQuery = new CallingThreadExecutingQuery(executionState,
       queryState,
       tracer,

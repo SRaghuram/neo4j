@@ -554,7 +554,7 @@ class ExecutionGraphDefinitionTest extends CypherFunSuite {
           override def fuseIn(output: OutputDefinition): Boolean =
             output match {
               case ProduceResultOutput(p) => fuseIn(p)
-              case ReduceOutput(_, p) => fuseIn(p)
+              case ReduceOutput(_, _, p) => fuseIn(p)
               case _ => false
             }
 

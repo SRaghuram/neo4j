@@ -156,7 +156,7 @@ sealed trait OutputDefinition
 case class ProduceResultOutput(plan: ProduceResult) extends OutputDefinition
 case class MorselBufferOutput(id: BufferId, nextPipelineHeadPlanId: Id) extends OutputDefinition
 case class MorselArgumentStateBufferOutput(id: BufferId, argumentSlotOffset: Int, nextPipelineHeadPlanId: Id) extends OutputDefinition
-case class ReduceOutput(bufferId: BufferId, plan: LogicalPlan) extends OutputDefinition
+case class ReduceOutput(bufferId: BufferId, argumentStateMapId: ArgumentStateMapId, plan: LogicalPlan) extends OutputDefinition
 case object NoOutput extends OutputDefinition
 
 // -- EXECUTION GRAPH

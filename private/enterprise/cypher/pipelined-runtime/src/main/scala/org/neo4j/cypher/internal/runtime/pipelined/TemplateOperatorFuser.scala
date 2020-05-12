@@ -133,7 +133,7 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
             new ProduceResultOperatorTaskTemplate(ctx.innermost, p.id, p.columns, slots)(ctx.expressionCompiler)
           })
 
-        case ReduceOutput(bufferId, p@plans.Aggregation(_, groupingExpressions, aggregationExpressionsMap)) =>
+        case ReduceOutput(_, argumentStateMapId, p@plans.Aggregation(_, groupingExpressions, aggregationExpressionsMap)) =>
           Some(p, (ctx: TemplateContext) => {
             def compileGroupingKey(astExpressions: Map[String, Expression],
                                    slots: SlotConfiguration,
@@ -167,18 +167,16 @@ class TemplateOperatorFuser(val physicalPlan: PhysicalPlan,
                 p.id,
                 argumentSlotOffset,
                 aggregators.result(),
-                bufferId,
+                argumentStateMapId,
                 aggregationExpressionsCreator,
-                groupingKeyExpressionCreator = compileGroupingKey(groupingExpressions, outputSlots, orderToLeverage = Seq.empty),
-                aggregationAstExpressions)(ctx.expressionCompiler)
+                compileGroupingKey(groupingExpressions, outputSlots, orderToLeverage = Seq.empty))(ctx.expressionCompiler)
             } else {
               new AggregationMapperOperatorNoGroupingTaskTemplate(ctx.innermost,
                 p.id,
                 argumentSlotOffset,
                 aggregators.result(),
-                bufferId,
-                aggregationExpressionsCreator,
-                aggregationAstExpressions)(ctx.expressionCompiler)
+                argumentStateMapId,
+                aggregationExpressionsCreator)(ctx.expressionCompiler)
             }
           })
         case _ => None

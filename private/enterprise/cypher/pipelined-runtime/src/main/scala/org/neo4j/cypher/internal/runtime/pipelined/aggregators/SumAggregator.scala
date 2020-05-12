@@ -19,94 +19,80 @@ import org.neo4j.values.utils.ValueMath.overflowSafeAdd
  * Aggregator for sum(...).
  */
 case object SumAggregator extends Aggregator {
-  override def newUpdater(memoryTracker: MemoryTracker): Updater = new SumUpdater
-  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new SumStandardReducer
+  override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new SumStandardReducer
   override def newConcurrentReducer: Reducer = new SumConcurrentReducer
+
+  def failMix() =
+    throw new CypherTypeException("sum() cannot mix number and duration")
+
+  def failType(value: AnyValue) =
+    throw new CypherTypeException(s"sum() can only handle numerical values, duration, and null. Got $value")
 }
 
 /**
  * Aggregator for sum(DISTINCT..).
  */
 case object SumDistinctAggregator extends Aggregator {
-  override def newUpdater(memoryTracker: MemoryTracker): Updater = new UnorderedDistinctUpdater(memoryTracker)
-  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new DistinctStandardReducer(new SumDistinctStandardReducer(), memoryTracker)
-  override def newConcurrentReducer: Reducer = new DistinctConcurrentReducer(new SumDistinctConcurrentReducer())
+  override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new DistinctStandardReducer(new SumStandardReducer(), memoryTracker)
+  override def newConcurrentReducer: Reducer = new DistinctConcurrentReducer(new SumConcurrentReducer())
 }
 
-trait SumStandardBase {
+abstract class SumBase {
 
-  private[aggregators] var seenNumber = false
-  private[aggregators] var seenDuration = false
-  private[aggregators] var sumNumber: NumberValue = Values.ZERO_INT
-  private[aggregators] var sumDuration: DurationValue = DurationValue.ZERO
+  private[aggregators] var seenNumber: Boolean = false
+  private[aggregators] var seenDuration: Boolean = false
+  private[aggregators] var sumNumber: NumberValue = _
+  private[aggregators] var sumDuration: DurationValue = _
 
-  protected def onNumber(number: NumberValue): Unit = {
-    seenNumber = true
-    if (!seenDuration) {
-      sumNumber = overflowSafeAdd(sumNumber, number)
-    } else {
-      failMix()
-    }
+  reset()
+
+  protected def reset(): Unit = {
+    sumNumber = Values.ZERO_INT
+    sumDuration = DurationValue.ZERO
   }
 
-  protected def onDuration(dur: DurationValue): Unit = {
-    seenDuration = true
-    if (!seenNumber) {
-      sumDuration = sumDuration.add(dur)
-    } else {
-      failMix()
-    }
-  }
-
-  protected def failMix() =
-    throw new CypherTypeException("sum() cannot mix number and duration")
-
-  protected def failType(value: AnyValue) =
-    throw new CypherTypeException(s"sum() can only handle numerical values, duration, and null. Got $value")
-}
-
-class SumUpdater() extends SumStandardBase with Updater {
-
-  override def update(value: AnyValue): Unit = {
+  protected def update(value: AnyValue): Unit = {
     if (value eq Values.NO_VALUE) {
       return
     }
     value match {
-      case number: NumberValue => onNumber(number)
-      case dur: DurationValue => onDuration(dur)
-      case _ => failType(value)
+      case number: NumberValue =>
+        seenNumber = true
+        if (!seenDuration) {
+          sumNumber = overflowSafeAdd(sumNumber, number)
+        } else {
+          SumAggregator.failMix()
+        }
+      case dur: DurationValue =>
+        seenDuration = true
+        if (!seenNumber) {
+          sumDuration = sumDuration.add(dur)
+        } else {
+          SumAggregator.failMix()
+        }
+      case _ => SumAggregator.failType(value)
     }
   }
 }
 
-trait SumResultProvider {
-  private[aggregators] def seenNumber: Boolean
-  private[aggregators] def seenDuration: Boolean
-  private[aggregators] def sumDuration: DurationValue
-  private[aggregators] def sumNumber: NumberValue
+class SumStandardReducer() extends SumBase with DirectStandardReducer {
 
-  def result: AnyValue =
+  // Reducer
+  override def newUpdater(): Updater = this
+  override def result: AnyValue =
     if (seenNumber && seenDuration) {
-      throw new CypherTypeException("sum() cannot mix number and duration")
+      SumAggregator.failMix()
     } else if (seenDuration) {
       sumDuration
     } else {
       sumNumber
     }
+
+  // Updater
+  override def add(value: AnyValue): Unit = update(value)
 }
 
-class SumStandardReducer() extends SumResultProvider with SumStandardBase with Reducer {
-
-  override def update(updater: Updater): Unit =
-    updater match {
-      case u: SumUpdater =>
-        if (u.seenNumber) {
-          onNumber(u.sumNumber)
-        } else if (u.seenDuration) onDuration(u.sumDuration)
-    }
-}
-
-trait SumConcurrentReducerBase extends SumResultProvider {
+class SumConcurrentReducer extends Reducer {
   // Note: these volatile flags are set by multiple threads, but only to true, so racing is benign.
   @volatile private[aggregators] var seenNumber = false
   @volatile private[aggregators] var seenDuration = false
@@ -114,37 +100,36 @@ trait SumConcurrentReducerBase extends SumResultProvider {
   private[aggregators] val sumNumberAR = new AtomicReference[NumberValue](Values.ZERO_INT)
   private[aggregators] val sumDurationAR = new AtomicReference[DurationValue](DurationValue.ZERO)
 
-  override private[aggregators] def sumDuration = sumDurationAR.get()
-  override private[aggregators] def sumNumber = sumNumberAR.get()
-
-  def onNumber(number: NumberValue): Unit = {
+  private def onNumber(number: NumberValue): Unit = {
     sumNumberAR.updateAndGet(num => overflowSafeAdd(num, number))
     seenNumber = true
   }
 
-  def onDuration(duration: DurationValue): Unit = {
+  private def onDuration(duration: DurationValue): Unit = {
     sumDurationAR.updateAndGet(dur => dur.add(duration))
     seenDuration = true
   }
-}
 
-class SumConcurrentReducer() extends SumConcurrentReducerBase with Reducer {
-  override def update(updater: Updater): Unit =
-    updater match {
-      case u: SumUpdater =>
-        if (u.seenNumber) {
-          onNumber(u.sumNumber)
-        } else if (u.seenDuration) {
-          onDuration(u.sumDuration)
-        }
+  override def newUpdater(): Updater = new Upd()
+
+  override def result: AnyValue =
+    if (seenNumber && seenDuration) {
+      SumAggregator.failMix()
+    } else if (seenDuration) {
+      sumDurationAR.get()
+    } else {
+      sumNumberAR.get()
     }
-}
 
-class SumDistinctStandardReducer() extends SumUpdater with DistinctInnerReducer with SumResultProvider
-
-class SumDistinctConcurrentReducer() extends SumConcurrentReducerBase with DistinctInnerReducer {
-  override def update(value: AnyValue): Unit = value match {
-    case number: NumberValue => onNumber(number)
-    case duration: DurationValue => onDuration(duration)
+  class Upd() extends SumBase with Updater {
+    override def add(value: AnyValue): Unit = update(value)
+    override def applyUpdates(): Unit = {
+      if (seenNumber) {
+        onNumber(sumNumber)
+      } else if (seenDuration) {
+        onDuration(sumDuration)
+      }
+      reset()
+    }
   }
 }

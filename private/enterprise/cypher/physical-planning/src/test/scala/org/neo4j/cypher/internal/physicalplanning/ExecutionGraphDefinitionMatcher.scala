@@ -69,7 +69,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
 
   private case class MorselArgumentStateBufferOutput(id: BufferId, argumentSlotOffset: Int) extends MatchableOutputDefinition
 
-  private case class ReduceOutput(bufferId: BufferId) extends MatchableOutputDefinition
+  private case class ReduceOutput(bufferId: BufferId, argumentStateMapId: ArgumentStateMapId) extends MatchableOutputDefinition
 
   private case object NoOutput extends MatchableOutputDefinition
 
@@ -82,7 +82,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
       case physicalplanning.ProduceResultOutput(_) => ProduceResultOutput
       case physicalplanning.MorselBufferOutput(id, _) => MorselBufferOutput(id)
       case physicalplanning.MorselArgumentStateBufferOutput(id, argumentSlotOffset, _) => MorselArgumentStateBufferOutput(id, argumentSlotOffset)
-      case physicalplanning.ReduceOutput(bufferId, _) => ReduceOutput(bufferId)
+      case physicalplanning.ReduceOutput(bufferId, argumentStateMapId, _) => ReduceOutput(bufferId, argumentStateMapId)
       case physicalplanning.NoOutput => NoOutput
     }
   }
@@ -274,7 +274,7 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
       pipelines(matchablePipeline.id.x) =
         matchablePipeline.copy(outputDefinition =
           if (fusedOutput) NoOutput
-          else ReduceOutput(BufferId(id)))
+          else ReduceOutput(BufferId(id), ArgumentStateMapId(asmId)))
       new ArgumentStateBufferSequence(bd)
     }
 

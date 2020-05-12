@@ -526,7 +526,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
   private def outputToArgumentStateBuffer(pipeline: PipelineDefiner, plan: LogicalPlan, applyBuffer: ApplyBufferDefiner, argumentSlotOffset: Int): ArgumentStateBufferDefiner = {
     val asm = stateDefiner.newArgumentStateMap(plan.id, argumentSlotOffset)
     val output = stateDefiner.newArgumentStateBuffer(pipeline.id, plan.id, asm.id, slotConfigurations(pipeline.headPlan.id))
-    pipeline.fuseOrInterpret(ReduceOutput(output.id, plan))
+    pipeline.fuseOrInterpret(ReduceOutput(output.id, asm.id, plan))
     markReducerInUpstreamBuffers(pipeline.inputBuffer, applyBuffer, asm)
     output
   }

@@ -622,7 +622,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
     }
 
     val middleOperatorBuilder = new ArrayBuffer[MiddleOperator]
-    middlePlans.foldLeft(middleOperatorBuilder, maybeSlottedPipeOperatorToChainOnTo)(createMiddleFoldFunction)
+    middlePlans.foldLeft(middleOperatorBuilder -> maybeSlottedPipeOperatorToChainOnTo)(createMiddleFoldFunction)
     val middleOperators = middleOperatorBuilder.result.toArray
     middleOperators
   }
@@ -748,7 +748,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       case MorselBufferOutput(bufferId, planId) => MorselBufferOutputOperator(bufferId, planId, nextPipelineCanTrackTime)
       case MorselArgumentStateBufferOutput(bufferId, argumentSlotOffset, planId) => MorselArgumentStateBufferOutputOperator(bufferId, argumentSlotOffset, planId, nextPipelineCanTrackTime)
       case ProduceResultOutput(p) => createProduceResults(p)
-      case ReduceOutput(bufferId, plan) =>
+      case ReduceOutput(bufferId, argumentStateMapId, plan) =>
         val id = plan.id
         val slots = physicalPlan.slotConfigurations(id)
         generateSlotAccessorFunctions(slots)
@@ -767,39 +767,31 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
               converters.toCommandExpression(id, limit)).mapper(argumentSlotOffset, bufferId)
 
           case plans.Aggregation(_, groupingExpressions, aggregationExpression) if groupingExpressions.isEmpty =>
-            val aggregators = Array.newBuilder[Aggregator]
-            val expressions = Array.newBuilder[Expression]
-            aggregationExpression.foreach {
-              case (key, astExpression) =>
-                val (aggregator, expression) = aggregatorFactory.newAggregator(astExpression)
-                aggregators += aggregator
-                expressions += converters.toCommandExpression(id, expression)
-            }
-
-            AggregationOperatorNoGrouping(WorkIdentity.fromPlan(plan, "Pre"),
-              aggregators.result())
-              .mapper(argumentSlotOffset,
-                bufferId,
-                expressions.result(),
-                id)
+            val (aggregators, expressions) = buildAggregators(id, aggregationExpression)
+            AggregationOperatorNoGrouping(WorkIdentity.fromPlan(plan, "Pre"), aggregators)
+              .mapper(argumentSlotOffset, argumentStateMapId, expressions, id)
 
           case plans.Aggregation(_, groupingExpressions, aggregationExpression) =>
             val groupings = converters.toGroupingExpression(id, groupingExpressions, Seq.empty)
+            val (aggregators, expressions) = buildAggregators(id, aggregationExpression)
 
-            val aggregators = Array.newBuilder[Aggregator]
-            val expressions = Array.newBuilder[Expression]
-            aggregationExpression.foreach {
-              case (key, astExpression) =>
-                val (aggregator, expression) = aggregatorFactory.newAggregator(astExpression)
-                aggregators += aggregator
-                expressions += converters.toCommandExpression(id, expression)
-            }
-
-            AggregationOperator(WorkIdentity.fromPlan(plan, "Pre"), aggregators.result(), groupings)
-              .mapper(argumentSlotOffset, bufferId, expressions.result(), id)
+            AggregationOperator(WorkIdentity.fromPlan(plan, "Pre"), aggregators, groupings)
+              .mapper(argumentSlotOffset, argumentStateMapId, expressions, id)
 
         }
     }
+  }
+
+  private def buildAggregators(operatorId: Id, aggregationExpression: Map[String, org.neo4j.cypher.internal.expressions.Expression]): (Array[Aggregator], Array[Expression]) = {
+    val aggregators = Array.newBuilder[Aggregator]
+    val expressions = Array.newBuilder[Expression]
+    aggregationExpression.foreach {
+      case (_, astExpression) =>
+        val (aggregator, expression) = aggregatorFactory.newAggregator(astExpression)
+        aggregators += aggregator
+        expressions += converters.toCommandExpression(operatorId, expression)
+    }
+    (aggregators.result(), expressions.result())
   }
 
   private def workIdentityDescriptionForPipe(pipe: Pipe): String = {

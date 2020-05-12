@@ -47,54 +47,61 @@ import org.neo4j.values.utils.ValueMath.overflowSafeAdd
  *   CMA =  CMA +              (US - (m * CMA)) / n + m
  */
 case object AvgAggregator extends Aggregator {
-  override def newUpdater(memoryTracker: MemoryTracker): Updater = new AvgUpdater
-  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new AvgStandardReducer
+  override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new AvgStandardReducer
   override def newConcurrentReducer: Reducer = new AvgConcurrentReducer
-}
 
-case object AvgDistinctAggregator extends Aggregator {
-  override def newUpdater(memoryTracker: MemoryTracker): Updater = new UnorderedDistinctUpdater(memoryTracker)
-  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new DistinctStandardReducer(new AvgDistinctStandardReducer, memoryTracker)
-  override def newConcurrentReducer: Reducer = new DistinctConcurrentReducer(new AvgDistinctConcurrentReducer)
-}
-
-abstract class AvgStandardBase {
-  protected def failMix() =
+  def failMix() =
     throw new CypherTypeException("avg() cannot mix number and duration")
 
-  protected def failType(value: AnyValue) =
+  def failType(value: AnyValue) =
     throw new CypherTypeException(s"avg() can only handle numerical values, duration, and null. Got $value")
 }
 
-class AvgUpdater() extends AvgStandardBase with Updater {
+case object AvgDistinctAggregator extends Aggregator {
+  override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new DistinctStandardReducer(new AvgStandardReducer, memoryTracker)
+  override def newConcurrentReducer: Reducer = new DistinctConcurrentReducer(new AvgConcurrentReducer)
+}
 
-  private[aggregators] var seenNumber = false
-  private[aggregators] var seenDuration = false
+abstract class AvgBase() {
 
-  private[aggregators] var count: Long = 0L
+  private[aggregators] var seenNumber: Boolean = false
+  private[aggregators] var seenDuration: Boolean = false
 
-  private[aggregators] var avgNumber: NumberValue = Values.ZERO_INT
+  private[aggregators] var partCount: Long = _
 
-  private[aggregators] var sumMonths = 0L
-  private[aggregators] var sumDays = 0L
-  private[aggregators] var sumSeconds = 0L
-  private[aggregators] var sumNanos = 0L
+  private[aggregators] var avgNumber: NumberValue = _
 
-  override def update(value: AnyValue): Unit = {
+  private[aggregators] var sumMonths: Long = _
+  private[aggregators] var sumDays: Long = _
+  private[aggregators] var sumSeconds: Long = _
+  private[aggregators] var sumNanos: Long = _
+
+  reset()
+
+  protected def reset(): Unit = {
+    partCount = 0L
+    avgNumber = Values.ZERO_INT
+    sumMonths = 0L
+    sumDays = 0L
+    sumSeconds = 0L
+    sumNanos = 0L
+  }
+
+  protected def update(value: AnyValue): Unit = {
     if (value eq Values.NO_VALUE) {
       return
     }
-    count += 1
+    partCount += 1
 
     value match {
       case number: NumberValue =>
         seenNumber = true
         if (!seenDuration) {
           val diff = number.minus(avgNumber)
-          val next = diff.dividedBy(count.toDouble)
+          val next = diff.dividedBy(partCount.toDouble)
           avgNumber = overflowSafeAdd(avgNumber, next)
         } else {
-          failMix()
+          AvgAggregator.failMix()
         }
 
       case dur: DurationValue =>
@@ -105,24 +112,26 @@ class AvgUpdater() extends AvgStandardBase with Updater {
           sumSeconds += dur.get(ChronoUnit.SECONDS)
           sumNanos += dur.get(ChronoUnit.NANOS)
         } else {
-          failMix()
+          AvgAggregator.failMix()
         }
 
-      case _ => failType(value)
+      case _ => AvgAggregator.failType(value)
     }
   }
 }
 
-trait AvgResultProvider {
-  private[aggregators] def seenNumber: Boolean
-  private[aggregators] def seenDuration: Boolean
-  private[aggregators] def monthsRunningAvg: Double
-  private[aggregators] def daysRunningAvg: Double
-  private[aggregators] def secondsRunningAvg: Double
-  private[aggregators] def nanosRunningAvg: Double
-  private[aggregators] def avgNumber: NumberValue
+class AvgStandardReducer() extends AvgBase with StandardReducer {
 
-  def result: AnyValue =
+  protected var count: Long = 0L
+
+  protected var monthsRunningAvg = 0d
+  protected var daysRunningAvg = 0d
+  protected var secondsRunningAvg = 0d
+  protected var nanosRunningAvg = 0d
+
+    // Reducer
+  override def newUpdater(): Updater = this
+  override def result: AnyValue =
     if (seenDuration) {
       DurationValue.approximate(monthsRunningAvg, daysRunningAvg, secondsRunningAvg, nanosRunningAvg).normalize()
     } else if (seenNumber) {
@@ -130,55 +139,28 @@ trait AvgResultProvider {
     } else {
       Values.NO_VALUE
     }
-}
 
-trait AvgStandardReducerBase extends AvgResultProvider {
-  private[aggregators] var seenNumber = false
-  private[aggregators] var seenDuration = false
-
-  private[aggregators] var count: Long = 0L
-
-  private[aggregators] var avgNumber: NumberValue = Values.ZERO_INT
-
-  private[aggregators] var monthsRunningAvg = 0d
-  private[aggregators] var daysRunningAvg = 0d
-  private[aggregators] var secondsRunningAvg = 0d
-  private[aggregators] var nanosRunningAvg = 0d
-}
-
-class AvgStandardReducer() extends AvgStandardBase with AvgStandardReducerBase with Reducer {
-  override def update(updater: Updater): Unit =
-    updater match {
-      case u: AvgUpdater =>
-        val newCount = count + u.count
-        if (u.seenNumber) {
-          seenNumber = true
-          if (seenDuration) {
-            failMix()
-          }
-          val diff = u.avgNumber.minus(avgNumber)
-          val next = diff.times(u.count.toDouble / newCount)
-          avgNumber = overflowSafeAdd(avgNumber, next)
-
-        } else if (u.seenDuration) {
-          seenDuration = true
-          if (seenNumber) {
-            failMix()
-          }
-          monthsRunningAvg += (u.sumMonths - monthsRunningAvg * u.count) / newCount
-          daysRunningAvg += (u.sumDays - daysRunningAvg * u.count) / newCount
-          secondsRunningAvg += (u.sumSeconds - secondsRunningAvg * u.count) / newCount
-          nanosRunningAvg += (u.sumNanos - nanosRunningAvg * u.count) / newCount
-        }
-        count = newCount
+  // Updater
+  override def add(value: AnyValue): Unit = update(value)
+  override def applyUpdates(): Unit = {
+    // do nothing if number
+    if (seenDuration) {
+      val newCount = partCount + count
+      monthsRunningAvg += (sumMonths - monthsRunningAvg * partCount) / newCount
+      daysRunningAvg += (sumDays - daysRunningAvg * partCount) / newCount
+      secondsRunningAvg += (sumSeconds - secondsRunningAvg * partCount) / newCount
+      nanosRunningAvg += (sumNanos - nanosRunningAvg * partCount) / newCount
+      count = newCount
+      reset()
     }
+  }
 }
 
-trait AvgConcurrentReducerBase extends AvgResultProvider {
-  // Note: these volatile flags are set by multiple threads, but only to true, so racing is benign.
-  @volatile private[aggregators] var seenNumber = false
-  @volatile private[aggregators] var seenDuration = false
+class AvgConcurrentReducer() extends Reducer {
 
+  // Note: these volatile flags are set by multiple threads, but only to true, so racing is benign.
+  @volatile private var seenNumber = false
+  @volatile private var seenDuration = false
 
   case class AvgDuration(count: Long = 0L,
                          monthsRunningAvg: Double = 0d,
@@ -186,117 +168,65 @@ trait AvgConcurrentReducerBase extends AvgResultProvider {
                          secondsRunningAvg: Double = 0d,
                          nanosRunningAvg: Double = 0d)
 
-  private[aggregators] val durationRunningAvg = new AtomicReference[AvgDuration](AvgDuration())
-
-  override private[aggregators] def monthsRunningAvg = durationRunningAvg.get().monthsRunningAvg
-  override private[aggregators] def daysRunningAvg = durationRunningAvg.get().daysRunningAvg
-  override private[aggregators] def secondsRunningAvg = durationRunningAvg.get().secondsRunningAvg
-  override private[aggregators] def nanosRunningAvg = durationRunningAvg.get().nanosRunningAvg
+  private val durationRunningAvg = new AtomicReference[AvgDuration](AvgDuration())
 
   case class AvgNumber(count: Long = 0L,
                        avgNumber: NumberValue = Values.ZERO_INT)
 
-  private[aggregators] val numberRunningAvg = new AtomicReference[AvgNumber](AvgNumber())
+  private val numberRunningAvg = new AtomicReference[AvgNumber](AvgNumber())
 
-  override private[aggregators] def avgNumber = numberRunningAvg.get().avgNumber
-}
-
-class AvgConcurrentReducer() extends AvgStandardBase with AvgConcurrentReducerBase with Reducer {
-  override def update(updater: Updater): Unit =
-    updater match {
-      case u: AvgUpdater =>
-        if (u.seenNumber) {
-          seenNumber = true
-          if (seenDuration) {
-            failMix()
-          }
-          numberRunningAvg.updateAndGet(old => {
-            val newCount = old.count + u.count
-            val diff = u.avgNumber.minus(old.avgNumber)
-            val next = diff.times(u.count.toDouble / newCount)
-            AvgNumber(newCount, overflowSafeAdd(old.avgNumber, next))
-          })
-
-        } else if (u.seenDuration) {
-          seenDuration = true
-          if (seenNumber) {
-            failMix()
-          }
-          durationRunningAvg.updateAndGet(old => {
-            val newCount = old.count + u.count
-            AvgDuration(newCount,
-              old.monthsRunningAvg + (u.sumMonths - old.monthsRunningAvg * u.count) / newCount,
-              old.daysRunningAvg + (u.sumDays - old.daysRunningAvg * u.count) / newCount,
-              old.secondsRunningAvg + (u.sumSeconds - old.secondsRunningAvg * u.count) / newCount,
-              old.nanosRunningAvg + (u.sumNanos - old.nanosRunningAvg * u.count) / newCount)
-          })
-        }
+  override def newUpdater(): Updater = new Upd()
+  override def result: AnyValue =
+    if (seenDuration) {
+      val monthsRunningAvg = durationRunningAvg.get().monthsRunningAvg
+      val daysRunningAvg = durationRunningAvg.get().daysRunningAvg
+      val secondsRunningAvg = durationRunningAvg.get().secondsRunningAvg
+      val nanosRunningAvg = durationRunningAvg.get().nanosRunningAvg
+      DurationValue.approximate(monthsRunningAvg, daysRunningAvg, secondsRunningAvg, nanosRunningAvg).normalize()
+    } else if (seenNumber) {
+      numberRunningAvg.get().avgNumber
+    } else {
+      Values.NO_VALUE
     }
-}
 
-class AvgDistinctStandardReducer() extends AvgStandardBase with DistinctInnerReducer with AvgStandardReducerBase {
-
-  override def update(value: AnyValue): Unit = {
-    count += 1
-    value match {
-      case number: NumberValue =>
-        seenNumber = true
-        if (!seenDuration) {
-          val diff = number.minus(avgNumber)
-          val next = diff.dividedBy(count.toDouble)
-          avgNumber = overflowSafeAdd(avgNumber, next)
-        } else {
-          failMix()
-        }
-
-      case duration: DurationValue =>
-        seenDuration = true
-        if (!seenNumber) {
-          monthsRunningAvg += (duration.get(ChronoUnit.MONTHS).asInstanceOf[Double] - monthsRunningAvg) / count
-          daysRunningAvg += (duration.get(ChronoUnit.DAYS).asInstanceOf[Double] - daysRunningAvg) / count
-          secondsRunningAvg += (duration.get(ChronoUnit.SECONDS).asInstanceOf[Double] - secondsRunningAvg) / count
-          nanosRunningAvg += (duration.get(ChronoUnit.NANOS).asInstanceOf[Double] - nanosRunningAvg) / count
-        } else {
-          failMix()
-        }
-
-      case _ => failType(value)
+  private def onNumberUpdate(partAvg: NumberValue, partCount: Long) = {
+    seenNumber = true
+    if (seenDuration) {
+      AvgAggregator.failMix()
     }
+    numberRunningAvg.updateAndGet(old => {
+      val newCount = old.count + partCount
+      val diff = partAvg.minus(old.avgNumber)
+      val next = diff.times(partCount.toDouble / newCount)
+      AvgNumber(newCount, overflowSafeAdd(old.avgNumber, next))
+    })
   }
-}
 
-class AvgDistinctConcurrentReducer() extends AvgStandardBase with AvgConcurrentReducerBase with DistinctInnerReducer {
-  override def update(value: AnyValue): Unit = {
-    value match {
-      case number: NumberValue =>
-        seenNumber = true
-        if (!seenDuration) {
-          numberRunningAvg.updateAndGet(old => {
-            val newCount = old.count + 1
-            val diff = number.minus(old.avgNumber)
-            val next = diff.dividedBy(newCount.toDouble)
-            AvgNumber(newCount, overflowSafeAdd(old.avgNumber, next))
-          })
-        } else {
-          failMix()
-        }
+  private def onDurationUpdate(sumMonths: Long, sumDays: Long, sumSeconds: Long, sumNanos: Long, partCount: Long) = {
+    seenDuration = true
+    if (seenNumber) {
+      AvgAggregator.failMix()
+    }
+    durationRunningAvg.updateAndGet(old => {
+      val newCount = old.count + partCount
+      AvgDuration(newCount,
+        old.monthsRunningAvg + (sumMonths - old.monthsRunningAvg * partCount) / newCount,
+        old.daysRunningAvg + (sumDays - old.daysRunningAvg * partCount) / newCount,
+        old.secondsRunningAvg + (sumSeconds - old.secondsRunningAvg * partCount) / newCount,
+        old.nanosRunningAvg + (sumNanos - old.nanosRunningAvg * partCount) / newCount)
+    })
+  }
 
-      case duration: DurationValue =>
-        seenDuration = true
-        if (!seenNumber) {
-          durationRunningAvg.updateAndGet(old => {
-            val newCount = old.count + 1
-            AvgDuration(newCount,
-              old.monthsRunningAvg + (duration.get(ChronoUnit.MONTHS).asInstanceOf[Double] - old.monthsRunningAvg) / newCount,
-              old.daysRunningAvg + (duration.get(ChronoUnit.DAYS).asInstanceOf[Double] - old.daysRunningAvg) / newCount,
-              old.secondsRunningAvg + (duration.get(ChronoUnit.SECONDS).asInstanceOf[Double] - old.secondsRunningAvg) / newCount,
-              old.nanosRunningAvg + (duration.get(ChronoUnit.NANOS).asInstanceOf[Double] - old.nanosRunningAvg) / newCount)
-          })
-        } else {
-          failMix()
-        }
+  class Upd() extends AvgBase with Updater {
 
-      case _ => failType(value)
+    override def add(value: AnyValue): Unit = update(value)
+    override def applyUpdates(): Unit = {
+      if (seenNumber) {
+        onNumberUpdate(avgNumber, partCount)
+      } else if (seenDuration) {
+        onDurationUpdate(sumMonths, sumDays, sumSeconds, sumNanos, partCount)
+      }
+      reset()
     }
   }
 }

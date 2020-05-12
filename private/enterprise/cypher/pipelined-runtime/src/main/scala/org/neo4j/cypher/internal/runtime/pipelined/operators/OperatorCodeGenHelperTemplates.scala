@@ -229,18 +229,31 @@ object OperatorCodeGenHelperTemplates {
   def setMemoryTracker(memoryTrackerField: InstanceField, operatorId: Int): IntermediateRepresentation =
     setField(memoryTrackerField, getMemoryTracker(operatorId))
 
-  def peekState[STATE_TYPE](argumentStateMapId: ArgumentStateMapId)(implicit to: Manifest[STATE_TYPE]): IntermediateRepresentation =
-    cast[STATE_TYPE](
+  def argumentStateMap[STATE <: ArgumentState](argumentStateMapId: ArgumentStateMapId
+                                             )(implicit to: Manifest[STATE]): IntermediateRepresentation = {
+    cast[ArgumentStateMap[STATE]](
+      invoke(load(
+        ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name),
+        method[ArgumentStateMaps, ArgumentStateMap[_ <: ArgumentState], Int]("applyByIntId"),
+        constant(argumentStateMapId.x))
+    )
+  }
+
+  def peekState[STATE](argumentStateMap: IntermediateRepresentation,
+                            argumentRowId: IntermediateRepresentation
+                           )(implicit to: Manifest[STATE]): IntermediateRepresentation =
+    cast[STATE](
       invoke(
-        cast[ArgumentStateMap[_ <: ArgumentState]](
-          invoke(load(
-            ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name),
-            method[ArgumentStateMaps, ArgumentStateMap[_ <: ArgumentState], Int]("applyByIntId"),
-            constant(argumentStateMapId.x))),
+        argumentStateMap,
         method[ArgumentStateMap[_ <: ArgumentState], ArgumentState, Long]("peek"),
-        constant(TopLevelArgument.VALUE)
+        argumentRowId
       )
     )
+
+  def peekState[STATE <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
+                            argumentRowId: IntermediateRepresentation = constant(TopLevelArgument.VALUE)
+                           )(implicit to: Manifest[STATE]): IntermediateRepresentation =
+    peekState[STATE](argumentStateMap[STATE](argumentStateMapId), argumentRowId)
 
   def argumentSlotOffsetFieldName(argumentStateMapId: ArgumentStateMapId): String =
     "argumentSlotOffset_asm" + argumentStateMapId.x

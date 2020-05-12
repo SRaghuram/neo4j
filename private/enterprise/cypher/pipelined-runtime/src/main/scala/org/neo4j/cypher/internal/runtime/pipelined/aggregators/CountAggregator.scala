@@ -15,73 +15,54 @@ import org.neo4j.values.storable.Values
  * Aggregator for count(...).
  */
 case object CountAggregator extends Aggregator {
-  override def newUpdater(memoryTracker: MemoryTracker): Updater = new CountUpdater
-  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new CountStandardReducer
-  override def newConcurrentReducer: Reducer = new CountConcurrentReducer
+  override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new CountStandardReducer(countNulls = false)
+  override def newConcurrentReducer: Reducer = new CountConcurrentReducer(countNulls = false)
 }
 
 /**
  * Aggregator for count(DISTINCT..).
  */
 case object CountDistinctAggregator extends Aggregator {
-  override def newUpdater(memoryTracker: MemoryTracker): Updater = new UnorderedDistinctUpdater(memoryTracker)
-  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new DistinctStandardReducer(new CountDistinctStandardReducer(), memoryTracker)
-  override def newConcurrentReducer: Reducer = new DistinctConcurrentReducer(new CountDistinctConcurrentReducer())
+  override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new DistinctStandardReducer(new CountStandardReducer(countNulls = false), memoryTracker)
+  override def newConcurrentReducer: Reducer = new DistinctConcurrentReducer(new CountConcurrentReducer(countNulls = false))
 }
 
 /**
  * Aggregator for count(*).
  */
 case object CountStarAggregator extends Aggregator {
-  override def newUpdater(memoryTracker: MemoryTracker): Updater = new CountStarUpdater
-  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new CountStandardReducer
-  override def newConcurrentReducer: Reducer = new CountConcurrentReducer
+  override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new CountStandardReducer(countNulls = true)
+  override def newConcurrentReducer: Reducer = new CountConcurrentReducer(countNulls = true)
 }
 
-abstract class CountUpdaterBase extends Updater {
-  private[aggregators] var count = 0L
-}
+class CountStandardReducer(countNulls: Boolean) extends DirectStandardReducer {
+  private var count = 0L
 
-class CountUpdater() extends CountUpdaterBase {
-  override def update(value: AnyValue): Unit =
-    if (!(value eq Values.NO_VALUE))
+  // Reducer
+  override def newUpdater(): Updater = this
+  override def result: AnyValue = Values.longValue(count)
+
+  // Updater
+  override def add(value: AnyValue): Unit =
+    if (countNulls || !(value eq Values.NO_VALUE))
       count += 1
 }
 
-class CountStarUpdater() extends CountUpdaterBase {
-  override def update(value: AnyValue): Unit = count += 1
-}
-
-class CountStandardReducer() extends Reducer {
-  private var count = 0L
-
-  override def update(updater: Updater): Unit =
-    updater match {
-      case u: CountUpdaterBase =>
-        count += u.count
-    }
-
-  override def result: AnyValue = Values.longValue(count)
-}
-
-class CountConcurrentReducer() extends Reducer {
+class CountConcurrentReducer(countNulls: Boolean) extends Reducer {
   private val count = new AtomicLong(0L)
 
-  override def update(updater: Updater): Unit =
-    updater match {
-      case u: CountUpdaterBase =>
-        count.addAndGet(u.count)
-    }
-
+  override def newUpdater(): Updater = new Upd(countNulls)
   override def result: AnyValue = Values.longValue(count.get)
-}
 
-class CountDistinctStandardReducer() extends CountStarUpdater with DistinctInnerReducer {
-  override def result: AnyValue = Values.longValue(count)
-}
+  class Upd(countNulls: Boolean) extends Updater {
+    var partCount = 0L
+    override def add(value: AnyValue): Unit =
+      if (countNulls || !(value eq Values.NO_VALUE))
+        partCount += 1
 
-class CountDistinctConcurrentReducer() extends DistinctInnerReducer {
-  private val count = new AtomicLong(0L)
-  override def update(value: AnyValue): Unit = count.incrementAndGet()
-  override def result: AnyValue = Values.longValue(count.get())
+    override def applyUpdates(): Unit = {
+      count.addAndGet(partCount)
+      partCount = 0L
+    }
+  }
 }

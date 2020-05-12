@@ -17,40 +17,40 @@ import org.neo4j.values.storable.Values
  */
 case object MinAggregator extends Aggregator {
 
-  override def newUpdater(memoryTracker: MemoryTracker): Updater = new MinUpdater
-  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new MinStandardReducer
+  override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new MinStandardReducer
   override def newConcurrentReducer: Reducer = new MinConcurrentReducer
 
   def shouldUpdate(min: AnyValue, value: AnyValue): Boolean =
-    ((min eq Values.NO_VALUE) || AnyValues.COMPARATOR.compare(min, value) > 0) && !(value eq Values.NO_VALUE)
+    !(value eq Values.NO_VALUE) && ((min eq Values.NO_VALUE) || AnyValues.COMPARATOR.compare(min, value) > 0)
 }
 
-class MinUpdater extends Updater {
+class MinUpdater {
   private[aggregators] var min: AnyValue = Values.NO_VALUE
-  override def update(value: AnyValue): Unit =
-    if (!(value eq Values.NO_VALUE)) {
-      if (MinAggregator.shouldUpdate(min, value))
-        min = value
-    }
+  protected def update(value: AnyValue): Unit =
+    if (MinAggregator.shouldUpdate(min, value))
+      min = value
 }
 
-class MinStandardReducer() extends MinUpdater with Reducer {
-  override def update(updater: Updater): Unit =
-    updater match {
-      case u: MinUpdater => update(u.min)
-    }
-
+class MinStandardReducer() extends MinUpdater with DirectStandardReducer {
+  // Reducer
+  override def newUpdater(): Updater = this
   override def result: AnyValue = min
+
+  // Updater
+  override def add(value: AnyValue): Unit = update(value)
 }
 
 class MinConcurrentReducer() extends Reducer {
-  private val min = new AtomicReference[AnyValue](Values.NO_VALUE)
+  private val minAR = new AtomicReference[AnyValue](Values.NO_VALUE)
 
-  override def update(updater: Updater): Unit =
-    updater match {
-      case u: MinUpdater =>
-        min.updateAndGet(oldMin => if (MinAggregator.shouldUpdate(oldMin, u.min)) u.min else oldMin)
-    }
+  // Reducer
+  override def newUpdater(): Updater = new Upd()
+  override def result: AnyValue = minAR.get
 
-  override def result: AnyValue = min.get
+  // Updater
+  class Upd() extends MinUpdater with Updater {
+    override def add(value: AnyValue): Unit = update(value)
+    override def applyUpdates(): Unit =
+      minAR.updateAndGet(oldMin => if (MinAggregator.shouldUpdate(oldMin, min)) min else oldMin)
+  }
 }

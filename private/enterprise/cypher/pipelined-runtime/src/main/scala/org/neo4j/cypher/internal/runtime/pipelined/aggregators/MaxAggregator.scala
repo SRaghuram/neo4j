@@ -17,41 +17,41 @@ import org.neo4j.values.storable.Values
  */
 case object MaxAggregator extends Aggregator {
 
-  override def newUpdater(memoryTracker: MemoryTracker): Updater = new MaxUpdater
-  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new MaxStandardReducer
+  override def newStandardReducer(memoryTracker: MemoryTracker): StandardReducer = new MaxStandardReducer
   override def newConcurrentReducer: Reducer = new MaxConcurrentReducer
 
   def shouldUpdate(max: AnyValue, value: AnyValue): Boolean =
-    ((max eq Values.NO_VALUE) || AnyValues.COMPARATOR.compare(max, value) < 0) && !(value eq Values.NO_VALUE)
+    !(value eq Values.NO_VALUE) && ((max eq Values.NO_VALUE) || AnyValues.COMPARATOR.compare(max, value) < 0)
 }
 
-class MaxUpdater extends Updater {
+class MaxUpdater {
   private[aggregators] var max: AnyValue = Values.NO_VALUE
 
-  override def update(value: AnyValue): Unit =
-    if (!(value eq Values.NO_VALUE)) {
-      if (MaxAggregator.shouldUpdate(max, value))
-        max = value
-    }
+  protected def update(value: AnyValue): Unit =
+    if (MaxAggregator.shouldUpdate(max, value))
+      max = value
 }
 
-class MaxStandardReducer() extends MaxUpdater with Reducer {
-  override def update(updater: Updater): Unit =
-    updater match {
-      case u: MaxUpdater => update(u.max)
-    }
-
+class MaxStandardReducer() extends MaxUpdater with DirectStandardReducer {
+  // Reducer
+  override def newUpdater(): Updater = this
   override def result: AnyValue = max
+
+  // Updater
+  override def add(value: AnyValue): Unit = update(value)
 }
 
 class MaxConcurrentReducer() extends Reducer {
-  private val max = new AtomicReference[AnyValue](Values.NO_VALUE)
+  // Reducer
+  private val maxAR = new AtomicReference[AnyValue](Values.NO_VALUE)
 
-  override def update(updater: Updater): Unit =
-    updater match {
-      case u: MaxUpdater =>
-        max.updateAndGet(oldMax => if (MaxAggregator.shouldUpdate(oldMax, u.max)) u.max else oldMax)
-    }
+  override def newUpdater(): Updater = new Upd()
+  override def result: AnyValue = maxAR.get
 
-  override def result: AnyValue = max.get
+  // Updater
+  class Upd() extends MaxUpdater with Updater {
+    override def add(value: AnyValue): Unit = update(value)
+    override def applyUpdates(): Unit =
+      maxAR.updateAndGet(oldMax => if (MaxAggregator.shouldUpdate(oldMax, max)) max else oldMax)
+  }
 }

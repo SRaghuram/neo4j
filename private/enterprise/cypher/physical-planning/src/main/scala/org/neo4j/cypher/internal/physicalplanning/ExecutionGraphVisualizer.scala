@@ -175,7 +175,7 @@ object ExecutionGraphVisualizer {
           rels += new VirtualRelationshipHack(current, bufs(bufferId), Map.empty, "WRITES_TO")
         case ProduceResultOutput(plan) =>
           rels += new VirtualRelationshipHack(current, ops(plan.id.x), Map("fused" -> (false: lang.Boolean)), "NEXT_OPERATOR")
-        case ReduceOutput(BufferId(bufferId), _) =>
+        case ReduceOutput(BufferId(bufferId), _, _) =>
           rels += new VirtualRelationshipHack(current, bufs(bufferId), Map.empty, "WRITES_TO")
         case MorselArgumentStateBufferOutput(BufferId(bufferId), argumentSlotOffset, _) =>
           rels += new VirtualRelationshipHack(current, bufs(bufferId), Map("argumentSlotOffset" -> (argumentSlotOffset: Integer)), "WRITES_TO")
