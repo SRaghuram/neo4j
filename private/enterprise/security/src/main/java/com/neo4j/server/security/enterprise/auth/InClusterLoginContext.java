@@ -49,7 +49,7 @@ public class InClusterLoginContext implements EnterpriseLoginContext
     @Override
     public EnterpriseSecurityContext authorize( IdLookup idLookup, String dbName )
     {
-        StandardAccessMode.Builder accessModeBuilder = new StandardAccessMode.Builder( true, false, roles, idLookup, dbName, defaultDatabase );
+        StandardAccessModeBuilder accessModeBuilder = new StandardAccessModeBuilder( true, false, roles, idLookup, dbName, defaultDatabase );
 
         Set<ResourcePrivilege> privileges = permissionsSupplier.get();
 
