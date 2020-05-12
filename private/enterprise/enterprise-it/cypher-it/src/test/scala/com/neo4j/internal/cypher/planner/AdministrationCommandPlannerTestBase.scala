@@ -89,7 +89,7 @@ class AdministrationCommandPlannerTestBase extends AdministrationCommandAcceptan
     planDescription(name, Seq(Details(graphPrivilegeArg(database).info ++ qualifier.info ++ rolePrivilegeArg(roleName).info)), SingleChild(source))
   def graphPrivilegePlan(name: String, database: Details, qualifier: Details, parameterRoleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
     planDescription(name, Seq(details((database.info.map(_.prettifiedString) ++ qualifier.info.map(_.prettifiedString)) :+ s"ROLE $parameterRoleName")), SingleChild(source))
-  def graphPrivilegePlan(name: String, qualifier: Details, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
+  def graphPrivilegePlanForAllGraphs(name: String, qualifier: Details, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
     planDescription(name, Seq(details("ALL GRAPHS" +: (qualifier.info.map(_.prettifiedString) ++ rolePrivilegeArg(roleName).info.map(_.prettifiedString)))), SingleChild(source))
 
   def graphPrivilegePlan(name: String, database: String, resource: Details, qualifier: Details, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl =
