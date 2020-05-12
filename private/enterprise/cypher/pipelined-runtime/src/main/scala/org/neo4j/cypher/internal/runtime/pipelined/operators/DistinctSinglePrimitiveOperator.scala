@@ -7,6 +7,8 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import java.util.concurrent.ConcurrentHashMap
 
+import org.neo4j.collection.trackable.HeapTrackingCollections
+import org.neo4j.collection.trackable.HeapTrackingLongHashSet
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeSetValueInSlotFunctionFor
@@ -26,8 +28,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.kernel.impl.util.collection.HeapTrackingCollections
-import org.neo4j.kernel.impl.util.collection.HeapTrackingLongHashSet
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 
