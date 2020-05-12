@@ -19,7 +19,7 @@ class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     createLabeledNode(Map("id" -> 3), "B")
 
     // when
-    executeWith(Configs.InterpretedAndSlotted, "MATCH (a:A), (b:B) WHERE a.id = b.id RETURN a, b",
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (a:A), (b:B) WHERE a.id = b.id RETURN a, b",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("ValueHashJoin")))
   }
 
@@ -34,7 +34,7 @@ class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     }
 
     // when
-    executeWith(Configs.InterpretedAndSlotted, "MATCH (a:A), (b:B) WHERE a.id = b.id RETURN a, b",
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (a:A), (b:B) WHERE a.id = b.id RETURN a, b",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("ValueHashJoin")))
   }
 
