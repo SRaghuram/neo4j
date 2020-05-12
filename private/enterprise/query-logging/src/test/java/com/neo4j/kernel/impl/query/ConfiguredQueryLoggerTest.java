@@ -42,6 +42,7 @@ import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel.VERBOSE;
 import static org.neo4j.configuration.GraphDatabaseSettings.log_queries;
+import static org.neo4j.configuration.GraphDatabaseSettings.log_queries_allocation_logging_enabled;
 import static org.neo4j.configuration.GraphDatabaseSettings.log_queries_parameter_logging_enabled;
 import static org.neo4j.configuration.GraphDatabaseSettings.log_queries_runtime_logging_enabled;
 import static org.neo4j.configuration.GraphDatabaseSettings.log_queries_threshold;
@@ -193,7 +194,7 @@ class ConfiguredQueryLoggerTest
         // then
         String expectedSessionString = sessionConnectionDetails( SESSION_1, "TestUser" );
         assertThat( logProvider ).forClass( this.getClass() ).forLevel( INFO )
-                .containsMessages( format( "%d ms: %s - %s - %s - {}", 11L, expectedSessionString, QUERY_4,
+                .containsMessages( format( "%d ms: -1 B - %s - %s - %s - {}", 11L, expectedSessionString, QUERY_4,
                     "{ages: " +
                     "[41, 42, 43]}" ) );
     }
@@ -205,8 +206,11 @@ class ConfiguredQueryLoggerTest
         Map<String,Object> params = new HashMap<>();
         params.put( "ages", Arrays.asList( 41, 42, 43 ) );
         ExecutingQuery query = query( SESSION_1, defaultDbId, "TestUser", QUERY_4, params, emptyMap() );
-        ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
-                Config.defaults( log_queries_parameter_logging_enabled, true ) );
+        Config config = Config.newBuilder()
+                .set( log_queries_parameter_logging_enabled, true )
+                .set( log_queries_allocation_logging_enabled, false )
+                .build();
+        ConfiguredQueryLogger queryLogger = queryLogger( logProvider, config );
         RuntimeException failure = new RuntimeException();
 
         // when
@@ -427,7 +431,7 @@ class ConfiguredQueryLoggerTest
 
         // then
         assertThat( logProvider ).forClass( this.getClass() ).forLevel( INFO )
-                                 .containsMessages( format( "%d ms: %s - %s - {%s} - {}", 10L, sessionConnectionDetails( SESSION_1, "neo" ),
+                                 .containsMessages( format( "%d ms: -1 B - %s - %s - {%s} - {}", 10L, sessionConnectionDetails( SESSION_1, "neo" ),
                                                             outputQuery,
                                                             paramsString ) );    }
 
@@ -454,7 +458,7 @@ class ConfiguredQueryLoggerTest
     {
         // given
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
-                Config.defaults( GraphDatabaseSettings.log_queries_allocation_logging_enabled, true ) );
+                Config.defaults( log_queries_allocation_logging_enabled, true ) );
         ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
         query.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
         query.onCompilationCompleted( null, null, null );
@@ -497,6 +501,7 @@ class ConfiguredQueryLoggerTest
         Config config = Config.defaults();
         config.set( log_queries_parameter_logging_enabled, true );
         config.set( GraphDatabaseSettings.log_queries_runtime_logging_enabled, true );
+        config.set( log_queries_allocation_logging_enabled, false );
         QueryLogger queryLogger = queryLogger( logProvider, config );
 
         // when
@@ -545,6 +550,7 @@ class ConfiguredQueryLoggerTest
                 .set( log_queries_parameter_logging_enabled, false )
                 .set( log_queries_threshold, Duration.ofMillis( thresholdInMillis ) )
                 .set( log_queries_runtime_logging_enabled, false )
+                .set( log_queries_allocation_logging_enabled, false )
                 .build();
         ConfiguredQueryLogger queryLogger = new ConfiguredQueryLogger( logProvider.getLog( getClass() ), config );
         ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
@@ -570,6 +576,7 @@ class ConfiguredQueryLoggerTest
                 .set( log_queries_parameter_logging_enabled, false )
                 .set( log_queries_threshold, Duration.ofMillis( thresholdInMillis ) )
                 .set( log_queries_runtime_logging_enabled, false )
+                .set( log_queries_allocation_logging_enabled, false )
                 .build();
         ConfiguredQueryLogger queryLogger = new ConfiguredQueryLogger( logProvider.getLog( getClass() ), config );
         ExecutingQuery query1 = query( SESSION_1, "TestUser", QUERY_1 );
@@ -599,7 +606,12 @@ class ConfiguredQueryLoggerTest
 
     private ConfiguredQueryLogger queryLogger( LogProvider logProvider )
     {
-        return queryLogger( logProvider, Config.defaults( log_queries_parameter_logging_enabled, false ) );
+        Config config = Config.newBuilder()
+                .set( log_queries_parameter_logging_enabled, false )
+                .set( log_queries_allocation_logging_enabled, false )
+                .build();
+
+        return queryLogger( logProvider, config );
     }
 
     private ConfiguredQueryLogger queryLogger( LogProvider logProvider, Config config )

@@ -142,19 +142,19 @@ class QueryLoggerIT
         assertThat( logLines.size(), equalTo( 10 ) );
         String connectionDetails = connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME );
         assertThat( logLines, contains(
-                endsWith( String.format( " ms: %s - %s - {} - runtime=system - {}", connectionDetails,
+                endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails,
                         "CREATE USER foo SET PASSWORD '******' CHANGE NOT REQUIRED" ) ),
-                endsWith( String.format( " ms: %s - %s - {} - runtime=system - {}", connectionDetails,
+                endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails,
                         "CREATE OR REPLACE USER foo SET PASSWORD '******' CHANGE NOT REQUIRED" ) ),
-                endsWith( String.format( " ms: %s - %s - {} - runtime=system - {}", connectionDetails,
+                endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails,
                         "CREATE USER foo IF NOT EXISTS SET PASSWORD '******' CHANGE NOT REQUIRED" ) ),
-                endsWith( String.format( " ms: %s - %s - {} - runtime=system - {}", connectionDetails, "CREATE ROLE role IF NOT EXISTS" ) ),
-                endsWith( String.format( " ms: %s - %s - {} - runtime=system - {}", connectionDetails, "GRANT ROLE role TO foo" ) ),
-                endsWith( String.format( " ms: %s - %s - {} - runtime=system - {}", connectionDetails, "GRANT ACCESS ON DATABASE * TO role" ) ),
-                endsWith( String.format( " ms: %s - %s - {} - runtime=system - {}", connectionDetails, "SHOW USERS" ) ),
-                endsWith( String.format( " ms: %s - %s - {} - runtime=system - {}", connectionDetails, "SHOW DATABASES" ) ),
-                endsWith( String.format( " ms: %s - %s - {} - runtime=system - {}", connectionDetails, "DROP USER foo" ) ),
-                endsWith( String.format( " ms: %s - %s - {} - runtime=system - {}", connectionDetails, "DROP ROLE role" ) )
+                endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails, "CREATE ROLE role IF NOT EXISTS" ) ),
+                endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails, "GRANT ROLE role TO foo" ) ),
+                endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails, "GRANT ACCESS ON DATABASE * TO role" ) ),
+                endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails, "SHOW USERS" ) ),
+                endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails, "SHOW DATABASES" ) ),
+                endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails, "DROP USER foo" ) ),
+                endsWith( String.format( "%s - %s - {} - runtime=system - {}", connectionDetails, "DROP ROLE role" ) )
         ) );
     }
 
@@ -577,7 +577,7 @@ class QueryLoggerIT
         var lastEntry = logLines.size() - 1;
         var obfuscatedQuery = "ALTER CURRENT USER SET PASSWORD FROM '******' TO '******'";
         assertThat( logLines.get( lastEntry ),
-                endsWith( String.format( " ms: %s%s - %s - {} - runtime=system - {}",
+                endsWith( String.format( "%s%s - %s - {} - runtime=system - {}",
                         connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
     }
 
@@ -600,7 +600,7 @@ class QueryLoggerIT
         var lastEntry = logLines.size() - 1;
         var obfuscatedQuery = "ALTER USER foo SET PASSWORD '******'";
         assertThat( logLines.get( lastEntry ),
-                endsWith( String.format( " ms: %s%s - %s - {} - runtime=system - {}",
+                endsWith( String.format( "%s%s - %s - {} - runtime=system - {}",
                         connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
     }
 
@@ -623,7 +623,7 @@ class QueryLoggerIT
         var lastEntry = logLines.size() - 1;
         var obfuscatedQuery = "CALL dbms.security.changeUserPassword('foo', '******')";
         assertThat( logLines.get( lastEntry ),
-                endsWith( String.format( " ms: %s%s - %s - {} - runtime=system - {}",
+                endsWith( String.format( "%s%s - %s - {} - runtime=system - {}",
                         connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
     }
 
@@ -645,7 +645,7 @@ class QueryLoggerIT
         var lastEntry = logLines.size() - 1;
         var obfuscatedQuery = "CREATE USER foo SET PASSWORD '******'";
         assertThat( logLines.get( lastEntry ),
-                endsWith( String.format( " ms: %s%s - %s - {} - runtime=system - {}",
+                endsWith( String.format( "%s%s - %s - {} - runtime=system - {}",
                         connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
     }
 
@@ -668,7 +668,7 @@ class QueryLoggerIT
         var lastEntry = logLines.size() - 1;
         var obfuscatedQuery = "CALL dbms.security.createUser('foo', '******')";
         assertThat( logLines.get( lastEntry ),
-                endsWith( String.format( " ms: %s%s - %s - {} - runtime=system - {}",
+                endsWith( String.format( "%s%s - %s - {} - runtime=system - {}",
                         connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME ), "neo4j", obfuscatedQuery ) ) );
     }
 
