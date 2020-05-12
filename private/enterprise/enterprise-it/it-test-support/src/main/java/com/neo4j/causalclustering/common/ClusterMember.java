@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.common;
 
-import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
+import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.io.File;
@@ -48,7 +48,7 @@ public interface ClusterMember
         return (GraphDatabaseFacade) managementService().database( databaseName );
     }
 
-    ClientConnectorAddresses clientConnectorAddresses();
+    ConnectorAddresses clientConnectorAddresses();
 
     <T> T settingValue( Setting<T> setting );
 
@@ -77,6 +77,8 @@ public interface ClusterMember
     int serverId();
 
     String boltAdvertisedAddress();
+
+    String intraClusterBoltAdvertisedAddress();
 
     default <T> void updateConfig( Setting<T> setting, T value )
     {

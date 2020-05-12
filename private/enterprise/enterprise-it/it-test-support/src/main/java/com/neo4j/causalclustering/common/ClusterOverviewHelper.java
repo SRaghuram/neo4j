@@ -99,7 +99,7 @@ public final class ClusterOverviewHelper
                     @Override
                     protected boolean matchesSafely( MemberInfo item )
                     {
-                        var expectedAddresses = Set.copyOf( coreClusterMember.clientConnectorAddresses().uriList() );
+                        var expectedAddresses = Set.copyOf( coreClusterMember.clientConnectorAddresses().publicUriList() );
                         return expectedAddresses.equals( item.addresses );
                     }
 
@@ -107,7 +107,7 @@ public final class ClusterOverviewHelper
                     public void describeTo( Description description )
                     {
                         description.appendText( "MemberInfo with addresses: " )
-                                .appendValue( coreClusterMember.clientConnectorAddresses().boltAddress() );
+                                .appendValue( coreClusterMember.clientConnectorAddresses().clientBoltAddress() );
                     }
                 }
         ).collect( toList() ) );

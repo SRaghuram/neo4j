@@ -18,7 +18,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
@@ -29,7 +28,6 @@ import org.neo4j.logging.Log;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.cluster_allow_reads_on_followers;
-import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
@@ -144,6 +142,6 @@ public class AddressCollector
 
     private static ServerInfo newServerInfo( MemberId memberId, DiscoveryServerInfo discoveryServerInfo )
     {
-        return new ServerInfo( discoveryServerInfo.connectors().boltAddress(), memberId, discoveryServerInfo.groups() );
+        return new ServerInfo( discoveryServerInfo.connectors().clientBoltAddress(), memberId, discoveryServerInfo.groups() );
     }
 }

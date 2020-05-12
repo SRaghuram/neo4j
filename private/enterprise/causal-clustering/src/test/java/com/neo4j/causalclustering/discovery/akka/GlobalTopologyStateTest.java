@@ -7,8 +7,8 @@ package com.neo4j.causalclustering.discovery.akka;
 
 import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
-import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
-import com.neo4j.causalclustering.discovery.ClientConnectorAddresses.ConnectorUri;
+import com.neo4j.causalclustering.discovery.ConnectorAddresses;
+import com.neo4j.causalclustering.discovery.ConnectorAddresses.ConnectorUri;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
@@ -31,8 +31,8 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.AssertableLogProvider;
 
-import static com.neo4j.causalclustering.discovery.ClientConnectorAddresses.Scheme.bolt;
-import static com.neo4j.causalclustering.discovery.ClientConnectorAddresses.Scheme.http;
+import static com.neo4j.causalclustering.discovery.ConnectorAddresses.Scheme.bolt;
+import static com.neo4j.causalclustering.discovery.ConnectorAddresses.Scheme.http;
 import static java.lang.String.format;
 import static java.lang.System.lineSeparator;
 import static java.util.Collections.emptyMap;
@@ -416,7 +416,7 @@ class GlobalTopologyStateTest
         var catchupAddress = new SocketAddress( "catchup-" + memberId.getUuid(), 2 );
         var boltUri = new ConnectorUri( bolt, new SocketAddress( "bolt-" + memberId.getUuid(), 3 ) );
         var httpUri = new ConnectorUri( http, new SocketAddress( "http-" + memberId.getUuid(), 4 ) );
-        var connectorUris = new ClientConnectorAddresses( List.of( boltUri, httpUri ) );
+        var connectorUris = ConnectorAddresses.fromList( List.of( boltUri, httpUri ) );
         var groups = ServerGroupName.setOf( "group-1-" + memberId.getUuid(), "group-2-" + memberId.getUuid() );
         var refuseToBeLeader = memberId.getUuid().getLeastSignificantBits() % 2 == 0;
         return new CoreServerInfo( raftAddress, catchupAddress, connectorUris, groups, databaseIds, refuseToBeLeader );
@@ -427,7 +427,7 @@ class GlobalTopologyStateTest
         var catchupAddress = new SocketAddress( "catchup-" + memberId.getUuid(), 1 );
         var boltUri = new ConnectorUri( bolt, new SocketAddress( "bolt-" + memberId.getUuid(), 2 ) );
         var httpUri = new ConnectorUri( http, new SocketAddress( "http-" + memberId.getUuid(), 3 ) );
-        var connectorUris = new ClientConnectorAddresses( List.of( boltUri, httpUri ) );
+        var connectorUris = ConnectorAddresses.fromList( List.of( boltUri, httpUri ) );
         var groups = ServerGroupName.setOf( "group-1-" + memberId.getUuid(), "group-2-" + memberId.getUuid() );
         return new ReadReplicaInfo( connectorUris, catchupAddress, groups, databaseIds );
     }

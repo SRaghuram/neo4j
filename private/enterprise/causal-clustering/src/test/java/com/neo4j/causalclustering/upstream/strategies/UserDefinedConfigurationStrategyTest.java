@@ -8,8 +8,8 @@ package com.neo4j.causalclustering.upstream.strategies;
 import co.unruly.matchers.OptionalMatchers;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.ServerGroupName;
-import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
-import com.neo4j.causalclustering.discovery.ClientConnectorAddresses.ConnectorUri;
+import com.neo4j.causalclustering.discovery.ConnectorAddresses;
+import com.neo4j.causalclustering.discovery.ConnectorAddresses.ConnectorUri;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
@@ -34,7 +34,7 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.NullLogProvider;
 
-import static com.neo4j.causalclustering.discovery.ClientConnectorAddresses.Scheme.bolt;
+import static com.neo4j.causalclustering.discovery.ConnectorAddresses.Scheme.bolt;
 import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberId;
 import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberIds;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -203,7 +203,7 @@ class UserDefinedConfigurationStrategyTest
 
     private static ReadReplicaInfo readReplicaInfo( MemberId memberId, AtomicInteger offset, Function<MemberId,Set<ServerGroupName>> groupGenerator )
     {
-        ClientConnectorAddresses connectorAddresses = new ClientConnectorAddresses( List.of(
+        ConnectorAddresses connectorAddresses = ConnectorAddresses.fromList( List.of(
                 new ConnectorUri( bolt, new SocketAddress( "localhost", offset.getAndIncrement() ) ) ) );
         SocketAddress catchupAddress = new SocketAddress( "localhost", offset.getAndIncrement() );
         var groups = groupGenerator.apply( memberId );

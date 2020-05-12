@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.upstream.strategies;
 
 import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
-import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
+import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
@@ -140,7 +140,7 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     {
         SocketAddress anyRaftAddress = new SocketAddress( "hostname", 1234 );
         SocketAddress anyCatchupServer = new SocketAddress( "hostname", 5678 );
-        ClientConnectorAddresses clientConnectorAddress = new ClientConnectorAddresses( Collections.emptyList() );
+        ConnectorAddresses clientConnectorAddress = ConnectorAddresses.fromList( Collections.emptyList() );
         Set<ServerGroupName> groups = Set.of( groupNames );
         Set<DatabaseId> databaseIds = Set.of( DATABASE_ID );
         return new CoreServerInfo( anyRaftAddress, anyCatchupServer, clientConnectorAddress, groups, databaseIds, false );
@@ -148,10 +148,10 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
 
     private static ReadReplicaInfo readReplicaInfo( ServerGroupName... groupNames )
     {
-        ClientConnectorAddresses clientConnectorAddresses = new ClientConnectorAddresses( Collections.emptyList() );
+        ConnectorAddresses connectorAddresses = ConnectorAddresses.fromList( Collections.emptyList() );
         SocketAddress catchupServerAddress = new SocketAddress( "hostname", 2468 );
         Set<ServerGroupName> groups = Set.of( groupNames );
         Set<DatabaseId> databaseIds = Set.of( DATABASE_ID );
-        return new ReadReplicaInfo( clientConnectorAddresses, catchupServerAddress, groups, databaseIds );
+        return new ReadReplicaInfo( connectorAddresses, catchupServerAddress, groups, databaseIds );
     }
 }

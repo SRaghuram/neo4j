@@ -253,7 +253,7 @@ class ClusterOverviewProcedureIT
         static List<String> expectedAddressesForMember( ClusterMember member )
         {
             return member.clientConnectorAddresses()
-                    .uriList()
+                    .publicUriList()
                     .stream()
                     .map( URI::toString )
                     .collect( toList() );

@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.core.ServerGroupName;
-import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
+import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.BooleanMarshal;
@@ -22,7 +22,7 @@ import org.neo4j.kernel.database.DatabaseId;
 
 public class CoreServerInfoMarshal extends DiscoveryServerInfoMarshal<CoreServerInfo>
 {
-    private final ChannelMarshal<ClientConnectorAddresses> clientConnectorAddressesMarshal = new ClientConnectorAddresses.Marshal();
+    private final ChannelMarshal<ConnectorAddresses> clientConnectorAddressesMarshal = new ConnectorAddresses.Marshal();
     private final ChannelMarshal<SocketAddress> advertisedSocketAddressMarshal = new AdvertisedSocketAddressMarshal();
 
     @Override
@@ -30,12 +30,12 @@ public class CoreServerInfoMarshal extends DiscoveryServerInfoMarshal<CoreServer
     {
         SocketAddress raftServer = advertisedSocketAddressMarshal.unmarshal( channel );
         SocketAddress catchupServer = advertisedSocketAddressMarshal.unmarshal( channel );
-        ClientConnectorAddresses clientConnectorAddresses = clientConnectorAddressesMarshal.unmarshal( channel );
+        ConnectorAddresses connectorAddresses = clientConnectorAddressesMarshal.unmarshal( channel );
         Set<ServerGroupName> groups = unmarshalGroups( channel );
         Set<DatabaseId> databaseIds = unmarshalDatabaseIds( channel );
         boolean refuseToBeLeader = BooleanMarshal.unmarshal( channel );
 
-        return new CoreServerInfo( raftServer, catchupServer, clientConnectorAddresses, groups, databaseIds, refuseToBeLeader );
+        return new CoreServerInfo( raftServer, catchupServer, connectorAddresses, groups, databaseIds, refuseToBeLeader );
     }
 
     @Override

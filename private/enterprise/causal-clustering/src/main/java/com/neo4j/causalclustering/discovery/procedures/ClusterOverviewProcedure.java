@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.discovery.procedures;
 
 import com.neo4j.causalclustering.core.ServerGroupName;
-import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
+import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
@@ -122,7 +122,7 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
 
     private static AnyValue formatAddresses( ResultRow row )
     {
-        return row.addresses.uriList()
+        return row.addresses.publicUriList()
                 .stream()
                 .map( URI::toString )
                 .map( Values::utf8Value )
@@ -153,11 +153,11 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
     static class ResultRow implements Comparable<ResultRow>
     {
         final UUID memberId;
-        final ClientConnectorAddresses addresses;
+        final ConnectorAddresses addresses;
         final Map<NamedDatabaseId,RoleInfo> databases;
         final Set<ServerGroupName> groups;
 
-        ResultRow( UUID memberId, ClientConnectorAddresses addresses, Map<NamedDatabaseId,RoleInfo> databases, Set<ServerGroupName> groups )
+        ResultRow( UUID memberId, ConnectorAddresses addresses, Map<NamedDatabaseId,RoleInfo> databases, Set<ServerGroupName> groups )
         {
             this.memberId = memberId;
             this.addresses = addresses;

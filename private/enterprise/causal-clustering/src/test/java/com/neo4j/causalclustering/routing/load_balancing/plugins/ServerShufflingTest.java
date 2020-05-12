@@ -133,7 +133,7 @@ class ServerShufflingTest
 
         var routers = coreMembers.values().stream().map( ClientConnector::boltAddress ).collect( toList() );
         var leader = coreMembers.get( leaderId );
-        var writer = leader.connectors().boltAddress();
+        var writer = leader.connectors().clientBoltAddress();
         var followerStream = coreMembers.values().stream().filter( c -> !c.equals( leader ) );
         var readers = followerStream.map( ClientConnector::boltAddress ).collect( toList() );
 

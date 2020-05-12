@@ -8,6 +8,8 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.discovery.DiscoveryServerInfo;
+import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
@@ -23,9 +25,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.procedure.builtin.routing.Role;
@@ -38,10 +44,12 @@ import static java.util.Collections.singleton;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.procedure.builtin.routing.Role.READ;
 import static org.neo4j.procedure.builtin.routing.Role.ROUTE;
 import static org.neo4j.procedure.builtin.routing.Role.WRITE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @ClusterExtension
 @TestInstance( Lifecycle.PER_METHOD )
@@ -49,6 +57,35 @@ class ClusterDiscoveryIT
 {
     @Inject
     private ClusterFactory clusterFactory;
+
+    @Test
+    void shouldFindIntraClusterBoltAddress() throws Exception
+    {
+
+        var config = clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 2 )
+                .withSharedCoreParam( BoltConnector.connector_routing_enabled, "true" )
+                .withSharedReadReplicaParam( BoltConnector.connector_routing_enabled, "true" );
+
+        var cluster = clusterFactory.createCluster( config );
+        cluster.start();
+
+        var expected = cluster.allMembers().stream()
+                              .map( ClusterMember::intraClusterBoltAdvertisedAddress )
+                              .collect( Collectors.toSet() );
+
+        var topologyService = cluster.awaitLeader().resolveDependency( SYSTEM_DATABASE_NAME, TopologyService.class );
+        assertEventually( () -> intraClusterAddresses( topologyService ), equalityCondition( expected ), 30, SECONDS );
+    }
+
+    private Set<String> intraClusterAddresses( TopologyService topologyService )
+    {
+        var serverInfos = Stream.concat( topologyService.allCoreServers().values().stream(), topologyService.allReadReplicas().values().stream() );
+        return serverInfos.flatMap( info -> info.connectors().intraClusterBoltAddress().stream() )
+                          .map( SocketAddress::toString )
+                          .collect( Collectors.toSet() );
+    }
 
     @Test
     void shouldFindReadWriteAndRouteServersWhenReadsOnFollowersAllowed() throws Exception

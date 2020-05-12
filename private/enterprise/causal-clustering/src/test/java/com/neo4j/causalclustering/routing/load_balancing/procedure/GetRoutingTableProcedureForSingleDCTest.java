@@ -178,8 +178,8 @@ class GetRoutingTableProcedureForSingleDCTest
 
         // then
         var builder = new ClusterView.Builder();
-        builder.readAddress( addressesForCore( 0, false ).connectors().boltAddress() );
-        builder.routeAddress( addressesForCore( 0, false ).connectors().boltAddress() );
+        builder.readAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
+        builder.routeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
 
         assertEquals( builder.build(), clusterView );
     }
@@ -204,12 +204,12 @@ class GetRoutingTableProcedureForSingleDCTest
 
         // then
         var builder = new ClusterView.Builder();
-        builder.writeAddress( addressesForCore( 0, false ).connectors().boltAddress() );
-        builder.readAddress( addressesForCore( 1, false ).connectors().boltAddress() );
-        builder.readAddress( addressesForCore( 2, false ).connectors().boltAddress() );
-        builder.routeAddress( addressesForCore( 0, false ).connectors().boltAddress() );
-        builder.routeAddress( addressesForCore( 1, false ).connectors().boltAddress() );
-        builder.routeAddress( addressesForCore( 2, false ).connectors().boltAddress() );
+        builder.writeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
+        builder.readAddress( addressesForCore( 1, false ).connectors().clientBoltAddress() );
+        builder.readAddress( addressesForCore( 2, false ).connectors().clientBoltAddress() );
+        builder.routeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
+        builder.routeAddress( addressesForCore( 1, false ).connectors().clientBoltAddress() );
+        builder.routeAddress( addressesForCore( 2, false ).connectors().clientBoltAddress() );
 
         assertEquals( builder.build(), clusterView );
     }
@@ -230,9 +230,9 @@ class GetRoutingTableProcedureForSingleDCTest
 
         // then
         var builder = new ClusterView.Builder();
-        builder.writeAddress( addressesForCore( 0, false ).connectors().boltAddress() );
-        builder.readAddress( addressesForCore( 0, false ).connectors().boltAddress() );
-        builder.routeAddress( addressesForCore( 0, false ).connectors().boltAddress() );
+        builder.writeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
+        builder.readAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
+        builder.routeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
 
         assertEquals( builder.build(), clusterView );
     }
@@ -253,8 +253,8 @@ class GetRoutingTableProcedureForSingleDCTest
         var clusterView = run( procedure, config );
 
         // then
-        var coreBoltAddress = addressesForCore( 0, false ).connectors().boltAddress();
-        var readReplicaBoltAddress = addressesForReadReplica( 1 ).connectors().boltAddress();
+        var coreBoltAddress = addressesForCore( 0, false ).connectors().clientBoltAddress();
+        var readReplicaBoltAddress = addressesForReadReplica( 1 ).connectors().clientBoltAddress();
 
         var builder = new ClusterView.Builder();
         builder.writeAddress( coreBoltAddress );
@@ -287,9 +287,9 @@ class GetRoutingTableProcedureForSingleDCTest
 
         // then
         var builder = new ClusterView.Builder();
-        builder.writeAddress( addressesForCore( 0, false ).connectors().boltAddress() );
-        builder.readAddress( addressesForCore( 0, false ).connectors().boltAddress() );
-        builder.routeAddress( addressesForCore( 0, false ).connectors().boltAddress() );
+        builder.writeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
+        builder.readAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
+        builder.routeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
 
         assertEquals( builder.build(), clusterView );
     }
@@ -309,8 +309,8 @@ class GetRoutingTableProcedureForSingleDCTest
 
         // then
         var builder = new ClusterView.Builder();
-        builder.readAddress( addressesForCore( 0, false ).connectors().boltAddress() );
-        builder.routeAddress( addressesForCore( 0, false ).connectors().boltAddress() );
+        builder.readAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
+        builder.routeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
 
         assertEquals( builder.build(), clusterView );
     }
@@ -332,8 +332,8 @@ class GetRoutingTableProcedureForSingleDCTest
         // then
 
         var builder = new ClusterView.Builder();
-        builder.readAddress( addressesForCore( 0, false ).connectors().boltAddress() );
-        builder.routeAddress( addressesForCore( 0, false ).connectors().boltAddress() );
+        builder.readAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
+        builder.routeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
 
         assertEquals( builder.build(), clusterView );
     }
@@ -442,12 +442,12 @@ class GetRoutingTableProcedureForSingleDCTest
         var clusterView = run( proc, databaseId, defaults );
 
         var builder = new ClusterView.Builder();
-        builder.writeAddress( addressesForCore( 0, false ).connectors().boltAddress() );
-        builder.readAddress( addressesForCore( 1, false ).connectors().boltAddress() );
-        builder.readAddress( addressesForCore( 2, false ).connectors().boltAddress() );
-        builder.routeAddress( addressesForCore( 0, false ).connectors().boltAddress() );
-        builder.routeAddress( addressesForCore( 1, false ).connectors().boltAddress() );
-        builder.routeAddress( addressesForCore( 2, false ).connectors().boltAddress() );
+        builder.writeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
+        builder.readAddress( addressesForCore( 1, false ).connectors().clientBoltAddress() );
+        builder.readAddress( addressesForCore( 2, false ).connectors().clientBoltAddress() );
+        builder.routeAddress( addressesForCore( 0, false ).connectors().clientBoltAddress() );
+        builder.routeAddress( addressesForCore( 1, false ).connectors().clientBoltAddress() );
+        builder.routeAddress( addressesForCore( 2, false ).connectors().clientBoltAddress() );
         assertEquals( builder.build(), clusterView );
     }
 
@@ -676,7 +676,7 @@ class GetRoutingTableProcedureForSingleDCTest
             var leader = leaders.get( namedDatabaseId );
             if ( leader != null )
             {
-                return Optional.ofNullable( coreTopologyService.allCoreServers().get( leader ) ).map( coreInfo -> coreInfo.connectors().boltAddress() );
+                return Optional.ofNullable( coreTopologyService.allCoreServers().get( leader ) ).map( coreInfo -> coreInfo.connectors().clientBoltAddress() );
             }
             return Optional.empty();
         }

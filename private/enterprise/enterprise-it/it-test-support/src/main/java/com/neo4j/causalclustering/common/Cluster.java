@@ -586,6 +586,7 @@ public class Cluster
         int txPort = PortAuthority.allocatePort();
         int raftPort = PortAuthority.allocatePort();
         int boltPort = PortAuthority.allocatePort();
+        int intraClusterBoltPort = PortAuthority.allocatePort();
         int httpPort = PortAuthority.allocatePort();
         int backupPort = PortAuthority.allocatePort();
 
@@ -595,6 +596,7 @@ public class Cluster
                 txPort,
                 raftPort,
                 boltPort,
+                intraClusterBoltPort,
                 httpPort,
                 backupPort,
                 clusterSize,
@@ -619,6 +621,7 @@ public class Cluster
             Monitors monitors )
     {
         int boltPort = PortAuthority.allocatePort();
+        int intraClusterBoltPort = PortAuthority.allocatePort();
         int httpPort = PortAuthority.allocatePort();
         int txPort = PortAuthority.allocatePort();
         int backupPort = PortAuthority.allocatePort();
@@ -628,6 +631,7 @@ public class Cluster
                 parentDir,
                 serverId,
                 boltPort,
+                intraClusterBoltPort,
                 httpPort,
                 txPort,
                 backupPort,

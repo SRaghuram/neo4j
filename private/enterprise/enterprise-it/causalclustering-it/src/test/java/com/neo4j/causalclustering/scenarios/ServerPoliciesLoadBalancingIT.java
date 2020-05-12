@@ -308,7 +308,7 @@ class ServerPoliciesLoadBalancingIT
             }
 
             Set<SocketAddress> allCoreBolts = cluster.coreMembers().stream()
-                    .map( c -> c.clientConnectorAddresses().boltAddress() )
+                    .map( c -> c.clientConnectorAddresses().clientBoltAddress() )
                     .collect( Collectors.toSet() );
 
             Set<SocketAddress> returnedCoreReaders = result.readEndpoints().stream()
@@ -321,7 +321,7 @@ class ServerPoliciesLoadBalancingIT
             }
 
             Set<SocketAddress> allReplicaBolts = cluster.readReplicas().stream()
-                    .map( c -> c.clientConnectorAddresses().boltAddress() )
+                    .map( c -> c.clientConnectorAddresses().clientBoltAddress() )
                     .collect( Collectors.toSet() );
 
             Set<SocketAddress> returnedReplicaReaders = result.readEndpoints().stream()
@@ -388,7 +388,7 @@ class ServerPoliciesLoadBalancingIT
 
             Set<SocketAddress> expectedBolts = cluster.readReplicas().stream()
                     .filter( r -> replicaIds.contains( r.serverId() ) )
-                    .map( r -> r.clientConnectorAddresses().boltAddress() )
+                    .map( r -> r.clientConnectorAddresses().clientBoltAddress() )
                     .collect( Collectors.toSet() );
 
             return expectedBolts.equals( returnedReaders );
@@ -421,7 +421,7 @@ class ServerPoliciesLoadBalancingIT
             List<SocketAddress> returnedRouters = new ArrayList<>( result.routeEndpoints() );
 
             Map<Integer,SocketAddress> allBoltsById = cluster.coreMembers().stream()
-                    .collect( Collectors.toMap( CoreClusterMember::serverId, c -> c.clientConnectorAddresses().boltAddress() ) );
+                    .collect( Collectors.toMap( CoreClusterMember::serverId, c -> c.clientConnectorAddresses().clientBoltAddress() ) );
 
             Function<Set<Integer>,Set<SocketAddress>> lookupBoltSubsets =
                     s -> s.stream().map( i -> getAddressOrThrow( allBoltsById, i ) ).collect( Collectors.toSet() );

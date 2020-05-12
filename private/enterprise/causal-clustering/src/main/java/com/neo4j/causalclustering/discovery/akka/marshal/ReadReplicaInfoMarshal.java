@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.core.ServerGroupName;
-import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
+import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
@@ -21,17 +21,17 @@ import org.neo4j.kernel.database.DatabaseId;
 
 public class ReadReplicaInfoMarshal extends DiscoveryServerInfoMarshal<ReadReplicaInfo>
 {
-    private final ChannelMarshal<ClientConnectorAddresses> clientConnectorAddressesMarshal = new ClientConnectorAddresses.Marshal();
+    private final ChannelMarshal<ConnectorAddresses> clientConnectorAddressesMarshal = new ConnectorAddresses.Marshal();
     private final ChannelMarshal<SocketAddress> advertisedSocketAddressMarshal = new AdvertisedSocketAddressMarshal();
 
     @Override
     protected ReadReplicaInfo unmarshal0( ReadableChannel channel ) throws IOException, EndOfStreamException
     {
-        ClientConnectorAddresses clientConnectorAddresses = clientConnectorAddressesMarshal.unmarshal( channel );
+        ConnectorAddresses connectorAddresses = clientConnectorAddressesMarshal.unmarshal( channel );
         SocketAddress catchupServer = advertisedSocketAddressMarshal.unmarshal( channel );
         Set<ServerGroupName> groups = unmarshalGroups( channel );
         Set<DatabaseId> databaseIds = unmarshalDatabaseIds( channel );
-        return new ReadReplicaInfo( clientConnectorAddresses, catchupServer, groups, databaseIds );
+        return new ReadReplicaInfo( connectorAddresses, catchupServer, groups, databaseIds );
     }
 
     @Override

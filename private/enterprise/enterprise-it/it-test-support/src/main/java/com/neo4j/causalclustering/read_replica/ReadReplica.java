@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.read_replica;
 
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
+import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
@@ -57,6 +57,7 @@ public class ReadReplica implements ClusterMember
     private final int serverId;
     private final MemberId memberId;
     private final String boltSocketAddress;
+    private final String intraClusterBoltSocketAddress;
     private final Config memberConfig;
     private final Monitors monitors;
     private final ThreadGroup threadGroup;
@@ -64,8 +65,8 @@ public class ReadReplica implements ClusterMember
 
     private ReadReplicaGraphDatabase readReplicaGraphDatabase;
 
-    public ReadReplica( File parentDir, int serverId, int boltPort, int httpPort, int txPort, int backupPort,
-            int discoveryPort, DiscoveryServiceFactory discoveryServiceFactory,
+    public ReadReplica( File parentDir, int serverId, int boltPort, int intraClusterBoltPort, int httpPort,
+            int txPort, int backupPort, int discoveryPort, DiscoveryServiceFactory discoveryServiceFactory,
             List<SocketAddress> coreMemberDiscoveryAddresses, Map<String,String> extraParams,
             Map<String,IntFunction<String>> instanceExtraParams, String recordFormat, Monitors monitors,
             String advertisedAddress, String listenAddress, ReadReplicaGraphDatabaseFactory dbFactory )
@@ -74,6 +75,7 @@ public class ReadReplica implements ClusterMember
         this.memberId = new MemberId( UUID.randomUUID() );
 
         boltSocketAddress = format( advertisedAddress, boltPort );
+        intraClusterBoltSocketAddress = format( advertisedAddress, intraClusterBoltPort);
 
         Config.Builder config = Config.newBuilder();
         config.set( EnterpriseEditionSettings.mode, EnterpriseEditionSettings.Mode.READ_REPLICA );
@@ -94,6 +96,8 @@ public class ReadReplica implements ClusterMember
         config.set( BoltConnector.enabled, TRUE );
         config.set( BoltConnector.listen_address, new SocketAddress( listenAddress, boltPort ) );
         config.set( BoltConnector.advertised_address, new SocketAddress( advertisedAddress, boltPort ) );
+        config.set( BoltConnector.connector_routing_listen_address, new SocketAddress( listenAddress, intraClusterBoltPort ) );
+        config.set( BoltConnector.connector_routing_advertised_address, new SocketAddress( advertisedAddress, intraClusterBoltPort ) );
         config.set( BoltConnector.encryption_level, DISABLED );
         config.set( HttpConnector.enabled, TRUE );
         config.set( HttpConnector.listen_address, new SocketAddress( listenAddress, httpPort ) );
@@ -122,6 +126,12 @@ public class ReadReplica implements ClusterMember
     public String boltAdvertisedAddress()
     {
         return boltSocketAddress;
+    }
+
+    @Override
+    public String intraClusterBoltAdvertisedAddress()
+    {
+        return intraClusterBoltSocketAddress;
     }
 
     @Override
@@ -169,9 +179,9 @@ public class ReadReplica implements ClusterMember
     }
 
     @Override
-    public ClientConnectorAddresses clientConnectorAddresses()
+    public ConnectorAddresses clientConnectorAddresses()
     {
-        return ClientConnectorAddresses.extractFromConfig( memberConfig );
+        return ConnectorAddresses.fromConfig( memberConfig );
     }
 
     @Override

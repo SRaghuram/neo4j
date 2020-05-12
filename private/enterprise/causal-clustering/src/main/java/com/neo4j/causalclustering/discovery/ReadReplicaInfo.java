@@ -18,14 +18,14 @@ import org.neo4j.kernel.database.DatabaseId;
 public class ReadReplicaInfo implements DiscoveryServerInfo
 {
     private final SocketAddress catchupServerAddress;
-    private final ClientConnectorAddresses clientConnectorAddresses;
+    private final ConnectorAddresses connectorAddresses;
     private final Set<ServerGroupName> groups;
     private final Set<DatabaseId> databaseIds;
 
-    public ReadReplicaInfo( ClientConnectorAddresses clientConnectorAddresses,
+    public ReadReplicaInfo( ConnectorAddresses connectorAddresses,
             SocketAddress catchupServerAddress, Set<ServerGroupName> groups, Set<DatabaseId> databaseIds )
     {
-        this.clientConnectorAddresses = clientConnectorAddresses;
+        this.connectorAddresses = connectorAddresses;
         this.catchupServerAddress = catchupServerAddress;
         this.groups = groups;
         this.databaseIds = databaseIds;
@@ -33,7 +33,7 @@ public class ReadReplicaInfo implements DiscoveryServerInfo
 
     public static ReadReplicaInfo from( Config config, Set<DatabaseId> databaseIds )
     {
-        var connectorUris = ClientConnectorAddresses.extractFromConfig( config );
+        var connectorUris = ConnectorAddresses.fromConfig( config );
         var catchupAddress = config.get( CausalClusteringSettings.transaction_advertised_address );
         var groups = Set.copyOf( config.get( CausalClusteringSettings.server_groups ) );
         return new ReadReplicaInfo( connectorUris, catchupAddress, groups, databaseIds );
@@ -46,9 +46,9 @@ public class ReadReplicaInfo implements DiscoveryServerInfo
     }
 
     @Override
-    public ClientConnectorAddresses connectors()
+    public ConnectorAddresses connectors()
     {
-        return clientConnectorAddresses;
+        return connectorAddresses;
     }
 
     @Override
@@ -76,7 +76,7 @@ public class ReadReplicaInfo implements DiscoveryServerInfo
         }
         var that = (ReadReplicaInfo) o;
         return Objects.equals( catchupServerAddress, that.catchupServerAddress ) &&
-               Objects.equals( clientConnectorAddresses, that.clientConnectorAddresses ) &&
+               Objects.equals( connectorAddresses, that.connectorAddresses ) &&
                Objects.equals( groups, that.groups ) &&
                Objects.equals( databaseIds, that.databaseIds );
     }
@@ -84,7 +84,7 @@ public class ReadReplicaInfo implements DiscoveryServerInfo
     @Override
     public int hashCode()
     {
-        return Objects.hash( catchupServerAddress, clientConnectorAddresses, groups, databaseIds );
+        return Objects.hash( catchupServerAddress, connectorAddresses, groups, databaseIds );
     }
 
     @Override
@@ -92,7 +92,7 @@ public class ReadReplicaInfo implements DiscoveryServerInfo
     {
         return "ReadReplicaInfo{" +
                "catchupServerAddress=" + catchupServerAddress +
-               ", clientConnectorAddresses=" + clientConnectorAddresses +
+               ", connectorAddresses=" + connectorAddresses +
                ", groups=" + groups +
                ", startedDatabaseIds=" + databaseIds +
                '}';

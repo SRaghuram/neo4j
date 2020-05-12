@@ -9,10 +9,10 @@ import org.neo4j.configuration.helpers.SocketAddress;
 
 public interface ClientConnector
 {
-    ClientConnectorAddresses connectors();
+    ConnectorAddresses connectors();
 
     default SocketAddress boltAddress()
     {
-        return connectors().boltAddress();
+        return connectors().clientBoltAddress();
     }
 }

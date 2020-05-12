@@ -9,7 +9,7 @@ import akka.actor.Address;
 import akka.cluster.Member;
 import akka.cluster.MemberStatus;
 import akka.cluster.UniqueAddress;
-import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
+import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
@@ -181,7 +181,7 @@ class BootstrapStateTest
     {
         var raftAddress = new SocketAddress( "neo4j.com", 1 );
         var catchupAddress = new SocketAddress( "neo4j.com", 2 );
-        var connectorAddresses = new ClientConnectorAddresses( List.of() );
+        var connectorAddresses = ConnectorAddresses.fromList( List.of() );
         return new CoreServerInfo( raftAddress, catchupAddress, connectorAddresses, Set.of(), Set.of( namedDatabaseId.databaseId() ), refuseToBeLeader );
     }
 }

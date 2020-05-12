@@ -15,7 +15,6 @@ import com.neo4j.causalclustering.routing.load_balancing.filters.Filter;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.FilterConfigParser;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.InvalidFilterSpecification;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.ServerInfo;
-import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 
 import java.util.Collection;
@@ -102,6 +101,6 @@ public class UserDefinedConfigurationStrategy extends UpstreamDatabaseSelectionS
     {
         T server = entry.getValue();
         MemberId memberId = entry.getKey();
-        return new ServerInfo( server.connectors().boltAddress(), memberId, server.groups() );
+        return new ServerInfo( server.connectors().clientBoltAddress(), memberId, server.groups() );
     }
 }

@@ -56,6 +56,6 @@ object LeaderLookup {
         leader <- leaderId(databaseId)
         members = topologyService.coreTopologyForDatabase(databaseId).members().asScala
         leaderInfo <- members.get(leader)
-      } yield leaderInfo.connectors().boltAddress()
+      } yield leaderInfo.connectors().clientBoltAddress()
   }
 }

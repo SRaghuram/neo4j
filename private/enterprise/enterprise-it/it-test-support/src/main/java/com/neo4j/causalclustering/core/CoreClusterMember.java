@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
-import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
+import com.neo4j.causalclustering.discovery.ConnectorAddresses;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
@@ -67,6 +67,7 @@ public class CoreClusterMember implements ClusterMember
     private final Config.Builder config = Config.newBuilder();
     private final int serverId;
     private final String boltSocketAddress;
+    private final String intraClusterBoltSocketAddress;
     private final int discoveryPort;
     private final String raftListenAddress;
     private CoreGraphDatabase coreGraphDatabase;
@@ -83,6 +84,7 @@ public class CoreClusterMember implements ClusterMember
                               int txPort,
                               int raftPort,
                               int boltPort,
+                              int intraClusterBoltPort,
                               int httpPort,
                               int backupPort,
                               int clusterSize,
@@ -101,6 +103,7 @@ public class CoreClusterMember implements ClusterMember
         this.discoveryPort = discoveryPort;
 
         boltSocketAddress = format( advertisedAddress, boltPort );
+        intraClusterBoltSocketAddress = format( advertisedAddress, intraClusterBoltPort );
         raftListenAddress = format( listenAddress, raftPort );
 
         config.set( default_database, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
@@ -122,6 +125,8 @@ public class CoreClusterMember implements ClusterMember
         config.set( BoltConnector.enabled, TRUE );
         config.set( BoltConnector.listen_address, new SocketAddress( listenAddress, boltPort ) );
         config.set( BoltConnector.advertised_address, new SocketAddress( advertisedAddress, boltPort ) );
+        config.set( BoltConnector.connector_routing_listen_address, new SocketAddress( listenAddress, intraClusterBoltPort ) );
+        config.set( BoltConnector.connector_routing_advertised_address, new SocketAddress( advertisedAddress, intraClusterBoltPort ) );
         config.set( BoltConnector.encryption_level, DISABLED );
         config.set( HttpConnector.enabled, TRUE );
         config.set( HttpConnector.listen_address, new SocketAddress( listenAddress, httpPort ) );
@@ -154,6 +159,12 @@ public class CoreClusterMember implements ClusterMember
     public String boltAdvertisedAddress()
     {
         return boltSocketAddress;
+    }
+
+    @Override
+    public String intraClusterBoltAdvertisedAddress()
+    {
+        return intraClusterBoltSocketAddress;
     }
 
     public String routingURI()
@@ -264,9 +275,9 @@ public class CoreClusterMember implements ClusterMember
     }
 
     @Override
-    public ClientConnectorAddresses clientConnectorAddresses()
+    public ConnectorAddresses clientConnectorAddresses()
     {
-        return ClientConnectorAddresses.extractFromConfig( config.build() );
+        return ConnectorAddresses.fromConfig( config.build() );
     }
 
     @Override
