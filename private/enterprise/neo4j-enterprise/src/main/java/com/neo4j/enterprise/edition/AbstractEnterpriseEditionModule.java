@@ -12,8 +12,6 @@ import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent;
 
-import java.io.IOException;
-
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -24,8 +22,8 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.scheduler.CallableExecutor;
 import org.neo4j.scheduler.Group;
-import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
 
 public interface AbstractEnterpriseEditionModule
@@ -73,17 +71,18 @@ public interface AbstractEnterpriseEditionModule
 
     default SecurityProvider makeEnterpriseSecurityModule( GlobalModule globalModule, GlobalProcedures globalProcedures )
     {
-        SecurityLog securityLog = createSecurityLog( globalModule.getGlobalConfig(), globalModule.getFileSystem(), globalModule.getJobScheduler(),
-                        globalModule.getLogService().getUserLogProvider() );
+        Config config = globalModule.getGlobalConfig();
+        LogProvider userLogProvider = globalModule.getLogService().getUserLogProvider();
+        CallableExecutor executor = globalModule.getJobScheduler().executor( Group.LOG_ROTATION );
+        SecurityLog securityLog = new SecurityLog( config, globalModule.getFileSystem(), executor, userLogProvider );
         globalModule.getGlobalLife().add( securityLog );
         SecurityProvider securityProvider;
         EnterpriseSecurityGraphComponent securityComponent = setupSecurityGraphInitializer( globalModule, securityLog );
-        if ( globalModule.getGlobalConfig().get( GraphDatabaseSettings.auth_enabled ) )
+        if ( config.get( GraphDatabaseSettings.auth_enabled ) )
         {
             EnterpriseSecurityModule securityModule = new EnterpriseSecurityModule(
-                    globalModule.getLogService().getUserLogProvider(),
-                    securityLog,
-                    globalModule.getGlobalConfig(),
+                    userLogProvider,
+                    securityLog, config,
                     globalProcedures,
                     globalModule.getGlobalDependencies(),
                     globalModule.getTransactionEventListeners(),
@@ -98,19 +97,5 @@ public interface AbstractEnterpriseEditionModule
             securityProvider = EnterpriseNoAuthSecurityProvider.INSTANCE;
         }
         return securityProvider;
-    }
-
-    private SecurityLog createSecurityLog( Config config, FileSystemAbstraction fileSystem, JobScheduler scheduler, LogProvider logProvider )
-    {
-        try
-        {
-            return SecurityLog.create( config, fileSystem, scheduler );
-        }
-        catch ( SecurityException | IOException e )
-        {
-            String message = "Unable to create security log.";
-            logProvider.getLog( EnterpriseSecurityModule.class ).error( message, e );
-            throw new RuntimeException( message, e );
-        }
     }
 }

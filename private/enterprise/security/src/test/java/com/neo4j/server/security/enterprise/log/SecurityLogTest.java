@@ -22,6 +22,7 @@ import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogTimeZone;
+import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.EphemeralTestDirectoryExtension;
 
@@ -39,11 +40,13 @@ class SecurityLogTest
             .set( SecuritySettings.store_security_log_rotation_delay, Duration.ofMillis( 1 ) ).build();
 
     @Test
-    void shouldRotateLog() throws IOException
+    void shouldRotateLog() throws Exception
     {
-        SecurityLog securityLog = new SecurityLog( config, fs, Runnable::run );
+        SecurityLog securityLog = new SecurityLog( config, fs, Runnable::run, NullLogProvider.nullLogProvider() );
+        securityLog.init();
         securityLog.info( "line 1" );
         securityLog.info( "line 2" );
+        securityLog.shutdown();
 
         File activeLogFile = config.get( SecuritySettings.security_log_filename ).toFile();
         assertThat( fs.fileExists( activeLogFile ) ).isEqualTo( true );
@@ -76,8 +79,10 @@ class SecurityLogTest
     {
         TimeZone.setDefault( TimeZone.getTimeZone( ZoneOffset.ofHours( hoursShift ) ) );
         Config timeZoneConfig = Config.defaults( GraphDatabaseSettings.db_timezone, LogTimeZone.SYSTEM );
-        SecurityLog securityLog = new SecurityLog( timeZoneConfig, fs, Runnable::run );
+        SecurityLog securityLog = new SecurityLog( timeZoneConfig, fs, Runnable::run, NullLogProvider.nullLogProvider() );
+        securityLog.init();
         securityLog.info( "line 1" );
+        securityLog.shutdown();
 
         File activeLogFile = timeZoneConfig.get( SecuritySettings.security_log_filename ).toFile();
         String[] activeLines = readLogFile( fs, activeLogFile );
@@ -105,6 +110,7 @@ class SecurityLogTest
 
     private void writeAllLevelsAndShutdown( SecurityLog securityLog, String tag ) throws Throwable
     {
+        securityLog.init();
         securityLog.debug( format( "%s: debug line", tag ) );
         securityLog.info( format( "%s: info line", tag ) );
         securityLog.warn( format( "%s: warn line", tag ) );
@@ -112,12 +118,13 @@ class SecurityLogTest
         securityLog.shutdown();
     }
 
-    private SecurityLog withLogLevel( Level debug ) throws IOException
+    private SecurityLog withLogLevel( Level debug )
     {
         return new SecurityLog(
                 Config.defaults( SecuritySettings.security_log_level, debug ),
                 fs,
-                Runnable::run
+                Runnable::run,
+                NullLogProvider.nullLogProvider()
             );
     }
 

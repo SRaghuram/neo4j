@@ -20,35 +20,56 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.FormattedLog;
 import org.neo4j.logging.Log;
+import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.Logger;
 import org.neo4j.logging.RotatingFileOutputStreamSupplier;
-import org.neo4j.scheduler.Group;
-import org.neo4j.scheduler.JobScheduler;
 
 import static org.neo4j.internal.helpers.Strings.escape;
 
 public class SecurityLog extends LifecycleAdapter implements Log
 {
     private RotatingFileOutputStreamSupplier rotatingSupplier;
-    private final Log inner;
+    private Log inner;
+    private Config config;
+    private FileSystemAbstraction fileSystem;
+    private Executor executor;
+    private LogProvider logProvider;
 
-    public SecurityLog( Config config, FileSystemAbstraction fileSystem, Executor executor ) throws IOException
+    public SecurityLog( Config config, FileSystemAbstraction fileSystem, Executor executor, LogProvider logProvider )
     {
-        ZoneId logTimeZoneId = config.get( GraphDatabaseSettings.db_timezone ).getZoneId();
-        File logFile = config.get( SecuritySettings.security_log_filename ).toFile();
+        this.config = config;
+        this.fileSystem = fileSystem;
+        this.executor = executor;
+        this.logProvider = logProvider;
+    }
 
-        FormattedLog.Builder builder = FormattedLog.withZoneId( logTimeZoneId );
+    @Override
+    public void init()
+    {
+        try
+        {
+            ZoneId logTimeZoneId = config.get( GraphDatabaseSettings.db_timezone ).getZoneId();
+            File logFile = config.get( SecuritySettings.security_log_filename ).toFile();
 
-        rotatingSupplier = new RotatingFileOutputStreamSupplier( fileSystem, logFile,
-                config.get( SecuritySettings.store_security_log_rotation_threshold ),
-                config.get( SecuritySettings.store_security_log_rotation_delay ).toMillis(),
-                config.get( SecuritySettings.store_security_log_max_archives ), executor );
+            FormattedLog.Builder builder = FormattedLog.withZoneId( logTimeZoneId );
 
-        builder.withFormat( config.get( GraphDatabaseSettings.log_format) );
-        FormattedLog formattedLog = builder.toOutputStream( rotatingSupplier );
-        formattedLog.setLevel( config.get( SecuritySettings.security_log_level ) );
+            rotatingSupplier = new RotatingFileOutputStreamSupplier( fileSystem, logFile,
+                    config.get( SecuritySettings.store_security_log_rotation_threshold ),
+                    config.get( SecuritySettings.store_security_log_rotation_delay ).toMillis(),
+                    config.get( SecuritySettings.store_security_log_max_archives ), executor );
 
-        this.inner = formattedLog;
+            builder.withFormat( config.get( GraphDatabaseSettings.log_format ) );
+            FormattedLog formattedLog = builder.toOutputStream( rotatingSupplier );
+            formattedLog.setLevel( config.get( SecuritySettings.security_log_level ) );
+
+            this.inner = formattedLog;
+        }
+        catch ( SecurityException | IOException e )
+        {
+            String message = "Unable to create security log: " + e.toString();
+            logProvider.getLog( SecurityLog.class ).error( message, e );
+            throw new RuntimeException( message );
+        }
     }
 
     /* Only used for tests */
@@ -195,12 +216,6 @@ public class SecurityLog extends LifecycleAdapter implements Log
         inner.bulk( consumer );
     }
 
-    public static SecurityLog create( Config config, FileSystemAbstraction fileSystem,
-            JobScheduler jobScheduler ) throws IOException
-    {
-        return new SecurityLog( config, fileSystem, jobScheduler.executor( Group.LOG_ROTATION ) );
-    }
-
     @Override
     public void shutdown() throws Exception
     {
@@ -208,6 +223,7 @@ public class SecurityLog extends LifecycleAdapter implements Log
         {
             this.rotatingSupplier.close();
             this.rotatingSupplier = null;
+            this.inner = null;
         }
     }
 }

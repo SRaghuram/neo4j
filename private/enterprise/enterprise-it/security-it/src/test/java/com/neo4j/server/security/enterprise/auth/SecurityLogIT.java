@@ -5,19 +5,16 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-
 import org.neo4j.adversaries.ClassGuardedAdversary;
 import org.neo4j.adversaries.CountingAdversary;
 import org.neo4j.adversaries.fs.AdversarialFileSystemAbstraction;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
+import org.neo4j.kernel.lifecycle.LifecycleException;
 import org.neo4j.logging.AssertableLogProvider;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -38,8 +35,7 @@ class SecurityLogIT
         final AdversarialFileSystemAbstraction evilFileSystem = new AdversarialFileSystemAbstraction( adversary );
 
         final DatabaseManagementServiceBuilder builder = new TestEnterpriseDatabaseManagementServiceBuilder()
-                .setFileSystem( evilFileSystem ).setInternalLogProvider( logProvider ).impermanent()
-                .setConfig( GraphDatabaseSettings.auth_enabled, true );
+                .setFileSystem( evilFileSystem ).setInternalLogProvider( logProvider ).impermanent();
 
         // When
         RuntimeException runtimeException = assertThrows( RuntimeException.class, () ->
@@ -49,11 +45,12 @@ class SecurityLogIT
         } );
 
         // Then
-        assertThat( runtimeException.getMessage() ).isEqualTo( "Unable to create security log." );
-        assertThat( runtimeException.getCause() ).isInstanceOfAny( IOException.class, SecurityException.class );
+        Throwable lifeCycleException = runtimeException.getCause();
+        assertThat( lifeCycleException ).isInstanceOf( LifecycleException.class );
+        assertThat( lifeCycleException.getMessage() ).contains( "Unable to create security log" );
+        assertThat( lifeCycleException.getCause().getMessage() ).contains( "Unable to create security log" );
 
-        assertThat( logProvider ).forClass(  EnterpriseSecurityModule.class ).forLevel( ERROR )
-                .containsMessageWithException( "Unable to create security log.", runtimeException.getCause() );
+        assertThat( logProvider ).forClass( SecurityLog.class ).forLevel( ERROR ).containsMessages( lifeCycleException.getCause().getMessage() );
     }
 
 }
