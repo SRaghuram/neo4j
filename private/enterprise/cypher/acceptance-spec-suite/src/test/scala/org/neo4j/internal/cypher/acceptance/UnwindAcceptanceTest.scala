@@ -142,6 +142,41 @@ class UnwindAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |CALL dbms.procedures() YIELD name AS rel
         |RETURN *""".stripMargin
     )
+  }
 
+  test("changing the order of the match clauses should not impact the result") {
+    // setup
+    execute(
+      """UNWIND [{prop:["foo", "bar", "baz", "blub"], properties:{eid:"AAA"}}] AS row
+        |CREATE (n:SmallMol{prop: row.prop})
+        |SET n += row.properties
+        |SET n:Drug;""".stripMargin)
+    execute(
+      """UNWIND [{eid:"CCC", properties:{}}] AS row
+        |CREATE (n:Protein{eid: row.eid}) SET n += row.properties;""".stripMargin)
+
+    val order1 = executeWith(Configs.All,
+      """PROFILE UNWIND [{start: {eid:"CCC"}, end: {prop:["foo", "bar", "baz", "blub"]}, properties:{eid:"BBB"}}] AS row
+        |MATCH (end:SmallMol{prop: row.end.prop})
+        |MATCH (start:Protein{eid: row.start.eid})
+        |RETURN *""".stripMargin
+    )
+
+    val description = order1.executionPlanDescription()
+    description should includeSomewhere.aPlan("CartesianProduct")
+    description should not(includeSomewhere.aPlan("ValueHashJoin"))
+    val res1: Seq[Map[String, Any]] = order1.toComparableResult
+    res1.size should be(1)
+    val order2 = executeWith(Configs.All,
+      """PROFILE UNWIND [{start: {eid:"CCC"}, end: {prop:["foo", "bar", "baz", "blub"]}, properties:{eid:"BBB"}}] AS row
+         MATCH (start:Protein{eid: row.start.eid})
+         MATCH (end:SmallMol{prop: row.end.prop})
+         RETURN *""".stripMargin
+    )
+
+    order2.executionPlanDescription() should includeSomewhere.aPlan("CartesianProduct")
+    order2.executionPlanDescription() should not(includeSomewhere.aPlan("ValueHashJoin"))
+    val res2 = order2.toComparableResult
+    res1 should equal(res2)
   }
 }
