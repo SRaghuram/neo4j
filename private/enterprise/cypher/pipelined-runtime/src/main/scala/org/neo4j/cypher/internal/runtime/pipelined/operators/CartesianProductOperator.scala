@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.CartesianProductOpe
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselAttachBuffer
@@ -48,7 +49,7 @@ class CartesianProductOperator(val workIdentity: WorkIdentity,
                          argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorselAndAccumulator[Morsel, LHSMorsel]] = {
     val accAndMorsel = operatorInput.takeAccumulatorAndMorsel()
     if (accAndMorsel != null) {
-      Array(new OTask(accAndMorsel.acc, accAndMorsel.morsel))
+      singletonIndexedSeq(new OTask(accAndMorsel.acc, accAndMorsel.morsel))
     } else {
       null
     }

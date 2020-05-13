@@ -96,6 +96,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -118,7 +119,7 @@ trait CompiledStreamingOperator extends StreamingOperator {
                                    parallelism: Int,
                                    resources: QueryResources,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
-    Array(compiledNextTask(state.queryContext.transactionalContext.dataRead, inputMorsel.nextCopy, argumentStateMaps))
+    singletonIndexedSeq(compiledNextTask(state.queryContext.transactionalContext.dataRead, inputMorsel.nextCopy, argumentStateMaps))
   }
 
   protected def compiledNextTask(dataRead: Read,

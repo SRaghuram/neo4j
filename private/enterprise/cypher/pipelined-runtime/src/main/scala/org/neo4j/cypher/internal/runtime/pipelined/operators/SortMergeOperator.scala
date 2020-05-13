@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBuffer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -47,7 +48,7 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
   }
 
   override def nextTasks(state: PipelinedQueryState, input: IndexedSeq[ArgumentStateBuffer], resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithAccumulators[Morsel, ArgumentStateBuffer]] = {
-    Array(new OTask(input))
+    singletonIndexedSeq(new OTask(input))
   }
 
   /*
