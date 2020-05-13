@@ -137,33 +137,48 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
         if ( data.isDense )
         {
             ByteBuffer buffer = readRelationshipTypes();
-            if ( relationshipTypesInNode.length > 0 )
+            while ( buffer != null )
             {
-                // Read degrees where relationship data would be if this would have been a sparse node
-                int[] degreesArray = readInts( buffer, false );
-                for ( int i = 0; i < selection.numberOfCriteria(); i++ )
+                if ( relationshipTypesInNode.length > 0 )
                 {
-                    int degreesIndex = 0;
-                    RelationshipSelection.Criterion criterion = selection.criterion( i );
-                    if ( criterion.type() == ANY_RELATIONSHIP_TYPE ) // all types
+                    // Read degrees where relationship data would be if this would have been a sparse node
+                    int[] degreesArray = readInts( buffer, false );
+                    for ( int i = 0; i < selection.numberOfCriteria(); i++ )
                     {
-                        for ( int type : relationshipTypesInNode )
+                        int degreesIndex = 0;
+                        RelationshipSelection.Criterion criterion = selection.criterion( i );
+                        if ( criterion.type() == ANY_RELATIONSHIP_TYPE ) // all types
                         {
-                            degreesIndex = readDegreesForNextType( degrees, type, criterion.direction(), degreesArray, degreesIndex );
-                        }
-                    }
-                    else // a single type
-                    {
-                        int typeIndex = Arrays.binarySearch( relationshipTypesInNode, criterion.type() );
-                        if ( typeIndex >= 0 )
-                        {
-                            for ( int j = 0; j < typeIndex; j++ ) //fastforward to correct index
+                            for ( int type : relationshipTypesInNode )
                             {
-                                degreesIndex += (degreesArray[degreesIndex] & 0x1) != 0 ? 3 : 2; //loop or not
+                                degreesIndex = readDegreesForNextType( degrees, type, criterion.direction(), degreesArray, degreesIndex );
                             }
-                            readDegreesForNextType( degrees, relationshipTypesInNode[typeIndex], criterion.direction(), degreesArray, degreesIndex );
+                        }
+                        else // a single type
+                        {
+                            int typeIndex = Arrays.binarySearch( relationshipTypesInNode, criterion.type() );
+                            if ( typeIndex >= 0 )
+                            {
+                                for ( int j = 0; j < typeIndex; j++ ) //fastforward to correct index
+                                {
+                                    degreesIndex += (degreesArray[degreesIndex] & 0x1) != 0 ? 3 : 2; //loop or not
+                                }
+                                readDegreesForNextType( degrees, relationshipTypesInNode[typeIndex], criterion.direction(), degreesArray, degreesIndex );
+                            }
                         }
                     }
+                }
+                if ( data.degreesIsSplit )
+                {
+                    buffer = loadNextSplitPiece( buffer, Header.OFFSET_DEGREES );
+                    if ( buffer != null )
+                    {
+                        readRelationshipTypes( buffer );
+                    }
+                }
+                else
+                {
+                    buffer = null;
                 }
             }
         }

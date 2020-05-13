@@ -60,6 +60,7 @@ class FrekiCursorData
     int relationshipOffset;
     int relationshipTypeOffsetsOffset;
     private ByteBuffer relationshipBuffer;
+    boolean degreesIsSplit;
 
     int refCount = 1;
 
@@ -127,6 +128,7 @@ class FrekiCursorData
         {
             relationshipOffset = header.getOffset( OFFSET_DEGREES );
             relationshipBuffer = buffer;
+            degreesIsSplit = header.hasReferenceMark( OFFSET_DEGREES );
         }
     }
 
@@ -176,6 +178,7 @@ class FrekiCursorData
         propertyIsSplit = false;
         relationshipOffset = 0;
         relationshipTypeOffsetsOffset = 0;
+        degreesIsSplit = false;
     }
 
     @Override

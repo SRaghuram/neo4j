@@ -660,7 +660,61 @@ class MutableNodeData
 
     private void writeDegrees( IntermediateBuffer intermediateBuffer )
     {
-        // TODO rewrite with vbyte writer and intermediate buffer
+        int[] types = sortedDegreeTypes();
+        ByteBuffer buffer = intermediateBuffer.add();
+        StreamVByte.Writer typeWriter = new StreamVByte.Writer();
+        writeInts( typeWriter, buffer, true, types.length );
+        ByteBuffer degreesBuffer = intermediateBuffer.temp();
+        StreamVByte.Writer degreeWriter = new StreamVByte.Writer();
+        writeInts( degreeWriter, degreesBuffer, false, types.length * 3 );
+        for ( int i = 0; i < types.length; )
+        {
+            int type = types[i];
+            boolean typeWritten = typeWriter.writeNext( type );
+            assert typeWritten;
+            EagerDegrees.Degree typeDegrees = degrees.findDegree( type );
+            int loop = typeDegrees.loop();
+            int outgoing = typeDegrees.outgoing() << 1 | (loop > 0 ? 1 : 0);
+            int expectedDegreesWriteCount = 0;
+            int degreesWriteCount = tryWrite( degreeWriter, outgoing, 0, expectedDegreesWriteCount++ );
+            degreesWriteCount = tryWrite( degreeWriter, typeDegrees.incoming(), degreesWriteCount, expectedDegreesWriteCount++ );
+            if ( loop > 0 )
+            {
+                degreesWriteCount = tryWrite( degreeWriter, loop, degreesWriteCount, expectedDegreesWriteCount++ );
+            }
+
+            if ( degreesWriteCount != expectedDegreesWriteCount || typeWriter.position() + degreeWriter.position() >= buffer.limit() )
+            {
+                degreeWriter.undoWrite( degreesWriteCount );
+                typeWriter.undoWrite();
+                typeWriter.done();
+                degreeWriter.done();
+                copyFromSerializedBuffer( degreesBuffer, buffer, 0, degreesBuffer.position() );
+
+                buffer = intermediateBuffer.add();
+                int numTypesLeft = types.length - i;
+                writeInts( typeWriter, buffer, true, numTypesLeft );
+                degreesBuffer = intermediateBuffer.temp();
+                writeInts( degreeWriter, degreesBuffer, false, numTypesLeft * 3 );
+            }
+            else
+            {
+                i++;
+            }
+        }
+
+        typeWriter.done();
+        degreeWriter.done();
+        copyFromSerializedBuffer( degreesBuffer, buffer, 0, degreesBuffer.position() );
+    }
+
+    private int tryWrite( StreamVByte.Writer writer, int value, int successCount, int expectedCount )
+    {
+        return successCount == expectedCount && writer.writeNext( value ) ? successCount + 1 : successCount;
+    }
+
+    private int[] sortedDegreeTypes()
+    {
         int[] types = degrees.types();
         int typesLength = types.length;
         for ( int i = 0; i < typesLength; i++ )
@@ -681,22 +735,7 @@ class MutableNodeData
             types = Arrays.copyOf( types, typesLength );
         }
         Arrays.sort( types );
-        int[] degreesArray = new int[typesLength * 3];
-        int degreesArrayIndex = 0;
-        for ( int t = 0; t < typesLength; t++ )
-        {
-            EagerDegrees.Degree typeDegrees = degrees.findDegree( types[t] );
-            int loop = typeDegrees.loop();
-            degreesArray[degreesArrayIndex++] = typeDegrees.outgoing() << 1 | (loop > 0 ? 1 : 0);
-            degreesArray[degreesArrayIndex++] = typeDegrees.incoming();
-            if ( loop > 0 )
-            {
-                degreesArray[degreesArrayIndex++] = loop;
-            }
-        }
-        ByteBuffer buffer = intermediateBuffer.add();
-        writeInts( types, buffer, true );
-        writeInts( Arrays.copyOf( degreesArray, degreesArrayIndex ), buffer, false );
+        return types;
     }
 
     private static void writeRelationshipProperties( MutableIntObjectMap<Value> properties, ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore,
@@ -734,12 +773,12 @@ class MutableNodeData
             }
             else
             {
-                keyWriter.undoLastWrite();
+                keyWriter.undoWrite();
                 keyWriter.done();
                 copyFromSerializedBuffer( valueBuffer, buffer, 0, completedValuePos );
 
                 buffer = intermediateBuffer.add();
-                writeInts( keyWriter, buffer, true, propertyKeys.length );
+                writeInts( keyWriter, buffer, true, propertyKeys.length - i );
                 valueBuffer = intermediateBuffer.temp();
                 valueWriter = new PropertyValueFormat( bigPropertyValueStore, commandConsumer, valueBuffer );
             }

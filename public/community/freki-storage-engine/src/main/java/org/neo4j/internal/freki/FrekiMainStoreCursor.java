@@ -312,18 +312,22 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     ByteBuffer readRelationshipTypes()
     {
         ensureRelationshipsLocated();
-        if ( data.relationshipOffset == 0 )
+        ByteBuffer buffer = data.relationshipBuffer();
+        readRelationshipTypes( buffer );
+        return buffer;
+    }
+
+    void readRelationshipTypes( ByteBuffer buffer )
+    {
+        if ( buffer == null )
         {
             relationshipTypesInNode = EMPTY_INT_ARRAY;
-            return null;
         }
         else
         {
-            ByteBuffer buffer = data.relationshipBuffer();
             relationshipTypesInNode = readInts( buffer, true );
             // Right after the types array the relationship group data starts, so this is the offset for the first type
             firstRelationshipTypeOffset = buffer.position();
-            return buffer;
         }
     }
 

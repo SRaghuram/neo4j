@@ -573,19 +573,28 @@ class StreamVByte
             return offset;
         }
 
-        void undoLastWrite()
+        void undoWrite()
         {
-            assert count > 0;
-            headerShift -= 2;
-            int sizeCode = (header >>> headerShift) & 0x3;
-            header &= ~(0x3 << headerShift);
-            offset -= codeSizes[sizeCode];
-            if ( headerShift == 0 )
+            undoWrite( 1 );
+        }
+
+        void undoWrite( int numValuesToUndo )
+        {
+            assert count >= numValuesToUndo;
+            for ( int i = 0; i < numValuesToUndo; i++ )
             {
-                // The last value required a new header byte to be written. Undo that too.
-                offset--;
+                headerShift -= 2;
+                int sizeCode = (header >>> headerShift) & 0x3;
+                header &= ~(0x3 << headerShift);
+                offset -= codeSizes[sizeCode];
+                if ( headerShift == 0 )
+                {
+                    // The last value required a new header byte to be written. Undo that too.
+                    offset--;
+                    headerShift = 8;
+                }
             }
-            count--;
+            count -= numValuesToUndo;
         }
 
         /**

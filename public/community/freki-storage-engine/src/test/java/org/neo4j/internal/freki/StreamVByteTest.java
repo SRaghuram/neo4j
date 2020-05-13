@@ -135,7 +135,7 @@ class StreamVByteTest
         {
             writer.writeNext( values[i] );
         }
-        writer.undoLastWrite();
+        writer.undoWrite();
         writer.done();
 
         // then

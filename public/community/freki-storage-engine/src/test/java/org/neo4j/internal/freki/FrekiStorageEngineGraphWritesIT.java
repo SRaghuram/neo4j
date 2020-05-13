@@ -1362,7 +1362,7 @@ class FrekiStorageEngineGraphWritesIT
                     double totalSize = labelsFillRate + propertiesFillRate + degreesFillRate;
                     if ( totalSize > .1 ) //skip case with no fill
                     {
-                        tests.add( createXLChainTest( labelsFillRate, propertiesFillRate, Double.min( 0.8D, degreesFillRate ) ) );
+                        tests.add( createXLChainTest( labelsFillRate, propertiesFillRate, degreesFillRate ) );
                     }
                 }
             }
@@ -1401,7 +1401,7 @@ class FrekiStorageEngineGraphWritesIT
 
                 Set<RelationshipSpec> relationships = new HashSet<>();
                 double degSize = x8Size * degreesXLFill;
-                int numRelsOfDifferentType = (int) (degSize / 6);
+                int numRelsOfDifferentType = (int) (degSize / 3.3d);
 
                 MutableLong nodeId = new MutableLong();
                 shouldGenerateIndexUpdates( target -> { /* do nothing */ }, target ->
