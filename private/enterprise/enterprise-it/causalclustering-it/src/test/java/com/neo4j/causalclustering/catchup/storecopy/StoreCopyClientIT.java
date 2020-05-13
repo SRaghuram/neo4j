@@ -97,7 +97,7 @@ class StoreCopyClientIT
         byte[] bytes = contents.getBytes();
         try ( StoreChannel storeChannel = fileSystemAbstraction.write( file ) )
         {
-            storeChannel.write( ByteBuffer.wrap( bytes ) );
+            storeChannel.writeAll( ByteBuffer.wrap( bytes ) );
         }
         catch ( IOException e )
         {
