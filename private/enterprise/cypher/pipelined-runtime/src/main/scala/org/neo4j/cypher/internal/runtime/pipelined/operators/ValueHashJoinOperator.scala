@@ -27,6 +27,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBuffer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.util.collection.ProbeTable
 import org.neo4j.memory.MemoryTracker
@@ -40,9 +41,9 @@ class ValueHashJoinOperator(val workIdentity: WorkIdentity,
                             slots: SlotConfiguration,
                             lhsExpression: Expression,
                             rhsExpression: Expression,
-                            longOffset: Int,
-                            refsOffset: Int,
-                            argumentSize: SlotConfiguration.Size)
+                            longsToCopy: Array[(Int, Int)],
+                            refsToCopy: Array[(Int, Int)],
+                            cachedPropertiesToCopy: Array[(Int, Int)])
                            (val id: Id = Id.INVALID_ID) extends Operator with OperatorState {
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
@@ -93,8 +94,7 @@ class ValueHashJoinOperator(val workIdentity: WorkIdentity,
       while (outputRow.onValidRow && lhsRows.hasNext) {
         val morsel = lhsRows.next()
         outputRow.copyFrom(morsel.readCursor(onFirstRow = true))
-        inputCursor.copyTo(outputRow, sourceLongOffset = argumentSize.nLongs, sourceRefOffset = argumentSize.nReferences, targetLongOffset = longOffset, targetRefOffset = refsOffset)
-
+        NodeHashJoinSlottedPipe.copyDataFromRhs(longsToCopy, refsToCopy, cachedPropertiesToCopy, outputRow, inputCursor)
         outputRow.next()
       }
     }
