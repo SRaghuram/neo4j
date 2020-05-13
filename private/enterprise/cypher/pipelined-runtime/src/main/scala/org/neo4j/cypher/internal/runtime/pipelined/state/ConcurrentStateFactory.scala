@@ -40,6 +40,8 @@ class ConcurrentStateFactory extends StateFactory {
 
   override def newLock(id: String): Lock = new ConcurrentLock(id)
 
+  override def newLowMark(startValue: Int): LowMark = new ConcurrentLowMark(startValue)
+
   override def newArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                                        argumentSlotOffset: Int,
                                                        factory: ArgumentStateFactory[S],

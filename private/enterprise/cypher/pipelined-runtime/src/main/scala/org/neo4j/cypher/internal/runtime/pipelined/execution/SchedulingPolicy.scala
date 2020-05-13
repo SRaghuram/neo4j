@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.execution
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.runtime.pipelined.SchedulingResult
 import org.neo4j.cypher.internal.runtime.pipelined.Task
+import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 
 /**
  * Gives scheduling policies for execution graphs.
@@ -20,7 +21,7 @@ trait SchedulingPolicy {
  * Gives scheduling policies for executing queries. Must be cacheable.
  */
 trait ExecutionGraphSchedulingPolicy {
-  def querySchedulingPolicy(executingQuery: ExecutingQuery): QuerySchedulingPolicy
+  def querySchedulingPolicy(executingQuery: ExecutingQuery, stateFactory: StateFactory): QuerySchedulingPolicy
 }
 
 /**

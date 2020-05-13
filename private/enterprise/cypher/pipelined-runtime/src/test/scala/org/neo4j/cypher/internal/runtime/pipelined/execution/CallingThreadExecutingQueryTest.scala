@@ -23,6 +23,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.Sleeper
 import org.neo4j.cypher.internal.runtime.pipelined.Task
 import org.neo4j.cypher.internal.runtime.pipelined.Worker
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerResourceProvider
+import org.neo4j.cypher.internal.runtime.pipelined.state.StandardStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
@@ -98,7 +99,8 @@ class CallingThreadExecutingQueryTest extends CypherFunSuite {
       mock[WorkersQueryProfiler],
       getWorker,
       mock[WorkerResourceProvider],
-      new LazyExecutionGraphScheduling(executionGraphDefinition)
+      new LazyExecutionGraphScheduling(executionGraphDefinition),
+      new StandardStateFactory
     )
   }
 

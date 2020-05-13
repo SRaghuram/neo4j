@@ -42,6 +42,8 @@ class StandardStateFactory extends StateFactory {
 
   override def newLock(id: String): Lock = new NoLock(id)
 
+  override def newLowMark(startValue: Int): LowMark = new StandardLowMark(startValue)
+
   override def newArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                                        argumentSlotOffset: Int,
                                                        factory: ArgumentStateFactory[S],

@@ -32,6 +32,7 @@ trait StateFactory {
                  tracer: QueryExecutionTracer): QueryCompletionTracker
   def newIdAllocator(): IdAllocator
   def newLock(id: String): Lock
+  def newLowMark(startValue: Int): LowMark
 
   /**
    *
