@@ -12,6 +12,7 @@ import java.util.Collections;
 
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
+import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.kernel.impl.newapi.Labels;
 
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.DENY;
@@ -22,6 +23,7 @@ import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CREATE_ELEMENT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DELETE_ELEMENT;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.GRAPH_ACTIONS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.MATCH;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.READ;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_LABEL;
@@ -122,6 +124,9 @@ class StandardAccessModeTest
         // SET/REMOVE LABEL
         assertThat( mode.allowsSetLabel( A ) ).isEqualTo( false );
         assertThat( mode.allowsRemoveLabel( A ) ).isEqualTo( false );
+
+        // SET PROPERTY
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( false );
 
         // NAME MANAGEMENT
         assertThat( mode.allowsTokenCreates( PrivilegeAction.CREATE_LABEL ) ).isEqualTo( false );
@@ -1881,4 +1886,153 @@ class StandardAccessModeTest
         assertThat( mode.allowsSetProperty( () -> R2, PROP1 ) ).isEqualTo( false );
         assertThat( mode.allowsSetProperty( () -> R2, PROP2 ) ).isEqualTo( false );
     }
-}
+
+    // ALL GRAPH PRIVILEGES
+
+    @Test
+    void shouldAllowAllReadsAndWritesWhenGrantedGraphActions() throws Exception
+    {
+        var privilege = new ResourcePrivilege( GRANT, GRAPH_ACTIONS, new Resource.GraphResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege ).build();
+
+         assertThat( mode.allowsAccess() ).isEqualTo( false );
+
+        // TRAVERSE NODES
+        assertThat( mode.allowsTraverseAllLabels() ).isEqualTo( true );
+        assertThat( mode.allowsTraverseNode( ANY_LABEL ) ).isEqualTo( true );
+        assertThat( mode.allowsTraverseNode( A ) ).isEqualTo( true );
+
+        assertThat( mode.disallowsTraverseLabel( A ) ).isEqualTo( false );
+        assertThat( mode.disallowsTraverseLabel( ANY_LABEL ) ).isEqualTo( false );
+
+        assertThat( mode.allowsTraverseAllNodesWithLabel( A ) ).isEqualTo( true );
+        assertThat( mode.allowsTraverseAllNodesWithLabel( ANY_LABEL ) ).isEqualTo( true );
+
+        // TRAVERSE RELATIONSHIPS
+        assertThat( mode.allowsTraverseAllRelTypes() ).isEqualTo( true );
+        assertThat( mode.allowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( true );
+
+        assertThat( mode.allowsTraverseRelType( R1 ) ).isEqualTo( true );
+
+        // READ {PROP} ON NODES
+        assertThat( mode.allowsReadPropertyAllLabels( PROP1 ) ).isEqualTo( true );
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( true );
+
+        // READ {PROP} ON RELATIONSHIPS
+        assertThat( mode.allowsReadPropertyAllRelTypes( PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP1 ) ).isEqualTo( true );
+
+        // SEE PROP IN TOKEN STORE
+        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ) ).isEqualTo( true );
+
+        // WRITE
+        assertThat( mode.allowsWrites() ).isEqualTo( true );
+
+        // CREATE
+        assertThat( mode.allowsCreateNode( new int[]{(int) A} ) ).isEqualTo( true );
+        assertThat( mode.allowsCreateRelationship( R1 ) ).isEqualTo( true );
+
+        // DELETE
+        assertThat( mode.allowsDeleteNode( () -> Labels.from( A ) ) ).isEqualTo( true );
+        assertThat( mode.allowsDeleteRelationship( R1 ) ).isEqualTo( true );
+
+        // SET/REMOVE LABEL
+        assertThat( mode.allowsSetLabel( A ) ).isEqualTo( true );
+        assertThat( mode.allowsRemoveLabel( A ) ).isEqualTo( true );
+
+        // SET PROPERTY
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( true );
+
+        // NAME MANAGEMENT
+        assertThat( mode.allowsTokenCreates( PrivilegeAction.CREATE_LABEL ) ).isEqualTo( false );
+        assertThat( mode.allowsTokenCreates( PrivilegeAction.CREATE_RELTYPE ) ).isEqualTo( false );
+        assertThat( mode.allowsTokenCreates( PrivilegeAction.CREATE_PROPERTYKEY ) ).isEqualTo( false );
+
+        // INDEX/CONSTRAINT MANAGEMENT
+        assertThat( mode.allowsSchemaWrites() ).isEqualTo( false );
+        assertThat( mode.allowsSchemaWrites( PrivilegeAction.CREATE_INDEX ) ).isEqualTo( false );
+        assertThat( mode.allowsSchemaWrites( PrivilegeAction.DROP_INDEX ) ).isEqualTo( false );
+        assertThat( mode.allowsSchemaWrites( PrivilegeAction.CREATE_CONSTRAINT ) ).isEqualTo( false );
+        assertThat( mode.allowsSchemaWrites( PrivilegeAction.DROP_CONSTRAINT ) ).isEqualTo( false );
+    }
+
+    @Test
+    void shouldDisallowAllReadsAndWritesWhenDeniedGraphActions() throws Exception
+    {
+        var privilege1 = new ResourcePrivilege( DENY, GRAPH_ACTIONS, new Resource.GraphResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 = new ResourcePrivilege( GRANT, MATCH,  new Resource.AllPropertiesResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege3 = new ResourcePrivilege( GRANT, MATCH,  new Resource.AllPropertiesResource(), RelTypeSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege4 = new ResourcePrivilege( GRANT, WRITE, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege5 = new ResourcePrivilege( GRANT, WRITE, new Resource.GraphResource(), RelTypeSegment.ALL, DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).addPrivilege( privilege3 ).addPrivilege( privilege4 )
+                .addPrivilege( privilege5 ).build();
+
+        // TRAVERSE NODES
+        assertThat( mode.allowsTraverseAllLabels() ).isEqualTo( false );
+        assertThat( mode.allowsTraverseNode( ANY_LABEL ) ).isEqualTo( false );
+        assertThat( mode.allowsTraverseNode( A ) ).isEqualTo( false );
+
+        assertThat( mode.disallowsTraverseLabel( A ) ).isEqualTo( true );
+        assertThat( mode.disallowsTraverseLabel( ANY_LABEL ) ).isEqualTo( true );
+
+        assertThat( mode.allowsTraverseAllNodesWithLabel( A ) ).isEqualTo( false );
+        assertThat( mode.allowsTraverseAllNodesWithLabel( ANY_LABEL ) ).isEqualTo( false );
+
+        // TRAVERSE RELATIONSHIPS
+        assertThat( mode.allowsTraverseAllRelTypes() ).isEqualTo( false );
+        assertThat( mode.allowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( false );
+
+        assertThat( mode.allowsTraverseRelType( R1 ) ).isEqualTo( false );
+
+        // READ {PROP} ON NODES
+        assertThat( mode.allowsReadPropertyAllLabels( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( false );
+
+        // READ {PROP} ON RELATIONSHIPS
+        assertThat( mode.allowsReadPropertyAllRelTypes( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP1 ) ).isEqualTo( false );
+
+        // SEE PROP IN TOKEN STORE
+        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ) ).isEqualTo( false );
+
+        // WRITE
+        assertThat( mode.allowsWrites() ).isEqualTo( false );
+
+        // CREATE
+        assertThat( mode.allowsCreateNode( new int[]{(int) A} ) ).isEqualTo( false );
+        assertThat( mode.allowsCreateRelationship( R1 ) ).isEqualTo( false );
+
+        // DELETE
+        assertThat( mode.allowsDeleteNode( () -> Labels.from( A ) ) ).isEqualTo( false );
+        assertThat( mode.allowsDeleteRelationship( R1 ) ).isEqualTo( false );
+
+        // SET/REMOVE LABEL
+        assertThat( mode.allowsSetLabel( A ) ).isEqualTo( false );
+        assertThat( mode.allowsRemoveLabel( A ) ).isEqualTo( false );
+
+        // SET PROPERTY
+        assertThat( mode.allowsSetProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( false );
+    }
+
+    @Test
+    void shouldDisallowCorrectReadsWhenGrantedGraphActionsButDeniedSpecificReads() throws Exception
+    {
+        var privilege1 = new ResourcePrivilege( GRANT, GRAPH_ACTIONS, new Resource.GraphResource(), Segment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 = new ResourcePrivilege( DENY, READ, new Resource.PropertyResource( "PROP1" ), new LabelSegment( "A" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+
+        assertThat( mode.allowsReadPropertyAllLabels( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadPropertyAllLabels( PROP2 ) ).isEqualTo( true );
+
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP1 ) ).isEqualTo( true );
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP2 ) ).isEqualTo( false );
+
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( true );
+
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( true );
+    }
+ }

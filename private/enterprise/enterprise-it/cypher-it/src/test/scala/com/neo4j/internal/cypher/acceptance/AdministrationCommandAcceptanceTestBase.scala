@@ -256,6 +256,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val setProperty: Map[String, String] = baseMap + ("resource" -> "all_properties", "action" -> "set_property")
   val setLabel: Map[String, String] = baseMap + ("action" -> "set_label", "segment" -> "NODE(*)")
   val removeLabel: Map[String, String] = baseMap + ("action" -> "remove_label", "segment" -> "NODE(*)")
+  val allGraphPrivileges: Map[String, String] = baseMap + ("resource" -> "graph", "action" -> "graph_actions")
 
   val allDatabasePrivilege: Map[String, String] = baseMap + ("resource" -> "database", "action" -> "database_actions")
   val adminPrivilege:  Map[String, String] = baseMap + ("resource" -> "database", "action" -> "admin")

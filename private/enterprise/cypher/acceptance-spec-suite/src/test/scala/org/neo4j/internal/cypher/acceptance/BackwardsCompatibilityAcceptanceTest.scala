@@ -573,6 +573,7 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
   }
 
   // Fined-grained write should not work in 4.0
+
   test("grant fine-grained write is not supported in 3.5 or 4.0") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -652,6 +653,92 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
       executeSingle(s"CYPHER 4.0 REVOKE GRANT DELETE ON GRAPH * NODES A FROM role")
     }
     exception_40.getMessage should include("Fine-grained writes are not supported in this Cypher version.")
+
+    // THEN
+    executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)
+  }
+
+  test("revoke deny fine-grained write is not supported in 3.5 or 4.0") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    executeSingle("CREATE ROLE role")
+
+    // WHEN 3.5
+    val exception_35 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 3.5 REVOKE DENY SET PROPERTY {prop} ON GRAPH * FROM role")
+    }
+    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+    // WHEN 4.0
+    val exception_40 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 4.0 REVOKE DENY SET PROPERTY {prop} ON GRAPH * FROM role")
+    }
+    exception_40.getMessage should include("Fine-grained writes are not supported in this Cypher version.")
+
+    // THEN
+    executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)
+  }
+
+  // ALL GRAPH PRIVILEGES should not be supported in 4.0
+
+   test("grant all graph privileges is not supported in 3.5 or 4.0") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    executeSingle("CREATE ROLE role")
+
+    // WHEN 3.5
+    val exception_35 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 3.5 GRANT ALL GRAPH PRIVILEGES ON GRAPH * TO role")
+    }
+    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+    // WHEN 4.0
+    val exception_40 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 4.0 GRANT ALL GRAPH PRIVILEGES ON GRAPH * TO role")
+    }
+    exception_40.getMessage should include("ALL GRAPH PRIVILEGES is not supported in this Cypher version.")
+
+    // THEN
+    executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)
+  }
+
+  test("deny all graph privileges is not supported in 3.5 or 4.0") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    executeSingle("CREATE ROLE role")
+
+    // WHEN 3.5
+    val exception_35 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 3.5 DENY ALL GRAPH PRIVILEGES ON GRAPH * TO role")
+    }
+    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+    // WHEN 4.0
+    val exception_40 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 4.0 DENY ALL GRAPH PRIVILEGES ON GRAPH * TO role")
+    }
+    exception_40.getMessage should include("ALL GRAPH PRIVILEGES is not supported in this Cypher version.")
+
+    // THEN
+    executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)
+  }
+
+  test("revoke all graph privileges is not supported in 3.5 or 4.0") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    executeSingle("CREATE ROLE role")
+
+    // WHEN 3.5
+    val exception_35 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 3.5 REVOKE ALL GRAPH PRIVILEGES ON GRAPH * FROM role")
+    }
+    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+    // WHEN 4.0
+    val exception_40 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 4.0 REVOKE ALL GRAPH PRIVILEGES ON GRAPH * FROM role")
+    }
+    exception_40.getMessage should include("ALL GRAPH PRIVILEGES is not supported in this Cypher version.")
 
     // THEN
     executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)

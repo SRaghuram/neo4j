@@ -256,6 +256,14 @@ class StandardAccessModeBuilder
             anyWrite.put( privilegeType, true );
             break;
 
+        case GRAPH_ACTIONS:
+            traverseAllLabels.put( privilegeType, true );
+            traverseAllRelTypes.put( privilegeType, true );
+            readAllPropertiesAllLabels.put( privilegeType, true );
+            readAllPropertiesAllRelTypes.put( privilegeType, true );
+            anyWrite.put( privilegeType, true );
+            break;
+
         case SET_LABEL:
         case REMOVE_LABEL:
             handleLabelPrivilege( resource, privilegeType, action );

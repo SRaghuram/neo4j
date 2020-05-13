@@ -57,7 +57,9 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       "GRANT MATCH {*} ON GRAPH * NODES * TO custom" -> 1,
       "REVOKE MATCH {*} ON GRAPH * NODES * FROM custom" -> 2,
 
-      "GRANT READ {a,b,c} ON GRAPH foo ELEMENTS p, q TO a, b, c" -> 36  // 3 props * 3 labels * 2 labels/types * 2 elements(nodes,rels)
+      "GRANT READ {a,b,c} ON GRAPH foo ELEMENTS p, q TO a, b, c" -> 36,  // 3 props * 3 labels * 2 labels/types * 2 elements(nodes,rels)
+
+      "GRANT ALL GRAPH PRIVILEGES ON GRAPH foo TO custom" -> 1
     ))
   }
 
