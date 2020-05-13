@@ -226,7 +226,7 @@ object InterpretedPipesFallbackPolicy {
 
       //------------------------------------------------------------------------------------
       // Whitelisted plans that can be breaking or non-breaking
-      case ProcedureCall(_, call) if !parallelExecution =>
+      case ProcedureCall(_, call) if !parallelExecution && call.containsNoUpdates =>
         !call.signature.isVoid // Void procedures preserve cardinality and are non-breaking
 
       case p: ProjectEndpoints =>

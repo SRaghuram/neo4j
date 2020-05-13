@@ -1690,6 +1690,17 @@ public class ProcedureIT
         }
     }
 
+    @Test
+    void shouldNotUsePipelinedRuntimeForWritingProcedure()
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            Result result = tx.execute( "CALL com.neo4j.procedure.writingProcedure()" );
+            String runtime = (String) result.getExecutionPlanDescription().getArguments().get( "runtime" );
+            assertThat( runtime.toUpperCase() ).isNotEqualTo( "PIPELINED" );
+        }
+    }
+
     public static class Output
     {
         public long someVal = 1337;
