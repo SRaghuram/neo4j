@@ -181,7 +181,7 @@ public class AsyncProfiler implements InternalProfiler, ExternalProfiler
             int resultCode = startAsync.waitFor();
             if ( resultCode != 0 )
             {
-                String asyncLogContents = new String( Files.readAllBytes( asyncLog ) );
+                String asyncLogContents = Files.readString( asyncLog );
                 // everything seems to be fine when output is as below, regardless of result code
                 if ( !asyncLogContents.contains( "Error reading response: Success\n" ) )
                 {
@@ -242,7 +242,7 @@ public class AsyncProfiler implements InternalProfiler, ExternalProfiler
             int resultCode = stopAsync.waitFor();
             if ( resultCode != 0 )
             {
-                String asyncLogContents = new String( Files.readAllBytes( asyncLog ) );
+                String asyncLogContents = Files.readString( asyncLog );
                 // everything seems to be fine when output is as below, regardless of result code
                 if ( !asyncLogContents.contains( "Error reading response: Success\n" ) )
                 {

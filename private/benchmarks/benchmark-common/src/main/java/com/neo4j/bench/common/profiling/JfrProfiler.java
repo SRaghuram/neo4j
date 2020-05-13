@@ -218,7 +218,7 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
                     .start();
 
             int resultCode = startJfr.waitFor();
-            String jfrLogContents = new String( Files.readAllBytes( jfrLog ) );
+            String jfrLogContents = Files.readString( jfrLog );
             if ( resultCode != 0 || jfrLogContents.contains( "Could not start recording" ) )
             {
                 appendFile( profilerLog,

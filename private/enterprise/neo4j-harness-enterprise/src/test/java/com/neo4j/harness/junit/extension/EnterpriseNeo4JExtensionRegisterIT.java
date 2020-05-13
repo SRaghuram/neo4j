@@ -28,7 +28,6 @@ import org.neo4j.logging.LogTimeZone;
 import org.neo4j.test.extension.SkipThreadLeakageGuard;
 import org.neo4j.test.server.HTTP;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -127,7 +126,7 @@ class EnterpriseNeo4JExtensionRegisterIT
         GraphDatabaseAPI api = (GraphDatabaseAPI) databaseService;
         Config config = api.getDependencyResolver().resolveDependency( Config.class );
         File homeDir = config.get( GraphDatabaseSettings.neo4j_home ).toFile();
-        return new String( Files.readAllBytes( new File( homeDir, file ).toPath() ), UTF_8 );
+        return Files.readString( new File( homeDir, file ).toPath() );
     }
 
     private static File createTempDirectory()
