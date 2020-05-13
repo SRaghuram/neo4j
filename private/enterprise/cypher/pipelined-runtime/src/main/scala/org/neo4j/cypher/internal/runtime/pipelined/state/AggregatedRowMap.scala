@@ -93,8 +93,13 @@ class StandardAggregationMap(override val argumentRowId: Long,
     reducerMap.autoClosingEntryIterator().asInstanceOf[java.util.Iterator[java.util.Map.Entry[AnyValue, AggregatedRow]]]
 
   private def newAggregators(groupingValue: AnyValue)(scopedMemoryTracker: MemoryTracker): StandardAggregators = {
-    val reducers = aggregators.map(_.newStandardReducer(scopedMemoryTracker))
     scopedMemoryTracker.allocateHeap(groupingValue.estimatedHeapUsage() + estimatedShallowSizeOfMapValue)
+    val reducers = new Array[StandardReducer](aggregators.length)
+    var i = 0
+    while (i < aggregators.length) {
+      reducers(i) = aggregators(i).newStandardReducer(memoryTracker)
+      i += 1
+    }
     new StandardAggregators(reducers)
   }
 
@@ -145,7 +150,12 @@ class ConcurrentAggregationMap(override val argumentRowId: Long,
   override def result(): util.Iterator[Map.Entry[AnyValue, AggregatedRow]] = reducerMap.entrySet().iterator().asInstanceOf[java.util.Iterator[java.util.Map.Entry[AnyValue, AggregatedRow]]]
 
   private def newAggregators(groupingValue: AnyValue): ConcurrentAggregators = {
-    val reducers = aggregators.map(_.newConcurrentReducer)
+    val reducers = new Array[Reducer](aggregators.length)
+    var i = 0
+    while (i < aggregators.length) {
+      reducers(i) = aggregators(i).newConcurrentReducer
+      i += 1
+    }
     new ConcurrentAggregators(reducers, numberOfWorkers)
   }
 }
