@@ -14,6 +14,7 @@ import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.ExecutionEngineHelper
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
+import org.neo4j.cypher.internal.runtime.ResourceManager
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
@@ -121,7 +122,7 @@ class ShortestPathSameNodeAcceptanceTest extends ExecutionEngineFunSuite with Ru
         subscriber)
 
       RewindableExecutionResult(result,
-        new TransactionBoundQueryContext(TransactionalContextWrapper(context))(mock[IndexSearchMonitor]),
+        new TransactionBoundQueryContext(TransactionalContextWrapper(context), new ResourceManager)(mock[IndexSearchMonitor]),
         subscriber)
     }
   }

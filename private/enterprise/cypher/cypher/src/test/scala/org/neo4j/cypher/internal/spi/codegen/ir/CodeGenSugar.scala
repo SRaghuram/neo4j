@@ -23,6 +23,7 @@ import org.neo4j.cypher.internal.profiling.ProfilingTracer
 import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.ProfileMode
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.ResourceManager
 import org.neo4j.cypher.internal.runtime.compiled.CompiledExecutionResult
 import org.neo4j.cypher.internal.runtime.compiled.CompiledPlan
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ByteCodeMode
@@ -71,7 +72,7 @@ trait CodeGenSugar extends MockitoSugar with LogicalPlanConstructionTestSupport 
       val contextFactory = Neo4jTransactionalContextFactory.create(graphDb)
       transactionalContext = TransactionalContextWrapper(
         contextFactory.newContext( tx, "no query text exists for this test", EMPTY_MAP))
-      val queryContext = new TransactionBoundQueryContext(transactionalContext)(mock[IndexSearchMonitor])
+      val queryContext = new TransactionBoundQueryContext(transactionalContext, new ResourceManager)(mock[IndexSearchMonitor])
       val tracer = Some(new ProfilingTracer(queryContext.transactionalContext.kernelStatisticProvider))
       val result = compile(plan).executionResultBuilder(queryContext, ProfileMode, tracer, EMPTY_MAP,
         prePopulateResults = false, DO_NOTHING_SUBSCRIBER)

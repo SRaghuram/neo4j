@@ -40,6 +40,7 @@ import org.neo4j.cypher.internal.runtime.NoInput
 import org.neo4j.cypher.internal.runtime.NormalMode
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext
+import org.neo4j.cypher.internal.runtime.ResourceManager
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
@@ -252,7 +253,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
 
   private def newQueryContext(tx: InternalTransaction): QueryContext = {
     val searchMonitor: IndexSearchMonitor = kernelMonitors.newMonitor(classOf[IndexSearchMonitor])
-    new TransactionBoundQueryContext(transactionalContextWrapper(txContext(tx)), trackResourcesInTransaction = false)(searchMonitor)
+    new TransactionBoundQueryContext(transactionalContextWrapper(txContext(tx)), new ResourceManager)(searchMonitor)
   }
 
   private def jobScheduler = dependencyResolver.resolveDependency(classOf[JobScheduler])

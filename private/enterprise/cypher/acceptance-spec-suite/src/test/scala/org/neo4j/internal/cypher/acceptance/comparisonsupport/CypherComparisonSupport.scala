@@ -15,6 +15,7 @@ import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.ExecutionEngineHelper
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext
+import org.neo4j.cypher.internal.runtime.ResourceManager
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
 import org.neo4j.cypher.internal.util.Eagerly
@@ -391,7 +392,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
   private def innerExecute(tx: InternalTransaction, queryText: String, params: Map[String, Any]) = {
     val subscriber = new RecordingQuerySubscriber
     val context = transactionalContext(tx, queryText -> params)
-    val queryContext = new TransactionBoundQueryContext(TransactionalContextWrapper(context))(mock[IndexSearchMonitor])
+    val queryContext = new TransactionBoundQueryContext(TransactionalContextWrapper(context), new ResourceManager())(mock[IndexSearchMonitor])
     val innerResult = eengineExecute(queryText, ExecutionEngineHelper.asMapValue(params), context, subscriber)
     RewindableExecutionResult(innerResult, queryContext, subscriber)
   }

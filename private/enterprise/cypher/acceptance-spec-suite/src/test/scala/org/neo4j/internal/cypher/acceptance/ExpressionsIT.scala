@@ -77,6 +77,7 @@ import org.neo4j.cypher.internal.runtime.ParameterMapping
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.ReadableRow
+import org.neo4j.cypher.internal.runtime.ResourceManager
 import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.ast.ParameterFromSlot
@@ -199,7 +200,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     beginTransaction(Type.EXPLICIT, LoginContext.AUTH_DISABLED)
     context = Neo4jTransactionalContextFactory.create(graph).newContext(tx, "X", EMPTY_MAP)
-    query = new TransactionBoundQueryContext(TransactionalContextWrapper(context))(mock[IndexSearchMonitor])
+    query = new TransactionBoundQueryContext(TransactionalContextWrapper(context), new ResourceManager())(mock[IndexSearchMonitor])
     cursors = new ExpressionCursors(TransactionalContextWrapper(context).cursors, PageCursorTracer.NULL, EmptyMemoryTracker.INSTANCE)
   }
 
