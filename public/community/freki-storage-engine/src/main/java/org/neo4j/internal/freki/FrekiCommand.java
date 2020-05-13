@@ -739,7 +739,7 @@ abstract class FrekiCommand implements StorageCommand
         @Override
         public String toString()
         {
-            return "Schema{" + mode + "descriptor=" + descriptor + '}';
+            return format( "Schema[%s,id:%d,%s]", mode, descriptor.getId(), descriptor );
         }
 
         void writeValue( WritableChannel channel, Value value ) throws IOException
