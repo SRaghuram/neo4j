@@ -17,12 +17,12 @@ public class FabricEverywhereExtension implements BeforeAllCallback, AfterAllCal
     @Override
     public void beforeAll( ExtensionContext context )
     {
-        FeatureToggles.set( FabricDatabaseManager.class, FabricDatabaseManager.FABRIC_BY_DEFAULT_FLAG_NAME, true );
+//        FeatureToggles.set( FabricDatabaseManager.class, FabricDatabaseManager.FABRIC_BY_DEFAULT_FLAG_NAME, true );
     }
 
     @Override
     public void afterAll( ExtensionContext context )
     {
-        FeatureToggles.set( FabricDatabaseManager.class, FabricDatabaseManager.FABRIC_BY_DEFAULT_FLAG_NAME, false );
+//        FeatureToggles.set( FabricDatabaseManager.class, FabricDatabaseManager.FABRIC_BY_DEFAULT_FLAG_NAME, false );
     }
 }
