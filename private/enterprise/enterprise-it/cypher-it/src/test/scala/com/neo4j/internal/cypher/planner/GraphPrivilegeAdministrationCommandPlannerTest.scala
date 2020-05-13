@@ -513,8 +513,8 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlanForAllGraphs("GrantSetProperty", allResourceArg(), Details("RELATIONSHIPS *"), "role",
-          graphPrivilegePlanForAllGraphs("GrantSetProperty", allResourceArg(), Details("NODES *"), "role",
+        graphPrivilegePlanForAllGraphs("GrantSetProperty", allResourceArg(), details("RELATIONSHIPS *"), "role",
+          graphPrivilegePlanForAllGraphs("GrantSetProperty", allResourceArg(), details("NODES *"), "role",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
@@ -529,8 +529,8 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlan("DenySetProperty", "foo", resourceArg("prop"), Details("NODE baz"), "role",
-          graphPrivilegePlan("DenySetProperty", "foo", resourceArg("prop"), Details("NODE bar"), "role",
+        graphPrivilegePlan("DenySetProperty", "foo", resourceArg("prop"), details("NODE baz"), "role",
+          graphPrivilegePlan("DenySetProperty", "foo", resourceArg("prop"), details("NODE bar"), "role",
             assertDbmsAdminPlan("ASSIGN PRIVILEGE")
           )
         )
@@ -545,8 +545,8 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     // Then
     plan should include(
       logPlan(
-        graphPrivilegePlanForAllGraphs("RevokeSetProperty(GRANTED)", resourceArg("bar"), Details("RELATIONSHIP baz"), "role",
-          graphPrivilegePlanForAllGraphs("RevokeSetProperty(GRANTED)", resourceArg("foo"), Details("RELATIONSHIP baz"), "role",
+        graphPrivilegePlanForAllGraphs("RevokeSetProperty(GRANTED)", resourceArg("bar"), details("RELATIONSHIP baz"), "role",
+          graphPrivilegePlanForAllGraphs("RevokeSetProperty(GRANTED)", resourceArg("foo"), details("RELATIONSHIP baz"), "role",
             assertDbmsAdminPlan("REMOVE PRIVILEGE")
           )
         )
