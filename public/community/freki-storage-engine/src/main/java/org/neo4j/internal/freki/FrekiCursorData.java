@@ -53,6 +53,7 @@ class FrekiCursorData
 
     int labelOffset;
     private ByteBuffer labelBuffer;
+    boolean labelIsSplit;
     int propertyOffset;
     private ByteBuffer propertyBuffer;
     int relationshipOffset;
@@ -107,6 +108,7 @@ class FrekiCursorData
         {
             labelOffset = buffer.position();
             labelBuffer = buffer;
+            labelIsSplit = header.hasReferenceMark( FLAG_LABELS );
         }
         if ( header.hasMark( OFFSET_PROPERTIES ) )
         {
@@ -172,6 +174,7 @@ class FrekiCursorData
         isDense = false;
         xLChainLoaded = false;
         labelOffset = 0;
+        labelIsSplit = false;
         propertyOffset = 0;
         relationshipOffset = 0;
         relationshipTypeOffsetsOffset = 0;

@@ -35,6 +35,7 @@ import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 
 import static java.lang.Math.min;
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_LONG_ARRAY;
+import static org.apache.commons.lang3.ArrayUtils.addAll;
 import static org.neo4j.internal.freki.MutableNodeData.readDegreesForNextType;
 import static org.neo4j.internal.freki.StreamVByte.LONG_CONSUMER;
 import static org.neo4j.internal.freki.StreamVByte.LONG_CREATOR;
@@ -61,7 +62,22 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
         cursorAccessTracer.registerNodeLabelsAccess();
         ensureLabelsLocated();
         ByteBuffer buffer = data.labelBuffer();
-        return buffer != null ? (long[]) readInts( buffer, true, LONG_CREATOR, LONG_CONSUMER ) : EMPTY_LONG_ARRAY;
+        if ( buffer == null )
+        {
+            return EMPTY_LONG_ARRAY;
+        }
+        long[] labels = (long[]) readInts( buffer, true, LONG_CREATOR, LONG_CONSUMER );
+
+        // === Logic for split label data
+        if ( data.labelIsSplit )
+        {
+            while ( (buffer = loadNextSplitPiece( buffer, Header.FLAG_LABELS )) != null )
+            {
+                long[] moreLabels = (long[]) readInts( buffer, true, LONG_CREATOR, LONG_CONSUMER );
+                labels = addAll( moreLabels, labels );
+            }
+        }
+        return labels;
     }
 
     @Override

@@ -192,6 +192,47 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         return false;
     }
 
+    /**
+     * Provides convenient way of iterating through data that is split into multiple records. The {@link FrekiCursorData} keeps a reference
+     * to the first (in chain) occurrence of a certain data part, i.e. labels or properties. Then when actually reading the data of that part
+     * this is the buffer to start from and to, when it runs out, advance to the next buffer containing more data for that part this
+     * method is invoked to get there. Very convenient, but a bit wasteful since it loads records one more time and then throws them away.
+     * This is done so that the book keeping for where data for various parts are is as slim as possible to not penalise the non-split case,
+     * which btw is by far the most common one, so if this split-reading is slightly suboptimal then that's fine a.t.m.
+     *
+     * @param buffer the buffer containing a piece of the data part that was just read. This buffer also contains information about how to get to
+     * the next record in the chain. This information is used to load the next record and return a buffer positioned to start reading the next
+     * piece of this part.
+     * @param headerSlot which part to look for.
+     * @return ByteBuffer (may be a different one than was passed in) filled with data and positioned to read the next piece of this data part,
+     * or {@code null} if there were no more pieces to load for this part.
+     */
+    ByteBuffer loadNextSplitPiece( ByteBuffer buffer, int headerSlot )
+    {
+        Header header = new Header();
+        header.deserialize( buffer.position( 0 ) );
+        long forwardPointer;
+        while ( (forwardPointer = forwardPointer( readLongs( buffer.position( header.getOffset( Header.OFFSET_RECORD_POINTER ) ) ),
+                buffer.limit() > stores.mainStore.recordDataSize() )) != NULL )
+        {
+            int sizeExp = sizeExponentialFromRecordPointer( forwardPointer );
+            Record record = new Record( sizeExp );
+            if ( !stores.mainStore( sizeExp ).read( xCursor( sizeExp ), record, idFromRecordPointer( forwardPointer ) ) || !record.hasFlag( FLAG_IN_USE ) )
+            {
+                throw new IllegalStateException(
+                        "Wanted to follow forward pointer " + recordPointerToString( forwardPointer ) + ", but ended up on an unused record" );
+            }
+            ByteBuffer nextBuffer = record.data();
+            header.deserialize( nextBuffer );
+            if ( header.hasMark( headerSlot ) )
+            {
+                return nextBuffer.position( header.getOffset( headerSlot ) );
+            }
+            // else there could be another record in between the pieces for this data part, so just skip on through it
+        }
+        return null;
+    }
+
     private void ensureLoaded( ToIntFunction<FrekiCursorData> test, int headerSlot )
     {
         if ( (!data.x1Loaded || !data.xLChainLoaded) && test.applyAsInt( data ) == 0 )
