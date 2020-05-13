@@ -29,8 +29,9 @@ import static org.neo4j.internal.freki.Header.OFFSET_PROPERTIES;
 import static org.neo4j.internal.freki.Header.OFFSET_RECORD_POINTER;
 import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIPS;
 import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS;
+import static org.neo4j.internal.freki.MutableNodeData.backwardPointer;
+import static org.neo4j.internal.freki.MutableNodeData.forwardPointer;
 import static org.neo4j.internal.freki.MutableNodeData.recordPointerToString;
-import static org.neo4j.internal.freki.StreamVByte.readLongs;
 
 /**
  * Data that cursors need to read data. This is a minimal parsed version of data loaded to a {@link Record} from a {@link Store}.
@@ -73,7 +74,7 @@ class FrekiCursorData
         assignDataOffsets( buffer );
         if ( header.hasMark( OFFSET_RECORD_POINTER ) )
         {
-            xLChainStartPointer = readRecordPointers( buffer )[0];
+            xLChainStartPointer = forwardPointer( readRecordPointers( buffer ), false );
             xLChainNextLinkPointer = xLChainStartPointer;
             // xL can be loaded lazily when/if needed
         }
@@ -91,9 +92,9 @@ class FrekiCursorData
         assignDataOffsets( buffer );
         assert header.hasMark( OFFSET_RECORD_POINTER );
         long[] pointers = readRecordPointers( buffer );
-        x1Pointer = pointers[0];
-        xLChainLoaded = pointers.length == 1;
-        xLChainNextLinkPointer = !xLChainLoaded ? pointers[1] : NULL;
+        x1Pointer = backwardPointer( pointers, true );
+        xLChainNextLinkPointer = forwardPointer( pointers, true );
+        xLChainLoaded = xLChainNextLinkPointer == NULL;
     }
 
     private void assignDataOffsets( ByteBuffer buffer )
@@ -127,7 +128,7 @@ class FrekiCursorData
 
     private long[] readRecordPointers( ByteBuffer buffer )
     {
-        return readLongs( buffer.position( header.getOffset( OFFSET_RECORD_POINTER ) ) );
+        return MutableNodeData.readRecordPointers( buffer.position( header.getOffset( OFFSET_RECORD_POINTER ) ) );
     }
 
     ByteBuffer labelBuffer()

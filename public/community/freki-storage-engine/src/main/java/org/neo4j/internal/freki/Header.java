@@ -114,6 +114,7 @@ class Header
         {
             return spaceNeeded();
         }
+        assert hasMark( slot );
         return offsets[slot];
     }
 
@@ -199,7 +200,7 @@ class Header
 
         for ( int slot = 0; slot < sizes.length; slot++ )
         {
-            int startOffset = getOffset( slot );
+            int startOffset = hasMark( slot ) ? getOffset( slot ) : 0;
             int smallestOtherOffset = Integer.MAX_VALUE;
             for ( int otherSlot = 0; otherSlot < offsets.length; otherSlot++ )
             {

@@ -29,10 +29,13 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.memory.MemoryTracker;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_INT_ARRAY;
+import static org.neo4j.internal.freki.MutableNodeData.forwardPointer;
 import static org.neo4j.internal.freki.MutableNodeData.idFromRecordPointer;
+import static org.neo4j.internal.freki.MutableNodeData.recordPointerToString;
 import static org.neo4j.internal.freki.MutableNodeData.sizeExponentialFromRecordPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.internal.freki.StreamVByte.readInts;
+import static org.neo4j.internal.freki.StreamVByte.readLongs;
 import static org.neo4j.util.Preconditions.checkState;
 
 abstract class FrekiMainStoreCursor implements AutoCloseable
@@ -205,17 +208,17 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         }
     }
 
-    void ensureLabelsLoaded()
+    void ensureLabelsLocated()
     {
         ensureLoaded( data -> data.labelOffset, Header.FLAG_LABELS );
     }
 
-    void ensureRelationshipsLoaded()
+    void ensureRelationshipsLocated()
     {
         ensureLoaded( data -> data.relationshipOffset, data.isDense ? Header.OFFSET_DEGREES : Header.OFFSET_RELATIONSHIPS );
     }
 
-    void ensurePropertiesLoaded()
+    void ensurePropertiesLocated()
     {
         ensureLoaded( data -> data.propertyOffset, Header.OFFSET_PROPERTIES );
     }
@@ -267,7 +270,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
 
     ByteBuffer readRelationshipTypes()
     {
-        ensureRelationshipsLoaded();
+        ensureRelationshipsLocated();
         if ( data.relationshipOffset == 0 )
         {
             relationshipTypesInNode = EMPTY_INT_ARRAY;

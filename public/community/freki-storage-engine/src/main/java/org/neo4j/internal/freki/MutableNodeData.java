@@ -868,22 +868,27 @@ class MutableNodeData
 
     private void readRecordPointer( ByteBuffer buffer, boolean xL )
     {
-        long[] pointers = readLongs( buffer );
+        long[] pointers = readRecordPointers( buffer );
         assert pointers.length > 0;
-        backwardPointer = NULL;
-        forwardPointer = NULL;
-        if ( xL )
-        {
-            backwardPointer = pointers[0];
-            if ( pointers.length > 1 )
-            {
-                forwardPointer = pointers[1];
-            }
-        }
-        else
-        {
-            forwardPointer = pointers[0];
-        }
+        backwardPointer = backwardPointer( pointers, xL );
+        forwardPointer = forwardPointer( pointers, xL );
+    }
+
+    static long[] readRecordPointers( ByteBuffer buffer )
+    {
+        return readLongs( buffer );
+    }
+
+    static long backwardPointer( long[] pointers, boolean xL )
+    {
+        return xL ? pointers[0] : NULL;
+    }
+
+    static long forwardPointer( long[] pointers, boolean xL )
+    {
+        return xL
+               ? pointers.length > 1 ? pointers[1] : NULL
+               : pointers[0];
     }
 
     private void readRelationships( ByteBuffer buffer )
@@ -897,9 +902,9 @@ class MutableNodeData
             for ( int i = 0; i < numRelationships; i++ )
             {
                 int relationshipArrayIndex = i * ARRAY_ENTRIES_PER_RELATIONSHIP;
-                long otherNodeRaw = packedRelationships[ relationshipArrayIndex ];
-                boolean outgoing =  relationshipIsOutgoing( otherNodeRaw );
-                long internalId = packedRelationships[ relationshipArrayIndex + 1 ];
+                long otherNodeRaw = packedRelationships[relationshipArrayIndex];
+                boolean outgoing = relationshipIsOutgoing( otherNodeRaw );
+                long internalId = packedRelationships[relationshipArrayIndex + 1];
 
                 if ( outgoing && internalId >= nextInternalRelationshipId )
                 {

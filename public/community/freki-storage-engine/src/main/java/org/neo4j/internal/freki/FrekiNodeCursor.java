@@ -59,7 +59,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     public long[] labels()
     {
         cursorAccessTracer.registerNodeLabelsAccess();
-        ensureLabelsLoaded();
+        ensureLabelsLocated();
         ByteBuffer buffer = data.labelBuffer();
         return buffer != null ? (long[]) readInts( buffer, true, LONG_CREATOR, LONG_CONSUMER ) : EMPTY_LONG_ARRAY;
     }
@@ -86,14 +86,14 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public void relationships( StorageRelationshipTraversalCursor traversalCursor, RelationshipSelection selection )
     {
-        ensureRelationshipsLoaded();
+        ensureRelationshipsLocated();
         traversalCursor.init( this, selection );
     }
 
     @Override
     public boolean relationshipsTo( StorageRelationshipTraversalCursor traversalCursor, RelationshipSelection selection, long neighbourNodeReference )
     {
-        ensureRelationshipsLoaded();
+        ensureRelationshipsLocated();
         ((FrekiRelationshipTraversalCursor) traversalCursor).init( this, selection, neighbourNodeReference );
         return true;
     }
@@ -242,7 +242,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public boolean hasProperties()
     {
-        ensurePropertiesLoaded();
+        ensurePropertiesLocated();
         ByteBuffer buffer = data.propertyBuffer();
         return buffer != null && hasNonEmptyIntArray( buffer );
     }

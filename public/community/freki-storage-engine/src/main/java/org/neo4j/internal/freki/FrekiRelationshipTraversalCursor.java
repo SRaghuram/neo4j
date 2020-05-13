@@ -146,7 +146,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
             {
                 return false;
             }
-            ensureRelationshipsLoaded();
+            ensureRelationshipsLocated();
             if ( !data.isDense && data.relationshipOffset == 0 )
             {
                 return false;
