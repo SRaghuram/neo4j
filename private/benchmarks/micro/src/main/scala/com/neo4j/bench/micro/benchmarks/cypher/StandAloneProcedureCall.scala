@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.QualifiedName
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.graphdb.Label
+import org.neo4j.kernel.api.procedure.GlobalProcedures
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
@@ -28,7 +29,7 @@ import org.openjdk.jmh.annotations.State
 import org.openjdk.jmh.annotations.TearDown
 import org.openjdk.jmh.infra.Blackhole
 
-@BenchmarkEnabled(true)
+@BenchmarkEnabled(false)
 class StandAloneProcedureCall extends AbstractProcedureCall {
 
   @ParamValues(
@@ -55,7 +56,7 @@ class StandAloneProcedureCall extends AbstractProcedureCall {
   }
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
-    val call = plans.ProcedureCall(plans.Argument()(IdGen), resolvedCall)(IdGen)
+    val call = plans.ProcedureCall(plans.Argument()(IdGen), resolvedCall(Seq.empty))(IdGen)
     (plans.ProduceResult(call, columns)(IdGen),semanticTable, columns.toList)
   }
 
@@ -68,7 +69,7 @@ class StandAloneProcedureCall extends AbstractProcedureCall {
     assertExpectedRowCount(labels, subscriber)
   }
 
-  override protected def procedureName: QualifiedName = QualifiedName(Seq("db"), "labels")
+  override protected def procedureName(procedures: GlobalProcedures): QualifiedName = QualifiedName(Seq("db"), "labels")
 }
 
 object StandAloneProcedureCall {

@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import com.neo4j.bench.micro.benchmarks.procs.ProcedureCall.LongValue
 import com.neo4j.bench.micro.data.DataGeneratorConfig
 import com.neo4j.bench.micro.data.Plans.Pos
 import com.neo4j.bench.micro.data.Plans.astVariable
@@ -24,6 +25,7 @@ import org.neo4j.cypher.internal.spi.procsHelpers.asOption
 import org.neo4j.internal.kernel
 import org.neo4j.kernel.api.procedure.GlobalProcedures
 import org.neo4j.kernel.internal.GraphDatabaseAPI
+import org.neo4j.procedure.Name
 
 import scala.collection.JavaConverters.asScalaBufferConverter
 
@@ -38,7 +40,8 @@ abstract class AbstractProcedureCall extends AbstractCypherBenchmark {
     val resolver = db.asInstanceOf[GraphDatabaseAPI].getDependencyResolver
     val procs = resolver.resolveDependency(classOf[GlobalProcedures])
 
-    val procedure = procs.procedure(new kernel.api.procs.QualifiedName(procedureName.namespace.toArray, procedureName.name))
+    val procName = procedureName(procs)
+    val procedure = procs.procedure(new kernel.api.procs.QualifiedName(procName.namespace.toArray, procName.name))
     val signature = procedure.signature()
     val input = signature.inputSignature().asScala
       .map(s => FieldSignature(s.name(), asCypherType(s.neo4jType()), asOption(s.defaultValue()).map(asCypherValue)))
@@ -47,7 +50,7 @@ abstract class AbstractProcedureCall extends AbstractCypherBenchmark {
       signature.outputSignature().asScala
         .map(s => FieldSignature(s.name(), asCypherType(s.neo4jType()), deprecated = s.isDeprecated)).toIndexedSeq)
 
-    procedureSignature = ProcedureSignature(procedureName,
+    procedureSignature = ProcedureSignature(procName,
       input,
       output,
       None,
@@ -61,9 +64,9 @@ abstract class AbstractProcedureCall extends AbstractCypherBenchmark {
 
   def columns: Seq[String] = procedureSignature.outputSignature.map(f => f.map(_.name)).getOrElse(List.empty)
 
-  def resolvedCall: ResolvedCall = {
+  def resolvedCall(callArguments: Seq[Expression]): ResolvedCall = {
     val callResults = columns.map(n => ProcedureResultItem(astVariable(n))(Pos)).toIndexedSeq
-    ResolvedCall(procedureSignature, Seq.empty, callResults)(Pos)
+    ResolvedCall(procedureSignature, callArguments, callResults)(Pos)
   }
 
   def semanticTable: SemanticTable = {
@@ -73,5 +76,11 @@ abstract class AbstractProcedureCall extends AbstractCypherBenchmark {
     SemanticTable(types = semanticTypes)
   }
 
-  protected def procedureName: QualifiedName
+  protected def procedureName(procedures: GlobalProcedures): QualifiedName
 }
+
+class TestProcedure {
+  @org.neo4j.procedure.Procedure(name = "bench.procedure")
+  def procedure(@Name("value") value: Long): java.util.stream.Stream[LongValue] = java.util.stream.LongStream.range(0, value).mapToObj(new LongValue(_))
+}
+
