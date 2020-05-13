@@ -8,9 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.cypher.internal.FullyParsedQuery
 import org.neo4j.cypher.internal.QueryOptions
 import org.neo4j.cypher.internal.ast.Statement
-import org.neo4j.cypher.internal.ast.semantics.SemanticFeature.Cypher9Comparability
 import org.neo4j.cypher.internal.ast.semantics.SemanticFeature.MultipleDatabases
-import org.neo4j.cypher.internal.ast.semantics.SemanticState
 import org.neo4j.cypher.internal.compiler.phases.CompilationPhases
 import org.neo4j.cypher.internal.compiler.phases.CompilationPhases.ParsingConfig
 import org.neo4j.cypher.internal.compiler.test_helpers.ContextHelper
@@ -42,7 +40,7 @@ trait FullyParsedQueryTestSupport {
     )
 
   private val semanticAnalysis =
-    SemanticAnalysis(warn = true, Cypher9Comparability, MultipleDatabases).adds(BaseContains[SemanticState]) andThen
+    SemanticAnalysis(warn = true, MultipleDatabases).adds(BaseContains[SemanticState]) andThen
       AstRewriting(RewriterStepSequencer.newPlain, IfNoParameter, innerVariableNamer = new GeneratingNamer())
 
   def prepare(query: Statement, options: QueryOptions = QueryOptions.default) =

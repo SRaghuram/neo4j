@@ -5,6 +5,7 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import java.util
 import java.util.concurrent.TimeUnit
 
 import com.neo4j.cypher.RunWithConfigTestSupport
@@ -34,6 +35,14 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     result.toList should equal(List(Map("t<f" -> false, "t>f" -> true)))
+  }
+
+  test("should type check param list accesses in inequalities") {
+    val nodes = for(i <- 0 to 30) yield createLabeledNode(Map("id" -> i), "User")
+    val q = "MATCH (user:User) WHERE ($range[0] > user.id OR user.id > $range[1]) RETURN user"
+    val p = Map("range" -> util.Arrays.asList(10, 20))
+    val r = executeSingle(q, p)
+    r.toList should contain theSameElementsAs (nodes.take(10) ++ nodes.reverse.take(10)).map(u => Map("user" -> u))
   }
 
   test("order by after projection") {
