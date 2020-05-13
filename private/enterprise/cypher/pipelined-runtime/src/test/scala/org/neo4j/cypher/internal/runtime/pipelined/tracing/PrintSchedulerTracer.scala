@@ -19,9 +19,9 @@ class PrintSchedulerTracer() extends SchedulerTracer {
   case class QueryTracer() extends QueryExecutionTracer {
     print(s"START $this\n")
 
-    override def scheduleWorkUnit(workId: WorkIdentity, upstreamWorkUnits: Seq[WorkUnitEvent]): ScheduledWorkUnitEvent = {
+    override def scheduleWorkUnit(workId: WorkIdentity, upstreamWorkUnit: WorkUnitEvent): ScheduledWorkUnitEvent = {
       val schedulingThread = Thread.currentThread().getId
-      val upstreamWorkUnitIds = upstreamWorkUnits.map(_.id)
+      val upstreamWorkUnitIds = Option(upstreamWorkUnit).map(_.id).toList
       val swu = ScheduledWorkUnit(upstreamWorkUnitIds, schedulingThread, workId)
       print(s"SCHEDULE $swu\n")
       swu

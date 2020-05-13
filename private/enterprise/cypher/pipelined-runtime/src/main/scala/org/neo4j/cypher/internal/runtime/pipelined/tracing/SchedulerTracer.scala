@@ -25,7 +25,7 @@ trait QueryExecutionTracer {
   /**
     * Trace the scheduling of a work unit for this query execution
     */
-  def scheduleWorkUnit(workId: WorkIdentity, upstreamWorkUnitEvents: Seq[WorkUnitEvent]): ScheduledWorkUnitEvent
+  def scheduleWorkUnit(workId: WorkIdentity, upstreamWorkUnitEvent: WorkUnitEvent): ScheduledWorkUnitEvent
 
   /**
     * End of query execution
@@ -64,7 +64,7 @@ object SchedulerTracer {
   val NoSchedulerTracer: SchedulerTracer = () => NoQueryExecutionTracer
 
   val NoQueryExecutionTracer: QueryExecutionTracer = new QueryExecutionTracer {
-    override def scheduleWorkUnit(workId: WorkIdentity, upstreamWorkUnitEvents: Seq[WorkUnitEvent]): ScheduledWorkUnitEvent = NoScheduledWorkUnitEvent
+    override def scheduleWorkUnit(workId: WorkIdentity, upstreamWorkUnitEvent: WorkUnitEvent): ScheduledWorkUnitEvent = NoScheduledWorkUnitEvent
     override def stopQuery(): Unit = {}
   }
 

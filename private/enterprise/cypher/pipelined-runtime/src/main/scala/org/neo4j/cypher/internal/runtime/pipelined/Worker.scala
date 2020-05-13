@@ -129,7 +129,7 @@ class Worker(val workerId: Int,
       DebugSupport.WORKERS.log("[WORKER%2d] working on %s of %s", workerId, task, executingQuery)
 
       sleeper.reportStartWorkUnit()
-      workUnitEvent = executingQuery.queryExecutionTracer.scheduleWorkUnit(task, upstreamWorkUnitEvents(task)).start()
+      workUnitEvent = executingQuery.queryExecutionTracer.scheduleWorkUnit(task, upstreamWorkUnitEvent(task)).start()
       preparedOutput = task.executeWorkUnit(resources, workUnitEvent, executingQuery.workersQueryProfiler.queryProfiler(workerId))
     } finally {
       if (workUnitEvent != null) {
@@ -181,16 +181,16 @@ class Worker(val workerId: Int,
     true
   }
 
-  private def upstreamWorkUnitEvents(task: PipelineTask): Seq[WorkUnitEvent] = {
+  private def upstreamWorkUnitEvent(task: PipelineTask): WorkUnitEvent = {
     val upstreamWorkUnitEvent = task.startTask.producingWorkUnitEvent
-    if (upstreamWorkUnitEvent != null) Array(upstreamWorkUnitEvent) else Worker.NO_WORK
+    if (upstreamWorkUnitEvent != null) upstreamWorkUnitEvent else Worker.NO_WORK
   }
 
   override def toString: String = s"Worker[$workerId, ${sleeper.statusString}]"
 }
 
 object Worker {
-  val NO_WORK: Seq[WorkUnitEvent] = Array.empty[WorkUnitEvent]
+  val NO_WORK: WorkUnitEvent = null
 
   def WORKING_THOUGH_RELEASED(worker: Worker): String =
     s"$worker is WORKING even though all resources should be released!"

@@ -18,8 +18,8 @@ class ComposingSchedulerTracer(val inners: SchedulerTracer*) extends SchedulerTr
 }
 
 class ComposingQueryExecutionTracer(inners: Seq[QueryExecutionTracer]) extends QueryExecutionTracer {
-  override def scheduleWorkUnit(workId: WorkIdentity, upstreamWorkUnitEvents: Seq[WorkUnitEvent]): ScheduledWorkUnitEvent = {
-    new ComposingScheduledWorkUnitEvent(inners.map(_.scheduleWorkUnit(workId, upstreamWorkUnitEvents)))
+  override def scheduleWorkUnit(workId: WorkIdentity, upstreamWorkUnitEvent: WorkUnitEvent): ScheduledWorkUnitEvent = {
+    new ComposingScheduledWorkUnitEvent(inners.map(_.scheduleWorkUnit(workId, upstreamWorkUnitEvent)))
   }
 
   override def stopQuery(): Unit = inners.foreach(_.stopQuery())

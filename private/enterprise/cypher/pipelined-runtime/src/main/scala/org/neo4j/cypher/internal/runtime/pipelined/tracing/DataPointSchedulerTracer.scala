@@ -28,11 +28,11 @@ class DataPointSchedulerTracer(dataPointWriter: DataPointWriter) extends Schedul
     QueryTracer(queryCounter.incrementAndGet())
 
   case class QueryTracer(queryId: Int) extends QueryExecutionTracer {
-    override def scheduleWorkUnit(workId: WorkIdentity, upstreamWorkUnits: Seq[WorkUnitEvent]): ScheduledWorkUnitEvent = {
+    override def scheduleWorkUnit(workId: WorkIdentity, upstreamWorkUnit: WorkUnitEvent): ScheduledWorkUnitEvent = {
       val scheduledTime = currentTime()
       val schedulingThread = Thread.currentThread().getId
       val workUnitId = newWorkUnitId(schedulingThread)
-      val upstreamWorkUnitIds = upstreamWorkUnits.map(_.id)
+      val upstreamWorkUnitIds = Option(upstreamWorkUnit).map(_.id).toList
       ScheduledWorkUnit(workUnitId, upstreamWorkUnitIds, queryId, scheduledTime, schedulingThread, workId)
     }
 

@@ -16,9 +16,9 @@ class VerifyingSchedulerTracer(verifier: TracerVerifier) extends SchedulerTracer
   }
   class VerifyingQueryExecutionTracer(queryId: Long) extends QueryExecutionTracer {
     private var workUnitId = -1
-    override def scheduleWorkUnit(workId: WorkIdentity, upstreamWorkUnitEvents: Seq[WorkUnitEvent]): ScheduledWorkUnitEvent = {
+    override def scheduleWorkUnit(workId: WorkIdentity, upstreamWorkUnitEvent: WorkUnitEvent): ScheduledWorkUnitEvent = {
       workUnitId += 1
-      val upstreamIds = upstreamWorkUnitEvents.map(_.id)
+      val upstreamIds = Option(upstreamWorkUnitEvent).map(_.id).toList
       verifier(TASK_SCHEDULE(queryId, workId, workUnitId, upstreamIds))
       new VerifyingScheduledWorkUnitEvent(queryId, workId, workUnitId)
     }
