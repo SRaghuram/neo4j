@@ -538,19 +538,18 @@ class SlottedPipeMapper(fallback: PipeMapper,
           NodeHashJoinSlottedPipe(leftNodes, rightNodes, lhs, rhs, slots, longsToCopy, refsToCopy, cachedPropertiesToCopy)(id)
         }
 
-      case ValueHashJoin(lhsPlan, _, Equals(lhsAstExp, rhsAstExp)) =>
+      case ValueHashJoin(lhsPlan, rhsPlan, Equals(lhsAstExp, rhsAstExp)) =>
         val argumentSize = physicalPlan.argumentSizes(plan.id)
         val lhsCmdExp = convertExpressions(lhsAstExp)
         val rhsCmdExp = convertExpressions(rhsAstExp)
-        val lhsSlots = slotConfigs(lhsPlan.id)
-        val longOffset = lhsSlots.numberOfLongs
-        val refOffset = lhsSlots.numberOfReferences
+        val rhsSlots = slotConfigs(rhsPlan.id)
 
         // Verify the assumption that the only shared slots we have are arguments which are identical on both lhs and rhs.
         // This assumption enables us to use array copy within ValueHashJoin.
-        checkOnlyWhenAssertionsAreEnabled(verifyOnlyArgumentsAreSharedSlots(plan, physicalPlan))
+        checkOnlyWhenAssertionsAreEnabled(verifyArgumentsAreTheSameOnBothSides(plan, physicalPlan))
+        val (longsToCopy, refsToCopy, cachedPropertiesToCopy) = computeSlotsToCopy(rhsSlots, argumentSize, slots)
 
-        ValueHashJoinSlottedPipe(lhsCmdExp, rhsCmdExp, lhs, rhs, slots, longOffset, refOffset, argumentSize)(id)
+        ValueHashJoinSlottedPipe(lhsCmdExp, rhsCmdExp, lhs, rhs, slots, longsToCopy, refsToCopy, cachedPropertiesToCopy)(id)
 
       case ConditionalApply(_, _, items) =>
         val (longIds , refIds) = items.partition(idName => slots.get(idName) match {
