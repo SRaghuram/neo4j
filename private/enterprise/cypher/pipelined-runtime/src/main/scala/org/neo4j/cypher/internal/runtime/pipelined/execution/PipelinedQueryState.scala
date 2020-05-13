@@ -64,6 +64,8 @@ case class PipelinedQueryState(queryContext: QueryContext,
       resources.expressionVariables(nExpressionSlots),
       subscriber,
       NoMemoryTracker,
-      pipeDecorator)
+      pipeDecorator,
+      initialContext = None,
+      cachedIn = cachedIn)
   }
 }
