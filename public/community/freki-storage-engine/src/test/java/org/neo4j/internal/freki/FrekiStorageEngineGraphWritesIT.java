@@ -1345,14 +1345,14 @@ class FrekiStorageEngineGraphWritesIT
         } );
 
         assertContentsOfNode( nodeId, LongSets.immutable.empty(), properties, relationships );
-        assertXLChainLength( nodeId, 2, false );
+        assertXLChainLength( nodeId, 2, false, true );
     }
 
     @TestFactory
     Collection<DynamicTest> shouldHandlePermutationsOfDataBlocksXLChains()
     {
         List<DynamicTest> tests = new ArrayList<>();
-        Set<Double> fillRates = Set.of( 0d, 0.8d/*, 1.5d, 3.5d*/);
+        Set<Double> fillRates = Set.of( 0d, 0.8d, 1.5d, 3.5d );
         for ( double labelsFillRate : fillRates )
         {
             for ( double propertiesFillRate : fillRates )
@@ -1362,7 +1362,7 @@ class FrekiStorageEngineGraphWritesIT
                     double totalSize = labelsFillRate + propertiesFillRate + degreesFillRate;
                     if ( totalSize > .1 ) //skip case with no fill
                     {
-                        tests.add( createXLChainTest( labelsFillRate, propertiesFillRate, degreesFillRate ) );
+                        tests.add( createXLChainTest( labelsFillRate, propertiesFillRate, Double.min( 0.8D, degreesFillRate ) ) );
                     }
                 }
             }
@@ -1403,22 +1403,25 @@ class FrekiStorageEngineGraphWritesIT
                 double degSize = x8Size * degreesXLFill;
                 int numRelsOfDifferentType = (int) (degSize / 6);
 
-                long node = 1;
+                MutableLong nodeId = new MutableLong();
                 shouldGenerateIndexUpdates( target -> { /* do nothing */ }, target ->
                 {
+                    CommandCreationContext txContext = storageEngine.newCommandCreationContext( NULL, EmptyMemoryTracker.INSTANCE );
+                    long node = txContext.reserveNode();
+                    nodeId.setValue( node );
                     target.visitCreatedNode( node );
                     target.visitNodeLabelChanges( node, labels, LongSets.immutable.empty() );
                     target.visitNodePropertyChanges( node, properties, Collections.emptyList(), IntSets.immutable.empty() );
                     if ( numRelsOfDifferentType > 0 )
                     {
-                        long otherNode = node + 1;
+                        long otherNode = txContext.reserveNode();
                         target.visitCreatedNode( otherNode );
                         int relPad = x8Size / 2;
                         int relType = 0;
                         for ( int i = 0; i < numRelsOfDifferentType + relPad; i++ )
                         {
                             //only one rel/type ensures big degrees block
-                            RelationshipSpec relationshipSpec = new RelationshipSpec( node, relType, otherNode, emptySet(), commandCreationContext );
+                            RelationshipSpec relationshipSpec = new RelationshipSpec( node, relType, otherNode, emptySet(), txContext );
                             relationships.add( relationshipSpec );
                             relationshipSpec.create( target );
 
@@ -1428,9 +1431,9 @@ class FrekiStorageEngineGraphWritesIT
                             }
                         }
                     }
-                }, index -> asSet( IndexEntryUpdate.add( node, index, before.value()) ) );
-                assertContentsOfNode( node, labels, properties, relationships );
-                assertXLChainLength( node, (int) (labelXLFill + propertiesXLFill + degreesXLFill + 0.65), degreesXLFill > 1e-3);
+                }, index -> asSet( IndexEntryUpdate.add( nodeId.longValue(), index, before.value()) ) );
+                assertContentsOfNode( nodeId.longValue(), labels, properties, relationships );
+                assertXLChainLength( nodeId.longValue(), (int) (labelXLFill + propertiesXLFill + degreesXLFill + 0.65), degreesXLFill > 1e-3, false );
             }
 
             @Override
@@ -1673,7 +1676,7 @@ class FrekiStorageEngineGraphWritesIT
         }
     }
 
-    private void assertXLChainLength( long nodeId, int expectedLength, boolean expectedDense )
+    private void assertXLChainLength( long nodeId, int expectedLength, boolean expectedDense, boolean exactLengthMatch )
     {
         try ( var storageReader = storageEngine.newReader();
                 var nodeCursor = storageReader.allocateNodeCursor( NULL ) )
@@ -1688,7 +1691,14 @@ class FrekiStorageEngineGraphWritesIT
             {
                 actualChainLength++;
             }
-            assertThat( actualChainLength ).isEqualTo( expectedLength );
+            if ( exactLengthMatch )
+            {
+                assertThat( actualChainLength ).isEqualTo( expectedLength );
+            }
+            else
+            {
+                assertThat( actualChainLength ).isGreaterThanOrEqualTo( expectedLength );
+            }
         }
     }
 

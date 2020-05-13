@@ -222,11 +222,11 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
                 throw new IllegalStateException(
                         "Wanted to follow forward pointer " + recordPointerToString( forwardPointer ) + ", but ended up on an unused record" );
             }
-            ByteBuffer nextBuffer = record.data();
-            header.deserialize( nextBuffer );
+            buffer = record.data();
+            header.deserialize( buffer );
             if ( header.hasMark( headerSlot ) )
             {
-                return nextBuffer.position( header.getOffset( headerSlot ) );
+                return buffer.position( header.getOffset( headerSlot ) );
             }
             // else there could be another record in between the pieces for this data part, so just skip on through it
         }

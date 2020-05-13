@@ -394,22 +394,17 @@ class GraphUpdates
 
             //split chain header into individual headers
             boolean canFitInSingleXL = (xLHeader.hasMark( Header.FLAG_LABELS ) ? intermediateBuffers[LABELS].totalSize() : 0) +
-                    (xLHeader.hasMark( Header.OFFSET_PROPERTIES ) ? intermediateBuffers[PROPERTIES].currentSize() : 0) +
+                    (xLHeader.hasMark( Header.OFFSET_PROPERTIES ) ? intermediateBuffers[PROPERTIES].totalSize() : 0) +
                     (xLHeader.hasMark( Header.OFFSET_RELATIONSHIPS ) ? relsSize : 0) +
-                    (xLHeader.hasMark( Header.OFFSET_DEGREES ) ? intermediateBuffers[DEGREES].currentSize() : 0) +
+                    (xLHeader.hasMark( Header.OFFSET_DEGREES ) ? intermediateBuffers[DEGREES].totalSize() : 0) +
                     (xLHeader.hasMark( Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID ) ?
-                            intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].currentSize() : 0) + xLHeader.spaceNeeded() +
+                            intermediateBuffers[NEXT_INTERNAL_RELATIONSHIP_ID].totalSize() : 0) + xLHeader.spaceNeeded() +
                     DUAL_VLONG_MAX_SIZE <= stores.largestMainStore().recordDataSize();
 
             long forwardPointer = NULL;
             long backwardPointer = buildRecordPointer( 0, nodeId );
             if ( !canFitInSingleXL )
             {
-                for ( int i = 0; i < intermediateBuffers.length; i++ )
-                {
-                    intermediateBuffers[i].seekFromEnd(); //start at the end for more efficient packing, then seek backwards.
-                }
-
                 Header chainHeader = Header.shallowCopy( xLHeader );
                 //Unmark common offsets for each link
                 chainHeader.mark( Header.OFFSET_END, false );
@@ -543,7 +538,7 @@ class GraphUpdates
                 if ( partSize <= spaceLeftInXL - linkHeader.spaceNeeded() )
                 {
                     spaceLeftInXL -= partSize;
-                    boolean lastBuffer = !intermediateBuffer.prev();
+                    boolean lastBuffer = !intermediateBuffer.next();
                     if ( lastBuffer )
                     {
                         // The last buffer of this part has now been included into chains
@@ -578,7 +573,7 @@ class GraphUpdates
             if ( header.hasMark( Header.FLAG_LABELS ) )
             {
                 into.put( intermediateBuffers[LABELS].get() );
-                intermediateBuffers[LABELS].next();
+                intermediateBuffers[LABELS].prev();
             }
             if ( header.hasMark( Header.OFFSET_RECORD_POINTER ) )
             {
@@ -603,7 +598,7 @@ class GraphUpdates
             {
                 header.setOffset( slot, into.position() );
                 into.put( part.get() );
-                part.next();
+                part.prev();
             }
         }
 

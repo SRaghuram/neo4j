@@ -46,21 +46,12 @@ class IntermediateBuffer
         {
             buffers.add( newBuffer() );
         }
-        return buffers.get( count++ ).clear().limit( bufferCapacity );
+        return clearBuffer( buffers.get( count++ ) );
     }
 
-    void seekFromEnd()
+    private ByteBuffer clearBuffer( ByteBuffer buffer )
     {
-        readIndex = count - 1;
-    }
-
-    /**
-     * @return {@code true} if there are more buffers after this one, otherwise {@code false} if there were no more buffers to go to.
-     */
-    boolean next()
-    {
-        assert readIndex < count;
-        return ++readIndex < count;
+        return buffer.clear().limit( bufferCapacity );
     }
 
     /**
@@ -68,9 +59,24 @@ class IntermediateBuffer
      */
     boolean prev()
     {
+        assert readIndex < count && readIndex >= 0;
         if ( readIndex > 0 )
         {
             readIndex--;
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @return {@code true} if there are more buffers after this one, otherwise {@code false} if there were no more buffers to go to.
+     */
+    boolean next()
+    {
+        assert readIndex < count && readIndex >= 0;
+        if ( readIndex + 1 < count )
+        {
+            readIndex++;
             return true;
         }
         return false;
@@ -80,7 +86,6 @@ class IntermediateBuffer
     {
         // We iterate over the buffers backwards because the last one will likely be the smallest and so has a higher
         // chance to be packed together with other small parts in the same record.
-        int readIndex = this.readIndex;
         assert readIndex <= count;
         return buffers.get( readIndex );
     }
@@ -111,7 +116,7 @@ class IntermediateBuffer
         {
             tempBuffer = newBuffer();
         }
-        return tempBuffer.clear();
+        return clearBuffer( tempBuffer );
     }
 
     IntermediateBuffer clear()

@@ -26,6 +26,8 @@ import java.nio.ByteBuffer;
 
 import org.neo4j.io.pagecache.PageCursor;
 
+import static java.lang.Integer.min;
+
 class StreamVByte
 {
     private static final int[] INT_RELATIVE_OFFSETS = new int[256];
@@ -38,6 +40,7 @@ class StreamVByte
     private static final long LONG_BYTE_SIZE_3 = 1L << (LONG_CODE_SIZES[3] * Byte.SIZE);
     static final int SINGLE_VLONG_MAX_SIZE = LONG_CODE_SIZES[LONG_CODE_SIZES.length - 1] + 1;
     static final int DUAL_VLONG_MAX_SIZE = LONG_CODE_SIZES[LONG_CODE_SIZES.length - 1] * 2 + 1;
+    private static final int MAX_COUNT = 0x3FFF;
 
     static
     {
@@ -80,7 +83,7 @@ class StreamVByte
 
     static void writeInts( Writer writer, ByteBuffer buffer, boolean deltas, int worstCaseNumValues )
     {
-        writer.initialize( buffer, deltas, INT_CODE_SIZES, INT_ENCODER, worstCaseNumValues );
+        writer.initialize( buffer, deltas, INT_CODE_SIZES, INT_ENCODER, min( MAX_COUNT, worstCaseNumValues ) );
     }
 
     static int[] readInts( ByteBuffer buffer, boolean deltas )
@@ -378,7 +381,7 @@ class StreamVByte
 
     private static int figureOutCountHeaderSize( int count )
     {
-        assert count <= 0x3FFF;
+        assert count <= MAX_COUNT;
         if ( count <= 2 )
         {   // doesn't use an additional byte, instead shares with the single header byte
             return 0;
@@ -390,7 +393,7 @@ class StreamVByte
 
     private static void writeCountHeader( int count, byte[] bytes, int offset, int style, boolean additive )
     {
-        assert count <= 0x3FFF;
+        assert count <= MAX_COUNT;
         if ( style == 0 )
         {
             // [1_cc,bbaa]
@@ -558,6 +561,16 @@ class StreamVByte
             headerShift += 2;
             count++;
             return true;
+        }
+
+        /**
+         * The added work of constantly updating the position in {@link ByteBuffer} is avoided when writing values, so if the position is
+         * requested before {@link #done()} has been called then this accessor provdes the correct offset instead.
+         * @return the current writer position into the buffer.
+         */
+        int position()
+        {
+            return offset;
         }
 
         void undoLastWrite()

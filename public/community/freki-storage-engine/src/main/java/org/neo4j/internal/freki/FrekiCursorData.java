@@ -56,6 +56,7 @@ class FrekiCursorData
     boolean labelIsSplit;
     int propertyOffset;
     private ByteBuffer propertyBuffer;
+    boolean propertyIsSplit;
     int relationshipOffset;
     int relationshipTypeOffsetsOffset;
     private ByteBuffer relationshipBuffer;
@@ -104,16 +105,17 @@ class FrekiCursorData
         {
             isDense = true;
         }
-        if ( header.hasMark( FLAG_LABELS ) )
+        if ( labelOffset == 0 && header.hasMark( FLAG_LABELS ) )
         {
             labelOffset = buffer.position();
             labelBuffer = buffer;
             labelIsSplit = header.hasReferenceMark( FLAG_LABELS );
         }
-        if ( header.hasMark( OFFSET_PROPERTIES ) )
+        if ( propertyOffset == 0 && header.hasMark( OFFSET_PROPERTIES ) )
         {
             propertyOffset = header.getOffset( OFFSET_PROPERTIES );
             propertyBuffer = buffer;
+            propertyIsSplit = header.hasReferenceMark( OFFSET_PROPERTIES );
         }
         if ( header.hasMark( OFFSET_RELATIONSHIPS ) )
         {
@@ -121,7 +123,7 @@ class FrekiCursorData
             relationshipBuffer = buffer;
             relationshipTypeOffsetsOffset = header.getOffset( OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
         }
-        if ( header.hasMark( OFFSET_DEGREES ) )
+        if ( relationshipOffset == 0 && header.hasMark( OFFSET_DEGREES ) )
         {
             relationshipOffset = header.getOffset( OFFSET_DEGREES );
             relationshipBuffer = buffer;
@@ -153,11 +155,6 @@ class FrekiCursorData
         return relationshipBuffer.position( offset );
     }
 
-    ByteBuffer degreesBuffer()
-    {
-        return relationshipBuffer();
-    }
-
     boolean isLoaded()
     {
         return x1Loaded | xLChainLoaded;
@@ -176,6 +173,7 @@ class FrekiCursorData
         labelOffset = 0;
         labelIsSplit = false;
         propertyOffset = 0;
+        propertyIsSplit = false;
         relationshipOffset = 0;
         relationshipTypeOffsetsOffset = 0;
     }

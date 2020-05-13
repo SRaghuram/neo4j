@@ -727,7 +727,7 @@ class MutableNodeData
             boolean couldWriteKey = keyWriter.writeNext( propertyKey );
             assert couldWriteKey;
             properties.get( propertyKey ).writeTo( valueWriter );
-            if ( buffer.position() + valueBuffer.position() <= buffer.limit() )
+            if ( keyWriter.position() + valueBuffer.position() <= buffer.limit() )
             {
                 i++;
                 completedValuePos = valueBuffer.position();

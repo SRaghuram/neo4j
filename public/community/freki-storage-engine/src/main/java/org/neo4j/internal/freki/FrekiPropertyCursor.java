@@ -178,8 +178,15 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
                 }
             }
 
-            propertyKeyIndex++;
-            if ( propertyKeyIndex >= propertyKeyArray.length )
+            boolean hasNextProperty = ++propertyKeyIndex < propertyKeyArray.length;
+            if ( !hasNextProperty && data.propertyIsSplit && readPropertyKeys( buffer = loadNextSplitPiece( buffer, Header.OFFSET_PROPERTIES ) ) )
+            {
+                hasNextProperty = true;
+                assert propertyKeyArray.length > 0;
+                propertyKeyIndex++;
+            }
+
+            if ( !hasNextProperty )
             {
                 propertyKeyIndex = -1;
             }

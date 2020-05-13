@@ -74,10 +74,18 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
             while ( (buffer = loadNextSplitPiece( buffer, Header.FLAG_LABELS )) != null )
             {
                 long[] moreLabels = (long[]) readInts( buffer, true, LONG_CREATOR, LONG_CONSUMER );
-                labels = addAll( moreLabels, labels );
+                labels = addAll( labels, moreLabels );
             }
         }
+        assert isOrdered( labels );
         return labels;
+    }
+
+    private static boolean isOrdered( long[] labels )
+    {
+        long[] sorted = labels.clone();
+        Arrays.sort( sorted );
+        return Arrays.equals( labels, sorted );
     }
 
     @Override
