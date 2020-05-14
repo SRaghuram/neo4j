@@ -23,7 +23,7 @@ import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.exceptions.EntityNotFoundException
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.fabric.FabricTest
-import org.neo4j.fabric.ProcedureRegistryTestSupport
+import org.neo4j.fabric.ProcedureSignatureResolverTestSupport
 import org.neo4j.fabric.config.FabricConfig
 import org.neo4j.fabric.eval.Catalog
 import org.neo4j.fabric.eval.Catalog.ExternalGraph
@@ -34,6 +34,7 @@ import org.neo4j.fabric.eval.UseEvaluation
 import org.neo4j.fabric.pipeline.SignatureResolver
 import org.neo4j.kernel.database.DatabaseIdFactory
 import org.neo4j.kernel.database.NamedDatabaseId
+import org.neo4j.procedure.impl.GlobalProceduresRegistry
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.MapValue
@@ -43,7 +44,10 @@ import org.scalatest.mockito.MockitoSugar
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.mutable
 
-class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport with TestName {
+class UseEvaluationTest
+  extends FabricTest
+    with ProcedureSignatureResolverTestSupport
+    with TestName {
 
   private val mega0 = new Graph(0L, FabricEnterpriseConfig.RemoteUri.create("bolt://mega:1111"), "neo4j", new NormalizedGraphName("source_of_all_truth"), null)
   private val mega1 = new Graph(1L, FabricEnterpriseConfig.RemoteUri.create("bolt://mega:2222"), "neo4j", null, null)
@@ -116,6 +120,12 @@ class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport wit
     private val databaseManagementService = MockitoSugar.mock[DatabaseManagementService]
     private val catalogManager = new EnterpriseSingleCatalogManager(databaseLookup, databaseManagementService, config)
     private val catalog = catalogManager.currentCatalog()
+    private val procedures = {
+      val reg = new GlobalProceduresRegistry()
+      callableProcedures.foreach(reg.register)
+      callableUseFunctions.foreach(reg.register)
+      reg
+    }
     private val signatures = new SignatureResolver(() => procedures)
     private val staticEvaluator = new StaticEvaluation.StaticEvaluator(() => procedures)
 
