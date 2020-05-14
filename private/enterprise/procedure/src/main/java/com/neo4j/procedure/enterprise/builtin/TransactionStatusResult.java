@@ -83,7 +83,7 @@ public class TransactionStatusResult
         if ( querySnapshot.isPresent() )
         {
             QuerySnapshot snapshot = querySnapshot.get();
-            this.currentQueryId = new DbmsQueryId( database, snapshot.internalQueryId() ).toString();
+            this.currentQueryId = new QueryId( snapshot.internalQueryId() ).toString();
             this.currentQuery = snapshot.obfuscatedQueryText().orElse( null );
         }
         else

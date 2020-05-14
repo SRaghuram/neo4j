@@ -245,10 +245,10 @@ class ProcedureResourcesIT
             proc.withParam( "'OtherLabel'" );
             break;
         case "dbms.killQuery":
-            proc.withParam( "'database-query-1234'" );
+            proc.withParam( "'query-1234'" );
             break;
         case "dbms.killQueries":
-            proc.withParam( "['database-query-1234']" );
+            proc.withParam( "['query-1234']" );
             break;
         case "dbms.killConnection":
             proc.withParam( "'bolt-1234'" );
@@ -266,7 +266,7 @@ class ProcedureResourcesIT
             proc.withParam( "{realUser:'MyMan'}" );
             break;
         case "dbms.listActiveLocks":
-            proc.withParam( "'database-query-1234'" );
+            proc.withParam( "'query-1234'" );
             break;
         case "dbms.setConfigValue":
             proc.withParam( "'dbms.logs.query.enabled'" );

@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.procedure.enterprise.builtin.DbmsQueryId;
+import com.neo4j.procedure.enterprise.builtin.QueryId;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.eclipse.jetty.server.Request;
@@ -2460,7 +2460,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     private static Matcher<Map<String,Object>> hasQueryId()
     {
         Matcher<String> queryId = equalTo( "queryId" );
-        Matcher<String> valueMatcher = allOf( isA( String.class ), containsString( DbmsQueryId.QUERY_ID_SEPARATOR ) );
+        Matcher<String> valueMatcher = allOf( isA( String.class ), containsString( QueryId.PREFIX ) );
         Matcher<?> queryIdMatcher = hasEntry( queryId, valueMatcher );
         return (Matcher<Map<String,Object>>) queryIdMatcher;
     }

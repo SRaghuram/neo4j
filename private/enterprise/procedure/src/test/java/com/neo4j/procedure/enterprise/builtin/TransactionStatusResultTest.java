@@ -82,7 +82,7 @@ class TransactionStatusResultTest
         TransactionStatusResult statusResult =
                 new TransactionStatusResult( "my-database", transactionHandle, blockerResolver, snapshotsMap, ZoneId.of( "UTC" ) );
 
-        checkTransactionStatus( statusResult, "testQuery", "my-database-query-7", "1970-01-01T00:00:01.984Z" );
+        checkTransactionStatus( statusResult, "testQuery", "query-7", "1970-01-01T00:00:01.984Z" );
     }
 
     @Test
@@ -102,7 +102,7 @@ class TransactionStatusResultTest
         TransactionStatusResult statusResult =
                 new TransactionStatusResult( "my-database", transactionHandle, blockerResolver, snapshotsMap, ZoneId.of( "UTC+1" ) );
 
-        checkTransactionStatus( statusResult, "testQuery", "my-database-query-7", "1970-01-01T01:00:01.984+01:00" );
+        checkTransactionStatus( statusResult, "testQuery", "query-7", "1970-01-01T01:00:01.984+01:00" );
     }
 
     @Test

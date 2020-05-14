@@ -65,7 +65,7 @@ public class DataCollectorObfuscationIT extends ProcedureInteractionTestBase<Ent
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.suspendUser('userB')" );
         assertSystemCommandSuccess( adminSubject, "call dbms.security.listRoles()", ResourceIterator::close );
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.createRole('monkey')" );
-        assertSuccess( adminSubject, "CALL dbms.killQuery('database-query-1234')", ResourceIterator::close );
+        assertSuccess( adminSubject, "CALL dbms.killQuery('query-1234')", ResourceIterator::close );
         assertEmpty( adminSubject, "CALL tx.setMetaData({prop: 'itsAProp'})" );
         assertSystemCommandFail( adminSubject, format( "CALL dbms.security.changeUserPassword(null, '%s')", secret ), "" );
         assertSystemCommandFail( adminSubject, format( "CALL dbms.security.changeUserPassword('malformedUser, '%s')", secret ), "" );

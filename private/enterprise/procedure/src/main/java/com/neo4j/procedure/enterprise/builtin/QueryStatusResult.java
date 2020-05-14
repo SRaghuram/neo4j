@@ -81,7 +81,7 @@ public class QueryStatusResult
 
     private QueryStatusResult( QuerySnapshot query, TransactionalEntityFactory manager, ZoneId zoneId, String database ) throws InvalidArgumentsException
     {
-        this.queryId = new DbmsQueryId( database,query.internalQueryId() ).toString();
+        this.queryId = new QueryId( query.internalQueryId() ).toString();
         this.username = query.username();
         this.query = query.obfuscatedQueryText().orElse( null );
         this.database = database;

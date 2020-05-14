@@ -31,11 +31,13 @@ import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphComponent;
 import org.neo4j.dbms.database.SystemGraphComponents;
+import org.neo4j.fabric.executor.FabricStatementLifecycles;
+import org.neo4j.fabric.transaction.FabricTransaction;
+import org.neo4j.fabric.transaction.TransactionManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.helpers.TimeUtil;
-import org.neo4j.internal.kernel.api.procs.ProcedureCallContext;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.kernel.api.procs.UserFunctionSignature;
 import org.neo4j.internal.kernel.api.security.AdminActionOnResource;
@@ -332,6 +334,20 @@ public class EnterpriseBuiltInDbmsProcedures
 
         ZoneId zoneId = getConfiguredTimeZone();
         List<QueryStatusResult> result = new ArrayList<>();
+
+        for ( FabricTransaction tx : getFabricTransactions() )
+        {
+            for ( ExecutingQuery query : getActiveFabricQueries( tx ) )
+            {
+                String username = query.username();
+                var action = new AdminActionOnResource( PrivilegeAction.SHOW_TRANSACTION, DatabaseScope.ALL, new UserSegment( username ) );
+                if ( isSelfOrAllows( username, action ) )
+                {
+                    result.add( new QueryStatusResult( query, (InternalTransaction) transaction, zoneId, "none" ) );
+                }
+            }
+        }
+
         for ( DatabaseContext databaseContext : getDatabaseManager().registeredDatabases().values() )
         {
             DatabaseScope dbScope = new DatabaseScope( databaseContext.database().getNamedDatabaseId().name() );
@@ -488,33 +504,27 @@ public class EnterpriseBuiltInDbmsProcedures
     {
         securityContext.assertCredentialsNotExpired();
 
-        DbmsQueryId dbmsQueryId = new DbmsQueryId( queryIdText );
+        QueryId queryId = QueryId.parse( queryIdText );
 
         DatabaseManager<DatabaseContext> databaseManager = getDatabaseManager();
-        DatabaseIdRepository databaseIdRepository = databaseManager.databaseIdRepository();
-        Optional<NamedDatabaseId> maybeNamedDatabaseId = databaseIdRepository.getByName( dbmsQueryId.database() );
-        if ( maybeNamedDatabaseId.isPresent() )
+        for ( Map.Entry<NamedDatabaseId,DatabaseContext> databaseEntry : databaseManager.registeredDatabases().entrySet() )
         {
-            NamedDatabaseId namedDatabaseId = maybeNamedDatabaseId.get();
-            Optional<DatabaseContext> maybeDatabaseContext = databaseManager.getDatabaseContext( namedDatabaseId );
-            if ( maybeDatabaseContext.isPresent() )
+            NamedDatabaseId databaseId = databaseEntry.getKey();
+            DatabaseContext databaseContext = databaseEntry.getValue();
+            for ( KernelTransactionHandle tx : getExecutingTransactions( databaseContext ) )
             {
-                DatabaseContext databaseContext = maybeDatabaseContext.get();
-                for ( KernelTransactionHandle tx : getExecutingTransactions( databaseContext ) )
+                if ( tx.executingQuery().isPresent() )
                 {
-                    if ( tx.executingQuery().isPresent() )
+                    ExecutingQuery query = tx.executingQuery().get();
+                    if ( query.internalQueryId() == queryId.internalId() )
                     {
-                        ExecutingQuery query = tx.executingQuery().get();
-                        if ( query.internalQueryId() == dbmsQueryId.internalId() )
+                        if ( isAdminOrSelf( query.username() ) )
                         {
-                            if ( isAdminOrSelf( query.username() ) )
-                            {
-                                return tx.activeLocks().map( ActiveLocksResult::new );
-                            }
-                            else
-                            {
-                                throw new AuthorizationViolationException( PERMISSION_DENIED );
-                            }
+                            return tx.activeLocks().map( ActiveLocksResult::new );
+                        }
+                        else
+                        {
+                            throw new AuthorizationViolationException( PERMISSION_DENIED );
                         }
                     }
                 }
@@ -541,41 +551,48 @@ public class EnterpriseBuiltInDbmsProcedures
         DatabaseManager<DatabaseContext> databaseManager = getDatabaseManager();
         DatabaseIdRepository databaseIdRepository = databaseManager.databaseIdRepository();
 
-        Set<NamedDatabaseId> affectedDatabases = new HashSet<>();
-        Set<DbmsQueryId> dbmsQueryIds = new HashSet<>( idTexts.size() );
+        Map<Long,QueryId> queryIds = new HashMap<>( idTexts.size() );
         for ( String idText : idTexts )
         {
-            DbmsQueryId id = new DbmsQueryId( idText );
-            dbmsQueryIds.add( id );
-            databaseIdRepository.getByName( id.database() ).ifPresent( affectedDatabases::add );
+            QueryId id = QueryId.parse( idText );
+            queryIds.put( id.internalId(), id );
         }
 
-        // Kill the ones we find
-        List<QueryTerminationResult> result = new ArrayList<>( dbmsQueryIds.size() );
-        for ( NamedDatabaseId databaseId : affectedDatabases )
+        List<QueryTerminationResult> result = new ArrayList<>( queryIds.size() );
+
+        for ( FabricTransaction tx : getFabricTransactions() )
         {
-            Optional<DatabaseContext> maybeDatabaseContext = databaseManager.getDatabaseContext( databaseId );
-            if ( maybeDatabaseContext.isPresent() )
+            for ( ExecutingQuery query : getActiveFabricQueries( tx ) )
             {
-                DatabaseContext databaseContext = maybeDatabaseContext.get();
-                for ( KernelTransactionHandle tx : getExecutingTransactions( databaseContext ) )
-                {
-                    DbmsQueryId internalDbmsQueryId = new DbmsQueryId(
-                            databaseContext.databaseFacade().databaseName(),
-                            tx.executingQuery().map( ExecutingQuery::internalQueryId ).orElse( -1L )
-                    );
-                    if ( dbmsQueryIds.remove( internalDbmsQueryId ) )
+                    QueryId givenQueryId = queryIds.remove( query.internalQueryId() );
+                    if ( givenQueryId != null )
                     {
-                        result.add( killQueryTransaction( internalDbmsQueryId, tx, databaseId ) );
+                        result.add( killFabricQueryTransaction( givenQueryId, tx, query ) );
+                    }
+            }
+        }
+
+        for ( Map.Entry<NamedDatabaseId,DatabaseContext> databaseEntry : databaseManager.registeredDatabases().entrySet() )
+        {
+            NamedDatabaseId databaseId = databaseEntry.getKey();
+            DatabaseContext databaseContext = databaseEntry.getValue();
+            for ( KernelTransactionHandle tx : getExecutingTransactions( databaseContext ) )
+            {
+                if ( tx.executingQuery().isPresent() )
+                {
+                    QueryId givenQueryId = queryIds.remove( tx.executingQuery().get().internalQueryId() );
+                    if ( givenQueryId != null )
+                    {
+                        result.add( killQueryTransaction( givenQueryId, tx, databaseId ) );
                     }
                 }
             }
         }
 
         // Add error about the rest
-        for ( DbmsQueryId dbmsQueryId : dbmsQueryIds )
+        for ( QueryId queryId : queryIds.values() )
         {
-            result.add( new QueryFailedTerminationResult( dbmsQueryId, "n/a", "No Query found with this id" ) );
+            result.add( new QueryFailedTerminationResult( queryId, "n/a", "No Query found with this id" ) );
         }
 
         return result.stream();
@@ -783,12 +800,30 @@ public class EnterpriseBuiltInDbmsProcedures
         return (DatabaseManager<DatabaseContext>) resolver.resolveDependency( DatabaseManager.class );
     }
 
+    private TransactionManager getFabricTransactionManager()
+    {
+        return resolver.resolveDependency( TransactionManager.class );
+    }
+
+    private Set<FabricTransaction> getFabricTransactions()
+    {
+        return getFabricTransactionManager().getOpenTransactions();
+    }
+
+    private List<ExecutingQuery> getActiveFabricQueries( FabricTransaction tx )
+    {
+        return tx.getLastSubmittedStatement().stream()
+                                            .filter( FabricStatementLifecycles.StatementLifecycle::inFabricPhase )
+                                            .map( FabricStatementLifecycles.StatementLifecycle::getMonitoredQuery )
+                                            .collect( toList() );
+    }
+
     private static Set<KernelTransactionHandle> getExecutingTransactions( DatabaseContext databaseContext )
     {
         return databaseContext.dependencies().resolveDependency( KernelTransactions.class ).executingTransactions();
     }
 
-    private QueryTerminationResult killQueryTransaction( DbmsQueryId dbmsQueryId, KernelTransactionHandle handle, NamedDatabaseId databaseId )
+    private QueryTerminationResult killQueryTransaction( QueryId queryId, KernelTransactionHandle handle, NamedDatabaseId databaseId )
     {
         Optional<ExecutingQuery> query = handle.executingQuery();
         ExecutingQuery executingQuery = query.orElseThrow( () -> new IllegalStateException( "Query should exist since we filtered based on query ids" ) );
@@ -798,10 +833,25 @@ public class EnterpriseBuiltInDbmsProcedures
         {
             if ( handle.isClosing() )
             {
-                return new QueryFailedTerminationResult( dbmsQueryId, username, "Unable to kill queries when underlying transaction is closing." );
+                return new QueryFailedTerminationResult( queryId, username, "Unable to kill queries when underlying transaction is closing." );
             }
             handle.markForTermination( Status.Transaction.Terminated );
-            return new QueryTerminationResult( dbmsQueryId, username, "Query found" );
+            return new QueryTerminationResult( queryId, username, "Query found" );
+        }
+        else
+        {
+            throw new AuthorizationViolationException( PERMISSION_DENIED );
+        }
+    }
+
+    private QueryTerminationResult killFabricQueryTransaction( QueryId queryId, FabricTransaction tx, ExecutingQuery query )
+    {
+        String username = query.username();
+        var action = new AdminActionOnResource( PrivilegeAction.TERMINATE_TRANSACTION, DatabaseScope.ALL, new UserSegment( username ) );
+        if ( isSelfOrAllows( username, action ) )
+        {
+            tx.markForTermination( Status.Transaction.Terminated );
+            return new QueryTerminationResult( queryId, username, "Query found" );
         }
         else
         {
@@ -831,9 +881,9 @@ public class EnterpriseBuiltInDbmsProcedures
         public final String username;
         public final String message;
 
-        public QueryTerminationResult( DbmsQueryId dbmsQueryId, String username, String message )
+        public QueryTerminationResult( QueryId queryId, String username, String message )
         {
-            this.queryId = dbmsQueryId.toString();
+            this.queryId = queryId.toString();
             this.username = username;
             this.message = message;
         }
@@ -841,9 +891,9 @@ public class EnterpriseBuiltInDbmsProcedures
 
     public static class QueryFailedTerminationResult extends QueryTerminationResult
     {
-        public QueryFailedTerminationResult( DbmsQueryId dbmsQueryId, String username, String message )
+        public QueryFailedTerminationResult( QueryId queryId, String username, String message )
         {
-            super( dbmsQueryId, username, message );
+            super( queryId, username, message );
         }
     }
 
