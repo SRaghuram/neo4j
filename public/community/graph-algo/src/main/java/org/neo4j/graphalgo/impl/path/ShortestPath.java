@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -174,7 +175,7 @@ public class ShortestPath implements PathFinder<Path>
     }
 
     // Few long-lived instances
-    private static class Hit
+    private static class Hit // TODO: Extend Measurable? Not if above comment about few is correct?
     {
         private final DirectionData start;
         private final DirectionData end;
@@ -249,7 +250,7 @@ public class ShortestPath implements PathFinder<Path>
                 monitorData( startSide, (otherSide == startSide) ? directionData : otherSide, nextNode );
                 // NOTE: Applying the filter-condition could give the wrong results with allShortestPaths,
                 // so only use it for singleShortestPath
-                if ( !stopAsap || filterPaths( hitToPaths( context, hit, start, end, stopAsap ) ).size() > 0 )
+                if ( !stopAsap || !filterPaths( hitToPaths( context, hit, start, end, stopAsap ) ).isEmpty() )
                 {
                     if ( hits.add( hit, depth ) >= maxResultCount )
                     {
@@ -322,7 +323,7 @@ public class ShortestPath implements PathFinder<Path>
         private int currentDepth;
         private ResourceIterator<Relationship> nextRelationships;
         private final Collection<Node> nextNodes = new ArrayList<>();
-        private final Map<Node,LevelData> visitedNodes = new HashMap<>();
+        private final Map<Node,LevelData> visitedNodes = new HashMap<>(); // TODO: Heap tracking collection?
         private final DirectionDataPath lastPath;
         private final MutableInt sharedFrozenDepth;
         private final MutableBoolean sharedStop;
@@ -534,7 +535,7 @@ public class ShortestPath implements PathFinder<Path>
     }
 
     // Many long-lived instances
-    public static class LevelData
+    public static class LevelData // TODO: Extend Measurable?
     {
         private Relationship[] relsToHere;
         public final int depth;
@@ -569,7 +570,7 @@ public class ShortestPath implements PathFinder<Path>
     // One long lived instance
     private static class Hits
     {
-        private final MutableIntObjectMap<Collection<Hit>> hits = new IntObjectHashMap<>();
+        private final MutableIntObjectMap<Collection<Hit>> hits = new IntObjectHashMap<>(); // TODO: Heap tracking collection?
         private int lowestDepth;
         private int totalHitCount;
 
@@ -629,12 +630,12 @@ public class ShortestPath implements PathFinder<Path>
     private static Collection<Path> hitToPaths( EvaluationContext context, Hit hit, Node start, Node end, boolean stopAsap )
     {
         Collection<Path> paths = new ArrayList<>();
-        Iterable<LinkedList<Relationship>> startPaths = getPaths( context, hit.connectingNode, hit.start, stopAsap );
-        Iterable<LinkedList<Relationship>> endPaths = getPaths( context, hit.connectingNode, hit.end, stopAsap );
-        for ( LinkedList<Relationship> startPath : startPaths )
+        Iterable<List<Relationship>> startPaths = getPaths( context, hit.connectingNode, hit.start, stopAsap );
+        Iterable<List<Relationship>> endPaths = getPaths( context, hit.connectingNode, hit.end, stopAsap );
+        for ( List<Relationship> startPath : startPaths )
         {
             PathImpl.Builder startBuilder = toBuilder( start, startPath );
-            for ( LinkedList<Relationship> endPath : endPaths )
+            for ( List<Relationship> endPath : endPaths )
             {
                 PathImpl.Builder endBuilder = toBuilder( end, endPath );
                 Path path = startBuilder.build( endBuilder );
@@ -644,13 +645,13 @@ public class ShortestPath implements PathFinder<Path>
         return paths;
     }
 
-    private static Iterable<LinkedList<Relationship>> getPaths( EvaluationContext context, Node connectingNode, DirectionData data,
+    private static Iterable<List<Relationship>> getPaths( EvaluationContext context, Node connectingNode, DirectionData data,
             boolean stopAsap )
     {
         LevelData levelData = data.visitedNodes.get( connectingNode );
         if ( levelData.depth == 0 )
         {
-            Collection<LinkedList<Relationship>> result = new ArrayList<>();
+            Collection<List<Relationship>> result = new ArrayList<>();
             result.add( new LinkedList<>() );
             return result;
         }
@@ -695,14 +696,14 @@ public class ShortestPath implements PathFinder<Path>
         return new IterableWrapper<>( set )
         {
             @Override
-            protected LinkedList<Relationship> underlyingObjectToObject( PathData object )
+            protected List<Relationship> underlyingObjectToObject( PathData object )
             {
                 return object.rels;
             }
         };
     }
 
-    private static Builder toBuilder( Node startNode, LinkedList<Relationship> rels )
+    private static Builder toBuilder( Node startNode, List<Relationship> rels )
     {
         PathImpl.Builder builder = new PathImpl.Builder( startNode );
         for ( Relationship rel : rels )

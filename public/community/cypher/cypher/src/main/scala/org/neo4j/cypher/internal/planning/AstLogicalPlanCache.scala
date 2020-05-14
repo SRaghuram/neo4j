@@ -23,6 +23,7 @@ import java.time.Clock
 
 import org.neo4j.cypher.internal.CacheTracer
 import org.neo4j.cypher.internal.CacheabilityInfo
+import org.neo4j.cypher.internal.DefaultPlanStalenessCaller
 import org.neo4j.cypher.internal.PlanStalenessCaller
 import org.neo4j.cypher.internal.QueryCache
 import org.neo4j.cypher.internal.QueryCache.ParameterTypeMap
@@ -49,8 +50,8 @@ class AstLogicalPlanCache[STATEMENT <: AnyRef](override val maximumSize: Int,
                                                divergence: StatsDivergenceCalculator,
                                                lastCommittedTxIdProvider: () => Long,
                                                log: Log)
-  extends QueryCache[STATEMENT, Pair[STATEMENT, ParameterTypeMap],
-    CacheableLogicalPlan](maximumSize,
+  extends QueryCache[STATEMENT, Pair[STATEMENT, ParameterTypeMap], CacheableLogicalPlan](
+    maximumSize,
     AstLogicalPlanCache.stalenessCaller(clock,
       divergence,
       lastCommittedTxIdProvider,
@@ -70,7 +71,9 @@ class AstLogicalPlanCache[STATEMENT <: AnyRef](override val maximumSize: Int,
 
       override def queryCacheFlush(sizeOfCacheBeforeFlush: Long): Unit = {}
 
-      override def queryCacheRecompile(queryKey: STATEMENT, metaData: String): Unit = {}
+      override def queryCompile(queryKey: STATEMENT, metaData: String): Unit = {}
+
+      override def queryCompileWithExpressionCodeGen(queryKey: STATEMENT, metaData: String): Unit = {}
     }
 }
 
@@ -79,10 +82,10 @@ object AstLogicalPlanCache {
                       divergence: StatsDivergenceCalculator,
                       txIdProvider: () => Long,
                       log: Log): PlanStalenessCaller[CacheableLogicalPlan] = {
-    new PlanStalenessCaller[CacheableLogicalPlan](clock, divergence, txIdProvider, (state, _) => state.reusability, log)
+    new DefaultPlanStalenessCaller[CacheableLogicalPlan](clock, divergence, txIdProvider, (state, _) => state.reusability, log)
   }
 }
 
 case class CacheableLogicalPlan(logicalPlanState: LogicalPlanState,
-                                reusability: ReusabilityState, notifications: Set[InternalNotification],
+                                reusability: ReusabilityState, notifications: IndexedSeq[InternalNotification],
                                 override val shouldBeCached: Boolean) extends CacheabilityInfo

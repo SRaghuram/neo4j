@@ -6,11 +6,10 @@
 package com.neo4j.bench.common.profiling;
 
 import com.google.common.collect.Lists;
-import com.neo4j.bench.common.model.Benchmark;
-import com.neo4j.bench.common.model.Benchmark.Mode;
-import com.neo4j.bench.common.model.BenchmarkGroup;
-import com.neo4j.bench.common.model.Parameters;
-import com.neo4j.bench.common.process.JvmArgs;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.Parameters;
+import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
@@ -34,6 +33,8 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.neo4j.bench.model.model.Benchmark.Mode;
+import static com.neo4j.bench.model.model.Benchmark.benchmarkFor;
 import static java.lang.String.format;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertEquals;
@@ -65,7 +66,7 @@ public class OOMProfilerTest
         benchmarkGroup = new BenchmarkGroup( "group" );
         BenchmarkGroupDirectory benchmarkGroupDirectory = BenchmarkGroupDirectory.findOrCreateAt( temporaryFolder.newFolder().toPath(), benchmarkGroup );
 
-        benchmark = Benchmark.benchmarkFor(
+        benchmark = benchmarkFor(
                 "description",
                 "simpleName",
                 Mode.THROUGHPUT,

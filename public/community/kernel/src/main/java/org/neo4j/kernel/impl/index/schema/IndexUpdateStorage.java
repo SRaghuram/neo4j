@@ -26,6 +26,7 @@ import org.neo4j.index.internal.gbptree.Layout;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.memory.ByteBufferFactory;
 import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.IndexEntryUpdate;
 import org.neo4j.storageengine.api.UpdateMode;
 
@@ -43,9 +44,10 @@ public class IndexUpdateStorage<KEY extends NativeIndexKey<KEY>, VALUE extends N
     private final KEY key2;
     private final VALUE value;
 
-    IndexUpdateStorage( FileSystemAbstraction fs, File file, ByteBufferFactory.Allocator byteBufferFactory, int blockSize, Layout<KEY,VALUE> layout )
+    IndexUpdateStorage( FileSystemAbstraction fs, File file, ByteBufferFactory.Allocator byteBufferFactory, int blockSize, Layout<KEY,VALUE> layout,
+            MemoryTracker memoryTracker )
     {
-        super( fs, file, byteBufferFactory, blockSize );
+        super( fs, file, byteBufferFactory, blockSize, memoryTracker );
         this.layout = layout;
         this.key1 = layout.newKey();
         this.key2 = layout.newKey();

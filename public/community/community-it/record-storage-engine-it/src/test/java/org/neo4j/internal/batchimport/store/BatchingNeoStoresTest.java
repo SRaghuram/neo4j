@@ -72,10 +72,9 @@ import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.memory.MemoryPools;
-import org.neo4j.monitoring.DatabaseEventListeners;
 import org.neo4j.monitoring.DatabaseHealth;
-import org.neo4j.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.monitoring.PanicEventGenerator;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.CommandCreationContext;
 import org.neo4j.storageengine.api.CommandsToApply;
@@ -98,7 +97,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.internal.batchimport.store.BatchingNeoStores.DOUBLE_RELATIONSHIP_RECORD_UNIT_THRESHOLD;
@@ -108,6 +106,7 @@ import static org.neo4j.internal.index.label.TokenScanStore.toggledRelationshipT
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.selectForConfig;
 import static org.neo4j.kernel.impl.store.format.standard.Standard.LATEST_RECORD_FORMATS;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
 @PageCacheExtension
@@ -140,7 +139,7 @@ class BatchingNeoStoresTest
             {
                 RecordFormats recordFormats = selectForConfig( Config.defaults(), NullLogProvider.getInstance() );
                 try ( BatchingNeoStores store = batchingNeoStores( fileSystem, databaseLayout, recordFormats, Configuration.DEFAULT,
-                        NullLogService.getInstance(), EMPTY, Config.defaults(), jobScheduler, PageCacheTracer.NULL ) )
+                        NullLogService.getInstance(), EMPTY, Config.defaults(), jobScheduler, PageCacheTracer.NULL, INSTANCE ) )
                 {
                     store.createNew();
                 }
@@ -164,7 +163,7 @@ class BatchingNeoStoresTest
         int headerSize = recordFormats.dynamic().getRecordHeaderSize();
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler();
               BatchingNeoStores store = batchingNeoStores( fileSystem, databaseLayout,
-              recordFormats, Configuration.DEFAULT, NullLogService.getInstance(), EMPTY, config, jobScheduler, PageCacheTracer.NULL ) )
+              recordFormats, Configuration.DEFAULT, NullLogService.getInstance(), EMPTY, config, jobScheduler, PageCacheTracer.NULL, INSTANCE ) )
         {
             store.createNew();
 
@@ -184,7 +183,7 @@ class BatchingNeoStoresTest
             testDirectory.cleanup();
             try ( BatchingNeoStores stores = BatchingNeoStores.batchingNeoStoresWithExternalPageCache( fileSystem, pageCache,
                     PageCacheTracer.NULL, databaseLayout, LATEST_RECORD_FORMATS, Configuration.DEFAULT, NullLogService.getInstance(), EMPTY,
-                    Config.defaults() ) )
+                    Config.defaults(), INSTANCE ) )
             {
                 stores.createNew();
                 for ( StoreType type : relevantRecordStores() )
@@ -196,7 +195,7 @@ class BatchingNeoStoresTest
             // when opening and pruning all except the one we test
             try ( BatchingNeoStores stores = BatchingNeoStores.batchingNeoStoresWithExternalPageCache( fileSystem, pageCache,
                     PageCacheTracer.NULL, databaseLayout, LATEST_RECORD_FORMATS, Configuration.DEFAULT, NullLogService.getInstance(), EMPTY,
-                    Config.defaults() ) )
+                    Config.defaults(), INSTANCE ) )
             {
                 stores.pruneAndOpenExistingStore( type -> type == typeToTest, Predicates.alwaysFalse() );
 
@@ -224,7 +223,7 @@ class BatchingNeoStoresTest
         RecordFormats formats = new ForcedSecondaryUnitRecordFormats( LATEST_RECORD_FORMATS );
         try ( BatchingNeoStores stores = BatchingNeoStores.batchingNeoStoresWithExternalPageCache( fileSystem,
                 pageCache, PageCacheTracer.NULL, databaseLayout, formats, Configuration.DEFAULT,
-                NullLogService.getInstance(), EMPTY, Config.defaults() ) )
+                NullLogService.getInstance(), EMPTY, Config.defaults(), INSTANCE ) )
         {
             stores.createNew();
             Input.Estimates estimates = Input.knownEstimates( 0, DOUBLE_RELATIONSHIP_RECORD_UNIT_THRESHOLD << 1, 0, 0, 0, 0, 0 );
@@ -244,7 +243,7 @@ class BatchingNeoStoresTest
         RecordFormats formats = new ForcedSecondaryUnitRecordFormats( LATEST_RECORD_FORMATS );
         try ( BatchingNeoStores stores = BatchingNeoStores.batchingNeoStoresWithExternalPageCache( fileSystem,
                 pageCache, PageCacheTracer.NULL, databaseLayout, formats, Configuration.DEFAULT,
-                NullLogService.getInstance(), EMPTY, Config.defaults() ) )
+                NullLogService.getInstance(), EMPTY, Config.defaults(), INSTANCE ) )
         {
             stores.createNew();
             Input.Estimates estimates = Input.knownEstimates( 0, DOUBLE_RELATIONSHIP_RECORD_UNIT_THRESHOLD >> 1, 0, 0, 0, 0, 0 );
@@ -264,7 +263,7 @@ class BatchingNeoStoresTest
         RecordFormats formats = LATEST_RECORD_FORMATS;
         try ( BatchingNeoStores stores = BatchingNeoStores.batchingNeoStoresWithExternalPageCache( fileSystem,
                 pageCache, PageCacheTracer.NULL, databaseLayout, formats, Configuration.DEFAULT,
-                NullLogService.getInstance(), EMPTY, Config.defaults() ) )
+                NullLogService.getInstance(), EMPTY, Config.defaults(), INSTANCE ) )
         {
             stores.createNew();
             Input.Estimates estimates = Input.knownEstimates( 0, DOUBLE_RELATIONSHIP_RECORD_UNIT_THRESHOLD << 1, 0, 0, 0, 0, 0 );
@@ -292,7 +291,7 @@ class BatchingNeoStoresTest
         {
             // Special hack for property store, since it's not enough to simply set a record as in use there
             PropertyBlock block = new PropertyBlock();
-            ((PropertyStore)store).encodeValue( block, 0, Values.of( 10 ), NULL );
+            ((PropertyStore)store).encodeValue( block, 0, Values.of( 10 ), NULL, INSTANCE );
             ((PropertyRecord) record).addPropertyBlock( block );
         }
         store.updateRecord( record, NULL );
@@ -341,21 +340,21 @@ class BatchingNeoStoresTest
                     new RecordStorageEngine( databaseLayout, Config.defaults(), pageCache, fileSystem, NullLogProvider.getInstance(),
                             tokenHolders, new DatabaseSchemaState( NullLogProvider.getInstance() ),
                             new StandardConstraintSemantics(), indexConfigCompleter, LockService.NO_LOCK_SERVICE,
-                            new DatabaseHealth( new DatabasePanicEventGenerator( new DatabaseEventListeners( nullLog ), DEFAULT_DATABASE_NAME ), nullLog ),
+                            new DatabaseHealth( PanicEventGenerator.NO_OP, nullLog ),
                             new DefaultIdGeneratorFactory( fileSystem, immediate() ), new DefaultIdController(),
-                            recoveryCleanupWorkCollector, PageCacheTracer.NULL, true ) );
+                            recoveryCleanupWorkCollector, PageCacheTracer.NULL, true, INSTANCE ) );
             // Create the relationship type token
             TxState txState = new TxState();
             Monitors monitors = new Monitors();
             NeoStores neoStores = storageEngine.testAccessNeoStores();
-            CommandCreationContext commandCreationContext = storageEngine.newCommandCreationContext( NULL );
+            CommandCreationContext commandCreationContext = storageEngine.newCommandCreationContext( NULL, INSTANCE );
             propertyKeyTokenCreator.initialize( neoStores.getPropertyKeyTokenStore(), txState );
             labelTokenCreator.initialize( neoStores.getLabelTokenStore(), txState );
             relationshipTypeTokenCreator.initialize( neoStores.getRelationshipTypeTokenStore(), txState );
             int relTypeId = tokenHolders.relationshipTypeTokens().getOrCreateId( RELTYPE.name() );
             RelationshipTypeScanStore relationshipTypeScanStore = life.add(
                     toggledRelationshipTypeScanStore( pageCache, databaseLayout, fileSystem, FullStoreChangeStream.EMPTY, false, monitors,
-                            recoveryCleanupWorkCollector, config, PageCacheTracer.NULL ) );
+                            recoveryCleanupWorkCollector, config, PageCacheTracer.NULL, INSTANCE ) );
             storageEngine.addRelationshipTypeUpdateListener( relationshipTypeScanStore.updateListener() );
             apply( txState, commandCreationContext, storageEngine );
 

@@ -50,6 +50,10 @@ class MainStores extends Life
     public final SimpleBigValueStore bigPropertyValueStore;
     public final DenseRelationshipStore denseStore;
     protected final List<Pair<IdGeneratorFactory,IdType>> idGeneratorsToRegisterOnTheWorkSync = new ArrayList<>();
+<<<<<<< HEAD
+=======
+    private final Record[] deletedReferenceRecords;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 
     MainStores( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache, IdGeneratorFactory idGeneratorFactory,
             PageCacheTracer pageCacheTracer, RecoveryCleanupWorkCollector recoveryCleanupWorkCollector,
@@ -84,6 +88,10 @@ class MainStores extends Life
             this.mainStore = mainStores[0];
             this.bigPropertyValueStore = bigPropertyValueStore;
             this.denseStore = denseStore;
+<<<<<<< HEAD
+=======
+            this.deletedReferenceRecords = constructDeletedReferenceRecords( mainStores );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
             addMainStoresToLife();
         }
         finally
@@ -101,9 +109,29 @@ class MainStores extends Life
         this.mainStore = mainStores[0];
         this.bigPropertyValueStore = bigPropertyValueStore;
         this.denseStore = denseStore;
+<<<<<<< HEAD
         addMainStoresToLife();
     }
 
+=======
+        this.deletedReferenceRecords = constructDeletedReferenceRecords( mainStores );
+        addMainStoresToLife();
+    }
+
+    private static Record[] constructDeletedReferenceRecords( SimpleStore[] mainStores )
+    {
+        Record[] records = new Record[mainStores.length];
+        for ( int i = 0; i < records.length; i++ )
+        {
+            if ( mainStores[i] != null )
+            {
+                records[i] = Record.deletedRecord( i, -1 );
+            }
+        }
+        return records;
+    }
+
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     private void addMainStoresToLife()
     {
         for ( SimpleStore store : mainStores )
@@ -169,6 +197,14 @@ class MainStores extends Life
         return null;
     }
 
+<<<<<<< HEAD
+=======
+    Record deletedReferenceRecord( int sizeExp )
+    {
+        return deletedReferenceRecords[sizeExp];
+    }
+
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     int getNumMainStores()
     {
         return mainStores.length;

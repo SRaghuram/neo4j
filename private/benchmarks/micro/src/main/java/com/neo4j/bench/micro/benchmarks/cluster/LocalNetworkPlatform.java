@@ -19,7 +19,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 
 import java.net.InetSocketAddress;
 import java.util.Objects;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.neo4j.configuration.Config;
@@ -33,6 +33,7 @@ public class LocalNetworkPlatform
 {
     private static final int SOME_BULLSHIT_PORT = 46870;
     private Log log = NullLog.getInstance();
+    private ExecutorService executor;
     private Server server;
     private Client client;
 
@@ -40,7 +41,7 @@ public class LocalNetworkPlatform
 
     public void start( ProtocolInstallers serverClientContext, LogProvider logProvider ) throws Throwable
     {
-        Executor executor = Executors.newCachedThreadPool();
+        executor = Executors.newCachedThreadPool();
         log = logProvider.getLog( getClass() );
         try
         {
@@ -48,7 +49,7 @@ public class LocalNetworkPlatform
             ProtocolInstaller<ProtocolInstaller.Orientation.Server> serverProtocolInstaller = serverClientContext.serverInstaller();
             SocketAddress listenSocketAddress = new SocketAddress( "localhost", SOME_BULLSHIT_PORT );
             log.info( "Starting server. Binding to: %s", listenSocketAddress );
-            server = new Server( serverProtocolInstaller::install, null, logProvider, logProvider, listenSocketAddress, "RaftServer", executor,
+            server = new Server( serverProtocolInstaller::install, null, logProvider, logProvider, listenSocketAddress, "BenchmarkServer", executor,
                                  new ConnectorPortRegister(), BootstrapConfiguration.serverConfig( Config.defaults() ) );
             server.init();
             server.start();
@@ -101,6 +102,10 @@ public class LocalNetworkPlatform
             {
                 errorHandler.execute( () -> server.stop() );
                 errorHandler.execute( () -> server.shutdown() );
+            }
+            if ( executor != null )
+            {
+                executor.shutdown();
             }
         }
         finally

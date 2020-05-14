@@ -18,6 +18,7 @@ import org.neo4j.test.OnDemandJobScheduler;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_strategy;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 public class SegmentedConcurrentStressIT extends ConcurrentStressIT
 {
@@ -29,6 +30,6 @@ public class SegmentedConcurrentStressIT extends ConcurrentStressIT
         var readerPoolSize = 8;
         var pruningStrategy = new CoreLogPruningStrategyFactory( raft_log_pruning_strategy.defaultValue(), logProvider ).newInstance();
         return new SegmentedRaftLog( fsa, dir, rotateAtSize, ignored -> new DummyRaftableContentSerializer(), logProvider,
-                readerPoolSize, Clocks.fakeClock(), new OnDemandJobScheduler(), pruningStrategy );
+                readerPoolSize, Clocks.fakeClock(), new OnDemandJobScheduler(), pruningStrategy, INSTANCE );
     }
 }

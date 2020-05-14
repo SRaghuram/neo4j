@@ -23,6 +23,10 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+<<<<<<< HEAD
+=======
+import org.neo4j.memory.MemoryTracker;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 import org.neo4j.storageengine.api.AllNodeScan;
 import org.neo4j.storageengine.api.Degrees;
 import org.neo4j.storageengine.api.Reference;
@@ -34,11 +38,18 @@ import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 
 import static java.lang.Math.min;
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_LONG_ARRAY;
+<<<<<<< HEAD
+=======
+import static org.apache.commons.lang3.ArrayUtils.addAll;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 import static org.neo4j.internal.freki.MutableNodeData.readDegreesForNextType;
 import static org.neo4j.internal.freki.StreamVByte.LONG_CONSUMER;
 import static org.neo4j.internal.freki.StreamVByte.LONG_CREATOR;
 import static org.neo4j.internal.freki.StreamVByte.hasNonEmptyIntArray;
+<<<<<<< HEAD
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
+=======
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 import static org.neo4j.internal.freki.StreamVByte.readInts;
 import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 
@@ -50,18 +61,53 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     private FrekiRelationshipTraversalCursor relationshipsCursor;
     private boolean lightweight;
 
+<<<<<<< HEAD
     FrekiNodeCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer )
     {
         super( stores, cursorAccessPatternTracer, cursorTracer );
+=======
+    FrekiNodeCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
+    {
+        super( stores, cursorAccessPatternTracer, cursorTracer, memoryTracker );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 
     @Override
     public long[] labels()
     {
         cursorAccessTracer.registerNodeLabelsAccess();
+<<<<<<< HEAD
         ensureLabelsLoaded();
         ByteBuffer buffer = data.labelBuffer();
         return buffer != null ? (long[]) readIntDeltas( buffer, LONG_CREATOR, LONG_CONSUMER ) : EMPTY_LONG_ARRAY;
+=======
+        ensureLabelsLocated();
+        ByteBuffer buffer = data.labelBuffer();
+        if ( buffer == null )
+        {
+            return EMPTY_LONG_ARRAY;
+        }
+        long[] labels = (long[]) readInts( buffer, true, LONG_CREATOR, LONG_CONSUMER );
+
+        // === Logic for split label data
+        if ( data.labelIsSplit )
+        {
+            while ( (buffer = loadNextSplitPiece( buffer, Header.FLAG_LABELS )) != null )
+            {
+                long[] moreLabels = (long[]) readInts( buffer, true, LONG_CREATOR, LONG_CONSUMER );
+                labels = addAll( labels, moreLabels );
+            }
+        }
+        assert isOrdered( labels );
+        return labels;
+    }
+
+    private static boolean isOrdered( long[] labels )
+    {
+        long[] sorted = labels.clone();
+        Arrays.sort( sorted );
+        return Arrays.equals( labels, sorted );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 
     @Override
@@ -86,14 +132,22 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public void relationships( StorageRelationshipTraversalCursor traversalCursor, RelationshipSelection selection )
     {
+<<<<<<< HEAD
         ensureRelationshipsLoaded();
+=======
+        ensureRelationshipsLocated();
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         traversalCursor.init( this, selection );
     }
 
     @Override
     public boolean relationshipsTo( StorageRelationshipTraversalCursor traversalCursor, RelationshipSelection selection, long neighbourNodeReference )
     {
+<<<<<<< HEAD
         ensureRelationshipsLoaded();
+=======
+        ensureRelationshipsLocated();
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         ((FrekiRelationshipTraversalCursor) traversalCursor).init( this, selection, neighbourNodeReference );
         return true;
     }
@@ -106,12 +160,19 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     }
 
     @Override
+<<<<<<< HEAD
     public void degrees( RelationshipSelection selection, Degrees.Mutator degrees )
     {
+=======
+    public void degrees( RelationshipSelection selection, Degrees.Mutator degrees, boolean allowFastDegreeLookup )
+    {
+        //TODO what do we do about allowFastDegreeLookup?
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         // Dense
         if ( data.isDense )
         {
             ByteBuffer buffer = readRelationshipTypes();
+<<<<<<< HEAD
             if ( relationshipTypesInNode.length > 0 )
             {
                 // Read degrees where relationship data would be if this would have been a sparse node
@@ -140,6 +201,51 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
                         }
                     }
                 }
+=======
+            while ( buffer != null )
+            {
+                if ( relationshipTypesInNode.length > 0 )
+                {
+                    // Read degrees where relationship data would be if this would have been a sparse node
+                    int[] degreesArray = readInts( buffer, false );
+                    for ( int i = 0; i < selection.numberOfCriteria(); i++ )
+                    {
+                        int degreesIndex = 0;
+                        RelationshipSelection.Criterion criterion = selection.criterion( i );
+                        if ( criterion.type() == ANY_RELATIONSHIP_TYPE ) // all types
+                        {
+                            for ( int type : relationshipTypesInNode )
+                            {
+                                degreesIndex = readDegreesForNextType( degrees, type, criterion.direction(), degreesArray, degreesIndex );
+                            }
+                        }
+                        else // a single type
+                        {
+                            int typeIndex = Arrays.binarySearch( relationshipTypesInNode, criterion.type() );
+                            if ( typeIndex >= 0 )
+                            {
+                                for ( int j = 0; j < typeIndex; j++ ) //fastforward to correct index
+                                {
+                                    degreesIndex += (degreesArray[degreesIndex] & 0x1) != 0 ? 3 : 2; //loop or not
+                                }
+                                readDegreesForNextType( degrees, relationshipTypesInNode[typeIndex], criterion.direction(), degreesArray, degreesIndex );
+                            }
+                        }
+                    }
+                }
+                if ( data.degreesIsSplit )
+                {
+                    buffer = loadNextSplitPiece( buffer, Header.OFFSET_DEGREES );
+                    if ( buffer != null )
+                    {
+                        readRelationshipTypes( buffer );
+                    }
+                }
+                else
+                {
+                    buffer = null;
+                }
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
             }
         }
         else
@@ -147,7 +253,11 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
             // Sparse
             if ( relationshipsCursor == null )
             {
+<<<<<<< HEAD
                 relationshipsCursor = new FrekiRelationshipTraversalCursor( stores, cursorAccessPatternTracer, cursorTracer );
+=======
+                relationshipsCursor = new FrekiRelationshipTraversalCursor( stores, cursorAccessPatternTracer, cursorTracer, memoryTracker );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
             }
             relationshipsCursor.init( this, selection );
             // TODO If the selection is for any direction then this can be made more efficient by simply looking at the vbyte relationship array length
@@ -229,13 +339,27 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public void single( long reference )
     {
+<<<<<<< HEAD
         singleId = reference;
+=======
+        single( reference, null );
+    }
+
+    void single( long reference, RecordLookup additionalRecordLookup )
+    {
+        singleId = reference;
+        this.additionalRecordLookup = additionalRecordLookup;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 
     @Override
     public boolean hasProperties()
     {
+<<<<<<< HEAD
         ensurePropertiesLoaded();
+=======
+        ensurePropertiesLocated();
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         ByteBuffer buffer = data.propertyBuffer();
         return buffer != null && hasNonEmptyIntArray( buffer );
     }

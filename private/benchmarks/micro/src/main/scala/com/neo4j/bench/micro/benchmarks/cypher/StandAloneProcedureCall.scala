@@ -32,7 +32,7 @@ import org.openjdk.jmh.infra.Blackhole
 class StandAloneProcedureCall extends AbstractProcedureCall {
 
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME, Parallel.NAME),
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Pipelined.NAME, Parallel.NAME),
     base = Array(Interpreted.NAME, Slotted.NAME))
   @Param(Array[String]())
   var runtime: String = _

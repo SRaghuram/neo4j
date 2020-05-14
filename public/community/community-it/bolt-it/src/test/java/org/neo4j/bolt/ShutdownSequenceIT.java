@@ -132,7 +132,7 @@ public class ShutdownSequenceIT
         } ).when( schedulerLog ).debug( "Shutting down thread pool" );
 
         // Shutdown the server
-        server.shutdownManagementService();
+        server.getManagementService().shutdown();
 
         // Expect the connection to have the following interactions
         assertThat( connection ).satisfies( util.eventuallyReceives( msgSuccess() ) );
@@ -150,7 +150,7 @@ public class ShutdownSequenceIT
         var connection = connectAndAuthenticate();
 
         // Shutdown the server
-        server.shutdownManagementService();
+        server.getManagementService().shutdown();
 
         // Expect the connection to be silently closed.
         assertThat( connection ).satisfies( eventuallyDisconnects() );
@@ -177,14 +177,14 @@ public class ShutdownSequenceIT
         } ).when( schedulerLog ).debug( "Shutting down thread pool" );
 
         // Initiate the shutdown
-        server.shutdownManagementService();
+        server.getManagementService().shutdown();
 
         // Expect the connection to have the following interactions
         assertThat( connection ).satisfies( util.eventuallyReceives( msgSuccess() ) );
         Condition<AnyValue> equalRecord = new Condition<>( record -> record.equals( stringValue( "0" ) ), "Equal record" );
         assertThat( connection ).satisfies( util.eventuallyReceives( msgRecord( eqRecord( equalRecord ) ) ) );
         assertThat( connection ).satisfies( util.eventuallyReceives(
-                msgFailure( Status.General.UnknownError, "Unable to complete transaction." ) ) );
+                msgFailure( Status.General.UnknownError, "The transaction has been terminated" ) ) );
         assertThat( connection ).satisfies( eventuallyDisconnects() );
         assertThat( internalLogProvider ).forClass( ExecutorBoltScheduler.class )
                 .forLevel( DEBUG ).containsMessages( "Thread pool shut down" );

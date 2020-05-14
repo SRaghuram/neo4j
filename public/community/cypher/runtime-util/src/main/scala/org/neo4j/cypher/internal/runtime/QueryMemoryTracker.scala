@@ -19,9 +19,11 @@
  */
 package org.neo4j.cypher.internal.runtime
 
-import org.eclipse.collections.impl.map.mutable.primitive.IntObjectHashMap
+import org.neo4j.cypher.internal.runtime.BoundedMemoryTracker.MemoryTrackerPerOperator
 import org.neo4j.cypher.internal.runtime.BoundedMemoryTracker.OperatorMemoryTracker
+import org.neo4j.cypher.internal.runtime.MemoryTrackingController.MemoryTrackerDecorator
 import org.neo4j.cypher.result.OperatorProfile
+import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.memory.Measurable
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.memory.OptionalMemoryTracker
@@ -35,58 +37,58 @@ trait QueryMemoryTracker {
   def isEnabled: Boolean
 
   /**
-    * Record allocation of bytes
-    *
-    * @param bytes number of allocated bytes
-    */
+   * Record allocation of bytes
+   *
+   * @param bytes number of allocated bytes
+   */
   def allocated(bytes: Long, operatorId: Int): Unit
 
   /**
-    * Record allocation of value
-    *
-    * @param value that value which was allocated
-    */
+   * Record allocation of value
+   *
+   * @param value that value which was allocated
+   */
   def allocated(value: AnyValue, operatorId: Int) : Unit
 
   /**
-    * Record allocation of instance with heap usage estimation
-    *
-    * @param instance the allocated instance
-    */
+   * Record allocation of instance with heap usage estimation
+   *
+   * @param instance the allocated instance
+   */
   def allocated(instance: Measurable, operatorId: Int): Unit
 
   /**
-    * Record de-allocation of bytes
-    *
-    * @param bytes number of de-allocated bytes
-    */
+   * Record de-allocation of bytes
+   *
+   * @param bytes number of de-allocated bytes
+   */
   def deallocated(bytes: Long, operatorId: Int): Unit
 
   /**
-    * Record de-allocation of value
-    *
-    * @param value that value which was de-allocated
-    */
+   * Record de-allocation of value
+   *
+   * @param value that value which was de-allocated
+   */
   def deallocated(value: AnyValue, operatorId: Int): Unit
 
   /**
-    * Record de-allocation of instance with heap usage estimation
-    *
-    * @param instance the de-allocated instance
-    */
+   * Record de-allocation of instance with heap usage estimation
+   *
+   * @param instance the de-allocated instance
+   */
   def deallocated(instance: Measurable, operatorId: Int): Unit
 
   /**
-    * Returns an Iterator that, given the memory config settings, might throw an exception if the
-    * memory used by the query grows too large.
-    */
+   * Returns an Iterator that, given the memory config settings, might throw an exception if the
+   * memory used by the query grows too large.
+   */
   def memoryTrackingIterator[T<: CypherRow](input: Iterator[T], operatorId: Int): Iterator[T]
 
   /**
-    * Get the total allocated memory of this query, in bytes.
-    *
-    * @return the total number of allocated memory bytes, or [[OptionalMemoryTracker]].ALLOCATIONS_NOT_TRACKED, if memory tracking was not enabled.
-    */
+   * Get the total allocated memory of this query, in bytes.
+   *
+   * @return the total number of allocated memory bytes, or [[OptionalMemoryTracker]].ALLOCATIONS_NOT_TRACKED, if memory tracking was not enabled.
+   */
   def totalAllocatedMemory: Long
 
   /**
@@ -95,20 +97,18 @@ trait QueryMemoryTracker {
    * @return the maximum number of allocated memory bytes, or [[OptionalMemoryTracker]].ALLOCATIONS_NOT_TRACKED, if memory tracking was not enabled.
    */
   def maxMemoryOfOperator(operatorId: Int): Long
+
+  def memoryTrackerForOperator(operatorId: Int): MemoryTracker
 }
 
 object QueryMemoryTracker {
   def apply(memoryTracking: MemoryTracking, transactionMemoryTracker: MemoryTracker): QueryMemoryTracker = {
     memoryTracking match {
       case NO_TRACKING => NoMemoryTracker
-      case MEMORY_TRACKING => new BoundedMemoryTracker(transactionMemoryTracker)
+      case MEMORY_TRACKING => BoundedMemoryTracker(transactionMemoryTracker)
+      case CUSTOM_MEMORY_TRACKING(decorator: MemoryTrackerDecorator) => BoundedMemoryTracker(decorator(transactionMemoryTracker))
     }
   }
-
-  /**
-   * This is here to facilitate using from compiled code
-   */
-  val NO_MEMORY_TRACKER: QueryMemoryTracker = NoMemoryTracker
 
   /**
    * Convert a value returned from `totalAllocatedMemory` or `maxMemoryOfOperator` to a value to be given to a QueryProfile.
@@ -139,37 +139,62 @@ case object NoMemoryTracker extends QueryMemoryTracker {
   override def totalAllocatedMemory: Long = OptionalMemoryTracker.ALLOCATIONS_NOT_TRACKED
 
   override def maxMemoryOfOperator(operatorId: Int): Long = OptionalMemoryTracker.ALLOCATIONS_NOT_TRACKED
+
+  override def memoryTrackerForOperator(operatorId: Int): MemoryTracker = EmptyMemoryTracker.INSTANCE
 }
 
 object BoundedMemoryTracker {
-  class OperatorMemoryTracker private[BoundedMemoryTracker]() {
+  def apply(transactionMemoryTracker: MemoryTracker): BoundedMemoryTracker = {
+    new BoundedMemoryTracker(transactionMemoryTracker, new MemoryTrackerPerOperator)
+  }
+
+  class OperatorMemoryTracker(transactionMemoryTracker: MemoryTracker) extends MemoryTracker {
     protected[this] var _allocatedBytes = 0L
     private var _highWaterMark = 0L
 
-    protected[BoundedMemoryTracker] def allocatedBytes: Long = _allocatedBytes
-    protected[BoundedMemoryTracker] def highWaterMark: Long = _highWaterMark
+    override def usedNativeMemory(): Long = transactionMemoryTracker.usedNativeMemory()
 
-    protected[BoundedMemoryTracker] def allocated(bytes: Long): Unit = {
+    override def estimatedHeapMemory(): Long = transactionMemoryTracker.estimatedHeapMemory()
+
+    override def allocateNative(bytes: Long): Unit = transactionMemoryTracker.allocateNative(bytes)
+
+    override def releaseNative(bytes: Long): Unit = transactionMemoryTracker.releaseNative(bytes)
+
+    override def allocateHeap(bytes: Long): Unit = {
       _allocatedBytes += bytes
       if (_allocatedBytes > _highWaterMark) {
         _highWaterMark = _allocatedBytes
       }
+      transactionMemoryTracker.allocateHeap(bytes)
     }
 
-    protected[BoundedMemoryTracker] def deallocated(bytes: Long): Unit = {
+    override def releaseHeap(bytes: Long): Unit = {
       _allocatedBytes -= bytes
+      transactionMemoryTracker.releaseHeap(bytes)
+    }
+
+    override def heapHighWaterMark(): Long = {
+      // This returns this operators share of the heap allocation
+      _highWaterMark
+    }
+
+    override def reset(): Unit = {
+      _allocatedBytes = 0L
+      _highWaterMark = 0L
+      transactionMemoryTracker.reset()
     }
   }
+
+  class MemoryTrackerPerOperator extends GrowingArray[MemoryTracker]
 }
 
-class BoundedMemoryTracker(transactionMemoryTracker: MemoryTracker) extends QueryMemoryTracker {
+class BoundedMemoryTracker(transactionMemoryTracker: MemoryTracker, memoryTrackerPerOperator: MemoryTrackerPerOperator) extends QueryMemoryTracker {
   override val isEnabled: Boolean = true
 
-  private val maxMemoryPerOperator = new IntObjectHashMap[OperatorMemoryTracker]()
+  private val newTracker = () => new OperatorMemoryTracker(transactionMemoryTracker)
 
   def allocated(bytes: Long, operatorId: Int): Unit = {
-    transactionMemoryTracker.allocateHeap(bytes)
-    maxMemoryPerOperator.getIfAbsentPutWithKey(operatorId, _ => new OperatorMemoryTracker()).allocated(bytes)
+    memoryTrackerPerOperator.computeIfAbsent(operatorId, newTracker).allocateHeap(bytes)
   }
 
   override def allocated(value: AnyValue, operatorId: Int): Unit = allocated(value.estimatedHeapUsage(), operatorId)
@@ -177,8 +202,7 @@ class BoundedMemoryTracker(transactionMemoryTracker: MemoryTracker) extends Quer
   override def allocated(instance: Measurable, operatorId: Int): Unit = allocated(instance.estimatedHeapUsage, operatorId)
 
   override def deallocated(bytes: Long, operatorId: Int): Unit = {
-    transactionMemoryTracker.releaseHeap(bytes)
-    maxMemoryPerOperator.getIfAbsentPutWithKey(operatorId, _ => new OperatorMemoryTracker()).deallocated(bytes)
+    memoryTrackerPerOperator.computeIfAbsent(operatorId, newTracker).releaseHeap(bytes)
   }
 
   override def deallocated(value: AnyValue, operatorId: Int): Unit = deallocated(value.estimatedHeapUsage(), operatorId)
@@ -189,38 +213,52 @@ class BoundedMemoryTracker(transactionMemoryTracker: MemoryTracker) extends Quer
     transactionMemoryTracker.heapHighWaterMark()
 
   override def maxMemoryOfOperator(operatorId: Int): Long = {
-    val maxOrNull = maxMemoryPerOperator.get(operatorId)
-    if (maxOrNull == null) OptionalMemoryTracker.ALLOCATIONS_NOT_TRACKED else maxOrNull.highWaterMark
+    if (memoryTrackerPerOperator.isDefinedAt(operatorId)) {
+      memoryTrackerPerOperator.get(operatorId).heapHighWaterMark()
+    } else {
+      OptionalMemoryTracker.ALLOCATIONS_NOT_TRACKED
+    }
+  }
+
+  override def memoryTrackerForOperator(operatorId: Int): MemoryTracker = {
+    memoryTrackerPerOperator.computeIfAbsent(operatorId, newTracker)
   }
 
   override def memoryTrackingIterator[T <: Measurable](input: Iterator[T], operatorId: Int): Iterator[T] = new MemoryTrackingIterator[T](input, operatorId)
 
   private class MemoryTrackingIterator[T <: Measurable](input: Iterator[T], operatorId: Int) extends Iterator[T] {
+    private val operatorMemoryTracker = memoryTrackerForOperator(operatorId)
+
     override def hasNext: Boolean = input.hasNext
 
     override def next(): T = {
       val t = input.next()
       val rowHeapUsage = t.estimatedHeapUsage
-      allocated(rowHeapUsage, operatorId)
+      operatorMemoryTracker.allocateHeap(rowHeapUsage)
       t
     }
   }
 }
 
 /**
-  * Logical description of memory tracking behaviour
-  */
+ * Logical description of memory tracking behaviour
+ */
 sealed trait MemoryTracking
 case object NO_TRACKING extends MemoryTracking
 case object MEMORY_TRACKING extends MemoryTracking
+case class CUSTOM_MEMORY_TRACKING(decorator: MemoryTrackerDecorator) extends MemoryTracking
 
 /**
-  * Controller of memory tracking. Needed to make memory tracking dynamically configurable.
-  */
+ * Controller of memory tracking. Needed to make memory tracking dynamically configurable.
+ */
 trait MemoryTrackingController {
   def memoryTracking(doProfile: Boolean): MemoryTracking
 }
 
-object NO_TRACKING_CONTROLLER extends MemoryTrackingController {
-  override def memoryTracking(doProfile: Boolean): MemoryTracking = NO_TRACKING
+object MemoryTrackingController {
+  type MemoryTrackerDecorator = MemoryTracker => MemoryTracker
+}
+
+case class CUSTOM_MEMORY_TRACKING_CONTROLLER(decorator: MemoryTrackerDecorator) extends MemoryTrackingController {
+  override def memoryTracking(doProfile: Boolean): MemoryTracking = CUSTOM_MEMORY_TRACKING(decorator)
 }

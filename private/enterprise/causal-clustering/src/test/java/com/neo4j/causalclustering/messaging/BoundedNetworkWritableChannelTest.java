@@ -7,14 +7,15 @@ package com.neo4j.causalclustering.messaging;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.Assert.fail;
 
-public class BoundedNetworkWritableChannelTest
+class BoundedNetworkWritableChannelTest
 {
     @Test
-    public void shouldRespectSizeLimit() throws Exception
+    void shouldRespectSizeLimit() throws Exception
     {
         // Given
         int sizeLimit = 100;
@@ -29,7 +30,7 @@ public class BoundedNetworkWritableChannelTest
         try
         {
             channel.put( (byte) 1 );
-            fail("Should not allow more bytes than what the limit dictates");
+            Assertions.fail( "Should not allow more bytes than what the limit dictates" );
         }
         catch ( MessageTooBigException e )
         {
@@ -38,7 +39,7 @@ public class BoundedNetworkWritableChannelTest
     }
 
     @Test
-    public void sizeLimitShouldWorkWithArrays() throws Exception
+    void sizeLimitShouldWorkWithArrays() throws Exception
     {
         // Given
         int sizeLimit = 100;
@@ -54,7 +55,7 @@ public class BoundedNetworkWritableChannelTest
         try
         {
             channel.put( new byte[padding * 2], padding * 2 );
-            fail("Should not allow more bytes than what the limit dictates");
+            Assertions.fail( "Should not allow more bytes than what the limit dictates" );
         }
         catch ( MessageTooBigException e )
         {
@@ -63,7 +64,7 @@ public class BoundedNetworkWritableChannelTest
     }
 
     @Test
-    public void shouldNotCountBytesAlreadyInBuffer() throws Exception
+    void shouldNotCountBytesAlreadyInBuffer() throws Exception
     {
         // Given
         int sizeLimit = 100;
@@ -90,7 +91,7 @@ public class BoundedNetworkWritableChannelTest
         try
         {
             channel.put( (byte) 0 );
-            fail("Should not allow more bytes than what the limit dictates");
+            Assertions.fail( "Should not allow more bytes than what the limit dictates" );
         }
         catch ( MessageTooBigException e )
         {

@@ -24,6 +24,7 @@ import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -312,7 +313,7 @@ class BackupStrategyWrapperTest
         backupWrapper.doBackup( onlineBackupContext );
 
         // then
-        verify( backupWrapper ).performRecovery( eq( config ), any( DatabaseLayout.class ) );
+        verify( backupWrapper ).performRecovery( eq( config ), any( DatabaseLayout.class ), any() );
     }
 
     @Test
@@ -329,7 +330,7 @@ class BackupStrategyWrapperTest
         backupWrapper.doBackup( onlineBackupContext );
 
         // then
-        verify( backupWrapper ).performRecovery( any(), any() );
+        verify( backupWrapper ).performRecovery( any(), any(), any() );
     }
 
     @Test
@@ -343,7 +344,7 @@ class BackupStrategyWrapperTest
         backupWrapper.doBackup( onlineBackupContext );
 
         // then
-        verify( backupWrapper ).performRecovery( eq( config ), any( DatabaseLayout.class ) );
+        verify( backupWrapper ).performRecovery( eq( config ), any( DatabaseLayout.class ), any() );
     }
 
     @Test
@@ -357,7 +358,7 @@ class BackupStrategyWrapperTest
         assertThrows( BackupExecutionException.class, () -> backupWrapper.doBackup( onlineBackupContext ) );
 
         // then
-        verify( backupWrapper, never() ).performRecovery( any(), any() );
+        verify( backupWrapper, never() ).performRecovery( any(), any(), any() );
     }
 
     @Test
@@ -376,7 +377,7 @@ class BackupStrategyWrapperTest
         backupWrapper.doBackup( onlineBackupContext );
 
         // then
-        verify( backupWrapper ).performRecovery( eq( config ), any( DatabaseLayout.class ) );
+        verify( backupWrapper ).performRecovery( eq( config ), any( DatabaseLayout.class ), any() );
     }
 
     @Test
@@ -394,7 +395,7 @@ class BackupStrategyWrapperTest
 
         InOrder inOrder = Mockito.inOrder( backupWrapper, backupCopyService );
         // 1) perform recovery
-        inOrder.verify( backupWrapper ).performRecovery( eq( config ), any( DatabaseLayout.class ) );
+        inOrder.verify( backupWrapper ).performRecovery( eq( config ), any( DatabaseLayout.class ), any() );
         // 2) move pre-existing backup to a different directory
         inOrder.verify( backupCopyService ).moveBackupLocation( databaseBackupDir, availableOldBackupLocation );
         // 3) move new backup from a temporary directory to the specified directory
@@ -453,7 +454,7 @@ class BackupStrategyWrapperTest
         }
 
         @Override
-        void performRecovery( Config config, DatabaseLayout backupLayout )
+        void performRecovery( Config config, DatabaseLayout backupLayout, MemoryTracker memoryTracker )
         {
             // empty recovery for mock tests
         }

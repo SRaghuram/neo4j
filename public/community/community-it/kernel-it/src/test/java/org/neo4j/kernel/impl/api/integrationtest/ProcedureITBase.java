@@ -97,9 +97,9 @@ public interface ProcedureITBase
                 proc( "dbms.components", "() :: (name :: STRING?, versions :: LIST? OF" + " STRING?, edition :: STRING?)",
                         "List DBMS components and their versions.", stringArray( "reader", "editor", "publisher", "architect", "admin" ), "DBMS" ),
                 proc( "dbms.queryJmx", "(query :: STRING?) :: (name :: STRING?, " + "description :: STRING?, attributes :: MAP?)",
-                        "Query JMX management data by domain and name." + " For instance, \"org.neo4j:*\"",
+                        "Query JMX management data by domain and name." + " For instance, \"*:*\"",
                         stringArray( "reader", "editor", "publisher", "architect", "admin" ), "DBMS" ),
-                proc( "db.createLabel", "(newLabel :: STRING?) :: VOID", "Create a label", stringArray(  "publisher", "architect", "admin" ), "WRITE",
+                proc( "db.createLabel", "(newLabel :: STRING?) :: VOID", "Create a label", stringArray( "publisher", "architect", "admin" ), "WRITE",
                         false ),
                 proc( "db.createProperty", "(newProperty :: STRING?) :: VOID", "Create a Property", stringArray( "publisher", "architect", "admin" ),
                         "WRITE", false ), proc( "db.createRelationshipType", "(newRelationshipType :: STRING?) :: VOID", "Create a RelationshipType",
@@ -189,14 +189,14 @@ public interface ProcedureITBase
 
     default List<Object[]> getExpectedEnterpriseProcs()
     {
-        ArrayList<Object[]> result = new ArrayList<>( getExpectedCommunityProcs() );
+        List<Object[]> result = new ArrayList<>( getExpectedCommunityProcs() );
         result.addAll( List.of(
                 // enterprise only functions
                 proc( "dbms.listPools",
-                        "() :: (poolName :: STRING?, group :: STRING?, heapMemoryUsed :: STRING?, heapMemoryUsedBytes :: STRING?, " +
+                        "() :: (group :: STRING?, databaseName :: STRING?, heapMemoryUsed :: STRING?, heapMemoryUsedBytes :: STRING?, " +
                                 "nativeMemoryUsed :: STRING?, nativeMemoryUsedBytes :: STRING?, freeMemory :: STRING?, freeMemoryBytes :: STRING?, " +
                                 "totalPoolMemory :: STRING?, totalPoolMemoryBytes :: STRING?)",
-                        "List all memory pools currently registered at this instance that are visible to the user.",
+                        "List all memory pools, including sub pools, currently registered at this instance that are visible to the user.",
                         stringArray( "reader", "editor", "publisher", "architect", "admin" ), "DBMS" ),
                 proc( "dbms.listTransactions",
                         "() :: (transactionId :: STRING?, username :: STRING?, metaData :: MAP?, startTime :: STRING?, protocol :: STRING?," +

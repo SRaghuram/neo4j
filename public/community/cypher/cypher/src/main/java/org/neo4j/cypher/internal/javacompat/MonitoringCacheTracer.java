@@ -20,44 +20,59 @@
 package org.neo4j.cypher.internal.javacompat;
 
 import scala.Option;
-import scala.collection.immutable.Map;
 
 import org.neo4j.cypher.internal.CacheTracer;
-import org.neo4j.cypher.internal.StringCacheMonitor;
+import org.neo4j.cypher.internal.ExecutionEngineQueryCacheMonitor;
+import org.neo4j.cypher.internal.QueryCache;
 import org.neo4j.internal.helpers.collection.Pair;
 
 /**
- * Adapter for passing CacheTraces into the Monitoring infrastructure.
+ * Adapter from ExecutionEngineQueryCacheMonitor to CacheTracer.
+ *
+ * The reason why we
+ * a) need an adapter and
+ * b) tracers for the ExpressionEngine query cache and the CypherPlanner query cache need to implement two different
+ *    interfaces (ExecutionEngineQueryCacheMonitor and CacheTracer respectively)
+ *
+ *  is that kernel monitors work by interface methods. If tracers for those two caches shared the abstract methods
+ *  in the same superclass, the monitor callbacks would always be invoked from both caches. So we need this
+ *  awful mumbo-jumbo in order to monitor specifically one of the two caches only.
  */
-public class MonitoringCacheTracer implements CacheTracer<Pair<String,scala.collection.immutable.Map<String, Class<?>>>>
+public class MonitoringCacheTracer implements CacheTracer<Pair<String,QueryCache.ParameterTypeMap>>
 {
-    private final StringCacheMonitor monitor;
+    private final ExecutionEngineQueryCacheMonitor monitor;
 
-    public MonitoringCacheTracer( StringCacheMonitor monitor )
+    public MonitoringCacheTracer( ExecutionEngineQueryCacheMonitor monitor )
     {
         this.monitor = monitor;
     }
 
     @Override
-    public void queryCacheHit( Pair<String,scala.collection.immutable.Map<String, Class<?>>> queryKey, String metaData )
+    public void queryCacheHit( Pair<String,QueryCache.ParameterTypeMap> queryKey, String metaData )
     {
         monitor.cacheHit( queryKey );
     }
 
     @Override
-    public void queryCacheMiss( Pair<String,scala.collection.immutable.Map<String, Class<?>>> queryKey, String metaData )
+    public void queryCacheMiss( Pair<String,QueryCache.ParameterTypeMap> queryKey, String metaData )
     {
         monitor.cacheMiss( queryKey );
     }
 
     @Override
-    public void queryCacheRecompile( Pair<String,Map<String,Class<?>>> queryKey, String metaData )
+    public void queryCompile( Pair<String,QueryCache.ParameterTypeMap> queryKey, String metaData )
     {
-        monitor.cacheRecompile( queryKey );
+        monitor.cacheCompile( queryKey );
     }
 
     @Override
-    public void queryCacheStale( Pair<String,scala.collection.immutable.Map<String, Class<?>>> queryKey, int secondsSincePlan, String metaData,
+    public void queryCompileWithExpressionCodeGen( Pair<String,QueryCache.ParameterTypeMap> queryKey, String metaData )
+    {
+        monitor.cacheCompileWithExpressionCodeGen( queryKey );
+    }
+
+    @Override
+    public void queryCacheStale( Pair<String,QueryCache.ParameterTypeMap> queryKey, int secondsSincePlan, String metaData,
                                  Option<String> maybeReason )
     {
         monitor.cacheDiscard( queryKey, metaData, secondsSincePlan, maybeReason );

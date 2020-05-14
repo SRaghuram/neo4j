@@ -5,12 +5,12 @@
  */
 package com.neo4j.bench.common.profiling;
 
-import com.neo4j.bench.common.model.Benchmark;
-import com.neo4j.bench.common.model.BenchmarkGroup;
-import com.neo4j.bench.common.model.Parameters;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.Parameters;
 
 import java.util.List;
 import java.util.concurrent.Executors;

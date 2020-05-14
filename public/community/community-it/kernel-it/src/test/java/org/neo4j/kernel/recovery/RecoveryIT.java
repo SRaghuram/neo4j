@@ -19,12 +19,11 @@
  */
 package org.neo4j.kernel.recovery;
 
-import org.junit.jupiter.api.Test;
-
 import java.io.File;
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.junit.jupiter.api.Test;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -51,6 +50,7 @@ import org.neo4j.kernel.database.DatabaseTracers;
 import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
+import org.neo4j.kernel.impl.storemigration.LegacyTransactionLogsLocator;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.ReadableLogChannel;
 import org.neo4j.kernel.impl.transaction.log.entry.CheckPoint;
@@ -64,6 +64,7 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.lock.LockTracer;
+import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
@@ -72,6 +73,7 @@ import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 
 import static java.lang.String.valueOf;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.apache.commons.lang3.RandomStringUtils.randomAlphanumeric;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -95,6 +97,7 @@ import static org.neo4j.kernel.database.DatabaseTracers.EMPTY;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_MISSING_STORE_FILES_RECOVERY_TIMESTAMP;
 import static org.neo4j.kernel.impl.store.MetaDataStore.getRecord;
 import static org.neo4j.kernel.recovery.Recovery.performRecovery;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @PageCacheExtension
 @Neo4jLayoutExtension
@@ -109,6 +112,7 @@ class RecoveryIT
     private Neo4jLayout neo4jLayout;
     @Inject
     private DatabaseLayout databaseLayout;
+    private TestDatabaseManagementServiceBuilder builder;
     private DatabaseManagementService managementService;
     private StorageEngineFactory storageEngineFactory;
 
@@ -131,8 +135,8 @@ class RecoveryIT
     @Test
     void recoveryNotRequiredWhenDatabaseNotFound() throws Exception
     {
-            DatabaseLayout absentDatabase = neo4jLayout.databaseLayout( "absent" );
-            assertFalse( isRecoveryRequired( absentDatabase ) );
+        DatabaseLayout absentDatabase = neo4jLayout.databaseLayout( "absent" );
+        assertFalse( isRecoveryRequired( absentDatabase ) );
     }
 
     @Test
@@ -432,6 +436,43 @@ class RecoveryIT
     }
 
     @Test
+    void failToStartDatabaseWithTransactionLogsInLegacyLocation() throws Exception
+    {
+        GraphDatabaseAPI database = createDatabase();
+        generateSomeData( database );
+        managementService.shutdown();
+
+        File[] txLogFiles = buildLogFiles().logFiles();
+        File databasesDirectory = databaseLayout.getNeo4jLayout().databasesDirectory();
+        DatabaseLayout legacyLayout = Neo4jLayout.ofFlat( databasesDirectory ).databaseLayout( databaseLayout.getDatabaseName() );
+        LegacyTransactionLogsLocator logsLocator = new LegacyTransactionLogsLocator( Config.defaults(), legacyLayout );
+        File transactionLogsDirectory = logsLocator.getTransactionLogsDirectory();
+        assertNotNull( txLogFiles );
+        assertTrue( txLogFiles.length > 0 );
+        for ( File logFile : txLogFiles )
+        {
+            fileSystem.moveToDirectory( logFile, transactionLogsDirectory );
+        }
+
+        AssertableLogProvider logProvider = new AssertableLogProvider();
+        builder.setInternalLogProvider( logProvider );
+        GraphDatabaseAPI restartedDb = createDatabase();
+        try
+        {
+            DatabaseStateService dbStateService = restartedDb.getDependencyResolver().resolveDependency( DatabaseStateService.class );
+
+            var failure = dbStateService.causeOfFailure( restartedDb.databaseId() );
+            assertTrue( failure.isPresent() );
+            assertThat( failure.get() ).hasRootCauseMessage( "Transaction logs are missing and recovery is not possible." );
+            assertThat( logProvider.serialize() ).contains( txLogFiles[0].getName() );
+        }
+        finally
+        {
+            managementService.shutdown();
+        }
+    }
+
+    @Test
     void startDatabaseWithRemovedSingleTransactionLogFile() throws Throwable
     {
         GraphDatabaseAPI database = createDatabase();
@@ -532,7 +573,8 @@ class RecoveryIT
     @Test
     void startDatabaseAfterTransactionLogsRemovalAndKillAfterRecovery() throws Throwable
     {
-        GraphDatabaseService database = createDatabase( ByteUnit.mebiBytes( 1 ) );
+        long logThreshold = ByteUnit.mebiBytes( 1 );
+        GraphDatabaseService database = createDatabase( logThreshold );
         while ( countTransactionLogFiles() < 5 )
         {
             generateSomeData( database );
@@ -557,8 +599,9 @@ class RecoveryIT
         // next start-stop cycle will have transaction between so we will have 3 checkpoints as expected.
         assertEquals( 2, countCheckPointsInTransactionLogs() );
         removeLastCheckpointRecordFromLastLogFile();
+        builder = null; // Reset log rotation threshold setting to avoid immediate rotation on `createSingleNode()`.
 
-        GraphDatabaseService service = createDatabase();
+        GraphDatabaseService service = createDatabase( logThreshold * 2 ); // Bigger log, to avoid rotation.
         createSingleNode( service );
         this.managementService.shutdown();
         removeLastCheckpointRecordFromLastLogFile();
@@ -579,7 +622,7 @@ class RecoveryIT
         fileSystem.deleteFileOrThrow( layout.idRelationshipStore() );
         assertTrue( isRecoveryRequired( layout ) );
 
-        performRecovery( fileSystem, pageCache, EMPTY, defaults(), layout );
+        performRecovery( fileSystem, pageCache, EMPTY, defaults(), layout, INSTANCE );
         assertFalse( isRecoveryRequired( layout ) );
 
         assertTrue( fileSystem.fileExists( layout.idRelationshipStore() ) );
@@ -620,21 +663,45 @@ class RecoveryIT
         assertTrue( isRecoveryRequired( layout ) );
 
         Monitors monitors = new Monitors();
+        var guardExtensionFactory = new GlobalGuardConsumerTestExtensionFactory();
         var recoveryMonitor = new RecoveryMonitor()
         {
+            private final AtomicBoolean reverseCompleted = new AtomicBoolean();
+            private final AtomicBoolean recoveryCompleted = new AtomicBoolean();
+
             @Override
             public void reverseStoreRecoveryCompleted( long lowestRecoveredTxId )
             {
-                GlobalGuardConsumer.globalGuard.stop();
+                guardExtensionFactory.getProvidedGuardConsumer().globalGuard.stop();
+                reverseCompleted.set( true );
+            }
+
+            @Override
+            public void recoveryCompleted( int numberOfRecoveredTransactions, long recoveryTimeInMilliseconds )
+            {
+                recoveryCompleted.set( true );
+            }
+
+            public boolean isReverseCompleted()
+            {
+                return reverseCompleted.get();
+            }
+
+            public boolean isRecoveryCompleted()
+            {
+                return recoveryCompleted.get();
             }
         };
         monitors.addMonitorListener( recoveryMonitor );
         var service = builderWithRelationshipTypeScanStoreSet( layout.getNeo4jLayout() )
-                .addExtension( new GlobalGuardConsumerTestExtensionFactory() )
+                .addExtension( guardExtensionFactory )
                 .setMonitors( monitors ).build();
         try
         {
             var database = service.database( layout.getDatabaseName() );
+            assertTrue( recoveryMonitor.isReverseCompleted() );
+            assertFalse( recoveryMonitor.isRecoveryCompleted() );
+            assertFalse( guardExtensionFactory.getProvidedGuardConsumer().globalGuard.isAvailable() );
             assertFalse( database.isAvailable( 0 ) );
             var e = assertThrows( Exception.class, database::beginTx );
             assertThat( getRootCause( e ) ).isInstanceOf( DatabaseStartAbortedException.class );
@@ -649,7 +716,7 @@ class RecoveryIT
     {
         try ( Transaction transaction = database.beginTx() )
         {
-            transaction.schema().awaitIndexesOnline( 10, TimeUnit.MINUTES );
+            transaction.schema().awaitIndexesOnline( 10, MINUTES );
             transaction.commit();
         }
     }
@@ -665,7 +732,8 @@ class RecoveryIT
 
     private void startStopDatabase()
     {
-        createDatabase();
+        GraphDatabaseService db = createDatabase();
+        db.beginTx().close();
         managementService.shutdown();
     }
 
@@ -678,7 +746,7 @@ class RecoveryIT
     {
         Config config = Config.newBuilder().set( enable_relationship_type_scan_store, enableRelationshipTypeScanStore() ).build();
         assertTrue( isRecoveryRequired( databaseLayout, config ) );
-        performRecovery( fileSystem, pageCache, databaseTracers, config, databaseLayout );
+        performRecovery( fileSystem, pageCache, databaseTracers, config, databaseLayout, INSTANCE );
         assertFalse( isRecoveryRequired( databaseLayout, config ) );
     }
 
@@ -690,7 +758,7 @@ class RecoveryIT
 
     private boolean isRecoveryRequired( DatabaseLayout layout, Config config ) throws Exception
     {
-        return Recovery.isRecoveryRequired( fileSystem, layout, config );
+        return Recovery.isRecoveryRequired( fileSystem, layout, config, INSTANCE );
     }
 
     private int countCheckPointsInTransactionLogs() throws IOException
@@ -807,13 +875,21 @@ class RecoveryIT
 
     private GraphDatabaseAPI createDatabase( long logThreshold )
     {
-        managementService = builderWithRelationshipTypeScanStoreSet()
-                .setConfig( preallocate_logical_logs, false )
-                .setConfig( logical_log_rotation_threshold, logThreshold )
-                .build();
+        createBuilder( logThreshold );
+        managementService = builder.build();
         GraphDatabaseAPI database = (GraphDatabaseAPI) managementService.database( databaseLayout.getDatabaseName() );
         storageEngineFactory = database.getDependencyResolver().resolveDependency( StorageEngineFactory.class );
         return database;
+    }
+
+    private void createBuilder( long logThreshold )
+    {
+        if ( builder == null )
+        {
+            builder = builderWithRelationshipTypeScanStoreSet()
+                    .setConfig( preallocate_logical_logs, false )
+                    .setConfig( logical_log_rotation_threshold, logThreshold );
+        }
     }
 
     private void startStopDatabaseWithForcedRecovery()
@@ -847,10 +923,10 @@ class RecoveryIT
 
     private void verifyRecoveryTimestampPresent( GraphDatabaseAPI databaseAPI ) throws IOException
     {
-        GraphDatabaseService restartedDatabase = createDatabase();
+        GraphDatabaseAPI restartedDatabase = createDatabase();
         try
         {
-            PageCache restartedCache = getDatabasePageCache( (GraphDatabaseAPI) restartedDatabase );
+            PageCache restartedCache = getDatabasePageCache( restartedDatabase );
             final long record = getRecord( restartedCache, databaseAPI.databaseLayout().metadataStore(), LAST_MISSING_STORE_FILES_RECOVERY_TIMESTAMP, NULL );
             assertThat( record ).isGreaterThan( 0L );
         }
@@ -860,12 +936,14 @@ class RecoveryIT
         }
     }
 
-    private static class GlobalGuardConsumerTestExtensionFactory extends ExtensionFactory<GlobalGuardConsumerTestExtensionFactory.Dependencies>
+    interface Dependencies
     {
-        interface Dependencies
-        {
-            CompositeDatabaseAvailabilityGuard globalGuard();
-        }
+        CompositeDatabaseAvailabilityGuard globalGuard();
+    }
+
+    private static class GlobalGuardConsumerTestExtensionFactory extends ExtensionFactory<Dependencies>
+    {
+        private GlobalGuardConsumer providedConsumer;
 
         GlobalGuardConsumerTestExtensionFactory()
         {
@@ -875,18 +953,23 @@ class RecoveryIT
         @Override
         public Lifecycle newInstance( ExtensionContext context, Dependencies dependencies )
         {
-            return new GlobalGuardConsumer( dependencies );
+            providedConsumer = new GlobalGuardConsumer( dependencies );
+            return providedConsumer;
+        }
+
+        public GlobalGuardConsumer getProvidedGuardConsumer()
+        {
+            return providedConsumer;
         }
     }
 
     private static class GlobalGuardConsumer extends LifecycleAdapter
     {
-        private static CompositeDatabaseAvailabilityGuard globalGuard;
+        private final CompositeDatabaseAvailabilityGuard globalGuard;
 
-        GlobalGuardConsumer( GlobalGuardConsumerTestExtensionFactory.Dependencies dependencies )
+        GlobalGuardConsumer( Dependencies dependencies )
         {
             globalGuard = dependencies.globalGuard();
         }
     }
-
 }

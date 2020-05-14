@@ -21,7 +21,7 @@ import org.neo4j.io.fs.WritableChannel;
 
 public class ReplicatedDatabaseStateMarshal extends SafeChannelMarshal<ReplicatedDatabaseState>
 {
-    public static ReplicatedDatabaseStateMarshal INSTANCE = new ReplicatedDatabaseStateMarshal();
+    public static final ReplicatedDatabaseStateMarshal INSTANCE = new ReplicatedDatabaseStateMarshal();
 
     private ReplicatedDatabaseStateMarshal()
     {

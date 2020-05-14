@@ -21,6 +21,7 @@ package org.neo4j.procedure.impl;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import org.neo4j.function.ThrowingFunction;
 import org.neo4j.graphdb.Entity;
@@ -291,6 +292,12 @@ public class ProcedureTransactionProvider implements ThrowingFunction<Context,Tr
         public boolean isOpen()
         {
             return transaction.isOpen();
+        }
+
+        @Override
+        public void terminate( Status reason )
+        {
+            transaction.terminate( reason );
         }
 
         @Override

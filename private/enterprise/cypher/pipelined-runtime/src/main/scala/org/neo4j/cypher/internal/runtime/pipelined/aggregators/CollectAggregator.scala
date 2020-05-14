@@ -7,35 +7,34 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
 import java.util.concurrent.ConcurrentLinkedQueue
 
-import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
-import org.neo4j.cypher.internal.util.attribution.Id
+import org.eclipse.collections.api.block.procedure.Procedure
+import org.neo4j.memory.MemoryTracker
+import org.neo4j.memory.ScopedMemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.ListValue
 import org.neo4j.values.virtual.ListValueBuilder
 import org.neo4j.values.virtual.VirtualValues
 
-import scala.collection.mutable.ArrayBuffer
-
 /**
  * Aggregator for collect(...).
  */
 case object CollectAggregator extends Aggregator {
-  override def newUpdater: Updater = new CollectUpdater(preserveNulls = false)
-  override def newStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id): Reducer = new CollectStandardReducer(memoryTracker, operatorId)
+  override def newUpdater(memoryTracker: MemoryTracker): Updater = new CollectUpdater(preserveNulls = false)
+  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new CollectStandardReducer(memoryTracker)
   override def newConcurrentReducer: Reducer = new CollectConcurrentReducer()
 }
 
 case object CollectAllAggregator extends Aggregator {
-  override def newUpdater: Updater = new CollectUpdater(preserveNulls = true)
-  override def newStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id): Reducer = new CollectStandardReducer(memoryTracker, operatorId)
+  override def newUpdater(memoryTracker: MemoryTracker): Updater = new CollectUpdater(preserveNulls = true)
+  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new CollectStandardReducer(memoryTracker)
   override def newConcurrentReducer: Reducer = new CollectConcurrentReducer()
 }
 
 case object CollectDistinctAggregator extends Aggregator {
-  override def newUpdater: Updater = new DistinctInOrderUpdater
-  override def newStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id): Reducer = new DistinctInOrderStandardReducer(new MemoryTrackingReducer(memoryTracker, operatorId)) with CollectDistinctReducer
-  override def newConcurrentReducer: Reducer = new DistinctConcurrentReducer(new DummyReducer) with CollectDistinctReducer
+  override def newUpdater(memoryTracker: MemoryTracker): Updater = new OrderedDistinctUpdater(memoryTracker)
+  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new OrderedDistinctStandardReducer(DummyReducer, memoryTracker) with CollectDistinctReducer
+  override def newConcurrentReducer: Reducer = new DistinctConcurrentReducer(DummyReducer) with CollectDistinctReducer
 }
 
 class CollectUpdater(preserveNulls: Boolean) extends Updater {
@@ -46,19 +45,19 @@ class CollectUpdater(preserveNulls: Boolean) extends Updater {
     }
 }
 
-class CollectStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id) extends Reducer {
-  private val collections = new ArrayBuffer[ListValue]
+class CollectStandardReducer(memoryTracker: MemoryTracker) extends Reducer {
+  private val collection = ListValueBuilder.newListBuilder()
   override def update(updater: Updater): Unit = {
     updater match {
       case u: CollectUpdater =>
-        val value = u.collection.build();
-        collections += value
+        collection.combine(u.collection)
         // Note: this allocation is currently never de-allocated
-        memoryTracker.allocated(value, operatorId.x)
+        memoryTracker.allocateHeap(u.collection.estimatedHeapUsage())
     }
   }
 
-  override def result: AnyValue = VirtualValues.concat(collections: _*)
+  override def result: AnyValue =
+    collection.build()
 }
 
 class CollectConcurrentReducer() extends Reducer {
@@ -73,12 +72,7 @@ class CollectConcurrentReducer() extends Reducer {
   override def result: AnyValue = VirtualValues.concat(collections.toArray(new Array[ListValue](0)):_*)
 }
 
-class MemoryTrackingReducer(memoryTracker: QueryMemoryTracker, operatorId: Id) extends DistinctInnerReducer {
-  override def update(value: AnyValue): Unit = memoryTracker.allocated(value, operatorId.x)
-  override def result: AnyValue = throw new IllegalStateException("Must be used inside of CollectDistinctReducer")
-}
-
-class DummyReducer extends DistinctInnerReducer {
+object DummyReducer extends DistinctInnerReducer {
   override def update(value: AnyValue): Unit = ()
   override def result: AnyValue = throw new IllegalStateException("Must be used inside of CollectDistinctReducer")
 }
@@ -88,15 +82,28 @@ trait CollectDistinctReducer {
 
   override def result: AnyValue = {
     val collection = ListValueBuilder.newListBuilder()
-    seen.forEach(value => collection.add(value))
+    forEachSeen(value => collection.add(value))
     collection.build()
   }
 }
 
-class DistinctInOrderStandardReducer(inner: DistinctInnerReducer) extends DistinctReducer(inner) {
-  override protected val seen: java.util.Set[AnyValue] = new java.util.LinkedHashSet[AnyValue]()
-}
+class OrderedDistinctStandardReducer(inner: DistinctInnerReducer, memoryTracker: MemoryTracker) extends DistinctReducer(inner) {
+  private val seenSet = new java.util.LinkedHashSet[AnyValue]() // TODO: Use a heap tracking ordered distinct set
+  private val scopedMemoryTracker = new ScopedMemoryTracker(memoryTracker)
 
-class DistinctInOrderUpdater() extends DistinctUpdater {
-  override val seen: java.util.Set[AnyValue] = new java.util.LinkedHashSet[AnyValue]()
+  override protected def seen(e: AnyValue): Boolean = {
+    val added = seenSet.add(e)
+    if (added) {
+      scopedMemoryTracker.allocateHeap(e.estimatedHeapUsage())
+    }
+    added
+  }
+
+  override protected def forEachSeen(action: Procedure[AnyValue]): Unit =
+    seenSet.forEach(action)
+
+  override def close(): Unit = {
+    scopedMemoryTracker.close()
+    super.close()
+  }
 }

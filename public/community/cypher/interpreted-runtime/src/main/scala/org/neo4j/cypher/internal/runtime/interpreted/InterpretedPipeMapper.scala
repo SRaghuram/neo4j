@@ -19,11 +19,11 @@
  */
 package org.neo4j.cypher.internal.runtime.interpreted
 
+import org.neo4j.cypher.internal
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.expressions.IterablePredicateExpression
 import org.neo4j.cypher.internal.expressions.RelTypeName
 import org.neo4j.cypher.internal.expressions.SignedDecimalIntegerLiteral
-import org.neo4j.cypher.internal
 import org.neo4j.cypher.internal.ir.VarPatternLength
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.Aggregation
@@ -118,23 +118,19 @@ import org.neo4j.cypher.internal.logical.plans.ValueHashJoin
 import org.neo4j.cypher.internal.logical.plans.VarExpand
 import org.neo4j.cypher.internal.logical.plans.VariablePredicate
 import org.neo4j.cypher.internal.planner.spi.TokenContext
+import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.ProcedureCallMode
+import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.interpreted.commands.KeyTokenResolver
-import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.PatternConverters.ShortestPathsConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.InterpretedCommandProjection
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.PatternConverters.ShortestPathsConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.ShortestPathExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.GroupingAggTable
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.NonGroupingAggTable
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.OrderedGroupingAggTable
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.OrderedNonGroupingAggTable
-import org.neo4j.cypher.internal.runtime.CypherRow
-import org.neo4j.cypher.internal.runtime.ProcedureCallMode
-import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.AllNodesScanPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.AllOrderedDistinctPipe
@@ -228,6 +224,10 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.UnwindPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.ValueHashJoinPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.VarLengthExpandPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.VarLengthPredicate
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.GroupingAggTable
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.NonGroupingAggTable
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.OrderedGroupingAggTable
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.OrderedNonGroupingAggTable
 import org.neo4j.cypher.internal.util.Eagerly
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.InternalException
@@ -263,12 +263,12 @@ case class InterpretedPipeMapper(readOnly: Boolean,
         NodeCountFromCountStorePipe(ident, labels.map(l => l.map(LazyLabel.apply)))(id = id)
 
       case RelationshipCountFromCountStore(ident, startLabel, typeNames, endLabel, _) =>
-        RelationshipCountFromCountStorePipe(ident, startLabel.map(LazyLabel.apply),
-          RelationshipTypes(typeNames.map(_.name).toArray, tokenContext), endLabel.map(LazyLabel.apply))(id = id)
+        RelationshipCountFromCountStorePipe(ident, startLabel.map(LazyLabel.apply(_)),
+          RelationshipTypes(typeNames.map(_.name).toArray, tokenContext), endLabel.map(LazyLabel.apply(_)))(id = id)
 
-      case NodeByLabelScan(ident, label, _) =>
+      case NodeByLabelScan(ident, label, _, indexOrder) =>
         indexRegistrator.registerLabelScan()
-        NodeByLabelScanPipe(ident, LazyLabel(label))(id = id)
+        NodeByLabelScanPipe(ident, LazyLabel(label), indexOrder)(id = id)
 
       case NodeByIdSeek(ident, nodeIdExpr, _) =>
         NodeByIdSeekPipe(ident, expressionConverters.toCommandSeekArgs(id, nodeIdExpr))(id = id)
@@ -346,19 +346,19 @@ case class InterpretedPipeMapper(readOnly: Boolean,
         val runtimeProperties = properties.toArray.map(buildExpression(_))
         CachePropertiesPipe(source, runtimeProperties)(id = id)
 
-      case Expand(_, fromName, dir, types: Seq[RelTypeName], toName, relName, ExpandAll) =>
+      case Expand(_, fromName, dir, types: Seq[RelTypeName], toName, relName, ExpandAll, _) =>
         ExpandAllPipe(source, fromName, relName, toName, dir, RelationshipTypes(types.toArray))(id = id)
 
-      case Expand(_, fromName, dir, types: Seq[RelTypeName], toName, relName, ExpandInto) =>
+      case Expand(_, fromName, dir, types: Seq[RelTypeName], toName, relName, ExpandInto, _) =>
         ExpandIntoPipe(source, fromName, relName, toName, dir, RelationshipTypes(types.toArray))(id = id)
 
       case LockNodes(_, nodesToLock) =>
         LockNodesPipe(source, nodesToLock)(id = id)
 
-      case OptionalExpand(_, fromName, dir, types, toName, relName, ExpandAll, predicate) =>
+      case OptionalExpand(_, fromName, dir, types, toName, relName, ExpandAll, predicate, _) =>
         OptionalExpandAllPipe(source, fromName, relName, toName, dir, RelationshipTypes(types.toArray), predicate.map(buildExpression))(id = id)
 
-      case OptionalExpand(_, fromName, dir, types, toName, relName, ExpandInto, predicate) =>
+      case OptionalExpand(_, fromName, dir, types, toName, relName, ExpandInto, predicate, _) =>
         OptionalExpandIntoPipe(source, fromName, relName, toName, dir, RelationshipTypes(types.toArray), predicate.map(buildExpression))(id = id)
 
       case VarExpand(_,

@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.infra.aws;
 
-import com.neo4j.bench.common.util.JsonUtil;
+import com.neo4j.bench.model.util.JsonUtil;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

@@ -30,6 +30,7 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.lock.ResourceLocker;
 import org.neo4j.logging.Log;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 
@@ -41,9 +42,10 @@ public interface StorageEngine extends Lifecycle
     /**
      * @return a new {@link CommandCreationContext} meant to be kept for multiple calls to
      * {@link #createCommands(Collection, ReadableTransactionState, StorageReader, CommandCreationContext, ResourceLocker, long, TxStateVisitor.Decorator,
-     * PageCursorTracer)}. Must be {@link CommandCreationContext#close() closed} after used, before being discarded.
+     * PageCursorTracer)}.
+     * Must be {@link CommandCreationContext#close() closed} after used, before being discarded.
      */
-    CommandCreationContext newCommandCreationContext( PageCursorTracer cursorTracer );
+    CommandCreationContext newCommandCreationContext( PageCursorTracer cursorTracer, MemoryTracker memoryTracker );
 
     /**
      * Adds an {@link IndexUpdateListener} which will receive streams of index updates from changes that gets

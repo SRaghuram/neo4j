@@ -5,23 +5,59 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.expressions
 
+import org.neo4j.codegen.api.StaticField
 import org.neo4j.cypher.internal.cache.LFUCache
 
 /**
   * Compiles [[IntermediateExpression]] into compiled byte code.
   */
-class CachingExpressionCompilerBack(inner: DefaultExpressionCompilerBack) extends ExpressionCompilerBack {
+class CachingExpressionCompilerBack(inner: DefaultExpressionCompilerBack,
+                                    tracer: CachingExpressionCompilerTracer
+                                   ) extends ExpressionCompilerBack {
 
   override def compileExpression(e: IntermediateExpression): CompiledExpression = {
-    CachingExpressionCompilerBack.EXPRESSIONS.computeIfAbsent(e, inner.compileExpression(e))
+    if (onlyStaticFields(e)) {
+      CachingExpressionCompilerBack.EXPRESSIONS.computeIfAbsent(e, innerCompileExpression(e))
+    } else {
+      innerCompileExpression(e)
+    }
+  }
+
+  private def innerCompileExpression(e: IntermediateExpression) = {
+    tracer.onCompileExpression()
+    inner.compileExpression(e)
   }
 
   override def compileProjection(projection: IntermediateExpression): CompiledProjection = {
-    CachingExpressionCompilerBack.PROJECTIONS.computeIfAbsent(projection, inner.compileProjection(projection))
+    if (onlyStaticFields(projection)) {
+      CachingExpressionCompilerBack.PROJECTIONS.computeIfAbsent(projection, innerCompilerProjection(projection))
+    } else {
+      innerCompilerProjection(projection)
+    }
+  }
+
+  private def innerCompilerProjection(projection: IntermediateExpression) = {
+    tracer.onCompileProjection()
+    inner.compileProjection(projection)
   }
 
   override def compileGrouping(grouping: IntermediateGroupingExpression): CompiledGroupingExpression = {
-    CachingExpressionCompilerBack.GROUPINGS.computeIfAbsent(grouping, inner.compileGrouping(grouping))
+    if (onlyStaticFields(grouping.computeKey) &&
+        onlyStaticFields(grouping.getKey) &&
+        onlyStaticFields(grouping.projectKey)) {
+      CachingExpressionCompilerBack.GROUPINGS.computeIfAbsent(grouping, innerCompileGrouping(grouping))
+    } else {
+      innerCompileGrouping(grouping)
+    }
+  }
+
+  private def innerCompileGrouping(grouping: IntermediateGroupingExpression) = {
+    tracer.onCompileGrouping()
+    inner.compileGrouping(grouping)
+  }
+
+  private def onlyStaticFields(e: IntermediateExpression): Boolean = {
+    e.fields.forall(_.isInstanceOf[StaticField])
   }
 }
 

@@ -33,6 +33,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ArrayIndexSupport
 import org.neo4j.cypher.internal.runtime.spec.tests.CachePropertiesTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ConditionalApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DistinctTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllTestBase
@@ -88,6 +89,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipCountFromCountStoreTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RightOuterHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RollupApplyTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.SelectOrSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ShortestPathTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SkipTestBase
@@ -182,6 +184,8 @@ class InterpretedShortestPathTest extends ShortestPathTestBase(COMMUNITY.EDITION
 class InterpretedUnionTest extends UnionTestBase(COMMUNITY.EDITION, InterpretedRuntime, SIZE_HINT)
 class InterpretedSemiApplyTest extends SemiApplyTestBase(COMMUNITY.EDITION, InterpretedRuntime, SIZE_HINT)
 class InterpretedAntiSemiApplyTest extends AntiSemiApplyTestBase(COMMUNITY.EDITION, InterpretedRuntime, SIZE_HINT)
+class InterpretedConditionalApplyTest extends ConditionalApplyTestBase(COMMUNITY.EDITION, InterpretedRuntime, SIZE_HINT)
 
+class InterpretedSelectOrSemiApplyTest extends SelectOrSemiApplyTestBase(COMMUNITY.EDITION, InterpretedRuntime, SIZE_HINT)
 class InterpretedNestedPlanExpressionTest extends NestedPlanExpressionTestBase(COMMUNITY.EDITION, InterpretedRuntime, SIZE_HINT)
 class InterpretedRollupApplyTest extends RollupApplyTestBase(COMMUNITY.EDITION, InterpretedRuntime, SIZE_HINT)

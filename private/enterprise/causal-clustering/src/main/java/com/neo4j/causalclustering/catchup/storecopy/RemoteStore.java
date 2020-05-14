@@ -6,8 +6,8 @@
 package com.neo4j.causalclustering.catchup.storecopy;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
-import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpFactory;
-import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpWriter;
+import com.neo4j.causalclustering.catchup.TransactionLogCatchUpFactory;
+import com.neo4j.causalclustering.catchup.TransactionLogCatchUpWriter;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 
@@ -23,6 +23,7 @@ import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.StoreId;
@@ -51,10 +52,11 @@ public class RemoteStore
     private final StorageEngineFactory storageEngineFactory;
     private final NamedDatabaseId namedDatabaseId;
     private final PageCacheTracer pageCacheTracer;
+    private final MemoryTracker memoryTracker;
 
     public RemoteStore( LogProvider logProvider, FileSystemAbstraction fs, PageCache pageCache, StoreCopyClient storeCopyClient, TxPullClient txPullClient,
             TransactionLogCatchUpFactory transactionLogFactory, Config config, Monitors monitors, StorageEngineFactory storageEngineFactory,
-            NamedDatabaseId namedDatabaseId, PageCacheTracer pageCacheTracer )
+            NamedDatabaseId namedDatabaseId, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
     {
         this.logProvider = logProvider;
         this.storeCopyClient = storeCopyClient;
@@ -69,17 +71,17 @@ public class RemoteStore
         this.storageEngineFactory = storageEngineFactory;
         this.namedDatabaseId = namedDatabaseId;
         this.pageCacheTracer = pageCacheTracer;
+        this.memoryTracker = memoryTracker;
         this.commitStateHelper = new CommitStateHelper( pageCache, fs, config, storageEngineFactory );
     }
 
-    public void tryCatchingUp( CatchupAddressProvider catchupAddressProvider, StoreId expectedStoreId, DatabaseLayout databaseLayout, boolean keepTxLogsInDir,
-            boolean forceTransactionLogRotation )
-            throws StoreCopyFailedException, IOException
+    public void tryCatchingUp( CatchupAddressProvider catchupAddressProvider, StoreId expectedStoreId, DatabaseLayout databaseLayout,
+            boolean keepTxLogsInStoreDir ) throws StoreCopyFailedException, IOException
     {
         CommitState commitState = getCommitState( databaseLayout );
         log.info( "Store commit state: " + commitState );
         TxPullRequestContext txPullRequestContext = createContextFromCatchingUp( expectedStoreId, commitState );
-        pullTransactions( catchupAddressProvider, databaseLayout, txPullRequestContext, false, keepTxLogsInDir, forceTransactionLogRotation );
+        pullTransactions( catchupAddressProvider, databaseLayout, txPullRequestContext, false, keepTxLogsInStoreDir );
     }
 
     private CommitState getCommitState( DatabaseLayout databaseLayout ) throws IOException
@@ -90,8 +92,7 @@ public class RemoteStore
         }
     }
 
-    public void copy( CatchupAddressProvider addressProvider, StoreId expectedStoreId, DatabaseLayout destinationLayout, boolean rotateTransactionsManually )
-            throws StoreCopyFailedException
+    public void copy( CatchupAddressProvider addressProvider, StoreId expectedStoreId, DatabaseLayout destinationLayout ) throws StoreCopyFailedException
     {
         StreamToDiskProvider streamToDiskProvider = new StreamToDiskProvider( destinationLayout.databaseDirectory(), fs, monitors );
         RequiredTransactions requiredTransactions =
@@ -101,7 +102,7 @@ public class RemoteStore
         log.info( "Store files need to be recovered starting from: %s", requiredTransactions );
 
         TxPullRequestContext context = createContextFromStoreCopy( requiredTransactions, expectedStoreId );
-        pullTransactions( addressProvider, destinationLayout, context, true, true, rotateTransactionsManually );
+        pullTransactions( addressProvider, destinationLayout, context, true, true );
     }
 
     private MaximumTotalTime getTerminationCondition()
@@ -110,12 +111,11 @@ public class RemoteStore
     }
 
     private void pullTransactions( CatchupAddressProvider catchupAddressProvider, DatabaseLayout databaseLayout, TxPullRequestContext context,
-            boolean asPartOfStoreCopy, boolean keepTxLogsInStoreDir, boolean rotateTransactionsManually )
-            throws StoreCopyFailedException
+            boolean fullStoreCopy, boolean keepTxLogsInStoreDir ) throws StoreCopyFailedException
     {
         storeCopyClientMonitor.startReceivingTransactions( context.startTxIdExclusive() );
         try ( TransactionLogCatchUpWriter writer = transactionLogFactory.create( databaseLayout, fs, pageCache, config, logProvider, storageEngineFactory,
-                validInitialTxRange( context ), asPartOfStoreCopy, keepTxLogsInStoreDir, rotateTransactionsManually, pageCacheTracer ) )
+                validInitialTxRange( context ), fullStoreCopy, keepTxLogsInStoreDir, pageCacheTracer, memoryTracker ) )
         {
             TxPuller txPuller = createTxPuller( catchupAddressProvider, logProvider, config, namedDatabaseId );
 

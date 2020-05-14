@@ -12,7 +12,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.internal.helpers.Strings;
 import org.neo4j.kernel.api.query.QuerySnapshot;
-import org.neo4j.memory.OptionalMemoryTracker;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.AnyValueWriter.EntityMode;
 import org.neo4j.values.utils.PrettyPrinter;
@@ -32,11 +31,7 @@ class QueryLogFormatter
 
     static void formatAllocatedBytes( StringBuilder result, QuerySnapshot query )
     {
-        long bytes = query.allocatedBytes();
-        if ( bytes != OptionalMemoryTracker.ALLOCATIONS_NOT_TRACKED )
-        {
-            result.append( bytes ).append( " B - " );
-        }
+        result.append( query.allocatedBytes() ).append( " B - " );
     }
 
     static void formatDetailedTime( StringBuilder result, QuerySnapshot query )

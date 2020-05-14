@@ -27,6 +27,7 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 
 import org.neo4j.bolt.BoltChannel;
+import org.neo4j.bolt.BoltProtocolVersion;
 import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
 import org.neo4j.bolt.dbapi.impl.BoltKernelDatabaseManagementServiceProvider;
 import org.neo4j.bolt.packstream.Neo4jPackV1;
@@ -41,6 +42,7 @@ import org.neo4j.bolt.security.auth.BasicAuthentication;
 import org.neo4j.bolt.txtracking.DefaultReconciledTransactionTracker;
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.bolt.v3.messaging.BoltResponseMessageWriterV3;
+import org.neo4j.bolt.v4.BoltProtocolV4;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -58,7 +60,7 @@ import static org.neo4j.bolt.transport.pipeline.ChannelProtector.NULL;
 public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
 {
     static final String USER_AGENT = "BoltPropertySerialization/0.0";
-    public static final long BOLT_VERSION = 4;
+    public static final BoltProtocolVersion BOLT_VERSION = BoltProtocolV4.VERSION;
 
     static BoltStateMachineFactory boltFactory( GraphDatabaseAPI db )
     {

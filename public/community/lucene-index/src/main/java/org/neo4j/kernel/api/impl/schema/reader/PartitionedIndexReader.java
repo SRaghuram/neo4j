@@ -38,10 +38,7 @@ import org.neo4j.kernel.api.index.BridgingIndexProgressor;
 import org.neo4j.kernel.api.index.IndexProgressor;
 import org.neo4j.kernel.api.index.IndexSampler;
 import org.neo4j.kernel.impl.api.index.IndexSamplingConfig;
-import org.neo4j.storageengine.api.NodePropertyAccessor;
 import org.neo4j.values.storable.Value;
-
-import static org.neo4j.internal.kernel.api.IndexQueryConstraints.unordered;
 
 /**
  * Index reader that is able to read/sample multiple partitions of a partitioned Lucene index.
@@ -72,7 +69,7 @@ public class PartitionedIndexReader extends AbstractIndexReader
 
     @Override
     public void query( QueryContext context, IndexProgressor.EntityValueClient client, IndexQueryConstraints constraints,
-            PageCursorTracer cursorTracer, IndexQuery... query ) throws IndexNotApplicableKernelException
+            IndexQuery... query ) throws IndexNotApplicableKernelException
     {
         try
         {
@@ -81,7 +78,7 @@ public class PartitionedIndexReader extends AbstractIndexReader
             {
                 try
                 {
-                    reader.query( context, bridgingIndexProgressor, constraints, cursorTracer, query );
+                    reader.query( context, bridgingIndexProgressor, constraints, query );
                 }
                 catch ( IndexNotApplicableKernelException e )
                 {

@@ -8,9 +8,8 @@ package com.neo4j.causalclustering.catchup.storecopy;
 import com.neo4j.causalclustering.catchup.CatchUpClientException;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
-import com.neo4j.causalclustering.catchup.CatchupResult;
-import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpFactory;
-import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpWriter;
+import com.neo4j.causalclustering.catchup.TransactionLogCatchUpFactory;
+import com.neo4j.causalclustering.catchup.TransactionLogCatchUpWriter;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
@@ -49,6 +48,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngine;
 
 class RemoteStoreTest
@@ -88,8 +88,7 @@ class RemoteStoreTest
 
         TxPullClient txPullClient = mock( TxPullClient.class );
         AtomicLong lastTxSupplier = new AtomicLong();
-        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then(
-                incrementTxIdResponse( SUCCESS_END_OF_STREAM, lastTxSupplier, 0 ) );
+        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then( incrementTxIdResponse( lastTxSupplier, 0 ) );
 
         when( writer.lastTx() ).then( m -> lastTxSupplier.get() );
 
@@ -110,8 +109,7 @@ class RemoteStoreTest
 
         TxPullClient txPullClient = mock( TxPullClient.class );
         AtomicLong lastTxSupplier = new AtomicLong();
-        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then(
-                incrementTxIdResponse( SUCCESS_END_OF_STREAM, lastTxSupplier, 1 ) );
+        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then( incrementTxIdResponse( lastTxSupplier, 1 ) );
 
         when( writer.lastTx() ).then( m -> lastTxSupplier.get() );
 
@@ -131,8 +129,7 @@ class RemoteStoreTest
 
         TxPullClient txPullClient = mock( TxPullClient.class );
         AtomicLong lastTxSupplier = new AtomicLong();
-        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then(
-                incrementTxIdResponse( SUCCESS_END_OF_STREAM, lastTxSupplier, 0 ) );
+        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then( incrementTxIdResponse( lastTxSupplier, 0 ) );
 
         when( writer.lastTx() ).then( m -> lastTxSupplier.get() );
 
@@ -194,8 +191,7 @@ class RemoteStoreTest
         TxPullClient txPullClient = mock( TxPullClient.class );
         AtomicLong lastTxSupplier = new AtomicLong();
         // fail with progress still increments txId
-        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then(
-                incrementTxIdResponse( SUCCESS_END_OF_STREAM, lastTxSupplier, 1 ) );
+        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then( incrementTxIdResponse( lastTxSupplier, 1 ) );
 
         when( writer.lastTx() ).then( m -> lastTxSupplier.get() );
 
@@ -221,8 +217,7 @@ class RemoteStoreTest
         TxPullClient txPullClient = mock( TxPullClient.class );
         AtomicLong lastTxSupplier = new AtomicLong();
         // fail with progress still increments txId
-        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then(
-                incrementTxIdResponse( SUCCESS_END_OF_STREAM, lastTxSupplier, 1 ) );
+        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then( incrementTxIdResponse( lastTxSupplier, 1 ) );
 
         when( writer.lastTx() ).then( m -> lastTxSupplier.get() );
 
@@ -236,19 +231,19 @@ class RemoteStoreTest
             throws IOException, StoreCopyFailedException
     {
         RemoteStore remoteStore = new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ), null,
-                storeCopyClient, txPullClient, factory( writer ), config, new Monitors(), selectStorageEngine(), DATABASE_ID, PageCacheTracer.NULL );
+                storeCopyClient, txPullClient, factory( writer ), config, new Monitors(), selectStorageEngine(), DATABASE_ID, PageCacheTracer.NULL, INSTANCE );
 
-        remoteStore.copy( catchupAddressProvider, storeId, databaseLayout, true );
+        remoteStore.copy( catchupAddressProvider, storeId, databaseLayout );
     }
 
-    private Answer<TxStreamFinishedResponse> incrementTxIdResponse( CatchupResult status, AtomicLong lastTxSupplier, long incrementAmount )
+    private Answer<TxStreamFinishedResponse> incrementTxIdResponse( AtomicLong lastTxSupplier, long incrementAmount )
     {
         return invocationOnMock ->
         {
             long txId = invocationOnMock.getArgument( 2 );
             long incrementedTxId = txId + incrementAmount;
             lastTxSupplier.set( incrementedTxId );
-            return new TxStreamFinishedResponse( status, status == SUCCESS_END_OF_STREAM ? incrementedTxId : -1 );
+            return new TxStreamFinishedResponse( SUCCESS_END_OF_STREAM, incrementedTxId );
         };
     }
 
@@ -256,7 +251,7 @@ class RemoteStoreTest
     {
         TransactionLogCatchUpFactory factory = mock( TransactionLogCatchUpFactory.class );
         when( factory.create( any(), any( FileSystemAbstraction.class ), isNull(), any( Config.class ), any( LogProvider.class ), any(),
-                any(), anyBoolean(), anyBoolean(), anyBoolean(), any() ) ).thenReturn( writer );
+                any(), anyBoolean(), anyBoolean(), any(), any() ) ).thenReturn( writer );
         return factory;
     }
 }

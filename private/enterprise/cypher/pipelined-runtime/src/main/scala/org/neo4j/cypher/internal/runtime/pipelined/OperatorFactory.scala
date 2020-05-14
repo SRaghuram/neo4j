@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
+import org.neo4j.cypher.internal.logical.plans.ExpandCursorProperties
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NodeUniqueIndexSeek
 import org.neo4j.cypher.internal.logical.plans.QueryExpression
@@ -26,6 +27,7 @@ import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
 import org.neo4j.cypher.internal.physicalplanning.ReduceOutput
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotWithKeyAndAliases
@@ -34,6 +36,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.isRefSlotAnd
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionSlotForPredicate
+import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
@@ -50,6 +53,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
+import org.neo4j.cypher.internal.runtime.pipelined.OperatorFactory.getExpandProperties
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AggregatorFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationOperator
@@ -63,6 +67,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.CachePropertiesOper
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CartesianProductOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipByIdSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctPrimitiveOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctSinglePrimitiveOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandIntoOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.FilterOperator
@@ -93,6 +99,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OrderedAggregationO
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OrderedDistinctOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.PartialSortOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.PartialTopOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProduceResultOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipCountFromCountStoreOperator
@@ -111,9 +118,12 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityMutableDescription
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityMutableDescriptionImpl
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.DistinctAllPrimitive
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionsForResult
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.findDistinctPhysicalOp
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.partitionGroupingExpressions
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColumnOrder
+import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPropertyKeys
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.InternalException
@@ -130,8 +140,10 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                       val readOnly: Boolean,
                       val indexRegistrator: QueryIndexRegistrator,
                       semanticTable: SemanticTable,
+                      tokenContext: TokenContext,
                       val interpretedPipesFallbackPolicy: InterpretedPipesFallbackPolicy,
-                      val slottedPipeBuilder: Option[PipeMapper]) {
+                      val slottedPipeBuilder: Option[PipeMapper],
+                      runtimeName: String) {
 
   private val physicalPlan = executionGraphDefinition.physicalPlan
   private val aggregatorFactory = AggregatorFactory(physicalPlan)
@@ -157,19 +169,20 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           slots.getLongOffsetFor(column),
           argumentSize)
 
-      case plans.NodeByLabelScan(column, label, _) =>
+      case plans.NodeByLabelScan(column, label, _, indexOrder) =>
         val argumentSize = physicalPlan.argumentSizes(id)
         indexRegistrator.registerLabelScan()
         new LabelScanOperator(WorkIdentity.fromPlan(plan),
           slots.getLongOffsetFor(column),
           LazyLabel(label)(semanticTable),
-          argumentSize)
+          argumentSize,
+          asKernelIndexOrder(indexOrder))
 
       case plans.NodeIndexSeek(column, label, properties, valueExpr, _, indexOrder) =>
         val argumentSize = physicalPlan.argumentSizes(id)
         val indexSeekMode = IndexSeekModeFactory(unique = false, readOnly = readOnly).fromQueryExpression(valueExpr)
         if (indexSeekMode == LockingUniqueIndexSeek) {
-          throw new CantCompileQueryException("Pipelined does not yet support the plans including `NodeUniqueIndexSeek(Locking)`, use another runtime.")
+          throw new CantCompileQueryException(s"$runtimeName does not yet support the plans including `NodeUniqueIndexSeek(Locking)`, use another runtime.")
         }
 
         new NodeIndexSeekOperator(WorkIdentity.fromPlan(plan),
@@ -278,19 +291,22 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           maybeEndLabel,
           physicalPlan.argumentSizes(id))
 
-      case plans.Expand(_, fromName, dir, types, to, relName, plans.ExpandAll) =>
+      case plans.Expand(_, fromName, dir, types, to, relName, plans.ExpandAll, expandProperties) =>
         val fromSlot = slots(fromName)
         val relOffset = slots.getLongOffsetFor(relName)
         val toOffset = slots.getLongOffsetFor(to)
         val lazyTypes = RelationshipTypes(types.toArray)(semanticTable)
+        val (nodePropsToCache, relPropsToCache) = getExpandProperties(slots, tokenContext, expandProperties)
         new ExpandAllOperator(WorkIdentity.fromPlan(plan),
           fromSlot,
           relOffset,
           toOffset,
           dir,
-          lazyTypes)
+          lazyTypes,
+          nodePropsToCache,
+          relPropsToCache)
 
-      case plans.Expand(_, fromName, dir, types, to, relName, plans.ExpandInto) =>
+      case plans.Expand(_, fromName, dir, types, to, relName, plans.ExpandInto, _) =>
         val fromSlot = slots(fromName)
         val relOffset = slots.getLongOffsetFor(relName)
         val toSlot = slots(to)
@@ -337,16 +353,19 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           nodePredicate.map(x => converters.toCommandExpression(id, x.predicate)).getOrElse(True()),
           relationshipPredicate.map(x => converters.toCommandExpression(id, x.predicate)).getOrElse(True()))
 
-      case plans.OptionalExpand(_, fromName, dir, types, to, relName, plans.ExpandAll, maybePredicate) =>
+      case plans.OptionalExpand(_, fromName, dir, types, to, relName, plans.ExpandAll, maybePredicate, expandProperties) =>
+        val (nodePropsToCache, relPropsToCache) = getExpandProperties(slots, tokenContext, expandProperties)
         new OptionalExpandAllOperator(WorkIdentity.fromPlan(plan),
           slots(fromName),
           slots.getLongOffsetFor(relName),
           slots.getLongOffsetFor(to),
           dir,
           RelationshipTypes(types.toArray)(semanticTable),
-          maybePredicate.map(converters.toCommandExpression(id, _)))
+          maybePredicate.map(converters.toCommandExpression(id, _)),
+          nodePropsToCache,
+          relPropsToCache)
 
-      case plans.OptionalExpand(_, fromName, dir, types, to, relName, plans.ExpandInto, maybePredicate) =>
+      case plans.OptionalExpand(_, fromName, dir, types, to, relName, plans.ExpandInto, maybePredicate, _) =>
         new OptionalExpandIntoOperator(WorkIdentity.fromPlan(plan),
           slots(fromName),
           slots.getLongOffsetFor(relName),
@@ -477,6 +496,26 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           ordering,
           converters.toCommandExpression(id, limit)).reducer(argumentStateMapId, id)
 
+      case plans.PartialTop(_, alreadySortedPrefix, stillToSortSuffix, limit) =>
+        val prefixComparator = MorselSorting.createComparator(alreadySortedPrefix.map(translateColumnOrder(slots, _)))
+        val suffixComparator = MorselSorting.createComparator(stillToSortSuffix.map(translateColumnOrder(slots, _)))
+        val Seq(bufferAsmId, workCancellerAsmId) = executionGraphDefinition.argumentStateMaps.toSeq.collect {
+          case argumentStateDef if argumentStateDef.planId == id => argumentStateDef.id
+        }
+
+        val applyPlanId = physicalPlan.applyPlans(id)
+        val argumentSlotOffset = slots.getArgumentLongOffsetFor(applyPlanId)
+
+        new PartialTopOperator(
+          bufferAsmId,
+          workCancellerAsmId,
+          argumentSlotOffset,
+          WorkIdentity.fromPlan(plan),
+          prefixComparator,
+          suffixComparator,
+          converters.toCommandExpression(id, limit),
+          id)
+
       case plans.Aggregation(_, groupingExpressions, aggregationExpression) if groupingExpressions.isEmpty =>
         val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStateBufferVariant].argumentStateMapId
 
@@ -571,7 +610,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         createSlottedPipeHeadOperator(plan)
 
       case _ =>
-        throw new CantCompileQueryException(s"Pipelined does not yet support the plans including `$plan`, use another runtime.")
+        throw new CantCompileQueryException(s"$runtimeName does not yet support the plans including `$plan`, use another runtime.")
     }
   }
 
@@ -640,9 +679,20 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         Some(new SkipOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), converters.toCommandExpression(id, count)))
 
       case plans.Distinct(_, groupingExpressions) =>
+        val physicalDistinctOp = findDistinctPhysicalOp(groupingExpressions, Seq.empty)
         val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
         val groupings = converters.toGroupingExpression(id, groupingExpressions, Seq.empty)
-        Some(new DistinctOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), groupings)(id))
+
+        physicalDistinctOp match {
+          case DistinctAllPrimitive(offsets, _) if offsets.size == 1 =>
+            val (toSlot, expression) = groupingExpressions.head
+            val runtimeExpression = converters.toCommandExpression(id, expression)
+            Some(new DistinctSinglePrimitiveOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), slots(toSlot), offsets.head, runtimeExpression)(id))
+          case SlottedPipeMapper.DistinctAllPrimitive(offsets, _) =>
+            Some(new DistinctPrimitiveOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), offsets.sorted.toArray, groupings)(id))
+          case SlottedPipeMapper.DistinctWithReferences =>
+            Some(new DistinctOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), groupings)(id))
+        }
 
       case plans.OrderedDistinct(_, groupingExpressions, orderToLeverage) =>
         val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
@@ -675,12 +725,12 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         interpretedPipesFallbackPolicy.breakOn(plan)
         if (breakingPolicyForInterpretedPipesFallback.breakOn(plan, physicalPlan.applyPlans(id))) {
           // Plan is supported, but only as a head plan
-          throw new CantCompileQueryException(s"Pipelined does not yet support using `$plan` as a fallback middle plan, use another runtime.")
+          throw new CantCompileQueryException(s"$runtimeName does not yet support using `$plan` as a fallback middle plan, use another runtime.")
         }
         createSlottedPipeMiddleOperator(plan, maybeSlottedPipeOperatorToChainOnTo)
 
       case _ =>
-        throw new CantCompileQueryException(s"Pipelined does not yet support using `$plan` as a middle plan, use another runtime.")
+        throw new CantCompileQueryException(s"$runtimeName does not yet support using `$plan` as a middle plan, use another runtime.")
     }
   }
 
@@ -692,12 +742,12 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       runtimeColumns)
   }
 
-  def createOutput(outputDefinition: OutputDefinition, nextPipelineFused: Boolean): OutputOperator = {
+  def createOutput(outputDefinition: OutputDefinition, nextPipelineCanTrackTime: Boolean): OutputOperator = {
 
     outputDefinition match {
       case NoOutput => NoOutputOperator
-      case MorselBufferOutput(bufferId, planId) => MorselBufferOutputOperator(bufferId, planId, nextPipelineFused)
-      case MorselArgumentStateBufferOutput(bufferId, argumentSlotOffset, planId) => MorselArgumentStateBufferOutputOperator(bufferId, argumentSlotOffset, planId, nextPipelineFused)
+      case MorselBufferOutput(bufferId, planId) => MorselBufferOutputOperator(bufferId, planId, nextPipelineCanTrackTime)
+      case MorselArgumentStateBufferOutput(bufferId, argumentSlotOffset, planId) => MorselArgumentStateBufferOutputOperator(bufferId, argumentSlotOffset, planId, nextPipelineCanTrackTime)
       case ProduceResultOutput(p) => createProduceResults(p)
       case ReduceOutput(bufferId, plan) =>
         val id = plan.id
@@ -731,7 +781,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
               aggregators.result())
               .mapper(argumentSlotOffset,
                 bufferId,
-                expressions.result())
+                expressions.result(),
+                id)
 
           case plans.Aggregation(_, groupingExpressions, aggregationExpression) =>
             val groupings = converters.toGroupingExpression(id, groupingExpressions, Seq.empty)
@@ -746,7 +797,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             }
 
             AggregationOperator(WorkIdentity.fromPlan(plan, "Pre"), aggregators.result(), groupings)
-              .mapper(argumentSlotOffset, bufferId, expressions.result())
+              .mapper(argumentSlotOffset, bufferId, expressions.result(), id)
 
         }
     }
@@ -801,6 +852,20 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
     }
   }
 
+}
+
+object OperatorFactory {
+  def getExpandProperties(slots: SlotConfiguration,
+                          tokenContext: TokenContext,
+                          expandProperties: Option[ExpandCursorProperties]): (Option[SlottedPropertyKeys], Option[SlottedPropertyKeys]) = {
+    val (nodePropsToCache, relPropsToCache) = expandProperties match {
+      case Some(rp) => (
+        if (rp.nodeProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.nodeProperties, slots, tokenContext)),
+        if (rp.relProperties.isEmpty) None else Some(SlottedPropertyKeys.resolve(rp.relProperties, slots, tokenContext)))
+      case None => (None, None)
+    }
+    (nodePropsToCache, relPropsToCache)
+  }
 }
 
 case class NodeIndexSeekParameters(nodeSlotOffset: Int,

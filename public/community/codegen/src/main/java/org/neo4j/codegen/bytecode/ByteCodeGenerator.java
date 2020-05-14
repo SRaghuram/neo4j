@@ -25,15 +25,18 @@ import java.util.List;
 import java.util.Map;
 
 import org.neo4j.codegen.ByteCodes;
-import org.neo4j.codegen.ClassEmitter;
+import org.neo4j.codegen.ClassWriter;
 import org.neo4j.codegen.CodeGenerator;
 import org.neo4j.codegen.CompilationFailureException;
 import org.neo4j.codegen.TypeReference;
 
+/**
+ * {@link CodeGenerator} that generates classes dy direct bytecode generation using {@link org.objectweb.asm.ClassWriter}.
+ */
 class ByteCodeGenerator extends CodeGenerator
 {
     private final Configuration configuration;
-    private final Map<TypeReference,ClassByteCodeWriter> classes = new HashMap<>();
+    private final Map<TypeReference,ByteCodeClassWriter> classes = new HashMap<>();
 
     ByteCodeGenerator( ClassLoader parentClassLoader, Configuration configuration )
     {
@@ -42,12 +45,12 @@ class ByteCodeGenerator extends CodeGenerator
     }
 
     @Override
-    protected ClassEmitter generate( TypeReference type, TypeReference base, TypeReference[] interfaces )
+    protected ClassWriter generate( TypeReference type, TypeReference base, TypeReference[] interfaces )
     {
-        ClassByteCodeWriter codeWriter = new ClassByteCodeWriter( type, base, interfaces );
+        ByteCodeClassWriter codeWriter = new ByteCodeClassWriter( type, base, interfaces );
         synchronized ( this )
         {
-            ClassByteCodeWriter old = classes.put( type, codeWriter );
+            ByteCodeClassWriter old = classes.put( type, codeWriter );
             if ( old != null )
             {
                 classes.put( type, old );
@@ -61,15 +64,20 @@ class ByteCodeGenerator extends CodeGenerator
     @Override
     protected Iterable<? extends ByteCodes> compile( ClassLoader classpathLoader ) throws CompilationFailureException
     {
-        List<ByteCodes> byteCodes = new ArrayList<>( classes.size() );
-        for ( ClassByteCodeWriter writer : classes.values() )
+        List<ByteCodes> byteCodes;
+        synchronized ( this )
         {
-            byteCodes.add( writer.toByteCodes() );
-        }
-        ByteCodeChecker checker = configuration.bytecodeChecker();
-        if ( checker != null )
-        {
-            checker.check( classpathLoader, byteCodes );
+            byteCodes = new ArrayList<>( classes.size() );
+            for ( ByteCodeClassWriter writer : classes.values() )
+            {
+                byteCodes.add( writer.toByteCodes() );
+            }
+            ByteCodeChecker checker = configuration.bytecodeChecker();
+            if ( checker != null )
+            {
+                checker.check( classpathLoader, byteCodes );
+            }
+            classes.clear();
         }
         return byteCodes;
     }

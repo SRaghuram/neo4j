@@ -19,14 +19,17 @@ import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.error_handling.DatabasePanicEventHandler;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.helper.StatUtil;
+import com.neo4j.causalclustering.helper.scheduling.LimitingScheduler;
+import com.neo4j.causalclustering.helper.scheduling.SingleElementJobsQueue;
 
 import java.io.IOException;
 import java.util.List;
 
-import org.neo4j.function.ThrowingAction;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.scheduler.Group;
+import org.neo4j.scheduler.JobScheduler;
 
 import static java.lang.Math.max;
 import static java.lang.String.format;
@@ -45,15 +48,17 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
     private final RaftLogAppliedIndexMonitor appliedIndexMonitor;
     private final CommandBatcher batcher;
     private final DatabasePanicker panicker;
+    private final LimitingScheduler scheduler;
     private final StatUtil.StatContext batchStat;
 
     private long lastFlushed = NOTHING;
-    private int pauseCount = 1; // we are created in the paused state
-    private Thread applierThread;
+    private volatile int pauseCount = 1; // we are created in the paused state
     private final ApplierState applierState = new ApplierState();
+    private volatile boolean hasPanicked;
 
     public CommandApplicationProcess( RaftLog raftLog, int maxBatchSize, int flushEvery, LogProvider logProvider, ProgressTracker progressTracker,
-            SessionTracker sessionTracker, CoreState coreState, InFlightCache inFlightCache, Monitors monitors, DatabasePanicker panicker )
+                                      SessionTracker sessionTracker, CoreState coreState, InFlightCache inFlightCache, Monitors monitors,
+                                      DatabasePanicker panicker, JobScheduler scheduler )
     {
         this.raftLog = raftLog;
         this.flushEvery = flushEvery;
@@ -66,18 +71,31 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
         this.appliedIndexMonitor = monitors.newMonitor( RaftLogAppliedIndexMonitor.class, getClass().getName() );
         this.batcher = new CommandBatcher( maxBatchSize, this::applyBatch );
         this.panicker = panicker;
+        this.scheduler = new LimitingScheduler( scheduler, Group.CORE_STATE_APPLIER, log, new SingleElementJobsQueue<>() );
         this.batchStat = StatUtil.create( "BatchSize", log, 4096, true );
     }
 
     void notifyCommitted( long commitIndex )
     {
         applierState.notifyCommitted( commitIndex );
+        if ( applierState.toApply() != NOTHING )
+        {
+            scheduleJob();
+        }
+    }
+
+    private synchronized void scheduleJob()
+    {
+        if ( pauseCount == 0 && !hasPanicked )
+        {
+            scheduler.offerJob( this::applyJob );
+        }
     }
 
     @Override
     public void onPanic( Throwable cause )
     {
-        applierState.panic();
+        hasPanicked = true;
     }
 
     private class ApplierState
@@ -87,39 +105,15 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
 
         // owned by applier
         private volatile long lastApplied = NOTHING;
-        private volatile boolean panic;
-
-        private volatile boolean keepRunning = true; // clear to shutdown the apply job
 
         private synchronized long getLastSeenCommitIndex()
         {
             return lastSeenCommitIndex;
         }
 
-        private void panic()
+        synchronized long toApply()
         {
-            panic = true;
-            keepRunning = false;
-        }
-
-        synchronized void setKeepRunning( boolean keepRunning )
-        {
-            if ( panic && keepRunning )
-            {
-                throw new IllegalStateException( "The applier has panicked" );
-            }
-
-            this.keepRunning = keepRunning;
-            notifyAll();
-        }
-
-        synchronized long awaitJob()
-        {
-            while ( lastApplied >= lastSeenCommitIndex && keepRunning )
-            {
-                ignoringInterrupts( this::wait );
-            }
-            return lastSeenCommitIndex;
+            return lastApplied >= lastSeenCommitIndex ? NOTHING : lastSeenCommitIndex;
         }
 
         synchronized void notifyCommitted( long commitIndex )
@@ -128,7 +122,6 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
             {
                 lastSeenCommitIndex = commitIndex;
                 commitIndexMonitor.commitIndex( commitIndex );
-                notifyAll();
             }
         }
 
@@ -141,26 +134,27 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
 
     private void applyJob()
     {
-        while ( applierState.keepRunning )
+        try
         {
-            try
-            {
-                applyUpTo( applierState.awaitJob() );
-            }
-            catch ( Throwable e )
-            {
-                panicker.panic( e );
-                log.error( "Failed to apply", e );
-                return; // LET THREAD DIE
-            }
+            applyUpTo( applierState.toApply() );
+        }
+        catch ( Throwable e )
+        {
+            panicker.panic( e );
+            log.error( "Failed to apply", e );
         }
     }
 
     private void applyUpTo( long applyUpToIndex ) throws Exception
     {
+        if ( applyUpToIndex == NOTHING )
+        {
+            // nothing to apply
+            return;
+        }
         try ( InFlightLogEntryReader logEntrySupplier = new InFlightLogEntryReader( raftLog, inFlightCache, true ) )
         {
-            for ( long logIndex = applierState.lastApplied + 1; applierState.keepRunning && logIndex <= applyUpToIndex; logIndex++ )
+            for ( long logIndex = applierState.lastApplied + 1; !hasPanicked && logIndex <= applyUpToIndex; logIndex++ )
             {
                 RaftLogEntry entry = logEntrySupplier.get( logIndex );
                 if ( entry == null )
@@ -294,21 +288,6 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
         coreState.flush( applierState.lastApplied );
     }
 
-    private void spawnApplierThread()
-    {
-        applierState.setKeepRunning( true );
-        //TODO: use a JobScheduler#threadFactory(Group) to create this thread so it doesn't just exist on calling groups (such as DatabaseReconciler and
-        //  CatchupServer)
-        applierThread = new Thread( this::applyJob, "core-state-applier" );
-        applierThread.start();
-    }
-
-    private void stopApplierThread()
-    {
-        applierState.setKeepRunning( false );
-        ignoringInterrupts( () -> applierThread.join() );
-    }
-
     public synchronized void pauseApplier( String reason )
     {
         if ( pauseCount < 0 )
@@ -321,7 +300,7 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
 
         if ( pauseCount == 1 )
         {
-            stopApplierThread();
+            scheduler.disable();
         }
     }
 
@@ -337,24 +316,8 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
 
         if ( pauseCount == 0 )
         {
-            spawnApplierThread();
+            scheduler.enable();
+            scheduleJob();
         }
     }
-
-    /**
-     * We do not expect the interrupt system to be used here,
-     * so we ignore them and log a warning.
-     */
-    private void ignoringInterrupts( ThrowingAction<InterruptedException> action )
-    {
-        try
-        {
-            action.apply();
-        }
-        catch ( InterruptedException e )
-        {
-            log.warn( "Unexpected interrupt", e );
-        }
-    }
-
 }

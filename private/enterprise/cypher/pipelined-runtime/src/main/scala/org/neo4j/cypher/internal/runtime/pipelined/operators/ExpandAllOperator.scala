@@ -54,7 +54,10 @@ import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.DB_ACCESS
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.PROPERTY_CURSOR
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.vPROPERTY_CURSOR
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression.EMPTY
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.pipelined.NodeCursorRepresentation
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
@@ -69,6 +72,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTa
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_NODE_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_TRAVERSAL_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NO_TOKEN
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NodeCursorPool
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.TraversalCursorPool
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.allocateAndTraceCursor
@@ -77,17 +81,21 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.singleNode
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
+import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPropertyKeys
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.NodeCursor
+import org.neo4j.internal.kernel.api.PropertyCursor
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.TokenRead
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections
 import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.Value
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -97,7 +105,9 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
                         relOffset: Int,
                         toOffset: Int,
                         dir: SemanticDirection,
-                        types: RelationshipTypes) extends StreamingOperator {
+                        types: RelationshipTypes,
+                        nodePropsToRead: Option[SlottedPropertyKeys],
+                        relsPropsToRead: Option[SlottedPropertyKeys]) extends StreamingOperator {
 
   override def toString: String = "ExpandAll"
 
@@ -106,13 +116,15 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
                                    parallelism: Int,
                                    resources: QueryResources,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
-    IndexedSeq(new ExpandAllTask(inputMorsel.nextCopy,
+    singletonIndexedSeq(new ExpandAllTask(inputMorsel.nextCopy,
       workIdentity,
       fromSlot,
       relOffset,
       toOffset,
       dir,
-      types))
+      types,
+      nodePropsToRead,
+      relsPropsToRead))
 
 }
 
@@ -122,7 +134,9 @@ class ExpandAllTask(inputMorsel: Morsel,
                     relOffset: Int,
                     toOffset: Int,
                     dir: SemanticDirection,
-                    types: RelationshipTypes) extends InputLoopTask(inputMorsel) {
+                    types: RelationshipTypes,
+                    nodePropsToRead: Option[SlottedPropertyKeys],
+                    relsPropsToRead: Option[SlottedPropertyKeys]) extends InputLoopTask(inputMorsel) {
 
   override def toString: String = "ExpandAllTask"
 
@@ -130,7 +144,7 @@ class ExpandAllTask(inputMorsel: Morsel,
   // Compile-time initializations
   //===========================================================================
   protected val getFromNodeFunction: ToLongFunction[ReadableRow] =
-    makeGetPrimitiveNodeFromSlotFunctionFor(fromSlot)
+  makeGetPrimitiveNodeFromSlotFunctionFor(fromSlot)
 
   /*
   This might look wrong, but it's like this by design. This allows the loop to terminate early and still be
@@ -140,6 +154,7 @@ class ExpandAllTask(inputMorsel: Morsel,
   protected var nodeCursor: NodeCursor = _
   private var traversalCursor: RelationshipTraversalCursor = _
   protected var relationships: RelationshipTraversalCursor = _
+  protected var propertyCursor: PropertyCursor = _
 
   protected override def initializeInnerLoop(state: PipelinedQueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
     val fromNode = getFromNodeFunction.applyAsLong(inputCursor)
@@ -149,13 +164,18 @@ class ExpandAllTask(inputMorsel: Morsel,
       val pools: CursorPools = resources.cursorPools
       nodeCursor = pools.nodeCursorPool.allocateAndTrace()
       relationships = getRelationshipsCursor(state.queryContext, pools, fromNode, dir, types.types(state.queryContext))
+      if (nodePropsToRead.isDefined || relsPropsToRead.isDefined) {
+        propertyCursor = resources.expressionCursors.propertyCursor
+      }
       true
     }
   }
 
   override protected def innerLoop(outputRow: MorselFullCursor, state: PipelinedQueryState): Unit = {
 
+    cacheNodeProperties(outputRow, state.queryContext)
     while (outputRow.onValidRow && relationships.next()) {
+      cacheRelationshipProperties(outputRow, state.queryContext)
       val relId = relationships.relationshipReference()
       val otherSide = relationships.otherNodeReference()
 
@@ -205,6 +225,24 @@ class ExpandAllTask(inputMorsel: Morsel,
       }
     }
   }
+
+  protected def cacheNodeProperties(outputRow: MorselFullCursor, queryContext: QueryContext): Unit = {
+    nodePropsToRead.foreach(p => {
+      nodeCursor.properties(propertyCursor)
+      while (propertyCursor.next() && p.accept(queryContext, propertyCursor.propertyKey())) {
+        outputRow.setCachedPropertyAt(p.offset, propertyCursor.propertyValue())
+      }
+    })
+  }
+
+  protected def cacheRelationshipProperties(outputRow: MorselFullCursor, queryContext: QueryContext): Unit = {
+    relsPropsToRead.foreach(p => {
+      relationships.properties(propertyCursor)
+      while (propertyCursor.next() && p.accept(queryContext, propertyCursor.propertyKey())) {
+        outputRow.setCachedPropertyAt(p.offset, propertyCursor.propertyValue())
+      }
+    })
+  }
 }
 
 class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
@@ -218,7 +256,9 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                     toOffset: Int,
                                     dir: SemanticDirection,
                                     types: Array[Int],
-                                    missingTypes: Array[String])
+                                    missingTypes: Array[String],
+                                    nodePropsToRead: Option[SlottedPropertyKeys],
+                                    relsPropsToRead: Option[SlottedPropertyKeys])
                                    (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen, isHead) {
 
   protected val nodeCursorField: InstanceField = field[NodeCursor](codeGen.namer.nextVariableName("nodeCursor"))
@@ -229,6 +269,9 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     else arrayOf[Int](types.map(constant):_*))
   private val missingTypeField: InstanceField = field[Array[String]](codeGen.namer.nextVariableName("missingType"),
     arrayOf[String](missingTypes.map(constant):_*))
+ private val missingProperties = (nodePropsToRead.map(_.unresolved).getOrElse(Seq.empty[(String,Int)]) ++ relsPropsToRead.map(_.unresolved).getOrElse(Seq.empty[(String,Int)])).toMap.map {
+   case (name, _) => name -> field[Int](codeGen.namer.nextVariableName(name), NO_TOKEN)
+ }
 
   codeGen.registerCursor(relName, RelationshipCursorRepresentation(loadField(relationshipsField)))
 
@@ -236,9 +279,12 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genMoreFields: Seq[Field] = {
     val localFields =
-      ArrayBuffer(nodeCursorField, traversalCursorField, relationshipsField, typeField)
+      ArrayBuffer[Field](nodeCursorField, traversalCursorField, relationshipsField, typeField)
     if (missingTypes.nonEmpty) {
       localFields += missingTypeField
+    }
+    missingProperties.foreach {
+      case (_, field) => localFields += field
     }
 
     localFields
@@ -246,7 +292,10 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
 
-  override def genExpressions: Seq[IntermediateExpression] = Seq.empty
+ //we return an empty expression here to get proper tracing for the property cursor
+  override def genExpressions: Seq[IntermediateExpression] =
+    if (nodePropsToRead.nonEmpty || relsPropsToRead.nonEmpty) Seq(EMPTY.withVariable(vPROPERTY_CURSOR))
+    else Seq.empty
 
   /**
    * {{{
@@ -311,6 +360,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
   override protected def genInnerLoop: IntermediateRepresentation = {
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
+        cacheProperties(relsPropsToRead, invokeSideEffect(loadField(relationshipsField), method[RelationshipTraversalCursor, Unit, PropertyCursor]("properties"), PROPERTY_CURSOR)),
         writeRow(getRelationship, getOtherNode),
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(
@@ -399,10 +449,12 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
    * There is an existing nodeCursor pointing at the correct node, we use that when setting up the `RelationshipSelectionCursor`
    */
   private def expandUsingExistingNodeCursor(cursor: NodeCursorRepresentation): IntermediateRepresentation = {
-    val method = findExpansionMethod
+    val expandMethod = findExpansionMethod
 
-    block(allocateAndTraceCursor(traversalCursorField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
-      setField(relationshipsField, invokeStatic(method,
+    block(
+      cacheProperties(nodePropsToRead, invokeSideEffect(cursor.target, method[NodeCursor, Unit, PropertyCursor]("properties"), PROPERTY_CURSOR)),
+      allocateAndTraceCursor(traversalCursorField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
+      setField(relationshipsField, invokeStatic(expandMethod,
         loadField(traversalCursorField),
         cursor.target,
         loadField(typeField))))
@@ -413,14 +465,15 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
    * Allocate a nodeCursor and point at the correct node, use that when setting up the `RelationshipSelectionCursor`
    */
   private def expandWithNewNodeCursor(fromNode: String): IntermediateRepresentation = {
-    val method = findExpansionMethod
+    val expandMethod = findExpansionMethod
     block(allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR),
       singleNode(load(fromNode), loadField(nodeCursorField)),
       ifElse(cursorNext[NodeCursor](loadField(nodeCursorField)))(
         block(
+          cacheProperties(nodePropsToRead, invokeSideEffect(loadField(nodeCursorField), method[NodeCursor, Unit, PropertyCursor]("properties"), PROPERTY_CURSOR)),
           allocateAndTraceCursor(traversalCursorField, executionEventField,
             ALLOCATE_TRAVERSAL_CURSOR),
-          setField(relationshipsField, invokeStatic(method,
+          setField(relationshipsField, invokeStatic(expandMethod,
             loadField(traversalCursorField),
             loadField(nodeCursorField),
             loadField(typeField))))
@@ -445,6 +498,38 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
         method[RelationshipSelections, RelationshipTraversalCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]](
           "allCursor")
     }
+  }
+
+  protected def cacheProperties(props: Option[SlottedPropertyKeys], setupPropertyCursor: IntermediateRepresentation) = {
+    props.map(p => {
+      val resolvedOps = p.resolved.map {
+        case (token, offset) =>
+          codeGen.setCachedPropertyAt(offset,
+            ternary(
+              invoke(PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), constant(token)),
+              invoke(PROPERTY_CURSOR, method[PropertyCursor, Value]("propertyValue")),
+              noValue
+            ))
+      }
+      val unResolvedOps = p.unresolved.map {
+        case (name, offset) =>
+          val f = missingProperties(name)
+          block(
+            condition(equal(loadField(f), NO_TOKEN)) {
+              setField(f, OperatorCodeGenHelperTemplates.propertyKeyId(name))
+            },
+            codeGen.setCachedPropertyAt(offset,
+              ternary(
+                invoke(PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), loadField(f)),
+                invoke(PROPERTY_CURSOR, method[PropertyCursor, Value]("propertyValue")),
+                noValue
+              )
+            )
+          )
+      }
+      block(setupPropertyCursor +: (resolvedOps ++ unResolvedOps):_*)
+    }
+    ).getOrElse(noop())
   }
 
   private def otherNodeMethod: Method = {

@@ -78,8 +78,10 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.StoreLogService;
+import org.neo4j.memory.GlobalMemoryGroupTracker;
+import org.neo4j.memory.MemoryGroup;
 import org.neo4j.memory.MemoryPools;
-import org.neo4j.monitoring.DatabaseEventListeners;
+import org.neo4j.kernel.monitoring.DatabaseEventListeners;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.DeferredExecutor;
 import org.neo4j.scheduler.Group;
@@ -91,6 +93,7 @@ import org.neo4j.time.SystemNanoClock;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
+import static org.neo4j.configuration.GraphDatabaseSettings.memory_transaction_global_max_size;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.tx_state_off_heap_block_cache_size;
 import static org.neo4j.configuration.GraphDatabaseSettings.tx_state_off_heap_max_cacheable_block_size;
@@ -128,6 +131,8 @@ public class GlobalModule
     private final DependencyResolver externalDependencyResolver;
     private final FileLockerService fileLockerService;
     private final MemoryPools memoryPools;
+    private final GlobalMemoryGroupTracker transactionsMemoryPool;
+    private final GlobalMemoryGroupTracker otherMemoryPool;
 
     public GlobalModule( Config globalConfig, DatabaseInfo databaseInfo, ExternalDependencies externalDependencies )
     {
@@ -171,9 +176,12 @@ public class GlobalModule
                 new JvmMetadataRepository() ).checkJvmCompatibilityAndIssueWarning();
 
         memoryPools = new MemoryPools();
+        otherMemoryPool = memoryPools.pool( MemoryGroup.OTHER, 0 );
+        transactionsMemoryPool = memoryPools.pool( MemoryGroup.TRANSACTION, globalConfig.get( memory_transaction_global_max_size ) );
+        globalConfig.addListener( memory_transaction_global_max_size, ( before, after ) -> transactionsMemoryPool.setSize( after ) );
         globalDependencies.satisfyDependency( memoryPools );
 
-        globalLife.add( new VmPauseMonitorComponent( globalConfig, logService.getInternalLog( VmPauseMonitorComponent.class ), jobScheduler ) );
+        globalLife.add( new VmPauseMonitorComponent( globalConfig, logService.getInternalLog( VmPauseMonitorComponent.class ), jobScheduler, globalMonitors ) );
 
         globalAvailabilityGuard = new CompositeDatabaseAvailabilityGuard( globalClock );
         globalDependencies.satisfyDependency( globalAvailabilityGuard );
@@ -333,7 +341,8 @@ public class GlobalModule
 
         builder.withLevels( asDebugLogLevels( globalConfig.get( GraphDatabaseSettings.store_internal_debug_contexts ) ) );
         builder.withDefaultLevel( globalConfig.get( GraphDatabaseSettings.store_internal_log_level ) )
-               .withTimeZone( globalConfig.get( GraphDatabaseSettings.db_timezone ).getZoneId() );
+               .withTimeZone( globalConfig.get( GraphDatabaseSettings.db_timezone ).getZoneId() )
+               .withFormat( globalConfig.get( GraphDatabaseSettings.log_format ) );
 
         File logFile = globalConfig.get( store_internal_log_path ).toFile();
         if ( !logFile.getParentFile().exists() )
@@ -533,5 +542,15 @@ public class GlobalModule
     public MemoryPools getMemoryPools()
     {
         return memoryPools;
+    }
+
+    public GlobalMemoryGroupTracker getTransactionsMemoryPool()
+    {
+        return transactionsMemoryPool;
+    }
+
+    public GlobalMemoryGroupTracker getOtherMemoryPool()
+    {
+        return otherMemoryPool;
     }
 }

@@ -16,6 +16,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.neo4j.kernel.database.NamedDatabaseId;
+import org.neo4j.logging.Log;
+import org.neo4j.logging.LogProvider;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
@@ -47,9 +49,18 @@ import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
  */
 public class ClusterInternalDbmsOperator extends DbmsOperator
 {
-    private final List<StoreCopyHandle> storeCopying = new CopyOnWriteArrayList<>();
-    private final Set<NamedDatabaseId> bootstrapping = ConcurrentHashMap.newKeySet();
-    private final Set<NamedDatabaseId> panicked = ConcurrentHashMap.newKeySet();
+    private final List<StoreCopyHandle> storeCopying;
+    private final Set<NamedDatabaseId> bootstrapping;
+    private final Set<NamedDatabaseId> shouldStop;
+    private final Log log;
+
+    public ClusterInternalDbmsOperator( LogProvider logProvider )
+    {
+        this.storeCopying = new CopyOnWriteArrayList<>();
+        this.bootstrapping = ConcurrentHashMap.newKeySet();
+        this.shouldStop = ConcurrentHashMap.newKeySet();
+        this.log = logProvider.getLog( getClass() );
+    }
 
     @Override
     protected Map<String,EnterpriseDatabaseState> desired0()
@@ -65,7 +76,7 @@ public class ClusterInternalDbmsOperator extends DbmsOperator
             }
         }
 
-        for ( var id : panicked )
+        for ( var id : shouldStop )
         {
             result.put( id.name(), new EnterpriseDatabaseState( id, STOPPED ) );
         }
@@ -94,15 +105,20 @@ public class ClusterInternalDbmsOperator extends DbmsOperator
 
     public void stopOnPanic( NamedDatabaseId namedDatabaseId, Throwable causeOfPanic )
     {
-        Objects.requireNonNull( causeOfPanic, "The cause of a panic cannot be null!" );
-        panicked.add( namedDatabaseId );
+        if ( causeOfPanic == null )
+        {
+            log.warn( "Panic event received for the database %s but the provided cause is null, so this event was ignored.", namedDatabaseId.name() );
+            return;
+        }
+
+        shouldStop.add( namedDatabaseId );
         var reconcilerResult = trigger( ReconcilerRequest.forPanickedDatabase( namedDatabaseId, causeOfPanic ) );
-        reconcilerResult.whenComplete( () -> panicked.remove( namedDatabaseId ) );
+        reconcilerResult.whenComplete( () -> shouldStop.remove( namedDatabaseId ) );
     }
 
     private boolean triggerReconcilerOnStoreCopy( NamedDatabaseId namedDatabaseId )
     {
-        if ( bootstrapping.contains( namedDatabaseId ) || panicked.contains( namedDatabaseId ) )
+        if ( bootstrapping.contains( namedDatabaseId ) || shouldStop.contains( namedDatabaseId ) )
         {
             return false;
         }

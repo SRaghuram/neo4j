@@ -21,12 +21,20 @@ package org.neo4j.internal.freki;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.commons.lang3.mutable.MutableLong;
+<<<<<<< HEAD
+=======
+import org.eclipse.collections.api.list.primitive.MutableLongList;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.api.set.primitive.ImmutableLongSet;
 import org.eclipse.collections.api.set.primitive.LongSet;
 import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.factory.primitive.IntSets;
+<<<<<<< HEAD
+=======
+import org.eclipse.collections.impl.factory.primitive.LongLists;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 import org.eclipse.collections.impl.factory.primitive.LongSets;
 import org.junit.jupiter.api.AfterEach;
@@ -83,9 +91,15 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.lock.ResourceLocker;
 import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
+<<<<<<< HEAD
 import org.neo4j.monitoring.DatabaseEventListeners;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.DatabasePanicEventGenerator;
+=======
+import org.neo4j.memory.EmptyMemoryTracker;
+import org.neo4j.memory.MemoryTracker;
+import org.neo4j.monitoring.DatabaseHealth;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 import org.neo4j.storageengine.api.CommandCreationContext;
 import org.neo4j.storageengine.api.CommandsToApply;
 import org.neo4j.storageengine.api.Degrees;
@@ -134,6 +148,10 @@ import static java.util.stream.Collectors.toMap;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+<<<<<<< HEAD
+=======
+import static org.junit.jupiter.api.Assertions.fail;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
@@ -161,7 +179,10 @@ import static org.neo4j.values.storable.Values.stringValue;
 class FrekiStorageEngineGraphWritesIT
 {
     private static final SchemaDescriptor SCHEMA_DESCRIPTOR = SchemaDescriptor.forLabel( 5, 10 );
+<<<<<<< HEAD
 
+=======
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     @Inject
     private FileSystemAbstraction fs;
     @Inject
@@ -186,20 +207,34 @@ class FrekiStorageEngineGraphWritesIT
                 new DelegatingTokenHolder( new SimpleTokenCreator(), TokenHolder.TYPE_PROPERTY_KEY ),
                 new DelegatingTokenHolder( new SimpleTokenCreator(), TokenHolder.TYPE_LABEL ),
                 new DelegatingTokenHolder( new SimpleTokenCreator(), TokenHolder.TYPE_RELATIONSHIP_TYPE ) );
+<<<<<<< HEAD
         DatabaseHealth databaseHealth = new DatabaseHealth( new DatabasePanicEventGenerator(
                 new DatabaseEventListeners( NullLog.getInstance() ), DEFAULT_DATABASE_NAME ), NullLog.getInstance() );
         life = new LifeSupport();
+=======
+        DatabaseHealth databaseHealth = new DatabaseHealth( causeOfPanic -> fail( "Should not panic", causeOfPanic ), NullLog.getInstance() );
+        life = new LifeSupport();
+        MemoryTracker memoryTracker = EmptyMemoryTracker.INSTANCE;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         storageEngine = life.add( new FrekiStorageEngine(
                 fs, layout, Config.defaults(), pageCache, tokenHolders, mock( SchemaState.class ), new StandardConstraintRuleAccessor(),
                         new NoopIndexConfigCompletor(), NO_LOCK_SERVICE, new DefaultIdGeneratorFactory( fs, RecoveryCleanupWorkCollector.immediate() ),
                         new DefaultIdController(), databaseHealth, NullLogProvider.getInstance(), RecoveryCleanupWorkCollector.immediate(),
+<<<<<<< HEAD
                         true, PageCacheTracer.NULL, CursorAccessPatternTracer.NO_TRACING ) );
+=======
+                        true, PageCacheTracer.NULL, CursorAccessPatternTracer.NO_TRACING, memoryTracker ) );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         nodeLabelUpdateListener = new RecordingNodeLabelUpdateListener();
         storageEngine.addNodeLabelUpdateListener( nodeLabelUpdateListener );
         indexUpdateListener = new RecordingIndexUpdatesListener();
         storageEngine.addIndexUpdateListener( indexUpdateListener );
         life.start();
+<<<<<<< HEAD
         commandCreationContext = storageEngine.newCommandCreationContext( NULL );
+=======
+        commandCreationContext = storageEngine.newCommandCreationContext( NULL, memoryTracker );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 
     @AfterEach
@@ -736,10 +771,14 @@ class FrekiStorageEngineGraphWritesIT
         } );
 
         // when
+<<<<<<< HEAD
         createAndApplyTransaction( target ->
         {
             target.visitDeletedNode( nodeId );
         } );
+=======
+        createAndApplyTransaction( target -> target.visitDeletedNode( nodeId ) );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 
         // then
         try ( StorageReader reader = storageEngine.newReader();
@@ -969,8 +1008,11 @@ class FrekiStorageEngineGraphWritesIT
             int round = r;
             createAndApplyTransaction( target ->
             {
+<<<<<<< HEAD
                 CommandCreationContext txCommandCreationContext = storageEngine.newCommandCreationContext( NULL );
 
+=======
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
                 // === random label changes
                 int numLabelChanges = random.nextInt( 4 );
                 MutableLongSet addedLabels = LongSets.mutable.empty();
@@ -1039,7 +1081,11 @@ class FrekiStorageEngineGraphWritesIT
                         endNode = nodeId;
                     }
                     RelationshipSpec relationship =
+<<<<<<< HEAD
                             createRelationship( target, txCommandCreationContext, startNode, random.nextInt( 4 ), endNode, randomProperties(
+=======
+                            createRelationship( target, commandCreationContext, startNode, random.nextInt( 4 ), endNode, randomProperties(
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
                                     random.nextInt( 3 ) ) );
                     createdRelationships.add( relationship );
                 }
@@ -1055,7 +1101,11 @@ class FrekiStorageEngineGraphWritesIT
             // then
             try ( StorageReader storageReader = storageEngine.newReader();
                     StorageNodeCursor nodeCursor = storageReader.allocateNodeCursor( NULL );
+<<<<<<< HEAD
                     StoragePropertyCursor propertyCursor = storageReader.allocatePropertyCursor( NULL );
+=======
+                    StoragePropertyCursor propertyCursor = storageReader.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
                     StorageRelationshipTraversalCursor relationshipCursor = storageReader.allocateRelationshipTraversalCursor( NULL ) )
             {
                 List<Runnable> checks = new ArrayList<>();
@@ -1094,12 +1144,19 @@ class FrekiStorageEngineGraphWritesIT
             {
                 target.visitCreatedNode( nodeId );
             }
+<<<<<<< HEAD
             CommandCreationContext context = storageEngine.newCommandCreationContext( NULL );
+=======
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
             for ( int i = 0; i < 100 * nodeIds.length; i++ )
             {
                 long startNode = nodeIds[random.nextInt( nodeIds.length )];
                 long endNode = nodeIds[random.nextInt( nodeIds.length )];
+<<<<<<< HEAD
                 RelationshipSpec relationship = new RelationshipSpec( startNode, 0, endNode, emptySet(), context );
+=======
+                RelationshipSpec relationship = new RelationshipSpec( startNode, 0, endNode, emptySet(), commandCreationContext );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
                 relationship.create( target );
                 relationships.add( relationship );
             }
@@ -1113,10 +1170,16 @@ class FrekiStorageEngineGraphWritesIT
             long nodeId = nodeIds[id];
             createAndApplyTransaction( target ->
             {
+<<<<<<< HEAD
                 CommandCreationContext context = storageEngine.newCommandCreationContext( NULL );
                 long otherNodeId = context.reserveNode();
                 target.visitCreatedNode( otherNodeId );
                 RelationshipSpec relationship = new RelationshipSpec( nodeId, 1, otherNodeId, emptySet(), context );
+=======
+                long otherNodeId = commandCreationContext.reserveNode();
+                target.visitCreatedNode( otherNodeId );
+                RelationshipSpec relationship = new RelationshipSpec( nodeId, 1, otherNodeId, emptySet(), commandCreationContext );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
                 relationship.create( target );
                 createdRelationships.add( relationship );
             } );
@@ -1147,7 +1210,10 @@ class FrekiStorageEngineGraphWritesIT
         {
             createAndApplyTransaction( target ->
             {
+<<<<<<< HEAD
                 CommandCreationContext context = storageEngine.newCommandCreationContext( NULL );
+=======
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
                 for ( int i = 0; i < 10; i++ )
                 {
                     int type = random.nextInt( numTypes );
@@ -1167,7 +1233,11 @@ class FrekiStorageEngineGraphWritesIT
                     boolean outgoing = random.nextBoolean();
                     long startNode = outgoing ? nodeId : otherNodeId;
                     long endNode = outgoing ? otherNodeId : nodeId;
+<<<<<<< HEAD
                     RelationshipSpec relationship = new RelationshipSpec( startNode, type, endNode, emptySet(), context );
+=======
+                    RelationshipSpec relationship = new RelationshipSpec( startNode, type, endNode, emptySet(), commandCreationContext );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
                     relationships.add( relationship );
                     relationship.create( target );
                 }
@@ -1210,7 +1280,11 @@ class FrekiStorageEngineGraphWritesIT
         try ( var reader = storageEngine.newReader();
                 var nodeCursor = reader.allocateNodeCursor( NULL );
                 var relationshipCursor = reader.allocateRelationshipTraversalCursor( NULL );
+<<<<<<< HEAD
                 var propertyCursor = reader.allocatePropertyCursor( NULL ) )
+=======
+                var propertyCursor = reader.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE ) )
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         {
             nodeCursor.single( nodeId );
             nodeCursor.next();
@@ -1238,8 +1312,11 @@ class FrekiStorageEngineGraphWritesIT
         {
             createAndApplyTransaction( target ->
             {
+<<<<<<< HEAD
                 CommandCreationContext txContext = storageEngine.newCommandCreationContext( NULL );
 
+=======
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
                 // Change some properties on existing relationships
                 RelationshipSpec[] existingRelationships = expectedRelationships.toArray( new RelationshipSpec[0] );
                 int numRelationshipsChanged = min( existingRelationships.length, random.nextInt( 1, 10 ) );
@@ -1299,7 +1376,12 @@ class FrekiStorageEngineGraphWritesIT
                 // Create some more relationships
                 for ( int i = 0; i < 10; i++ )
                 {
+<<<<<<< HEAD
                     RelationshipSpec relationship = new RelationshipSpec( nodeId, 0, nodeId, randomProperties( random.nextInt( 1, 5 ) ), txContext );
+=======
+                    RelationshipSpec relationship =
+                            new RelationshipSpec( nodeId, 0, nodeId, randomProperties( random.nextInt( 1, 5 ) ), commandCreationContext );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
                     expectedRelationships.add( relationship );
                     relationship.create( target );
                 }
@@ -1309,6 +1391,150 @@ class FrekiStorageEngineGraphWritesIT
         }
     }
 
+<<<<<<< HEAD
+=======
+    @Test
+    void shouldFormXLChainBeforeDense() throws Exception
+    {
+        // given
+        long nodeId = commandCreationContext.reserveNode();
+        MutableLongList otherNodes = LongLists.mutable.empty();
+        for ( int i = 0; i < 100; i++ )
+        {
+            otherNodes.add( commandCreationContext.reserveNode() );
+        }
+        int x8Size = Record.recordSize( Record.sizeExpFromXFactor( 8 ) );
+        Set<StorageProperty> properties = new HashSet<>();
+        Value prop = Values.byteArray( new byte[]{0, 1, 2, 3, 4, 5, 6} ); //this will generate 10B data (header + length + data + key)
+        int sizePerProp = 10;
+        int propSize = (int) (x8Size * 0.8);
+        for ( int i = 0; i < propSize / sizePerProp; i++ )
+        {
+            properties.add( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId() + i + 1, prop ) );
+        }
+
+        int relsToAdd = 100;
+        Set<RelationshipSpec> relationships = new HashSet<>();
+
+        createAndApplyTransaction( target ->
+        {
+            otherNodes.forEach( target::visitCreatedNode );
+        } );
+        createAndApplyTransaction( target ->
+        {
+            target.visitCreatedNode( nodeId );
+            target.visitNodePropertyChanges( nodeId, properties, emptyList(), IntSets.immutable.empty() );
+            for ( int i = 0; i < relsToAdd; i++ )
+            {
+                RelationshipSpec relationship =
+                        new RelationshipSpec( nodeId, i % 3, otherNodes.get( i % otherNodes.size() ), emptySet(), commandCreationContext );
+                relationship.create( target );
+                relationships.add( relationship );
+            }
+        } );
+
+        assertContentsOfNode( nodeId, LongSets.immutable.empty(), properties, relationships );
+        assertXLChainLength( nodeId, 2, false, true );
+    }
+
+    @TestFactory
+    Collection<DynamicTest> shouldHandlePermutationsOfDataBlocksXLChains()
+    {
+        List<DynamicTest> tests = new ArrayList<>();
+        Set<Double> fillRates = Set.of( 0d, 0.8d, 1.5d, 3.5d );
+        for ( double labelsFillRate : fillRates )
+        {
+            for ( double propertiesFillRate : fillRates )
+            {
+                for ( double degreesFillRate : fillRates )
+                {
+                    double totalSize = labelsFillRate + propertiesFillRate + degreesFillRate;
+                    if ( totalSize > .1 ) //skip case with no fill
+                    {
+                        tests.add( createXLChainTest( labelsFillRate, propertiesFillRate, degreesFillRate ) );
+                    }
+                }
+            }
+        }
+        return tests;
+    }
+
+    private DynamicTest createXLChainTest( double labelXLFill, double propertiesXLFill, double degreesXLFill )
+    {
+        Executable test = new Executable()
+        {
+            @Override
+            public void execute() throws Throwable
+            {
+                int x8Size = Record.recordSize( Record.sizeExpFromXFactor( 8 ) );
+
+                MutableLongSet labels = LongSets.mutable.empty();
+                double labelsSize = x8Size * labelXLFill;
+                double sizePerLabel = 1.3;
+                for ( int i = 0; i < labelsSize / sizePerLabel; i++ )
+                {
+                    labels.add( SCHEMA_DESCRIPTOR.getLabelId() + i + 1 );
+                }
+                labels.add( SCHEMA_DESCRIPTOR.getLabelId() );
+
+                Set<StorageProperty> properties = new HashSet<>();
+                Value prop = Values.byteArray( new byte[]{0, 1, 2, 3, 4, 5, 6} ); //this will generate 10B data (header + length + data + key)
+                int sizePerProp = 10;
+                int propSize = (int) (x8Size * propertiesXLFill);
+                for ( int i = 0; i < propSize / sizePerProp; i++ )
+                {
+                    properties.add( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId() + i + 1, prop ) );
+                }
+                PropertyKeyValue before = new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), Values.intValue( 25 ) );
+                properties.add( before );
+
+                Set<RelationshipSpec> relationships = new HashSet<>();
+                double degSize = x8Size * degreesXLFill;
+                int numRelsOfDifferentType = (int) (degSize / 3.3d);
+
+                MutableLong nodeId = new MutableLong();
+                shouldGenerateIndexUpdates( target -> { /* do nothing */ }, target ->
+                {
+                    CommandCreationContext txContext = storageEngine.newCommandCreationContext( NULL, EmptyMemoryTracker.INSTANCE );
+                    long node = txContext.reserveNode();
+                    nodeId.setValue( node );
+                    target.visitCreatedNode( node );
+                    target.visitNodeLabelChanges( node, labels, LongSets.immutable.empty() );
+                    target.visitNodePropertyChanges( node, properties, Collections.emptyList(), IntSets.immutable.empty() );
+                    if ( numRelsOfDifferentType > 0 )
+                    {
+                        long otherNode = txContext.reserveNode();
+                        target.visitCreatedNode( otherNode );
+                        int relPad = x8Size / 2;
+                        int relType = 0;
+                        for ( int i = 0; i < numRelsOfDifferentType + relPad; i++ )
+                        {
+                            //only one rel/type ensures big degrees block
+                            RelationshipSpec relationshipSpec = new RelationshipSpec( node, relType, otherNode, emptySet(), txContext );
+                            relationships.add( relationshipSpec );
+                            relationshipSpec.create( target );
+
+                            if ( i < numRelsOfDifferentType )
+                            {
+                                relType++;
+                            }
+                        }
+                    }
+                }, index -> asSet( IndexEntryUpdate.add( nodeId.longValue(), index, before.value()) ) );
+                assertContentsOfNode( nodeId.longValue(), labels, properties, relationships );
+                assertXLChainLength( nodeId.longValue(), (int) (labelXLFill + propertiesXLFill + degreesXLFill + 0.65), degreesXLFill > 1e-3, false );
+            }
+
+            @Override
+            public String toString()
+            {
+                return String.format( "XL chains - Labels:%.1f Properties:%.1f Degrees:%.1f", labelXLFill, propertiesXLFill, degreesXLFill );
+            }
+        };
+        return DynamicTest.dynamicTest( test.toString(), test );
+    }
+
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     @TestFactory
     Collection<DynamicTest> shouldSeeAllLabelPropertiesPermutations()
     {
@@ -1527,15 +1753,52 @@ class FrekiStorageEngineGraphWritesIT
             assertThat( nodeCursor.next() ).isEqualTo( sizeX > 0 );
             if ( sizeX > 1 )
             {
+<<<<<<< HEAD
                 assertThat( nodeCursor.data.forwardPointer ).isNotEqualTo( FrekiMainStoreCursor.NULL );
                 assertThat( nodeCursor.data.header.hasReferenceMark( Header.FLAG_LABELS ) ).isEqualTo( labelsInXL );
                 assertThat( nodeCursor.data.header.hasReferenceMark( Header.OFFSET_PROPERTIES ) ).isEqualTo( propsInXL );
                 int sizeExp = sizeExponentialFromRecordPointer( nodeCursor.data.forwardPointer );
+=======
+                assertThat( nodeCursor.data.xLChainStartPointer ).isNotEqualTo( FrekiMainStoreCursor.NULL );
+                assertThat( nodeCursor.data.header.hasReferenceMark( Header.FLAG_LABELS ) ).isEqualTo( labelsInXL );
+                assertThat( nodeCursor.data.header.hasReferenceMark( Header.OFFSET_PROPERTIES ) ).isEqualTo( propsInXL );
+                int sizeExp = sizeExponentialFromRecordPointer( nodeCursor.data.xLChainStartPointer );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
                 assertThat( sizeX ).isEqualTo( Record.recordXFactor( sizeExp ) );
             }
             else if ( sizeX == 1 )
             {
+<<<<<<< HEAD
                 assertThat( nodeCursor.data.forwardPointer ).isEqualTo( FrekiMainStoreCursor.NULL );
+=======
+                assertThat( nodeCursor.data.xLChainStartPointer ).isEqualTo( FrekiMainStoreCursor.NULL );
+            }
+        }
+    }
+
+    private void assertXLChainLength( long nodeId, int expectedLength, boolean expectedDense, boolean exactLengthMatch )
+    {
+        try ( var storageReader = storageEngine.newReader();
+                var nodeCursor = storageReader.allocateNodeCursor( NULL ) )
+        {
+            nodeCursor.single( nodeId );
+            assertThat( nodeCursor.next() ).isTrue();
+            assertThat( nodeCursor.data.isDense ).isEqualTo( expectedDense );
+            assertThat( nodeCursor.data.xLChainStartPointer ).isEqualTo( nodeCursor.data.xLChainNextLinkPointer ); //we have not yet loaded the chain
+
+            int actualChainLength = 0;
+            while ( nodeCursor.loadNextChainLink() )
+            {
+                actualChainLength++;
+            }
+            if ( exactLengthMatch )
+            {
+                assertThat( actualChainLength ).isEqualTo( expectedLength );
+            }
+            else
+            {
+                assertThat( actualChainLength ).isGreaterThanOrEqualTo( expectedLength );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
             }
         }
     }
@@ -1544,7 +1807,11 @@ class FrekiStorageEngineGraphWritesIT
     {
         try ( var storageReader = storageEngine.newReader();
                 var nodeCursor = storageReader.allocateNodeCursor( NULL );
+<<<<<<< HEAD
                 var propertyCursor = storageReader.allocatePropertyCursor( NULL );
+=======
+                var propertyCursor = storageReader.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
                 var relationshipsCursor = storageReader.allocateRelationshipTraversalCursor( NULL ) )
         {
             nodeCursor.single( nodeId );
@@ -1610,7 +1877,11 @@ class FrekiStorageEngineGraphWritesIT
     {
         try ( StorageReader storageReader = storageEngine.newReader();
                 StorageNodeCursor nodeCursor = storageReader.allocateNodeCursor( NULL );
+<<<<<<< HEAD
                 StoragePropertyCursor propertyCursor = storageReader.allocatePropertyCursor( NULL );
+=======
+                StoragePropertyCursor propertyCursor = storageReader.allocatePropertyCursor( NULL, EmptyMemoryTracker.INSTANCE );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
                 StorageRelationshipTraversalCursor relationshipCursor = storageReader.allocateRelationshipTraversalCursor( NULL ) )
         {
             assertContentsOfNode( nodeId, labelIds, nodeProperties, relationships, nodeCursor, propertyCursor, relationshipCursor );
@@ -1637,7 +1908,11 @@ class FrekiStorageEngineGraphWritesIT
 
         // degrees
         EagerDegrees degrees = new EagerDegrees();
+<<<<<<< HEAD
         nodeCursor.degrees( ALL_RELATIONSHIPS, degrees );
+=======
+        nodeCursor.degrees( ALL_RELATIONSHIPS, degrees, true );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         Degrees expectedDegrees = buildExpectedDegrees( nodeId, relationships );
         assertThat( IntSets.immutable.of( degrees.types() ) ).isEqualTo( IntSets.immutable.of( expectedDegrees.types() ) );
         for ( int type : degrees.types() )

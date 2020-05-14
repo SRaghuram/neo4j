@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.impl.api.LeaseService.NO_LEASE;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @ExtendWith( {EphemeralFileSystemExtension.class, TestDirectorySupportExtension.class} )
 class ReplicatedLeaseStateMachineTest
@@ -56,7 +57,7 @@ class ReplicatedLeaseStateMachineTest
 
         // then
         assertNull( state.owner() );
-        assertEquals( state.leaseId(), NO_LEASE );
+        assertEquals( NO_LEASE, state.leaseId() );
         assertEquals( -1, state.ordinal() );
     }
 
@@ -154,7 +155,7 @@ class ReplicatedLeaseStateMachineTest
         stateMachine.applyCommand( new ReplicatedLeaseRequest( member( 0 ), firstCandidateId + 1, databaseId ), 1, r -> {} ); // not accepted
 
         // then
-        assertEquals( stateMachine.snapshot().leaseId(), NO_LEASE );
+        assertEquals( NO_LEASE, stateMachine.snapshot().leaseId() );
 
         // when
         stateMachine.applyCommand( new ReplicatedLeaseRequest( member( 0 ), firstCandidateId, databaseId ), 2, r -> {} ); // accepted
@@ -194,7 +195,7 @@ class ReplicatedLeaseStateMachineTest
         int candidateId;
 
         DurableStateStorage<ReplicatedLeaseState> storage = new DurableStateStorage<>( fsa, testDir.homeDir(),
-                CoreStateFiles.DUMMY( marshal ), 100, NullLogProvider.getInstance() );
+                CoreStateFiles.DUMMY( marshal ), 100, NullLogProvider.getInstance(), INSTANCE );
         try ( Lifespan ignored = new Lifespan( storage ) )
         {
             ReplicatedLeaseStateMachine stateMachine = new ReplicatedLeaseStateMachine( storage );
@@ -211,7 +212,7 @@ class ReplicatedLeaseStateMachineTest
 
         // then
         DurableStateStorage<ReplicatedLeaseState> storage2 = new DurableStateStorage<>( fsa, testDir.homeDir(),
-                CoreStateFiles.DUMMY( marshal ), 100, NullLogProvider.getInstance() );
+                CoreStateFiles.DUMMY( marshal ), 100, NullLogProvider.getInstance(), INSTANCE );
         try ( Lifespan ignored = new Lifespan( storage2 ) )
         {
             ReplicatedLeaseState initialState = storage2.getInitialState();
@@ -230,7 +231,7 @@ class ReplicatedLeaseStateMachineTest
         SafeStateMarshal<ReplicatedLeaseState> marshal = new ReplicatedLeaseState.Marshal();
 
         DurableStateStorage<ReplicatedLeaseState> storage = new DurableStateStorage<>( fsa, testDir.homeDir(),
-                CoreStateFiles.DUMMY( marshal ), 100, NullLogProvider.getInstance() );
+                CoreStateFiles.DUMMY( marshal ), 100, NullLogProvider.getInstance(), INSTANCE );
 
         try ( Lifespan ignored = new Lifespan( storage ) )
         {

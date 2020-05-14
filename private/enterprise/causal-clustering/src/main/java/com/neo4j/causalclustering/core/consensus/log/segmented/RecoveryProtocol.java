@@ -5,27 +5,30 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
+import com.neo4j.causalclustering.core.consensus.log.EntryRecord;
+import com.neo4j.causalclustering.core.replication.ReplicatedContent;
+import com.neo4j.causalclustering.messaging.EndOfStreamException;
+import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
+
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.function.Function;
 
-import com.neo4j.causalclustering.core.consensus.log.EntryRecord;
-import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
-import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import org.neo4j.cursor.IOCursor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.io.memory.HeapScopedBuffer;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.memory.MemoryTracker;
 
+import static com.neo4j.causalclustering.core.consensus.log.segmented.SegmentHeader.CURRENT_RECORD_OFFSET;
 import static java.lang.String.format;
 import static java.util.Collections.emptyList;
 
@@ -42,10 +45,11 @@ class RecoveryProtocol
     private final Function<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector;
     private final LogProvider logProvider;
     private final Log log;
+    private final MemoryTracker memoryTracker;
     private final ReaderPool readerPool;
 
     RecoveryProtocol( FileSystemAbstraction fileSystem, FileNames fileNames, ReaderPool readerPool,
-            Function<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector, LogProvider logProvider )
+            Function<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector, LogProvider logProvider, MemoryTracker memoryTracker )
     {
         this.fileSystem = fileSystem;
         this.fileNames = fileNames;
@@ -53,6 +57,7 @@ class RecoveryProtocol
         this.marshalSelector = marshalSelector;
         this.logProvider = logProvider;
         this.log = logProvider.getLog( getClass() );
+        this.memoryTracker = memoryTracker;
     }
 
     State run() throws IOException, DamagedLogStorageException, DisposedException
@@ -62,7 +67,7 @@ class RecoveryProtocol
 
         if ( files.entrySet().isEmpty() )
         {
-            state.segments = new Segments( fileSystem, fileNames, readerPool, emptyList(), marshalSelector, logProvider, -1 );
+            state.segments = new Segments( fileSystem, fileNames, readerPool, emptyList(), marshalSelector, logProvider, -1, memoryTracker );
             state.segments.rotate( -1, -1, -1 );
             state.terms = new Terms( -1, -1 );
             return state;
@@ -85,7 +90,7 @@ class RecoveryProtocol
 
             try
             {
-                header = loadHeader( fileSystem, file );
+                header = loadHeader( fileSystem, file, memoryTracker );
                 checkSegmentNumberMatches( header.segmentNumber(), fileSegmentNumber );
             }
             catch ( EndOfStreamException e )
@@ -104,7 +109,8 @@ class RecoveryProtocol
                 break;
             }
 
-            segment = new SegmentFile( fileSystem, file, readerPool, fileSegmentNumber, marshalSelector.apply( header.formatVersion() ), logProvider, header );
+            segment = new SegmentFile( fileSystem, file, readerPool, fileSegmentNumber, marshalSelector.apply( header.formatVersion() ), logProvider, header,
+                    memoryTracker );
             segmentFiles.add( segment );
 
             if ( segment.header().prevIndex() != segment.header().prevFileLastIndex() )
@@ -145,42 +151,44 @@ class RecoveryProtocol
             log.warn( "Recovering last file based on next-to-last file. " + header );
 
             File file = fileNames.getForSegment( expectedSegmentNumber );
-            writeHeader( fileSystem, file, header );
+            writeHeader( fileSystem, file, header, memoryTracker );
 
             segment = new SegmentFile( fileSystem, file, readerPool, expectedSegmentNumber,
-                    marshalSelector.apply( header.formatVersion() ), logProvider, header );
+                    marshalSelector.apply( header.formatVersion() ), logProvider, header, memoryTracker );
             segmentFiles.add( segment );
         }
 
         state.segments = new Segments( fileSystem, fileNames, readerPool, segmentFiles, marshalSelector, logProvider,
-                segment.header().segmentNumber() );
+                segment.header().segmentNumber(), memoryTracker );
 
         return state;
     }
 
     private static SegmentHeader loadHeader(
             FileSystemAbstraction fileSystem,
-            File file ) throws IOException, EndOfStreamException
+            File file,
+            MemoryTracker memoryTracker ) throws IOException, EndOfStreamException
     {
         try ( StoreChannel channel = fileSystem.read( file ) )
         {
-            ByteBuffer buffer = ByteBuffer.allocate( SegmentHeader.CURRENT_RECORD_OFFSET );
-            return headerMarshal.unmarshal( new ReadAheadChannel<>( channel, buffer ) );
+            return headerMarshal.unmarshal( new ReadAheadChannel<>( channel, new HeapScopedBuffer( CURRENT_RECORD_OFFSET, memoryTracker ) ) );
         }
     }
 
     private static void writeHeader(
             FileSystemAbstraction fileSystem,
             File file,
-            SegmentHeader header ) throws IOException
+            SegmentHeader header,
+            MemoryTracker memoryTracker ) throws IOException
     {
         try ( StoreChannel channel = fileSystem.write( file ) )
         {
             channel.position( 0 );
-            ByteBuffer buffer = ByteBuffer.allocate( SegmentHeader.CURRENT_RECORD_OFFSET );
-            PhysicalFlushableChannel writer = new PhysicalFlushableChannel( channel, buffer );
-            headerMarshal.marshal( header, writer );
-            writer.prepareForFlush().flush();
+            try ( PhysicalFlushableChannel writer = new PhysicalFlushableChannel( channel, new HeapScopedBuffer( CURRENT_RECORD_OFFSET, memoryTracker ) ) )
+            {
+                headerMarshal.marshal( header, writer );
+                writer.prepareForFlush().flush();
+            }
         }
     }
 

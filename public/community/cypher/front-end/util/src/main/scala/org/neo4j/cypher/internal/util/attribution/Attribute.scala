@@ -20,7 +20,7 @@ import org.neo4j.cypher.internal.util.Unchangeable
 
 import scala.collection.mutable.ArrayBuffer
 
-trait Attribute[KEY <: Identifiable, VALUE] {
+trait Attribute[KEY, VALUE] {
 
   private val array: ArrayBuffer[Unchangeable[VALUE]] = new ArrayBuffer[Unchangeable[VALUE]]()
 
@@ -41,7 +41,7 @@ trait Attribute[KEY <: Identifiable, VALUE] {
   }
 
   def isDefinedAt(id: Id): Boolean = {
-    array.size > id.x && array(id.x).hasValue
+    array.size > id.x && id.x >= 0 && array(id.x).hasValue
   }
 
   def getOrElse(id: Id, other: => VALUE): VALUE = {
@@ -125,12 +125,12 @@ trait Default[KEY <: Identifiable, VALUE] extends Attribute[KEY, VALUE] {
 abstract class PartialAttribute[KEY <: Identifiable, VALUE](override val defaultValue: VALUE) extends Default[KEY, VALUE]
 
 /**
-  * This class encapsulates attributes and allows to copy them from one ID to another without having explicit
-  * read or write access. This allows rewriters to set some attributes manually on a new ID, but copying
-  * others over from an old id.
-  * @param idGen the IdGen used to provide new IDs
-  * @param attributes the attributes encapsulated
-  */
+ * This class encapsulates attributes and allows to copy them from one ID to another without having explicit
+ * read or write access. This allows rewriters to set some attributes manually on a new ID, but copying
+ * others over from an old id.
+ * @param idGen the IdGen used to provide new IDs
+ * @param attributes the attributes encapsulated
+ */
 case class Attributes[KEY <: Identifiable](idGen: IdGen, private val attributes: Attribute[KEY, _]*) {
   def copy(from: Id): IdGen = new IdGen {
     override def id(): Id = {

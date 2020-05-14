@@ -25,6 +25,9 @@ import org.neo4j.values.storable.Values;
 
 import static org.neo4j.util.Preconditions.checkArgument;
 
+/**
+ * A sort merge join that sorts nodes by their values (properties).
+ */
 final class SortedMergeJoin
 {
     private long nextFromA = -1;

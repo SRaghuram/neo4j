@@ -28,9 +28,16 @@ import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+<<<<<<< HEAD
 import org.neo4j.storageengine.api.CommandCreationContext;
 
 import static org.neo4j.internal.freki.Header.FLAG_HAS_DENSE_RELATIONSHIPS;
+=======
+import org.neo4j.memory.MemoryTracker;
+import org.neo4j.storageengine.api.CommandCreationContext;
+
+import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 import static org.neo4j.internal.freki.Header.OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID;
 import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIPS;
 import static org.neo4j.internal.freki.MutableNodeData.ARTIFICIAL_MAX_RELATIONSHIP_COUNTER;
@@ -50,9 +57,16 @@ class FrekiCommandCreationContext implements CommandCreationContext
     private final IdGenerator propertyKeyTokens;
     private final IdGenerator schema;
     private final PageCursorTracer cursorTracer;
+<<<<<<< HEAD
     private MutableLongObjectMap<MutableInt> sourceNodeNextRelationshipIds = LongObjectMaps.mutable.empty();
 
     FrekiCommandCreationContext( MainStores stores, IdGeneratorFactory idGeneratorFactory, PageCursorTracer cursorTracer )
+=======
+    private final MemoryTracker memoryTracker; //TODO we should probably track some memory
+    private MutableLongObjectMap<MutableInt> sourceNodeNextRelationshipIds = LongObjectMaps.mutable.empty();
+
+    FrekiCommandCreationContext( MainStores stores, IdGeneratorFactory idGeneratorFactory, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     {
         this.stores = stores;
         nodes = idGeneratorFactory.get( IdType.NODE );
@@ -61,6 +75,10 @@ class FrekiCommandCreationContext implements CommandCreationContext
         propertyKeyTokens = idGeneratorFactory.get( IdType.PROPERTY_KEY_TOKEN );
         schema = idGeneratorFactory.get( IdType.SCHEMA );
         this.cursorTracer = cursorTracer;
+<<<<<<< HEAD
+=======
+        this.memoryTracker = memoryTracker;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 
     @Override
@@ -75,6 +93,7 @@ class FrekiCommandCreationContext implements CommandCreationContext
         // This is a bit more complicated than simply asking an ID generator for a new ID. The relationship ids are associated with
         // their source node and therefore there's some loading of node data involved.
 
+<<<<<<< HEAD
         MutableInt nextRelationshipId = sourceNodeNextRelationshipIds.getIfAbsentPutWithKey( sourceNode, nodeId ->
         {
             MutableNodeData data = readAndDeserializeNode( sourceNode, 0, sourceNode );
@@ -104,12 +123,16 @@ class FrekiCommandCreationContext implements CommandCreationContext
                 return new MutableInt( data.getNextInternalRelationshipId() );
             }
         } );
+=======
+        MutableInt nextRelationshipId = sourceNodeNextRelationshipIds.getIfAbsentPutWithKey( sourceNode, this::getNextInternalRelationshipId );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 
         long internalRelationshipId = nextRelationshipId.getAndIncrement();
         checkState( internalRelationshipId < ARTIFICIAL_MAX_RELATIONSHIP_COUNTER, "Relationship counter exhausted for node %d", internalRelationshipId );
         return externalRelationshipId( sourceNode, internalRelationshipId );
     }
 
+<<<<<<< HEAD
     private MutableNodeData readAndDeserializeNode( long nodeId, int sizeExp, long id )
     {
         SimpleStore store = stores.mainStore( sizeExp );
@@ -120,6 +143,52 @@ class FrekiCommandCreationContext implements CommandCreationContext
                    ? new MutableNodeData( nodeId, stores.bigPropertyValueStore, cursorTracer, record.data() )
                    : null;
         }
+=======
+    private MutableInt getNextInternalRelationshipId( long nodeId )
+    {
+        int sizeExp = 0;
+        long id = nodeId;
+        MutableNodeData data = new MutableNodeData( nodeId, stores.bigPropertyValueStore, cursorTracer );
+
+        long nextInternalRelId = NULL;
+        while ( nextInternalRelId == NULL )
+        {
+            SimpleStore store = stores.mainStore( sizeExp );
+            try ( PageCursor cursor = store.openReadCursor( cursorTracer ) )
+            {
+                boolean x1 = sizeExp == 0;
+                Record record = store.newRecord();
+                if ( store.read( cursor, record, id ) && record.hasFlag( FLAG_IN_USE ) )
+                {
+                    Header header = data.deserialize( record );
+                    int mark = data.isDense() ? OFFSET_NEXT_INTERNAL_RELATIONSHIP_ID : OFFSET_RELATIONSHIPS;
+                    if ( header.hasMark( mark ) || !header.hasReferenceMark( mark ) )
+                    {
+                        nextInternalRelId = data.getNextInternalRelationshipId(); //either exists here or not at all
+                    }
+                    else
+                    {
+                        //load next
+                        long fw = data.getLastLoadedForwardPointer();
+                        sizeExp = sizeExponentialFromRecordPointer( fw );
+                        id = idFromRecordPointer( fw );
+                    }
+                }
+                else
+                {
+                    if ( x1 )
+                    {
+                        nextInternalRelId = FIRST_RELATIONSHIP_ID;
+                    }
+                    else
+                    {
+                        throw new IllegalStateException( String.format( "Broken node record. NodeId:%d SizeExp:%d Id:%d", nodeId, sizeExp, id ) );
+                    }
+                }
+            }
+        }
+        return new MutableInt( nextInternalRelId );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 
     @Override

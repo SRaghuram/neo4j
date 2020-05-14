@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.core;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
@@ -90,12 +91,12 @@ public class LeaderProviderTest
 
         if ( termFromRaft == 0 )
         {
-            when( leaderLocator.getLeaderInfo() ).thenReturn( null );
+            when( leaderLocator.getLeaderInfo() ).thenReturn( Optional.empty() );
         }
         else
         {
             LeaderInfo leaderFromRaft = new LeaderInfo( this.leaderFromRaft, termFromRaft );
-            when( leaderLocator.getLeaderInfo() ).thenReturn( leaderFromRaft );
+            when( leaderLocator.getLeaderInfo() ).thenReturn( Optional.of( leaderFromRaft ) );
         }
 
         if ( termFromDiscovery == 0 )

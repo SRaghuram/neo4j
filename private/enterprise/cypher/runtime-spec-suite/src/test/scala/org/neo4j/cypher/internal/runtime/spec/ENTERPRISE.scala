@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.RuntimeEnvironment
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.kernel.api.Kernel
+import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.scheduler.JobScheduler
 
 //noinspection TypeAnnotation
@@ -32,7 +33,7 @@ object ENTERPRISE {
       val jobScheduler = resolver.resolveDependency(classOf[JobScheduler])
       val workerManager = resolver.resolveDependency(classOf[WorkerManagement])
 
-      val runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, kernel.cursors(), lifeSupport, workerManager)
+      val runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, kernel.cursors(), lifeSupport, workerManager, EmptyMemoryTracker.INSTANCE)
 
       TracingRuntimeContextManager(
         GeneratedQueryStructure,

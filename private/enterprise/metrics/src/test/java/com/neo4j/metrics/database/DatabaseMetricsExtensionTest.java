@@ -19,6 +19,7 @@ import java.util.function.Supplier;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.dbms.database.DatabaseOperationCounts;
 import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -40,6 +41,7 @@ import org.neo4j.kernel.monitoring.tracing.Tracers;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.SimpleLogService;
+import org.neo4j.memory.MemoryPools;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.server.web.WebContainerThreadInfo;
@@ -144,6 +146,12 @@ class DatabaseMetricsExtensionTest
         }
 
         @Override
+        public DatabaseOperationCounts databaseOperationCounts()
+        {
+            return new DatabaseOperationCounts.Counter();
+        }
+
+        @Override
         public Config configuration()
         {
             return config;
@@ -177,6 +185,12 @@ class DatabaseMetricsExtensionTest
         public Supplier<WebContainerThreadInfo> webContainerThreadInfo()
         {
             return null;
+        }
+
+        @Override
+        public MemoryPools memoryPools()
+        {
+            return new MemoryPools();
         }
     }
 
@@ -254,6 +268,12 @@ class DatabaseMetricsExtensionTest
         public Tracers tracers()
         {
             return null;
+        }
+
+        @Override
+        public MemoryPools memoryPools()
+        {
+            return new MemoryPools();
         }
 
         @Override

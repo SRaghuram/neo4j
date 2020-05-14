@@ -24,6 +24,10 @@ import java.util.Iterator;
 
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+<<<<<<< HEAD
+=======
+import org.neo4j.memory.MemoryTracker;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 import org.neo4j.storageengine.api.Reference;
 import org.neo4j.storageengine.api.RelationshipDirection;
 import org.neo4j.storageengine.api.RelationshipSelection;
@@ -66,9 +70,16 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     private int selectionCriterionIndex;
     private long neighbourNodeReferenceSelection;
 
+<<<<<<< HEAD
     public FrekiRelationshipTraversalCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer )
     {
         super( stores, cursorAccessPatternTracer, cursorTracer );
+=======
+    public FrekiRelationshipTraversalCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer,
+            MemoryTracker memoryTracker )
+    {
+        super( stores, cursorAccessPatternTracer, cursorTracer, memoryTracker );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 
     @Override
@@ -144,7 +155,11 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
             {
                 return false;
             }
+<<<<<<< HEAD
             ensureRelationshipsLoaded();
+=======
+            ensureRelationshipsLocated();
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
             if ( !data.isDense && data.relationshipOffset == 0 )
             {
                 return false;

@@ -22,6 +22,7 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.dbms.database.DatabaseOperationCounts;
 import org.neo4j.function.Predicates;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
@@ -43,6 +44,7 @@ public abstract class ClusteringEditionModule extends AbstractEditionModule
     {
         reconciledTxTracker = new DefaultReconciledTransactionTracker( globalModule.getLogService() );
         configureThreadFactories( globalModule.getJobScheduler() );
+        globalModule.getGlobalDependencies().satisfyDependency( new DatabaseOperationCounts.Counter() ); // for global metrics and multidbmanager
     }
 
     protected void editionInvariants( GlobalModule globalModule, Dependencies dependencies )

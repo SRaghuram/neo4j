@@ -23,6 +23,7 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.ExtensionCallback;
+import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 /**
@@ -51,7 +52,8 @@ import org.neo4j.test.rule.TestDirectory;
 @Target( ElementType.TYPE )
 @Retention( RetentionPolicy.RUNTIME )
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
-@ExtendWith( {DefaultFileSystemExtension.class, EnterpriseDbmsSupportExtension.class} )
+@Neo4jLayoutExtension
+@ExtendWith( EnterpriseDbmsSupportExtension.class )
 public @interface EnterpriseDbmsExtension
 {
     /**

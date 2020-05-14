@@ -79,6 +79,7 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.monitoring.tracing.Tracers;
 import org.neo4j.lock.ResourceLocker;
 import org.neo4j.logging.NullLog;
+import org.neo4j.memory.MemoryGroup;
 import org.neo4j.memory.MemoryPools;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.resources.CpuClock;
@@ -123,6 +124,7 @@ import static org.neo4j.kernel.api.KernelTransaction.Type.EXPLICIT;
 import static org.neo4j.kernel.api.KernelTransaction.Type.IMPLICIT;
 import static org.neo4j.kernel.api.security.AnonymousContext.access;
 import static org.neo4j.kernel.impl.util.collection.CollectionsFactorySupplier.ON_HEAP;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.test.rule.DatabaseRule.mockedTokenHolders;
 import static org.neo4j.util.concurrent.Futures.combine;
 
@@ -400,15 +402,8 @@ class KernelTransactionsTest
 
         Future<?> wrongUnblocker = unblockTxsInSeparateThread( kernelTransactions );
 
-        try
-        {
-            wrongUnblocker.get();
-        }
-        catch ( Exception e )
-        {
-            assertThat( e ).isInstanceOf( ExecutionException.class );
-            assertThat( e.getCause() ).isInstanceOf( IllegalStateException.class );
-        }
+        var e = assertThrows( ExecutionException.class, wrongUnblocker::get );
+        assertThat( e.getCause() ).isInstanceOf( IllegalStateException.class );
         assertNotDone( txOpener );
 
         kernelTransactions.unblockNewTransactions();
@@ -639,7 +634,7 @@ class KernelTransactionsTest
 
         StorageEngine storageEngine = mock( StorageEngine.class );
         when( storageEngine.newReader() ).thenReturn( firstReader, otherReaders );
-        when( storageEngine.newCommandCreationContext( any( PageCursorTracer.class ) ) ).thenReturn( mock( CommandCreationContext.class ) );
+        when( storageEngine.newCommandCreationContext( any( PageCursorTracer.class ), any() ) ).thenReturn( mock( CommandCreationContext.class ) );
         doAnswer( invocation ->
         {
             Collection<StorageCommand> argument = invocation.getArgument( 0 );
@@ -696,7 +691,8 @@ class KernelTransactionsTest
                 new CanWrite(), EmptyVersionContextSupplier.EMPTY, ON_HEAP,
                 mock( ConstraintSemantics.class ), mock( SchemaState.class ),
                 mockedTokenHolders(), DEFAULT_DATABASE_ID, mock( IndexingService.class ), mock( LabelScanStore.class ), mock( RelationshipTypeScanStore.class ),
-                mock( IndexStatisticsStore.class ), createDependencies(), tracers, LeaseService.NO_LEASES, new MemoryPools() );
+                mock( IndexStatisticsStore.class ), createDependencies(), tracers, LeaseService.NO_LEASES,
+                new MemoryPools().pool( MemoryGroup.TRANSACTION, 0 ) );
     }
 
     private static TestKernelTransactions createTestTransactions( StorageEngine storageEngine,
@@ -754,7 +750,8 @@ class KernelTransactionsTest
                     new AtomicReference<>( HeapAllocation.NOT_AVAILABLE ), accessCapability,
                     versionContextSupplier, ON_HEAP, new StandardConstraintSemantics(), mock( SchemaState.class ), tokenHolders,
                     DEFAULT_DATABASE_ID, mock( IndexingService.class ), mock( LabelScanStore.class ), mock( RelationshipTypeScanStore.class ),
-                    mock( IndexStatisticsStore.class ), databaseDependencies, tracers, LeaseService.NO_LEASES, new MemoryPools() );
+                    mock( IndexStatisticsStore.class ), databaseDependencies, tracers, LeaseService.NO_LEASES,
+                    new MemoryPools().pool( MemoryGroup.TRANSACTION, 0 ) );
         }
 
         @Override

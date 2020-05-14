@@ -19,12 +19,14 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStreamArgumentStateBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfNonEmptyStream
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.memory.MemoryTracker
 
 class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
                                  argumentSlotOffset: Int,
@@ -36,16 +38,26 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
                                  argumentSize: SlotConfiguration.Size)
                                 (val id: Id = Id.INVALID_ID) extends Operator {
 
-  private type ResultsMap = util.LinkedHashMap[unorderedGroupings.KeyType, Array[AggregationFunction]]
-  private case class Result(orderedGroupingKey: orderedGroupings.KeyType, resultsMap: ResultsMap)
+  private type ResultsMap = util.LinkedHashMap[unorderedGroupings.KeyType, Array[AggregationFunction]] // TODO: Use heap tracking collection or ScopedMemoryTracker
+  private case class Result(orderedGroupingKey: orderedGroupings.KeyType, resultsMap: ResultsMap, memoryTracker: MemoryTracker) extends AutoCloseable {
+    override def close(): Unit = {
+      if (resultsMap != null) {
+        resultsMap.forEach { (key, functions) =>
+          memoryTracker.releaseHeap(key.estimatedHeapUsage())
+          functions.foreach(_.recordMemoryDeallocation())
+        }
+      }
+    }
+  }
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
                            state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = {
 
+    val memoryTracker = stateFactory.newMemoryTracker(id.x)
     argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStreamArgumentStateBuffer.Factory(stateFactory, id), ordered = true)
-    new OrderedAggregationState()
+    new OrderedAggregationState(memoryTracker)
   }
 
   override def toString: String = "OrderedAggregationOperator"
@@ -55,8 +67,9 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
 
   private class OrderedAggregationState(var lastSeenGroupingKey: orderedGroupings.KeyType,
                                         var resultsMap: ResultsMap,
-                                        var outstandingResults: Result) extends OperatorState {
-    def this() = this(null.asInstanceOf[orderedGroupings.KeyType], new ResultsMap, null)
+                                        var outstandingResults: Result,
+                                        val memoryTracker: MemoryTracker) extends OperatorState {
+    def this(memoryTracker: MemoryTracker) = this(null.asInstanceOf[orderedGroupings.KeyType], new ResultsMap, null, memoryTracker)
 
     override def nextTasks(state: PipelinedQueryState,
                            operatorInput: OperatorInput,
@@ -65,7 +78,7 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
                            argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
       val input: MorselData = operatorInput.takeData()
       if (input != null) {
-        IndexedSeq(new OrderedAggregationTask(input, this))
+        singletonIndexedSeq(new OrderedAggregationTask(input, this))
       } else {
         null
       }
@@ -124,6 +137,7 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
         val result = taskState.outstandingResults
         val it = result.resultsMap.entrySet().iterator()
         if (!it.hasNext) {
+          taskState.outstandingResults.close()
           taskState.outstandingResults = null
         } else {
           val entry = it.next()
@@ -145,7 +159,7 @@ class OrderedAggregationOperator(argumentStateMapId: ArgumentStateMapId,
     }
 
     private def completeCurrentChunk(): Unit = {
-      taskState.outstandingResults = Result(taskState.lastSeenGroupingKey, taskState.resultsMap)
+      taskState.outstandingResults = Result(taskState.lastSeenGroupingKey, taskState.resultsMap, taskState.memoryTracker)
       taskState.lastSeenGroupingKey = null.asInstanceOf[orderedGroupings.KeyType]
       taskState.resultsMap = new ResultsMap
     }

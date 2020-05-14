@@ -31,11 +31,15 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiFunction;
 
 import org.neo4j.configuration.helpers.DurationRange;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.graphdb.config.Configuration;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.string.SecureString;
 
@@ -50,6 +54,7 @@ import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 import static org.neo4j.configuration.SettingConstraints.PORT;
 import static org.neo4j.configuration.SettingConstraints.POWER_OF_2;
 import static org.neo4j.configuration.SettingConstraints.any;
+import static org.neo4j.configuration.SettingConstraints.dependency;
 import static org.neo4j.configuration.SettingConstraints.except;
 import static org.neo4j.configuration.SettingConstraints.is;
 import static org.neo4j.configuration.SettingConstraints.matches;
@@ -75,6 +80,7 @@ import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.configuration.SettingValueParsers.listOf;
 import static org.neo4j.configuration.SettingValueParsers.ofEnum;
 import static org.neo4j.configuration.SettingValueParsers.ofPartialEnum;
+import static org.neo4j.graphdb.config.Configuration.EMPTY;
 
 class SettingTest
 {
@@ -205,7 +211,17 @@ class SettingTest
 
         assertEquals( "1s", setting.valueToString( setting.parse( "1s" ) ) );
         assertEquals( "3m", setting.valueToString( setting.parse( "3m" ) ) );
+
+        // Anything less than a millisecond is rounded down
         assertEquals( "0ns", setting.valueToString( setting.parse( "0s" ) ) );
+        assertEquals( "0ns", setting.valueToString( setting.parse( "1ns" ) ) );
+        assertEquals( "0ns", setting.valueToString( setting.parse( "999999ns" ) ) );
+        assertEquals( "0ns", setting.valueToString( setting.parse( "999μs" ) ) );
+
+        // Time strings containing multiple units are permitted
+        assertEquals( "11d19h25m4s50ms", setting.valueToString( setting.parse( "11d19h25m4s50ms607μs80ns" ) ) );
+        // Weird time strings will be converted to something more readable
+        assertEquals( "2m1ms", setting.valueToString( setting.parse( "1m60000ms1000000ns" ) ) );
     }
 
     @Test
@@ -221,10 +237,26 @@ class SettingTest
         assertThrows( IllegalArgumentException.class, () -> setting.parse( "-1s" ) );
         assertThrows( IllegalArgumentException.class, () -> setting.parse( "-1s--2s" ) );
         assertThrows( IllegalArgumentException.class, () -> setting.parse( "2s-1s" ) );
+        assertThrows( IllegalArgumentException.class, () -> setting.parse( "2000ms-1s" ) );
+
+        // DurationRange may have zero delta
+        assertEquals( 1, setting.parse( "1s-1s" ).getMin().toSeconds() );
+        assertEquals( 1, setting.parse( "1s-1s" ).getMax().toSeconds() );
+        assertEquals( 0, setting.parse( "1s-1s" ).getDelta().toNanos() );
 
         assertEquals( "0ns-0ns", setting.valueToString( setting.parse( "0s-0s" ) ) );
         assertEquals( "1s-2s", setting.valueToString( setting.parse( "1s-2s" ) ) );
         assertEquals( "3m-6m", setting.valueToString( setting.parse( "[3m-6m]" ) ) );
+
+        // Time strings containing multiple units are permitted
+        assertEquals( "0ns-1m23s456ms", setting.valueToString( setting.parse( "0s-1m23s456ms" ) ) );
+
+        // Units will be converted to something "more readable"
+        assertEquals( "1s-2s500ms", setting.valueToString( setting.parse( "1000ms-2500ms" ) ) );
+
+        // Anything less than a millisecond is rounded down
+        assertEquals( "0ns-0ns", setting.valueToString( setting.parse( "999μs-999999ns" ) ) );
+        assertEquals( 0, setting.parse( "999μs-999999ns" ).getDelta().toNanos() );
     }
 
     @Test
@@ -349,18 +381,18 @@ class SettingTest
     void testMinConstraint()
     {
         var setting = (SettingImpl<Integer>) settingBuilder( "setting", INT ).addConstraint( min( 10 ) ).build();
-        assertDoesNotThrow( () -> setting.validate( 100 ) );
-        assertDoesNotThrow( () -> setting.validate( 10 ) );
-        assertThrows( IllegalArgumentException.class, () -> setting.validate( 9 ) );
+        assertDoesNotThrow( () -> setting.validate( 100, EMPTY ) );
+        assertDoesNotThrow( () -> setting.validate( 10, EMPTY ) );
+        assertThrows( IllegalArgumentException.class, () -> setting.validate( 9, EMPTY ) );
     }
 
     @Test
     void testMaxConstraint()
     {
         var setting = (SettingImpl<Integer>) settingBuilder( "setting", INT ).addConstraint( max( 10 ) ).build();
-        assertDoesNotThrow( () -> setting.validate( -100 ) );
-        assertDoesNotThrow( () -> setting.validate( 10 ) );
-        assertThrows( IllegalArgumentException.class, () -> setting.validate( 11 ) );
+        assertDoesNotThrow( () -> setting.validate( -100, EMPTY ) );
+        assertDoesNotThrow( () -> setting.validate( 10, EMPTY ) );
+        assertThrows( IllegalArgumentException.class, () -> setting.validate( 11, EMPTY ) );
     }
 
     @Test
@@ -368,52 +400,52 @@ class SettingTest
     {
         var setting = (SettingImpl<Double>) settingBuilder( "setting", DOUBLE ).addConstraint( range( 10.0, 20.0 ) ).build();
 
-        assertThrows( IllegalArgumentException.class, () -> setting.validate( 9.9 ) );
-        assertThrows( IllegalArgumentException.class, () -> setting.validate( 20.01 ) );
-        assertDoesNotThrow( () -> setting.validate( 10.1 ) );
-        assertDoesNotThrow( () -> setting.validate( 19.9999 ) );
+        assertThrows( IllegalArgumentException.class, () -> setting.validate( 9.9, EMPTY ) );
+        assertThrows( IllegalArgumentException.class, () -> setting.validate( 20.01, EMPTY ) );
+        assertDoesNotThrow( () -> setting.validate( 10.1, EMPTY ) );
+        assertDoesNotThrow( () -> setting.validate( 19.9999, EMPTY ) );
     }
 
     @Test
     void testExceptConstraint()
     {
         var setting = (SettingImpl<String>) settingBuilder( "setting", STRING ).addConstraint( except( "foo" ) ).build();
-        assertThrows( IllegalArgumentException.class, () -> setting.validate( "foo" ) );
-        assertDoesNotThrow( () -> setting.validate( "bar" ) );
+        assertThrows( IllegalArgumentException.class, () -> setting.validate( "foo", EMPTY ) );
+        assertDoesNotThrow( () -> setting.validate( "bar", EMPTY ) );
     }
 
     @Test
     void testMatchesConstraint()
     {
         var setting = (SettingImpl<String>) settingBuilder( "setting", STRING ).addConstraint( matches( "^[^.]+\\.[^.]+$" ) ).build();
-        assertDoesNotThrow( () -> setting.validate( "foo.bar" ) );
-        assertThrows( IllegalArgumentException.class, () -> setting.validate( "foo" ) );
+        assertDoesNotThrow( () -> setting.validate( "foo.bar", EMPTY ) );
+        assertThrows( IllegalArgumentException.class, () -> setting.validate( "foo", EMPTY ) );
     }
 
     @Test
     void testPowerOf2Constraint()
     {
         var setting = (SettingImpl<Long>) settingBuilder( "setting", LONG ).addConstraint( POWER_OF_2 ).build();
-        assertDoesNotThrow( () -> setting.validate( 8L ) );
-        assertDoesNotThrow( () -> setting.validate( 4294967296L ) );
-        assertThrows( IllegalArgumentException.class, () -> setting.validate( 1023L ) );
+        assertDoesNotThrow( () -> setting.validate( 8L, EMPTY ) );
+        assertDoesNotThrow( () -> setting.validate( 4294967296L, EMPTY ) );
+        assertThrows( IllegalArgumentException.class, () -> setting.validate( 1023L, EMPTY ) );
     }
 
     @Test
     void testPortConstraint()
     {
         var setting = (SettingImpl<Integer>) settingBuilder( "setting", INT ).addConstraint( PORT ).build();
-        assertDoesNotThrow( () -> setting.validate( 7474 ) );
-        assertThrows( IllegalArgumentException.class, () -> setting.validate( 200000 ) );
-        assertThrows( IllegalArgumentException.class, () -> setting.validate( -1 ) );
+        assertDoesNotThrow( () -> setting.validate( 7474, EMPTY ) );
+        assertThrows( IllegalArgumentException.class, () -> setting.validate( 200000, EMPTY ) );
+        assertThrows( IllegalArgumentException.class, () -> setting.validate( -1, EMPTY ) );
     }
 
     @Test
     void testIsConstraint()
     {
         var setting = (SettingImpl<Integer>) settingBuilder( "setting", INT ).addConstraint( is( 10 ) ).build();
-        assertDoesNotThrow( () -> setting.validate( 10 ) );
-        assertThrows( IllegalArgumentException.class, () -> setting.validate( 9 ) );
+        assertDoesNotThrow( () -> setting.validate( 10, EMPTY ) );
+        assertThrows( IllegalArgumentException.class, () -> setting.validate( 9, EMPTY ) );
     }
 
     @Test
@@ -421,27 +453,74 @@ class SettingTest
     {
         var intSetting = (SettingImpl<Integer>) settingBuilder( "setting", INT )
                 .addConstraint( any( min( 30 ), is( 0 ), is( -10 ) )  ).build();
-        assertDoesNotThrow( () -> intSetting.validate( 30 ) );
-        assertDoesNotThrow( () -> intSetting.validate( 100 ) );
-        assertDoesNotThrow( () -> intSetting.validate( 0 ) );
-        assertDoesNotThrow( () -> intSetting.validate( -10 ) );
-        assertThrows( IllegalArgumentException.class, () -> intSetting.validate( 29 ) );
-        assertThrows( IllegalArgumentException.class, () -> intSetting.validate( 1 ) );
-        assertThrows( IllegalArgumentException.class, () -> intSetting.validate( -9 ) );
+        assertDoesNotThrow( () -> intSetting.validate( 30, EMPTY ) );
+        assertDoesNotThrow( () -> intSetting.validate( 100, EMPTY ) );
+        assertDoesNotThrow( () -> intSetting.validate( 0, EMPTY ) );
+        assertDoesNotThrow( () -> intSetting.validate( -10, EMPTY ) );
+        assertThrows( IllegalArgumentException.class, () -> intSetting.validate( 29, EMPTY ) );
+        assertThrows( IllegalArgumentException.class, () -> intSetting.validate( 1, EMPTY ) );
+        assertThrows( IllegalArgumentException.class, () -> intSetting.validate( -9, EMPTY ) );
 
         var durationSetting = (SettingImpl<Duration>) settingBuilder( "setting", DURATION )
                 .addConstraint( any( min( Duration.ofMinutes( 30 ) ), is( Duration.ZERO ) )  ).build();
-        assertDoesNotThrow( () -> durationSetting.validate( Duration.ofMinutes( 30 ) ) );
-        assertDoesNotThrow( () -> durationSetting.validate( Duration.ofHours( 1 ) ) );
-        assertDoesNotThrow( () -> durationSetting.validate( Duration.ZERO ) );
-        assertThrows( IllegalArgumentException.class, () -> durationSetting.validate( Duration.ofMinutes( 29 ) ) );
-        assertThrows( IllegalArgumentException.class, () -> durationSetting.validate( Duration.ofMillis( 1 ) ) );
+        assertDoesNotThrow( () -> durationSetting.validate( Duration.ofMinutes( 30 ), EMPTY ) );
+        assertDoesNotThrow( () -> durationSetting.validate( Duration.ofHours( 1 ), EMPTY ) );
+        assertDoesNotThrow( () -> durationSetting.validate( Duration.ZERO, EMPTY ) );
+        assertThrows( IllegalArgumentException.class, () -> durationSetting.validate( Duration.ofMinutes( 29 ), EMPTY ) );
+        assertThrows( IllegalArgumentException.class, () -> durationSetting.validate( Duration.ofMillis( 1 ), EMPTY ) );
+
+    }
+
+    @Test
+    void testDependencyConstraint()
+    {
+        //Given
+        var intSetting = (SettingImpl<Integer>) settingBuilder( "int-setting", INT ).build();
+        var enumSetting = (SettingImpl<Colors>) settingBuilder( "enum-setting", ofEnum( Colors.class ) ).build();
+        Map<Setting<?>,Object> settings = new HashMap<>();
+
+        Configuration simpleConfig = new Configuration()
+        {
+            @Override
+            public <T> T get( Setting<T> setting )
+            {
+                return (T) settings.get( setting );
+            }
+        };
+        var dependingIntSetting = (SettingImpl<Integer>) settingBuilder( "setting", INT )
+                .addConstraint( dependency( max( 3 ), max(7), intSetting, min( 3 ) ) ).build();
+
+        var dependingEnumSetting = (SettingImpl<List<String>>) settingBuilder( "setting", listOf( STRING ) )
+                .addConstraint( dependency( SettingConstraints.size( 2 ), SettingConstraints.size( 4 ) , enumSetting, is( Colors.BLUE ) ) ).build();
+
+        //When
+        settings.put( intSetting, 5 );
+        settings.put( enumSetting, Colors.BLUE );
+        //Then
+        assertDoesNotThrow( () -> dependingIntSetting.validate( 3, simpleConfig ) );
+        assertThrows( IllegalArgumentException.class, () -> dependingIntSetting.validate( 4, simpleConfig ) );
+
+        assertDoesNotThrow( () -> dependingEnumSetting.validate( List.of( "a", "b" ), simpleConfig ) );
+        assertThrows( IllegalArgumentException.class, () -> dependingEnumSetting.validate( List.of( "a", "b", "c" ), simpleConfig ) );
+        assertThrows( IllegalArgumentException.class, () -> dependingEnumSetting.validate( List.of( "a", "b", "c", "d" ), simpleConfig ) );
+
+        //When
+        settings.put( intSetting, 2 );
+        settings.put( enumSetting, Colors.GREEN );
+        //Then
+        assertDoesNotThrow( () -> dependingIntSetting.validate( 4, simpleConfig ) );
+        assertThrows( IllegalArgumentException.class, () -> dependingIntSetting.validate( 8, simpleConfig ) );
+
+        assertDoesNotThrow( () -> dependingEnumSetting.validate( List.of( "a", "b", "c", "d" ), simpleConfig ) );
+        assertThrows( IllegalArgumentException.class, () -> dependingEnumSetting.validate( List.of( "a", "b" ), simpleConfig ) );
+        assertThrows( IllegalArgumentException.class, () -> dependingEnumSetting.validate( List.of( "a", "b", "c" ), simpleConfig ) );
 
     }
 
     @Test
     void testDescriptionWithConstraints()
     {
+        //Given
         var oneConstraintSetting = (SettingImpl<Long>) settingBuilder( "setting.name", LONG )
                 .addConstraint( POWER_OF_2 )
                 .build();
@@ -451,8 +530,21 @@ class SettingTest
                 .addConstraint( max( 10 ) )
                 .build();
 
+        var enumSetting = (SettingImpl<Colors>) settingBuilder( "setting.name", ofEnum( Colors.class ) ).build();
+        var intSetting = (SettingImpl<Integer>) settingBuilder( "setting.name", INT ).build();
+
+        var dependencySetting1 = (SettingImpl<List<String>>) settingBuilder( "setting.depending.name", listOf( STRING ) )
+                .addConstraint( dependency( SettingConstraints.size( 2 ), SettingConstraints.size( 4 ) , enumSetting, is( Colors.BLUE ) ) ).build();
+        var dependencySetting2 = (SettingImpl<Integer>) settingBuilder( "setting.depending.name", INT )
+                .addConstraint( dependency( max( 3 ), max(7), intSetting, min( 3 ) ) ).build();
+
+        //Then
         assertEquals( "setting.name, a long which is power of 2", oneConstraintSetting.description() );
         assertEquals( "setting.name, an integer which is minimum `2` and is maximum `10`", twoConstraintSetting.description() );
+        assertEquals( "setting.depending.name, a ',' separated list with elements of type 'a string'. which depends on setting.name." +
+                " If setting.name is `BLUE` then it is of size `2` otherwise it is of size `4`.", dependencySetting1.description() );
+        assertEquals( "setting.depending.name, an integer which depends on setting.name." +
+                " If setting.name is minimum `3` then it is maximum `3` otherwise it is maximum `7`.", dependencySetting2.description() );
     }
 
     @TestFactory

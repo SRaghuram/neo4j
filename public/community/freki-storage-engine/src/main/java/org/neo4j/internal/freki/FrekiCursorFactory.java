@@ -20,9 +20,16 @@
 package org.neo4j.internal.freki;
 
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+<<<<<<< HEAD
 import org.neo4j.storageengine.api.AllRelationshipsScan;
 
 class FrekiCursorFactory
+=======
+import org.neo4j.memory.MemoryTracker;
+import org.neo4j.storageengine.api.AllRelationshipsScan;
+
+class FrekiCursorFactory // almost implements CursorFactory
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 {
     private final MainStores stores;
     private final CursorAccessPatternTracer cursorAccessPatternTracer;
@@ -40,21 +47,38 @@ class FrekiCursorFactory
 
     public FrekiNodeCursor allocateNodeCursor( PageCursorTracer cursorTracer )
     {
+<<<<<<< HEAD
         return new FrekiNodeCursor( stores, cursorAccessPatternTracer, cursorTracer );
     }
 
     public FrekiPropertyCursor allocatePropertyCursor( PageCursorTracer cursorTracer )
     {
         return new FrekiPropertyCursor( stores, cursorAccessPatternTracer, cursorTracer );
+=======
+        return new FrekiNodeCursor( stores, cursorAccessPatternTracer, cursorTracer, null ); //Awaiting next MT propagation PR.
+    }
+
+    public FrekiPropertyCursor allocatePropertyCursor( PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
+    {
+        return new FrekiPropertyCursor( stores, cursorAccessPatternTracer, cursorTracer, memoryTracker ); //Awaiting next MT propagation PR.
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 
     public FrekiRelationshipTraversalCursor allocateRelationshipTraversalCursor( PageCursorTracer cursorTracer )
     {
+<<<<<<< HEAD
         return new FrekiRelationshipTraversalCursor( stores, cursorAccessPatternTracer, cursorTracer );
+=======
+        return new FrekiRelationshipTraversalCursor( stores, cursorAccessPatternTracer, cursorTracer, null ); //Awaiting next MT propagation PR.
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 
     public FrekiRelationshipScanCursor allocateRelationshipScanCursor( PageCursorTracer cursorTracer )
     {
+<<<<<<< HEAD
         return new FrekiRelationshipScanCursor( stores, cursorAccessPatternTracer, cursorTracer );
+=======
+        return new FrekiRelationshipScanCursor( stores, cursorAccessPatternTracer, cursorTracer, null ); //Awaiting next MT propagation PR.
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 }

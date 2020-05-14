@@ -5,9 +5,6 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.executor.FabricException;
-import com.neo4j.fabric.executor.FabricSecondaryException;
-import com.neo4j.fabric.executor.Location;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -18,6 +15,9 @@ import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.driver.reactive.RxResult;
 import org.neo4j.driver.reactive.RxSession;
 import org.neo4j.driver.reactive.RxTransaction;
+import org.neo4j.fabric.executor.FabricException;
+import org.neo4j.fabric.executor.FabricSecondaryException;
+import org.neo4j.fabric.executor.Location;
 import org.neo4j.values.virtual.MapValue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

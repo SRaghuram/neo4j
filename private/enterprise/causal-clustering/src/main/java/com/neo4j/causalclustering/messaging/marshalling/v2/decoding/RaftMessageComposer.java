@@ -21,7 +21,7 @@ public class RaftMessageComposer extends MessageToMessageDecoder<Object>
 {
     private final Queue<ReplicatedContent> replicatedContents = new LinkedList<>();
     private final Queue<Long> raftLogEntryTerms = new LinkedList<>();
-    private RaftMessageDecoder.RaftIdAwareMessageComposer messageComposer;
+    private RaftMessageDecoder.InboundRaftMessageContainerComposer messageComposer;
     private final Clock clock;
 
     public RaftMessageComposer( Clock clock )
@@ -36,20 +36,20 @@ public class RaftMessageComposer extends MessageToMessageDecoder<Object>
         {
             replicatedContents.add( (ReplicatedContent) msg );
         }
-        else if ( msg instanceof RaftLogEntryTermsDecoder.RaftLogEntryTerms )
+        else if ( msg instanceof RaftLogEntryTerms )
         {
-            for ( long term : ((RaftLogEntryTermsDecoder.RaftLogEntryTerms) msg).terms() )
+            for ( long term : ((RaftLogEntryTerms) msg).terms() )
             {
                 raftLogEntryTerms.add( term );
             }
         }
-        else if ( msg instanceof RaftMessageDecoder.RaftIdAwareMessageComposer )
+        else if ( msg instanceof RaftMessageDecoder.InboundRaftMessageContainerComposer )
         {
             if ( messageComposer != null )
             {
                 throw new IllegalStateException( "Received raft message header. Pipeline already contains message header waiting to build." );
             }
-            messageComposer = (RaftMessageDecoder.RaftIdAwareMessageComposer) msg;
+            messageComposer = (RaftMessageDecoder.InboundRaftMessageContainerComposer) msg;
         }
         else
         {

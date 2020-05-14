@@ -29,12 +29,8 @@ public class EnterpriseDbmsSupportController extends DbmsSupportController
     }
 
     @Override
-    public void startDbms( UnaryOperator<TestDatabaseManagementServiceBuilder> callback ) throws Exception
+    public void startDbms( UnaryOperator<TestDatabaseManagementServiceBuilder> callback )
     {
-        // Create and manage TestDirectoryExtension our self
-        // The caveat is that the order of postProcessTestInstance and beforeAll changes if you change TestInstance.Lifecycle
-        injectManagedTestDirectory();
-
         // Find closest configuration
         TestConfiguration enterpriseDbmsExtension = getAnnotatedConfiguration(
                 getTestAnnotation( EnterpriseDbmsExtension.class ),
@@ -58,7 +54,6 @@ public class EnterpriseDbmsSupportController extends DbmsSupportController
     public void shutdown()
     {
         super.shutdown();
-        removeManagedTestDirectory();
     }
 
     @Override

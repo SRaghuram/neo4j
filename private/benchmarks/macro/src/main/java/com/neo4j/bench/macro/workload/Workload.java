@@ -10,10 +10,10 @@ import com.google.common.collect.Sets;
 import com.google.common.io.CharStreams;
 import com.neo4j.bench.common.database.DatabaseName;
 import com.neo4j.bench.common.database.Neo4jDatabaseNames;
-import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.tool.macro.DeploymentMode;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.database.Schema;
+import com.neo4j.bench.model.model.BenchmarkGroup;
 
 import java.io.BufferedReader;
 import java.io.IOException;

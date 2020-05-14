@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeOperator.updateProfileEvent
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
+import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
 import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -35,7 +36,7 @@ import org.neo4j.cypher.internal.util.attribution.Id
  */
 trait OutputOperator extends HasWorkIdentity {
   def outputBuffer: Option[BufferId]
-  def createState(executionState: ExecutionState): OutputOperatorState
+  def createState(executionState: ExecutionState, stateFactory: StateFactory): OutputOperatorState
 }
 
 trait OutputOperatorState extends HasWorkIdentity {
@@ -73,21 +74,22 @@ trait OutputOperatorState extends HasWorkIdentity {
   def canContinueOutput: Boolean = false
 }
 
-trait PreparedOutput {
-  def produce(): Unit
+trait PreparedOutput extends AutoCloseable {
+  def produce(resources: QueryResources): Unit
+  override def close(): Unit = {}
 }
 
 // NO OUTPUT
 
 case object NoOutputOperator extends OutputOperator with OutputOperatorState with PreparedOutput {
   override def outputBuffer: Option[BufferId] = None
-  override def createState(executionState: ExecutionState): OutputOperatorState = this
+  override def createState(executionState: ExecutionState, stateFactory: StateFactory): OutputOperatorState = this
   override def prepareOutput(outputMorsel: Morsel,
                              state: PipelinedQueryState,
                              resources: QueryResources,
                              operatorExecutionEvent: OperatorProfileEvent): PreparedOutput = this
 
-  override def produce(): Unit = ()
+  override def produce(resources: QueryResources): Unit = ()
   override def workIdentity: WorkIdentity = WorkIdentityImpl(Id.INVALID_ID, "Perform no output")
   override def trackTime: Boolean = true
 }
@@ -96,12 +98,12 @@ case object NoOutputOperator extends OutputOperator with OutputOperatorState wit
 
 // we need the the id of the head plan of the next pipeline because that is where er attribute time spent
 // during prepare output in profiling.
-case class MorselBufferOutputOperator(bufferId: BufferId, nextPipelineHeadPlanId: Id, nextPipelineFused: Boolean) extends OutputOperator {
+case class MorselBufferOutputOperator(bufferId: BufferId, nextPipelineHeadPlanId: Id, nextPipelineCanTrackTime: Boolean) extends OutputOperator {
   override def outputBuffer: Option[BufferId] = Some(bufferId)
   override val workIdentity: WorkIdentity = WorkIdentityImpl(nextPipelineHeadPlanId, s"Output morsel to $bufferId")
-  override def createState(executionState: ExecutionState): OutputOperatorState =
-    //if nextPipeLineFused is true we shouldn't attribute time to nextPipelineHeadPlanId
-    MorselBufferOutputState(workIdentity, !nextPipelineFused, bufferId, executionState)
+  override def createState(executionState: ExecutionState, stateFactory: StateFactory): OutputOperatorState =
+    //if nextPipelineCanTrackTime is false we shouldn't attribute time to nextPipelineHeadPlanId
+    MorselBufferOutputState(workIdentity, nextPipelineCanTrackTime, bufferId, executionState)
 }
 case class MorselBufferOutputState(override val workIdentity: WorkIdentity,
                                    override val trackTime: Boolean,
@@ -116,22 +118,22 @@ case class MorselBufferOutputState(override val workIdentity: WorkIdentity,
 case class MorselBufferPreparedOutput(bufferId: BufferId,
                                       executionState: ExecutionState,
                                       outputMorsel: Morsel) extends PreparedOutput {
-  override def produce(): Unit =
-    executionState.putMorsel(bufferId, outputMorsel)
+  override def produce(resources: QueryResources): Unit =
+    executionState.putMorsel(bufferId, outputMorsel, resources)
 }
 
 // PIPELINED ARGUMENT STATE BUFFER OUTPUT
 
 // we need the the id of the head plan of the next pipeline because that is where er attribute time spent
 // during prepare output in profiling.
-case class MorselArgumentStateBufferOutputOperator(bufferId: BufferId, argumentSlotOffset: Int, nextPipelineHeadPlanId: Id, nextPipelineFused: Boolean) extends OutputOperator {
+case class MorselArgumentStateBufferOutputOperator(bufferId: BufferId, argumentSlotOffset: Int, nextPipelineHeadPlanId: Id, nextPipelineCanTrackTime: Boolean) extends OutputOperator {
   override def outputBuffer: Option[BufferId] = Some(bufferId)
   override val workIdentity: WorkIdentity = WorkIdentityImpl(nextPipelineHeadPlanId, s"Output morsel grouped by argumentSlot $argumentSlotOffset to $bufferId")
-  override def createState(executionState: ExecutionState): OutputOperatorState =
-  //if nextPipeLineFused is true we shouldn't attribute time to nextPipelineHeadPlanId
+  override def createState(executionState: ExecutionState, stateFactory: StateFactory): OutputOperatorState =
+  //if nextPipelineCanTrackTime is false we shouldn't attribute time to nextPipelineHeadPlanId
     MorselArgumentStateBufferOutputState(workIdentity,
       executionState.getSink[IndexedSeq[PerArgument[Morsel]]](bufferId),
-      argumentSlotOffset, !nextPipelineFused)
+      argumentSlotOffset, nextPipelineCanTrackTime)
 }
 case class MorselArgumentStateBufferOutputState(override val workIdentity: WorkIdentity,
                                                 sink: Sink[IndexedSeq[PerArgument[Morsel]]],
@@ -147,5 +149,5 @@ case class MorselArgumentStateBufferOutputState(override val workIdentity: WorkI
 }
 case class MorselArgumentStateBufferPreparedOutput(sink: Sink[IndexedSeq[PerArgument[Morsel]]],
                                                    data: IndexedSeq[PerArgument[Morsel]]) extends PreparedOutput {
-  override def produce(): Unit = sink.put(data)
+  override def produce(resources: QueryResources): Unit = sink.put(data, resources)
 }

@@ -10,11 +10,11 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 
 import java.io.IOException;
 
-import org.neo4j.test.extension.StatefullFieldExtension;
+import org.neo4j.test.extension.StatefulFieldExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectorySupportExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-class DriverFactoryExtension extends StatefullFieldExtension<DriverFactory> implements AfterEachCallback
+class DriverFactoryExtension extends StatefulFieldExtension<DriverFactory> implements AfterEachCallback
 {
     private static final String DRIVER = "driver";
     private static final ExtensionContext.Namespace DRIVER_NAMESPACE = ExtensionContext.Namespace.create( DRIVER );

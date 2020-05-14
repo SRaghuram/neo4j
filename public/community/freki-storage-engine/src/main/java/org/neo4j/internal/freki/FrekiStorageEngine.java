@@ -46,6 +46,10 @@ import org.neo4j.lock.LockService;
 import org.neo4j.lock.ResourceLocker;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+<<<<<<< HEAD
+=======
+import org.neo4j.memory.MemoryTracker;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.storageengine.api.CommandCreationContext;
 import org.neo4j.storageengine.api.CommandsToApply;
@@ -81,6 +85,10 @@ public class FrekiStorageEngine extends Life implements StorageEngine
     private final DatabaseHealth databaseHealth;
     private final PageCacheTracer pageCacheTracer;
     private final CursorAccessPatternTracer cursorAccessPatternTracer;
+<<<<<<< HEAD
+=======
+    private final MemoryTracker memoryTracker; //TODO we should probably track some memory
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 
     private final Stores stores;
     private final IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync;
@@ -93,8 +101,13 @@ public class FrekiStorageEngine extends Life implements StorageEngine
     FrekiStorageEngine( FileSystemAbstraction fs, DatabaseLayout databaseLayout, Config config, PageCache pageCache, TokenHolders tokenHolders,
             SchemaState schemaState, ConstraintRuleAccessor constraintSemantics, IndexConfigCompleter indexConfigCompleter, LockService lockService,
             IdGeneratorFactory idGeneratorFactory, IdController idController, DatabaseHealth databaseHealth, LogProvider logProvider,
+<<<<<<< HEAD
             RecoveryCleanupWorkCollector recoveryCleanupWorkCollector, boolean createStoreIfNotExists,
             PageCacheTracer pageCacheTracer, CursorAccessPatternTracer cursorAccessPatternTracer )
+=======
+            RecoveryCleanupWorkCollector recoveryCleanupWorkCollector, boolean createStoreIfNotExists, PageCacheTracer pageCacheTracer,
+            CursorAccessPatternTracer cursorAccessPatternTracer, MemoryTracker memoryTracker )
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
             throws IOException
     {
         this.pageCache = pageCache;
@@ -105,18 +118,31 @@ public class FrekiStorageEngine extends Life implements StorageEngine
         this.databaseHealth = databaseHealth;
         this.pageCacheTracer = pageCacheTracer;
         this.cursorAccessPatternTracer = cursorAccessPatternTracer;
+<<<<<<< HEAD
         this.idGeneratorUpdatesWorkSync = new IdGeneratorUpdatesWorkSync();
         this.stores = new Stores( fs, databaseLayout, pageCache, idGeneratorFactory, pageCacheTracer, recoveryCleanupWorkCollector,
                 createStoreIfNotExists, constraintSemantics, indexConfigCompleter );
+=======
+        this.memoryTracker = memoryTracker;
+        this.idGeneratorUpdatesWorkSync = new IdGeneratorUpdatesWorkSync();
+        this.stores = new Stores( fs, databaseLayout, pageCache, idGeneratorFactory, pageCacheTracer, recoveryCleanupWorkCollector,
+                createStoreIfNotExists, constraintSemantics, indexConfigCompleter, memoryTracker );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         this.singleReader = new FrekiStorageReader( stores, cursorAccessPatternTracer, tokenHolders );
         this.denseRelationshipsWorkSync = new DenseRelationshipsWorkSync( stores.denseStore );
         life.add( stores );
     }
 
     @Override
+<<<<<<< HEAD
     public CommandCreationContext newCommandCreationContext( PageCursorTracer cursorTracer )
     {
         return new FrekiCommandCreationContext( stores, idGeneratorFactory, cursorTracer );
+=======
+    public CommandCreationContext newCommandCreationContext( PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
+    {
+        return new FrekiCommandCreationContext( stores, idGeneratorFactory, cursorTracer, memoryTracker );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 
     @Override
@@ -144,7 +170,11 @@ public class FrekiStorageEngine extends Life implements StorageEngine
             PageCursorTracer cursorTracer )
             throws KernelException
     {
+<<<<<<< HEAD
         TxStateVisitor main = new CommandCreator( target, stores, constraintSemantics, cursorTracer );
+=======
+        TxStateVisitor main = new CommandCreator( target, stores, constraintSemantics, cursorTracer, memoryTracker );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         TxStateVisitor withCounts = trackCounts( target, main, state, storageReader, cursorTracer );
         try ( TxStateVisitor visitor = additionalTxStateVisitor.apply( withCounts ) )
         {
@@ -181,7 +211,11 @@ public class FrekiStorageEngine extends Life implements StorageEngine
         try ( LockGroup locks = new LockGroup();
                 FrekiTransactionApplier txApplier = new FrekiTransactionApplier( stores, singleReader, schemaState, indexUpdateListener, mode,
                         idGeneratorUpdatesWorkSync, labelIndexUpdatesWorkSync, indexUpdatesWorkSync, denseRelationshipsWorkSync,
+<<<<<<< HEAD
                         pageCacheTracer, batch.cursorTracer() ) )
+=======
+                        pageCacheTracer, batch.cursorTracer(), memoryTracker ) )
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         {
             while ( batch != null )
             {

@@ -7,11 +7,10 @@ package com.neo4j.bench.common.results;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.neo4j.bench.common.model.Benchmark;
-import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
-import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkGroup;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -26,7 +25,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.common.model.Benchmark.Mode;
+import static com.neo4j.bench.common.util.BenchmarkUtil.assertException;
 import static com.neo4j.bench.common.util.BenchmarkUtil.sanitize;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -39,8 +38,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class DirectoryTest
 {
     private static final BenchmarkGroup GROUP_1 = new BenchmarkGroup( "group1" );
-    private static final Benchmark BENCH_1 = Benchmark.benchmarkFor( "test bench 1", "bench 1", Mode.LATENCY, new HashMap<>() );
-    private static final Benchmark BENCH_2 = Benchmark.benchmarkFor( "test bench 2", "bench2", Mode.THROUGHPUT, new HashMap<>() );
+    private static final Benchmark BENCH_1 = Benchmark.benchmarkFor( "test bench 1", "bench 1", Benchmark.Mode.LATENCY, new HashMap<>() );
+    private static final Benchmark BENCH_2 = Benchmark.benchmarkFor( "test bench 2", "bench2", Benchmark.Mode.THROUGHPUT, new HashMap<>() );
     private static final String FORK1 = "fork 1";
     private static final String FORK2 = "fork2";
 
@@ -137,7 +136,7 @@ public class DirectoryTest
                     containsInAnyOrder( FORK1, FORK2 ) );
 
         // should not be able to create a fork directory where one already exists
-        BenchmarkUtil.assertException( RuntimeException.class,
+        assertException( RuntimeException.class,
                                        () -> benchDir.create( FORK1, new ArrayList<>() ) );
     }
 
@@ -173,13 +172,13 @@ public class DirectoryTest
         assertFalse( Files.exists( file1 ), "File should not yet be created" );
         assertThat( "File path should be within fork directory", file1.getParent(), equalTo( forkDirPath ) );
 
-        BenchmarkUtil.assertException( RuntimeException.class,
+        assertException( RuntimeException.class,
                                        () -> forkDir.findOrFail( "file1" ) );
 
         assertThat( "Same filenames mapped to different files", forkDir.create( "file1" ), equalTo( file1 ) );
         assertTrue( Files.exists( file1 ), "File should be created now" );
 
-        BenchmarkUtil.assertException( RuntimeException.class,
+        assertException( RuntimeException.class,
                                        () -> forkDir.create( "file1" ) );
 
         assertThat( "Could not find previously created file", forkDir.findOrFail( "file1" ), equalTo( file1 ) );

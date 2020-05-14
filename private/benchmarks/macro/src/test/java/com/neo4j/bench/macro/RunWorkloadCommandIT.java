@@ -8,22 +8,23 @@ package com.neo4j.bench.macro;
 import com.neo4j.bench.client.AddProfilesCommand;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
-import com.neo4j.bench.common.model.TestRunReport;
-import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
-import com.neo4j.bench.common.process.JvmArgs;
+import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
-import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.cli.RunMacroWorkloadCommand;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
+import com.neo4j.bench.model.model.TestRunReport;
+import com.neo4j.bench.model.options.Edition;
+import com.neo4j.bench.model.process.JvmArgs;
+import com.neo4j.bench.model.util.JsonUtil;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -38,6 +39,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 
@@ -268,6 +270,7 @@ class RunWorkloadCommandIT
                     profilerRecordingsDir,
                     new RunMacroWorkloadParams(
                             workload.name(),
+                            emptyList(),
                             Edition.ENTERPRISE,
                             jvmPath,
                             profilers,
@@ -285,7 +288,7 @@ class RunWorkloadCommandIT
                             skipFlameGraphs,
                             deployment,
                             neo4jCommit,
-                            neo4jVersion,
+                            new Version( neo4jVersion ),
                             neo4jBranch,
                             neo4jBranchOwner,
                             toolCommit,

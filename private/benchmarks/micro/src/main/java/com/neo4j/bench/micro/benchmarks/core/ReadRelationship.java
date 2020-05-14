@@ -6,7 +6,7 @@
 package com.neo4j.bench.micro.benchmarks.core;
 
 import com.neo4j.bench.common.Neo4jConfigBuilder;
-import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.benchmarks.RNGState;

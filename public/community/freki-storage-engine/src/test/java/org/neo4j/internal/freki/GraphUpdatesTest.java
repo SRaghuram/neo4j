@@ -34,14 +34,25 @@ import java.util.List;
 import org.neo4j.internal.kernel.api.exceptions.ConstraintViolationTransactionFailureException;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+<<<<<<< HEAD
 import org.neo4j.storageengine.api.PropertyKeyValue;
 import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.util.IdUpdateListener;
+=======
+import org.neo4j.memory.EmptyMemoryTracker;
+import org.neo4j.storageengine.api.PropertyKeyValue;
+import org.neo4j.storageengine.api.StorageProperty;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.rule.RandomRule;
 
 import static org.assertj.core.api.Assertions.assertThat;
+<<<<<<< HEAD
+=======
+import static org.neo4j.internal.freki.Record.deletedRecord;
+import static org.neo4j.storageengine.util.IdUpdateListener.IGNORE;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 
 @ExtendWith( RandomExtension.class )
 class GraphUpdatesTest
@@ -59,7 +70,11 @@ class GraphUpdatesTest
     {
         long nodeId = 0;
         {
+<<<<<<< HEAD
             GraphUpdates updates = new GraphUpdates( mainStores, PageCursorTracer.NULL );
+=======
+            GraphUpdates updates = new GraphUpdates( mainStores, PageCursorTracer.NULL, EmptyMemoryTracker.INSTANCE );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
             updates.create( nodeId );
             extractAndApplyUpdates( updates );
         }
@@ -73,7 +88,11 @@ class GraphUpdatesTest
         BitSet existing = new BitSet();
         for ( int i = 0; i < 1_000; i++ )
         {
+<<<<<<< HEAD
             GraphUpdates updates = new GraphUpdates( mainStores, PageCursorTracer.NULL );
+=======
+            GraphUpdates updates = new GraphUpdates( mainStores, PageCursorTracer.NULL, EmptyMemoryTracker.INSTANCE );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
             int numChanges = random.nextInt( 1, 10 );
             GraphUpdates.NodeUpdates nodeUpdates = updates.getOrLoad( nodeId );
             List<StorageProperty> added = new ArrayList<>();
@@ -120,12 +139,24 @@ class GraphUpdatesTest
                     @Override
                     public void handle( FrekiCommand.SparseNode node ) throws IOException
                     {
+<<<<<<< HEAD
                         Record record = node.after;
                         byte sizeExp = record.sizeExp();
                         SimpleStore store = mainStores.mainStore( sizeExp );
                         try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
                         {
                             store.write( cursor, record, IdUpdateListener.IGNORE, PageCursorTracer.NULL );
+=======
+                        for ( FrekiCommand.RecordChange change : node )
+                        {
+                            Record record = change.after;
+                            byte sizeExp = change.sizeExp();
+                            SimpleStore store = mainStores.mainStore( sizeExp );
+                            try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
+                            {
+                                store.write( cursor, record != null ? record : deletedRecord( sizeExp, change.recordId() ), IGNORE, PageCursorTracer.NULL );
+                            }
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
                         }
                     }
 

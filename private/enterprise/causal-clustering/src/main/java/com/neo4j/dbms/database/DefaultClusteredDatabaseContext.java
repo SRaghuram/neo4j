@@ -9,9 +9,11 @@ import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupComponents;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.common.ClusteredDatabase;
+import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Optional;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.dbms.database.DatabaseManager;
@@ -45,15 +47,16 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
     private final GraphDatabaseFacade facade;
     private volatile Throwable failureCause;
     private final CatchupComponents catchupComponents;
+    private final LeaderLocator leaderLocator;
     private final PageCacheTracer cacheTracer;
     private final ClusteredDatabase clusterDatabase;
     private final Monitors clusterDatabaseMonitors;
 
     private volatile StoreId storeId;
 
-    DefaultClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles txLogs, StoreFiles storeFiles, LogProvider logProvider,
+    private DefaultClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles txLogs, StoreFiles storeFiles, LogProvider logProvider,
             CatchupComponentsFactory catchupComponentsFactory, ClusteredDatabase clusterDatabase, Monitors clusterDatabaseMonitors,
-            PageCacheTracer cacheTracer )
+            LeaderLocator leaderLocator, PageCacheTracer cacheTracer )
     {
         this.database = database;
         this.facade = facade;
@@ -66,6 +69,25 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
         this.clusterDatabaseMonitors = clusterDatabaseMonitors;
         this.catchupComponents = catchupComponentsFactory.createDatabaseComponents( this );
         this.cacheTracer = cacheTracer;
+        this.leaderLocator = leaderLocator;
+    }
+
+    public static DefaultClusteredDatabaseContext readReplica( Database database, GraphDatabaseFacade facade, LogFiles txLogs,
+                                                               StoreFiles storeFiles, LogProvider logProvider,
+                                                               CatchupComponentsFactory catchupComponentsFactory, ClusteredDatabase clusterDatabase,
+                                                               Monitors clusterDatabaseMonitors, PageCacheTracer cacheTracer )
+    {
+        return new DefaultClusteredDatabaseContext( database, facade, txLogs, storeFiles, logProvider, catchupComponentsFactory, clusterDatabase,
+                                                    clusterDatabaseMonitors, null, cacheTracer );
+    }
+
+    public static DefaultClusteredDatabaseContext core( Database database, GraphDatabaseFacade facade, LogFiles txLogs, StoreFiles storeFiles,
+            LogProvider logProvider,
+            CatchupComponentsFactory catchupComponentsFactory, ClusteredDatabase clusterDatabase, Monitors clusterDatabaseMonitors,
+            LeaderLocator leaderLocator, PageCacheTracer cacheTracer )
+    {
+        return new DefaultClusteredDatabaseContext( database, facade, txLogs, storeFiles, logProvider, catchupComponentsFactory, clusterDatabase,
+                                                    clusterDatabaseMonitors, leaderLocator, cacheTracer );
     }
 
     /**
@@ -196,5 +218,11 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
     public ClusteredDatabase clusteredDatabase()
     {
         return clusterDatabase;
+    }
+
+    @Override
+    public Optional<LeaderLocator> leaderLocator()
+    {
+        return Optional.ofNullable( leaderLocator );
     }
 }

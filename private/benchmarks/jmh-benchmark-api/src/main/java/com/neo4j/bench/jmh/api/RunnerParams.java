@@ -7,7 +7,6 @@ package com.neo4j.bench.jmh.api;
 
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
-import com.neo4j.bench.common.util.BenchmarkUtil;
 import org.openjdk.jmh.infra.BenchmarkParams;
 
 import java.nio.file.Path;
@@ -18,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static com.neo4j.bench.model.util.MapPrinter.prettyPrint;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 
@@ -146,7 +146,7 @@ public final class RunnerParams
     @Override
     public String toString()
     {
-        return BenchmarkUtil.prettyPrint( runnerParams );
+        return prettyPrint( runnerParams );
     }
 
     public static class RunnerParam

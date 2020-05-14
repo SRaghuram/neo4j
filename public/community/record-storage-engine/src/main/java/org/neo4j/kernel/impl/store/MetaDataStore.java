@@ -803,7 +803,7 @@ public class MetaDataStore extends CommonAbstractStore<MetaDataRecord,NoStoreHea
     public TransactionId getUpgradeTransaction()
     {
         assertNotClosed();
-        checkInitialized( upgradeTxIdField  );
+        checkInitialized( upgradeTxIdField );
         return upgradeTransaction;
     }
 

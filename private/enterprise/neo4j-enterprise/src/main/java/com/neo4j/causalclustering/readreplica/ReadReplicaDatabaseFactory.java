@@ -28,11 +28,13 @@ import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -109,8 +111,9 @@ class ReadReplicaDatabaseFactory
         Supplier<CatchupComponents> catchupComponentsSupplier = () -> catchupComponentsRepository.componentsFor( namedDatabaseId ).orElseThrow(
                 () -> new IllegalStateException( format( "No per database catchup components exist for database %s.", namedDatabaseId.name() ) ) );
 
+        var backoffStrategy = new ConstantTimeTimeoutStrategy( 1, TimeUnit.SECONDS );
         ReadReplicaBootstrap bootstrap = new ReadReplicaBootstrap( databaseContext, upstreamDatabaseStrategySelector, internalLogProvider,
-                userLogProvider, topologyService, catchupComponentsSupplier, clusterInternalOperator, databaseStartAborter );
+                userLogProvider, topologyService, catchupComponentsSupplier, clusterInternalOperator, databaseStartAborter, backoffStrategy );
 
         RaftIdCheck raftIdCheck = new RaftIdCheck( raftIdStorage, namedDatabaseId );
 

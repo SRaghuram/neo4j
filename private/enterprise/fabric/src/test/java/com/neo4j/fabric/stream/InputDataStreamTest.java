@@ -13,6 +13,9 @@ import java.util.stream.Collectors;
 
 import org.neo4j.cypher.internal.runtime.InputCursor;
 import org.neo4j.cypher.internal.runtime.InputDataStream;
+import org.neo4j.fabric.stream.InputDataStreamImpl;
+import org.neo4j.fabric.stream.Record;
+import org.neo4j.fabric.stream.Rx2SyncStream;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.Values;
 

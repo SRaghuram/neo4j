@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.logical.plans.Distinct
 import org.neo4j.cypher.internal.logical.plans.Limit
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.OrderedDistinct
+import org.neo4j.cypher.internal.logical.plans.PartialTop
 import org.neo4j.cypher.internal.logical.plans.Skip
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.physicalplanning.FusedHead
@@ -32,12 +33,12 @@ class PipelineCompiler(operatorFactory: OperatorFactory,
     // Compile pipelines from the end backwards/upstream, to track needsFilteringMorsel
     // (the previous pipelines will need a filtering morsel if its downstream pipeline has a work canceller
     val (executablePipelines, _, _) =
-      executionGraphDefinition.pipelines.foldRight (IndexedSeq.empty[ExecutablePipeline], false, false) {
-        case (p, (pipelines, needsFilteringMorsel, nextPipelineFused)) =>
+      executionGraphDefinition.pipelines.foldRight (IndexedSeq.empty[ExecutablePipeline], false, true) {
+        case (p, (pipelines, needsFilteringMorsel, nextPipelineCanTrackTime)) =>
           val (executablePipeline, upstreamNeedsFilteringMorsel) =
-            compilePipeline(executionGraphDefinition, p, needsFilteringMorsel, nextPipelineFused)
+            compilePipeline(executionGraphDefinition, p, needsFilteringMorsel, nextPipelineCanTrackTime)
 
-          (executablePipeline +: pipelines, needsFilteringMorsel || upstreamNeedsFilteringMorsel, executablePipeline.isFused)
+          (executablePipeline +: pipelines, needsFilteringMorsel || upstreamNeedsFilteringMorsel, executablePipeline.startOperatorCanTrackTime)
       }
     executablePipelines
   }
@@ -51,7 +52,7 @@ class PipelineCompiler(operatorFactory: OperatorFactory,
 
   private def requiresUpstreamPipelinesToUseFilteringMorsel(plan: LogicalPlan): Boolean = plan match {
     case _: Limit => true // All upstreams from LIMIT need filtering morsels
-    case _: Skip => true // All upstreams from SKIP need filtering morsels
+    case _: PartialTop => true
     case _ => false
   }
 
@@ -62,7 +63,7 @@ class PipelineCompiler(operatorFactory: OperatorFactory,
   def compilePipeline(executionGraphDefinition: ExecutionGraphDefinition,
                       p: PipelineDefinition,
                       needsFilteringMorsel: Boolean,
-                      nextPipelineFused: Boolean): (ExecutablePipeline, Boolean) = {
+                      nextPipelineCanTrackTime: Boolean): (ExecutablePipeline, Boolean) = {
 
     // See if we need filtering morsels in upstream pipelines
     val upstreamsNeedsFilteringMorsel =
@@ -70,7 +71,7 @@ class PipelineCompiler(operatorFactory: OperatorFactory,
       p.middlePlans.exists(requiresUpstreamPipelinesToUseFilteringMorsel) ||
       (p.headPlan match {
         case FusedHead(fuser) => fuser.fusedPlans.exists(requiresUpstreamPipelinesToUseFilteringMorsel)
-        case _ => false
+        case InterpretedHead(plan) => requiresUpstreamPipelinesToUseFilteringMorsel(plan)
       })
 
     val headOperator =
@@ -97,7 +98,7 @@ class PipelineCompiler(operatorFactory: OperatorFactory,
                         p.serial,
                         physicalPlan.slotConfigurations(p.headPlan.id),
                         p.inputBuffer,
-                        operatorFactory.createOutput(p.outputDefinition, nextPipelineFused),
+                        operatorFactory.createOutput(p.outputDefinition, nextPipelineCanTrackTime),
                         p.workLimiter,
                         needsMorsel,
                         thisNeedsFilteringMorsel),

@@ -13,6 +13,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
 import org.neo4j.codegen.api.IntermediateRepresentation.loop
 import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.or
 import org.neo4j.codegen.api.IntermediateRepresentation.self
 import org.neo4j.codegen.api.LocalVariable
@@ -28,6 +29,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NEXT
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -43,7 +45,7 @@ class ArgumentOperator(val workIdentity: WorkIdentity,
                                    parallelism: Int,
                                    resources: QueryResources,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
-    IndexedSeq(new OTask(inputMorsel.nextCopy))
+    singletonIndexedSeq(new OTask(inputMorsel.nextCopy))
 
   class OTask(val inputMorsel: Morsel) extends ContinuableOperatorTaskWithMorsel {
 
@@ -87,6 +89,7 @@ class ArgumentOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
 
   override protected def genOperateHead: IntermediateRepresentation = {
     block(
+      genAdvanceOnCancelledRow,
       loop(and(invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue")), innermost.predicate))(
         block(
           innermost.resetBelowLimitAndAdvanceToNextArgument,
@@ -116,4 +119,5 @@ class ArgumentOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
 
   override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
 
+  override def genClearStateOnCancelledRow: IntermediateRepresentation = noop()
 }

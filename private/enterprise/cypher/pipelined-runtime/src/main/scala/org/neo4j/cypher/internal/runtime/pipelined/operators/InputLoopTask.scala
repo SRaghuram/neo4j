@@ -198,17 +198,7 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
     //
     //outputCursor.close()
     block(
-      condition(not(INPUT_ROW_IS_VALID)) {
-        block(
-          condition(loadField(innerLoop)) {
-            block(
-              genCloseInnerLoop,
-              setField(innerLoop, constant(false))
-            )
-          },
-          invokeSideEffect(INPUT_CURSOR, NEXT),
-        )
-      },
+      genAdvanceOnCancelledRow,
       loop(and(or(INPUT_ROW_IS_VALID, loadField(innerLoop)), innermost.predicate))(
         block(
           innermost.resetBelowLimitAndAdvanceToNextArgument,
@@ -282,6 +272,15 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
       )
     )
   }
+
+  override def genClearStateOnCancelledRow: IntermediateRepresentation =
+    block(
+      condition(loadField(innerLoop)) {
+        genCloseInnerLoop
+      },
+      setField(innerLoop, constant(false)),
+      setField(canContinue, constant(false)),
+    )
 
   //noinspection MutatorLikeMethodIsParameterless
   private def doInitializeInnerLoopOrRestoreContinuationState: IntermediateRepresentation = {

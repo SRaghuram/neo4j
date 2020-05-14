@@ -7,6 +7,9 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import java.util.concurrent.atomic.AtomicInteger
 
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+
 /**
  * Implementation of a concurrent [[Buffer]] of elements of type `T`.
  */
@@ -23,7 +26,7 @@ class ConcurrentBuffer[T <: AnyRef] extends Buffer[T] {
 
   override def hasData: Boolean = !data.isEmpty
 
-  override def put(t: T): Unit = {
+  override def put(t: T, resources: QueryResources): Unit = {
     size.incrementAndGet()
     data.add(t)
   }

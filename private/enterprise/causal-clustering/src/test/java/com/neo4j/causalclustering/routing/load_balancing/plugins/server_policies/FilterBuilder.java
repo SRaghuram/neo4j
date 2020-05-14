@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.routing.load_balancing.filters.Filter;
 import com.neo4j.causalclustering.routing.load_balancing.filters.FilterChain;
 import com.neo4j.causalclustering.routing.load_balancing.filters.FirstValidRule;
@@ -32,7 +33,7 @@ class FilterBuilder
 
     FilterBuilder groups( String... groups )
     {
-        current.add( new AnyGroupFilter( groups ) );
+        current.add( new AnyGroupFilter( ServerGroupName.setOf( groups ) ) );
         return this;
     }
 

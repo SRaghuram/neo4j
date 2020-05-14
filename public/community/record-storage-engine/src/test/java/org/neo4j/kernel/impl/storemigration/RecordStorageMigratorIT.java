@@ -60,17 +60,21 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.kernel.impl.store.DynamicRecordAllocator;
 import org.neo4j.kernel.impl.store.DynamicStringStore;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.SchemaStore;
 import org.neo4j.kernel.impl.store.StoreFactory;
 import org.neo4j.kernel.impl.store.StoreType;
 import org.neo4j.kernel.impl.store.TokenStore;
+import org.neo4j.kernel.impl.store.allocator.ReusableRecordsCompositeAllocator;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.store.format.standard.StandardV3_4;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.TokenRecord;
+import org.neo4j.kernel.impl.storemigration.legacy.SchemaRuleSerialization35;
 import org.neo4j.kernel.impl.storemigration.legacy.SchemaStore35;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.logging.AssertableLogProvider;
@@ -89,12 +93,16 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 import org.neo4j.token.TokenHolders;
 
+import static java.util.Collections.singleton;
 import static org.eclipse.collections.api.factory.Sets.immutable;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
+import static org.neo4j.kernel.impl.store.AbstractDynamicStore.allocateRecordsFromBytes;
+import static org.neo4j.kernel.impl.store.record.RecordLoad.CHECK;
 import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
 import static org.neo4j.logging.LogAssertions.assertThat;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @PageCacheExtension
 @Neo4jLayoutExtension
@@ -158,11 +166,11 @@ class RecordStorageMigratorIT
         String versionToMigrateFrom = getVersionToMigrateFrom( check );
         MigrationProgressMonitor progressMonitor = MigrationProgressMonitor.SILENT;
         RecordStorageMigrator migrator = new RecordStorageMigrator( fs, pageCache, CONFIG, logService, jobScheduler, PageCacheTracer.NULL,
-                batchImporterFactory );
+                batchImporterFactory, INSTANCE );
         migrator.migrate( databaseLayout, migrationLayout, progressMonitor.startSection( "section" ), versionToMigrateFrom, getVersionToMigrateTo( check ) );
 
         // WHEN simulating resuming the migration
-        migrator = new RecordStorageMigrator( fs, pageCache, CONFIG, logService, jobScheduler, PageCacheTracer.NULL, batchImporterFactory );
+        migrator = new RecordStorageMigrator( fs, pageCache, CONFIG, logService, jobScheduler, PageCacheTracer.NULL, batchImporterFactory, INSTANCE );
         migrator.moveMigratedFiles( migrationLayout, databaseLayout, versionToMigrateFrom, getVersionToMigrateTo( check ) );
 
         // THEN starting the new store should be successful
@@ -189,7 +197,7 @@ class RecordStorageMigratorIT
 
         String versionToMigrateFrom = getVersionToMigrateFrom( check );
         RecordStorageMigrator migrator = new RecordStorageMigrator( fs, pageCache, CONFIG, logService, jobScheduler, PageCacheTracer.NULL,
-                batchImporterFactory );
+                batchImporterFactory, INSTANCE );
 
         // WHEN migrating
         migrator.migrate( databaseLayout, migrationLayout, progressMonitor.startSection( "section" ), versionToMigrateFrom, getVersionToMigrateTo( check ) );
@@ -220,7 +228,7 @@ class RecordStorageMigratorIT
         String versionToMigrateFrom = getVersionToMigrateFrom( check );
         MigrationProgressMonitor progressMonitor = MigrationProgressMonitor.SILENT;
         RecordStorageMigrator migrator = new RecordStorageMigrator( fs, pageCache, CONFIG, logService, jobScheduler, PageCacheTracer.NULL,
-                batchImporterFactory );
+                batchImporterFactory, INSTANCE );
         migrator.migrate( databaseLayout, migrationLayout, progressMonitor.startSection( "section" ),
                 versionToMigrateFrom, getVersionToMigrateTo( check ) );
 
@@ -252,7 +260,7 @@ class RecordStorageMigratorIT
         String versionToMigrateFrom = getVersionToMigrateFrom( check );
         MigrationProgressMonitor progressMonitor = MigrationProgressMonitor.SILENT;
         RecordStorageMigrator migrator = new RecordStorageMigrator( fs, pageCache, CONFIG, logService, jobScheduler, PageCacheTracer.NULL,
-                batchImporterFactory );
+                batchImporterFactory, INSTANCE );
 
         // WHEN migrating
         migrator.migrate( databaseLayout, migrationLayout, progressMonitor.startSection( "section" ), versionToMigrateFrom, getVersionToMigrateTo( check ) );
@@ -278,7 +286,7 @@ class RecordStorageMigratorIT
         String versionToMigrateFrom = getVersionToMigrateFrom( check );
         MigrationProgressMonitor progressMonitor = MigrationProgressMonitor.SILENT;
         RecordStorageMigrator migrator = new RecordStorageMigrator( fs, pageCache, CONFIG, logService, jobScheduler, PageCacheTracer.NULL,
-                batchImporterFactory );
+                batchImporterFactory, INSTANCE );
 
         // when
         migrator.migrate( databaseLayout, migrationLayout, progressMonitor.startSection( "section" ), versionToMigrateFrom, getVersionToMigrateTo( check ) );
@@ -352,7 +360,7 @@ class RecordStorageMigratorIT
                 }
                 randomSchema.commit();
                 generatedRules.add( schemaRule );
-                List<DynamicRecord> dynamicRecords = schemaStore35.allocateFrom( schemaRule, NULL );
+                List<DynamicRecord> dynamicRecords = allocateFrom( schemaStore35, schemaRule, NULL );
                 for ( DynamicRecord dynamicRecord : dynamicRecords )
                 {
                     schemaStore35.updateRecord( dynamicRecord, NULL );
@@ -370,7 +378,7 @@ class RecordStorageMigratorIT
         String versionToMigrateFrom = getVersionToMigrateFrom( check );
         MigrationProgressMonitor progressMonitor = MigrationProgressMonitor.SILENT;
         RecordStorageMigrator migrator = new RecordStorageMigrator( fs, pageCache, CONFIG, logService, jobScheduler, PageCacheTracer.NULL,
-                batchImporterFactory );
+                batchImporterFactory, INSTANCE );
 
         // When we migrate it to the new store format.
         String versionToMigrateTo = getVersionToMigrateTo( check );
@@ -569,4 +577,14 @@ class RecordStorageMigratorIT
     {
         return txInfo -> txInfo.transactionId() == id && txInfo.commitTimestamp() == timestamp;
     }
+
+    public List<DynamicRecord> allocateFrom( SchemaStore35 schemaStore35, SchemaRule rule, PageCursorTracer cursorTracer )
+    {
+        List<DynamicRecord> records = new ArrayList<>();
+        DynamicRecord record = schemaStore35.getRecord( rule.getId(), schemaStore35.newRecord(), CHECK, cursorTracer );
+        DynamicRecordAllocator recordAllocator = new ReusableRecordsCompositeAllocator( singleton( record ), schemaStore35 );
+        allocateRecordsFromBytes( records, SchemaRuleSerialization35.serialize( rule, INSTANCE ), recordAllocator, cursorTracer );
+        return records;
+    }
+
 }

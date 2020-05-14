@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Objects;
@@ -19,9 +20,9 @@ public class ServerInfo
 {
     private final SocketAddress boltAddress;
     private MemberId memberId;
-    private Set<String> groups;
+    private Set<ServerGroupName> groups;
 
-    public ServerInfo( SocketAddress boltAddress, MemberId memberId, Set<String> groups )
+    public ServerInfo( SocketAddress boltAddress, MemberId memberId, Set<ServerGroupName> groups )
     {
         this.boltAddress = boltAddress;
         this.memberId = memberId;
@@ -38,7 +39,7 @@ public class ServerInfo
         return boltAddress;
     }
 
-    Set<String> groups()
+    Set<ServerGroupName> groups()
     {
         return groups;
     }

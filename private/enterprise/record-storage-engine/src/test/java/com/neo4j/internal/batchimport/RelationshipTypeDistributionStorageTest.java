@@ -24,6 +24,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static java.util.stream.StreamSupport.stream;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @TestDirectoryExtension
 @ExtendWith( RandomExtension.class )
@@ -41,7 +42,7 @@ class RelationshipTypeDistributionStorageTest
     {
         // given
         File file = directory.file( "store" );
-        RelationshipTypeDistributionStorage storage = new RelationshipTypeDistributionStorage( fs, file );
+        RelationshipTypeDistributionStorage storage = new RelationshipTypeDistributionStorage( fs, file, INSTANCE );
         List<RelationshipTypeCount> types = new ArrayList<>();
         for ( int i = 0; i < 10; i++ )
         {

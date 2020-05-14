@@ -74,7 +74,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     private final ActorSystemLifecycle actorSystemLifecycle;
     private final LogProvider logProvider;
     private final RetryStrategy catchupAddressRetryStrategy;
-    private final RetryStrategy restartRetryStrategy;
+    private final Restarter restarter;
     private final DiscoveryMemberFactory discoveryMemberFactory;
     private final Executor executor;
     private final Clock clock;
@@ -94,13 +94,13 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     private volatile GlobalTopologyState globalTopologyState;
 
     public AkkaCoreTopologyService( Config config, MemberId myself, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
-            LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, RetryStrategy restartRetryStrategy,
+            LogProvider userLogProvider, RetryStrategy catchupAddressRetryStrategy, Restarter restarter,
             DiscoveryMemberFactory discoveryMemberFactory, Executor executor, Clock clock, Monitors monitors )
     {
         this.actorSystemLifecycle = actorSystemLifecycle;
         this.logProvider = logProvider;
         this.catchupAddressRetryStrategy = catchupAddressRetryStrategy;
-        this.restartRetryStrategy = restartRetryStrategy;
+        this.restarter = restarter;
         this.discoveryMemberFactory = discoveryMemberFactory;
         this.executor = executor;
         this.clock = clock;
@@ -269,15 +269,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
 
         userLog.info( "Restarting discovery system after probable network partition" );
 
-        try
-        {
-            restartRetryStrategy.apply( this::doRestart, r -> r );
-        }
-        catch ( TimeoutException e )
-        {
-            log.error( "Unable to restart discovery system", e );
-            throw new IllegalStateException( e );
-        }
+        restarter.restart( this::doRestart );
     }
 
     private boolean doRestart()
@@ -318,7 +310,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public void stateChange( DatabaseState newState )
+    public void stateChange( DatabaseState previousState, DatabaseState newState )
     {
         var stateActor = databaseStateActorRef;
         if ( stateActor != null )
@@ -461,5 +453,11 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     private LeaderInfo getLocalLeader( NamedDatabaseId namedDatabaseId )
     {
         return localLeadersByDatabaseId.getOrDefault( namedDatabaseId, LeaderInfo.INITIAL );
+    }
+
+    @Override
+    public boolean isHealthy()
+    {
+        return restarter.isHealthy();
     }
 }

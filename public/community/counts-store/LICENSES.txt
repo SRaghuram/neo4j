@@ -5,6 +5,10 @@ libraries. For an overview of the licenses see the NOTICE.txt file.
 ------------------------------------------------------------------------------
 Apache Software License, Version 2.0
   Apache Commons Lang
+<<<<<<< HEAD
+=======
+  Jettison
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 ------------------------------------------------------------------------------
 
                                  Apache License

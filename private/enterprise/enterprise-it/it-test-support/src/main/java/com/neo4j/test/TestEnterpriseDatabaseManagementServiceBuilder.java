@@ -7,6 +7,7 @@ package com.neo4j.test;
 
 import com.neo4j.enterprise.edition.EnterpriseEditionModule;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.test.fabric.TestFabricDatabaseManagementServiceFactory;
 
 import java.io.File;
 import java.util.Map;
@@ -16,7 +17,10 @@ import org.neo4j.common.DependencyResolver;
 import org.neo4j.common.Edition;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.graphdb.facade.ExternalDependencies;
+import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.security.URLAccessRule;
@@ -28,11 +32,14 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.time.SystemNanoClock;
+import org.neo4j.util.FeatureToggles;
 
 import static java.lang.Boolean.FALSE;
 
 public class TestEnterpriseDatabaseManagementServiceBuilder extends TestDatabaseManagementServiceBuilder
 {
+    public static final String FABRIC_IN_EMBEDDED_TEST_TRANSACTIONS_FLAG_NAME = "fabric_in_embedded_test_transactions";
+
     public TestEnterpriseDatabaseManagementServiceBuilder()
     {
         super();
@@ -54,6 +61,27 @@ public class TestEnterpriseDatabaseManagementServiceBuilder extends TestDatabase
     }
 
     @Override
+    protected DatabaseManagementService newDatabaseManagementService( Config config, ExternalDependencies dependencies )
+    {
+        if ( fabricInEmbeddedTestTransactionsEnabled() )
+        {
+            var factory = new TestFabricDatabaseManagementServiceFactory(
+                    getDatabaseInfo( config ), getEditionFactory( config ), impermanent, fileSystem, clock, internalLogProvider, config
+            );
+            return factory.build( augmentConfig( config ), GraphDatabaseDependencies.newDependencies( dependencies ) );
+        }
+        else
+        {
+            return super.newDatabaseManagementService( config, dependencies );
+        }
+    }
+
+    private boolean fabricInEmbeddedTestTransactionsEnabled()
+    {
+        return FeatureToggles.flag( TestEnterpriseDatabaseManagementServiceBuilder.class, FABRIC_IN_EMBEDDED_TEST_TRANSACTIONS_FLAG_NAME, false );
+    }
+
+    @Override
     protected Config augmentConfig( Config config )
     {
         config = super.augmentConfig( config );
@@ -63,13 +91,13 @@ public class TestEnterpriseDatabaseManagementServiceBuilder extends TestDatabase
     }
 
     @Override
-    protected DatabaseInfo getDatabaseInfo()
+    protected DatabaseInfo getDatabaseInfo( Config config )
     {
         return DatabaseInfo.ENTERPRISE;
     }
 
     @Override
-    protected Function<GlobalModule,AbstractEditionModule> getEditionFactory()
+    protected Function<GlobalModule,AbstractEditionModule> getEditionFactory( Config config )
     {
         return EnterpriseEditionModule::new;
     }

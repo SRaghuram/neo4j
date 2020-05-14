@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.slotted.SlottedCompatible
+import org.neo4j.memory.HeapEstimator
 import org.neo4j.memory.Measurable
 
 /**
@@ -37,10 +38,10 @@ trait MorselDerivedRow extends SlottedCompatible with Measurable {
   def refOffset(offsetInRow: Int): Int
 
   /**
-   * Total heap usage of current row.
+   * Heap usage of long and ref arrays for the current row.
    */
-  override def estimatedHeapUsage: Long = {
-    var usage = morsel.longsPerRow * java.lang.Long.BYTES.toLong
+  def estimatedLongsAndRefsHeapUsage: Long = {
+    var usage = morsel.longsPerRow * java.lang.Long.BYTES.toLong  + morsel.refsPerRow * HeapEstimator.OBJECT_REFERENCE_BYTES
     var i = 0
     while (i < morsel.refsPerRow) {
       val ref = morsel.refs(refOffset(i))
@@ -52,6 +53,12 @@ trait MorselDerivedRow extends SlottedCompatible with Measurable {
     usage
   }
 
+  /**
+   * Heap usage of the current row object instance.
+   */
+  def shallowInstanceHeapUsage: Long
+
+  override def estimatedHeapUsage(): Long = estimatedLongsAndRefsHeapUsage + shallowInstanceHeapUsage
 }
 
 /**

@@ -5,6 +5,7 @@
  */
 package com.neo4j;
 
+import com.neo4j.harness.EnterpriseNeo4jBuilders;
 import com.neo4j.utils.ProxyFunctions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -23,27 +24,29 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
-import java.util.logging.Level;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
-import org.neo4j.driver.Logging;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
+import org.neo4j.driver.TransactionConfig;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.internal.shaded.reactor.core.publisher.Mono;
 import org.neo4j.driver.reactive.RxTransaction;
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.fabric.transaction.TransactionManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
 import org.neo4j.harness.Neo4j;
-import org.neo4j.harness.Neo4jBuilders;
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.impl.api.KernelTransactions;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
@@ -72,8 +75,12 @@ class TransactionIntegrationTest
     static void beforeAll() throws KernelException
     {
 
-        remote0 = Neo4jBuilders.newInProcessBuilder().build();
-        remote1 = Neo4jBuilders.newInProcessBuilder().build();
+        remote0 = EnterpriseNeo4jBuilders.newInProcessBuilder()
+                                         .withConfig( GraphDatabaseSettings.auth_enabled, true )
+                                         .build();
+        remote1 = EnterpriseNeo4jBuilders.newInProcessBuilder()
+                                         .withConfig( GraphDatabaseSettings.auth_enabled, true )
+                                         .build();
 
         var configProperties = Map.of(
                 "fabric.database.name", "mega",
@@ -84,7 +91,8 @@ class TransactionIntegrationTest
                 "fabric.stream.batch_size", "1",
                 "fabric.stream.buffer.size", "10",
                 "dbms.connector.bolt.listen_address", "0.0.0.0:0",
-                "dbms.connector.bolt.enabled", "true"
+                "dbms.connector.bolt.enabled", "true",
+                "dbms.security.auth_enabled", "true"
         );
 
         var config = Config.newBuilder()
@@ -97,9 +105,14 @@ class TransactionIntegrationTest
         testServer.getDependencies().resolveDependency( GlobalProceduresRegistry.class )
                 .registerFunction( ProxyFunctions.class );
 
+        var localDbms = testServer.getDependencies().resolveDependency( DatabaseManagementService.class );
+        createUser( localDbms );
+        createUser( remote0.databaseManagementService() );
+        createUser( remote1.databaseManagementService() );
+
         clientDriver = GraphDatabase.driver(
                 testServer.getBoltRoutingUri(),
-                AuthTokens.none(),
+                AuthTokens.basic( "myUser", "hello" ),
                 org.neo4j.driver.Config.builder()
                         .withoutEncryption()
                         .withMaxConnectionPoolSize( 3 )
@@ -107,18 +120,21 @@ class TransactionIntegrationTest
 
         shard0Driver = GraphDatabase.driver(
                 remote0.boltURI(),
-                AuthTokens.none(),
+                AuthTokens.basic( "myUser", "hello" ),
                 org.neo4j.driver.Config.builder()
                         .withoutEncryption()
                         .withMaxConnectionPoolSize( 3 )
                         .build() );
         shard1Driver = GraphDatabase.driver(
                 remote1.boltURI(),
-                AuthTokens.none(),
+                AuthTokens.basic( "myUser", "hello" ),
                 org.neo4j.driver.Config.builder()
                         .withoutEncryption()
                         .withMaxConnectionPoolSize( 3 )
                         .build() );
+
+        createDatabase( "dbA" );
+        createDatabase( "dbB" );
     }
 
     @BeforeEach
@@ -417,6 +433,47 @@ class TransactionIntegrationTest
         verifyNoOpenTransactions();
     }
 
+    @Test
+    void testTransactionTermination()
+    {
+        var sessionConfig = SessionConfig.builder().withDatabase( "mega" ).build();
+        try ( var session = clientDriver.session( sessionConfig ) )
+        {
+            var txConfig = TransactionConfig.builder().withMetadata( Map.of( "tx-marker", "tx1" ) ).build();
+            var tx = session.beginTransaction( txConfig );
+            run( tx, "dbA" );
+            run( tx, "dbB" );
+            run( tx, "mega.graph(0)" );
+
+            assertEquals( 2, runningTransactionsByMarker( clientDriver, "tx1" ) );
+            assertEquals( 1, runningTransactionsByMarker( shard0Driver, "tx1" ) );
+
+            var transactionManager = testServer.getDependencies().resolveDependency( TransactionManager.class );
+            var compositeTransaction = transactionManager.getOpenTransactions().stream()
+                                                         .filter( compositeTx -> "tx1"
+                                                                 .equals( compositeTx.getTransactionInfo().getTxMetadata().get( "tx-marker" ) ) )
+                                                         .findAny().get();
+
+            var dbms = testServer.getDependencies().resolveDependency( DatabaseManagementService.class );
+            var db = (GraphDatabaseFacade) dbms.database( "dbA" );
+            var kernelTransactions = db.getDependencyResolver().resolveDependency( KernelTransactions.class );
+            var childTransaction = kernelTransactions.executingTransactions()
+                                                     .stream()
+                                                     .filter( kernelTx -> "tx1".equals( kernelTx.getMetaData().get( "tx-marker" ) ) )
+                                                     .findAny()
+                                                     .get();
+
+            // just a random status to see if it gets propagated
+            childTransaction.markForTermination( Status.Transaction.LockAcquisitionTimeout );
+
+            assertTrue( compositeTransaction.getReasonIfTerminated().isPresent() );
+            assertEquals( Status.Transaction.LockAcquisitionTimeout, compositeTransaction.getReasonIfTerminated().get() );
+
+            assertEquals( 0, runningTransactionsByMarker( clientDriver, "tx1" ) );
+            assertEquals( 0, runningTransactionsByMarker( shard0Driver, "tx1" ) );
+        }
+    }
+
     private RxTransaction begin()
     {
         var tx = clientDriver.rxSession( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction();
@@ -492,6 +549,45 @@ class TransactionIntegrationTest
                 assertEquals( Set.of(), activeTransactions );
             }
         }
+    }
+
+    private static void createUser( DatabaseManagementService dbms )
+    {
+        var db = dbms.database( "system" );
+        db.executeTransactionally( "CREATE USER myUser SET PASSWORD 'hello' CHANGE NOT REQUIRED" );
+        db.executeTransactionally( "GRANT ROLE admin TO myUser" );
+    }
+
+    private void run( Transaction tx, String dbName )
+    {
+        var query = joinAsLines( "USE " + dbName,
+                "MATCH (n:Person) RETURN n"
+        );
+        tx.run( query ).list();
+    }
+
+    private int runningTransactionsByMarker( Driver driver, String marker )
+    {
+        try ( var session = driver.session( SessionConfig.defaultConfig() ) )
+        {
+            var records = session.run( "CALL dbms.listTransactions" ).list();
+            return (int) records.stream()
+                                .filter( tx -> marker.equals( tx.get( "metaData" ).get( "tx-marker" ).asObject() ) )
+                                .filter( tx -> getColumn( tx, "status" ).equals( "Running" ) )
+                                .count();
+        }
+    }
+
+    private String getColumn( Record record, String column )
+    {
+        return (String) record.get( column ).asObject();
+    }
+
+    private static void createDatabase( String name )
+    {
+        var localDbms = testServer.getDependencies().resolveDependency( DatabaseManagementService.class );
+        var systemDb = localDbms.database( "system" );
+        systemDb.executeTransactionally( "CREATE DATABASE " + name );
     }
 
     private static class TransactionEventCountingListener extends TransactionEventListenerAdapter<Object>

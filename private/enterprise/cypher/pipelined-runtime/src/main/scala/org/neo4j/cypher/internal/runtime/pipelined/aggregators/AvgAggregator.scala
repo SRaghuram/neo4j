@@ -8,9 +8,8 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.atomic.AtomicReference
 
-import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
-import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CypherTypeException
+import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.DurationValue
 import org.neo4j.values.storable.NumberValue
@@ -48,14 +47,14 @@ import org.neo4j.values.utils.ValueMath.overflowSafeAdd
  *   CMA =  CMA +              (US - (m * CMA)) / n + m
  */
 case object AvgAggregator extends Aggregator {
-  override def newUpdater: Updater = new AvgUpdater
-  override def newStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id): Reducer = new AvgStandardReducer
+  override def newUpdater(memoryTracker: MemoryTracker): Updater = new AvgUpdater
+  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new AvgStandardReducer
   override def newConcurrentReducer: Reducer = new AvgConcurrentReducer
 }
 
 case object AvgDistinctAggregator extends Aggregator {
-  override def newUpdater: Updater = new DistinctUpdater
-  override def newStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id): Reducer = new DistinctStandardReducer(new AvgDistinctStandardReducer)
+  override def newUpdater(memoryTracker: MemoryTracker): Updater = new UnorderedDistinctUpdater(memoryTracker)
+  override def newStandardReducer(memoryTracker: MemoryTracker): Reducer = new DistinctStandardReducer(new AvgDistinctStandardReducer, memoryTracker)
   override def newConcurrentReducer: Reducer = new DistinctConcurrentReducer(new AvgDistinctConcurrentReducer)
 }
 

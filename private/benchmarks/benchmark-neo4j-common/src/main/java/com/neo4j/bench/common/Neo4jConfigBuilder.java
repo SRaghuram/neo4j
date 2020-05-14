@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.common;
 
-import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.apache.commons.configuration.PropertiesConfiguration;

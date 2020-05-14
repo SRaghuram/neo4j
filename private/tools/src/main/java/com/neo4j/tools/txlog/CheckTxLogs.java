@@ -14,7 +14,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -75,7 +74,7 @@ public class CheckTxLogs
         }
 
         boolean validateCheckPoints = arguments.getBoolean( VALIDATE_CHECKPOINTS_FLAG );
-        CheckType<?,?>[] checkTypes = parseChecks( arguments );
+        List<CheckType<?,?>> checkTypes = parseChecks( arguments );
         File dir = parseDir( out, arguments );
 
         boolean success;
@@ -103,7 +102,7 @@ public class CheckTxLogs
         }
     }
 
-    // used in other projects do not remove!
+    @SuppressWarnings( "unused" ) // used by recovery-robustness
     public boolean checkAll( File storeDirectory ) throws IOException
     {
         LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDirectory, fs )
@@ -157,7 +156,7 @@ public class CheckTxLogs
         return openLogs( fs, logFiles, StorageEngineFactory.selectStorageEngine().commandReaderFactory() );
     }
 
-    boolean scan( LogFiles logFiles, InconsistenciesHandler handler, CheckType<?,?>... checkTypes )
+    boolean scan( LogFiles logFiles, InconsistenciesHandler handler, List<CheckType<?,?>> checkTypes )
             throws IOException
     {
         boolean success = true;
@@ -273,7 +272,7 @@ public class CheckTxLogs
         return isValidRecord;
     }
 
-    private static CheckType<?,?>[] parseChecks( Args arguments )
+    private static List<CheckType<?,?>> parseChecks( Args arguments )
     {
         String checks = arguments.get( CHECKS );
         if ( checks == null )
@@ -281,7 +280,7 @@ public class CheckTxLogs
             return CheckTypes.CHECK_TYPES;
         }
 
-        return Stream.of( checks.split( SEPARATOR ) ).map( CheckTypes::fromName ).toArray( CheckType[]::new );
+        return Stream.of( checks.split( SEPARATOR ) ).map( CheckTypes::fromName ).collect( Collectors.toList() );
     }
 
     private static File parseDir( PrintStream printStream, Args args )
@@ -307,7 +306,7 @@ public class CheckTxLogs
         out.println( "Options:" );
         out.println( "\t--help\t\tprints this description" );
         out.println( "\t--checks='checkname[,...]'\t\tthe list of checks to perform. Checks available: " +
-                Arrays.stream( CheckTypes.CHECK_TYPES ).map( CheckType::name )
+                CheckTypes.CHECK_TYPES.stream().map( CheckType::name )
                         .collect( Collectors.joining( SEPARATOR ) ) );
         System.exit( 1 );
     }

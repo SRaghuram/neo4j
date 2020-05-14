@@ -5,11 +5,14 @@
  */
 package com.neo4j.fabric.eval
 
-import com.neo4j.fabric.config.FabricConfig
-import com.neo4j.fabric.executor.FabricException
-import com.neo4j.fabric.executor.Location
+import com.neo4j.fabric.config.FabricEnterpriseConfig
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.configuration.helpers.SocketAddress
+import org.neo4j.dbms.api.DatabaseManagementService
+import org.neo4j.fabric.eval.Catalog
+import org.neo4j.fabric.eval.DatabaseLookup
+import org.neo4j.fabric.executor.FabricException
+import org.neo4j.fabric.executor.Location
 import org.neo4j.kernel.api.exceptions.Status
 import org.neo4j.kernel.database.NamedDatabaseId
 
@@ -17,9 +20,10 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 
 class ClusterCatalogManager(
   databaseLookup: DatabaseLookup,
+  databaseManagementService: DatabaseManagementService,                         
   leaderLookup: LeaderLookup,
-  fabricConfig: FabricConfig,
-) extends SingleCatalogManager(databaseLookup, fabricConfig) {
+  fabricConfig: FabricEnterpriseConfig,
+) extends EnterpriseSingleCatalogManager(databaseLookup, databaseManagementService, fabricConfig) {
 
   override def locationOf(graph: Catalog.Graph, requireWritable: Boolean): Location = (graph, requireWritable) match {
 

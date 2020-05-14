@@ -6,6 +6,7 @@
 package com.neo4j.fabric.driver;
 
 import org.neo4j.driver.Bookmark;
+import org.neo4j.fabric.bookmark.RemoteBookmark;
 
 public class Utils
 {

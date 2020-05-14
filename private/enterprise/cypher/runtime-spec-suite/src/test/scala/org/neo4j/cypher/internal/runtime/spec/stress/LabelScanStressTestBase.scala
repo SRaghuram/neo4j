@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.spec.stress
 
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.runtime.spec.Edition
 
 abstract class LabelScanStressTestBase(edition: Edition[EnterpriseRuntimeContext], runtime: CypherRuntime[EnterpriseRuntimeContext])
@@ -15,7 +16,7 @@ abstract class LabelScanStressTestBase(edition: Edition[EnterpriseRuntimeContext
 
   override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String): RHSOfApplyLeafTD =
     RHSOfApplyLeafTD(
-      _.nodeByLabelScan(variable, "Label"),
+      _.nodeByLabelScan(variable, "Label", IndexOrderNone),
       rowsComingIntoTheOperator =>
         for {
           Array(x) <- rowsComingIntoTheOperator

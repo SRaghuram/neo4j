@@ -6,10 +6,13 @@
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.ReadOnlyArray
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.PipelinedDebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
@@ -68,7 +71,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.DataHol
 class LHSAccumulatingRHSStreamingSource[DATA <: AnyRef,
                                         LHS_ACC <: MorselAccumulator[DATA]
                                        ](tracker: QueryCompletionTracker,
-                                         downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
+                                         downstreamArgumentReducers: ReadOnlyArray[AccumulatingBuffer],
                                          override val argumentStateMaps: ArgumentStateMaps,
                                          val lhsArgumentStateMapId: ArgumentStateMapId,
                                          val rhsArgumentStateMapId: ArgumentStateMapId,
@@ -138,6 +141,8 @@ class LHSAccumulatingRHSStreamingSource[DATA <: AnyRef,
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[close] $this -X- $accumulator & ${PipelinedDebugSupport.prettyMorselWithHeader("", rhsMorsel).reduce(_ + _)}")
     }
+    val argumentRowIdsForReducers = accumulator.argumentRowIdsForReducers
+
     // Check if the argument count is zero -- in the case of the RHS, that means that no more data will ever arrive
     if (rhsArgumentStateMap.hasCompleted(accumulator.argumentRowId)) {
       val rhsAcc = rhsArgumentStateMap.peek(accumulator.argumentRowId)
@@ -146,10 +151,11 @@ class LHSAccumulatingRHSStreamingSource[DATA <: AnyRef,
       if (rhsAcc != null && !rhsAcc.hasData && rhsArgumentStateMap.remove(accumulator.argumentRowId)) {
         // Clean up the LHS as well
         lhsArgumentStateMap.remove(accumulator.argumentRowId)
+        accumulator.close()
       }
     }
     // Decrement for a morsel in the RHS buffer
-    forAllArgumentReducers(downstreamArgumentReducers, accumulator.argumentRowIdsForReducers, _.decrement(_))
+    forAllArgumentReducers(downstreamArgumentReducers, argumentRowIdsForReducers, _.decrement(_))
     tracker.decrement()
   }
 
@@ -158,7 +164,7 @@ class LHSAccumulatingRHSStreamingSource[DATA <: AnyRef,
 // The LHS does not need any reference counting, because no tasks
 // will ever be produced from the LHS
 class LHSAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[DATA]](val argumentStateMapId: ArgumentStateMapId,
-                                                                              downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
+                                                                              downstreamArgumentReducers: ReadOnlyArray[AccumulatingBuffer],
                                                                               override val argumentStateMaps: ArgumentStateMaps)
   extends ArgumentCountUpdater
   with Sink[IndexedSeq[PerArgument[DATA]]]
@@ -168,13 +174,13 @@ class LHSAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[DATA]](va
 
   override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
 
-  override def put(data: IndexedSeq[PerArgument[DATA]]): Unit = {
+  override def put(data: IndexedSeq[PerArgument[DATA]], resources: QueryResources): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
     }
     var i = 0
     while (i < data.length) {
-      argumentStateMap.update(data(i).argumentRowId, acc => acc.update(data(i).value))
+      argumentStateMap.update(data(i).argumentRowId, acc => acc.update(data(i).value, resources))
       i += 1
     }
   }
@@ -202,7 +208,7 @@ class LHSAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[DATA]](va
 // Tasks need to be tracked since the RHS accumulator's Buffer is used multiple times
 // to spawn tasks, unlike in the MorselArgumentStateBuffer where you only take the accumulator once.
 class RHSStreamingSink(val argumentStateMapId: ArgumentStateMapId,
-                       downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
+                       downstreamArgumentReducers: ReadOnlyArray[AccumulatingBuffer],
                        override val argumentStateMaps: ArgumentStateMaps,
                        tracker: QueryCompletionTracker) extends ArgumentCountUpdater
                                                with Sink[IndexedSeq[PerArgument[Morsel]]]
@@ -211,7 +217,7 @@ class RHSStreamingSink(val argumentStateMapId: ArgumentStateMapId,
 
   override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
 
-  override def put(data: IndexedSeq[PerArgument[Morsel]]): Unit = {
+  override def put(data: IndexedSeq[PerArgument[Morsel]], resources: QueryResources): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
     }
@@ -220,7 +226,7 @@ class RHSStreamingSink(val argumentStateMapId: ArgumentStateMapId,
     while (i < data.length) {
       val argumentValue = data(i)
       argumentStateMap.update(argumentValue.argumentRowId, acc => {
-        acc.put(argumentValue.value)
+        acc.put(argumentValue.value, resources)
         // Increment for a morsel in the RHS buffer
         forAllArgumentReducers(downstreamArgumentReducers, acc.argumentRowIdsForReducers, _.increment(_))
       })

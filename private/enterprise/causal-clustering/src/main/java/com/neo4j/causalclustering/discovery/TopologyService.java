@@ -47,4 +47,6 @@ public interface TopologyService extends Lifecycle, DatabaseStateChangedListener
     Map<MemberId,DiscoveryDatabaseState> allCoreStatesForDatabase( NamedDatabaseId namedDatabaseId );
 
     Map<MemberId,DiscoveryDatabaseState> allReadReplicaStatesForDatabase( NamedDatabaseId namedDatabaseId );
+
+    boolean isHealthy();
 }

@@ -16,11 +16,13 @@ import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.ReadPastEndException;
 import org.neo4j.io.fs.ReadableChannel;
-import org.neo4j.io.memory.BufferScope;
+import org.neo4j.io.memory.NativeScopedBuffer;
+import org.neo4j.memory.MemoryTracker;
 
 import static com.neo4j.internal.batchimport.ChannelUtils.readString;
 import static com.neo4j.internal.batchimport.ChannelUtils.writeString;
 import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
+import static org.neo4j.io.fs.ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE;
 import static org.neo4j.kernel.impl.store.PropertyType.EMPTY_BYTE_ARRAY;
 
 public class StateStorage
@@ -31,12 +33,14 @@ public class StateStorage
     private final FileSystemAbstraction fs;
     private final File stateFile;
     private final File tempFile;
+    private final MemoryTracker memoryTracker;
 
-    StateStorage( FileSystemAbstraction fs, File stateFile )
+    StateStorage( FileSystemAbstraction fs, File stateFile, MemoryTracker memoryTracker )
     {
         this.fs = fs;
         this.stateFile = stateFile;
         this.tempFile = new File( stateFile.getAbsolutePath() + ".tmp" );
+        this.memoryTracker = memoryTracker;
     }
 
     public Pair<String,byte[]> get() throws IOException
@@ -45,8 +49,7 @@ public class StateStorage
         {
             return Pair.of( NO_STATE, EMPTY_BYTE_ARRAY );
         }
-        try ( BufferScope bufferScope = new BufferScope( ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE );
-              ReadableChannel channel = new ReadAheadChannel<>( fs.read( stateFile ), bufferScope.buffer ) )
+        try ( ReadableChannel channel = new ReadAheadChannel<>( fs.read( stateFile ), new NativeScopedBuffer( DEFAULT_READ_AHEAD_SIZE, memoryTracker ) ) )
         {
             String name = readString( channel );
             byte[] checkPoint = new byte[channel.getInt()];
@@ -68,7 +71,7 @@ public class StateStorage
     public void set( String name, byte[] checkPoint ) throws IOException
     {
         fs.mkdirs( tempFile.getParentFile() );
-        try ( FlushableChannel channel = new PhysicalFlushableChannel( fs.write( tempFile ) ) )
+        try ( FlushableChannel channel = new PhysicalFlushableChannel( fs.write( tempFile ), memoryTracker ) )
         {
             writeString( name, channel );
             channel.putInt( checkPoint.length );

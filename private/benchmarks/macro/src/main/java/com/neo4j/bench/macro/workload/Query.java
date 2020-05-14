@@ -6,8 +6,8 @@
 package com.neo4j.bench.macro.workload;
 
 import com.google.common.collect.Sets;
-import com.neo4j.bench.common.model.Benchmark;
-import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkGroup;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.tool.macro.DeploymentMode;

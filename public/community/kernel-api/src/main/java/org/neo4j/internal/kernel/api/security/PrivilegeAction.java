@@ -33,8 +33,14 @@ public enum PrivilegeAction
     /** Read properties of element */
     READ,
 
-    /** Create, update and delete elements and properties */
-    WRITE,
+    /** Set and remove labels from nodes */
+    SET_LABEL,
+    REMOVE_LABEL,
+
+    CREATE_ELEMENT,
+    DELETE_ELEMENT,
+
+    SET_PROPERTY,
 
     /** Execute procedure/view with elevated access */
     EXECUTE,
@@ -260,6 +266,26 @@ public enum PrivilegeAction
                 }
             },
 
+    /** Create, update and delete elements and properties */
+    WRITE
+            {
+                @Override
+                public boolean satisfies( PrivilegeAction action )
+                {
+                    switch ( action )
+                    {
+                    case SET_LABEL:
+                    case REMOVE_LABEL:
+                    case CREATE_ELEMENT:
+                    case DELETE_ELEMENT:
+                    case SET_PROPERTY:
+                        return true;
+                    default:
+                        return this == action;
+                    }
+                }
+    },
+
     GRAPH_ACTIONS
             {
                 @Override
@@ -268,12 +294,11 @@ public enum PrivilegeAction
                     switch ( action )
                     {
                     case READ:
-                    case WRITE:
                     case TRAVERSE:
                     case MATCH:
                         return true;
                     default:
-                        return this == action;
+                        return WRITE.satisfies( action ) || this == action;
                     }
                 }
             },
@@ -305,8 +330,8 @@ public enum PrivilegeAction
             };
 
     /**
-     * @return true if this action satifies the specified action. For example any broad-scope action satisfies many other actions, but a narrow scope action
-     * satifies only itself.
+     * @return true if this action satisfies the specified action. For example any broad-scope action satisfies many other actions, but a narrow scope action
+     * satisfies only itself.
      */
     public boolean satisfies( PrivilegeAction action )
     {

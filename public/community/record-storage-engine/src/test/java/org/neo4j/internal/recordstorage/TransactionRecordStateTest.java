@@ -121,6 +121,7 @@ import static org.neo4j.internal.schema.constraints.ConstraintDescriptorFactory.
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.FORCE;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.NORMAL;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.storageengine.api.IndexEntryUpdate.add;
 import static org.neo4j.storageengine.api.IndexEntryUpdate.change;
 import static org.neo4j.storageengine.api.IndexEntryUpdate.remove;
@@ -1469,7 +1470,7 @@ class TransactionRecordStateTest
         List<Iterable<IndexEntryUpdate<IndexDescriptor>>> updates = new ArrayList<>();
         OnlineIndexUpdates onlineIndexUpdates =
                 new OnlineIndexUpdates( neoStores.getNodeStore(), schemaCache,
-                        new PropertyPhysicalToLogicalConverter( neoStores.getPropertyStore(), NULL ), reader, NULL );
+                        new PropertyPhysicalToLogicalConverter( neoStores.getPropertyStore(), NULL ), reader, NULL, INSTANCE );
         onlineIndexUpdates.feed( extractor.getNodeCommands(), extractor.getRelationshipCommands() );
         updates.add( onlineIndexUpdates );
         reader.close();
@@ -1573,15 +1574,15 @@ class TransactionRecordStateTest
     private TransactionRecordState newTransactionRecordState()
     {
         Loaders loaders = new Loaders( neoStores );
-        recordChangeSet = new RecordChangeSet( loaders );
+        recordChangeSet = new RecordChangeSet( loaders, INSTANCE );
         PropertyTraverser propertyTraverser = new PropertyTraverser( NULL );
         RelationshipGroupGetter relationshipGroupGetter = new RelationshipGroupGetter( neoStores.getRelationshipGroupStore(), NULL );
         PropertyDeleter propertyDeleter = new PropertyDeleter( propertyTraverser, NULL );
         return new TransactionRecordState( neoStores, integrityValidator, recordChangeSet, 0, ResourceLocker.IGNORE,
                 new RelationshipCreator( relationshipGroupGetter, neoStores.getRelationshipGroupStore().getStoreHeaderInt(), NULL ),
                 new RelationshipDeleter( relationshipGroupGetter, propertyDeleter, NULL ),
-                new PropertyCreator( neoStores.getPropertyStore(), propertyTraverser, NULL ),
-                propertyDeleter, NULL );
+                new PropertyCreator( neoStores.getPropertyStore(), propertyTraverser, NULL, INSTANCE ),
+                propertyDeleter, NULL, INSTANCE );
     }
 
     private static CommandsToApply transaction( TransactionRecordState recordState ) throws TransactionFailureException

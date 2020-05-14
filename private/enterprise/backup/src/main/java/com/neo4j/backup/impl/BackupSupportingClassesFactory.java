@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.catchup.CatchupClientBuilder;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClient;
-import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpFactory;
+import com.neo4j.causalclustering.catchup.TransactionLogCatchUpFactory;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
@@ -31,6 +31,8 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.memory.EmptyMemoryTracker;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.SslPolicy;
@@ -75,16 +77,17 @@ public class BackupSupportingClassesFactory
     {
         JobScheduler jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
         PageCacheTracer pageCacheTracer = PageCacheTracer.NULL;
+        MemoryTracker memoryTracker = EmptyMemoryTracker.INSTANCE;
         PageCache pageCache = createPageCache( fileSystemAbstraction, context.getConfig(), jobScheduler, pageCacheTracer );
         return new BackupSupportingClasses(
-                backupDelegatorFromConfig( pageCache, context, jobScheduler, pageCacheTracer ),
+                backupDelegatorFromConfig( pageCache, context, jobScheduler, pageCacheTracer, memoryTracker ),
                 pageCache,
                 pageCacheTracer,
                 Arrays.asList( pageCache, jobScheduler ) );
     }
 
     private BackupDelegator backupDelegatorFromConfig( PageCache pageCache, OnlineBackupContext onlineBackupContext, JobScheduler jobScheduler,
-            PageCacheTracer pageCacheTracer )
+            PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
     {
         Config config = onlineBackupContext.getConfig();
         CatchupClientFactory catchUpClient = catchUpClient( onlineBackupContext, jobScheduler );
@@ -98,7 +101,7 @@ public class BackupSupportingClassesFactory
 
         Function<NamedDatabaseId,RemoteStore> remoteStore = databaseId -> new RemoteStore( logProvider, fileSystemAbstraction, pageCache,
                 storeCopyClient.apply( databaseId ), txPullClient.apply( databaseId ), transactionLogCatchUpFactory, config, monitors, storageEngineFactory,
-                databaseId, pageCacheTracer );
+                databaseId, pageCacheTracer, memoryTracker );
 
         return backupDelegator( remoteStore, storeCopyClient, catchUpClient, logProvider );
     }

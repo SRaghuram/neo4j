@@ -19,11 +19,13 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.Set;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
+import static com.neo4j.causalclustering.core.consensus.MessageUtils.messageFor;
 import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.preVoteRequest;
 import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.preVoteResponse;
 import static com.neo4j.causalclustering.core.consensus.TestMessageBuilders.voteRequest;
@@ -44,6 +46,51 @@ class CandidateTest
     private LogProvider logProvider = NullLogProvider.getInstance();
 
     @Test
+    void shouldImmediatelyHandleRejectionMessageOnLeadershipTransferProposal() throws Exception
+    {
+        // given
+        var state = RaftStateBuilder.builder()
+                .myself( myself )
+                .addInitialOutcome( OutcomeTestBuilder.builder()
+                        .setCommitIndex( 2 )
+                        .setTerm( 1 ).build() )
+                .votingMembers( myself, member1, member2 )
+                .supportsPreVoting( true )
+                .build();
+
+        var message = new RaftMessages.LeadershipTransfer.Proposal( myself, member1, Set.of() );
+
+        // when
+        Outcome outcome = new Follower().handle( message, state, log() );
+
+        // then
+        var leaderTransferRejection = outcome.getLeaderTransferRejection();
+        assertThat( leaderTransferRejection ).isNotNull();
+    }
+
+    @Test
+    void shouldRespondWithRejectionOnLeaderTransferRequest() throws Exception
+    {
+        // given
+        var state = RaftStateBuilder.builder()
+                .myself( myself )
+                .addInitialOutcome( OutcomeTestBuilder.builder()
+                        .setCommitIndex( 3 )
+                        .setTerm( 1 ).build() )
+                .votingMembers( myself, member1, member2 )
+                .supportsPreVoting( true )
+                .build();
+
+        var message = new RaftMessages.LeadershipTransfer.Request( member2, 3, 1, Set.of() );
+
+        // when
+        Outcome outcome = new Candidate().handle( message, state, log() );
+
+        // then
+        assertThat( RaftMessages.Type.LEADERSHIP_TRANSFER_REJECTION ).isEqualTo( messageFor( outcome, member2 ).type() );
+    }
+
+    @Test
     void shouldBeElectedLeaderOnReceivingGrantedVoteResponseWithCurrentTerm() throws Exception
     {
         // given
@@ -51,7 +98,6 @@ class CandidateTest
                 .addInitialOutcome( OutcomeTestBuilder.builder().setTerm( 1 ).build() )
                 .myself( myself )
                 .votingMembers( member1, member2 )
-                .replicationMembers( member1, member2 )
                 .build();
 
         // when

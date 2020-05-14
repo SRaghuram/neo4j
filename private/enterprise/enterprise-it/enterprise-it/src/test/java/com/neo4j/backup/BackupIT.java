@@ -134,6 +134,7 @@ import static org.neo4j.kernel.impl.MyRelTypes.TEST;
 import static org.neo4j.kernel.impl.store.record.Record.NO_LABELS_FIELD;
 import static org.neo4j.kernel.impl.store.record.Record.NO_NEXT_PROPERTY;
 import static org.neo4j.kernel.impl.store.record.Record.NO_NEXT_RELATIONSHIP;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 
 @PageCacheExtension
@@ -1201,7 +1202,8 @@ class BackupIT
         return OnlineBackupContext.builder()
                 .withAddress( address )
                 .withBackupDirectory( dir )
-                .withReportsDirectory( dir );
+                .withReportsDirectory( dir )
+                .withConsistencyCheckRelationshipTypeScanStore( enable_relationship_type_scan_store.defaultValue() );
     }
 
     private static DbRepresentation addLotsOfData( GraphDatabaseService db )
@@ -1323,7 +1325,7 @@ class BackupIT
         LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( backupDatabaseLayout.databaseDirectory(), fs )
                 .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
                 .build();
-        LogHeader logHeader = LogHeaderReader.readLogHeader( fs, logFiles.getLogFileForVersion( logVersion ) );
+        LogHeader logHeader = LogHeaderReader.readLogHeader( fs, logFiles.getLogFileForVersion( logVersion ), INSTANCE );
         assertEquals( txId, logHeader.getLastCommittedTxId() );
     }
 

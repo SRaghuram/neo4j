@@ -52,7 +52,6 @@ import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.IndexCreator;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.IndexType;
-import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.internal.counts.GBPTreeCountsStore;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.helpers.collection.IteratorWrapper;
@@ -61,8 +60,8 @@ import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.internal.id.IdValidator;
-import org.neo4j.internal.index.label.EmptyingRelationshipTypeScanStore;
 import org.neo4j.internal.index.label.LabelScanStore;
+import org.neo4j.internal.index.label.RelationshipTypeScanStore;
 import org.neo4j.internal.index.label.TokenScanStore;
 import org.neo4j.internal.kernel.api.InternalIndexState;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
@@ -112,6 +111,7 @@ import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.index.IndexingServiceFactory;
 import org.neo4j.kernel.impl.api.index.stats.IndexStatisticsStore;
 import org.neo4j.kernel.impl.api.scan.FullLabelStream;
+import org.neo4j.kernel.impl.api.scan.FullRelationshipTypeStream;
 import org.neo4j.kernel.impl.coreapi.schema.BaseNodeConstraintCreator;
 import org.neo4j.kernel.impl.coreapi.schema.IndexCreatorImpl;
 import org.neo4j.kernel.impl.coreapi.schema.IndexDefinitionImpl;
@@ -150,6 +150,7 @@ import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.kernel.impl.store.record.TokenRecord;
+import org.neo4j.kernel.impl.transaction.log.files.TransactionLogInitializer;
 import org.neo4j.kernel.impl.transaction.state.DefaultIndexProviderMap;
 import org.neo4j.kernel.impl.transaction.state.storeview.DynamicIndexStoreView;
 import org.neo4j.kernel.impl.transaction.state.storeview.NeoStoreIndexStoreView;
@@ -162,7 +163,9 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLog;
 import org.neo4j.logging.internal.StoreLogService;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.memory.MemoryPools;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.Clocks;
@@ -218,7 +221,9 @@ public class BatchInserterImpl implements BatchInserter
     private final SchemaRuleAccess schemaRuleAccess;
     private final PageCacheTracer pageCacheTracer;
     private final PageCursorTracer cursorTracer;
+    private final MemoryTracker memoryTracker;
     private boolean labelsTouched;
+    private boolean relationshipTypesTouched;
     private boolean isShutdown;
 
     private final LongFunction<Label> labelIdToLabelFunction;
@@ -256,9 +261,9 @@ public class BatchInserterImpl implements BatchInserter
                 .fromConfig( fromConfig )
                 .build();
         this.fileSystem = fileSystem;
-
         pageCacheTracer = tracers.getPageCacheTracer();
         cursorTracer = pageCacheTracer.createPageCursorTracer( BATCH_INSERTER_TAG );
+        memoryTracker = EmptyMemoryTracker.INSTANCE;
         life = new LifeSupport();
         this.databaseLayout = databaseLayout;
         this.jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
@@ -348,7 +353,7 @@ public class BatchInserterImpl implements BatchInserter
             relationshipCreator = new RelationshipCreator(
                 new RelationshipGroupGetter( relationshipGroupStore, cursorTracer ), relationshipGroupStore.getStoreHeaderInt(), cursorTracer );
             propertyTraverser = new PropertyTraverser( cursorTracer );
-            propertyCreator = new PropertyCreator( propertyStore, propertyTraverser, cursorTracer );
+            propertyCreator = new PropertyCreator( propertyStore, propertyTraverser, cursorTracer, memoryTracker );
             propertyDeletor = new PropertyDeleter( propertyTraverser, cursorTracer );
 
             flushStrategy = new BatchedFlushStrategy( recordAccess, config.get( GraphDatabaseSettings
@@ -535,9 +540,9 @@ public class BatchInserterImpl implements BatchInserter
 
         try
         {
-            schemaRuleAccess.writeSchemaRule( index, cursorTracer );
+            schemaRuleAccess.writeSchemaRule( index, cursorTracer, memoryTracker );
             schemaCache.addSchemaRule( index );
-            labelsTouched = true;
+            updateTouchToken( index.schema() );
             flushStrategy.forceFlush();
             return index;
         }
@@ -547,24 +552,35 @@ public class BatchInserterImpl implements BatchInserter
         }
     }
 
+    private void updateTouchToken( SchemaDescriptor schema )
+    {
+        if ( schema.entityType() == EntityType.NODE )
+        {
+            labelsTouched = true;
+        }
+        else
+        {
+            relationshipTypesTouched = true;
+        }
+    }
+
     private boolean isFullTextIndexType( IndexPrototype prototype )
     {
         return prototype.getIndexType() == org.neo4j.internal.schema.IndexType.FULLTEXT;
     }
 
-    private void repopulateAllIndexes( LabelScanStore labelIndex ) throws IOException
+    private void repopulateAllIndexes( LabelScanStore labelIndex, RelationshipTypeScanStore relationshipTypeIndex ) throws IOException
     {
         LogProvider logProvider = logService.getInternalLogProvider();
         LogProvider userLogProvider = logService.getUserLogProvider();
         var cacheTracer = PageCacheTracer.NULL;
-        EmptyingRelationshipTypeScanStore relationshipTypeScanStore = new EmptyingRelationshipTypeScanStore( fileSystem, databaseLayout, false );
-        IndexStoreView indexStoreView = new DynamicIndexStoreView( storeIndexStoreView, labelIndex, relationshipTypeScanStore,
+        IndexStoreView indexStoreView = new DynamicIndexStoreView( storeIndexStoreView, labelIndex, relationshipTypeIndex,
                 NO_LOCK_SERVICE, () -> new RecordStorageReader( neoStores ), logProvider, config );
         IndexStatisticsStore indexStatisticsStore = new IndexStatisticsStore( pageCache, databaseLayout.indexStatisticsStore(),
                 immediate(), false, cacheTracer );
         IndexingService indexingService = IndexingServiceFactory
                 .createIndexingService( config, jobScheduler, indexProviderMap, indexStoreView, tokenHolders, emptyList(), logProvider, userLogProvider,
-                        NO_MONITOR, new DatabaseSchemaState( logProvider ), indexStatisticsStore, cacheTracer, false );
+                        NO_MONITOR, new DatabaseSchemaState( logProvider ), indexStatisticsStore, cacheTracer, memoryTracker, false );
         life.add( indexingService );
         try
         {
@@ -603,15 +619,21 @@ public class BatchInserterImpl implements BatchInserter
         }
     }
 
-    private void rebuildCounts( PageCacheTracer cacheTracer ) throws IOException
+    private void rebuildCounts( PageCacheTracer cacheTracer, MemoryTracker memoryTracker ) throws IOException
     {
-        new GBPTreeCountsStore( pageCache, databaseLayout.countStore(), fileSystem, RecoveryCleanupWorkCollector.immediate(),
-                new CountsComputer( neoStores, pageCache, cacheTracer, databaseLayout ), false, cacheTracer, GBPTreeCountsStore.NO_MONITOR ).close();
+        File countsStoreFile = databaseLayout.countStore();
+        fileSystem.deleteRecursively( countsStoreFile );
+        CountsComputer initialCountsBuilder = new CountsComputer( neoStores, pageCache, cacheTracer, databaseLayout, memoryTracker );
+        try ( GBPTreeCountsStore countsStore = new GBPTreeCountsStore( pageCache, countsStoreFile, fileSystem, immediate(), initialCountsBuilder,
+                false, cacheTracer, GBPTreeCountsStore.NO_MONITOR ) )
+        {
+            countsStore.start( PageCursorTracer.NULL, memoryTracker );
+        }
     }
 
     private void createEmptyTransactionLog()
     {
-        TransactionLogsInitializer.INSTANCE.initializeLogFiles( config, databaseLayout, neoStores, fileSystem );
+        TransactionLogInitializer.getLogFilesInitializer().initializeLogFiles( databaseLayout, neoStores.getMetaDataStore(), fileSystem );
     }
 
     private IndexDescriptor[] getIndexesNeedingPopulation( PageCursorTracer cursorTracer )
@@ -652,11 +674,11 @@ public class BatchInserterImpl implements BatchInserter
 
         try
         {
-            schemaRuleAccess.writeSchemaRule( constraint, cursorTracer );
+            schemaRuleAccess.writeSchemaRule( constraint, cursorTracer, memoryTracker );
             schemaCache.addSchemaRule( constraint );
-            schemaRuleAccess.writeSchemaRule( index, cursorTracer );
+            schemaRuleAccess.writeSchemaRule( index, cursorTracer, memoryTracker );
             schemaCache.addSchemaRule( index );
-            labelsTouched = true;
+            updateTouchToken( constraint.schema() );
             flushStrategy.forceFlush();
             return constraint;
         }
@@ -742,9 +764,9 @@ public class BatchInserterImpl implements BatchInserter
 
         try
         {
-            schemaRuleAccess.writeSchemaRule( rule, cursorTracer );
+            schemaRuleAccess.writeSchemaRule( rule, cursorTracer, memoryTracker );
             schemaCache.addSchemaRule( rule );
-            labelsTouched = true;
+            updateTouchToken( rule.schema() );
             flushStrategy.forceFlush();
             return rule;
         }
@@ -761,7 +783,7 @@ public class BatchInserterImpl implements BatchInserter
 
         try
         {
-            schemaRuleAccess.writeSchemaRule( rule, cursorTracer );
+            schemaRuleAccess.writeSchemaRule( rule, cursorTracer, memoryTracker );
             schemaCache.addSchemaRule( rule );
             flushStrategy.forceFlush();
             return rule;
@@ -856,7 +878,7 @@ public class BatchInserterImpl implements BatchInserter
     private void setNodeLabels( NodeRecord nodeRecord, Label... labels )
     {
         NodeLabels nodeLabels = parseLabelsField( nodeRecord );
-        nodeLabels.put( getOrCreateLabelIds( labels ), nodeStore, nodeStore.getDynamicLabelStore(), cursorTracer );
+        nodeLabels.put( getOrCreateLabelIds( labels ), nodeStore, nodeStore.getDynamicLabelStore(), cursorTracer, memoryTracker );
         labelsTouched = true;
     }
 
@@ -959,6 +981,7 @@ public class BatchInserterImpl implements BatchInserter
             record.setNextProp( propertyCreator.createPropertyChain( record,
                     propertiesIterator( properties ), recordAccess.getPropertyRecords() ) );
         }
+        relationshipTypesTouched = true;
         flushStrategy.flush();
         return id;
     }
@@ -1082,9 +1105,10 @@ public class BatchInserterImpl implements BatchInserter
               locker;
               neoStores )
         {
-            rebuildCounts( pageCacheTracer );
+            rebuildCounts( pageCacheTracer, memoryTracker );
             LabelScanStore labelIndex = buildLabelIndex();
-            repopulateAllIndexes( labelIndex );
+            RelationshipTypeScanStore relationshipTypeIndex = buildRelationshipTypeIndex();
+            repopulateAllIndexes( labelIndex, relationshipTypeIndex );
             idGeneratorFactory.visit( IdGenerator::markHighestWrittenAtHighId );
             neoStores.flush( IOLimiter.UNLIMITED, cursorTracer );
             createEmptyTransactionLog();
@@ -1100,7 +1124,7 @@ public class BatchInserterImpl implements BatchInserter
     {
         FullLabelStream labelStream = new FullLabelStream( storeIndexStoreView );
         LabelScanStore labelIndex = TokenScanStore.labelScanStore( pageCache, databaseLayout, fileSystem, labelStream, false, monitors, immediate(),
-                pageCacheTracer );
+                pageCacheTracer, memoryTracker );
         if ( labelsTouched )
         {
             labelIndex.drop();
@@ -1108,6 +1132,21 @@ public class BatchInserterImpl implements BatchInserter
         // Rebuild will happen as part of this call if it was dropped
         life.add( labelIndex );
         return labelIndex;
+    }
+
+    private RelationshipTypeScanStore buildRelationshipTypeIndex() throws IOException
+    {
+        FullRelationshipTypeStream fullRelationshipTypeStream = new FullRelationshipTypeStream( storeIndexStoreView );
+        RelationshipTypeScanStore relationshipTypeIndex = TokenScanStore
+                .toggledRelationshipTypeScanStore( pageCache, databaseLayout, fileSystem, fullRelationshipTypeStream, false, monitors, immediate(), config,
+                        pageCacheTracer, memoryTracker );
+        if ( relationshipTypesTouched )
+        {
+            relationshipTypeIndex.drop();
+        }
+        // Rebuild will happen as part of this call if it was dropped
+        life.add( relationshipTypeIndex );
+        return relationshipTypeIndex;
     }
 
     @Override

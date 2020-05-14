@@ -15,16 +15,15 @@ import com.neo4j.causalclustering.core.consensus.outcome.ShipCommand;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerState;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
 import com.neo4j.causalclustering.core.consensus.state.ReadableRaftState;
-import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.io.IOException;
-import java.util.Collection;
 
 import org.neo4j.internal.helpers.collection.FilteringIterable;
 import org.neo4j.logging.Log;
 
 import static java.lang.Math.max;
+import static org.neo4j.internal.helpers.collection.Iterables.stream;
 
 public class Leader implements RaftMessageHandler
 {
@@ -239,16 +238,22 @@ public class Leader implements RaftMessageHandler
         @Override
         public OutcomeBuilder handle( RaftMessages.NewEntry.Request req ) throws IOException
         {
-            ReplicatedContent content = req.content();
-            Appending.appendNewEntry( ctx, outcomeBuilder, content );
+            if ( !ctx.areTransferringLeadership() )
+            {
+                var content = req.content();
+                Appending.appendNewEntry( ctx, outcomeBuilder, content );
+            }
             return outcomeBuilder;
         }
 
         @Override
         public OutcomeBuilder handle( RaftMessages.NewEntry.BatchRequest req ) throws IOException
         {
-            Collection<ReplicatedContent> contents = req.contents();
-            Appending.appendNewEntries( ctx, outcomeBuilder, contents );
+            if ( !ctx.areTransferringLeadership() )
+            {
+                var contents = req.contents();
+                Appending.appendNewEntries( ctx, outcomeBuilder, contents );
+            }
             return outcomeBuilder;
         }
 
@@ -295,6 +300,50 @@ public class Leader implements RaftMessageHandler
         @Override
         public OutcomeBuilder handle( RaftMessages.LogCompactionInfo logCompactionInfo )
         {
+            return outcomeBuilder;
+        }
+
+        @Override
+        public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Request request ) throws IOException
+        {
+            if ( request.term() > ctx.term() )
+            {
+                stepDownToFollower( outcomeBuilder, ctx );
+                log.info( "Moving to FOLLOWER state after receiving leadership transfer request from %s at term %d (I am at %d)",
+                          request.from(), request.term(), ctx.term() );
+            }
+            var rejection = new RaftMessages.LeadershipTransfer.Rejection( request.from(), ctx.commitIndex(), ctx.term() );
+            outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( request.from(), rejection ) );
+            return outcomeBuilder;
+        }
+
+        @Override
+        public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Proposal proposal ) throws IOException
+        {
+            long commitIndex = ctx.commitIndex();
+            long commitIndexTerm = ctx.entryLog().readEntryTerm( commitIndex );
+            var proposed = proposal.proposed();
+
+            var proposedKnown = stream( replicationTargets( ctx ) )
+                    .anyMatch( member -> member.equals( proposed ) );
+
+            if ( !proposedKnown )
+            {
+                return handle( new RaftMessages.LeadershipTransfer.Rejection( proposed, commitIndex, commitIndexTerm ) );
+            }
+
+            var request = new RaftMessages.LeadershipTransfer.Request( ctx.myself(), commitIndex, commitIndexTerm, proposal.priorityGroups() );
+            outcomeBuilder.startTransferringLeadership( proposed );
+            log.info( "Attempt to transfer leadership to follower %s. Will stop accepting writes for a short period.", proposal.proposed() );
+            outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( proposed, request ) );
+            return outcomeBuilder;
+        }
+
+        @Override
+        public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection ) throws IOException
+        {
+            outcomeBuilder.addLeaderTransferRejection( leadershipTransferRejection );
+            log.debug( "Leadership transfer request rejected by member %s.", leadershipTransferRejection.from() );
             return outcomeBuilder;
         }
 

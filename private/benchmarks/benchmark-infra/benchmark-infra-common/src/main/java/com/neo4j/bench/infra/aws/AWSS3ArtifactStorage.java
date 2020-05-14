@@ -19,6 +19,7 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.amazonaws.services.s3.transfer.Upload;
+import com.neo4j.bench.infra.AWSCredentials;
 import com.neo4j.bench.infra.ArtifactStorage;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.Dataset;
@@ -70,16 +71,22 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
 
     public static AWSS3ArtifactStorage getAWSS3ArtifactStorage( InfraParams infraParams )
     {
-        if ( infraParams.hasAwsCredentials() )
+        AWSCredentials awsCredentials = infraParams.awsCredentials();
+        if ( awsCredentials.hasAwsCredentials() )
         {
-            return create( infraParams.awsRegion(),
-                           infraParams.awsKey(),
-                           infraParams.awsSecret() );
+            return create( awsCredentials.awsRegion(),
+                           awsCredentials.awsAccessKeyId(),
+                           awsCredentials.awsSecretAccessKey() );
         }
         else
         {
-            return create( infraParams.awsRegion() );
+            return create( awsCredentials.awsRegion() );
         }
+    }
+
+    private static boolean hasAwsCredentials( String awsKey, String awsSecret )
+    {
+        return awsSecret != null && awsKey != null;
     }
 
     private static AmazonS3ClientBuilder s3ClientBuilder( AWSCredentialsProvider credentialsProvider )

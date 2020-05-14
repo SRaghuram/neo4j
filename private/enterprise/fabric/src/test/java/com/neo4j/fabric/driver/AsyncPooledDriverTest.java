@@ -5,10 +5,6 @@
  */
 package com.neo4j.fabric.driver;
 
-import com.neo4j.fabric.executor.FabricException;
-import com.neo4j.fabric.executor.Location;
-import com.neo4j.fabric.stream.Records;
-import com.neo4j.fabric.transaction.FabricTransactionInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -34,6 +30,10 @@ import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.driver.internal.InternalBookmark;
 import org.neo4j.driver.summary.ResultSummary;
+import org.neo4j.fabric.executor.FabricException;
+import org.neo4j.fabric.executor.Location;
+import org.neo4j.fabric.stream.Records;
+import org.neo4j.fabric.transaction.FabricTransactionInfo;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.virtual.MapValue;
@@ -254,7 +254,7 @@ class AsyncPooledDriverTest
         return CompletableFuture.completedFuture( record );
     }
 
-    private com.neo4j.fabric.stream.Record createFabricRecord( String... values )
+    private org.neo4j.fabric.stream.Record createFabricRecord( String... values )
     {
         var convertedValues =
                 Arrays.stream( values ).map( org.neo4j.values.storable.Values::stringValue ).map( v -> (AnyValue) v ).collect( Collectors.toList() );

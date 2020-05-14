@@ -11,7 +11,7 @@ public enum Runtime
     INTERPRETED,
     SLOTTED,
     LEGACY_COMPILED,
-    MORSEL,
+    PIPELINED,
     PARALLEL;
 
     public String value()

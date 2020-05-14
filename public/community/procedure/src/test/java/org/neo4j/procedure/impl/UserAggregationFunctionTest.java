@@ -169,9 +169,9 @@ public class UserAggregationFunctionTest
     @Test
     void shouldGiveHelpfulErrorOnConstructorThatRequiresArgument()
     {
-        ProcedureException exception = assertThrows( ProcedureException.class, () -> compile( WierdConstructorFunction.class ) );
+        ProcedureException exception = assertThrows( ProcedureException.class, () -> compile( WeirdConstructorFunction.class ) );
         assertThat( exception.getMessage() ).isEqualTo(
-                "Unable to find a usable public no-argument constructor in the class `WierdConstructorFunction`. Please add a " +
+                "Unable to find a usable public no-argument constructor in the class `WeirdConstructorFunction`. Please add a " +
                         "valid, public constructor, recompile the class and try again." );
     }
 
@@ -559,7 +559,7 @@ public class UserAggregationFunctionTest
             return new LoggingAggregator( );
         }
 
-        public  class LoggingAggregator
+        public class LoggingAggregator
         {
             @UserAggregationUpdate
             public void logAround()
@@ -614,9 +614,9 @@ public class UserAggregationFunctionTest
         }
     }
 
-    public static class WierdConstructorFunction
+    public static class WeirdConstructorFunction
     {
-        public WierdConstructorFunction( WierdConstructorFunction wat )
+        public WeirdConstructorFunction( WeirdConstructorFunction wat )
         {
 
         }
@@ -694,7 +694,7 @@ public class UserAggregationFunctionTest
             @UserAggregationUpdate
             public void update()
             {
-                throw new IndexOutOfBoundsException(  );
+                throw new IndexOutOfBoundsException();
             }
 
             @UserAggregationResult

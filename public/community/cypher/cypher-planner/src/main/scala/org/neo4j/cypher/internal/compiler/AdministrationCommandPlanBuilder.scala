@@ -40,11 +40,12 @@ import org.neo4j.cypher.internal.ast.DropUser
 import org.neo4j.cypher.internal.ast.DropUserAction
 import org.neo4j.cypher.internal.ast.GrantPrivilege
 import org.neo4j.cypher.internal.ast.GrantRolesToUsers
+import org.neo4j.cypher.internal.ast.GraphPrivilege
 import org.neo4j.cypher.internal.ast.IfExistsDo
 import org.neo4j.cypher.internal.ast.IfExistsDoNothing
 import org.neo4j.cypher.internal.ast.IfExistsReplace
 import org.neo4j.cypher.internal.ast.MatchPrivilege
-import org.neo4j.cypher.internal.ast.PasswordString
+import org.neo4j.cypher.internal.ast.NoResource
 import org.neo4j.cypher.internal.ast.Query
 import org.neo4j.cypher.internal.ast.ReadPrivilege
 import org.neo4j.cypher.internal.ast.RemovePrivilegeAction
@@ -75,7 +76,6 @@ import org.neo4j.cypher.internal.ast.StartDatabaseAction
 import org.neo4j.cypher.internal.ast.StopDatabase
 import org.neo4j.cypher.internal.ast.StopDatabaseAction
 import org.neo4j.cypher.internal.ast.TraversePrivilege
-import org.neo4j.cypher.internal.ast.WritePrivilege
 import org.neo4j.cypher.internal.ast.prettifier.ExpressionStringifier
 import org.neo4j.cypher.internal.ast.prettifier.Prettifier
 import org.neo4j.cypher.internal.ast.semantics.SemanticCheckResult
@@ -95,8 +95,8 @@ import org.neo4j.cypher.internal.logical.plans.QualifiedName
 import org.neo4j.cypher.internal.logical.plans.ResolvedCall
 import org.neo4j.cypher.internal.logical.plans.SecurityAdministrationLogicalPlan
 import org.neo4j.cypher.internal.planner.spi.AdministrationPlannerName
+import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.util.attribution.SequentialIdGen
-import org.neo4j.string.UTF8
 
 /**
  * This planner takes on queries that run at the DBMS level for multi-database administration
@@ -122,10 +122,7 @@ case object AdministrationCommandPlanBuilder extends Phase[PlannerContext, BaseS
         planRevoke(revokeGrant, RevokeDenyType()(t.position).relType)
       case t => planRevoke(source, t.relType)
     }
-    val passwordEncoder: PartialFunction[Either[PasswordString, Parameter], Either[Array[Byte], Parameter]] = {
-      case Left(PasswordString(pw)) => Left(UTF8.encode(pw))
-      case Right(param) => Right(param)
-    }
+
     def getSourceForCreateRole(roleName: Either[String, Parameter], ifExistsDo: IfExistsDo): SecurityAdministrationLogicalPlan = ifExistsDo match {
       case _: IfExistsReplace => plans.DropRole(plans.AssertDbmsAdmin(Seq(DropRoleAction, CreateRoleAction)), roleName)
       case _: IfExistsDoNothing => plans.DoNothingIfExists(plans.AssertDbmsAdmin(CreateRoleAction), "Role", roleName)
@@ -144,7 +141,7 @@ case object AdministrationCommandPlanBuilder extends Phase[PlannerContext, BaseS
           case _ => plans.AssertDbmsAdmin(CreateUserAction)
         }
         Some(plans.LogSystemCommand(
-          plans.CreateUser(source, userName, passwordEncoder(initialPassword), requirePasswordChange, suspended),
+          plans.CreateUser(source, userName, initialPassword, requirePasswordChange, suspended),
           prettifier.asString(c)))
 
       // DROP USER foo [IF EXISTS]
@@ -165,13 +162,13 @@ case object AdministrationCommandPlanBuilder extends Phase[PlannerContext, BaseS
           if(suspended.isDefined) plans.AssertNotCurrentUser(admin, userName, "alter", "Changing your own activation status is not allowed")
           else admin
         Some(plans.LogSystemCommand(
-          plans.AlterUser(assertionSubPlan, userName, initialPassword.map(passwordEncoder), requirePasswordChange, suspended),
+          plans.AlterUser(assertionSubPlan, userName, initialPassword, requirePasswordChange, suspended),
           prettifier.asString(c)))
 
       // ALTER CURRENT USER SET PASSWORD FROM currentPassword TO newPassword
       case c@SetOwnPassword(newPassword, currentPassword) =>
         Some(plans.LogSystemCommand(
-          plans.SetOwnPassword(passwordEncoder(newPassword), passwordEncoder(currentPassword)),
+          plans.SetOwnPassword(newPassword, currentPassword),
           prettifier.asString(c)))
 
       // SHOW [ ALL | POPULATED ] ROLES
@@ -301,30 +298,34 @@ case object AdministrationCommandPlanBuilder extends Phase[PlannerContext, BaseS
         }
         Some(plans.LogSystemCommand(plan, prettifier.asString(c)))
 
-      // GRANT WRITE ON GRAPH foo ELEMENTS * (*) TO role
-      case c@GrantPrivilege(WritePrivilege(), _, graphScopes, segments, roleNames) =>
-        val plan = (for (graphScope <- graphScopes; roleName <- roleNames; segment <- segments.simplify) yield {
-          (roleName, segment, graphScope)
+      // GRANT _ ON GRAPH foo _ TO role
+      case c@GrantPrivilege(GraphPrivilege(action), optionalResource, graphScopes, segments, roleNames) =>
+        val resources = optionalResource.getOrElse(NoResource()(InputPosition.NONE))
+        val plan = (for (graphScope <- graphScopes; roleName <- roleNames; segment <- segments.simplify; resource <- resources.simplify) yield {
+          (roleName, segment, resource, graphScope)
         }).foldLeft(plans.AssertDbmsAdmin(AssignPrivilegeAction).asInstanceOf[PrivilegePlan]) {
-          case (source, (roleName, segment, graphScope)) => plans.GrantWrite(source, graphScope, segment, roleName)
+          case (source, (roleName, segment, resource, graphScope)) => plans.GrantGraphAction(source, action, resource, graphScope, segment, roleName)
         }
         Some(plans.LogSystemCommand(plan, prettifier.asString(c)))
 
-      // DENY WRITE ON GRAPH foo ELEMENTS * (*) TO role
-      case c@DenyPrivilege(WritePrivilege(), _, graphScopes, segments, roleNames) =>
-        val plan = (for (graphScope <- graphScopes; roleName <- roleNames; segment <- segments.simplify) yield {
-          (roleName, segment, graphScope)
+      // DENY _ ON GRAPH foo _ TO role
+      case c@DenyPrivilege(GraphPrivilege(action), optionalResource, graphScopes, segments, roleNames) =>
+        val resources = optionalResource.getOrElse(NoResource()(InputPosition.NONE))
+        val plan = (for (graphScope <- graphScopes; roleName <- roleNames; segment <- segments.simplify; resource <- resources.simplify) yield {
+          (roleName, segment, resource, graphScope)
         }).foldLeft(plans.AssertDbmsAdmin(AssignPrivilegeAction).asInstanceOf[PrivilegePlan]) {
-          case (source, (roleName, segment, graphScope)) => plans.DenyWrite(source, graphScope, segment, roleName)
+          case (source, (roleName, segment, resource, graphScope)) => plans.DenyGraphAction(source, action, resource, graphScope, segment, roleName)
         }
         Some(plans.LogSystemCommand(plan, prettifier.asString(c)))
 
-      // REVOKE WRITE ON GRAPH foo ELEMENTS * (*) FROM role
-      case c@RevokePrivilege(WritePrivilege(), _, graphScopes, segments, roleNames, revokeType) =>
-        val plan = (for (graphScope <- graphScopes; roleName <- roleNames; segment <- segments.simplify) yield {
-          (roleName, segment, graphScope)
+      // REVOKE _ ON GRAPH foo _ FROM role
+      case c@RevokePrivilege(GraphPrivilege(action), optionalResource, graphScopes, segments, roleNames, revokeType) =>
+        val resources = optionalResource.getOrElse(NoResource()(InputPosition.NONE))
+        val plan = (for (graphScope <- graphScopes; roleName <- roleNames; segment <- segments.simplify; resource <- resources.simplify) yield {
+          (roleName, segment, resource, graphScope)
         }).foldLeft(plans.AssertDbmsAdmin(RemovePrivilegeAction).asInstanceOf[PrivilegePlan]) {
-          case (source, (roleName, segment, graphScope)) => planRevokes(source, revokeType, (s, r) => plans.RevokeWrite(s, graphScope, segment, roleName, r))
+          case (source, (roleName, segment, resource, graphScope)) =>
+            planRevokes(source, revokeType, (s, r) => plans.RevokeGraphAction(s, action, resource, graphScope, segment, roleName, r))
         }
         Some(plans.LogSystemCommand(plan, prettifier.asString(c)))
 
@@ -439,7 +440,7 @@ case object AdministrationCommandPlanBuilder extends Phase[PlannerContext, BaseS
         }
         val SemanticCheckResult(_, errors) = resolved.semanticCheck(SemanticState.clean)
         errors.foreach { error => throw context.cypherExceptionFactory.syntaxException(error.msg, error.position) }
-        Some(plans.SystemProcedureCall(signature.name.toString, from.queryText, context.params, checkCredentialsExpired))
+        Some(plans.SystemProcedureCall(signature.name.toString, resolved, context.params, checkCredentialsExpired))
 
       case _ => None
     }

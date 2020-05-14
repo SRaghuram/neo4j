@@ -5,15 +5,13 @@
  */
 package com.neo4j.dbms;
 
-import java.util.Objects;
 import java.util.concurrent.Executor;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
-
-import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 public class ReconcilerExecutors
 {
@@ -33,11 +31,11 @@ public class ReconcilerExecutors
         return unboundExecutor;
     }
 
-    Executor executor( ReconcilerRequest request, String databaseName )
+    Executor executor( ReconcilerRequest request, NamedDatabaseId databaseId )
     {
         // We use the unbound executor for priority and system database reconciliation jobs
-        var isSystem = Objects.equals( databaseName, SYSTEM_DATABASE_NAME );
-        var isHighPriority = request.isPriorityRequestForDatabase( databaseName );
+        var isSystem = databaseId.isSystemDatabase();
+        var isHighPriority = request.shouldBeExecutedAsPriorityFor( databaseId.name() );
 
         return (isSystem || isHighPriority) ? unboundExecutor : standardExecutor;
     }

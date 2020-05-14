@@ -44,6 +44,10 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+<<<<<<< HEAD
+=======
+import org.neo4j.memory.MemoryTracker;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 import org.neo4j.storageengine.api.ConstraintRuleAccessor;
 import org.neo4j.storageengine.api.TransactionMetaDataStore;
 import org.neo4j.token.api.NamedToken;
@@ -64,6 +68,7 @@ public class Stores extends MainStores
     public final GBPTreeTokenStore propertyKeyTokenStore;
     public final GBPTreeTokenStore relationshipTypeTokenStore;
     public final GBPTreeTokenStore labelTokenStore;
+<<<<<<< HEAD
 
     public Stores( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache, IdGeneratorFactory idGeneratorFactory,
             PageCacheTracer pageCacheTracer, RecoveryCleanupWorkCollector recoveryCleanupWorkCollector,
@@ -71,6 +76,17 @@ public class Stores extends MainStores
             throws IOException
     {
         super( fs, databaseLayout, pageCache, idGeneratorFactory, pageCacheTracer, recoveryCleanupWorkCollector, createStoreIfNotExists );
+=======
+    private final MemoryTracker memoryTracker;
+
+    public Stores( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache, IdGeneratorFactory idGeneratorFactory,
+            PageCacheTracer pageCacheTracer, RecoveryCleanupWorkCollector recoveryCleanupWorkCollector,
+            boolean createStoreIfNotExists, ConstraintRuleAccessor constraintSemantics, IndexConfigCompleter indexConfigCompleter, MemoryTracker memoryTracker )
+            throws IOException
+    {
+        super( fs, databaseLayout, pageCache, idGeneratorFactory, pageCacheTracer, recoveryCleanupWorkCollector, createStoreIfNotExists );
+        this.memoryTracker = memoryTracker;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         GBPTreeMetaDataStore metaDataStore = null;
         GBPTreeCountsStore countsStore = null;
         GBPTreeSchemaStore schemaStore = null;
@@ -119,7 +135,12 @@ public class Stores extends MainStores
 
     Stores( SimpleStore[] mainStores, BigPropertyValueStore bigPropertyValueStore, DenseRelationshipStore denseStore,
             TransactionMetaDataStore metaDataStore, GBPTreeCountsStore countsStore, GBPTreeSchemaStore schemaStore, SchemaCache schemaCache,
+<<<<<<< HEAD
             GBPTreeTokenStore propertyKeyTokenStore, GBPTreeTokenStore relationshipTypeTokenStore, GBPTreeTokenStore labelTokenStore )
+=======
+            GBPTreeTokenStore propertyKeyTokenStore, GBPTreeTokenStore relationshipTypeTokenStore, GBPTreeTokenStore labelTokenStore,
+            MemoryTracker memoryTracker )
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     {
         super( mainStores, bigPropertyValueStore, denseStore );
         this.metaDataStore = metaDataStore;
@@ -129,6 +150,10 @@ public class Stores extends MainStores
         this.propertyKeyTokenStore = propertyKeyTokenStore;
         this.relationshipTypeTokenStore = relationshipTypeTokenStore;
         this.labelTokenStore = labelTokenStore;
+<<<<<<< HEAD
+=======
+        this.memoryTracker = memoryTracker;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         addStoresToLife();
     }
 
@@ -140,7 +165,11 @@ public class Stores extends MainStores
             @Override
             public void start() throws Exception
             {
+<<<<<<< HEAD
                 countsStore.start( PageCursorTracer.NULL );
+=======
+                countsStore.start( PageCursorTracer.NULL, memoryTracker );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
             }
 
             @Override
@@ -172,7 +201,11 @@ public class Stores extends MainStores
         return new CountsBuilder()
         {
             @Override
+<<<<<<< HEAD
             public void initialize( CountsAccessor.Updater updater, PageCursorTracer tracer )
+=======
+            public void initialize( CountsAccessor.Updater updater, PageCursorTracer tracer, MemoryTracker memoryTracker )
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
             {
                 // TODO rebuild from store, right?
             }

@@ -141,6 +141,24 @@ public class RaftMessageContentEncoder extends MessageToMessageEncoder<RaftMessa
             return illegalOutbound( pruneRequest );
         }
 
+        @Override
+        public Void handle( RaftMessages.LeadershipTransfer.Request leadershipTransferRequest ) throws Exception
+        {
+            return null;
+        }
+
+        @Override
+        public Void handle( RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection ) throws Exception
+        {
+            return null;
+        }
+
+        @Override
+        public Void handle( RaftMessages.LeadershipTransfer.Proposal leadershipTransferProposal ) throws Exception
+        {
+            return illegalOutbound( leadershipTransferProposal );
+        }
+
         private Void illegalOutbound( RaftMessages.RaftMessage raftMessage )
         {
             // not network

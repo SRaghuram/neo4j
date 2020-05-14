@@ -45,4 +45,24 @@ public interface RaftMembership
          */
         void onMembershipChanged();
     }
+
+    RaftMembership EMPTY = new RaftMembership()
+    {
+        @Override
+        public Set<MemberId> votingMembers()
+        {
+            return Set.of();
+        }
+
+        @Override
+        public Set<MemberId> replicationMembers()
+        {
+            return Set.of();
+        }
+
+        @Override
+        public void registerListener( Listener listener )
+        { // no-op
+        }
+    };
 }

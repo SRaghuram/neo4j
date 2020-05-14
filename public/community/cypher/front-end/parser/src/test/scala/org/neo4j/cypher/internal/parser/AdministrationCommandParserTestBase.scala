@@ -16,13 +16,14 @@
  */
 package org.neo4j.cypher.internal.parser
 
+import java.nio.charset.StandardCharsets
+
 import org.neo4j.cypher.internal.ast
 import org.neo4j.cypher.internal.ast.ActionResource
 import org.neo4j.cypher.internal.ast.AdminAction
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.ast.DatabaseAction
 import org.neo4j.cypher.internal.ast.GraphScope
-import org.neo4j.cypher.internal.ast.PasswordString
 import org.neo4j.cypher.internal.ast.PrivilegeQualifier
 import org.neo4j.cypher.internal.ast.PrivilegeType
 import org.neo4j.cypher.internal.ast.RevokeBothType
@@ -43,9 +44,11 @@ class AdministrationCommandParserTestBase
 
   def param(name: String): Either[String, expressions.Parameter] = Right(expressions.Parameter(name, CTString)(_))
 
-  def pw(password: String): Either[PasswordString, expressions.Parameter] = Left(PasswordString(password)(_))
+  def toUtf8Bytes(pw: String): Array[Byte] = pw.getBytes(StandardCharsets.UTF_8)
 
-  def pwParam(name: String): Either[PasswordString, expressions.Parameter] = Right(expressions.Parameter(name, CTString)(_))
+  def pw(password: String) = expressions.SensitiveStringLiteral(toUtf8Bytes(password))(_)
+
+  def pwParam(name: String): expressions.Parameter = expressions.Parameter(name, CTString)(_)
 
   type resourcePrivilegeFunc = (PrivilegeType, ActionResource, List[GraphScope], PrivilegeQualifier, Seq[Either[String, Parameter]]) => InputPosition => ast.Statement
   type noResourcePrivilegeFunc = (PrivilegeType, List[GraphScope], PrivilegeQualifier, Seq[Either[String, Parameter]]) => InputPosition => ast.Statement

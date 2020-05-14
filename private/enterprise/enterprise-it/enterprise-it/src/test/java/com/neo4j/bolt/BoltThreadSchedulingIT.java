@@ -64,30 +64,6 @@ class BoltThreadSchedulingIT
     }
 
     @Test
-    void oneWorkerThreadShouldBeAbleToServeSequentialMessagesFromTwoConnections()
-    {
-        // Given a server with single worker thread.
-        db = startDbWithBolt( 1, 1, -1 );
-        driver = createDriver( getBoltPort( db ) );
-
-        try ( Session session1 = driver.session();
-              Session session2 = driver.session() )
-        {
-            // When connection 1 sends a few messages
-            var tx1 = session1.beginTransaction();
-            tx1.run( "MATCH (n) RETURN n LIMIT 1" ).consume();
-            // consume ensures the server worker thread has finish all messages from connection 1
-
-            // Then connection 2 send more messages
-            var tx2 = session2.beginTransaction();
-            tx2.run( "CREATE (n) RETURN n" ).consume();
-
-            tx1.commit();
-            tx2.commit();
-        }
-    }
-
-    @Test
     void shouldFinishAllQueries() throws Throwable
     {
         // create server with limited thread pool size and rejecting jobs immediately if no thread available.

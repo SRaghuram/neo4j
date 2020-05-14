@@ -95,6 +95,7 @@ import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.SimpleLogService;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.EntityUpdates;
 import org.neo4j.storageengine.api.StorageEngine;
@@ -123,6 +124,7 @@ import static org.neo4j.internal.kernel.api.TokenRead.ANY_LABEL;
 import static org.neo4j.internal.recordstorage.StoreTokens.allReadableTokens;
 import static org.neo4j.internal.recordstorage.StoreTokens.readOnlyTokenHolders;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 public abstract class GraphStoreFixture implements AutoCloseable
 {
@@ -273,7 +275,7 @@ public abstract class GraphStoreFixture implements AutoCloseable
                         new CountsBuilder()
                         {
                             @Override
-                            public void initialize( CountsAccessor.Updater updater, PageCursorTracer cursorTracer )
+                            public void initialize( CountsAccessor.Updater updater, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
                             {
                                 throw new UnsupportedOperationException( "Should not be rebuilt" );
                             }
@@ -284,7 +286,7 @@ public abstract class GraphStoreFixture implements AutoCloseable
                                 return 0;
                             }
                         }, true, PageCacheTracer.NULL, NO_MONITOR );
-                counts.start( NULL );
+                counts.start( NULL, INSTANCE );
             }
             return counts;
         };
@@ -294,7 +296,7 @@ public abstract class GraphStoreFixture implements AutoCloseable
     {
         FullLabelStream labelStream = new FullLabelStream( indexStoreView );
         LabelScanStore labelScanStore = TokenScanStore.labelScanStore( pageCache, databaseLayout(), fileSystem, labelStream, readOnly, monitors, immediate(),
-                PageCacheTracer.NULL );
+                PageCacheTracer.NULL, INSTANCE );
         try
         {
             labelScanStore.init();
@@ -313,7 +315,7 @@ public abstract class GraphStoreFixture implements AutoCloseable
         FullRelationshipTypeStream typeStream = new FullRelationshipTypeStream( indexStoreView );
         RelationshipTypeScanStore relationshipTypeScanStore =
                 TokenScanStore.toggledRelationshipTypeScanStore( pageCache, databaseLayout(), fileSystem, typeStream, readOnly, monitors, immediate(), config,
-                        PageCacheTracer.NULL );
+                        PageCacheTracer.NULL, INSTANCE );
         try
         {
             relationshipTypeScanStore.init();
@@ -351,7 +353,7 @@ public abstract class GraphStoreFixture implements AutoCloseable
     public EntityUpdates nodeAsUpdates( long nodeId )
     {
         try ( StorageNodeCursor nodeCursor = storeReader.allocateNodeCursor( NULL );
-              StoragePropertyCursor propertyCursor = storeReader.allocatePropertyCursor( NULL ) )
+              StoragePropertyCursor propertyCursor = storeReader.allocatePropertyCursor( NULL, INSTANCE ) )
         {
             nodeCursor.single( nodeId );
             long[] labels;
@@ -631,12 +633,12 @@ public abstract class GraphStoreFixture implements AutoCloseable
             writer.create( group );
         }
 
-        public void update(  RelationshipGroupRecord before, RelationshipGroupRecord after )
+        public void update( RelationshipGroupRecord before, RelationshipGroupRecord after )
         {
             writer.update( before, after );
         }
 
-        public void delete(  RelationshipGroupRecord group )
+        public void delete( RelationshipGroupRecord group )
         {
             writer.delete( group );
         }

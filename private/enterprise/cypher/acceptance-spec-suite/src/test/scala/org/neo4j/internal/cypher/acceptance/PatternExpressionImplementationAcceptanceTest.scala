@@ -6,9 +6,8 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.expressions.SemanticDirection
+import org.neo4j.cypher.internal.plandescription.Arguments.Details
 import org.neo4j.cypher.internal.plandescription.Arguments.EstimatedRows
-import org.neo4j.cypher.internal.plandescription.Arguments.ExpandExpression
 import org.neo4j.cypher.internal.runtime.PathImpl
 import org.neo4j.graphdb.Node
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
@@ -341,7 +340,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
         val expandArgs = planDescription.cd("Expand(All)").arguments.toSet
         expandArgs should contain(EstimatedRows(0.05))
         expandArgs collect {
-          case ExpandExpression("n", _, Seq("HAS"), _, SemanticDirection.OUTGOING, 1, Some(1)) => true
+          case Details(List(details)) if details.prettifiedString.matches("""\(n\)\-\[anon_[0-9]*\:HAS]\-\>\(anon_[0-9]*\)""") => true
         } should not be empty
       }))
   }

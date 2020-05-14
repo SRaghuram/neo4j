@@ -24,6 +24,8 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.EphemeralTestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
+
 @EphemeralTestDirectoryExtension
 class StateRecoveryManagerTest
 {
@@ -54,7 +56,7 @@ class StateRecoveryManagerTest
         File fileB = fileB();
         fsa.write( fileB );
 
-        StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal() );
+        StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal(), INSTANCE );
 
         try
         {
@@ -83,7 +85,7 @@ class StateRecoveryManagerTest
         File fileB = fileB();
         fsa.write( fileB );
 
-        StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal() );
+        StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal(), INSTANCE );
 
         // when
         final StateRecoveryManager.RecoveryStatus recoveryStatus = manager.recover( fileA, fileB );
@@ -109,7 +111,7 @@ class StateRecoveryManagerTest
         channel = fsa.write( fileB );
         channel.close();
 
-        StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal() );
+        StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal(), INSTANCE );
 
         // when
         final StateRecoveryManager.RecoveryStatus recoveryStatus = manager.recover( fileA, fileB );
@@ -142,7 +144,7 @@ class StateRecoveryManagerTest
         File fileB = fileB();
         fsa.write( fileB );
 
-        StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal() );
+        StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal(), INSTANCE );
 
         // when
         final StateRecoveryManager.RecoveryStatus recoveryStatus = manager.recover( fileA, fileB );
@@ -157,7 +159,7 @@ class StateRecoveryManagerTest
         // given
         fsa.mkdir( testDir.homeDir() );
 
-        StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal() );
+        StateRecoveryManager<Long> manager = new StateRecoveryManager<>( fsa, new LongMarshal(), INSTANCE );
 
         writeSomeLongsIn( fsa, fileA(), 3, 4 );
         writeSomeLongsIn( fsa, fileB(), 5, 6 );
@@ -185,7 +187,7 @@ class StateRecoveryManagerTest
     private void writeSomeGarbage( FileSystemAbstraction fsa, File file ) throws IOException
     {
         final StoreChannel channel = fsa.write( file );
-        ByteBuffer buffer = ByteBuffers.allocate( 4 );
+        ByteBuffer buffer = ByteBuffers.allocate( 4, INSTANCE );
         buffer.putInt( 9876 );
         buffer.flip();
         channel.writeAll( buffer );
@@ -196,7 +198,7 @@ class StateRecoveryManagerTest
     private void writeSomeLongsIn( FileSystemAbstraction fsa, File file, long... longs ) throws IOException
     {
         final StoreChannel channel = fsa.write( file );
-        ByteBuffer buffer = ByteBuffers.allocate( longs.length * 8 );
+        ByteBuffer buffer = ByteBuffers.allocate( longs.length * 8, INSTANCE );
 
         for ( long aLong : longs )
         {
@@ -221,7 +223,7 @@ class StateRecoveryManagerTest
 
     private ByteBuffer writeLong( long logIndex )
     {
-        ByteBuffer buffer = ByteBuffers.allocate( 8 );
+        ByteBuffer buffer = ByteBuffers.allocate( 8, INSTANCE );
         buffer.putLong( logIndex );
         buffer.flip();
         return buffer;

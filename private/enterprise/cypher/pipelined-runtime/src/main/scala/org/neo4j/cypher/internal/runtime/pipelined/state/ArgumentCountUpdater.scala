@@ -9,6 +9,7 @@ import java.util
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.Initialization
+import org.neo4j.cypher.internal.physicalplanning.ReadOnlyArray
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ArgumentSlots
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
@@ -25,11 +26,11 @@ abstract class ArgumentCountUpdater {
    */
   def argumentStateMaps: ArgumentStateMaps
 
-  private def morselLoop(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
+  private def morselLoop(downstreamAccumulatingBuffers: ReadOnlyArray[AccumulatingBuffer],
                          morsel: Morsel,
                          operation: (AccumulatingBuffer, Long) => Unit): Unit = {
 
-    val lastSeenRowIds = new Array[Long](downstreamAccumulatingBuffers.size)
+    val lastSeenRowIds = new Array[Long](downstreamAccumulatingBuffers.length)
     // Write all initial last seen ids to -1
     util.Arrays.fill(lastSeenRowIds, -1L)
 
@@ -49,7 +50,7 @@ abstract class ArgumentCountUpdater {
     }
   }
 
-  private def argumentCountLoop(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
+  private def argumentCountLoop(downstreamAccumulatingBuffers: ReadOnlyArray[AccumulatingBuffer],
                                 argumentRowIds: IndexedSeq[Long],
                                 operation: (AccumulatingBuffer, Long) => Unit): Unit = {
     var i = 0
@@ -73,7 +74,7 @@ abstract class ArgumentCountUpdater {
    * @param argumentRowId argument row at the same apply nesting level as the argument states expect
    * @param morsel must point at the row of `argumentRowId`
    */
-  protected def initiateArgumentStatesHere(argumentStates: IndexedSeq[ArgumentStateMapId],
+  protected def initiateArgumentStatesHere(argumentStates: ReadOnlyArray[ArgumentStateMapId],
                                            argumentRowId: Long,
                                            morsel: MorselReadCursor): Unit = {
     argumentStates.foreach {
@@ -93,7 +94,7 @@ abstract class ArgumentCountUpdater {
    * @param argumentRowId  argument row at the same apply nesting level as the argument states expect
    * @param morsel         must point at the row of `argumentRowId`
    */
-  protected def initiateWorkCancellerArgumentStatesHere(argumentStates: IndexedSeq[Initialization[ArgumentStateMapId]],
+  protected def initiateWorkCancellerArgumentStatesHere(argumentStates: ReadOnlyArray[Initialization[ArgumentStateMapId]],
                                                         argumentRowId: Long,
                                                         morsel: MorselReadCursor): Unit = {
     argumentStates.foreach {
@@ -108,7 +109,7 @@ abstract class ArgumentCountUpdater {
    * @param argumentRowId argument row at the same apply nesting level as the argument states expect
    * @param morsel must point at the row of `argumentRowId`
    */
-  protected def initiateArgumentReducersHere(accumulatingBuffers: IndexedSeq[Initialization[AccumulatingBuffer]],
+  protected def initiateArgumentReducersHere(accumulatingBuffers: ReadOnlyArray[Initialization[AccumulatingBuffer]],
                                              argumentRowId: Long,
                                              morsel: MorselReadCursor): Unit = {
     accumulatingBuffers.foreach {
@@ -124,10 +125,10 @@ abstract class ArgumentCountUpdater {
    * @param fun function to invoke on buffers
    * @return array of argument row ids
    */
-  protected def forAllArgumentReducersAndGetArgumentRowIds(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
+  protected def forAllArgumentReducersAndGetArgumentRowIds(accumulatingBuffers: ReadOnlyArray[AccumulatingBuffer],
                                                            morselRow: MorselReadCursor,
                                                            fun: (AccumulatingBuffer, Long) => Unit): Array[Long] = {
-    val argumentRowIdsForReducers: Array[Long] = new Array[Long](accumulatingBuffers.size)
+    val argumentRowIdsForReducers: Array[Long] = new Array[Long](accumulatingBuffers.length)
     var i = 0
     while (i < accumulatingBuffers.length) {
       val reducer = accumulatingBuffers(i)
@@ -147,7 +148,7 @@ abstract class ArgumentCountUpdater {
    * @param argumentRowIds argument row ids for the provided buffers, buffers may be at different apply nesting levels
    * @param fun function to invoke on buffers
    */
-  protected def forAllArgumentReducers(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
+  protected def forAllArgumentReducers(accumulatingBuffers: ReadOnlyArray[AccumulatingBuffer],
                                        argumentRowIds: Array[Long],
                                        fun: (AccumulatingBuffer, Long) => Unit ): Unit = {
     var i = 0
@@ -162,7 +163,7 @@ abstract class ArgumentCountUpdater {
   /**
    * Increment each accumulating buffer for all argument row id in the given morsel.
    */
-  protected def incrementArgumentCounts(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
+  protected def incrementArgumentCounts(accumulatingBuffers: ReadOnlyArray[AccumulatingBuffer],
                                         morsel: Morsel): Unit = {
     morselLoop(accumulatingBuffers, morsel, _.increment(_))
   }
@@ -170,7 +171,7 @@ abstract class ArgumentCountUpdater {
   /**
    * Decrement each accumulating buffer for all argument row id in the given morsel.
    */
-  protected def decrementArgumentCounts(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
+  protected def decrementArgumentCounts(accumulatingBuffers: ReadOnlyArray[AccumulatingBuffer],
                                         morsel: Morsel): Unit = {
     morselLoop(accumulatingBuffers, morsel, _.decrement(_))
   }
@@ -178,7 +179,7 @@ abstract class ArgumentCountUpdater {
   /**
    * Decrement each accumulating buffer for all given argument row ids
    */
-  protected def decrementArgumentCounts(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
+  protected def decrementArgumentCounts(accumulatingBuffers: ReadOnlyArray[AccumulatingBuffer],
                                         argumentRowIds: IndexedSeq[Long]): Unit = {
     argumentCountLoop(accumulatingBuffers, argumentRowIds, _.decrement(_))
   }

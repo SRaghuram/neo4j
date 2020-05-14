@@ -91,7 +91,7 @@ public class HighLimitRecordStorageReaderRelTypesAndDegreeTest extends RecordSto
 
         // Verify that an exception is thrown when we attempt to get the node degrees and thus decode all group records.
         StorageNodeCursor cursor = newCursor( nodeId );
-        var e = assertThrows( UnderlyingStorageException.class, () -> cursor.degrees( ALL_RELATIONSHIPS, new SingleDegree() ) );
+        var e = assertThrows( UnderlyingStorageException.class, () -> cursor.degrees( ALL_RELATIONSHIPS, new SingleDegree(), true ) );
         assertThat( e ).hasMessageContaining( "out of bounds" );
     }
 
@@ -139,7 +139,7 @@ public class HighLimitRecordStorageReaderRelTypesAndDegreeTest extends RecordSto
 
         // Verify that an exception is thrown when we attempt to get the node degrees and thus decode all group records.
         StorageNodeCursor cursor = newCursor( nodeId );
-        var e = assertThrows( UnderlyingStorageException.class, () -> cursor.degrees( ALL_RELATIONSHIPS, new SingleDegree() ) );
+        var e = assertThrows( UnderlyingStorageException.class, () -> cursor.degrees( ALL_RELATIONSHIPS, new SingleDegree(), true ) );
         assertThat( e ).hasMessageContaining( "out of bounds" );
     }
 }

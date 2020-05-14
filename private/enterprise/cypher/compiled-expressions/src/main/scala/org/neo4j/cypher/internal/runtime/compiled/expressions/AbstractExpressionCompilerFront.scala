@@ -128,7 +128,6 @@ import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter
 import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter.DEFAULT_NULLABLE
 import org.neo4j.cypher.internal.physicalplanning.SlottedRewriter.DEFAULT_OFFSET_IS_FOR_LONG_SLOT
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
@@ -853,7 +852,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           loadExpressionVariable(accVar)
         )
         IntermediateExpression(block(ops: _*), collection.fields ++ inner.fields ++ init.fields, collection.variables ++
-          inner.variables ++ init.variables, collection.nullChecks ++ init.nullChecks)
+          inner.variables ++ init.variables, collection.nullChecks)
       }
 
     //boolean operators
@@ -1257,8 +1256,8 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
           val default = maybeDefault.get
           val returnVariable = namer.nextVariableName()
           val local = variable[AnyValue](returnVariable, constant(null))
-          val ops = caseExpression(returnVariable, checks.map(_.ir), loads.map(_.ir), default.ir,
-                          toCheck => invoke(inner.ir, method[AnyValue, Boolean, AnyRef]("equals"), toCheck))
+          val ops = caseExpression(returnVariable, checks.map(nullCheckIfRequired(_)), loads.map(nullCheckIfRequired(_)), nullCheckIfRequired(default),
+                          toCheck => invoke(nullCheckIfRequired(inner), method[AnyValue, Boolean, AnyRef]("equals"), toCheck))
           IntermediateExpression(ops,
                                  inner.fields ++ checks.flatMap(_.fields) ++ loads.flatMap(_.fields) ++ default.fields,
                                  inner.variables ++ checks.flatMap(_.variables) ++ loads.flatMap(_.variables) ++ default.variables :+ local,
@@ -1296,7 +1295,7 @@ abstract class AbstractExpressionCompilerFront(val slots: SlotConfiguration,
         val default = maybeDefault.get
         val returnVariable = namer.nextVariableName()
         val local = variable[AnyValue](returnVariable, constant(null))
-        val ops = caseExpression(returnVariable, checks.map(_.ir), loads.map(_.ir), default.ir,
+        val ops = caseExpression(returnVariable, checks.map(nullCheckIfRequired(_)), loads.map(nullCheckIfRequired(_)), nullCheckIfRequired(default),
                         toCheck => equal(toCheck, trueValue))
         Some(IntermediateExpression(ops,
                                     checks.flatMap(_.fields) ++ loads.flatMap(_.fields) ++ default.fields,

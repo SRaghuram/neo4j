@@ -16,11 +16,14 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
+import org.eclipse.collections.api.factory.Maps;
+import org.eclipse.collections.api.map.MutableMap;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.batchimport.AdditionalInitialIds;
@@ -64,6 +67,7 @@ import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
+import org.neo4j.kernel.impl.transaction.log.files.TransactionLogInitializer;
 import org.neo4j.logging.DuplicatingLogProvider;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Log;
@@ -75,13 +79,18 @@ import org.neo4j.procedure.builtin.SchemaStatementProcedure;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.Clocks;
 import org.neo4j.token.TokenHolders;
+import org.neo4j.token.api.NamedToken;
+import org.neo4j.token.api.NonUniqueTokenException;
 import org.neo4j.token.api.TokenConstants;
 import org.neo4j.token.api.TokenHolder;
+import org.neo4j.token.api.TokenNotFoundException;
+import org.neo4j.token.api.TokensLoader;
 
 import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
-import static org.neo4j.internal.recordstorage.StoreTokens.readOnlyTokenHolders;
+import static org.neo4j.internal.recordstorage.StoreTokens.allReadableTokens;
+import static org.neo4j.internal.recordstorage.StoreTokens.createReadOnlyTokenHolder;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.logging.Level.DEBUG;
 import static org.neo4j.logging.Level.INFO;
@@ -101,6 +110,7 @@ public class StoreCopy
     private final PrintStream out;
 
     private StoreCopyFilter storeCopyFilter;
+    private MutableMap<String, List<NamedToken>> recreatedTokens;
     private TokenHolders tokenHolders;
     private NodeStore nodeStore;
     private PropertyStore propertyStore;
@@ -140,7 +150,7 @@ public class StoreCopy
                   FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
                   JobScheduler scheduler = createInitialisedScheduler();
                   PageCache fromPageCache = createPageCache( fs, fromPageCacheMemory, scheduler );
-                    PageCache toPageCache = createPageCache( fs, toPageCacheMemory, scheduler );
+                  PageCache toPageCache = createPageCache( fs, toPageCacheMemory, scheduler );
                   NeoStores neoStores = new StoreFactory( from, config, new ScanOnOpenReadOnlyIdGeneratorFactory(), fromPageCache, fs,
                           NullLogProvider.getInstance(), pageCacheTracer ).openAllNeoStores() )
             {
@@ -148,7 +158,8 @@ public class StoreCopy
                 nodeStore = neoStores.getNodeStore();
                 propertyStore = neoStores.getPropertyStore();
                 relationshipStore = neoStores.getRelationshipStore();
-                tokenHolders = readOnlyTokenHolders( neoStores, cursorTracer );
+                recreatedTokens = Maps.mutable.empty();
+                tokenHolders = createTokenHolders( neoStores, cursorTracer );
                 stats = new StoreCopyStats( log );
                 SchemaStore schemaStore = neoStores.getSchemaStore();
 
@@ -164,33 +175,230 @@ public class StoreCopy
                 log.info( "Target: %s (page cache %s)", toDatabaseLayout.databaseDirectory(), toPageCacheMemory );
                 log.info( "Empty database created, will start importing readable data from the source." );
 
-                BatchImporter batchImporter = BatchImporterFactory.withHighestPriority().instantiate( toDatabaseLayout, fs, toPageCache, PageCacheTracer.NULL,
-                        Configuration.DEFAULT,
+                BatchImporter batchImporter = BatchImporterFactory.withHighestPriority().instantiate(
+                        toDatabaseLayout, fs, toPageCache, PageCacheTracer.NULL, Configuration.DEFAULT,
                         new SimpleLogService( logProvider ), executionMonitor, AdditionalInitialIds.EMPTY, config, recordFormats, NO_MONITOR, null,
-                        Collector.EMPTY, TransactionLogsInitializer.INSTANCE );
+                        Collector.EMPTY, TransactionLogInitializer.getLogFilesInitializer(), EmptyMemoryTracker.INSTANCE );
 
                 batchImporter.doImport( Input.input( () -> nodeIterator( pageCacheTracer ), () -> relationshipIterator( pageCacheTracer ), IdType.INTEGER,
                         getEstimates(), new Groups() ) );
 
                 stats.printSummary();
+
                 // Display schema information
                 log.info( "### Extracting schema ###" );
                 log.info( "Trying to extract schema..." );
                 Map<String,String> schemaStatements = getSchemaStatements( stats, schemaStore, tokenHolders, cursorTracer );
-                log.info( "... found %d schema definition. The following can be used to recreate the schema:", schemaStatements.size() );
-                log.info( System.lineSeparator() + System.lineSeparator() + String.join( ";" + System.lineSeparator(), schemaStatements.values() ) );
-                log.info( "You have to manually apply the above commands to the database when it is stared to recreate the indexes and constraints. " +
-                        "The commands are saved to " + logFilePath.toAbsolutePath() + " as well for reference.");
+                int schemaCount = schemaStatements.size();
+                if ( schemaCount == 0 )
+                {
+                    log.info( "... found %d schema definitions.", schemaCount );
+                }
+                else
+                {
+                    log.info( "... found %d schema definitions. The following can be used to recreate the schema:", schemaCount );
+                    String newLine = System.lineSeparator();
+                    log.info( newLine + newLine + String.join( ";" + newLine, schemaStatements.values() ) );
+                    log.info( "You have to manually apply the above commands to the database when it is stared to recreate the indexes and constraints. " +
+                            "The commands are saved to " + logFilePath.toAbsolutePath() + " as well for reference." );
+                }
+
+                if ( recreatedTokens.notEmpty() )
+                {
+                    log.info( "The following tokens were recreated (with new names) in order to not leave data behind:" );
+                    recreatedTokens.forEach( ( type, tokens ) ->
+                    {
+                        for ( NamedToken token : tokens )
+                        {
+                            log.info( "   `%s` (with id %s(%s)).", token.name(), type, token.id() );
+                        }
+                    } );
+                }
             }
         }
+    }
+
+    private TokenHolders createTokenHolders( NeoStores neoStores, PageCursorTracer cursorTracer )
+    {
+        TokenHolder propertyKeyTokens = createTokenHolder( TokenHolder.TYPE_PROPERTY_KEY );
+        TokenHolder labelTokens = createTokenHolder( TokenHolder.TYPE_LABEL );
+        TokenHolder relationshipTypeTokens = createTokenHolder( TokenHolder.TYPE_RELATIONSHIP_TYPE );
+        TokenHolders tokenHolders = new TokenHolders( propertyKeyTokens, labelTokens, relationshipTypeTokens );
+        tokenHolders.setInitialTokens( filterDuplicateTokens( allReadableTokens( neoStores ) ), cursorTracer );
+        return tokenHolders;
+    }
+
+    private TokenHolder createTokenHolder( String tokenType )
+    {
+        return new TokenHolder()
+        {
+            private final TokenHolder delegate = createReadOnlyTokenHolder( tokenType );
+            private int createdTokenCounter; // Guarded by 'this'.
+
+            @Override
+            public synchronized void setInitialTokens( List<NamedToken> tokens ) throws NonUniqueTokenException
+            {
+                delegate.setInitialTokens( tokens );
+            }
+
+            @Override
+            public void addToken( NamedToken token ) throws NonUniqueTokenException
+            {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public int getOrCreateId( String name )
+            {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void getOrCreateIds( String[] names, int[] ids )
+            {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public synchronized NamedToken getTokenById( int id )
+            {
+                try
+                {
+                    return delegate.getTokenById( id );
+                }
+                catch ( TokenNotFoundException e )
+                {
+                    stats.addCorruptToken( tokenType, id );
+                    String tokenName;
+                    do
+                    {
+                        createdTokenCounter++;
+                        tokenName = getTokenType() + "_" + createdTokenCounter;
+                    }
+                    while ( getIdByName( tokenName ) != TokenConstants.NO_TOKEN );
+                    NamedToken token = new NamedToken( tokenName, id );
+                    delegate.addToken( token );
+                    recreatedTokens.getIfAbsentPut( getTokenType(), ArrayList::new ).add( token );
+                    return token;
+                }
+            }
+
+            @Override
+            public synchronized int getIdByName( String name )
+            {
+                return delegate.getIdByName( name );
+            }
+
+            @Override
+            public synchronized boolean getIdsByNames( String[] names, int[] ids )
+            {
+                return delegate.getIdsByNames( names, ids );
+            }
+
+            @Override
+            public synchronized Iterable<NamedToken> getAllTokens()
+            {
+                return delegate.getAllTokens();
+            }
+
+            @Override
+            public synchronized String getTokenType()
+            {
+                return delegate.getTokenType();
+            }
+
+            @Override
+            public synchronized boolean hasToken( int id )
+            {
+                return delegate.hasToken( id );
+            }
+
+            @Override
+            public synchronized int size()
+            {
+                return delegate.size();
+            }
+
+            @Override
+            public void getOrCreateInternalIds( String[] names, int[] ids )
+            {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public synchronized NamedToken getInternalTokenById( int id ) throws TokenNotFoundException
+            {
+                return delegate.getInternalTokenById( id );
+            }
+        };
+    }
+
+    private TokensLoader filterDuplicateTokens( TokensLoader loader )
+    {
+        return new TokensLoader()
+        {
+            @Override
+            public List<NamedToken> getPropertyKeyTokens( PageCursorTracer cursorTracer )
+            {
+                return unique( loader.getPropertyKeyTokens( cursorTracer ) );
+            }
+
+            @Override
+            public List<NamedToken> getLabelTokens( PageCursorTracer cursorTracer )
+            {
+                return unique( loader.getLabelTokens( cursorTracer ) );
+            }
+
+            @Override
+            public List<NamedToken> getRelationshipTypeTokens( PageCursorTracer cursorTracer )
+            {
+                return unique( loader.getRelationshipTypeTokens( cursorTracer ) );
+            }
+
+            private List<NamedToken> unique( List<NamedToken> tokens )
+            {
+                if ( !tokens.isEmpty() )
+                {
+                    Set<String> names = new HashSet<>( tokens.size() );
+                    int i = 0;
+                    while ( i < tokens.size() )
+                    {
+                        if ( names.add( tokens.get( i ).name() ) )
+                        {
+                            i++;
+                        }
+                        else
+                        {
+                            removeUnordered( tokens, i );
+                        }
+                    }
+                }
+                return tokens;
+            }
+
+            /**
+             * Remove the token at the given index, by replacing it with the last token in the list.
+             * This changes the order of elements, but can be done in constant time instead of linear time.
+             */
+            private void removeUnordered( List<NamedToken> list, int index )
+            {
+                int lastIndex = list.size() - 1;
+                NamedToken endToken = list.remove( lastIndex );
+                if ( index < lastIndex )
+                {
+                    list.set( index, endToken );
+                }
+            }
+        };
     }
 
     private static PageCache createPageCache( FileSystemAbstraction fileSystem, String memory, JobScheduler jobScheduler )
     {
         VersionContextSupplier versionContextSupplier = EmptyVersionContextSupplier.EMPTY;
         SingleFilePageSwapperFactory factory = new SingleFilePageSwapperFactory( fileSystem );
-        MemoryAllocator memoryAllocator = MemoryAllocator.createAllocator( ByteUnit.parse( memory ), EmptyMemoryTracker.INSTANCE );
-        return new MuninnPageCache( factory, memoryAllocator, PageCacheTracer.NULL, versionContextSupplier, jobScheduler, Clocks.nanoClock() );
+        var memoryTracker = EmptyMemoryTracker.INSTANCE;
+        MemoryAllocator memoryAllocator = MemoryAllocator.createAllocator( ByteUnit.parse( memory ), memoryTracker );
+        return new MuninnPageCache( factory, memoryAllocator, PageCacheTracer.NULL, versionContextSupplier, jobScheduler, Clocks.nanoClock(), memoryTracker );
     }
 
     private LogProvider getLog( OutputStream out )

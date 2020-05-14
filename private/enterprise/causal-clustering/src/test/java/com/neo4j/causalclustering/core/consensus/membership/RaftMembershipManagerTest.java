@@ -17,6 +17,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.AssertableLogProvider;
@@ -27,7 +29,6 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.time.Clocks;
 
-import static com.neo4j.causalclustering.core.consensus.membership.RaftMembershipState.Marshal;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static com.neo4j.causalclustering.identity.RaftTestMemberSetBuilder.INSTANCE;
@@ -35,6 +36,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -217,6 +219,33 @@ class RaftMembershipManagerTest
                 .containsMessageWithArguments( warningMessage, membersC.getMembers(), membersB.getMembers() );
     }
 
+    @Test
+    void shouldKeepTrackOfAdditionalReplicationMembersAfterLeadershipTransfer()
+    {
+        // given
+        var raftLog = new InMemoryRaftLog();
+        var logProvider = new AssertableLogProvider();
+        var membersA = new RaftTestMembers( 0, 1, 2 );
+        var membershipManager = life.add( raftMembershipManager( raftLog, logProvider, membersA.getMembers() ) );
+        var membershipChangedListener = new AtomicBoolean( false );
+        membershipManager.registerListener( () -> membershipChangedListener.set( true ) );
+        var membersB = new RaftTestMembers( 0, 1, 2, 3 );
+
+        membershipManager.onRole( LEADER );
+        membershipManager.handleLeadershipTransfers( true );
+        // when
+        membershipManager.setTargetMembershipSet( membersB.getMembers() );
+
+        // then
+        assertFalse( membershipChangedListener.get() );
+
+        // when
+        membershipManager.handleLeadershipTransfers( false );
+
+        // then
+        assertTrue( membershipChangedListener.get() );
+    }
+
     private RaftMembershipManager raftMembershipManager( InMemoryRaftLog log )
     {
         return raftMembershipManager( log, getInstance() );
@@ -224,12 +253,29 @@ class RaftMembershipManagerTest
 
     private RaftMembershipManager raftMembershipManager( InMemoryRaftLog log, LogProvider logProvider )
     {
+        return raftMembershipManager( log, logProvider, Set.of() );
+    }
+
+    private RaftMembershipManager raftMembershipManager( InMemoryRaftLog log, LogProvider logProvider, Set<MemberId> initialMembers )
+    {
+        RaftMembershipState initialState;
+        if ( initialMembers.isEmpty() )
+        {
+            initialState = new RaftMembershipState();
+        }
+        else
+        {
+            var membershipEntry = new MembershipEntry( 1, Set.copyOf( initialMembers ) );
+            initialState = new RaftMembershipState( 0, membershipEntry, null );
+        }
+
         RaftMembershipManager raftMembershipManager = new RaftMembershipManager(
                 sendToMyself, myself, INSTANCE, log,
                 logProvider, 3, 1000, Clocks.fakeClock(),
-                1000, new InMemoryStateStorage<>( new Marshal().startState() ) );
+                1000, new InMemoryStateStorage<>( initialState ) );
 
         raftMembershipManager.setRecoverFromIndexSupplier( () -> 0 );
         return raftMembershipManager;
     }
+
 }

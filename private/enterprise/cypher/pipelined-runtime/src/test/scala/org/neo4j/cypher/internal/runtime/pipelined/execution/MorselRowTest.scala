@@ -12,37 +12,26 @@ import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
 class MorselRowTest extends CypherFunSuite {
 
-  test("should ignore null refs on estimateHeapUsage") {
-    // GIVEN
-    val morselSize = 3
-    val slots =
-      SlotConfiguration.empty
-        .newLong("n", nullable = false, CTNode)
-        .newReference("x", nullable = true, CTAny)
-
-    // WHEN
-    val ctx = MorselFactory.allocate(slots, morselSize)
-
-    // THEN
-    val expectedSizeOfLongs = morselSize * 8L
-    val expectedSizeOfRefs = 0L
-    ctx.estimatedHeapUsage should be(expectedSizeOfLongs + expectedSizeOfRefs)
-  }
-
   test("should compute estimateHeapUsage on a view") {
     // GIVEN
-    val morselSize = 3
+    val morselSize = 5
     val slots =
       SlotConfiguration.empty
         .newLong("n", nullable = false, CTNode)
         .newReference("x", nullable = true, CTAny)
 
     // WHEN
-    val ctx = MorselFactory.allocate(slots, morselSize).view(1, morselSize)
+    val ctx1 = MorselFactory.allocate(slots, morselSize).view(0, 1)
+    val ctx2 = MorselFactory.allocate(slots, morselSize).view(1, morselSize)
+    val ctx3 = MorselFactory.allocate(slots, morselSize).view(0, 3)
+    val ctx4 = MorselFactory.allocate(slots, morselSize).view(3, morselSize)
+    val morsel = MorselFactory.allocate(slots, morselSize)
 
     // THEN
-    val expectedSizeOfLongs = morselSize * 8L
-    val expectedSizeOfRefs = 0L
-    ctx.estimatedHeapUsage should be(expectedSizeOfLongs + expectedSizeOfRefs)
+    ctx1.estimatedHeapUsage should be > 0L
+    ctx2.estimatedHeapUsage should be > 0L
+    ctx3.estimatedHeapUsage should be > 0L
+    ctx4.estimatedHeapUsage should be > 0L
+    ctx1.estimatedHeapUsage + ctx2.estimatedHeapUsage shouldBe ctx3.estimatedHeapUsage + ctx4.estimatedHeapUsage
   }
 }

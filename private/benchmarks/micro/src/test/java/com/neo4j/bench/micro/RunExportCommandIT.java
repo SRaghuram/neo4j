@@ -5,41 +5,39 @@
  */
 package com.neo4j.bench.micro;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-import com.neo4j.bench.common.Neo4jConfigBuilder;
-import com.neo4j.bench.common.model.BenchmarkTool;
-import com.neo4j.bench.common.model.Project;
-import com.neo4j.bench.common.model.Repository;
-import com.neo4j.bench.common.model.TestRunReport;
-import com.neo4j.bench.common.profiling.ProfilerType;
-import com.neo4j.bench.common.profiling.RecordingType;
-import com.neo4j.bench.common.util.BenchmarkUtil;
-import com.neo4j.bench.common.util.ErrorReporter;
-import com.neo4j.bench.common.util.JsonUtil;
-import com.neo4j.bench.common.util.Jvm;
-import com.neo4j.bench.micro.benchmarks.core.ReadById;
-import org.apache.commons.compress.utils.IOUtils;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.util.ErrorReporter;
+import com.neo4j.bench.common.util.Jvm;
+import com.neo4j.bench.micro.benchmarks.core.ReadById;
+import com.neo4j.bench.model.model.BenchmarkTool;
+import com.neo4j.bench.model.model.Project;
+import com.neo4j.bench.model.model.Repository;
+import com.neo4j.bench.model.model.TestRunReport;
+import com.neo4j.bench.model.profiling.RecordingType;
+import com.neo4j.bench.model.util.JsonUtil;
+import org.apache.commons.compress.utils.IOUtils;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bench.common.options.Edition.ENTERPRISE;
+import static com.neo4j.bench.model.options.Edition.ENTERPRISE;
+import static com.neo4j.bench.model.util.MapPrinter.prettyPrint;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -53,7 +51,7 @@ class RunExportCommandIT
     @Test
     void shouldThrowExceptionWhenNoBenchmarkIsEnabled()
     {
-        assertThrows( RuntimeException.class, () ->
+        var e = assertThrows( RuntimeException.class, () ->
         {
             // Create empty Neo4j configuration file
             File neo4jConfigFile = temporaryFolder.file( "neo4j.conf" );
@@ -66,11 +64,11 @@ class RunExportCommandIT
 
             // Create empty benchmark configuration file
             File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
-            Files.write( benchmarkConfig.toPath(), Arrays.asList( "# empty config file" ) );
+            Files.write( benchmarkConfig.toPath(), List.of( "# empty config file" ) );
 
             Path jsonFile = temporaryFolder.file( "file.json" ).toPath();
             Path profileOutputDirectory = temporaryFolder.directory( "output" ).toPath();
-            Path storesDir = Paths.get( "benchmark_stores" );
+            Path storesDir = temporaryFolder.directory( "benchmark_stores" ).toPath();
 
             List<String> commandArgs = RunExportCommand.argsFor(
                     jsonFile,
@@ -93,9 +91,10 @@ class RunExportCommandIT
                     ErrorReporter.ErrorPolicy.FAIL,
                     Jvm.defaultJvm(),
                     "Trinity",
-                    Lists.newArrayList( ProfilerType.JFR ) );
+                    List.of() );
             Main.main( commandArgs.toArray( new String[0] ) );
         } );
+        assertThat( e.getMessage(), containsString( "Validation Failed" ) );
     }
 
     @Test
@@ -122,7 +121,7 @@ class RunExportCommandIT
 
         Path jsonFile = temporaryFolder.file( "file.json" ).toPath();
         Path profilerRecordingDirectory = temporaryFolder.directory( "output" ).toPath();
-        Path storesDir = Paths.get( "benchmark_stores" );
+        Path storesDir = temporaryFolder.directory( "benchmark_stores" ).toPath();
 
         List<String> commandArgs = RunExportCommand.argsFor(
                 jsonFile,
@@ -162,7 +161,7 @@ class RunExportCommandIT
                                                    .toMap()
                                                    .size();
 
-        assertThat( BenchmarkUtil.prettyPrint( report.baseNeo4jConfig().toMap() ), report.baseNeo4jConfig().toMap().size(), equalTo( expectedConfigSize ) );
+        assertThat( prettyPrint( report.baseNeo4jConfig().toMap() ), report.baseNeo4jConfig().toMap().size(), equalTo( expectedConfigSize ) );
         assertThat( report.java().jvmArgs(), equalTo(
                 "-Xms2g -Xmx2g -XX:+UseG1GC -XX:-OmitStackTraceInFastThrow -XX:+AlwaysPreTouch " +
                 "-XX:+UnlockExperimentalVMOptions " +

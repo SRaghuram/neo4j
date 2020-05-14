@@ -7,11 +7,10 @@ package com.neo4j.bench.macro;
 
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
-import com.neo4j.bench.common.model.Neo4jConfig;
-import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.execution.database.Schema;
 import com.neo4j.bench.macro.workload.Workload;
+import com.neo4j.bench.model.options.Edition;
 import com.neo4j.common.util.TestSupport;
 
 import java.io.IOException;

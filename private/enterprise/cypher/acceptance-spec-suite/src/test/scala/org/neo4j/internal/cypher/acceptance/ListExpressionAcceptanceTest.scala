@@ -11,6 +11,21 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSu
 
 class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
+  test("should reduce on null accumulator") {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+      query = "RETURN" +
+        " reduce(res=null, x in [1] | CASE WHEN res IS NULL THEN x ELSE res END) as firstOfOne," +
+        " reduce(res=null, x in [1,2] | CASE WHEN res IS NULL THEN x ELSE res END) as firstOfTwo," +
+        " reduce(res=null, x in [null,2] | CASE WHEN res IS NULL THEN x ELSE res END) as firstNonNull," +
+        " reduce(res=null, x in [] | CASE WHEN res IS NULL THEN x ELSE res END) as nullOfEmptyList")
+
+    result.toList.head should equal(Map(
+      "firstOfOne" -> 1,
+      "firstOfTwo" -> 1,
+      "firstNonNull" -> 2,
+      "nullOfEmptyList" -> null))
+  }
+
   test("should reduce on values") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
       query = "RETURN" +

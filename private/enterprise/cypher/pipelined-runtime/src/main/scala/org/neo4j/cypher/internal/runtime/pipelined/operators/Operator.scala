@@ -24,6 +24,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
 import org.neo4j.memory.Measurable
+import org.neo4j.memory.MemoryTracker
 
 /**
  * Input to use for starting an operator task.
@@ -150,6 +151,28 @@ trait OperatorState {
 }
 
 /**
+ * A memory tracking version of the execution state of an operator.
+ * One instance of this is created for every query execution that requires memory tracking.
+ */
+class MemoryTrackingOperatorState(delegate: OperatorState, operatorId: Int, stateFactory: StateFactory) extends OperatorState {
+  private val memoryTracker = stateFactory.newMemoryTracker(operatorId)
+
+  override def nextTasks(state: PipelinedQueryState,
+                         operatorInput: OperatorInput,
+                         parallelism: Int,
+                         resources: QueryResources,
+                         argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTask] = {
+
+    resources.setMemoryTracker(memoryTracker)
+    try {
+      delegate.nextTasks(state, operatorInput, parallelism, resources, argumentStateMaps)
+    } finally {
+      resources.resetMemoryTracker()
+    }
+  }
+}
+
+/**
  * The execution state of a reduce operator. One instance of this is created for every query execution.
  */
 trait ReduceOperatorState[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]] extends OperatorState {
@@ -226,6 +249,22 @@ trait MiddleOperator extends HasWorkIdentity {
                  stateFactory: StateFactory,
                  state: PipelinedQueryState,
                  resources: QueryResources): OperatorTask
+}
+
+abstract class MemoryTrackingMiddleOperator(operatorId: Int) extends MiddleOperator {
+  final override def createTask(argumentStateCreator: ArgumentStateMapCreator,
+                                stateFactory: StateFactory,
+                                state: PipelinedQueryState,
+                                resources: QueryResources): OperatorTask = {
+    val memoryTracker = stateFactory.newMemoryTracker(operatorId)
+    createTask(argumentStateCreator, stateFactory, state, resources, memoryTracker)
+  }
+
+  def createTask(argumentStateCreator: ArgumentStateMapCreator,
+                 stateFactory: StateFactory,
+                 state: PipelinedQueryState,
+                 resources: QueryResources,
+                 memoryTracker: MemoryTracker): OperatorTask
 }
 
 trait StatelessOperator extends MiddleOperator with OperatorTask {

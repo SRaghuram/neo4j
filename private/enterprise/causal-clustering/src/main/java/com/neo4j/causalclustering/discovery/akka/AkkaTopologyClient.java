@@ -131,7 +131,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public void stateChange( DatabaseState newState )
+    public void stateChange( DatabaseState previousState, DatabaseState newState )
     {
         var clientTopologyActor = clientTopologyActorRef;
         if ( clientTopologyActor != null )
@@ -209,6 +209,12 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     public Map<MemberId,DiscoveryDatabaseState> allReadReplicaStatesForDatabase( NamedDatabaseId namedDatabaseId )
     {
         return Map.copyOf( globalTopologyState.readReplicaStatesForDatabase( namedDatabaseId ).memberStates() );
+    }
+
+    @Override
+    public boolean isHealthy()
+    {
+        return true;
     }
 
     @VisibleForTesting

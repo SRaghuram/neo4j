@@ -8,6 +8,8 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 import java.util
 import java.util.concurrent.atomic.AtomicReference
 
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.internal.helpers.collection.Iterators
 
 /**
@@ -16,7 +18,7 @@ import org.neo4j.internal.helpers.collection.Iterators
 class ConcurrentSingletonBuffer[T <: AnyRef] extends SingletonBuffer[T] {
   private val datum = new AtomicReference[T]()
 
-  override def put(t: T): Unit = {
+  override def put(t: T, resources: QueryResources): Unit = {
     if (!datum.compareAndSet(null.asInstanceOf[T], t)) {
       throw new IllegalStateException(s"SingletonBuffer is full: tried to put $t but already held element ${datum.get}")
     }

@@ -17,13 +17,11 @@ import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphVisualizer
 import org.neo4j.cypher.internal.physicalplanning.FusedHead
 import org.neo4j.cypher.internal.physicalplanning.InterpretedHead
-import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphVisualizer
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanner
 import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.plandescription.Arguments.PipelineInfo
-import org.neo4j.cypher.internal.rewriting.RewriterStepSequencer
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ExecutionMode
 import org.neo4j.cypher.internal.runtime.InputDataStream
@@ -78,8 +76,8 @@ import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
 
 object PipelinedRuntime {
-  val PIPELINED = new PipelinedRuntime(false, "pipelined")
-  val PARALLEL = new PipelinedRuntime(true, "parallel")
+  val PIPELINED = new PipelinedRuntime(false, "Pipelined")
+  val PARALLEL = new PipelinedRuntime(true, "Parallel")
 
   val CODE_GEN_FAILED_MESSAGE = "Code generation failed. Retrying physical planning."
 }
@@ -150,9 +148,9 @@ class PipelinedRuntime private(parallelExecution: Boolean,
 
     val logicalPlan = pipelinedPrePhysicalPlanRewriter(query)
 
-    PipelinedBlacklist.throwOnUnsupportedPlan(logicalPlan, parallelExecution, query.leveragedOrders)
+    PipelinedBlacklist.throwOnUnsupportedPlan(logicalPlan, parallelExecution, query.leveragedOrders, name)
 
-    val interpretedPipesFallbackPolicy = InterpretedPipesFallbackPolicy(context.interpretedPipesFallback, parallelExecution)
+    val interpretedPipesFallbackPolicy = InterpretedPipesFallbackPolicy(context.interpretedPipesFallback, parallelExecution, name)
     val breakingPolicy = PipelinedPipelineBreakingPolicy(operatorFusionPolicy, interpretedPipesFallbackPolicy)
 
     var physicalPlan = PhysicalPlanner.plan(context.tokenContext,
@@ -170,7 +168,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
     val converters: ExpressionConverters = {
       val builder = Seq.newBuilder[ExpressionConverter]
       if (context.compileExpressions)
-        builder += new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly, codeGenerationMode)
+        builder += new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext, query.readOnly, codeGenerationMode, context.cachingExpressionCompilerTracer)
       builder += SlottedExpressionConverters(physicalPlan, Some(NoPipe))
       builder += CommunityExpressionConverter(context.tokenContext)
       new ExpressionConverters(builder.result():_*)
@@ -180,7 +178,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
     val pipeMapper =
       {
         val interpretedPipeMapper = InterpretedPipeMapper(query.readOnly, converters, context.tokenContext, queryIndexRegistrator)(query.semanticTable)
-        new SlottedPipeMapper(interpretedPipeMapper, converters, physicalPlan, query.readOnly, queryIndexRegistrator)(query.semanticTable)
+        new SlottedPipeMapper(interpretedPipeMapper, converters, context.tokenContext, physicalPlan, query.readOnly, queryIndexRegistrator)(query.semanticTable)
       }
 
     val pipeTreeBuilder = PipeTreeBuilder(pipeMapper)
@@ -215,8 +213,10 @@ class PipelinedRuntime private(parallelExecution: Boolean,
       readOnly = readOnly,
       queryIndexRegistrator,
       query.semanticTable,
+      context.tokenContext,
       interpretedPipesFallbackPolicy,
-      maybePipeMapper)
+      maybePipeMapper,
+      name)
 
     DebugLog.logDiff("ExecutionGraphDefiner")
     //=======================================================

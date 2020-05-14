@@ -7,6 +7,7 @@ package com.neo4j.bench.common.process;
 
 import com.google.common.collect.Lists;
 import com.neo4j.bench.common.util.Jvm;
+import com.neo4j.bench.model.process.JvmArgs;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;

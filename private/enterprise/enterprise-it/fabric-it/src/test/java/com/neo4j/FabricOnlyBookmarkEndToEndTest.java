@@ -5,13 +5,6 @@
  */
 package com.neo4j;
 
-import com.neo4j.fabric.bolt.FabricBookmark;
-import com.neo4j.fabric.bolt.FabricBookmarkParser;
-import com.neo4j.fabric.bookmark.FabricOnlyBookmarkManager;
-import com.neo4j.fabric.bookmark.LocalGraphTransactionIdTracker;
-import com.neo4j.fabric.bookmark.TransactionBookmarkManagerFactory;
-import com.neo4j.fabric.driver.RemoteBookmark;
-import com.neo4j.fabric.localdb.FabricDatabaseManager;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -40,6 +33,13 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.SessionConfig;
+import org.neo4j.fabric.FabricDatabaseManager;
+import org.neo4j.fabric.bolt.FabricBookmark;
+import org.neo4j.fabric.bolt.FabricBookmarkParser;
+import org.neo4j.fabric.bookmark.FabricOnlyBookmarkManager;
+import org.neo4j.fabric.bookmark.LocalGraphTransactionIdTracker;
+import org.neo4j.fabric.bookmark.RemoteBookmark;
+import org.neo4j.fabric.bookmark.TransactionBookmarkManagerFactory;
 import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.Notification;
 import org.neo4j.graphdb.QueryExecutionType;
@@ -214,7 +214,7 @@ class FabricOnlyBookmarkEndToEndTest
             var database = mock( BoltGraphDatabaseServiceSPI.class );
             when(remote.boltGraphDatabaseManagementService.database( any() )).thenReturn( database );
             var tx = mock( BoltTransaction.class );
-            when(database.beginTransaction( any(), any(), any(), receivedBookmarks.capture(), any(), any(), any() )).thenReturn( tx );
+            when(database.beginTransaction( any(), any(), any(), receivedBookmarks.capture(), any(), any(), any(), any() )).thenReturn( tx );
             when( database.getNamedDatabaseId() ).thenReturn( NAMED_SYSTEM_DATABASE_ID );
 
             var bookmarkMetadata = IntStream.range( 1, txIds.size() )

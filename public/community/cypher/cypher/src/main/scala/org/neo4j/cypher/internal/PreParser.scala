@@ -24,6 +24,7 @@ import org.neo4j.cypher.CypherExpressionEngineOption
 import org.neo4j.cypher.CypherInterpretedPipesFallbackOption
 import org.neo4j.cypher.CypherOperatorEngineOption
 import org.neo4j.cypher.CypherPlannerOption
+import org.neo4j.cypher.CypherReplanOption
 import org.neo4j.cypher.CypherRuntimeOption
 import org.neo4j.cypher.CypherUpdateStrategy
 import org.neo4j.cypher.CypherVersion
@@ -76,14 +77,22 @@ class PreParser(configuredVersion: CypherVersion,
    *
    * @param queryText the query
    * @param profile true if the query should be profiled even if profile is not given as a pre-parser option
+   * @param couldContainSensitiveFields true if the query might contain passwords, like some administrative commands can
    * @throws SyntaxException if there are syntactic errors in the pre-parser options
    * @return the pre-parsed query
    */
   @throws(classOf[SyntaxException])
-  def preParseQuery(queryText: String, profile: Boolean = false): PreParsedQuery = {
-    val preParsedQuery = preParsedQueries.computeIfAbsent(queryText, actuallyPreParse(queryText))
-    if (profile) preParsedQuery.copy(options = preParsedQuery.options.copy(executionMode = CypherExecutionMode.profile))
-    else preParsedQuery
+  def preParseQuery(queryText: String, profile: Boolean = false, couldContainSensitiveFields: Boolean = false): PreParsedQuery = {
+    val preParsedQuery = if (couldContainSensitiveFields) {   // This is potentially any outer query running on the system database
+      actuallyPreParse(queryText)
+    } else {
+      preParsedQueries.computeIfAbsent(queryText, actuallyPreParse(queryText))
+    }
+    if (profile) {
+      preParsedQuery.copy(options = preParsedQuery.options.copy(executionMode = CypherExecutionMode.profile))
+    } else {
+      preParsedQuery
+    }
   }
 
   private def actuallyPreParse(queryText: String): PreParsedQuery = {
@@ -165,6 +174,7 @@ object PreParser {
     val operatorEngine: PPOption[CypherOperatorEngineOption] = new PPOption(configuredOperatorEngine)
     val interpretedPipesFallback: PPOption[CypherInterpretedPipesFallbackOption] = new PPOption(configuredInterpretedPipesFallback)
     val updateStrategy: PPOption[CypherUpdateStrategy] = new PPOption(CypherUpdateStrategy.default)
+    val replan: PPOption[CypherReplanOption] = new PPOption(CypherReplanOption.default)
     var debugOptions: Set[String] = Set()
 
     def parseOptions(options: Seq[PreParserOption]): Unit =
@@ -181,7 +191,7 @@ object PreParser {
           case r: RuntimePreParserOption =>
             runtime.selectOrThrow(CypherRuntimeOption(r.name), "Can't specify multiple conflicting Cypher runtimes")
           case u: UpdateStrategyOption =>
-            updateStrategy.selectOrThrow( CypherUpdateStrategy(u.name), "Can't specify multiple conflicting update strategies")
+            updateStrategy.selectOrThrow(CypherUpdateStrategy(u.name), "Can't specify multiple conflicting update strategies")
           case DebugOption(debug) =>
             debugOptions = debugOptions + debug.toLowerCase()
           case engine: ExpressionEnginePreParserOption =>
@@ -190,6 +200,8 @@ object PreParser {
             operatorEngine.selectOrThrow(CypherOperatorEngineOption(o.name), "Can't specify multiple conflicting operator execution modes")
           case i: InterpretedPipesFallbackPreParserOption =>
             interpretedPipesFallback.selectOrThrow(CypherInterpretedPipesFallbackOption(i.name), "Can't specify multiple conflicting interpreted pipes fallback modes")
+          case r: ReplanPreParserOption =>
+            replan.selectOrThrow(CypherReplanOption(r.name), "Can't specify multiple conflicting replan strategies")
 
           case ConfigurationOptions(versionOpt, innerOptions) =>
             for (v <- versionOpt)
@@ -228,6 +240,7 @@ object PreParser {
       expressionEngine.pick,
       operatorEngine.pick,
       interpretedPipesFallback.pick,
+      replan.pick,
       debugOptions)
   }
 }

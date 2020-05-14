@@ -5,9 +5,6 @@
  */
 package com.neo4j.fabric.bookmark;
 
-import com.neo4j.fabric.bolt.FabricBookmark;
-import com.neo4j.fabric.driver.RemoteBookmark;
-import com.neo4j.fabric.executor.Location;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -17,6 +14,12 @@ import java.util.stream.Collectors;
 
 import org.neo4j.bolt.runtime.BoltResponseHandler;
 import org.neo4j.bolt.runtime.Bookmark;
+import org.neo4j.fabric.bolt.FabricBookmark;
+import org.neo4j.fabric.bookmark.LocalGraphTransactionIdTracker;
+import org.neo4j.fabric.bookmark.MixedModeBookmarkManager;
+import org.neo4j.fabric.bookmark.RemoteBookmark;
+import org.neo4j.fabric.bookmark.TransactionBookmarkManager;
+import org.neo4j.fabric.executor.Location;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.fabric.TestUtils.createUri;

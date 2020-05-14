@@ -6,8 +6,11 @@
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.ReadOnlyArray
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
@@ -29,7 +32,7 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
   ACC <: MorselAccumulator[DATA]
 ](
    tracker: QueryCompletionTracker,
-   downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
+   downstreamArgumentReducers: ReadOnlyArray[AccumulatingBuffer],
    override val argumentStateMaps: ArgumentStateMaps,
    val argumentStateMapId: ArgumentStateMapId
  ) extends ArgumentCountUpdater
@@ -42,13 +45,13 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
 
   override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
 
-  override def put(data: IndexedSeq[PerArgument[DATA]]): Unit = {
+  override def put(data: IndexedSeq[PerArgument[DATA]], resources: QueryResources): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
     }
     var i = 0
     while (i < data.length) {
-      argumentStateMap.update(data(i).argumentRowId, acc => acc.update(data(i).value))
+      argumentStateMap.update(data(i).argumentRowId, acc => acc.update(data(i).value, resources))
       i += 1
     }
   }

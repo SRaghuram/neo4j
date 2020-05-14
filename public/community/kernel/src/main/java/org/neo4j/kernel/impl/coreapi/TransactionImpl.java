@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import org.neo4j.common.EntityType;
 import org.neo4j.exceptions.KernelException;
@@ -70,6 +71,7 @@ import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationExcep
 import org.neo4j.internal.kernel.api.exceptions.schema.SchemaKernelException;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.internal.schema.IndexDescriptor;
+import org.neo4j.internal.schema.IndexOrder;
 import org.neo4j.internal.schema.IndexType;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
@@ -115,17 +117,19 @@ public class TransactionImpl implements InternalTransaction
     private final TransactionalContextFactory contextFactory;
     private final DatabaseAvailabilityGuard availabilityGuard;
     private final QueryExecutionEngine executionEngine;
+    private final Consumer<Status> terminationCallback;
     private KernelTransaction transaction;
     private boolean closed;
 
     public TransactionImpl( TokenHolders tokenHolders, TransactionalContextFactory contextFactory,
             DatabaseAvailabilityGuard availabilityGuard, QueryExecutionEngine executionEngine,
-            KernelTransaction transaction )
+            KernelTransaction transaction, Consumer<Status> terminationCallback )
     {
         this.tokenHolders = tokenHolders;
         this.contextFactory = contextFactory;
         this.availabilityGuard = availabilityGuard;
         this.executionEngine = executionEngine;
+        this.terminationCallback = terminationCallback;
         setTransaction( transaction );
     }
 
@@ -475,7 +479,17 @@ public class TransactionImpl implements InternalTransaction
     @Override
     public final void terminate()
     {
-        transaction.markForTermination( Terminated );
+        terminate( Terminated );
+    }
+
+    @Override
+    public void terminate( Status reason )
+    {
+        transaction.markForTermination( reason );
+        if ( terminationCallback != null )
+        {
+            terminationCallback.accept( reason );
+        }
     }
 
     @Override
@@ -687,9 +701,9 @@ public class TransactionImpl implements InternalTransaction
 
         NodeLabelIndexCursor nodeLabelCursor = transaction.cursors().allocateNodeLabelIndexCursor( transaction.pageCursorTracer() );
         NodeCursor nodeCursor = transaction.cursors().allocateNodeCursor( transaction.pageCursorTracer() );
-        PropertyCursor propertyCursor = transaction.cursors().allocatePropertyCursor( transaction.pageCursorTracer() );
+        PropertyCursor propertyCursor = transaction.cursors().allocatePropertyCursor( transaction.pageCursorTracer(), transaction.memoryTracker() );
 
-        transaction.dataRead().nodeLabelScan( labelId, nodeLabelCursor );
+        transaction.dataRead().nodeLabelScan( labelId, nodeLabelCursor, IndexOrder.NONE );
 
         return new NodeLabelPropertyIterator( transaction.dataRead(),
                 nodeLabelCursor,
@@ -758,7 +772,7 @@ public class TransactionImpl implements InternalTransaction
         }
 
         NodeLabelIndexCursor cursor = ktx.cursors().allocateNodeLabelIndexCursor( transaction.pageCursorTracer() );
-        ktx.dataRead().nodeLabelScan( labelId, cursor );
+        ktx.dataRead().nodeLabelScan( labelId, cursor, IndexOrder.NONE );
         return new NodeCursorResourceIterator<>( cursor, this::newNodeEntity );
     }
 

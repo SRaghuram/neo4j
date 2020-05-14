@@ -32,6 +32,7 @@ import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
 import org.neo4j.kernel.impl.store.record.SchemaRecord;
+import org.neo4j.memory.MemoryTracker;
 
 public class RecordChangeSet implements RecordAccessSet
 {
@@ -45,16 +46,17 @@ public class RecordChangeSet implements RecordAccessSet
     private final RecordAccess<RelationshipTypeTokenRecord, Void> relationshipTypeTokenChanges;
     private final MutableInt changeCounter = new MutableInt();
 
-    public RecordChangeSet( Loaders loaders )
+    public RecordChangeSet( Loaders loaders, MemoryTracker memoryTracker )
     {
-        this(   loaders.nodeLoader(),
-                loaders.propertyLoader(),
-                loaders.relationshipLoader(),
-                loaders.relationshipGroupLoader(),
-                loaders.schemaRuleLoader(),
-                loaders.propertyKeyTokenLoader(),
-                loaders.labelTokenLoader(),
-                loaders.relationshipTypeTokenLoader() );
+        this( loaders.nodeLoader(),
+              loaders.propertyLoader(),
+              loaders.relationshipLoader(),
+              loaders.relationshipGroupLoader(),
+              loaders.schemaRuleLoader(),
+              loaders.propertyKeyTokenLoader(),
+              loaders.labelTokenLoader(),
+              loaders.relationshipTypeTokenLoader(),
+              memoryTracker );
     }
 
     public RecordChangeSet(
@@ -65,16 +67,17 @@ public class RecordChangeSet implements RecordAccessSet
             Loader<SchemaRecord,SchemaRule> schemaRuleLoader,
             Loader<PropertyKeyTokenRecord,Void> propertyKeyTokenLoader,
             Loader<LabelTokenRecord,Void> labelTokenLoader,
-            Loader<RelationshipTypeTokenRecord,Void> relationshipTypeTokenLoader )
+            Loader<RelationshipTypeTokenRecord,Void> relationshipTypeTokenLoader,
+            MemoryTracker memoryTracker )
     {
-        this.nodeRecords = new RecordChanges<>( nodeLoader, changeCounter );
-        this.propertyRecords = new RecordChanges<>( propertyLoader, changeCounter );
-        this.relRecords = new RecordChanges<>( relationshipLoader, changeCounter );
-        this.relGroupRecords = new RecordChanges<>( relationshipGroupLoader, changeCounter );
-        this.schemaRuleChanges = new RecordChanges<>( schemaRuleLoader, changeCounter );
-        this.propertyKeyTokenChanges = new RecordChanges<>( propertyKeyTokenLoader, changeCounter );
-        this.labelTokenChanges = new RecordChanges<>( labelTokenLoader, changeCounter );
-        this.relationshipTypeTokenChanges = new RecordChanges<>( relationshipTypeTokenLoader, changeCounter );
+        this.nodeRecords = new RecordChanges<>( nodeLoader, changeCounter, memoryTracker );
+        this.propertyRecords = new RecordChanges<>( propertyLoader, changeCounter, memoryTracker );
+        this.relRecords = new RecordChanges<>( relationshipLoader, changeCounter, memoryTracker );
+        this.relGroupRecords = new RecordChanges<>( relationshipGroupLoader, changeCounter, memoryTracker );
+        this.schemaRuleChanges = new RecordChanges<>( schemaRuleLoader, changeCounter, memoryTracker );
+        this.propertyKeyTokenChanges = new RecordChanges<>( propertyKeyTokenLoader, changeCounter, memoryTracker );
+        this.labelTokenChanges = new RecordChanges<>( labelTokenLoader, changeCounter, memoryTracker );
+        this.relationshipTypeTokenChanges = new RecordChanges<>( relationshipTypeTokenLoader, changeCounter, memoryTracker );
     }
 
     @Override
@@ -135,22 +138,5 @@ public class RecordChangeSet implements RecordAccessSet
     public int changeSize()
     {
         return changeCounter.intValue();
-    }
-
-    @Override
-    public void close()
-    {
-        if ( hasChanges() )
-        {
-            nodeRecords.close();
-            propertyRecords.close();
-            relRecords.close();
-            schemaRuleChanges.close();
-            relGroupRecords.close();
-            propertyKeyTokenChanges.close();
-            labelTokenChanges.close();
-            relationshipTypeTokenChanges.close();
-            changeCounter.setValue( 0 );
-        }
     }
 }

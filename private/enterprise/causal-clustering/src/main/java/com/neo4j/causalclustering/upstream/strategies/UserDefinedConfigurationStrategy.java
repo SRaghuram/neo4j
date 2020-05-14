@@ -15,8 +15,10 @@ import com.neo4j.causalclustering.routing.load_balancing.filters.Filter;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.FilterConfigParser;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.InvalidFilterSpecification;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.ServerInfo;
+import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -63,12 +65,24 @@ public class UserDefinedConfigurationStrategy extends UpstreamDatabaseSelectionS
     @Override
     public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId )
     {
-        return filters.flatMap( filters ->
-        {
-            Set<ServerInfo> possibleServers = possibleServers( namedDatabaseId );
+        return filters
+                .flatMap( filters -> choices( namedDatabaseId, filters )
+                .findFirst() );
+    }
 
-            return filters.apply( possibleServers ).stream().map( ServerInfo::memberId ).filter( memberId -> !Objects.equals( myself, memberId ) ).findFirst();
-        } );
+    @Override
+    public Collection<MemberId> upstreamMembersForDatabase( NamedDatabaseId namedDatabaseId )
+    {
+        return filters.stream()
+                .flatMap( filters -> choices( namedDatabaseId, filters ) )
+                .collect( Collectors.toList() );
+    }
+
+    private Stream<MemberId> choices( NamedDatabaseId namedDatabaseId, Filter<ServerInfo> filter )
+    {
+        Set<ServerInfo> possibleServers = possibleServers( namedDatabaseId );
+
+        return filter.apply( possibleServers ).stream().map( ServerInfo::memberId ).filter( memberId -> !Objects.equals( myself, memberId ) );
     }
 
     private Set<ServerInfo> possibleServers( NamedDatabaseId namedDatabaseId )

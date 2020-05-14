@@ -7,9 +7,6 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import java.util
 
-import org.eclipse.collections.api.map.primitive.MutableLongObjectMap
-import org.eclipse.collections.impl.factory.primitive.LongObjectMaps
-import org.eclipse.collections.impl.list.mutable.FastList
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.PrefetchingIterator
@@ -18,6 +15,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.kernel.impl.util.collection.LongProbeTable
 
 case class NodeHashJoinSlottedSingleNodePipe(lhsOffset: Int,
                                              rhsOffset: Int,
@@ -38,7 +36,7 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsOffset: Int,
     if (rhsIterator.isEmpty)
       return Iterator.empty
 
-    val table = buildProbeTable(state.memoryTracker.memoryTrackingIterator(input, id.x), state)
+    val table = buildProbeTable(input, state)
 
     // This will only happen if all the lhs-values evaluate to null, which is probably rare.
     // But, it's cheap to check and will save us from exhausting the rhs, so it's probably worth it
@@ -48,14 +46,13 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsOffset: Int,
     probeInput(rhsIterator, state, table)
   }
 
-  private def buildProbeTable(lhsInput: Iterator[CypherRow], queryState: QueryState): MutableLongObjectMap[FastList[CypherRow]] = {
-    val table = LongObjectMaps.mutable.empty[FastList[CypherRow]]()
+  private def buildProbeTable(lhsInput: Iterator[CypherRow], queryState: QueryState): LongProbeTable[CypherRow] = {
+    val table = LongProbeTable.createLongProbeTable[CypherRow](queryState.memoryTracker.memoryTrackerForOperator(id.x))
 
     for (current <- lhsInput) {
       val nodeId = current.getLongAt(lhsOffset)
       if(nodeId != -1) {
-        val list = table.getIfAbsentPut(nodeId, new FastList[CypherRow](1))
-        list.add(current)
+        table.put(nodeId, current)
       }
     }
 
@@ -64,7 +61,7 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsOffset: Int,
 
   private def probeInput(rhsInput: Iterator[CypherRow],
                          queryState: QueryState,
-                         probeTable: MutableLongObjectMap[FastList[CypherRow]]): Iterator[CypherRow] =
+                         probeTable: LongProbeTable[CypherRow]): Iterator[CypherRow] =
     new PrefetchingIterator[CypherRow] {
       private var matches: util.Iterator[CypherRow] = util.Collections.emptyIterator()
       private var currentRhsRow: CypherRow = _
@@ -84,12 +81,15 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsOffset: Int,
           val nodeId = currentRhsRow.getLongAt(rhsOffset)
           if(nodeId != -1) {
             val innerMatches = probeTable.get(nodeId)
-            if(innerMatches != null) {
-              matches = innerMatches.iterator()
+            if (innerMatches.hasNext) {
+              matches = innerMatches
               return produceNext()
             }
           }
         }
+
+        // We have produced the last row, close the probe table to release estimated heap usage
+        probeTable.close()
 
         None
       }

@@ -44,6 +44,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.nodeLabelId
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.NameId
@@ -66,7 +67,7 @@ class NodeCountFromCountStoreOperator(val workIdentity: WorkIdentity,
                                    parallelism: Int,
                                    resources: QueryResources,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
-    IndexedSeq(new NodeFromCountStoreTask(inputMorsel.nextCopy))
+    singletonIndexedSeq(new NodeFromCountStoreTask(inputMorsel.nextCopy))
   }
 
 
@@ -214,7 +215,7 @@ class NodeCountFromCountStoreOperatorTemplate(override val inner: OperatorTaskTe
     //takes care of the labels we do know at compile time
     val knownLabelOps = block(knownLabels.map(token =>
       assign(countVar, multiply(load(countVar), invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), constant(token))))) :+
-      dbHits(loadField(executionEventField), constant(knownLabels.size)) :_*)
+      dbHits(loadField(executionEventField), constant(knownLabels.size.toLong)) :_*)
 
     //take care of all wildcard labels
     val wildCardOps = if (wildCards > 0) {

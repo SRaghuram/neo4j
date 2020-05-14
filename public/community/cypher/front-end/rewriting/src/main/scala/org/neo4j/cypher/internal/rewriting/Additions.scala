@@ -29,10 +29,12 @@ import org.neo4j.cypher.internal.ast.DenyPrivilege
 import org.neo4j.cypher.internal.ast.DropConstraintOnName
 import org.neo4j.cypher.internal.ast.DropIndexOnName
 import org.neo4j.cypher.internal.ast.GrantPrivilege
+import org.neo4j.cypher.internal.ast.GraphPrivilege
 import org.neo4j.cypher.internal.ast.RevokePrivilege
 import org.neo4j.cypher.internal.ast.RoleManagementAction
 import org.neo4j.cypher.internal.ast.Statement
 import org.neo4j.cypher.internal.ast.TransactionManagementAction
+import org.neo4j.cypher.internal.ast.WriteAction
 import org.neo4j.cypher.internal.expressions.ExistsSubClause
 import org.neo4j.cypher.internal.util.CypherExceptionFactory
 
@@ -118,6 +120,18 @@ object Additions {
       // revoke transaction administration
       case p@RevokePrivilege(DatabasePrivilege(_: TransactionManagementAction), _, _, _, _, _) =>
         throw cypherExceptionFactory.syntaxException("Transaction administration privileges are not supported in this Cypher version.", p.position)
+
+      // grant fine-grained write
+      case p@GrantPrivilege(GraphPrivilege(action), _, _, _, _) if !action.equals(WriteAction) =>
+        throw cypherExceptionFactory.syntaxException("Fine-grained writes are not supported in this Cypher version.", p.position)
+
+      // deny fine-grained write
+      case p@DenyPrivilege(GraphPrivilege(action), _, _, _, _) if !action.equals(WriteAction) =>
+        throw cypherExceptionFactory.syntaxException("Fine-grained writes are not supported in this Cypher version.", p.position)
+
+      // revoke fine-grained
+      case p@RevokePrivilege(GraphPrivilege(action), _, _, _, _, _) if !action.equals(WriteAction) =>
+        throw cypherExceptionFactory.syntaxException("Fine-grained writes are not supported in this Cypher version.", p.position)
     }
   }
 

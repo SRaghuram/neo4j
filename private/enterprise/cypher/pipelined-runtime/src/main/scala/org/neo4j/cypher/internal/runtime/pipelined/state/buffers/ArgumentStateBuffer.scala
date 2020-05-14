@@ -7,6 +7,8 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
@@ -22,11 +24,11 @@ class ArgumentStateBuffer(override val argumentRowId: Long,
   with Buffer[Morsel] {
 
   // MorselAccumulator
-  override def update(morsel: Morsel): Unit = put(morsel)
+  override def update(morsel: Morsel, resources: QueryResources): Unit = put(morsel, resources)
 
   // Buffer
-  override def put(morsel: Morsel): Unit = {
-    inner.put(morsel)
+  override def put(morsel: Morsel, resources: QueryResources): Unit = {
+    inner.put(morsel, resources)
   }
 
   override def canPut: Boolean = inner.canPut

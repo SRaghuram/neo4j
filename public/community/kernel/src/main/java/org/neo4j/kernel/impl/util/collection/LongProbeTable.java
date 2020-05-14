@@ -19,24 +19,27 @@
  */
 package org.neo4j.kernel.impl.util.collection;
 
-import org.eclipse.collections.impl.map.mutable.primitive.LongObjectHashMap;
+import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 
 import java.util.Iterator;
 
+import org.neo4j.collection.trackable.HeapTrackingAppendList;
+import org.neo4j.memory.Measurable;
 import org.neo4j.memory.MemoryTracker;
 import org.neo4j.memory.ScopedMemoryTracker;
 
 import static java.util.Collections.emptyIterator;
+import static org.neo4j.collection.trackable.HeapTrackingCollections.newLongObjectMap;
 import static org.neo4j.memory.HeapEstimator.shallowSizeOfInstance;
 
-public class LongProbeTable<V> implements AutoCloseable
+public class LongProbeTable<V extends Measurable> implements AutoCloseable
 {
     private static final long SHALLOW_SIZE = shallowSizeOfInstance( LongProbeTable.class );
     static final long SCOPED_MEMORY_TRACKER_SHALLOW_SIZE = shallowSizeOfInstance( ScopedMemoryTracker.class );
     private final ScopedMemoryTracker scopedMemoryTracker;
-    private final LongObjectHashMap<HeapTrackingAppendList<V>> map;
+    private final MutableLongObjectMap<HeapTrackingAppendList<V>> map;
 
-    public static <V> LongProbeTable<V> createLongProbeTable( MemoryTracker memoryTracker )
+    public static <V extends Measurable> LongProbeTable<V> createLongProbeTable( MemoryTracker memoryTracker )
     {
         ScopedMemoryTracker scopedMemoryTracker = new ScopedMemoryTracker( memoryTracker );
         scopedMemoryTracker.allocateHeap( SHALLOW_SIZE + SCOPED_MEMORY_TRACKER_SHALLOW_SIZE );
@@ -46,12 +49,13 @@ public class LongProbeTable<V> implements AutoCloseable
     private LongProbeTable( ScopedMemoryTracker scopedMemoryTracker )
     {
         this.scopedMemoryTracker = scopedMemoryTracker;
-        this.map = HeapTrackingLongObjectHashMap.createLongObjectHashMap( scopedMemoryTracker );
+        this.map = newLongObjectMap( scopedMemoryTracker );
     }
 
     public void put( long key, V value )
     {
         map.getIfAbsentPutWith( key, HeapTrackingAppendList::newAppendList, scopedMemoryTracker ).add( value );
+        scopedMemoryTracker.allocateHeap( value.estimatedHeapUsage() );
     }
 
     public Iterator<V> get( long key )
@@ -62,6 +66,11 @@ public class LongProbeTable<V> implements AutoCloseable
             return emptyIterator();
         }
         return entry.iterator();
+    }
+
+    public boolean isEmpty()
+    {
+        return map.isEmpty();
     }
 
     @Override

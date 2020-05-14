@@ -5,7 +5,7 @@
  */
 package com.neo4j;
 
-import com.neo4j.fabric.config.FabricSettings;
+import com.neo4j.fabric.config.FabricEnterpriseSettings;
 import com.neo4j.utils.StdoutLogProvider;
 
 import java.io.IOException;
@@ -106,7 +106,7 @@ public class TestServer implements AutoCloseable
         var hostPort = getHostnamePort();
         if ( hostPort != null )
         {
-            runtimeConfig.setDynamic( FabricSettings.fabricServersSetting, List.of( new SocketAddress( hostPort.getHost(), hostPort.getPort() ) ),
+            runtimeConfig.setDynamic( FabricEnterpriseSettings.fabricServersSetting, List.of( new SocketAddress( hostPort.getHost(), hostPort.getPort() ) ),
                     "TestServer" );
         }
     }

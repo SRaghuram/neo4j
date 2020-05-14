@@ -6,13 +6,13 @@
 package com.neo4j.bench.jmh.api;
 
 import com.google.common.collect.ImmutableSet;
-import com.neo4j.bench.common.model.BenchmarkGroupBenchmark;
-import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
-import com.neo4j.bench.common.model.Metrics;
-import com.neo4j.bench.common.model.TestRunError;
+import com.neo4j.bench.model.model.BenchmarkGroupBenchmark;
+import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
+import com.neo4j.bench.model.model.Metrics;
+import com.neo4j.bench.model.model.TestRunError;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
-import com.neo4j.bench.common.profiling.RecordingType;
+import com.neo4j.bench.model.profiling.RecordingType;
 import com.neo4j.bench.common.util.ErrorReporter;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.jmh.api.config.BenchmarkConfigFile;
@@ -32,7 +32,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
 
-import static com.google.common.collect.Lists.newArrayList;
 import static com.neo4j.bench.common.profiling.ParameterizedProfiler.defaultProfilers;
 import static java.util.stream.Collectors.joining;
 import static org.hamcrest.MatcherAssert.assertThat;

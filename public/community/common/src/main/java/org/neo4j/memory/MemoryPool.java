@@ -35,7 +35,7 @@ public interface MemoryPool
      * Grab a chunk of memory. This method might throw if there is no available memory.
      *
      * @param bytes number of bytes to reserve
-     * @throws HeapMemoryLimitExceeded if the are not enough free memory to fulfill the reservation
+     * @throws MemoryLimitExceeded if the are not enough free memory to fulfill the reservation
      */
     void reserveHeap( long bytes );
 
@@ -43,7 +43,7 @@ public interface MemoryPool
      * Grab a chunk of native memory. This method might throw if there is no available memory.
      *
      * @param bytes number of bytes to reserve
-     * @throws HeapMemoryLimitExceeded if the are not enough free memory to fulfill the reservation
+     * @throws MemoryLimitExceeded if the are not enough free memory to fulfill the reservation
      */
     void reserveNative( long bytes );
 
@@ -87,7 +87,10 @@ public interface MemoryPool
      *
      * @return the total number or reserved bytes.
      */
-    long totalUsed();
+    default long totalUsed()
+    {
+        return usedHeap() + usedNative();
+    }
 
     /**
      * Returns the number of bytes that can still be reserved from this pool.
@@ -95,4 +98,11 @@ public interface MemoryPool
      * @return the number of bytes that are not used by anyone.
      */
     long free();
+
+    /**
+     * Updates the total size of the pool.
+     *
+     * @param size the new size of the pool.
+     */
+    void setSize( long size );
 }

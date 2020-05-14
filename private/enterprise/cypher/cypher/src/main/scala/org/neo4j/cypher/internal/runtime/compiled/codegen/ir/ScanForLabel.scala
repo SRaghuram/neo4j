@@ -8,14 +8,15 @@ package org.neo4j.cypher.internal.runtime.compiled.codegen.ir
 import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.Variable
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
+import org.neo4j.internal.schema.IndexOrder
 
-case class ScanForLabel(opName: String, labelName: String, labelVar: String) extends LoopDataGenerator {
+case class ScanForLabel(opName: String, labelName: String, labelVar: String, indexOrder: IndexOrder) extends LoopDataGenerator {
 
   override def init[E](generator: MethodStructure[E])(implicit context: CodeGenContext) =
     generator.lookupLabelId(labelVar, labelName)
 
   override def produceLoopData[E](cursorName: String, generator: MethodStructure[E])(implicit context: CodeGenContext) = {
-    generator.labelScan(cursorName, labelVar)
+    generator.labelScan(cursorName, labelVar, indexOrder)
     generator.incrementDbHits()
   }
 

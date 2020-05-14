@@ -45,7 +45,7 @@ public class StoreCopyProcess
         try ( TemporaryStoreDirectory tempStore = new TemporaryStoreDirectory( fs, pageCache, clusteredDatabaseContext.databaseLayout(),
                 clusteredDatabaseContext.database().getStorageEngineFactory() ) )
         {
-            remoteStore.copy( addressProvider, expectedStoreId, tempStore.databaseLayout(), false );
+            remoteStore.copy( addressProvider, expectedStoreId, tempStore.databaseLayout() );
             try
             {
                 copiedStoreRecovery.recoverCopiedStore( config, tempStore.databaseLayout() );

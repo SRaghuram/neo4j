@@ -584,10 +584,15 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         assertSuccess( adminSubject, "CALL dbms.listPools()", r ->
         {
             List<Map<String,Object>> maps = collectResults( r );
-            assertEquals( 3, maps.size() );
-            assertTrue( maps.stream().anyMatch( map -> "neo4j transactions pool".equals( map.get( "poolName" ) ) ) );
-            assertTrue( maps.stream().anyMatch( map -> "system transactions pool".equals( map.get( "poolName" ) ) ) );
-            assertTrue( maps.stream().anyMatch( map -> "Global Page Cache Pool".equals( map.get( "poolName" ) ) ) );
+            assertEquals( 8, maps.size() );
+            assertTrue( maps.stream().anyMatch( map -> "Transaction".equals( map.get( "group" ) ) ) );
+            assertTrue( maps.stream().anyMatch( map -> "Transaction".equals( map.get( "group" ) ) && "system".equals( map.get( "databaseName" ) ) ) );
+            assertTrue( maps.stream().anyMatch( map -> "Transaction".equals( map.get( "group" ) ) && "neo4j".equals( map.get( "databaseName" ) ) ) );
+            assertTrue( maps.stream().anyMatch( map -> "Other".equals( map.get( "group" ) ) ) );
+            assertTrue( maps.stream().anyMatch( map -> "Other".equals( map.get( "group" ) ) && "system".equals( map.get( "databaseName" ) ) ) );
+            assertTrue( maps.stream().anyMatch( map -> "Other".equals( map.get( "group" ) ) && "neo4j".equals( map.get( "databaseName" ) ) ) );
+            assertTrue( maps.stream().anyMatch( map -> "Netty".equals( map.get( "group" ) ) ) );
+            assertTrue( maps.stream().anyMatch( map -> "Page Cache".equals( map.get( "group" ) ) ) );
         } );
     }
 
@@ -1915,10 +1920,10 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         assertDDLCommandSuccess( adminSubject, String.format( "GRANT ROLE %s to notAllowedToWrite", READER ) );
         // should be able to invoke allowed procedure
         assertSuccess( neo.login( "notAllowedToWrite", "abc" ), "CALL test.allowedWriteProcedure()",
-                itr -> assertEquals( (int) itr.stream().count(), 2 ) );
+                itr -> assertEquals( 2, (int) itr.stream().count() ) );
         // should not be able to do writes
         assertFail( neo.login( "notAllowedToWrite", "abc" ),
-                "CALL test.allowedWriteProcedure() YIELD value CREATE (:NEWNODE {name:value})", WRITE_OPS_NOT_ALLOWED );
+                "CALL test.allowedWriteProcedure() YIELD value CREATE (:NEWNODE {name:value})", "Create node with labels 'NEWNODE' is not allowed" );
     }
 
     @Test
@@ -1932,7 +1937,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         assertSuccess( neo.login( "nopermission", "abc" ), "CALL test.numNodes()", r -> assertKeyIs( r, "count", "0" ) );
 
         // should not be able to invoke any procedure
-        assertFail( neo.login( "nopermission", "abc" ), "CALL test.staticWriteProcedure()", WRITE_OPS_NOT_ALLOWED );
+        assertFail( neo.login( "nopermission", "abc" ), "CALL test.staticWriteProcedure()", "Create node with labels '' is not allowed" );
         assertFail( neo.login( "nopermission", "abc" ), "CALL test.staticSchemaProcedure()", SCHEMA_OPS_NOT_ALLOWED );
     }
 
@@ -1941,7 +1946,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     {
         setupTestSubject();
         assertSuccess( neo.login( SUBJECT, PASSWORD ), "CALL test.allowedReadProcedure()",
-                itr -> assertEquals( (int) itr.stream().count(), 1 ) );
+                itr -> assertEquals( 1, (int) itr.stream().count() ) );
         assertSuccess( neo.login( SUBJECT, PASSWORD ), "CALL test.allowedReadProcedure() YIELD value MATCH (n) RETURN count(n) AS count",
                        itr -> assertThat( itr.next().get( "count" ), equalTo( valueOf( 0L ) ) ) );
     }
@@ -1970,7 +1975,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         setupTestSubject();
         assertFail( neo.login( SUBJECT, PASSWORD ),
                 "CALL test.nestedAllowedProcedure('test.allowedWriteProcedure') YIELD value",
-                WRITE_OPS_NOT_ALLOWED );
+                "Create node with labels 'VeryUniqueLabel' is not allowed" );
     }
 
     @Test
@@ -1980,7 +1985,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         assertDDLCommandSuccess( adminSubject, String.format( "GRANT ROLE %s TO %s", ADMIN, SUBJECT ) );
         assertFail( neo.login( SUBJECT, PASSWORD ),
                 "CALL test.nestedAllowedProcedure('test.allowedWriteProcedure') YIELD value",
-                WRITE_OPS_NOT_ALLOWED );
+                "Create node with labels 'VeryUniqueLabel' is not allowed" );
     }
 
     @Test
@@ -1989,7 +1994,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         setupTestSubject();
         assertFail( neo.login( SUBJECT, PASSWORD ),
                 "CALL test.failingNestedAllowedWriteProcedure YIELD value",
-                WRITE_OPS_NOT_ALLOWED );
+                "Create node with labels 'VeryUniqueLabel' is not allowed" );
     }
 
     @Test
@@ -2011,7 +2016,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         // Even if subject has WRITE permission the procedure should restrict to READ
         assertFail( neo.login( SUBJECT, PASSWORD ),
                 "CALL test.nestedReadProcedure('test.allowedWriteProcedure') YIELD value",
-                WRITE_OPS_NOT_ALLOWED );
+                "Create node with labels 'VeryUniqueLabel' is not allowed" );
     }
 
     @Test

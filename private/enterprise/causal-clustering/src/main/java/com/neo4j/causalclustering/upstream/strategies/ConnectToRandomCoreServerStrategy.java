@@ -10,8 +10,12 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Optional;
-import java.util.Random;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -20,7 +24,6 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 public class ConnectToRandomCoreServerStrategy extends UpstreamDatabaseSelectionStrategy
 {
     static final String IDENTITY = "connect-to-random-core-server";
-    private final Random random = new Random();
 
     public ConnectToRandomCoreServerStrategy()
     {
@@ -30,6 +33,17 @@ public class ConnectToRandomCoreServerStrategy extends UpstreamDatabaseSelection
     @Override
     public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
     {
+        return choices( namedDatabaseId ).findFirst();
+    }
+
+    @Override
+    public Collection<MemberId> upstreamMembersForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
+    {
+        return choices( namedDatabaseId ).collect( Collectors.toList() );
+    }
+
+    private Stream<MemberId> choices( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
+    {
         final DatabaseCoreTopology coreTopology = topologyService.coreTopologyForDatabase( namedDatabaseId );
 
         if ( coreTopology.members().isEmpty() )
@@ -37,8 +51,8 @@ public class ConnectToRandomCoreServerStrategy extends UpstreamDatabaseSelection
             throw new UpstreamDatabaseSelectionException( "No core servers available" );
         }
 
-        int skippedServers = random.nextInt( coreTopology.members().size() );
-
-        return coreTopology.members().keySet().stream().skip( skippedServers ).findFirst();
+        var members = new ArrayList<>( coreTopology.members().keySet() );
+        Collections.shuffle( members );
+        return members.stream();
     }
 }

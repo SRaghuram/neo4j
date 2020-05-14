@@ -214,7 +214,6 @@ Feature "UnwindAcceptance": Scenario "Creating nodes from an unwound parameter l
 Feature "UnwindAcceptance": Scenario "Unwind with merge"
 
 // TCK needs to be updated, expects wrong error type or message
-Feature "ExpressionAcceptance": Scenario "Fail at runtime when trying to index into a map with a non-string"
 Feature "ExpressionAcceptance": Scenario "Fail at runtime when trying to index something which is not a map or list"
 Feature "ListOperations": Scenario "Fail at runtime when trying to index into a list with a list"
 Feature "SkipLimitAcceptanceTest": Scenario "Floating point parameter for LIMIT should fail"

@@ -61,6 +61,7 @@ import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
 import org.neo4j.kernel.impl.store.record.SchemaRecord;
 import org.neo4j.lock.LockService;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.storageengine.api.CommandsToApply;
 import org.neo4j.storageengine.api.EntityTokenUpdateListener;
 import org.neo4j.storageengine.api.IndexUpdateListener;
@@ -87,6 +88,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.internal.schema.SchemaDescriptor.forLabel;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.INTERNAL;
 
 class NeoStoreTransactionApplierTest
@@ -252,7 +254,8 @@ class NeoStoreTransactionApplierTest
         // given
         TransactionApplierFactory applier = newApplier( false );
         RelationshipRecord before = new RelationshipRecord( 12 );
-        RelationshipRecord record = new RelationshipRecord( 12, 3, 4, 5 );
+        RelationshipRecord record = new RelationshipRecord( 12 );
+        record.setLinks( 3, 4, 5 );
         record.setInUse( true );
 
         Command command = new Command.RelationshipCommand( before, record );
@@ -271,7 +274,8 @@ class NeoStoreTransactionApplierTest
         // given
         TransactionApplierFactory applier = newApplier( false );
         RelationshipRecord before = new RelationshipRecord( 12 );
-        RelationshipRecord record = new RelationshipRecord( 12, 3, 4, 5 );
+        RelationshipRecord record = new RelationshipRecord( 12 );
+        record.setLinks( 3, 4, 5 );
         record.setInUse( false );
 
         Command command = new Command.RelationshipCommand( before, record );
@@ -291,7 +295,8 @@ class NeoStoreTransactionApplierTest
         // given
         TransactionApplierFactory applier = newApplier( true );
         RelationshipRecord before = new RelationshipRecord( 12 );
-        RelationshipRecord record = new RelationshipRecord( 12, 3, 4, 5 );
+        RelationshipRecord record = new RelationshipRecord( 12 );
+        record.setLinks( 3, 4, 5 );
         record.setInUse( true );
         Command command = new Command.RelationshipCommand( before, record );
 
@@ -618,7 +623,7 @@ class NeoStoreTransactionApplierTest
     {
         // given
         var batchContext = new BatchContext( indexingService, labelScanStoreSynchronizer, relationshipTypeScanStoreSync, indexUpdatesSync, nodeStore,
-                propertyStore, mock( RecordStorageEngine.class ), mock( SchemaCache.class ), NULL, IdUpdateListener.IGNORE );
+                propertyStore, mock( RecordStorageEngine.class ), mock( SchemaCache.class ), NULL, INSTANCE, IdUpdateListener.IGNORE );
         TransactionApplierFactory applier = newApplierFacade( newIndexApplier(), newApplier( false ) );
         SchemaRecord before = new SchemaRecord( 21 );
         SchemaRecord after = before.copy().initialize( true, Record.NO_NEXT_PROPERTY.longValue() );
@@ -642,7 +647,7 @@ class NeoStoreTransactionApplierTest
     {
         // given
         var batchContext = new BatchContext( indexingService, labelScanStoreSynchronizer, relationshipTypeScanStoreSync, indexUpdatesSync, nodeStore,
-                propertyStore, mock( RecordStorageEngine.class ), mock( SchemaCache.class ), NULL, IdUpdateListener.IGNORE );
+                propertyStore, mock( RecordStorageEngine.class ), mock( SchemaCache.class ), NULL, INSTANCE, IdUpdateListener.IGNORE );
         TransactionApplierFactory applier = newApplierFacade( newIndexApplier(), newApplier( true ) );
         SchemaRecord before = new SchemaRecord( 21 );
         SchemaRecord after = before.copy().initialize( true, Record.NO_NEXT_PROPERTY.longValue() );

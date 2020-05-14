@@ -56,7 +56,7 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-fabric</artifactId>
+            <artifactId>neo4j-enterprise-fabric</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

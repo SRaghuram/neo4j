@@ -14,6 +14,7 @@ import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.AbstractDatabaseManager;
 import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseOperationCounts;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.kernel.database.Database;
@@ -27,6 +28,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
 {
     private final long maximumNumberOfDatabases;
     private volatile boolean databaseManagerStarted;
+    private DatabaseOperationCounts.Counter operationCounts;
 
     public MultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition )
     {
@@ -36,6 +38,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
     MultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, boolean manageDatabasesOnStartAndStop )
     {
         super( globalModule, edition, manageDatabasesOnStartAndStop );
+        operationCounts = globalModule.getGlobalDependencies().resolveDependency( DatabaseOperationCounts.Counter.class );
         maximumNumberOfDatabases = globalModule.getGlobalConfig().get( maxNumberOfDatabases );
     }
 
@@ -66,6 +69,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
 
         databaseMap.put( namedDatabaseId, databaseContext );
         databaseIdRepository().cache( namedDatabaseId );
+        operationCounts.increaseCreateCount();
 
         return databaseContext;
     }
@@ -84,18 +88,21 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
             throw new DatabaseManagementException( "System database can't be dropped." );
         }
         forSingleDatabase( namedDatabaseId, this::dropDatabase );
+        operationCounts.increaseDropCount();
     }
 
     @Override
     public void stopDatabase( NamedDatabaseId namedDatabaseId ) throws DatabaseNotFoundException
     {
         forSingleDatabase( namedDatabaseId, this::stopDatabase );
+        operationCounts.increaseStopCount();
     }
 
     @Override
     public void startDatabase( NamedDatabaseId namedDatabaseId ) throws DatabaseNotFoundException
     {
         forSingleDatabase( namedDatabaseId, this::startDatabase );
+        operationCounts.increaseStartCount();
     }
 
     protected final void forSingleDatabase( NamedDatabaseId namedDatabaseId, BiConsumer<NamedDatabaseId,DB> consumer )

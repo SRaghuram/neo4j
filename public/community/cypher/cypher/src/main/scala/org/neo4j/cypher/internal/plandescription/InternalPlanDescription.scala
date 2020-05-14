@@ -21,8 +21,10 @@ package org.neo4j.cypher.internal.plandescription
 
 import java.util
 
+import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
 import org.neo4j.cypher.internal.plandescription.Arguments.ByteCode
 import org.neo4j.cypher.internal.plandescription.Arguments.DbHits
+import org.neo4j.cypher.internal.plandescription.Arguments.Details
 import org.neo4j.cypher.internal.plandescription.Arguments.PageCacheHitRatio
 import org.neo4j.cypher.internal.plandescription.Arguments.PageCacheHits
 import org.neo4j.cypher.internal.plandescription.Arguments.PageCacheMisses
@@ -42,8 +44,8 @@ import org.neo4j.graphdb.ExecutionPlanDescription.ProfilerStatistics
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.JavaConverters.setAsJavaSetConverter
-import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.ArrayStack
 
 /**
  * Abstract description of an execution plan
@@ -59,7 +61,7 @@ sealed trait InternalPlanDescription extends org.neo4j.graphdb.ExecutionPlanDesc
 
   def children: Children
 
-  def variables: Set[String]
+  def variables: Set[PrettyString]
 
   def cd(name: String): InternalPlanDescription = children.find(name).head
 
@@ -71,7 +73,7 @@ sealed trait InternalPlanDescription extends org.neo4j.graphdb.ExecutionPlanDesc
 
   def flatten: Seq[InternalPlanDescription] = {
     val flatten = new ArrayBuffer[InternalPlanDescription]
-    val stack = new mutable.Stack[InternalPlanDescription]()
+    val stack = new ArrayStack[InternalPlanDescription]()
     stack.push(self)
     while (stack.nonEmpty) {
       val plan = stack.pop()
@@ -87,8 +89,6 @@ sealed trait InternalPlanDescription extends org.neo4j.graphdb.ExecutionPlanDesc
     }
     flatten
   }
-
-  def orderedVariables: Seq[String] = variables.toIndexedSeq.sorted
 
   def totalDbHits: TotalHits = {
     val allMaybeDbHits: Seq[TotalHits] = flatten.map {
@@ -108,7 +108,7 @@ sealed trait InternalPlanDescription extends org.neo4j.graphdb.ExecutionPlanDesc
   override def getArguments: util.Map[String, AnyRef] =
     arguments.map { arg => arg.name -> PlanDescriptionArgumentSerializer.serialize(arg) }.toMap.asJava
 
-  override def getIdentifiers: util.Set[String] = orderedVariables.toSet.asJava
+  override def getIdentifiers: util.Set[String] = variables.map(_.prettifiedString).asJava
 
   override def hasProfilerStatistics: Boolean = arguments.exists(_.isInstanceOf[DbHits])
 
@@ -189,7 +189,9 @@ final case class PlanDescriptionImpl(id: Id,
                                      name: String,
                                      children: Children,
                                      arguments: Seq[Argument],
-                                     variables: Set[String]) extends InternalPlanDescription {
+                                     variables: Set[PrettyString]) extends InternalPlanDescription {
+
+  checkOnlyWhenAssertionsAreEnabled(arguments.count(_.isInstanceOf[Details]) < 2)
 
   def find(name: String): Seq[InternalPlanDescription] =
     children.find(name) ++ (if (this.name == name)
@@ -245,7 +247,7 @@ final case class CompactedPlanDescription(similar: Seq[InternalPlanDescription])
 
   override def name: String = s"${similar.head.name}(${similar.size})"
 
-  override lazy val variables: Set[String] = similar.foldLeft(Set.empty[String]) { (acc, plan) =>
+  override lazy val variables: Set[PrettyString] = similar.foldLeft(Set.empty[PrettyString]) { (acc, plan) =>
     acc ++ plan.variables
   }
 
@@ -290,7 +292,7 @@ final case class CompactedPlanDescription(similar: Seq[InternalPlanDescription])
 
 final case class ArgumentPlanDescription(id: Id,
                                          arguments: Seq[Argument] = Seq.empty,
-                                         variables: Set[String])
+                                         variables: Set[PrettyString])
   extends InternalPlanDescription {
 
   def children = NoChildren

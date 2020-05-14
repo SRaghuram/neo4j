@@ -74,7 +74,10 @@ object LogicalPlanToPlanBuilderString {
     val specialCases: PartialFunction[LogicalPlan, String] = {
       case _:ProduceResult => "produceResults"
       case _:AllNodesScan => "allNodeScan"
+      case e:Expand if e.mode == ExpandAll && e.expandProperties.nonEmpty => "expand"
       case e:Expand => if(e.mode == ExpandAll) "expandAll" else "expandInto"
+      case e:Expand => if(e.mode == ExpandAll) "expandAll" else "expandInto"
+      case e:Expand if e.mode == ExpandAll && e.expandProperties.nonEmpty => "expand"
       case _:VarExpand => "expand"
       case e:OptionalExpand => if(e.mode == ExpandAll) "optionalExpandAll" else "optionalExpandInto"
       case _:Selection => "filter"
@@ -119,9 +122,9 @@ object LogicalPlanToPlanBuilderString {
         wrapInQuotationsAndMkString(properties.toSeq.map(expressionStringifier(_)))
       case Create(_, nodes, _) =>
         nodes.map(createNode => "createNode(" + wrapInQuotationsAndMkString(createNode.idName +: createNode.labels.map(_.name)) + ")").mkString(", ")
-      case Expand(_, from, dir, _, to, relName, _) =>
+      case Expand(_, from, dir, _, to, relName, _, expandProperties) =>
         val (dirStrA, dirStrB) = arrows(dir)
-        s""" "($from)$dirStrA[$relName]$dirStrB($to)" """.trim
+        s""" "($from)$dirStrA[$relName]$dirStrB($to)"${propertiesToCache(expandProperties)}""".trim
       case VarExpand(_, from, dir, pDir, types, to, relName, length, mode, nodePredicate, relationshipPredicate) =>
         val (dirStrA, dirStrB) = arrows(dir)
         val typeStr = relTypeStr(types)
@@ -158,14 +161,14 @@ object LogicalPlanToPlanBuilderString {
         integerString(count)
       case Skip(_, count) =>
         integerString(count)
-      case NodeByLabelScan(idName, label, argumentIds) =>
-        wrapInQuotationsAndMkString(idName +: label.name +: argumentIds.toSeq)
+      case NodeByLabelScan(idName, label, argumentIds, indexOrder) =>
+        s""" "$idName", "${label.name}", ${objectName(indexOrder)}, ${wrapInQuotationsAndMkString(argumentIds)} """.trim
       case Optional(_, protectedSymbols) =>
         wrapInQuotationsAndMkString(protectedSymbols)
-      case OptionalExpand(_, from, dir, _, to, relName, _, predicate) =>
+      case OptionalExpand(_, from, dir, _, to, relName, _, predicate, expandProperties) =>
         val (dirStrA, dirStrB) = arrows(dir)
         val predStr = predicate.fold("")(p => s""", Some("${expressionStringifier(p)}")""")
-        s""" "($from)$dirStrA[$relName]$dirStrB($to)"$predStr """.trim
+        s""" "($from)$dirStrA[$relName]$dirStrB($to)"$predStr${propertiesToCache(expandProperties)}""".trim
       case ProcedureCall(_, ResolvedCall(ProcedureSignature(QualifiedName(namespace, name), _, _, _, _, _, _, _, _, _), callArguments, callResults, _, _)) =>
         val yielding = if(callResults.isEmpty) "" else callResults.map(i => expressionStringifier(i.variable)).mkString(" YIELD ", ",", "")
         s""" "${namespace.mkString(".")}.$name(${callArguments.map(expressionStringifier(_)).mkString(", ")})$yielding" """.trim
@@ -230,6 +233,8 @@ object LogicalPlanToPlanBuilderString {
         s""" ${wrapInQuotationsAndMkString(Seq(idName, expressionStringifier(expression)))}, $removeOtherProps """.trim
       case Selection(ands, _) =>
         wrapInQuotationsAndMkString(ands.exprs.map(expressionStringifier(_)))
+      case SelectOrSemiApply(_, _, predicate) => wrapInQuotations(expressionStringifier(predicate))
+      case SelectOrAntiSemiApply(_, _, predicate) => wrapInQuotations(expressionStringifier(predicate))
       case NodeByIdSeek(idName, ids, argumentIds) =>
         val idsString: String = idsStr(ids)
         s""" ${wrapInQuotations(idName)}, Set(${wrapInQuotationsAndMkString(argumentIds)}), $idsString """.trim
@@ -260,12 +265,29 @@ object LogicalPlanToPlanBuilderString {
         indexOperator(idName, labelToken, properties, argumentIds, indexOrder, unique = true, queryStr)
       case RollUpApply(_, _, collectionName, variableToCollect, nullableVariables) =>
         s"""${wrapInQuotations(collectionName)}, ${wrapInQuotations(variableToCollect)}, Set(${wrapInQuotationsAndMkString(nullableVariables)})"""
+      case ConditionalApply(_, _, items) => wrapInQuotationsAndMkString(items)
     }
     val plansWithContent2: PartialFunction[LogicalPlan, String] = {
       case MultiNodeIndexSeek(indexSeekLeafPlans: Seq[IndexSeekLeafPlan]) =>
         indexSeekLeafPlans.map(p => s"_.indexSeek(${plansWithContent(p)})").mkString(", ")
     }
     plansWithContent.orElse(plansWithContent2).applyOrElse(logicalPlan, (_: LogicalPlan) => "")
+  }
+
+  private def propertiesToCache(expandProperties: Option[ExpandCursorProperties]) = {
+    expandProperties.map(p => {
+      val sb = new StringBuilder
+      if (p.nodeProperties.nonEmpty) {
+        sb.append(", ")
+        sb.append(s"""cacheNodeProperties = Seq(${p.nodeProperties.map(p => s""""${p.propertyKeyName.name}"""").mkString(", ")})""")
+      }
+      if (p.relProperties.nonEmpty) {
+        sb.append(", ")
+        sb.append(s"""cacheRelProperties = Seq(${p.relProperties.map(p => s""""${p.propertyKeyName.name}"""").mkString(", ")})"""
+        )
+      }
+      sb.toString()
+    }).getOrElse(" ")
   }
 
   private def queryExpressionStr(valueExpr: QueryExpression[Expression],

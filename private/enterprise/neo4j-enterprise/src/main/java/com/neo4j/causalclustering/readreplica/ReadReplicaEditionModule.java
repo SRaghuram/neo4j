@@ -32,7 +32,7 @@ import com.neo4j.dbms.SystemDbOnlyReplicatedDatabaseEventService;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 import com.neo4j.dbms.procedures.ClusteredDatabaseStateProcedure;
 import com.neo4j.enterprise.edition.AbstractEnterpriseEditionModule;
-import com.neo4j.fabric.bootstrap.FabricServicesBootstrap;
+import com.neo4j.fabric.bootstrap.EnterpriseFabricServicesBootstrap;
 import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
@@ -63,6 +63,7 @@ import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseComponent
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
+import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -79,6 +80,7 @@ import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.SystemNanoClock;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.status_throughput_window;
+import static java.util.UUID.randomUUID;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 /**
@@ -104,9 +106,15 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     private DatabaseStartAborter databaseStartAborter;
     private final ClusterStateStorageFactory storageFactory;
     private final ClusterStateLayout clusterStateLayout;
-    private final FabricServicesBootstrap fabricServicesBootstrap;
+    private final EnterpriseFabricServicesBootstrap fabricServicesBootstrap;
+    private AuthManager inClusterAuthManager;
 
-    public ReadReplicaEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory, MemberId myIdentity )
+    public ReadReplicaEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory )
+    {
+        this( globalModule, discoveryServiceFactory, new MemberId( randomUUID() ) );
+    }
+
+    public ReadReplicaEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory, final MemberId myIdentity )
     {
         super( globalModule );
 
@@ -142,7 +150,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
 
         final File dataDir = globalConfig.get( GraphDatabaseSettings.data_directory ).toFile();
         clusterStateLayout = ClusterStateLayout.of( dataDir );
-        storageFactory = new ClusterStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig );
+        storageFactory = new ClusterStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig,
+                globalModule.getOtherMemoryPool().getPoolMemoryTracker() );
 
         addThroughputMonitorService();
 
@@ -150,7 +159,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
 
         editionInvariants( globalModule, globalDependencies );
 
-        fabricServicesBootstrap = new FabricServicesBootstrap.ReadReplica( globalModule.getGlobalLife(), globalDependencies, logService );
+        fabricServicesBootstrap = new EnterpriseFabricServicesBootstrap.ReadReplica( globalModule.getGlobalLife(), globalDependencies, logService );
     }
 
     private void addThroughputMonitorService()
@@ -225,7 +234,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
                 .databaseFacade();
         var dbmsModel = new ClusterSystemGraphDbmsModel( systemDbSupplier );
         reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager,
-                databaseEventService, storageFactory, reconciledTxTracker, panicService, dbmsModel );
+                databaseEventService, storageFactory, reconciledTxTracker, dbmsModel );
 
         topologyService = createTopologyService( databaseManager, reconcilerModule.reconciler(), globalLogService );
         reconcilerModule.reconciler().registerListener( topologyService );
@@ -279,10 +288,12 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
             securityModule.setup();
             globalModule.getGlobalLife().add( securityModule );
             securityProvider = securityModule;
+            inClusterAuthManager = securityModule.getInClusterAuthManager();
         }
         else
         {
             securityProvider = EnterpriseNoAuthSecurityProvider.INSTANCE;
+            inClusterAuthManager = EnterpriseNoAuthSecurityProvider.INSTANCE.authManager();
         }
         setSecurityProvider( securityProvider );
     }
@@ -332,5 +343,11 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     {
         var kernelDatabaseManagementService = super.createBoltDatabaseManagementServiceProvider(dependencies, managementService, monitors, clock, logService);
         return fabricServicesBootstrap.createBoltDatabaseManagementServiceProvider( kernelDatabaseManagementService, managementService, monitors, clock );
+    }
+
+    @Override
+    public AuthManager getBoltInClusterAuthManager()
+    {
+        return inClusterAuthManager;
     }
 }

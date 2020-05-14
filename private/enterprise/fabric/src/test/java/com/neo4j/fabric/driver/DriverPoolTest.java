@@ -6,8 +6,7 @@
 package com.neo4j.fabric.driver;
 
 import com.neo4j.fabric.auth.CredentialsProvider;
-import com.neo4j.fabric.config.FabricConfig;
-import com.neo4j.fabric.executor.Location;
+import com.neo4j.fabric.config.FabricEnterpriseConfig;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +20,7 @@ import java.time.Duration;
 import org.neo4j.configuration.Config;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.AuthTokens;
+import org.neo4j.fabric.executor.Location;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
@@ -45,7 +45,7 @@ class DriverPoolTest
     private static Neo4j shard1;
 
     private final JobScheduler jobScheduler = mock( JobScheduler.class );
-    private final FabricConfig fabricConfig = mock( FabricConfig.class );
+    private final FabricEnterpriseConfig fabricConfig = mock( FabricEnterpriseConfig.class );
     private final Config config = mock( Config.class );
 
     private final Location.Remote s1 = new Location.Remote.External( 1, null, createUri( shard0.boltURI().toString() ), "db1" );
@@ -79,17 +79,17 @@ class DriverPoolTest
     @BeforeEach
     void beforeEach()
     {
-        var driverConfig = mock( FabricConfig.DriverConfig.class );
+        var driverConfig = mock( FabricEnterpriseConfig.DriverConfig.class );
         when( driverConfig.getMaxConnectionPoolSize() ).thenReturn( 10 );
         when( driverConfig.getLoggingLevel() ).thenReturn( Level.INFO );
         when( driverConfig.getDriverApi() ).thenReturn(  DriverConfigFactory.DriverApi.RX );
 
-        var remoteGraphDriver = new FabricConfig.GlobalDriverConfig( idleTimeout, ofMinutes( 1 ), 1, driverConfig );
+        var remoteGraphDriver = new FabricEnterpriseConfig.GlobalDriverConfig( idleTimeout, ofMinutes( 1 ), 1, driverConfig );
         when( fabricConfig.getGlobalDriverConfig() ).thenReturn( remoteGraphDriver );
         when( credentialsProvider.credentialsFor( as1 ) ).thenReturn( at1 );
         when( credentialsProvider.credentialsFor( as2 ) ).thenReturn( at2 );
 
-        var database = mock(FabricConfig.Database.class );
+        var database = mock( FabricEnterpriseConfig.Database.class );
         when( fabricConfig.getDatabase() ).thenReturn( database );
 
         var driverConfigFactory = new ExternalDriverConfigFactory( fabricConfig, config, mock(SslPolicyLoader.class ) );

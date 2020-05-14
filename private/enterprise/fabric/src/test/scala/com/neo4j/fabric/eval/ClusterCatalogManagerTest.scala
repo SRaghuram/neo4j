@@ -10,31 +10,35 @@ import java.util
 import java.util.UUID
 
 import com.neo4j.causalclustering.identity.MemberId
-import com.neo4j.fabric.FabricTest
-import com.neo4j.fabric.config.FabricConfig
-import com.neo4j.fabric.config.FabricConfig.GlobalDriverConfig
-import com.neo4j.fabric.config.FabricConfig.Graph
-import com.neo4j.fabric.eval.Catalog.ExternalGraph
-import com.neo4j.fabric.eval.Catalog.InternalGraph
-import com.neo4j.fabric.executor.Location
+import com.neo4j.fabric.config.FabricEnterpriseConfig
+import com.neo4j.fabric.config.FabricEnterpriseConfig.GlobalDriverConfig
+import com.neo4j.fabric.config.FabricEnterpriseConfig.Graph
 import org.neo4j.configuration.helpers.NormalizedDatabaseName
 import org.neo4j.configuration.helpers.NormalizedGraphName
 import org.neo4j.configuration.helpers.SocketAddress
 import org.neo4j.cypher.internal.ast.CatalogName
+import org.neo4j.dbms.api.DatabaseManagementService
+import org.neo4j.fabric.FabricTest
+import org.neo4j.fabric.config.FabricConfig
+import org.neo4j.fabric.eval.Catalog.ExternalGraph
+import org.neo4j.fabric.eval.Catalog.InternalGraph
+import org.neo4j.fabric.eval.DatabaseLookup
+import org.neo4j.fabric.executor.Location
 import org.neo4j.kernel.database.DatabaseIdFactory
 import org.neo4j.kernel.database.NamedDatabaseId
 import org.neo4j.values.storable.Values
+import org.scalatest.mockito.MockitoSugar
 
 import scala.collection.JavaConverters.seqAsJavaListConverter
 
 class ClusterCatalogManagerTest extends FabricTest {
 
-  private val mega0 = new Graph(0L, FabricConfig.RemoteUri.create("bolt://mega:1111"), "neo4j0", new NormalizedGraphName("extA"), null)
-  private val mega1 = new Graph(1L, FabricConfig.RemoteUri.create("bolt://mega:2222"), "neo4j1", null, null)
-  private val mega2 = new Graph(2L, FabricConfig.RemoteUri.create("bolt://mega:3333"), "neo4j2", new NormalizedGraphName("extB"), null)
+  private val mega0 = new Graph(0L, FabricEnterpriseConfig.RemoteUri.create("bolt://mega:1111"), "neo4j0", new NormalizedGraphName("extA"), null)
+  private val mega1 = new Graph(1L, FabricEnterpriseConfig.RemoteUri.create("bolt://mega:2222"), "neo4j1", null, null)
+  private val mega2 = new Graph(2L, FabricEnterpriseConfig.RemoteUri.create("bolt://mega:3333"), "neo4j2", new NormalizedGraphName("extB"), null)
 
-  private val config = new FabricConfig(
-    new FabricConfig.Database(new NormalizedDatabaseName("mega"), util.Set.of(mega0, mega1, mega2)),
+  private val config = new FabricEnterpriseConfig(
+    new FabricEnterpriseConfig.Database(new NormalizedDatabaseName("mega"), util.Set.of(mega0, mega1, mega2)),
     util.List.of(), Duration.ZERO, Duration.ZERO,
     new GlobalDriverConfig(Duration.ZERO, Duration.ZERO, 0, null),
     new FabricConfig.DataStream(300, 1000, 50, 10)
@@ -54,12 +58,14 @@ class ClusterCatalogManagerTest extends FabricTest {
   private val remoteId = new MemberId(UUID.randomUUID())
   private val remoteAddress = new SocketAddress("remote", 1234)
   private val remoteAddresses = Map(remoteId -> remoteAddress)
+  private val databaseManagementService = MockitoSugar.mock[DatabaseManagementService]
 
   def createManager(leaderMapping: Map[NamedDatabaseId, MemberId]) = new ClusterCatalogManager(
     databaseLookup = new DatabaseLookup {
       def databaseIds: Set[NamedDatabaseId] = internalDbs
       def databaseId(databaseName: NormalizedDatabaseName): Option[NamedDatabaseId] = internalDbs.find(_.name() == databaseName.name())
     },
+    databaseManagementService,
     leaderLookup = new LeaderLookup {
       def memberId: MemberId = myId
       def leaderId(databaseId: NamedDatabaseId): Option[MemberId] = leaderMapping.get(databaseId)
@@ -207,10 +213,10 @@ class ClusterCatalogManagerTest extends FabricTest {
     }
   }
 
-  private def external(graph: FabricConfig.Graph) = ExternalGraph(graph, uuid(graph.getId))
+  private def external(graph: FabricEnterpriseConfig.Graph) = ExternalGraph(graph.getId, Option(graph.getName).map(_.name()), uuid(graph.getId))
   private def internal(id: Long, uuid: UUID, name: String) = InternalGraph(id, uuid, new NormalizedGraphName(name), new NormalizedDatabaseName(name))
 
-  private def remoteUri(uri: FabricConfig.RemoteUri): Location.RemoteUri = new Location.RemoteUri(uri.getScheme, uri.getAddresses, uri.getQuery)
+  private def remoteUri(uri: FabricEnterpriseConfig.RemoteUri): Location.RemoteUri = new Location.RemoteUri(uri.getScheme, uri.getAddresses, uri.getQuery)
   private def remoteUri(scheme: String, address: SocketAddress): Location.RemoteUri = new Location.RemoteUri(scheme, Seq(address).asJava, null)
 
   private def uuid(graphId: Long): UUID = new UUID(graphId, 0);

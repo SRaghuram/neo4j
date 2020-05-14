@@ -23,6 +23,7 @@ import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.LogicalQuery
 import org.neo4j.cypher.internal.RuntimeContext
 import org.neo4j.cypher.internal.logical.plans.Ascending
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.runtime.InputValues
 import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
@@ -154,9 +155,9 @@ abstract class ProfileMemoryTestBase[CONTEXT <: RuntimeContext](edition: Edition
       .produceResults("x")
       .nodeHashJoin("x", "y")
       .|.expand("(y)--(x)")
-      .|.nodeByLabelScan("y", "Y")
+      .|.nodeByLabelScan("y", "Y", IndexOrderNone)
       .expand("(x)--(y)")
-      .nodeByLabelScan("x", "X")
+      .nodeByLabelScan("x", "X", IndexOrderNone)
       .build()
 
     // then
@@ -195,6 +196,34 @@ abstract class ProfileMemoryTestBase[CONTEXT <: RuntimeContext](edition: Edition
     assertOnMemory(logicalQuery, NO_INPUT, 3, 1)
   }
 
+  test("should profile memory of partial top n, where n < max array size") {
+    val input = for (i <- 0 to SIZE) yield Array[Any](1, i)
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("y")
+      .partialTop(Seq(Ascending("x")), Seq(Ascending("y")), ArrayUtil.MAX_ARRAY_SIZE - 1L)
+      .input(variables = Seq("x", "y"))
+      .build()
+
+    // then
+    assertOnMemory(logicalQuery, inputValues(input:_*), 3, 1)
+  }
+
+  test("should profile memory of partial top n, where n > max array size") {
+    val input = for (i <- 0 to SIZE) yield Array[Any](1, i)
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("y")
+      .partialTop(Seq(Ascending("x")), Seq(Ascending("y")), ArrayUtil.MAX_ARRAY_SIZE + 1L)
+      .input(variables = Seq("x", "y"))
+      .build()
+
+    // then
+    assertOnMemory(logicalQuery, inputValues(input:_*), 3, 1)
+  }
+
   test("should profile memory of ordered distinct") {
     val input = for (i <- 0 to SIZE) yield Array[Any](1, i)
 
@@ -218,11 +247,29 @@ abstract class ProfileMemoryTestBase[CONTEXT <: RuntimeContext](edition: Edition
       .input(variables = Seq("x", "y"))
       .build()
 
-    val runtimeResult = profile(logicalQuery, runtime, inputValues(input:_*))
+    val runtimeResult = profile(logicalQuery, runtime, inputValues(input: _*))
     consume(runtimeResult)
 
     // then
-    assertOnMemory(logicalQuery, inputValues(input:_*), 3, 1)
+    assertOnMemory(logicalQuery, inputValues(input: _*), 3, 1)
+  }
+
+  test("should profile memory of var-length-expand") {
+    // given
+    val paths = given { chainGraphs(3, "TO", "TO", "TO", "TOO", "TO") }
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("y")
+      .distinct("y AS y")
+      .pruningVarExpand("(x)-[*2..4]->(y)")
+      .nodeByLabelScan("x", "START", IndexOrderNone)
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime)
+
+    // then
+    assertOnMemory(logicalQuery, NO_INPUT, 4, 1, 2)
   }
 
   //noinspection SameParameterValue
@@ -344,12 +391,63 @@ trait FullSupportProfileMemoryTestBase [CONTEXT <: RuntimeContext] {
       .produceResults("x")
       .expandInto("(x)-->(y)")
       .cartesianProduct()
-      .|.nodeByLabelScan("y", "Y")
-      .nodeByLabelScan("x", "X")
+      .|.nodeByLabelScan("y", "Y", IndexOrderNone)
+      .nodeByLabelScan("x", "X", IndexOrderNone)
       .build()
 
     // then
     assertOnMemory(logicalQuery, NO_INPUT, 5, 1)
   }
 
+  test("should profile memory of node left outer hash join") {
+    given {
+      nodeGraph(SIZE)
+    }
+
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .leftOuterHashJoin("x")
+      .|.allNodeScan("x")
+      .allNodeScan("x")
+      .build()
+
+    // then
+    assertOnMemory(logicalQuery, NO_INPUT, 4, 1)
+  }
+
+  test("should profile memory of node right outer hash join") {
+    given {
+      nodeGraph(SIZE)
+    }
+
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .rightOuterHashJoin("x")
+      .|.allNodeScan("x")
+      .allNodeScan("x")
+      .build()
+
+    // then
+    assertOnMemory(logicalQuery, NO_INPUT, 4, 1)
+  }
+
+  test("should profile memory of value hash join") {
+    // given
+    given {
+      nodePropertyGraph(SIZE, {
+        case i => Map("prop" -> i)
+      })
+    }
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("a", "b")
+      .valueHashJoin("a.prop=b.prop")
+      .|.allNodeScan("b")
+      .allNodeScan("a")
+      .build()
+
+    // then
+    assertOnMemory(logicalQuery, NO_INPUT, 4, 1)
+  }
 }

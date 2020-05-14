@@ -497,11 +497,15 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         }
         recordArgument(lp)
 
-      case Expand(_, _, _, _, to, relName, ExpandAll) =>
+      case Expand(_, from, _, _, to, relName, ExpandAll, expandProperties) =>
         slots.newLong(relName, nullable, CTRelationship)
         slots.newLong(to, nullable, CTNode)
+        for (rp <- expandProperties) {
+          rp.nodeProperties.foreach(n => slots.newCachedProperty(n.asCachedProperty))
+          rp.relProperties.foreach(r => slots.newCachedProperty(r.asCachedProperty))
+        }
 
-      case Expand(_, _, _, _, _, relName, ExpandInto) =>
+      case Expand(_, _, _, _, _, relName, ExpandInto, _) =>
         slots.newLong(relName, nullable, CTRelationship)
 
       case Optional(_, _) =>
@@ -534,13 +538,17 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
             slots.newReference(key, nullable = true, CTAny)
         }
 
-      case OptionalExpand(_, _, _, _, to, rel, ExpandAll, _) =>
+      case OptionalExpand(_, _, _, _, to, rel, ExpandAll, _, expandProperties) =>
         // Note that OptionExpand only is optional on the expand and not on incoming rows, so
         // we do not need to record the argument here.
         slots.newLong(rel, nullable = true, CTRelationship)
         slots.newLong(to, nullable = true, CTNode)
+        for (rp <- expandProperties) {
+          rp.nodeProperties.foreach(n => slots.newCachedProperty(n.asCachedProperty))
+          rp.relProperties.foreach(r => slots.newCachedProperty(r.asCachedProperty))
+        }
 
-      case OptionalExpand(_, _, _, _, _, rel, ExpandInto, _) =>
+      case OptionalExpand(_, _, _, _, _, rel, ExpandInto, _, _) =>
         // Note that OptionExpand only is optional on the expand and not on incoming rows, so
         // we do not need to record the argument here.
         slots.newLong(rel, nullable = true, CTRelationship)

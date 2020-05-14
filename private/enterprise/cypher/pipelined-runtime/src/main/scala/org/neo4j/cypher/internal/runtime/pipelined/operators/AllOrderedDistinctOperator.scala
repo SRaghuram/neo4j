@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
-import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
@@ -14,6 +13,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OrderedDistinctOperator.AbstractOrderedDistinctState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -28,13 +28,13 @@ class AllOrderedDistinctOperator(argumentStateMapId: ArgumentStateMapId,
                           stateFactory: StateFactory,
                           state: PipelinedQueryState,
                           resources: QueryResources): OperatorTask =
-    new DistinctOperatorTask(
-      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AllOrderedDistinctStateFactory(stateFactory.memoryTracker), ordered = false),
+    new OrderedDistinctOperatorTask(
+      argumentStateCreator.createArgumentStateMap(argumentStateMapId, AllOrderedDistinctStateFactory, ordered = false),
       workIdentity)
 
-  class AllOrderedDistinctStateFactory(memoryTracker: QueryMemoryTracker) extends ArgumentStateFactory[AllOrderedDistinctState] {
+  object AllOrderedDistinctStateFactory extends ArgumentStateFactory[AllOrderedDistinctState] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): AllOrderedDistinctState =
-      new AllOrderedDistinctState(argumentRowId, argumentRowIdsForReducers, memoryTracker)
+      new AllOrderedDistinctState(argumentRowId, argumentRowIdsForReducers)
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): AllOrderedDistinctState =
       throw new IllegalStateException("OrderedDistinct is not supported in parallel")
@@ -43,8 +43,7 @@ class AllOrderedDistinctOperator(argumentStateMapId: ArgumentStateMapId,
   }
 
   class AllOrderedDistinctState(override val argumentRowId: Long,
-                                override val argumentRowIdsForReducers: Array[Long],
-                                memoryTracker: QueryMemoryTracker) extends DistinctOperatorState {
+                                override val argumentRowIdsForReducers: Array[Long]) extends AbstractOrderedDistinctState {
 
     private var prevGroupingKey: groupings.KeyType = _
 

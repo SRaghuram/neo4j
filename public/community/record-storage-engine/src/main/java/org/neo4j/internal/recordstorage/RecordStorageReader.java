@@ -39,6 +39,7 @@ import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.kernel.impl.store.RelationshipGroupStore;
 import org.neo4j.kernel.impl.store.RelationshipStore;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.AllNodeScan;
 import org.neo4j.storageengine.api.AllRelationshipsScan;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
@@ -343,8 +344,8 @@ public class RecordStorageReader implements StorageReader
     }
 
     @Override
-    public StoragePropertyCursor allocatePropertyCursor( PageCursorTracer cursorTracer )
+    public StoragePropertyCursor allocatePropertyCursor( PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
-        return new RecordPropertyCursor( propertyStore, cursorTracer );
+        return new RecordPropertyCursor( propertyStore, cursorTracer, memoryTracker );
     }
 }

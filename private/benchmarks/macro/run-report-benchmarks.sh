@@ -5,14 +5,16 @@
 # This file is part of Neo4j internal tooling.
 #
 
+set -eux
 
-set -e
-set -u
-set -x
+if [[ -z "$JAVA_HOME" ]]; then
+    echo "JAVA_HOME not set, bye, bye"
+    exit 1
+fi
 
-if [ $# -lt 31 ] ; then
+if [ $# -lt 32 ] ; then
     echo "Expected at least 31 arguments, but got $#"
-    echo "usage: ./run-report-benchmarks.sh workload db warmup_count measurement_count db_edition jvm neo4j_config work_dir profilers forks results time_unit results_store_uri results_store_user results_store_password neo4j_commit neo4j_version neo4j_branch neo4j_branch_owner tool_commit tool_branch_owner tool_branch teamcity_build parent_teamcity_build jvm_args recreate_schema triggered_by error_policy deployment"
+    echo "usage: ./run-report-benchmarks.sh workload db warmup_count measurement_count db_edition jvm neo4j_config work_dir profilers forks results time_unit results_store_uri results_store_user results_store_password neo4j_commit neo4j_version neo4j_branch neo4j_branch_owner tool_commit tool_branch_owner tool_branch teamcity_build parent_teamcity_build jvm_args recreate_schema triggered_by error_policy deployment queries"
     exit 1
 fi
 
@@ -49,24 +51,32 @@ runtime="${29}"
 triggered_by="${30}"
 error_policy="${31}"
 deployment="${32}"
+queries="${33}"
 
+# parse optional arguments
+all_args=("$@")
+optional_args=("${all_args[@]:33}")
 
-# here we are checking for optional AWS Batch Job Id,
-BATCH_JOB_ID=
-if [[ $# -ge 33 ]]; then
-	BATCH_JOB_ID="--batch-job-id=${33}"
-fi
+aws_endpoint_url=
+batch_job_id=
 
-# here we are checking for optional AWS endpoint URL,
-# this is required for end to end testing, where we mock s3
-AWS_EXTRAS=
-if [[ $# -eq 34 ]]; then
-	AWS_EXTRAS="--endpoint-url=${34}"
-fi
-if [[ -z "$JAVA_HOME" ]]; then
-    echo "JAVA_HOME not set, bye, bye"
-    exit 1
-fi
+while ((${#optional_args[@]})); do
+    arg=${optional_args[0]}
+    optional_args=("${optional_args[@]:1}")
+    case "$arg" in
+        --aws-endpoint-url)
+            aws_endpoint_url=${optional_args[0]}
+            optional_args=("${optional_args[@]:1}")
+            ;;
+        --batch-job-id)
+            batch_job_id=${optional_args[0]}
+            optional_args=("${optional_args[@]:1}")
+            ;;
+        --)
+            break
+            ;;
+    esac
+done
 
 macro_benchmark_dir=$(pwd)
 
@@ -119,52 +129,49 @@ echo "Profiler Recording directory                                   : ${profile
 echo "Triggered by                                                   : ${triggered_by}"
 echo "Error policy                                                   : ${error_policy}"
 echo "Neo4j Directory                                                : ${deployment}"
-echo "Batch job id                                                   : ${BATCH_JOB_ID}"
+echo "Queries                                                        : ${queries}"
+echo "Batch job id                                                   : ${batch_job_id}"
 
-function runExport {
-    #shellcheck disable=SC2068
-    ${jvm}  -Xmx1g -XX:OnOutOfMemoryError="$out_of_memory_script --jvm-pid %p --output-dir $out_of_memory_dir" \
-            -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath="$out_of_memory_dir" \
-            -jar "${jar_path}" run-workload  \
-            --workload "${workload}" \
-            --db-dir "${db}" \
-            --warmup-count "${warmup_count}" \
-            --measurement-count "${measurement_count}" \
-            --db-edition "${db_edition}" \
-            --jvm "${jvm}" \
-            --neo4j-config "${neo4j_config}" \
-            --work-dir "${work_dir}" \
-            --profilers "${profilers}" \
-            --forks "${forks}" \
-            --results "${results_path}" \
-            --time-unit "${time_unit}" \
-            --neo4j-commit "${neo4j_commit}" \
-            --neo4j-version "${neo4j_version}" \
-            --neo4j-branch "${neo4j_branch}" \
-            --neo4j-branch-owner "${neo4j_branch_owner}" \
-            --tool-commit "${tool_commit}" \
-            --tool-branch-owner "${tool_branch_owner}" \
-            --tool-branch "${tool_branch}" \
-            --teamcity-build "${teamcity_build}" \
-            --parent-teamcity-build "${parent_teamcity_build}" \
-            --execution-mode "${execution_mode}" \
-            --jvm-args "${jvm_args}" \
-            --planner "${planner}" \
-            --runtime "${runtime}" \
-            --profiler-recordings-dir "${profiler_recording_output_dir}" \
-            --triggered-by "${triggered_by}" \
-            --neo4j-deployment "${deployment}" \
-            $@
-}
 
-if [ "${recreate_schema}" = "true" ]
-then
-    #shellcheck disable=SC2086
-    runExport "--recreate-schema" ${BATCH_JOB_ID} && echo "Will recreate the schema"
-else
-    #shellcheck disable=SC2086
-    runExport ${BATCH_JOB_ID}
+if [ "$recreate_schema" != "true" ]; then
+  recreate_schema=""
 fi
+
+#shellcheck disable=SC2068
+${jvm}  -Xmx1g -XX:OnOutOfMemoryError="$out_of_memory_script --jvm-pid %p --output-dir $out_of_memory_dir" \
+        -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath="$out_of_memory_dir" \
+        -jar "${jar_path}" run-workload  \
+        --workload "${workload}" \
+        --db-dir "${db}" \
+        --warmup-count "${warmup_count}" \
+        --measurement-count "${measurement_count}" \
+        --db-edition "${db_edition}" \
+        --jvm "${jvm}" \
+        --neo4j-config "${neo4j_config}" \
+        --work-dir "${work_dir}" \
+        --profilers "${profilers}" \
+        --forks "${forks}" \
+        --results "${results_path}" \
+        --time-unit "${time_unit}" \
+        --neo4j-commit "${neo4j_commit}" \
+        --neo4j-version "${neo4j_version}" \
+        --neo4j-branch "${neo4j_branch}" \
+        --neo4j-branch-owner "${neo4j_branch_owner}" \
+        --tool-commit "${tool_commit}" \
+        --tool-branch-owner "${tool_branch_owner}" \
+        --tool-branch "${tool_branch}" \
+        --teamcity-build "${teamcity_build}" \
+        --parent-teamcity-build "${parent_teamcity_build}" \
+        --execution-mode "${execution_mode}" \
+        --jvm-args "${jvm_args}" \
+        --planner "${planner}" \
+        --runtime "${runtime}" \
+        --profiler-recordings-dir "${profiler_recording_output_dir}" \
+        --triggered-by "${triggered_by}" \
+        --neo4j-deployment "${deployment}" \
+        --queries "${queries}" \
+        ${recreate_schema:+--recreate-schema} \
+        ${batch_job_id:+--batch-job-id $batch_job_id}
 
 # --- create archive of profiler recording artifacts---
 profiler_recording_dir_name=$(basename "${profiler_recording_output_dir}")
@@ -173,10 +180,10 @@ tar czvf "${archive}" "${profiler_recording_dir_name}"
 
 # --- upload archive of profiler recording artifacts to S3 ---
 # shellcheck disable=SC2086
-aws ${AWS_EXTRAS:+"$AWS_EXTRAS"} --region eu-north-1 s3 cp "${archive}" s3://benchmarking.neo4j.com/recordings/"${archive}"
+aws ${aws_endpoint_url:+--endpoint-url $aws_endpoint_url} --region eu-north-1 s3 cp "${archive}" s3://benchmarking.neo4j.com/recordings/"${archive}"
 # --- upload profiler recording artifacts to S3 ---
 # shellcheck disable=SC2086
-aws ${AWS_EXTRAS:+"$AWS_EXTRAS"} --region eu-north-1 s3 sync "${profiler_recording_output_dir}" s3://benchmarking.neo4j.com/recordings/"${profiler_recording_dir_name}"
+aws ${aws_endpoint_url:+--endpoint-url $aws_endpoint_url} --region eu-north-1 s3 sync "${profiler_recording_output_dir}" s3://benchmarking.neo4j.com/recordings/"${profiler_recording_dir_name}"
 
 # --- enrich results file with profiler recording information (locations in S3) ---
 ${jvm} -cp "${jar_path}" com.neo4j.bench.client.Main add-profiles \

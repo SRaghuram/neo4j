@@ -6,6 +6,7 @@
 package com.neo4j.harness.internal;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.helper.ErrorHandler;
 import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
@@ -284,7 +285,7 @@ public class CausalClusterInProcessBuilder
 
                 builder.withConfig( CausalClusteringSettings.minimum_core_cluster_size_at_formation, nCores );
                 builder.withConfig( CausalClusteringSettings.minimum_core_cluster_size_at_runtime, nCores );
-                builder.withConfig( CausalClusteringSettings.server_groups, List.of( "core",  "core" + coreId ) );
+                builder.withConfig( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "core",  "core" + coreId ) );
                 configureConnectors( boltPort, httpPort, builder );
 
                 builder.withConfig( OnlineBackupSettings.online_backup_enabled, false );
@@ -322,7 +323,7 @@ public class CausalClusterInProcessBuilder
                 builder.withConfig( CausalClusteringSettings.discovery_advertised_address, specifyPortOnly( discoveryPort ) );
                 builder.withConfig( CausalClusteringSettings.transaction_advertised_address, specifyPortOnly( txPort ) );
 
-                builder.withConfig( CausalClusteringSettings.server_groups, List.of( "replica", "replica" + replicaId ) );
+                builder.withConfig( CausalClusteringSettings.server_groups, ServerGroupName.listOf( "replica", "replica" + replicaId ) );
                 configureConnectors( boltPort, httpPort, builder );
 
                 builder.withConfig( OnlineBackupSettings.online_backup_enabled, false );

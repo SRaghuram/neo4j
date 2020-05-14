@@ -14,6 +14,7 @@ import java.util.function.Supplier;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.dbms.database.DatabaseOperationCounts;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
@@ -24,6 +25,7 @@ import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.SimpleLogService;
+import org.neo4j.memory.MemoryPools;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.server.web.WebContainerThreadInfo;
@@ -123,6 +125,12 @@ class GlobalMetricsExtensionTest
         }
 
         @Override
+        public DatabaseOperationCounts databaseOperationCounts()
+        {
+            return null;
+        }
+
+        @Override
         public Config configuration()
         {
             return config;
@@ -154,6 +162,12 @@ class GlobalMetricsExtensionTest
 
         @Override
         public Supplier<WebContainerThreadInfo> webContainerThreadInfo()
+        {
+            return null;
+        }
+
+        @Override
+        public MemoryPools memoryPools()
         {
             return null;
         }

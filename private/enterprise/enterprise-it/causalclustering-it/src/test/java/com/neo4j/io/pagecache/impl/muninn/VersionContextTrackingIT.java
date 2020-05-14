@@ -31,10 +31,8 @@ import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static org.hamcrest.core.Is.is;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
-import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @ClusterExtension
 class VersionContextTrackingIT
@@ -67,7 +65,7 @@ class VersionContextTrackingIT
             long expectedLatestPageVersion = getExpectedLatestPageVersion( baseTxId, i );
             Callable<Long> anyCoreSupplier = () -> getLatestPageVersion( getAnyCore() );
             assertEventually( "Any core page version should match to expected page version.", anyCoreSupplier,
-                    equalityCondition( expectedLatestPageVersion ), 2, MINUTES );
+                    value -> value >= expectedLatestPageVersion, 2, MINUTES );
         }
     }
 
@@ -81,7 +79,7 @@ class VersionContextTrackingIT
             long expectedLatestPageVersion = getExpectedLatestPageVersion( baseTxId, i );
             Callable<Long> replicateVersionSupplier = () -> getLatestPageVersion( getAnyReadReplica() );
             assertEventually( "Read replica page version should match to core page version.", replicateVersionSupplier,
-                    equalityCondition( expectedLatestPageVersion ), 2, MINUTES );
+                    value -> value >= expectedLatestPageVersion, 2, MINUTES );
         }
     }
 

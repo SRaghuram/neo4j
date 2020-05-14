@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.core.ServerGroupName;
 
 import java.util.Objects;
 import java.util.Set;
@@ -18,11 +19,11 @@ public class ReadReplicaInfo implements DiscoveryServerInfo
 {
     private final SocketAddress catchupServerAddress;
     private final ClientConnectorAddresses clientConnectorAddresses;
-    private final Set<String> groups;
+    private final Set<ServerGroupName> groups;
     private final Set<DatabaseId> databaseIds;
 
     public ReadReplicaInfo( ClientConnectorAddresses clientConnectorAddresses,
-            SocketAddress catchupServerAddress, Set<String> groups, Set<DatabaseId> databaseIds )
+            SocketAddress catchupServerAddress, Set<ServerGroupName> groups, Set<DatabaseId> databaseIds )
     {
         this.clientConnectorAddresses = clientConnectorAddresses;
         this.catchupServerAddress = catchupServerAddress;
@@ -57,7 +58,7 @@ public class ReadReplicaInfo implements DiscoveryServerInfo
     }
 
     @Override
-    public Set<String> groups()
+    public Set<ServerGroupName> groups()
     {
         return groups;
     }

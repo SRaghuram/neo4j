@@ -50,7 +50,9 @@ import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.runW
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.either;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -192,9 +194,8 @@ class BoltCausalClusteringIT
                 // when
                 runWithLeaderDisabled( cluster, ( oldLeader, otherMembers ) ->
                 {
-                    SessionExpiredException sep =
-                            assertThrows( SessionExpiredException.class, () -> session.run( "CREATE (n:Person {name: 'Mark'})" ).consume() );
-                    assertThat( sep.getMessage(), containsString( "no longer accepts writes" ) );
+                    Exception ex = assertThrows( Exception.class, () -> session.run( "CREATE (n:Person {name: 'Mark'})" ).consume() );
+                    assertThat( ex, either( instanceOf( SessionExpiredException.class ) ).or( instanceOf( TransientException.class ) ) );
                     return null;
                 } );
             }
@@ -240,9 +241,9 @@ class BoltCausalClusteringIT
 
                     runWithLeaderDisabled( cluster, ( oldLeader, otherMembers ) ->
                     {
-                        var sep = assertThrows( SessionExpiredException.class, () -> session
+                        var ex = assertThrows( Exception.class, () -> session
                                 .run( "CREATE (p:Person {name: $name })", parameters( "name", "Mark" ) ).consume() );
-                        assertThat( sep.getMessage(), containsString( "no longer accepts writes" ) );
+                        assertThat( ex, either( instanceOf( SessionExpiredException.class ) ).or( instanceOf( TransientException.class ) ) );
                         return null;
                     } );
                 }
@@ -389,7 +390,7 @@ class BoltCausalClusteringIT
                         tx.run( "CREATE (person:Person {name: $name, title: $title})", parameters( "name", "Webber", "title", "Mr" ) );
                         tx.commit();
                     }
-                    catch ( SessionExpiredException ignored )
+                    catch ( SessionExpiredException | TransientException ignored )
                     {
                         // expected
                     }
@@ -628,7 +629,7 @@ class BoltCausalClusteringIT
             {
                 return op.apply( session );
             }
-            catch ( SessionExpiredException | ClientException e )
+            catch ( SessionExpiredException | TransientException | ClientException e )
             {
                 // role might have changed; try again;
             }

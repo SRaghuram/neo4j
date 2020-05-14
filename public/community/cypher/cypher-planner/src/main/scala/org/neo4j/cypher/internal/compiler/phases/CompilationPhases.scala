@@ -39,17 +39,16 @@ import org.neo4j.cypher.internal.frontend.phases.BaseContains
 import org.neo4j.cypher.internal.frontend.phases.BaseContext
 import org.neo4j.cypher.internal.frontend.phases.BaseState
 import org.neo4j.cypher.internal.frontend.phases.CNFNormalizer
+import org.neo4j.cypher.internal.frontend.phases.ExpandStarRewriter
 import org.neo4j.cypher.internal.frontend.phases.If
 import org.neo4j.cypher.internal.frontend.phases.LateAstRewriting
 import org.neo4j.cypher.internal.frontend.phases.Namespacer
 import org.neo4j.cypher.internal.frontend.phases.ObfuscationMetadataCollection
 import org.neo4j.cypher.internal.frontend.phases.Parsing
 import org.neo4j.cypher.internal.frontend.phases.PreparatoryRewriting
-import org.neo4j.cypher.internal.frontend.phases.ExpandStarRewriter
 import org.neo4j.cypher.internal.frontend.phases.SemanticAnalysis
 import org.neo4j.cypher.internal.frontend.phases.SyntaxAdditionsErrors
 import org.neo4j.cypher.internal.frontend.phases.SyntaxDeprecationWarnings
-import org.neo4j.cypher.internal.frontend.phases.Transformer
 import org.neo4j.cypher.internal.frontend.phases.Transformer
 import org.neo4j.cypher.internal.frontend.phases.isolateAggregation
 import org.neo4j.cypher.internal.frontend.phases.rewriteEqualityToInPredicate
@@ -63,7 +62,6 @@ import org.neo4j.cypher.internal.rewriting.RewriterStepSequencer
 import org.neo4j.cypher.internal.rewriting.rewriters.IfNoParameter
 import org.neo4j.cypher.internal.rewriting.rewriters.InnerVariableNamer
 import org.neo4j.cypher.internal.rewriting.rewriters.LiteralExtraction
-import org.neo4j.cypher.internal.rewriting.rewriters.expandStar
 import org.neo4j.cypher.internal.util.symbols.CypherType
 
 object CompilationPhases {
@@ -128,7 +126,8 @@ object CompilationPhases {
   // Phase 1.1 (Fabric)
   def fabricFinalize(config: ParsingConfig): Transformer[BaseContext, BaseState, BaseState] = {
     SemanticAnalysis(warn = true, config.semanticFeatures: _*).adds(BaseContains[SemanticState]) andThen
-      AstRewriting(config.sequencer, config.literalExtraction, innerVariableNamer = config.innerVariableNamer, parameterTypeMapping = config.parameterTypeMapping)
+      AstRewriting(config.sequencer, config.literalExtraction, innerVariableNamer = config.innerVariableNamer, parameterTypeMapping = config.parameterTypeMapping) andThen
+      SemanticAnalysis(warn = true, config.semanticFeatures: _*).adds(BaseContains[SemanticState])
   }
 
   // Phase 2
@@ -143,6 +142,7 @@ object CompilationPhases {
     sequencer: String => RewriterStepSequencer,
     pushdownPropertyReads: Boolean = true,
     semanticFeatures: Seq[SemanticFeature] = defaultSemanticFeatures,
+    readPropertiesFromCursor: Boolean = false,
   ): Transformer[PlannerContext, BaseState, LogicalPlanState] =
     SchemaCommandPlanBuilder andThen
       If((s: LogicalPlanState) => s.maybeLogicalPlan.isEmpty)(
@@ -161,7 +161,7 @@ object CompilationPhases {
           OptionalMatchRemover andThen
           QueryPlanner.adds(CompilationContains[LogicalPlan]) andThen
           PlanRewriter(sequencer) andThen
-          InsertCachedProperties(pushdownPropertyReads) andThen
+          InsertCachedProperties(pushdownPropertyReads, readPropertiesFromCursor) andThen
           If((s: LogicalPlanState) => s.query.readOnly)(
             CheckForUnresolvedTokens
           )

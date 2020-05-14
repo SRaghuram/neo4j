@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import org.neo4j.codegen.api.CodeGeneration
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.and
@@ -28,6 +27,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.loop
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
 import org.neo4j.codegen.api.IntermediateRepresentation.noValue
+import org.neo4j.codegen.api.IntermediateRepresentation.noop
 import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
 import org.neo4j.codegen.api.IntermediateRepresentation.or
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
@@ -53,6 +53,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NEXT
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.Collections.singletonIndexedSeq
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
@@ -87,7 +88,7 @@ class UnionOperator(val workIdentity: WorkIdentity,
       else if (morsel.slots eq rhsSlotConfig) rhsMapping
       else throw new IllegalStateException(s"Unknown slot configuration in UnionOperator. Got: ${morsel.slots}. LHS: $lhsSlotConfig. RHS: $rhsSlotConfig")
 
-    IndexedSeq(new UnionTask(morsel,
+    singletonIndexedSeq(new UnionTask(morsel,
       workIdentity,
       rowMapping))
   }
@@ -231,6 +232,7 @@ class UnionOperatorTemplate(val inner: OperatorTaskTemplate,
           fail(newInstance(constructor[IllegalStateException, String], constant("Unknown slot configuration in UnionOperator.")))
         }
       },
+      genAdvanceOnCancelledRow,
       setField(canContinue, INPUT_ROW_IS_VALID),
       genLoop
     )
@@ -313,4 +315,6 @@ class UnionOperatorTemplate(val inner: OperatorTaskTemplate,
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
 
   override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
+
+  override def genClearStateOnCancelledRow: IntermediateRepresentation = noop()
 }

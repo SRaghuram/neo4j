@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.core.consensus.roles;
 
-import com.neo4j.causalclustering.core.consensus.ElectionTimerMode;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.Timeout.Election;
@@ -24,7 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Optional;
+import java.util.Set;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
@@ -48,6 +47,74 @@ class FollowerTest
     private MemberId member2 = member( 2 );
     private MemberId member3 = member( 3 );
     private MemberId member4 = member( 4 );
+
+    @Test
+    void shouldImmediatelyHandleRejectionMessageOnLeadershipTransferProposal() throws Exception
+    {
+        // given
+        var state = builder()
+                .myself( myself )
+                .addInitialOutcome( OutcomeTestBuilder.builder()
+                        .setCommitIndex( 2 )
+                        .setTerm( 1 ).build() )
+                .votingMembers( myself, member1, member2 )
+                .supportsPreVoting( true )
+                .build();
+
+        var message = new RaftMessages.LeadershipTransfer.Proposal( myself, member1, Set.of() );
+
+        // when
+        Outcome outcome = new Follower().handle( message, state, log() );
+
+        // then
+        var leaderTransferRejection = outcome.getLeaderTransferRejection();
+        assertThat( leaderTransferRejection ).isNotNull();
+    }
+
+    @Test
+    void shouldInstigateAPreElectionAfterValidLeadershipTransfer() throws Exception
+    {
+        // given
+        var state = builder()
+                .myself( myself )
+                .addInitialOutcome( OutcomeTestBuilder.builder()
+                        .setCommitIndex( 3 )
+                        .setTerm( 1 ).build() )
+                .votingMembers( myself, member1, member2 )
+                .supportsPreVoting( true )
+                .build();
+
+        var message = new RaftMessages.LeadershipTransfer.Request( member2, 3, 1, Set.of() );
+
+        // when
+        Outcome outcome = new Follower().handle( message, state, log() );
+
+        // then
+        assertThat( RaftMessages.Type.VOTE_REQUEST ).isEqualTo( messageFor( outcome, member1 ).type() );
+        assertThat( RaftMessages.Type.VOTE_REQUEST ).isEqualTo( messageFor( outcome, member2 ).type() );
+    }
+
+    @Test
+    void shouldSendALeadershipRejectionResponseAfterInvalidLeadershipTransfer() throws Exception
+    {
+        // given
+        var state = builder()
+                .myself( myself )
+                .addInitialOutcome( OutcomeTestBuilder.builder()
+                        .setCommitIndex( 2 )
+                        .setTerm( 1 ).build() )
+                .votingMembers( myself, member1, member2 )
+                .supportsPreVoting( true )
+                .build();
+
+        var message = new RaftMessages.LeadershipTransfer.Request( member2, 3, 1, Set.of() );
+
+        // when
+        Outcome outcome = new Follower().handle( message, state, log() );
+
+        // then
+        assertThat( RaftMessages.Type.LEADERSHIP_TRANSFER_REJECTION ).isEqualTo( messageFor( outcome, member2 ).type() );
+    }
 
     @Test
     void shouldInstigateAnElectionAfterTimeout() throws Exception

@@ -27,6 +27,11 @@ import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.pagecache.PageCursor;
 
+<<<<<<< HEAD
+=======
+import static java.lang.String.format;
+
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 class Record
 {
     /*
@@ -57,15 +62,32 @@ class Record
 
     Record( int sizeExp, long id )
     {
+<<<<<<< HEAD
         this( sizeExpAsFlagsByte( sizeExp ), id );
     }
 
     private Record( byte flags, long id )
+=======
+        this( sizeExpAsFlagsByte( sizeExp ), id, true );
+    }
+
+    private Record( byte flags, long id, boolean instantiateData )
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     {
         this.flags = flags;
         this.id = id;
         this.dataLength = recordDataSize( sizeExp() );
+<<<<<<< HEAD
         this.data = ByteBuffer.wrap( new byte[dataLength] );
+=======
+        // for instantiatedData == false this is a record which will never be used as anything other than deleting a record
+        this.data = instantiateData ? ByteBuffer.wrap( new byte[dataLength] ) : null;
+    }
+
+    static Record deletedRecord( int sizeExp, long id )
+    {
+        return new Record( sizeExpAsFlagsByte( sizeExp ), id, false );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 
     static int recordSize( int sizeExp )
@@ -135,7 +157,11 @@ class Record
         channel.put( (byte) (flags | sizeExp()) );
         if ( hasFlag( FLAG_IN_USE ) )
         {
+<<<<<<< HEAD
             int length = data.position();
+=======
+            int length = data.limit();
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
             // write the length so that we save on tx-log command size
             channel.putShort( (short) length );
             channel.put( data.array(), length );
@@ -151,6 +177,10 @@ class Record
             short length = channel.getShort();
             assert length <= recordDataSize( record.sizeExp() ); // if incorrect, fail here instead of OOM
             channel.get( record.data( 0 ).array(), length );
+<<<<<<< HEAD
+=======
+            record.data.position( length ).flip();
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         }
         return record;
     }
@@ -230,12 +260,17 @@ class Record
     public String toString()
     {
         String dataString;
+<<<<<<< HEAD
+=======
+        int dataLength = 0;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         if ( data == null )
         {
             dataString = "<null>";
         }
         else
         {
+<<<<<<< HEAD
             int highestNonZeroLimit = findHighestNonZeroLimit();
             int diff = data.limit() - highestNonZeroLimit;
             dataString = diff >= 8 ? Arrays.toString( Arrays.copyOf( data.array(), findHighestNonZeroLimit() ) ) + "..." + diff + " more zeros"
@@ -256,6 +291,12 @@ class Record
             nonZeroLimit--;
         }
         return nonZeroLimit;
+=======
+            dataString = Arrays.toString( Arrays.copyOf( data.array(), data.limit() ) );
+            dataLength = data.limit();
+        }
+        return format( "Record{x%d(%d)%s,len=%d, %s}", recordXFactor( sizeExp() ), id, hasFlag( FLAG_IN_USE ) ? "" : " UNUSED ", dataLength, dataString );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 
     boolean hasSameContentsAs( Record other )

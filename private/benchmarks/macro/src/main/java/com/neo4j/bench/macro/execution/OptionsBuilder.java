@@ -6,7 +6,7 @@
 package com.neo4j.bench.macro.execution;
 
 import com.neo4j.bench.common.Neo4jConfigBuilder;
-import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;

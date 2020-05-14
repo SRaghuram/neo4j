@@ -106,7 +106,7 @@ abstract class KernelReadTracerTxStateTestBase<G extends KernelAPIWriteTestSuppo
 
             // when
             cursor.setTracer( tracer );
-            tx.dataRead().nodeLabelScan( barId, cursor );
+            tx.dataRead().nodeLabelScan( barId, cursor, IndexOrder.NONE );
             tracer.assertEvents( OnLabelScan( barId ) );
 
             assertTrue( cursor.next() );
@@ -229,7 +229,7 @@ abstract class KernelReadTracerTxStateTestBase<G extends KernelAPIWriteTestSuppo
 
         try ( KernelTransaction tx = beginTransaction();
               NodeCursor nodeCursor = tx.cursors().allocateNodeCursor( tx.pageCursorTracer() );
-              PropertyCursor propertyCursor = tx.cursors().allocatePropertyCursor( tx.pageCursorTracer() ) )
+              PropertyCursor propertyCursor = tx.cursors().allocatePropertyCursor( tx.pageCursorTracer(), tx.memoryTracker() ) )
         {
             long n = tx.dataWrite().nodeCreate();
             int name = tx.token().propertyKey( "name" );

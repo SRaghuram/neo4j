@@ -28,6 +28,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.stream.StreamSupport;
 
@@ -412,7 +413,7 @@ public abstract class MapValue extends VirtualValue
            {
                private boolean iteratingMap2;
                private Iterator<String> iterator = map1.keySet().iterator();
-               private HashSet<String> seen = new HashSet<>();
+               private Set<String> seen = new HashSet<>();
 
                @Override
                protected String fetchNextOrNull()
@@ -442,7 +443,7 @@ public abstract class MapValue extends VirtualValue
         @Override
         public <E extends Exception> void foreach( ThrowingBiConsumer<String,AnyValue,E> f ) throws E
         {
-            HashSet<String> seen = new HashSet<>();
+            Set<String> seen = new HashSet<>();
             ThrowingBiConsumer<String,AnyValue,E> consume = ( key, value ) ->
             {
                 if ( seen.add( key ) )
@@ -479,7 +480,7 @@ public abstract class MapValue extends VirtualValue
         public int size()
         {
             int[] size = {0};
-            HashSet<String> seen = new HashSet<>();
+            Set<String> seen = new HashSet<>();
             ThrowingBiConsumer<String,AnyValue,RuntimeException> consume = ( key, value ) ->
             {
                 if ( seen.add( key ) )
@@ -571,9 +572,9 @@ public abstract class MapValue extends VirtualValue
         int compare = Integer.compare( size, otherMap.size() );
         if ( compare == 0 )
         {
-            String[] thisKeys = StreamSupport.stream( keySet().spliterator(), false).toArray( String[]::new  );
+            String[] thisKeys = StreamSupport.stream( keySet().spliterator(), false).toArray( String[]::new );
             Arrays.sort( thisKeys, String::compareTo );
-            String[] thatKeys = StreamSupport.stream( otherMap.keySet().spliterator(), false).toArray( String[]::new  );
+            String[] thatKeys = StreamSupport.stream( otherMap.keySet().spliterator(), false).toArray( String[]::new );
             Arrays.sort( thatKeys, String::compareTo );
             for ( int i = 0; i < size; i++ )
             {
@@ -605,9 +606,9 @@ public abstract class MapValue extends VirtualValue
         int compare = Integer.compare( size, otherMap.size() );
         if ( compare == 0 )
         {
-            String[] thisKeys = StreamSupport.stream( keySet().spliterator(), false).toArray( String[]::new  );
+            String[] thisKeys = StreamSupport.stream( keySet().spliterator(), false).toArray( String[]::new );
             Arrays.sort( thisKeys, String::compareTo );
-            String[] thatKeys = StreamSupport.stream( otherMap.keySet().spliterator(), false).toArray( String[]::new  );
+            String[] thatKeys = StreamSupport.stream( otherMap.keySet().spliterator(), false).toArray( String[]::new );
             Arrays.sort( thatKeys, String::compareTo );
             for ( int i = 0; i < size; i++ )
             {
@@ -728,7 +729,7 @@ public abstract class MapValue extends VirtualValue
         }
     }
 
-    public MapValue updatedWith(  MapValue other )
+    public MapValue updatedWith( MapValue other )
     {
         return new CombinedMapValue( this, other );
     }
@@ -742,7 +743,7 @@ public abstract class MapValue extends VirtualValue
     @Override
     public String toString()
     {
-        StringBuilder sb = new StringBuilder( getTypeName() + "{" );
+        StringBuilder sb = new StringBuilder( getTypeName() ).append( '{' );
         final String[] sep = new String[]{""};
         foreach( ( key, value ) ->
         {

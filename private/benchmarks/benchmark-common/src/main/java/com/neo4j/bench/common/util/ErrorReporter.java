@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.common.util;
 
-import com.neo4j.bench.common.model.Benchmark;
-import com.neo4j.bench.common.model.BenchmarkGroup;
-import com.neo4j.bench.common.model.TestRunError;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.TestRunError;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;

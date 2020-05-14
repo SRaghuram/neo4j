@@ -50,6 +50,7 @@ import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.index.label.LabelScanStore;
 import org.neo4j.internal.index.label.RelationshipTypeScanStore;
+import org.neo4j.internal.index.label.RelationshipTypeScanStoreSettings;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
@@ -65,6 +66,7 @@ import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.store.record.PropertyKeyTokenRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
 import org.neo4j.logging.Log;
+import org.neo4j.memory.MemoryTracker;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.experimental_consistency_checker;
 import static org.neo4j.consistency.report.ConsistencyReporter.NO_MONITOR;
@@ -80,10 +82,10 @@ public class FullCheck
     private final boolean verbose;
     private final NodeBasedMemoryLimiter.Factory memoryLimit;
     private final ProgressMonitorFactory progressFactory;
-    private final ConsistencyFlags flags;
     private final IndexSamplingConfig samplingConfig;
     private final int threads;
     private final Statistics statistics;
+    private ConsistencyFlags flags;
 
     public FullCheck( ProgressMonitorFactory progressFactory, Statistics statistics, int threads,
                       ConsistencyFlags consistencyFlags, Config config, boolean verbose, NodeBasedMemoryLimiter.Factory memoryLimit )
@@ -100,12 +102,12 @@ public class FullCheck
     }
 
     public ConsistencySummaryStatistics execute( PageCache pageCache, DirectStoreAccess stores, ThrowingSupplier<CountsStore,IOException> countsSupplier,
-            PageCacheTracer pageCacheTracer, Log log ) throws ConsistencyCheckIncompleteException
+            PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker, Log log ) throws ConsistencyCheckIncompleteException
     {
         ConsistencySummaryStatistics summary = new ConsistencySummaryStatistics();
         InconsistencyReport report = new InconsistencyReport( new InconsistencyMessageLogger( log ), summary );
         CountsStore countsStore = getCountsStore( countsSupplier, log, summary );
-        execute( pageCache, stores, report, countsStore, pageCacheTracer );
+        execute( pageCache, stores, report, countsStore, pageCacheTracer, memoryTracker );
 
         if ( !summary.isConsistent() )
         {
@@ -147,11 +149,20 @@ public class FullCheck
     }
 
     void execute( PageCache pageCache, final DirectStoreAccess directStoreAccess, final InconsistencyReport report, CountsStore countsStore,
-            PageCacheTracer pageCacheTracer ) throws ConsistencyCheckIncompleteException
+            PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker ) throws ConsistencyCheckIncompleteException
     {
         try ( IndexAccessors indexes = new IndexAccessors( directStoreAccess.indexes(), directStoreAccess.nativeStores().getRawNeoStores(),
                 samplingConfig, pageCacheTracer ) )
         {
+            if ( !config.get( RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store ) && flags.isCheckRelationshipTypeScanStore() )
+            {
+                report.warning( "Consistency checker was configured to validate consistency of relationship type scan store, " +
+                        "but this auxiliary store is not enabled and can therefore not be validated." );
+                report.updateSummary( RecordType.RELATIONSHIP_TYPE_SCAN_DOCUMENT, 0, 1 );
+                flags = new ConsistencyFlags( flags.isCheckGraph(), flags.isCheckIndexes(), flags.isCheckIndexStructure(), flags.isCheckLabelScanStore(), false,
+                        flags.isCheckPropertyOwners() );
+            }
+
             if ( flags.isCheckIndexStructure() )
             {
                 consistencyCheckIndexStructure( directStoreAccess.labelScanStore(), directStoreAccess.relationshipTypeScanStore(),
@@ -162,8 +173,8 @@ public class FullCheck
             if ( !useExperimentalChecker )
             {
                 CacheAccess cacheAccess =
-                        new DefaultCacheAccess( DefaultCacheAccess.defaultByteArray( directStoreAccess.nativeStores().getNodeStore().getHighId() ),
-                                statistics.getCounts(), threads );
+                        new DefaultCacheAccess( DefaultCacheAccess.defaultByteArray( directStoreAccess.nativeStores().getNodeStore().getHighId(),
+                                memoryTracker ), statistics.getCounts(), threads );
                 RecordAccess recordAccess = recordAccess( directStoreAccess.nativeStores(), cacheAccess, pageCacheTracer );
                 OwnerCheck ownerCheck = new OwnerCheck( flags.isCheckPropertyOwners() );
                 CountsBuilderDecorator countsBuilder = new CountsBuilderDecorator( directStoreAccess.nativeStores() );
@@ -187,8 +198,9 @@ public class FullCheck
             else
             {
                 try ( RecordStorageConsistencyChecker checker = new RecordStorageConsistencyChecker( pageCache,
-                        directStoreAccess.nativeStores().getRawNeoStores(), countsStore, directStoreAccess.labelScanStore(), indexes, report, progressFactory,
-                        config, threads, verbose, flags, memoryLimit, pageCacheTracer ) )
+                        directStoreAccess.nativeStores().getRawNeoStores(), countsStore, directStoreAccess.labelScanStore(),
+                        directStoreAccess.relationshipTypeScanStore(), indexes, report, progressFactory, config, threads, verbose, flags, memoryLimit,
+                        pageCacheTracer, memoryTracker ) )
                 {
                     checker.check();
                 }

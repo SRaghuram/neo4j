@@ -5,15 +5,19 @@
  */
 package com.neo4j.causalclustering.core.state;
 
+import com.neo4j.causalclustering.core.state.storage.StateMarshal;
+import com.neo4j.causalclustering.messaging.EndOfStreamException;
+
 import java.io.File;
 import java.io.IOException;
 
-import com.neo4j.causalclustering.core.state.storage.StateMarshal;
-import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.ReadableChannel;
-import org.neo4j.io.memory.BufferScope;
+import org.neo4j.io.memory.NativeScopedBuffer;
+import org.neo4j.memory.MemoryTracker;
+
+import static org.neo4j.io.fs.ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE;
 
 public class StateRecoveryManager<STATE>
 {
@@ -41,11 +45,13 @@ public class StateRecoveryManager<STATE>
 
     protected final FileSystemAbstraction fileSystem;
     private final StateMarshal<STATE> marshal;
+    private final MemoryTracker memoryTracker;
 
-    public StateRecoveryManager( FileSystemAbstraction fileSystem, StateMarshal<STATE> marshal )
+    public StateRecoveryManager( FileSystemAbstraction fileSystem, StateMarshal<STATE> marshal, MemoryTracker memoryTracker )
     {
         this.fileSystem = fileSystem;
         this.marshal = marshal;
+        this.memoryTracker = memoryTracker;
     }
 
     /**
@@ -58,8 +64,8 @@ public class StateRecoveryManager<STATE>
     {
         assert fileA != null && fileB != null;
 
-        STATE a = readLastEntryFrom( fileA );
-        STATE b = readLastEntryFrom( fileB );
+        STATE a = readLastEntryFrom( fileA, memoryTracker );
+        STATE b = readLastEntryFrom( fileB, memoryTracker );
 
         if ( a == null && b == null )
         {
@@ -84,10 +90,9 @@ public class StateRecoveryManager<STATE>
         }
     }
 
-    private STATE readLastEntryFrom( File file ) throws IOException
+    private STATE readLastEntryFrom( File file, MemoryTracker memoryTracker ) throws IOException
     {
-        try ( BufferScope bufferScope = new BufferScope( ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE );
-              ReadableChannel channel = new ReadAheadChannel<>( fileSystem.read( file ), bufferScope.buffer ) )
+        try ( ReadableChannel channel = new ReadAheadChannel<>( fileSystem.read( file ), new NativeScopedBuffer( DEFAULT_READ_AHEAD_SIZE, memoryTracker ) ) )
         {
             STATE result = null;
             STATE lastRead;

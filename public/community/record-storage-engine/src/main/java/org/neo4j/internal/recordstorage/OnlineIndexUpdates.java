@@ -31,6 +31,7 @@ import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.SchemaCache;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.NodeStore;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.storageengine.api.EntityUpdates;
 import org.neo4j.storageengine.api.IndexEntryUpdate;
 import org.neo4j.storageengine.api.StorageNodeCursor;
@@ -59,18 +60,20 @@ public class OnlineIndexUpdates implements IndexUpdates
     private final PropertyPhysicalToLogicalConverter converter;
     private final StorageReader reader;
     private final PageCursorTracer cursorTracer;
+    private final MemoryTracker memoryTracker;
     private final Collection<IndexEntryUpdate<IndexDescriptor>> updates = new ArrayList<>();
     private StorageNodeCursor nodeCursor;
     private StorageRelationshipScanCursor relationshipCursor;
 
     public OnlineIndexUpdates( NodeStore nodeStore, SchemaCache schemaCache, PropertyPhysicalToLogicalConverter converter, StorageReader reader,
-            PageCursorTracer cursorTracer )
+            PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
         this.nodeStore = nodeStore;
         this.schemaCache = schemaCache;
         this.converter = converter;
         this.reader = reader;
         this.cursorTracer = cursorTracer;
+        this.memoryTracker = memoryTracker;
     }
 
     @Override
@@ -122,7 +125,7 @@ public class OnlineIndexUpdates implements IndexUpdates
                 entityType );
         // we need to materialize the IndexEntryUpdates here, because when we
         // consume (later in separate thread) the store might have changed.
-        entityUpdates.forIndexKeys( relatedIndexes, reader, entityType, cursorTracer ).forEach( updates::add );
+        entityUpdates.forIndexKeys( relatedIndexes, reader, entityType, cursorTracer, memoryTracker ).forEach( updates::add );
     }
 
     private EntityUpdates.Builder gatherUpdatesFromCommandsForNode( long nodeId,

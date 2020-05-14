@@ -47,6 +47,7 @@ class CoreBootstrapTest
     private final DatabaseStartAborter databaseStartAborter = mock( DatabaseStartAborter.class );
     private final BootstrappingHandle bootstrapHandle = mock( BootstrappingHandle.class );
     private final BootstrapSaver bootstrapSaver = mock( BootstrapSaver.class );
+    private final TempBootstrapDir tempBootstrapDir = mock( TempBootstrapDir.class );
 
     private final NamedDatabaseId databaseId = databaseIdRepository.getRaw( "foo" );
     private final RaftId raftId = RaftIdFactory.random();
@@ -71,8 +72,10 @@ class CoreBootstrapTest
         bootstrap.perform();
 
         // then
-        var inOrder = inOrder( databaseStartAborter, messageHandler, internalOperator, bootstrapHandle, raftIdStorage );
+        var inOrder = inOrder( bootstrapSaver, tempBootstrapDir, databaseStartAborter, messageHandler, internalOperator, bootstrapHandle, raftIdStorage );
         inOrder.verify( internalOperator ).bootstrap( databaseId );
+        inOrder.verify( bootstrapSaver ).restore( any() );
+        inOrder.verify( tempBootstrapDir ).delete();
         inOrder.verify( messageHandler ).start( raftId );
         inOrder.verify( raftIdStorage ).writeState( raftId );
         inOrder.verify( bootstrapHandle ).release();
@@ -92,8 +95,10 @@ class CoreBootstrapTest
         assertThrows( RuntimeException.class, bootstrap::perform );
 
         // then
-        var inOrder = inOrder( databaseStartAborter, messageHandler, internalOperator, bootstrapHandle, raftIdStorage );
+        var inOrder = inOrder( bootstrapSaver, tempBootstrapDir, databaseStartAborter, messageHandler, internalOperator, bootstrapHandle, raftIdStorage );
         inOrder.verify( internalOperator ).bootstrap( databaseId );
+        inOrder.verify( bootstrapSaver ).restore( any() );
+        inOrder.verify( tempBootstrapDir ).delete();
         inOrder.verify( bootstrapHandle ).release();
         inOrder.verify( databaseStartAborter ).started( databaseId );
         inOrder.verifyNoMoreInteractions();
@@ -124,6 +129,6 @@ class CoreBootstrapTest
     private CoreBootstrap createBootstrap()
     {
         return new CoreBootstrap( database, raftBinder, messageHandler, snapshotService, downloaderService, internalOperator, databaseStartAborter,
-                raftIdStorage, bootstrapSaver );
+                raftIdStorage, bootstrapSaver, tempBootstrapDir );
     }
 }

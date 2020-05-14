@@ -36,8 +36,12 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
+import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -50,6 +54,7 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -71,9 +76,10 @@ class CommandApplicationProcessTest
     private final Monitors monitors = new Monitors();
     private final CoreState coreState = mock( CoreState.class );
     private final SinglePanic panicker = new SinglePanic();
+    private final JobScheduler jobScheduler = new ThreadPoolJobScheduler();
     private final CommandApplicationProcess applicationProcess =
             new CommandApplicationProcess( raftLog, batchSize, flushEvery, NullLogProvider.getInstance(), new ProgressTrackerImpl( globalSession ),
-                    sessionTracker, coreState, inFlightCache, monitors, panicker );
+                                           sessionTracker, coreState, inFlightCache, monitors, panicker, jobScheduler );
 
     private final ReplicatedTransaction nullTx = ReplicatedTransaction.from( new byte[0], databaseId );
 
@@ -89,9 +95,10 @@ class CommandApplicationProcessTest
     }
 
     @AfterEach
-    void tearDown() throws IOException
+    void tearDown() throws Exception
     {
         applicationProcess.stop();
+        jobScheduler.shutdown();
     }
 
     @Test
@@ -133,7 +140,7 @@ class CommandApplicationProcessTest
         applicationProcess.start();
 
         // then
-        verifyNoMoreInteractions( commandDispatcher );
+        verifyNoInteractions( commandDispatcher );
     }
 
     @Test
@@ -259,7 +266,7 @@ class CommandApplicationProcessTest
 
         //then the cache should have had it's get method called.
         verify( inFlightCache ).get( 0L );
-        verifyNoMoreInteractions( raftLog );
+        verifyNoInteractions( raftLog );
     }
 
     @Test
@@ -323,6 +330,30 @@ class CommandApplicationProcessTest
 
         // then
         assertEquals( 2, applicationProcess.lastApplied() );
+    }
+
+    @Test
+    void pauseAndNotifyShouldBeThreadSafe() throws Exception
+    {
+        // given
+        raftLog.append( new RaftLogEntry( 0, operation( nullTx ) ) );
+        applicationProcess.start();
+
+        // when
+        for ( int i = 0; i < 1000; i++ )
+        {
+            final int current = i;
+            raftLog.append( new RaftLogEntry( 0, operation( nullTx ) ) );
+            var pauseFuture = runAsync( () -> applicationProcess.pauseApplier( "Testing" ) );
+            var notifyFuture = runAsync( () -> applicationProcess.notifyCommitted( current + 1 ) );
+
+            // then
+            assertThat(pauseFuture).succeedsWithin( 1, SECONDS );
+            assertThat(notifyFuture).succeedsWithin( 1, SECONDS );
+
+            // reset state
+            applicationProcess.resumeApplier( "Testing" );
+        }
     }
 
     private ReplicatedTransaction tx( byte dataValue )

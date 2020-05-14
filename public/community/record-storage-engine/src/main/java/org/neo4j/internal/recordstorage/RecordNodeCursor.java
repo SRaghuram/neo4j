@@ -159,17 +159,7 @@ public class RecordNodeCursor extends NodeRecord implements StorageNodeCursor
     @Override
     public boolean hasLabel( int label )
     {
-        //Get labels from store and put in intSet, unfortunately we get longs back
-        long[] longs = NodeLabelsField.get( this, read, cursorTracer );
-        for ( long labelToken : longs )
-        {
-            if ( labelToken == label )
-            {
-                assert (int) labelToken == labelToken : "value too big to be represented as and int";
-                return true;
-            }
-        }
-        return false;
+        return NodeLabelsField.hasLabel( this, read, cursorTracer, label );
     }
 
     @Override
@@ -231,9 +221,9 @@ public class RecordNodeCursor extends NodeRecord implements StorageNodeCursor
     }
 
     @Override
-    public void degrees( RelationshipSelection selection, Degrees.Mutator mutator )
+    public void degrees( RelationshipSelection selection, Degrees.Mutator mutator, boolean allowFastDegreeLookup )
     {
-        if ( !isDense() )
+        if ( !isDense() || !allowFastDegreeLookup )
         {
             if ( relationshipCursor == null )
             {
@@ -242,7 +232,7 @@ public class RecordNodeCursor extends NodeRecord implements StorageNodeCursor
             relationshipCursor.init( this, ALL_RELATIONSHIPS );
             while ( relationshipCursor.next() )
             {
-                if ( selection.test( relationshipCursor.type() ) )
+                if ( selection.test( relationshipCursor.type(), relationshipCursor.sourceNodeReference(), relationshipCursor.targetNodeReference() ) )
                 {
                     int outgoing = 0;
                     int incoming = 0;

@@ -168,6 +168,9 @@ public abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecor
     {
         if ( record.inUse() )
         {
+            assert !(record.isUseFixedReferences() && record.requiresSecondaryUnit()) :
+                    record + " is marked as using fixed reference format, but still requires secondary unit, forgot to unmark secondary unit?";
+
             // Let the specific implementation provide the additional header bits, and we'll provide the core format bits.
             byte headerByte = headerBits( record );
             assert (headerByte & 0x7) == 0 : "Format-specific header bits (" + headerByte +
@@ -261,6 +264,12 @@ public abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecor
                     // this record doesn't need this secondary unit anymore... that needs to be done when applying to store.
                     record.setSecondaryUnitIdOnCreate( idSequence.nextId( cursorTracer ) );
                 }
+            }
+            else if ( record.requiresSecondaryUnit() )
+            {
+                // This record has previously made use of a secondary unit, but with the latest changes made to it
+                // it has shrunk to the point where it no longer needs that secondary unit
+                record.setRequiresSecondaryUnit( false );
             }
         }
     }

@@ -747,7 +747,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
     plan should includeSomewhere
       .aPlan("Projection").containingArgumentForProjection("point")
       .onTopOf(aPlan("Filter").containingArgumentRegex("distance.*".r)
-        .onTopOf(includeSomewhere.aPlan("NodeByLabelScan").containingArgument(":Place")))
+        .onTopOf(includeSomewhere.aPlan("NodeByLabelScan").containingArgument("p:Place")))
     result.toList.toSet should equal(Set.empty)
   }
 

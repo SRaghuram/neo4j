@@ -6,6 +6,7 @@
 package com.neo4j.bench.common.profiling;
 
 import com.google.common.collect.Sets;
+import com.neo4j.bench.model.profiling.RecordingType;
 
 import java.util.ArrayList;
 import java.util.Arrays;

@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabas
 
 public class DiscoveryDatabaseStateSerializer extends BaseAkkaSerializer<DiscoveryDatabaseState>
 {
-    public static int SIZE_HINT = 128;
+    public static final int SIZE_HINT = 128;
 
     public DiscoveryDatabaseStateSerializer()
     {

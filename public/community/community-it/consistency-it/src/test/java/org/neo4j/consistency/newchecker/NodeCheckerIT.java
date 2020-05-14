@@ -31,6 +31,7 @@ import org.neo4j.consistency.report.ConsistencyReport;
 import org.neo4j.internal.helpers.collection.LongRange;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.internal.index.label.LabelScanStore;
+import org.neo4j.internal.index.label.RelationshipTypeScanStore;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
@@ -48,6 +49,7 @@ import static org.mockito.Mockito.RETURNS_MOCKS;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.consistency.newchecker.ParallelExecution.NOOP_EXCEPTION_HANDLER;
 import static org.neo4j.graphdb.Label.label;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @DbmsExtension
 class NodeCheckerIT
@@ -66,6 +68,8 @@ class NodeCheckerIT
     private PageCache pageCache;
     @Inject
     private LabelScanStore labelScanStore;
+    @Inject
+    private RelationshipTypeScanStore relationshipTypeScanStore;
     @Inject
     private TokenHolders tokenHolders;
     private long nodeId;
@@ -115,11 +119,10 @@ class NodeCheckerIT
     {
         var neoStores = storageEngine.testAccessNeoStores();
         var indexAccessors = new IndexAccessors( providerMap, neoStores, new IndexSamplingConfig( config ), PageCacheTracer.NULL );
-        context = new CheckerContext( neoStores, indexAccessors, labelScanStore, execution,
-                mock( ConsistencyReport.Reporter.class, RETURNS_MOCKS ), CacheAccess.EMPTY, tokenHolders,
-                mock( RecordLoading.class ), mock( CountsState.class ),
-                mock( NodeBasedMemoryLimiter.class ), ProgressMonitorFactory.NONE.multipleParts( "test" ),
-                pageCache, pageCacheTracer, false, ConsistencyFlags.DEFAULT );
+        context = new CheckerContext( neoStores, indexAccessors, labelScanStore, relationshipTypeScanStore,
+                execution, mock( ConsistencyReport.Reporter.class, RETURNS_MOCKS ), CacheAccess.EMPTY,
+                tokenHolders, mock( RecordLoading.class ), mock( CountsState.class ), mock( NodeBasedMemoryLimiter.class ),
+                ProgressMonitorFactory.NONE.multipleParts( "test" ), pageCache, pageCacheTracer, INSTANCE, false, ConsistencyFlags.DEFAULT );
         context.initialize();
     }
 }

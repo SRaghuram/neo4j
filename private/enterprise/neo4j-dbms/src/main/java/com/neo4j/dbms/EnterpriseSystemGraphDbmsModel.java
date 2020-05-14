@@ -5,14 +5,15 @@
  */
 package com.neo4j.dbms;
 
-import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.neo4j.dbms.OperatorState;
 import org.neo4j.dbms.database.SystemGraphDbmsModel;
@@ -21,6 +22,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.event.PropertyEntry;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.internal.helpers.collection.Iterables;
+import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
@@ -40,29 +42,69 @@ public class EnterpriseSystemGraphDbmsModel extends SystemGraphDbmsModel
         this.systemDatabase = systemDatabase;
     }
 
-    Collection<NamedDatabaseId> updatedDatabases( TransactionData transactionData )
+    DatabaseUpdates updatedDatabases( TransactionData transactionData )
     {
-        Collection<NamedDatabaseId> updatedDatabases;
+        Set<NamedDatabaseId> changedDatabases;
+        Set<NamedDatabaseId> touchedDatabases;
+
+        var changedAndTouchedNodes = extractChangedAndTouchedNodes( transactionData );
+        var changedNodes = changedAndTouchedNodes.first();
+        var touchedNodes = changedAndTouchedNodes.other();
 
         try ( var tx = systemDatabase.get().beginTx() )
         {
-            var changedDatabases = Iterables.stream( transactionData.assignedNodeProperties() )
-                    .map( PropertyEntry::entity )
-                    .map( n -> tx.getNodeById( n.getId() ) )
-                    .filter( n -> n.hasLabel( DATABASE_LABEL ) )
-                    .map( this::getDatabaseId )
-                    .distinct();
+            touchedDatabases = touchedNodes.stream()
+                                               .map( tx::getNodeById )
+                                               .filter( n -> n.hasLabel( DATABASE_LABEL ) || n.hasLabel( DELETED_DATABASE_LABEL ) )
+                                               .map( this::getDatabaseId )
+                                               .collect( Collectors.toSet() );
 
-            var deletedDatabases = Iterables.stream( transactionData.assignedLabels() )
-                    .filter( l -> l.label().equals( DELETED_DATABASE_LABEL ) )
-                    .map( e -> tx.getNodeById( e.node().getId() ) )
-                    .map( this::getDatabaseId );
+            changedDatabases = changedNodes.stream()
+                                               .map( tx::getNodeById )
+                                               .filter( n -> n.hasLabel( DATABASE_LABEL ) || n.hasLabel( DELETED_DATABASE_LABEL ) )
+                                               .map( this::getDatabaseId )
+                                               .collect( Collectors.toSet() );
 
-            updatedDatabases = Stream.concat( changedDatabases, deletedDatabases ).collect( Collectors.toList() );
             tx.commit();
         }
 
-        return updatedDatabases;
+        return new DatabaseUpdates( changedDatabases, touchedDatabases );
+    }
+
+    private Pair<Set<Long>,Set<Long>> extractChangedAndTouchedNodes( TransactionData transactionData )
+    {
+        var propertiesByNode = Iterables.stream( transactionData.assignedNodeProperties() )
+                                        .collect( Collectors.groupingBy( PropertyEntry::entity ) );
+        var newDeletedDatabaseNodes = Iterables.stream( transactionData.assignedLabels() )
+                                               .filter( l -> l.label().equals( DELETED_DATABASE_LABEL ) )
+                                               .map( e -> e.node().getId() )
+                                               .collect( Collectors.toSet() );
+
+        var touchedNodes = new HashSet<Long>();
+        var changedNodes = new HashSet<Long>();
+
+        for ( var entry : propertiesByNode.entrySet() )
+        {
+            var id = entry.getKey().getId();
+
+            if ( nodeOnlyTouched( entry ) && !newDeletedDatabaseNodes.contains( id ) )
+            {
+                touchedNodes.add( id );
+            }
+            else
+            {
+                changedNodes.add( id );
+            }
+        }
+
+        changedNodes.addAll( newDeletedDatabaseNodes );
+        return Pair.of( changedNodes, touchedNodes );
+    }
+
+    private boolean nodeOnlyTouched( Map.Entry<Node,List<PropertyEntry<Node>>> txDataEntry )
+    {
+        var properties = txDataEntry.getValue();
+        return properties.size() == 1 && properties.get( 0 ).key().equals( UPDATED_AT_PROPERTY );
     }
 
     Map<String,EnterpriseDatabaseState> getDatabaseStates()

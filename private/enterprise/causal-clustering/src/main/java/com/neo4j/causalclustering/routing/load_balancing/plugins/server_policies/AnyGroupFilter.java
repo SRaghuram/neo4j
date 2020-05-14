@@ -5,14 +5,14 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.routing.load_balancing.filters.Filter;
 
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-
-import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 /**
  * Only returns servers matching any of the supplied groups.
@@ -20,25 +20,13 @@ import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 public class AnyGroupFilter implements Filter<ServerInfo>
 {
     private final Predicate<ServerInfo> matchesAnyGroup;
-    private final Set<String> groups;
+    private final Set<ServerGroupName> groups;
 
-    AnyGroupFilter( String... groups )
-    {
-        this( asSet( groups ) );
-    }
-
-    AnyGroupFilter( Set<String> groups )
+    AnyGroupFilter( Set<ServerGroupName> groups )
     {
         this.matchesAnyGroup = serverInfo ->
         {
-            for ( String group : serverInfo.groups() )
-            {
-                if ( groups.contains( group ) )
-                {
-                    return true;
-                }
-            }
-            return false;
+            return serverInfo.groups().stream().anyMatch( groups::contains );
         };
         this.groups = groups;
     }

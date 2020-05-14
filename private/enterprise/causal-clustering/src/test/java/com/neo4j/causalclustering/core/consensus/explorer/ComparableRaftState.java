@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.explorer;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.ReadableRaftLog;
@@ -173,6 +174,18 @@ public class ComparableRaftState implements ReadableRaftState
     public boolean refusesToBeLeader()
     {
         return refusesToBeLeader;
+    }
+
+    @Override
+    public Set<ServerGroupName> serverGroups()
+    {
+        return Set.of();
+    }
+
+    @Override
+    public boolean areTransferringLeadership()
+    {
+        return false;
     }
 
     public void update( Outcome outcome ) throws IOException

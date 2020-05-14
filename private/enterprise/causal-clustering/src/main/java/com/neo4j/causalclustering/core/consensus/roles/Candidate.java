@@ -19,8 +19,8 @@ import java.util.Set;
 
 import org.neo4j.logging.Log;
 
-import static com.neo4j.causalclustering.core.consensus.MajorityIncludingSelfQuorum.isQuorum;
 import static com.neo4j.causalclustering.core.consensus.ElectionTimerMode.FAILURE_DETECTION;
+import static com.neo4j.causalclustering.core.consensus.MajorityIncludingSelfQuorum.isQuorum;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.CANDIDATE;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.FOLLOWER;
 import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
@@ -220,6 +220,27 @@ class Candidate implements RaftMessageHandler
         public OutcomeBuilder handle( RaftMessages.PruneRequest pruneRequest )
         {
             Pruning.handlePruneRequest( outcomeBuilder, pruneRequest );
+            return outcomeBuilder;
+        }
+
+        @Override
+        public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Request leadershipTransferRequest )
+        {
+            var rejection = new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), ctx.commitIndex(), ctx.term() );
+            outcomeBuilder.addOutgoingMessage( new RaftMessages.Directed( leadershipTransferRequest.from(), rejection ) );
+            return outcomeBuilder;
+        }
+
+        @Override
+        public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Proposal leadershipTransferProposal )
+        {
+            return handle( new RaftMessages.LeadershipTransfer.Rejection( ctx.myself(), ctx.commitIndex(), ctx.term() ) );
+        }
+
+        @Override
+        public OutcomeBuilder handle( RaftMessages.LeadershipTransfer.Rejection leadershipTransferRejection )
+        {
+            outcomeBuilder.addLeaderTransferRejection( leadershipTransferRejection );
             return outcomeBuilder;
         }
     }

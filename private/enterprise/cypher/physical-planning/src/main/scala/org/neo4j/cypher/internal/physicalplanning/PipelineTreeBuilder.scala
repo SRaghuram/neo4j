@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.logical.plans.Optional
 import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
 import org.neo4j.cypher.internal.logical.plans.OrderedDistinct
 import org.neo4j.cypher.internal.logical.plans.PartialSort
+import org.neo4j.cypher.internal.logical.plans.PartialTop
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.logical.plans.Skip
 import org.neo4j.cypher.internal.logical.plans.Sort
@@ -81,7 +82,7 @@ object PipelineTreeBuilder {
     var serial: Boolean = false
     var workCanceller: Option[ArgumentStateMapId] = None
 
-    def fuse(plan: LogicalPlan, isBreaking: Boolean): Boolean = {
+    def fuse(plan: LogicalPlan): Boolean = {
       headPlan match {
         case FusedHead(operatorFuser) if middlePlans.isEmpty && outputDefinition == NoOutput =>
           operatorFuser.fuseIn(plan)
@@ -90,7 +91,7 @@ object PipelineTreeBuilder {
     }
 
     def fuseOrInterpret(plan: LogicalPlan, isBreaking: Boolean): Unit = {
-      if (!fuse(plan, isBreaking)) {
+      if (!fuse(plan)) {
         middlePlans += plan
       }
     }
@@ -137,8 +138,8 @@ object PipelineTreeBuilder {
 
       BufferDefinition(id,
                        memoryTrackingOperatorId,
-                       downstreamReducers.result(),
-                       downstreamWorkCancellers.result(),
+                       new ReadOnlyArray(downstreamReducers.result()),
+                       new ReadOnlyArray(downstreamWorkCancellers.result()),
                        variant
                      )(bufferConfiguration)
     }
@@ -204,9 +205,9 @@ object PipelineTreeBuilder {
       val reducersOnRHSReversed = reducersOnRHS.result().sortBy(_.receiver.x * -1)
 
       ApplyBufferVariant(argumentSlotOffset,
-                         reducersOnRHSReversed,
-                         downstreamStatesOnRHS.result(),
-                         delegates.result())
+                         new ReadOnlyArray(reducersOnRHSReversed),
+                         new ReadOnlyArray(downstreamStatesOnRHS.result()),
+                         new ReadOnlyArray(delegates.result()))
     }
   }
 
@@ -559,6 +560,22 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
           throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
         }
 
+      case _: PartialTop =>
+        if (!breakingPolicy.breakOn(plan, applyPlans(plan.id)))
+          throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
+
+        val buffer = outputToArgumentStreamBuffer(source, plan, argument, argument.argumentSlotOffset)
+        val pipeline = newPipeline(plan, buffer)
+        pipeline.lhs = source.id
+
+        val workCancellerAsmId = stateDefiner.newArgumentStateMap(plan.id, argument.argumentSlotOffset).id
+        //if we are a toplevel PartialTop we want to propagate the limit upstream
+        val onPipeline: PipelineDefiner => Unit = createPropagateTopLevelLimitCallback(argument, workCancellerAsmId)
+        //we want to propagate starting with source and then all upstream pipelines
+        onPipeline(pipeline)
+        markCancellerInUpstreamBuffers(pipeline.inputBuffer, argument, workCancellerAsmId, onPipeline)
+        pipeline
+
       case _: Optional |
            _: OrderedAggregation  |
            _: PartialSort =>
@@ -583,14 +600,8 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
 
       case _: Limit =>
         val asm = stateDefiner.newArgumentStateMap(plan.id, argument.argumentSlotOffset)
-        //if we are a toplevel limit we want to to propagate the limit upstream
-        val onPipeline: PipelineDefiner => Unit =
-          if(argument.argumentSlotOffset == TopLevelArgument.SLOT_OFFSET) p => {
-            if (p.workCanceller.isEmpty) {
-              p.workCanceller = Some(asm.id)
-            }
-          }
-          else _ => {}
+        //if we are a toplevel limit we want to propagate the limit upstream
+        val onPipeline: PipelineDefiner => Unit = createPropagateTopLevelLimitCallback(argument, asm.id)
         //we want to propagate starting with source and then all upstream pipelines
         onPipeline(source)
         markCancellerInUpstreamBuffers(source.inputBuffer, argument, asm.id, onPipeline)
@@ -605,7 +616,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
 
       case _ =>
         val isBreaking = breakingPolicy.breakOn(plan, applyPlans(plan.id))
-        if (source.fuse(plan, isBreaking)) {
+        if (source.fuse(plan)) {
           source
         } else {
           if (isBreaking) {
@@ -834,4 +845,13 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     val buffers = Seq(buffer)
     bfs(buffers)
   }
+
+  private def createPropagateTopLevelLimitCallback(argument: ApplyBufferDefiner, workCancellerAsmId: ArgumentStateMapId): PipelineDefiner => Unit =
+    if (argument.argumentSlotOffset == TopLevelArgument.SLOT_OFFSET)
+      p => {
+        if (p.workCanceller.isEmpty)
+          p.workCanceller = Some(workCancellerAsmId)
+      }
+    else
+      _ => ()
 }

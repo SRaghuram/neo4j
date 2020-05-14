@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.execution
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryStatus
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Source
 
 trait WorkerWaker {
 
@@ -22,10 +23,17 @@ class AlarmSink[-T <: AnyRef](inner: Sink[T], waker: WorkerWaker, queryStatus: Q
   /**
    * Put an element in this sink
    */
-  override def put(t: T): Unit = {
+  override def put(t: T, resources: QueryResources): Unit = {
     if (!queryStatus.cancelled) {
-      inner.put(t)
-      waker.wakeOne()
+      inner.put(t, resources)
+
+      inner match {
+        case x: Source[T] =>
+          if (x.hasData)
+            waker.wakeOne()
+        case _ =>
+          waker.wakeOne()
+      }
     } else {
       DebugSupport.ERROR_HANDLING.log("Dropped data %s because of query cancellation", t)
     }

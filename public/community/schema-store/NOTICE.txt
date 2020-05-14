@@ -27,6 +27,10 @@ Third-party licenses
 
 Apache Software License, Version 2.0
   Apache Commons Lang
+<<<<<<< HEAD
+=======
+  Jettison
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 
 Eclipse Distribution License - v 1.0
   Eclipse Collections API

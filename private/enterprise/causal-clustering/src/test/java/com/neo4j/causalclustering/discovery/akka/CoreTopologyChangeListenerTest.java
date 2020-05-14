@@ -22,12 +22,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.time.Clocks;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -37,7 +39,7 @@ class CoreTopologyChangeListenerTest
     private final NamedDatabaseId namedDatabaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
     private final MemberId myself = new MemberId( UUID.randomUUID() );
     private final RetryStrategy catchupAddressRetryStrategy = new NoRetriesStrategy();
-    private final RetryStrategy discoveryRestartRetryStrategy = new NoRetriesStrategy();
+    private final Restarter restarter = new Restarter( new ConstantTimeTimeoutStrategy( 1, MILLISECONDS ), 0 );
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     private final ActorSystemLifecycle actorSystemLifecycle = Mockito.mock( ActorSystemLifecycle.class );
@@ -49,7 +51,7 @@ class CoreTopologyChangeListenerTest
             NullLogProvider.getInstance(),
             NullLogProvider.getInstance(),
             catchupAddressRetryStrategy,
-            discoveryRestartRetryStrategy,
+            restarter,
             TestDiscoveryMember::new,
             executor,
             Clocks.systemClock(),

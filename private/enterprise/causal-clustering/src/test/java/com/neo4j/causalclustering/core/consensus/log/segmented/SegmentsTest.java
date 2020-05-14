@@ -35,6 +35,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.neo4j.logging.NullLogProvider.getInstance;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 class SegmentsTest
 {
@@ -50,9 +51,9 @@ class SegmentsTest
             Clocks.fakeClock() );
 
     private final SegmentFile fileA = spy( new SegmentFile( fsa, fileNames.getForSegment( 0 ), readerPool, 0,
-            contentMarshal, logProvider, header ) );
+            contentMarshal, logProvider, header, INSTANCE ) );
     private final SegmentFile fileB = spy( new SegmentFile( fsa, fileNames.getForSegment( 1 ), readerPool, 1,
-            contentMarshal, logProvider, header ) );
+            contentMarshal, logProvider, header, INSTANCE ) );
 
     private final List<SegmentFile> segmentFiles = asList( fileA, fileB );
 
@@ -67,7 +68,7 @@ class SegmentsTest
     {
         // Given
         try ( Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshals,
-                logProvider, -1 ) )
+                logProvider, -1, INSTANCE ) )
         {
             // When
             segments.rotate( 10, 10, 12 );
@@ -87,7 +88,7 @@ class SegmentsTest
         verifyNoInteractions( fsa );
         // Given
         try ( Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshals,
-                logProvider, -1 ) )
+                logProvider, -1, INSTANCE ) )
         {
             // this is version 0 and will be deleted on prune later
             SegmentFile toPrune = segments.rotate( -1, -1, -1 );
@@ -108,7 +109,7 @@ class SegmentsTest
     {
         // Given
         try ( Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshals,
-                logProvider, -1 ) )
+                logProvider, -1, INSTANCE ) )
         {
             segments.rotate( -1, -1, -1 );
             segments.last().closeWriter(); // need to close writer otherwise dispose will not be called
@@ -128,7 +129,7 @@ class SegmentsTest
     {
         // Given
         try ( Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshals,
-                logProvider, -1 ) )
+                logProvider, -1, INSTANCE ) )
         {
             SegmentFile toBePruned = segments.rotate( -1, -1, -1 );
             segments.last().closeWriter(); // need to close writer otherwise dispose will not be called
@@ -153,7 +154,7 @@ class SegmentsTest
     void shouldCloseTheSegments()
     {
         // Given
-        Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshals, logProvider, -1 );
+        Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshals, logProvider, -1, INSTANCE );
 
         // When
         segments.close();
@@ -172,7 +173,7 @@ class SegmentsTest
         doThrow( new RuntimeException() ).when( fileA ).close();
         doThrow( new RuntimeException() ).when( fileB ).close();
 
-        Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshals, logProvider, -1 );
+        Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshals, logProvider, -1, INSTANCE );
 
         // When
         try
@@ -194,7 +195,7 @@ class SegmentsTest
     {
         //Given a prune index of n, if the smallest value for a segment file is n+c, the pruning should not remove
         // any files and not result in a failure.
-        Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshals, logProvider, -1 );
+        Segments segments = new Segments( fsa, fileNames, readerPool, segmentFiles, contentMarshals, logProvider, -1, INSTANCE );
 
         segments.rotate( -1, -1, -1 );
         segments.last().closeWriter(); // need to close writer otherwise dispose will not be called
@@ -224,7 +225,7 @@ class SegmentsTest
          */
 
         // Given
-        Segments segments = new Segments( fsa, fileNames, readerPool, Collections.emptyList(), contentMarshals, logProvider, -1 );
+        Segments segments = new Segments( fsa, fileNames, readerPool, Collections.emptyList(), contentMarshals, logProvider, -1, INSTANCE );
 
         /*
         create 0

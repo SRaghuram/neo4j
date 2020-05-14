@@ -13,7 +13,7 @@ import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkloadConfiguration;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration;
-import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.model.model.Neo4jConfig;
 import com.neo4j.bench.ldbc.utils.StoreFormat;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 

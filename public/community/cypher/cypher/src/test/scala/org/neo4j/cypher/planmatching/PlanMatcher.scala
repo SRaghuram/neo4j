@@ -22,19 +22,20 @@ package org.neo4j.cypher.planmatching
 import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.ir.ordering.ProvidedOrder
 import org.neo4j.cypher.internal.logical.plans.CacheProperties
-import org.neo4j.cypher.internal.plandescription.Arguments
 import org.neo4j.cypher.internal.plandescription.Arguments.DbHits
+import org.neo4j.cypher.internal.plandescription.Arguments.Details
 import org.neo4j.cypher.internal.plandescription.Arguments.EstimatedRows
 import org.neo4j.cypher.internal.plandescription.Arguments.GlobalMemory
 import org.neo4j.cypher.internal.plandescription.Arguments.Memory
-import org.neo4j.cypher.internal.plandescription.Arguments.Order
 import org.neo4j.cypher.internal.plandescription.Arguments.Rows
 import org.neo4j.cypher.internal.plandescription.Arguments.Time
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
 import org.neo4j.cypher.internal.plandescription.NoChildren
 import org.neo4j.cypher.internal.plandescription.PlanDescriptionImpl
+import org.neo4j.cypher.internal.plandescription.PrettyString
 import org.neo4j.cypher.internal.plandescription.SingleChild
 import org.neo4j.cypher.internal.plandescription.TwoChildren
+import org.neo4j.cypher.internal.plandescription.asPrettyString
 import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.scalatest.matchers.MatchResult
@@ -83,9 +84,18 @@ trait PlanMatcher extends Matcher[InternalPlanDescription] {
 
   def containingArgument(argument: String*): PlanMatcher
 
+  def containingArgumentForProjection(projections: Map[String, String]): PlanMatcher = {
+    val expectedArg = projections
+      .map {
+        case (k, v) => if (k == v) k else s"$v AS $k"
+      }
+      .mkString(", ")
+    containingArgument(expectedArg)
+  }
+
   def containingArgumentForProjection(keys: String*): PlanMatcher = {
-    val k = keys.map(k => s"$k : .*").mkString(", ")
-    containingArgumentRegex(s"\\{$k\\}".r)
+    val k = keys.map(k => s".* AS $k").mkString(", ")
+    containingArgumentRegex(k.r)
   }
 
   def containingArgumentForCachedProperty(varName: String, propName: String): PlanMatcher = {
@@ -380,7 +390,7 @@ case class ExactPlan(name: Option[PlanNameMatcher] = None,
 
   override def toPlanDescription: InternalPlanDescription = {
     val nameDesc = name.fold("???")(_.expectedName)
-    val variablesDesc = variables.fold(Set.empty[String])(_.expected)
+    val variablesDesc = variables.fold(Set.empty[PrettyString])(_.expected.map(asPrettyString.raw))
     val lhsDesc = lhs.map(_.toPlanDescription)
     val rhsDesc = rhs.map(_.toPlanDescription)
     val estRowArg = estimatedRows.map(m => EstimatedRows(m.expectedValue)).toSeq
@@ -389,8 +399,10 @@ case class ExactPlan(name: Option[PlanNameMatcher] = None,
     val memoryArg = memory.map(m => Memory(m.expectedValue)).toSeq
     val globalMemoryArg = memory.map(m => GlobalMemory(m.expectedValue)).toSeq
     val dbHitsArg = dbHits.map(m => DbHits(m.expectedValue)).toSeq
-    val orderArg = order.map(m => Order(m.expected)).toSeq
-    val otherArgs = other.map(_.expected.toSeq.map(str => Arguments.Expression(JustForToStringExpression(str)))).getOrElse(Seq.empty)
+    val orderArg = order.map(m => asPrettyString.order(m.expected)).toSeq
+    val otherArgs = other
+      .map(_.expected.toSeq.map(str => Details(asPrettyString(JustForToStringExpression(str)))))
+      .getOrElse(Seq.empty)
 
     val children = (lhsDesc, rhsDesc) match {
       case (None, None) => NoChildren

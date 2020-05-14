@@ -28,6 +28,7 @@
             <artifactId>benchmark-infra-common</artifactId>
             <version>${project.version}</version>
         </dependency>
+
         <dependency>
             <groupId>com.github.rvesse</groupId>
             <artifactId>airline</artifactId>
@@ -41,31 +42,11 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.neo4j.bench</groupId>
+            <artifactId>benchmark-model</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <finalName>${project.name}</finalName>
-                            <transformers>
-                                <transformer
-                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>com.neo4j.bench.infra.scheduler.Main</mainClass>
-                                </transformer>
-                            </transformers>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
 </project>

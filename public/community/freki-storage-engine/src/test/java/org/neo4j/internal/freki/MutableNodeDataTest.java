@@ -33,8 +33,11 @@ import org.neo4j.test.rule.RandomRule;
 import org.neo4j.values.storable.CoordinateReferenceSystem;
 import org.neo4j.values.storable.Values;
 
+<<<<<<< HEAD
 import static org.neo4j.internal.freki.MutableNodeData.buildRecordPointer;
 
+=======
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 @ExtendWith( RandomExtension.class )
 class MutableNodeDataTest
 {
@@ -182,10 +185,13 @@ class MutableNodeDataTest
     @Test
     void canHaveDegreesForDenseNode()
     {
+<<<<<<< HEAD
         // given
         mutableNodeData.setRecordPointer( buildRecordPointer( 0, 0 ) );
         mutableNodeData.setDense( true );
 
+=======
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         // when
         mutableNodeData.addDegrees( 3, 33, 333, 3333 );
         mutableNodeData.addDegrees( 5, 55, 555, 5555 );
@@ -197,10 +203,13 @@ class MutableNodeDataTest
     @Test
     void canHaveZeroLoopDegreesForDenseNode()
     {
+<<<<<<< HEAD
         // given
         mutableNodeData.setRecordPointer( buildRecordPointer( 0, 0 ) );
         mutableNodeData.setDense( true );
 
+=======
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         // when
         mutableNodeData.addDegrees( 3, 1234, 5678, 0 );
         mutableNodeData.addDegrees( 5, 4321, 21, 0 );

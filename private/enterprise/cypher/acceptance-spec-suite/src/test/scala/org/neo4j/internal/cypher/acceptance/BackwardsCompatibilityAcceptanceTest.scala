@@ -571,4 +571,110 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     // THEN
     executeSingle("SHOW ROLE role PRIVILEGES").toList should not be List.empty
   }
+
+  // Fined-grained write should not work in 4.0
+  test("grant fine-grained write is not supported in 3.5 or 4.0") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    executeSingle("CREATE ROLE role")
+
+    // WHEN 3.5
+    val exception_35 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 3.5 GRANT SET LABEL label ON GRAPH * TO role")
+    }
+    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+    // WHEN 4.0
+    val exception_40 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 4.0 GRANT SET LABEL label ON GRAPH * TO role")
+    }
+    exception_40.getMessage should include("Fine-grained writes are not supported in this Cypher version.")
+
+    // THEN
+    executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)
+  }
+
+  test("deny fine-grained write is not supported in 3.5 or 4.0") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    executeSingle("CREATE ROLE role")
+
+    // WHEN 3.5
+    val exception_35 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 3.5 DENY REMOVE LABEL label ON GRAPH * TO role")
+    }
+    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+    // WHEN 4.0
+    val exception_40 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 4.0 DENY REMOVE LABEL label ON GRAPH * TO role")
+    }
+    exception_40.getMessage should include("Fine-grained writes are not supported in this Cypher version.")
+
+    // THEN
+    executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)
+  }
+
+  test("revoke fine-grained write is not supported in 3.5 or 4.0") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    executeSingle("CREATE ROLE role")
+
+    // WHEN 3.5
+    val exception_35 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 3.5 REVOKE CREATE ON GRAPH * FROM role")
+    }
+    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+    // WHEN 4.0
+    val exception_40 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 4.0 REVOKE CREATE ON GRAPH * FROM role")
+    }
+    exception_40.getMessage should include("Fine-grained writes are not supported in this Cypher version.")
+
+    // THEN
+    executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)
+  }
+
+  test("revoke grant fine-grained write is not supported in 3.5 or 4.0") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    executeSingle("CREATE ROLE role")
+
+    // WHEN 3.5
+    val exception_35 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 3.5 REVOKE GRANT DELETE ON GRAPH * NODES A FROM role")
+    }
+    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+    // WHEN 4.0
+    val exception_40 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 4.0 REVOKE GRANT DELETE ON GRAPH * NODES A FROM role")
+    }
+    exception_40.getMessage should include("Fine-grained writes are not supported in this Cypher version.")
+
+    // THEN
+    executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)
+  }
+
+  // Write should work in 4.0
+  test("GRANT WRITE is not supported in 3.5") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    executeSingle("CREATE ROLE role")
+
+    // WHEN 3.5
+    val exception_35 = the[SyntaxException] thrownBy {
+      executeSingle(s"CYPHER 3.5 GRANT WRITE ON GRAPH * TO role")
+    }
+    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+
+    // WHEN 4.0
+    executeSingle(s"CYPHER 4.0 GRANT WRITE ON GRAPH * TO role")
+
+    // THEN
+    executeSingle("SHOW ROLE role PRIVILEGES").toList should not be (List.empty)
+  }
 }
+

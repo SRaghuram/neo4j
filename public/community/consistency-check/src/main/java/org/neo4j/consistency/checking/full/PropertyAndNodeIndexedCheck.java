@@ -28,7 +28,6 @@ import org.eclipse.collections.impl.set.mutable.primitive.IntHashSet;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 
 import org.neo4j.collection.PrimitiveLongResourceCollections;
 import org.neo4j.collection.PrimitiveLongResourceIterator;
@@ -254,7 +253,7 @@ public class PropertyAndNodeIndexedCheck implements RecordCheck<NodeRecord, Cons
         try
         {
             NodeValueIterator iterator = new NodeValueIterator();
-            reader.query( NULL_CONTEXT, iterator, unconstrained(), cursorTracer, query );
+            reader.query( NULL_CONTEXT, iterator, unconstrained(), query );
             indexedNodeIds = iterator;
         }
         catch ( IndexNotApplicableKernelException e )

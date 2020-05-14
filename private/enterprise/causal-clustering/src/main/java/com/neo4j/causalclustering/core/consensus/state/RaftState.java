@@ -5,13 +5,16 @@
  */
 package com.neo4j.causalclustering.core.consensus.state;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
+import com.neo4j.causalclustering.core.consensus.leader_transfer.ExpiringSet;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.ReadableRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.cache.InFlightCache;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembership;
 import com.neo4j.causalclustering.core.consensus.outcome.Outcome;
 import com.neo4j.causalclustering.core.consensus.outcome.RaftLogCommand;
+import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.consensus.roles.follower.FollowerStates;
 import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.consensus.vote.VoteState;
@@ -21,6 +24,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Supplier;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -35,6 +39,7 @@ public class RaftState implements ReadableRaftState
     private final RaftLog entryLog;
     private final InFlightCache inFlightCache;
     private final boolean supportPreVoting;
+    private final ExpiringSet<MemberId> leadershipTransfers;
 
     private TermState termState;
     private VoteState voteState;
@@ -50,6 +55,7 @@ public class RaftState implements ReadableRaftState
     private long lastLogIndexBeforeWeBecameLeader = -1;
     private boolean isPreElection;
     private final boolean refuseToBeLeader;
+    private final Supplier<Set<ServerGroupName>> serverGroupsSupplier;
 
     public RaftState( MemberId myself,
                       StateStorage<TermState> termStorage,
@@ -57,8 +63,9 @@ public class RaftState implements ReadableRaftState
                       RaftLog entryLog,
                       StateStorage<VoteState> voteStorage,
                       InFlightCache inFlightCache, LogProvider logProvider, boolean supportPreVoting,
-                      boolean refuseToBeLeader
-            )
+                      boolean refuseToBeLeader,
+                      Supplier<Set<ServerGroupName>> serverGroupsSupplier,
+                      ExpiringSet<MemberId> leadershipTransfers )
     {
         this.myself = myself;
         this.termStorage = termStorage;
@@ -72,6 +79,8 @@ public class RaftState implements ReadableRaftState
         // Initial state
         this.isPreElection = supportPreVoting;
         this.refuseToBeLeader = refuseToBeLeader;
+        this.serverGroupsSupplier = serverGroupsSupplier;
+        this.leadershipTransfers = leadershipTransfers;
     }
 
     @Override
@@ -200,6 +209,18 @@ public class RaftState implements ReadableRaftState
         return refuseToBeLeader;
     }
 
+    @Override
+    public Set<ServerGroupName> serverGroups()
+    {
+        return serverGroupsSupplier.get();
+    }
+
+    @Override
+    public boolean areTransferringLeadership()
+    {
+        return leadershipTransfers.nonEmpty();
+    }
+
     public void update( Outcome outcome ) throws IOException
     {
         if ( termState().update( outcome.getTerm() ) )
@@ -222,6 +243,16 @@ public class RaftState implements ReadableRaftState
         lastLogIndexBeforeWeBecameLeader = outcome.getLastLogIndexBeforeWeBecameLeader();
         followerStates = outcome.getFollowerStates();
         isPreElection = outcome.isPreElection();
+
+        if ( outcome.getRole() != Role.LEADER )
+        {
+            leadershipTransfers.clear();
+        }
+        else
+        {
+            outcome.transferringLeadershipTo().ifPresent( leadershipTransfers::add );
+            outcome.getLeaderTransferRejection().ifPresent( rejection -> leadershipTransfers.remove( rejection.from() ) );
+        }
 
         for ( RaftLogCommand logCommand : outcome.getLogCommands() )
         {
@@ -254,7 +285,7 @@ public class RaftState implements ReadableRaftState
                 lastLogIndexBeforeWeBecameLeader(), term(), votingMembers() );
     }
 
-    private class ReadOnlyRaftState implements ExposedRaftState
+    private static class ReadOnlyRaftState implements ExposedRaftState
     {
 
         final long leaderCommit;

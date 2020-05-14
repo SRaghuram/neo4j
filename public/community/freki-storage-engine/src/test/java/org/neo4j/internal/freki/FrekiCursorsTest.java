@@ -37,6 +37,10 @@ import org.neo4j.internal.freki.GraphUpdates.NodeUpdates;
 import org.neo4j.internal.kernel.api.exceptions.ConstraintViolationTransactionFailureException;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+<<<<<<< HEAD
+=======
+import org.neo4j.memory.EmptyMemoryTracker;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 import org.neo4j.storageengine.api.PropertyKeyValue;
 import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StorageEntityCursor;
@@ -88,7 +92,12 @@ abstract class FrekiCursorsTest
 
         Node( long id )
         {
+<<<<<<< HEAD
             graphUpdates = new GraphUpdates( stores, new ArrayList<>(), applyToStoreImmediately( stores.bigPropertyValueStore ), PageCursorTracer.NULL );
+=======
+            graphUpdates = new GraphUpdates( stores, new ArrayList<>(), applyToStoreImmediately( stores.bigPropertyValueStore ), PageCursorTracer.NULL,
+                    EmptyMemoryTracker.INSTANCE );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
             graphUpdates.create( id );
             updates = graphUpdates.getOrLoad( id );
         }
@@ -105,6 +114,7 @@ abstract class FrekiCursorsTest
                 MutableObject<Record> x1 = new MutableObject<>();
                 graphUpdates.extractUpdates( command ->
                 {
+<<<<<<< HEAD
                     FrekiCommand.SparseNode sparseNode = (FrekiCommand.SparseNode) command;
                     Record record = sparseNode.after;
                     SimpleStore store = stores.mainStore( record.sizeExp() );
@@ -119,6 +129,24 @@ abstract class FrekiCursorsTest
                     if ( record.sizeExp() == 0 )
                     {
                         x1.setValue( record );
+=======
+                    for ( FrekiCommand.RecordChange change : (FrekiCommand.SparseNode) command )
+                    {
+                        Record record = change.after;
+                        SimpleStore store = stores.mainStore( record.sizeExp() );
+                        try ( PageCursor cursor = store.openWriteCursor( PageCursorTracer.NULL ) )
+                        {
+                            store.write( cursor, record, IdUpdateListener.IGNORE, PageCursorTracer.NULL );
+                        }
+                        catch ( IOException e )
+                        {
+                            throw new UncheckedIOException( e );
+                        }
+                        if ( record.sizeExp() == 0 )
+                        {
+                            x1.setValue( record );
+                        }
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
                     }
                 } );
                 return x1.getValue();

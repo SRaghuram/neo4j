@@ -21,7 +21,6 @@ package org.neo4j.annotations.api;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -166,10 +165,9 @@ public class PublicApiAnnotationProcessor extends AbstractProcessor
 
             // Write new signature
             final FileObject file = processingEnv.getFiler().createResource( CLASS_OUTPUT, "", GENERATED_SIGNATURE_DESTINATION );
-            try ( Writer writer = file.openWriter();
-                    BufferedWriter out = new BufferedWriter( writer ) )
+            try ( BufferedWriter writer = new BufferedWriter( file.openWriter() ) )
             {
-                out.write( newSignature );
+                writer.write( newSignature );
             }
 
             if ( !testExecution )

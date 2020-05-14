@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.catchup.storecopy.CopiedStoreRecovery;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClient;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
-import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpFactory;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.common.TransactionBackupServiceProvider;
@@ -35,6 +34,7 @@ import org.neo4j.kernel.database.DatabaseTracers;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogProvider;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngineFactory;
@@ -65,6 +65,7 @@ public final class CatchupComponentsProvider
     private final StorageEngineFactory storageEngineFactory;
     private final ExponentialBackoffStrategy storeCopyBackoffStrategy;
     private final DatabaseTracers databaseTracers;
+    private final MemoryTracker otherMemoryGlobalTracker;
 
     public CatchupComponentsProvider( GlobalModule globalModule, PipelineBuilders pipelineBuilders )
     {
@@ -83,8 +84,9 @@ public final class CatchupComponentsProvider
         this.catchupClientFactory = createCatchupClientFactory();
         this.portRegister = globalModule.getConnectorPortRegister();
         this.databaseTracers = new DatabaseTracers( globalModule.getTracers() );
+        this.otherMemoryGlobalTracker = globalModule.getOtherMemoryPool().getPoolMemoryTracker();
         this.copiedStoreRecovery = globalLife.add(
-                new CopiedStoreRecovery( pageCache, databaseTracers, fileSystem, globalModule.getStorageEngineFactory() ) );
+                new CopiedStoreRecovery( pageCache, databaseTracers, fileSystem, globalModule.getStorageEngineFactory(), otherMemoryGlobalTracker ) );
         this.storeCopyBackoffStrategy = new ExponentialBackoffStrategy( 1,
                 config.get( CausalClusteringSettings.store_copy_backoff_max_wait ).toMillis(), TimeUnit.MILLISECONDS );
     }
@@ -107,8 +109,6 @@ public final class CatchupComponentsProvider
 
     /**
      * Global Server instance for the Neo4j Catchup Protocol. Responds to store copy and catchup requests from other Neo4j instances
-     * @param installedProtocolsHandler
-     * @param catchupServerHandler
      * @return a catchup server
      */
     public Server createCatchupServer( InstalledProtocolHandler installedProtocolsHandler, CatchupServerHandler catchupServerHandler )
@@ -133,8 +133,6 @@ public final class CatchupComponentsProvider
 
     /**
      * Optional global server instance for the Neo4j Backup protocol. Basically works the same way as the catchup protocol.
-     * @param installedProtocolsHandler
-     * @param catchupServerHandler
      * @return an optional backup server
      */
     public Optional<Server> createBackupServer( InstalledProtocolHandler installedProtocolsHandler, CatchupServerHandler catchupServerHandler )
@@ -166,7 +164,7 @@ public final class CatchupComponentsProvider
         TxPullClient txPullClient = new TxPullClient( catchupClientFactory, clusteredDatabaseContext.databaseId(), () -> monitors, databaseLogProvider );
 
         RemoteStore remoteStore = new RemoteStore( databaseLogProvider, fileSystem, pageCache, storeCopyClient, txPullClient, transactionLogFactory, config,
-                monitors, storageEngineFactory, clusteredDatabaseContext.databaseId(), databaseTracers.getPageCacheTracer() );
+                monitors, storageEngineFactory, clusteredDatabaseContext.databaseId(), databaseTracers.getPageCacheTracer(), otherMemoryGlobalTracker );
 
         StoreCopyProcess storeCopy = new StoreCopyProcess( fileSystem, pageCache, clusteredDatabaseContext,
                 copiedStoreRecovery, remoteStore, databaseLogProvider );

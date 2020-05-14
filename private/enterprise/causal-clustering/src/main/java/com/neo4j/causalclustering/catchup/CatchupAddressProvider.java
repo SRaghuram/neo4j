@@ -10,6 +10,9 @@ import com.neo4j.causalclustering.core.LeaderProvider;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 
+import java.util.Collection;
+import java.util.List;
+
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
@@ -31,6 +34,16 @@ public interface CatchupAddressProvider
      * @throws CatchupAddressResolutionException if the provider was unable to find an address to this location.
      */
     SocketAddress secondary( NamedDatabaseId namedDatabaseId ) throws CatchupAddressResolutionException;
+
+    /**
+     * @return the collection of addresses for known secondary locations which are not required to be up to date. Whilst it is possible to return a
+     * stable list of all known addresses, many implementations will return changing sub lists according to load balancing policies or filtering rules.
+     * @throws CatchupAddressResolutionException if the provider was unable to find any addresses to this location
+     */
+    default Collection<SocketAddress> allSecondaries( NamedDatabaseId namedDatabaseId ) throws CatchupAddressResolutionException
+    {
+        return List.of( secondary( namedDatabaseId ) );
+    }
 
     class SingleAddressProvider implements CatchupAddressProvider
     {
@@ -74,6 +87,12 @@ public interface CatchupAddressProvider
         {
             return upstreamAddressLookup.lookupAddressForDatabase( namedDatabaseId );
         }
+
+        @Override
+        public Collection<SocketAddress> allSecondaries( NamedDatabaseId namedDatabaseId ) throws CatchupAddressResolutionException
+        {
+            return upstreamAddressLookup.lookupAddressesForDatabase( namedDatabaseId );
+        }
     }
 
     /**
@@ -108,6 +127,12 @@ public interface CatchupAddressProvider
         public SocketAddress secondary( NamedDatabaseId namedDatabaseId ) throws CatchupAddressResolutionException
         {
             return secondaryUpstreamAddressLookup.lookupAddressForDatabase( namedDatabaseId );
+        }
+
+        @Override
+        public Collection<SocketAddress> allSecondaries( NamedDatabaseId namedDatabaseId ) throws CatchupAddressResolutionException
+        {
+            return secondaryUpstreamAddressLookup.lookupAddressesForDatabase( namedDatabaseId );
         }
     }
 }

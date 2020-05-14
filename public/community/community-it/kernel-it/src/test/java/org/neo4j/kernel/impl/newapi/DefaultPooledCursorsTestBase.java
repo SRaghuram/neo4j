@@ -37,11 +37,11 @@ import org.neo4j.internal.kernel.api.RelationshipIndexCursor;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
 import org.neo4j.internal.schema.IndexDescriptor;
+import org.neo4j.internal.schema.IndexOrder;
 import org.neo4j.internal.schema.IndexPrototype;
 import org.neo4j.internal.schema.IndexType;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.storageengine.api.RelationshipSelection;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -50,6 +50,7 @@ import static org.neo4j.graphdb.RelationshipType.withName;
 import static org.neo4j.internal.kernel.api.InternalIndexState.ONLINE;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.index.schema.FulltextIndexProviderFactory.DESCRIPTOR;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.storageengine.api.RelationshipSelection.ALL_RELATIONSHIPS;
 
 public abstract class DefaultPooledCursorsTestBase<G extends KernelAPIReadTestSupport> extends KernelAPIReadTestBase<G>
@@ -147,7 +148,7 @@ public abstract class DefaultPooledCursorsTestBase<G extends KernelAPIReadTestSu
     void shouldReusePropertyCursor()
     {
         NodeCursor node = cursors.allocateNodeCursor( NULL );
-        PropertyCursor c1 = cursors.allocatePropertyCursor( NULL );
+        PropertyCursor c1 = cursors.allocatePropertyCursor( NULL, INSTANCE );
 
         read.singleNode( propNode, node );
         node.next();
@@ -156,7 +157,7 @@ public abstract class DefaultPooledCursorsTestBase<G extends KernelAPIReadTestSu
         node.close();
         c1.close();
 
-        PropertyCursor c2 = cursors.allocatePropertyCursor( NULL );
+        PropertyCursor c2 = cursors.allocatePropertyCursor( NULL, INSTANCE );
         assertEquals( c1, c2 );
         c2.close();
     }
@@ -165,7 +166,7 @@ public abstract class DefaultPooledCursorsTestBase<G extends KernelAPIReadTestSu
     void shouldReuseFullAccessPropertyCursor()
     {
         NodeCursor node = cursors.allocateNodeCursor( NULL );
-        PropertyCursor c1 = cursors.allocateFullAccessPropertyCursor( NULL );
+        PropertyCursor c1 = cursors.allocateFullAccessPropertyCursor( NULL, INSTANCE );
 
         read.singleNode( propNode, node );
         node.next();
@@ -174,7 +175,7 @@ public abstract class DefaultPooledCursorsTestBase<G extends KernelAPIReadTestSu
         node.close();
         c1.close();
 
-        PropertyCursor c2 = cursors.allocateFullAccessPropertyCursor( NULL );
+        PropertyCursor c2 = cursors.allocateFullAccessPropertyCursor( NULL, INSTANCE );
         assertEquals( c1, c2 );
         c2.close();
     }
@@ -202,7 +203,7 @@ public abstract class DefaultPooledCursorsTestBase<G extends KernelAPIReadTestSu
         try ( KernelTransaction tx = beginTransaction() )
         {
             NodeLabelIndexCursor c1 = tx.cursors().allocateNodeLabelIndexCursor( NULL );
-            tx.dataRead().nodeLabelScan( 1, c1 );
+            tx.dataRead().nodeLabelScan( 1, c1, IndexOrder.NONE );
             c1.close();
 
             NodeLabelIndexCursor c2 = tx.cursors().allocateNodeLabelIndexCursor( NULL );

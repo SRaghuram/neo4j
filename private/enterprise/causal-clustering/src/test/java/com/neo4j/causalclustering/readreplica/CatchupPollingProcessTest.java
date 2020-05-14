@@ -36,6 +36,7 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.Log;
+import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.storageengine.api.TransactionIdStore;
@@ -99,7 +100,7 @@ class CatchupPollingProcessTest
         when( storeFiles.readStoreId( any(), any() ) ).thenReturn( storeId );
 
         databaseContext = spy( new ReadReplicaDatabaseContext( kernelDatabase, new Monitors(), new Dependencies(), storeFiles, mock( LogFiles.class ),
-                new ClusterInternalDbmsOperator(), PageCacheTracer.NULL ) );
+                                                               new ClusterInternalDbmsOperator( NullLogProvider.nullLogProvider() ), PageCacheTracer.NULL ) );
 
         when( idStore.getLastCommittedTransactionId() ).thenReturn( BASE_TX_ID + 1 );
         when( clusteredDatabaseContext.storeId() ).thenReturn( storeId );

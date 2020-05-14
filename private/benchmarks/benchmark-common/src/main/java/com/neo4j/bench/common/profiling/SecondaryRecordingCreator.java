@@ -11,7 +11,8 @@ import com.neo4j.bench.common.process.ProcessWrapper;
 import com.neo4j.bench.common.profiling.jfr.JfrMemoryStackCollapse;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.BenchmarkUtil;
-import com.neo4j.bench.common.util.JsonUtil;
+import com.neo4j.bench.model.profiling.RecordingType;
+import com.neo4j.bench.model.util.JsonUtil;
 
 import java.io.IOException;
 import java.nio.file.Files;

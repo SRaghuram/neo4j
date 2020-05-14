@@ -83,6 +83,25 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       )))
     }
 
+    test(s"$cypherToken: Label scan") {
+      val result = executeWith(Configs.All,
+        s"MATCH (n:DateString) RETURN n.ds ORDER BY n $cypherToken",
+        executeBefore = createSomeNodes)
+
+      result.executionPlanDescription() should not(includeSomewhere.aPlan("Sort"))
+
+      result.toList should be(expectedOrder(List(
+        Map("n.ds" -> "2018-01-01"),
+        Map("n.ds" -> "2018-02-01"),
+        Map("n.ds" -> "2018-04-01"),
+        Map("n.ds" -> "2017-03-01"),
+        Map("n.ds" -> "2018-01-01"),
+        Map("n.ds" -> "2018-02-01"),
+        Map("n.ds" -> "2018-04-01"),
+        Map("n.ds" -> "2017-03-01"),
+      )))
+    }
+
     test(s"$cypherToken: Order by index backed property renamed in an earlier WITH") {
       val result = executeWith(Configs.CachedProperty,
         s"""MATCH (n:Awesome) WHERE n.prop3 STARTS WITH 'foo'
@@ -258,7 +277,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       result.executionPlanDescription() should includeSomewhere
         .aPlan("PartialSort")
         .withOrder(order)
-        .containingArgument("n.prop2", "n.prop1")
+        .containingArgument(s"n.prop2 $cypherToken, n.prop1 $cypherToken")
 
       result.toList should equal(expectedOrder(List(
         Map("n.prop2" -> 1, "n.prop1" -> 43),
@@ -275,7 +294,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
     test(s"$cypherToken: should plan partial top after index provided order") {
       val query = s"MATCH (n:Awesome) WHERE n.prop2 > 0 RETURN n.prop2, n.prop1 ORDER BY n.prop2 $cypherToken, n.prop1 $cypherToken LIMIT 4"
-      val result = executeWith(Configs.InterpretedAndSlotted, query)
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
       val order = cypherToken match {
         case "ASC" => ProvidedOrder.asc(varFor("n.prop2")).asc(varFor("n.prop1")).fromLeft
@@ -285,7 +304,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       result.executionPlanDescription() should includeSomewhere
         .aPlan("PartialTop")
         .withOrder(order)
-        .containingArgument("n.prop2", "n.prop1")
+        .containingArgument(s"n.prop2 $cypherToken, n.prop1 $cypherToken")
 
       result.toList should equal(expectedOrder(List(
         Map("n.prop2" -> 1, "n.prop1" -> 43),
@@ -302,7 +321,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
     test(s"$cypherToken: should plan partial top1 after index provided order") {
       val query = s"MATCH (n:Awesome) WHERE n.prop2 > 0 RETURN n.prop2, n.prop1 ORDER BY n.prop2 $cypherToken, n.prop1 $cypherToken LIMIT 1"
-      val result = executeWith(Configs.InterpretedAndSlotted, query)
+      val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
       val order = cypherToken match {
         case "ASC" => ProvidedOrder.asc(varFor("n.prop2")).asc(varFor("n.prop1")).fromLeft
@@ -312,7 +331,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       result.executionPlanDescription() should includeSomewhere
         .aPlan("PartialTop")
         .withOrder(order)
-        .containingArgument("n.prop2", "n.prop1")
+        .containingArgument(s"n.prop2 $cypherToken, n.prop1 $cypherToken")
 
       result.toList should equal(expectedOrder(List(
         Map("n.prop2" -> 1, "n.prop1" -> 43),
@@ -400,7 +419,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
           result.executionPlanDescription() should includeSomewhere
             .aPlan("PartialSort")
             .withOrder(sortOrder)
-            .containingArgument("n.prop1", "n.prop2")
+            .containingArgument(orderByString)
         else result.executionPlanDescription() should not(includeSomewhere.aPlan("PartialSort"))
     }
   }
@@ -575,7 +594,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
         // Then
         result.executionPlanDescription() should includeSomewhere
           .aPlan("PartialSort")
-          .containingArgument("n.prop1, n.prop2", sortItem)
+          .containingArgument(orderByString)
           .withOrder(sortOrder)
           .onTopOf(aPlan("Projection")
             .onTopOf(aPlan("Filter")
@@ -747,7 +766,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
         result.executionPlanDescription() should includeSomewhere
           .aPlan("PartialSort")
-          .containingArgument(alreadySorted, toBeSorted)
+          .containingArgument(orderByString)
           .withOrder(sortOrder)
           .onTopOf(aPlan("Projection")
             .onTopOf(aPlan("Filter")
@@ -818,7 +837,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
         // Then
         result.executionPlanDescription() should includeSomewhere
           .aPlan("PartialSort")
-          .containingArgument(alreadySorted, toBeSorted)
+          .containingArgument(orderByString)
           .withOrder(sortOrder)
           .onTopOf(aPlan("Projection")
             .onTopOf(aPlan("Projection")

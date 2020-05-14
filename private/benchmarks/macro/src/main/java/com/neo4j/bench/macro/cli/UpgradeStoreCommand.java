@@ -12,7 +12,7 @@ import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.AutoDetectStore;
 import com.neo4j.bench.common.database.Store;
-import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Resources;

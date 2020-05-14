@@ -29,6 +29,8 @@ import static com.neo4j.dbms.EnterpriseOperatorState.UNKNOWN;
  */
 class ReconcilerTransitions
 {
+    static final Consumer<NamedDatabaseId> nothing =  ignored -> {};
+
     private final Transition create;
     private final Transition start;
     private final Transition stop;
@@ -49,7 +51,7 @@ class ReconcilerTransitions
         return Transition.from( INITIAL )
                          .doTransition( databaseManager::createDatabase )
                          .ifSucceeded( STOPPED )
-                         .ifFailed( DIRTY );
+                         .ifFailedThenDo( nothing, DIRTY );
     }
 
     private static Transition startFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager )
@@ -57,7 +59,7 @@ class ReconcilerTransitions
         return Transition.from( STOPPED )
                          .doTransition( databaseManager::startDatabase )
                          .ifSucceeded( STARTED )
-                         .ifFailed( STOPPED );
+                         .ifFailedThenDo( nothing, STOPPED );
     }
 
     private static Transition stopFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager )
@@ -65,7 +67,7 @@ class ReconcilerTransitions
         return Transition.from( STARTED, STORE_COPYING )
                          .doTransition( databaseManager::stopDatabase )
                          .ifSucceeded( STOPPED )
-                         .ifFailed( STOPPED );
+                         .ifFailedThenDo( nothing, STOPPED );
     }
 
     private static Transition dropFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager )
@@ -73,7 +75,7 @@ class ReconcilerTransitions
         return Transition.from( STOPPED )
                          .doTransition( databaseManager::dropDatabase )
                          .ifSucceeded( DROPPED )
-                         .ifFailed( DIRTY );
+                         .ifFailedThenDo( nothing, DIRTY );
     }
 
     private static Transition prepareDropFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager )
@@ -82,7 +84,10 @@ class ReconcilerTransitions
                                                                     .map( DatabaseContext::database )
                                                                     .ifPresent( Database::prepareToDrop );
         // Failed state for prepareDrop marked as unknown as the only possible failure is that the database manage fails to find database with given id
-        return Transition.from( STARTED ).doTransition( transition ).ifSucceeded( STARTED ).ifFailed( UNKNOWN );
+        return Transition.from( STARTED )
+                         .doTransition( transition )
+                         .ifSucceeded( STARTED )
+                         .ifFailedThenDo( nothing, UNKNOWN );
     }
 
     final Transition stop()

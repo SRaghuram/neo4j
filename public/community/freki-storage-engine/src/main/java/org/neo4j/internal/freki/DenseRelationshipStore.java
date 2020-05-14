@@ -60,11 +60,20 @@ import org.neo4j.values.storable.Value;
 import static java.lang.String.format;
 import static org.neo4j.internal.freki.MutableNodeData.externalRelationshipId;
 import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValueSizeIncludingTypeHeader;
+<<<<<<< HEAD
 import static org.neo4j.internal.freki.StreamVByte.calculateLongSizeIndex;
 import static org.neo4j.internal.freki.StreamVByte.decodeLongValue;
 import static org.neo4j.internal.freki.StreamVByte.encodeLongValue;
 import static org.neo4j.internal.freki.StreamVByte.sizeOfLongSizeIndex;
 import static org.neo4j.internal.freki.StreamVByte.writeIntDeltas;
+=======
+import static org.neo4j.internal.freki.StreamVByte.decodeLongValue;
+import static org.neo4j.internal.freki.StreamVByte.encodeLongValue;
+import static org.neo4j.internal.freki.StreamVByte.longValueSizeCode;
+import static org.neo4j.internal.freki.StreamVByte.readInts;
+import static org.neo4j.internal.freki.StreamVByte.sizeOfLongSizeIndex;
+import static org.neo4j.internal.freki.StreamVByte.writeInts;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 import static org.neo4j.internal.helpers.collection.Iterators.iterator;
 import static org.neo4j.storageengine.api.RelationshipDirection.LOOP;
 import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
@@ -206,7 +215,11 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         {
             return NO_PROPERTIES;
         }
+<<<<<<< HEAD
         int[] propertyKeys = StreamVByte.readIntDeltas( relationshipData );
+=======
+        int[] propertyKeys = readInts( relationshipData, true );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         return new RelationshipPropertyIterator()
         {
             private int current = -1;
@@ -519,10 +532,17 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
         {
             if ( cachedKeySize == 0 )
             {
+<<<<<<< HEAD
                 int nodeIdSize = calculateLongSizeIndex( nodeId );
                 int tokenAndDirectionSize = calculateLongSizeIndex( tokenAndDirectionInt() );
                 int neighbourIdSize = calculateLongSizeIndex( neighbourNodeId );
                 int internalRelationshipIdSize = calculateLongSizeIndex( internalRelationshipId );
+=======
+                int nodeIdSize = longValueSizeCode( nodeId );
+                int tokenAndDirectionSize = longValueSizeCode( tokenAndDirectionInt() );
+                int neighbourIdSize = longValueSizeCode( neighbourNodeId );
+                int internalRelationshipIdSize = longValueSizeCode( internalRelationshipId );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
                 cachedKeySize = 1 + sizeOfLongSizeIndex( nodeIdSize ) + sizeOfLongSizeIndex( tokenAndDirectionSize ) +
                         sizeOfLongSizeIndex( neighbourIdSize ) + sizeOfLongSizeIndex( internalRelationshipIdSize );
                 cachedSizesByte = (byte) (nodeIdSize | (tokenAndDirectionSize << 2) | (neighbourIdSize << 4) | (internalRelationshipIdSize << 6));
@@ -579,7 +599,11 @@ class DenseRelationshipStore extends LifecycleAdapter implements Closeable
                 }
                 sortedKeys = cursor == properties.size() ? sortedKeys : Arrays.copyOf( sortedKeys, cursor );
                 Arrays.sort( sortedKeys );
+<<<<<<< HEAD
                 writeIntDeltas( sortedKeys, data );
+=======
+                writeInts( sortedKeys, data, true );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
                 for ( int key : sortedKeys )
                 {
                     data.put( version.apply( properties.get( key ) ) );

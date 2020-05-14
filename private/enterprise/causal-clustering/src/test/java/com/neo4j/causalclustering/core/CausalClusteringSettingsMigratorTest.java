@@ -41,6 +41,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.routing_ttl;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.configuration.helpers.DurationRange.fromSeconds;
+import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
 import static org.neo4j.logging.AssertableLogProvider.Level.WARN;
 import static org.neo4j.logging.LogAssertions.assertThat;
 
@@ -128,6 +129,13 @@ class CausalClusteringSettingsMigratorTest
                             failure_resolution_window.defaultValue() );
         testFailureWindows( "4s", fromSeconds( 4, 8 ), failure_resolution_window.defaultValue() );
         testFailureWindows( "1s", fromSeconds( 1, 2 ), fromSeconds( 1, 2 ) );
+
+        // Test cases that contain durations which span TimeUnits (i.e. 1500ms -> 1s500ms)
+        var onePointFiveToThreeSeconds = new DurationRange( Duration.ofMillis( 1500 ), Duration.ofMillis( 3000 ) );
+        testFailureWindows( "1500ms", onePointFiveToThreeSeconds, onePointFiveToThreeSeconds );
+        testFailureWindows( "1s500ms", onePointFiveToThreeSeconds, onePointFiveToThreeSeconds );
+        testFailureWindows( "61s", fromSeconds( 61, 66 ), failure_resolution_window.defaultValue() );
+        testFailureWindows( "1m1s", fromSeconds( 61, 66 ), failure_resolution_window.defaultValue() );
     }
 
     @Test
@@ -171,16 +179,18 @@ class CausalClusteringSettingsMigratorTest
         assertEquals( new SocketAddress( "bar", advertisedAddr.defaultValue().getPort() ), config5.get( advertisedAddr ) );
         assertEquals( new SocketAddress( "bar", 777 ), config6.get( advertisedAddr ) );
 
-        String msg = "Use of deprecated setting port propagation. port %s is migrated from %s to %s.";
+        String msg = "Note that since you did not explicitly set the port in %s Neo4j automatically set it to %s to match %s." +
+                " This behavior may change in the future and we recommend you to explicitly set it.";
 
-        var matcher = assertThat( logProvider ).forClass( Config.class ).forLevel( WARN );
-        matcher.containsMessageWithArguments( msg, 111, listenAddr.name(), advertisedAddr.name() );
-        matcher.containsMessageWithArguments( msg, 222, listenAddr.name(), advertisedAddr.name() );
-        matcher.containsMessageWithArguments( msg, 333, listenAddr.name(), advertisedAddr.name() );
+        var warnMatcher = assertThat( logProvider ).forClass( Config.class ).forLevel( WARN );
+        var infoMatcher = assertThat( logProvider ).forClass( Config.class ).forLevel( INFO );
+        infoMatcher.containsMessageWithArguments( msg, advertisedAddr.name(), 111, listenAddr.name() );
+        infoMatcher.containsMessageWithArguments( msg, advertisedAddr.name(), 222, listenAddr.name() );
+        warnMatcher.containsMessageWithArguments( msg, advertisedAddr.name(), 333, listenAddr.name() );
 
-        matcher.doesNotContainMessageWithArguments( msg, 444, listenAddr.name(), advertisedAddr.name() );
-        matcher.doesNotContainMessageWithArguments( msg, 555, listenAddr.name(), advertisedAddr.name() );
-        matcher.doesNotContainMessageWithArguments( msg, 666, listenAddr.name(), advertisedAddr.name() );
+        warnMatcher.doesNotContainMessageWithArguments( msg, advertisedAddr.name(), 444, listenAddr.name() );
+        infoMatcher.doesNotContainMessageWithArguments( msg, advertisedAddr.name(), 555, listenAddr.name() );
+        warnMatcher.doesNotContainMessageWithArguments( msg, advertisedAddr.name(), 666, listenAddr.name() );
     }
 
     private static void testRoutingTtlSettingMigration( String rawValue, Duration expectedValue )

@@ -50,7 +50,8 @@ class RaftOutcomeApplierTest
     private RaftMembershipManager membershipManager = mock( RaftMembershipManager.class );
 
     private RaftOutcomeApplier raftOutcomeApplier =
-            new RaftOutcomeApplier( raftState, outbound, leaderAvailabilityTimers, raftMessageTimerResetMonitor, logShipping, membershipManager, logProvider );
+            new RaftOutcomeApplier( raftState, outbound, leaderAvailabilityTimers, raftMessageTimerResetMonitor, logShipping, membershipManager, logProvider,
+                                    rejection -> {} );
 
     private OutcomeBuilder outcomeTestBuilder = OutcomeTestBuilder.builder();
 
@@ -314,6 +315,34 @@ class RaftOutcomeApplierTest
         raftOutcomeApplier.handle( outcome );
 
         verify( membershipManager, never() ).onFollowerStateChange( any( FollowerStates.class ) );
+    }
+
+    @Test
+    void shouldChangeMembershipManagerStateIfTransferringLeadership() throws IOException
+    {
+        var transferTarget = new MemberId( UUID.randomUUID() );
+        var outcome = outcomeTestBuilder.setRole( Role.LEADER )
+                                        .startTransferringLeadership( transferTarget )
+                                        .build();
+        when( raftState.areTransferringLeadership() ).thenReturn( true );
+
+        raftOutcomeApplier.handle( outcome );
+
+        verify( membershipManager ).handleLeadershipTransfers( true );
+    }
+
+    @Test
+    void shouldNotChangeMembershipManagerStateIfNextRoleIsNotLeader() throws IOException
+    {
+        var transferTarget = new MemberId( UUID.randomUUID() );
+        var outcome = outcomeTestBuilder.setRole( Role.FOLLOWER )
+                                        .startTransferringLeadership( transferTarget )
+                                        .build();
+        when( raftState.areTransferringLeadership() ).thenReturn( true );
+
+        raftOutcomeApplier.handle( outcome );
+
+        verify( membershipManager, never() ).handleLeadershipTransfers( true );
     }
 
     @Test

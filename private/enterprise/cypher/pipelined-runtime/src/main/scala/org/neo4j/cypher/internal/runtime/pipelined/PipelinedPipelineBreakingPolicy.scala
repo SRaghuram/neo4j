@@ -41,6 +41,7 @@ import org.neo4j.cypher.internal.logical.plans.OptionalExpand
 import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
 import org.neo4j.cypher.internal.logical.plans.OrderedDistinct
 import org.neo4j.cypher.internal.logical.plans.PartialSort
+import org.neo4j.cypher.internal.logical.plans.PartialTop
 import org.neo4j.cypher.internal.logical.plans.ProcedureCall
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.logical.plans.ProjectEndpoints
@@ -94,6 +95,7 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, i
            _: Sort |
            _: PartialSort |
            _: Top |
+           _: PartialTop |
            _: Aggregation |
            _: OrderedAggregation |
            _: Optional |
@@ -127,9 +129,6 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, i
   }
 
   override def onNestedPlanBreak(): Unit = {}
-
-  private def unsupported(thing: String): CantCompileQueryException =
-    new CantCompileQueryException(s"Pipelined does not yet support the plans including `$thing`, use another runtime.")
 
   /**
    * Checks if the current one-child operator can be fused.
@@ -184,32 +183,32 @@ trait InterpretedPipesFallbackPolicy {
 
 object InterpretedPipesFallbackPolicy {
 
-  def apply(interpretedPipesFallbackOption: CypherInterpretedPipesFallbackOption, parallelExecution: Boolean): InterpretedPipesFallbackPolicy =
+  def apply(interpretedPipesFallbackOption: CypherInterpretedPipesFallbackOption, parallelExecution: Boolean, runtimeName: String): InterpretedPipesFallbackPolicy =
     interpretedPipesFallbackOption match {
       case CypherInterpretedPipesFallbackOption.disabled =>
-        INTERPRETED_PIPES_FALLBACK_DISABLED
+        INTERPRETED_PIPES_FALLBACK_DISABLED(runtimeName)
 
       case CypherInterpretedPipesFallbackOption.whitelistedPlansOnly =>
-        INTERPRETED_PIPES_FALLBACK_FOR_WHITELISTED_PLANS_ONLY(parallelExecution)
+        INTERPRETED_PIPES_FALLBACK_FOR_WHITELISTED_PLANS_ONLY(parallelExecution, runtimeName)
 
       case CypherInterpretedPipesFallbackOption.allPossiblePlans =>
-        INTERPRETED_PIPES_FALLBACK_FOR_ALL_POSSIBLE_PLANS(parallelExecution)
+        INTERPRETED_PIPES_FALLBACK_FOR_ALL_POSSIBLE_PLANS(parallelExecution, runtimeName)
     }
 
   //===================================
   // DISABLED
-  case object INTERPRETED_PIPES_FALLBACK_DISABLED extends InterpretedPipesFallbackPolicy {
+  private case class INTERPRETED_PIPES_FALLBACK_DISABLED(runtimeName: String) extends InterpretedPipesFallbackPolicy {
 
     override def readOnly: Boolean = true
 
     override def breakOn(lp: LogicalPlan): Boolean = {
-      throw unsupported(lp.getClass.getSimpleName)
+      throw unsupported(lp.getClass.getSimpleName, runtimeName)
     }
   }
 
   //===================================
   // WHITELIST
-  private case class INTERPRETED_PIPES_FALLBACK_FOR_WHITELISTED_PLANS_ONLY(parallelExecution: Boolean) extends InterpretedPipesFallbackPolicy {
+  private case class INTERPRETED_PIPES_FALLBACK_FOR_WHITELISTED_PLANS_ONLY(parallelExecution: Boolean, runtimeName: String) extends InterpretedPipesFallbackPolicy {
 
     override def readOnly: Boolean = true
 
@@ -238,45 +237,45 @@ object InterpretedPipesFallbackPolicy {
     override def breakOn(lp: LogicalPlan): Boolean = {
       WHITELIST.applyOrElse[LogicalPlan, Boolean](lp, _ =>
         // All other plans not explicitly whitelisted are not supported
-        throw unsupported(lp.getClass.getSimpleName))
+        throw unsupported(lp.getClass.getSimpleName, runtimeName))
     }
   }
 
   //===================================
   // BLACKLIST
-  private case class INTERPRETED_PIPES_FALLBACK_FOR_ALL_POSSIBLE_PLANS(parallelExecution: Boolean) extends InterpretedPipesFallbackPolicy {
+  private case class INTERPRETED_PIPES_FALLBACK_FOR_ALL_POSSIBLE_PLANS(parallelExecution: Boolean, runtimeName: String) extends InterpretedPipesFallbackPolicy {
 
     override def readOnly: Boolean = false
 
-    private val WHITELIST = INTERPRETED_PIPES_FALLBACK_FOR_WHITELISTED_PLANS_ONLY(parallelExecution).WHITELIST
+    private val WHITELIST = INTERPRETED_PIPES_FALLBACK_FOR_WHITELISTED_PLANS_ONLY(parallelExecution, runtimeName).WHITELIST
 
     val BLACKLIST: PartialFunction[LogicalPlan, Boolean] = {
       // Blacklisted non-eager plans
       case lp: Skip => // Maintains state
-        throw unsupported(lp.getClass.getSimpleName)
+        throw unsupported(lp.getClass.getSimpleName, runtimeName)
 
       // Not supported in parallel execution
       case lp: ProcedureCall if parallelExecution =>
-        throw unsupported(lp.getClass.getSimpleName)
+        throw unsupported(lp.getClass.getSimpleName, runtimeName)
       case lp: LoadCSV if parallelExecution =>
-        throw unsupported(lp.getClass.getSimpleName)
+        throw unsupported(lp.getClass.getSimpleName, runtimeName)
 
       // We do not support any eager plans
       case lp: EagerLogicalPlan =>
-        throw unsupported(lp.getClass.getSimpleName)
+        throw unsupported(lp.getClass.getSimpleName, runtimeName)
 
       // No leaf plans (but they should all be supported by operators anyway...)
       case lp if lp.isLeaf =>
-        throw unsupported(lp.getClass.getSimpleName)
+        throw unsupported(lp.getClass.getSimpleName, runtimeName)
 
       // No two-children plans
       case lp if lp.lhs.isDefined && lp.rhs.isDefined =>
-        throw unsupported(lp.getClass.getSimpleName)
+        throw unsupported(lp.getClass.getSimpleName, runtimeName)
 
       // Updating plans and exclusive locking plans are not supported in parallel execution
       case lp @ (_: UpdatingPlan |
                  _: LockNodes) if parallelExecution =>
-        throw unsupported(lp.getClass.getSimpleName)
+        throw unsupported(lp.getClass.getSimpleName, runtimeName)
     }
 
     override def breakOn(lp: LogicalPlan): Boolean = {
@@ -291,6 +290,6 @@ object InterpretedPipesFallbackPolicy {
     }
   }
 
-  def unsupported(thing: String): CantCompileQueryException =
-    new CantCompileQueryException(s"Pipelined does not yet support the plans including `$thing`, use another runtime.")
+  def unsupported(thing: String, runtimeName: String): CantCompileQueryException =
+    new CantCompileQueryException(s"$runtimeName does not yet support the plans including `$thing`, use another runtime.")
 }

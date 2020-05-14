@@ -140,6 +140,54 @@ public class OverriddenAccessMode extends WrappedAccessMode
     }
 
     @Override
+    public boolean allowsSetLabel( long labelId )
+    {
+        return wrapping.allowsSetLabel( labelId );
+    }
+
+    @Override
+    public boolean allowsRemoveLabel( long labelId )
+    {
+        return wrapping.allowsRemoveLabel( labelId );
+    }
+
+    @Override
+    public boolean allowsCreateNode( int[] labelIds )
+    {
+        return wrapping.allowsCreateNode( labelIds );
+    }
+
+    @Override
+    public boolean allowsDeleteNode( Supplier<TokenSet> labelSupplier )
+    {
+        return wrapping.allowsDeleteNode( labelSupplier );
+    }
+
+    @Override
+    public boolean allowsCreateRelationship( int relType )
+    {
+        return wrapping.allowsCreateRelationship( relType );
+    }
+
+    @Override
+    public boolean allowsDeleteRelationship( int relType )
+    {
+        return wrapping.allowsDeleteRelationship( relType );
+    }
+
+    @Override
+    public boolean allowsSetProperty( Supplier<TokenSet> labels, int propertyKey )
+    {
+        return wrapping.allowsSetProperty( labels, propertyKey );
+    }
+
+    @Override
+    public boolean allowsSetProperty( IntSupplier relType, int propertyKey )
+    {
+        return wrapping.allowsSetProperty( relType, propertyKey);
+    }
+
+    @Override
     public String name()
     {
         return original.name() + " overridden by " + wrapping.name();

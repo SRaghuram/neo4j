@@ -103,8 +103,8 @@ import org.neo4j.kernel.internal.event.DatabaseTransactionEventListeners;
 import org.neo4j.kernel.internal.event.TransactionListenersState;
 import org.neo4j.lock.LockTracer;
 import org.neo4j.memory.LocalMemoryTracker;
-import org.neo4j.memory.MemoryPool;
 import org.neo4j.memory.MemoryTracker;
+import org.neo4j.memory.ScopedMemoryPool;
 import org.neo4j.resources.CpuClock;
 import org.neo4j.resources.HeapAllocation;
 import org.neo4j.storageengine.api.CommandCreationContext;
@@ -220,15 +220,16 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
             ConstraintSemantics constraintSemantics, SchemaState schemaState, TokenHolders tokenHolders, IndexingService indexingService,
             LabelScanStore labelScanStore, RelationshipTypeScanStore relationshipTypeScanStore,
             IndexStatisticsStore indexStatisticsStore, Dependencies dependencies,
-            NamedDatabaseId namedDatabaseId, LeaseService leaseService, MemoryPool transactionMemoryPool )
+            NamedDatabaseId namedDatabaseId, LeaseService leaseService, ScopedMemoryPool transactionMemoryPool )
     {
         this.pageCursorTracer = tracers.getPageCacheTracer().createPageCursorTracer( TRANSACTION_TAG );
+        this.memoryTracker = new LocalMemoryTracker( transactionMemoryPool, transactionHeapBytesLimit, INITIAL_RESERVED_BYTES );
         this.eventListeners = eventListeners;
         this.constraintIndexCreator = constraintIndexCreator;
         this.commitProcess = commitProcess;
         this.transactionMonitor = transactionMonitor;
         this.storageReader = storageEngine.newReader();
-        this.commandCreationContext = storageEngine.newCommandCreationContext( pageCursorTracer );
+        this.commandCreationContext = storageEngine.newCommandCreationContext( pageCursorTracer, memoryTracker );
         this.namedDatabaseId = namedDatabaseId;
         this.storageEngine = storageEngine;
         this.pool = pool;
@@ -244,7 +245,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         DefaultPooledCursors cursors = new DefaultPooledCursors( storageReader );
         this.allStoreHolder =
                 new AllStoreHolder( storageReader, this, cursors, globalProcedures, schemaState, indexingService, labelScanStore, relationshipTypeScanStore,
-                        indexStatisticsStore, pageCursorTracer, dependencies, config );
+                        indexStatisticsStore, pageCursorTracer, dependencies, config, memoryTracker );
         this.operations =
                 new Operations(
                         allStoreHolder,
@@ -257,12 +258,11 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
                         constraintIndexCreator,
                         constraintSemantics,
                         indexingService,
-                        config, pageCursorTracer );
+                        config, pageCursorTracer, memoryTracker );
         traceProvider = getTraceProvider( config );
         transactionHeapBytesLimit = config.get( memory_transaction_max_size );
         registerConfigChangeListeners( config );
         this.collectionsFactory = collectionsFactorySupplier.create();
-        this.memoryTracker = new LocalMemoryTracker( transactionMemoryPool, transactionHeapBytesLimit, INITIAL_RESERVED_BYTES );
     }
 
     /**
@@ -297,7 +297,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         this.currentStatement.initialize( statementLocks, pageCursorTracer, startTimeMillis );
         this.operations.initialize();
         this.initializationTrace = traceProvider.getTraceInfo();
-        this.memoryTracker.setHeapLimit( transactionHeapBytesLimit );
+        this.memoryTracker.setLimit( transactionHeapBytesLimit );
         return this;
     }
 
@@ -425,6 +425,14 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
                 statementLocks.stop();
             }
             transactionMonitor.transactionTerminated( hasTxStateWithChanges() );
+
+            var internalTransaction = this.internalTransaction;
+
+            if ( internalTransaction != null )
+            {
+                internalTransaction.terminate( reason );
+            }
+
             return true;
         }
         return false;
@@ -562,7 +570,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
     {
         if ( closed )
         {
-            throw new NotInTransactionException( "This transaction has already been closed. " );
+            throw new NotInTransactionException( "This transaction has already been closed." );
         }
     }
 
@@ -798,7 +806,6 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
     public Write dataWrite() throws InvalidTransactionTypeKernelException
     {
         accessCapability.assertCanWrite();
-        assertAllowsWrites();
         upgradeToDataWrites();
         return operations;
     }
@@ -916,15 +923,6 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         return currentStatement.lockTracer();
     }
 
-    private void assertAllowsWrites()
-    {
-        AccessMode accessMode = securityContext().mode();
-        if ( !accessMode.allowsWrites() )
-        {
-            throw accessMode.onViolation( format( "Write operations are not allowed for %s.", securityContext().description() ) );
-        }
-    }
-
     private void assertAllowsSchemaWrites()
     {
         AccessMode accessMode = securityContext().mode();
@@ -1006,8 +1004,8 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
             operations.release();
             pageCursorTracer.reportEvents();
             initializationTrace = null;
-            memoryTracker.reset();
             pool.release( this );
+            memoryTracker.reset();
         }
         finally
         {
@@ -1116,7 +1114,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
     private TxStateVisitor enforceConstraints( TxStateVisitor txStateVisitor )
     {
         return constraintSemantics.decorateTxStateVisitor( storageReader, operations.dataRead(), operations.cursors(), txState, txStateVisitor,
-                pageCursorTracer );
+                pageCursorTracer, memoryTracker );
     }
 
     /**

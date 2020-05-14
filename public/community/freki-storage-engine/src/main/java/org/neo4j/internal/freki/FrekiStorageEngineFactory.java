@@ -40,6 +40,10 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.lock.LockService;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
+<<<<<<< HEAD
+=======
+import org.neo4j.memory.MemoryTracker;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.CommandReaderFactory;
@@ -80,7 +84,11 @@ public class FrekiStorageEngineFactory implements StorageEngineFactory
 
     @Override
     public List<StoreMigrationParticipant> migrationParticipants( FileSystemAbstraction fs, Config config, PageCache pageCache, JobScheduler jobScheduler,
+<<<<<<< HEAD
             LogService logService, PageCacheTracer pageCacheTracer )
+=======
+            LogService logService, PageCacheTracer pageCacheTracer, MemoryTracker memoryTracker )
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     {
         return Collections.emptyList();
     }
@@ -89,11 +97,20 @@ public class FrekiStorageEngineFactory implements StorageEngineFactory
     public FrekiStorageEngine instantiate( FileSystemAbstraction fs, DatabaseLayout databaseLayout, Config config, PageCache pageCache,
             TokenHolders tokenHolders, SchemaState schemaState, ConstraintRuleAccessor constraintSemantics, IndexConfigCompleter indexConfigCompleter,
             LockService lockService, IdGeneratorFactory idGeneratorFactory, IdController idController, DatabaseHealth databaseHealth, LogProvider logProvider,
+<<<<<<< HEAD
             RecoveryCleanupWorkCollector recoveryCleanupWorkCollector, PageCacheTracer pageCacheTracer, boolean createStoreIfNotExists ) throws IOException
     {
         return new FrekiStorageEngine( fs, databaseLayout, config, pageCache, tokenHolders, schemaState, constraintSemantics, indexConfigCompleter, lockService,
                 idGeneratorFactory, idController, databaseHealth, logProvider, recoveryCleanupWorkCollector, createStoreIfNotExists, pageCacheTracer,
                 CursorAccessPatternTracer.decidedByFeatureToggle() );
+=======
+            RecoveryCleanupWorkCollector recoveryCleanupWorkCollector, PageCacheTracer pageCacheTracer, boolean createStoreIfNotExists,
+            MemoryTracker memoryTracker ) throws IOException
+    {
+        return new FrekiStorageEngine( fs, databaseLayout, config, pageCache, tokenHolders, schemaState, constraintSemantics, indexConfigCompleter, lockService,
+                idGeneratorFactory, idController, databaseHealth, logProvider, recoveryCleanupWorkCollector, createStoreIfNotExists, pageCacheTracer,
+                CursorAccessPatternTracer.decidedByFeatureToggle(), memoryTracker );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 
     @Override
@@ -142,7 +159,11 @@ public class FrekiStorageEngineFactory implements StorageEngineFactory
 
     @Override
     public SchemaRuleMigrationAccess schemaRuleMigrationAccess( FileSystemAbstraction fs, PageCache pageCache, Config config, DatabaseLayout databaseLayout,
+<<<<<<< HEAD
             LogService logService, String recordFormats, PageCacheTracer cacheTracer, PageCursorTracer cursorTracer )
+=======
+            LogService logService, String recordFormats, PageCacheTracer cacheTracer, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     {
         return null;
     }

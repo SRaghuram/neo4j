@@ -6,9 +6,11 @@
 package com.neo4j.causalclustering.upstream.strategies;
 
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -41,7 +43,7 @@ public class TypicallyConnectToRandomReadReplicaStrategy extends UpstreamDatabas
     @Override
     public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId )
     {
-        if ( counter.shouldReturnCoreMemberId() )
+        if ( counter.shouldReturnOnlyCores() )
         {
             return randomCoreMember( namedDatabaseId );
         }
@@ -55,6 +57,23 @@ public class TypicallyConnectToRandomReadReplicaStrategy extends UpstreamDatabas
             Collections.shuffle( coreMembers );
 
             return Stream.concat( readReplicaMembers.stream(), coreMembers.stream() ).filter( not( myself::equals ) ).findFirst();
+        }
+    }
+
+    @Override
+    public Collection<MemberId> upstreamMembersForDatabase( NamedDatabaseId namedDatabaseId )
+    {
+        var cores = otherCoreMembers( namedDatabaseId );
+        var readReplicas = otherReadReplicas( namedDatabaseId );
+        if ( counter.shouldReturnOnlyCores() || readReplicas.isEmpty() )
+        {
+            Collections.shuffle( cores );
+            return cores;
+        }
+        else
+        {
+            Collections.shuffle( readReplicas );
+            return readReplicas;
         }
     }
 
@@ -74,6 +93,22 @@ public class TypicallyConnectToRandomReadReplicaStrategy extends UpstreamDatabas
         return Optional.of( coreMembersNotSelf.get( randomIndex ) );
     }
 
+    private List<MemberId> otherCoreMembers( NamedDatabaseId namedDatabaseId )
+    {
+        return topologyService.coreTopologyForDatabase( namedDatabaseId )
+                .members().keySet().stream()
+                .filter( not( myself::equals ) )
+                .collect( Collectors.toList() );
+    }
+
+    private List<MemberId> otherReadReplicas( NamedDatabaseId namedDatabaseId )
+    {
+        return topologyService.readReplicaTopologyForDatabase( namedDatabaseId )
+                .members().keySet().stream()
+                .filter( not( myself::equals ) )
+                .collect( Collectors.toList() );
+    }
+
     private static class ModuloCounter
     {
         private final int modulo;
@@ -84,7 +119,7 @@ public class TypicallyConnectToRandomReadReplicaStrategy extends UpstreamDatabas
             this.modulo = modulo;
         }
 
-        boolean shouldReturnCoreMemberId()
+        boolean shouldReturnOnlyCores()
         {
             counter = (counter + 1) % modulo;
             return counter == 0;

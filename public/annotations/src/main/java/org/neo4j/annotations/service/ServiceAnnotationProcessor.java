@@ -26,9 +26,7 @@ import org.eclipse.collections.impl.factory.Multimaps;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -184,14 +182,13 @@ public class ServiceAnnotationProcessor extends AbstractProcessor
             newProviders.addAll( oldProviders );
 
             final FileObject file = processingEnv.getFiler().createResource( CLASS_OUTPUT, "", path );
-            try ( Writer writer = file.openWriter();
-                  BufferedWriter out = new BufferedWriter( writer ) )
+            try ( BufferedWriter writer = new BufferedWriter( file.openWriter() ) )
             {
                 info( "Writing service providers: " + newProviders );
                 for ( final String provider : newProviders )
                 {
-                    out.write( provider );
-                    out.write( "\n" );
+                    writer.write( provider );
+                    writer.write( "\n" );
                 }
             }
         }
@@ -204,8 +201,7 @@ public class ServiceAnnotationProcessor extends AbstractProcessor
         {
             final FileObject file = processingEnv.getFiler().getResource( CLASS_OUTPUT, "", path );
             final List<String> lines = new ArrayList<>();
-            try ( InputStream is = file.openInputStream();
-                  BufferedReader in = new BufferedReader( new InputStreamReader( is, StandardCharsets.UTF_8 ) ) )
+            try ( BufferedReader in = new BufferedReader( new InputStreamReader( file.openInputStream(), StandardCharsets.UTF_8 ) ) )
             {
                 String line;
                 while ( (line = in.readLine()) != null )

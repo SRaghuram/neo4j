@@ -31,6 +31,7 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_rotation_size;
 import static com.neo4j.causalclustering.core.consensus.log.RaftLogHelper.readLogEntry;
 import static org.neo4j.logging.NullLogProvider.getInstance;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 public class ReplayRaftLog
 {
@@ -60,7 +61,7 @@ public class ReplayRaftLog
 
             SegmentedRaftLog log = new SegmentedRaftLog( fileSystem, logDirectory, config.get( raft_log_rotation_size ),
                     ignored -> new CoreReplicatedContentMarshalV2(), logProvider, config.get( raft_log_reader_pool_size ),
-                    Clocks.systemClock(), new ThreadPoolJobScheduler(), pruningStrategy );
+                    Clocks.systemClock(), new ThreadPoolJobScheduler(), pruningStrategy, INSTANCE );
 
             long totalCommittedEntries = log.appendIndex(); // Not really, but we need to have a way to pass in the commit index
             LogEntryReader reader = new VersionAwareLogEntryReader( storageEngineFactory.commandReaderFactory() );

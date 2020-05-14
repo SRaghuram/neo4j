@@ -121,7 +121,7 @@ class DriverAuthHelper
 
     static void assertWriteFails( Driver driver )
     {
-        assertWriteFails( driver, "Write operations are not allowed for user " );
+        assertWriteFails( driver, "Create node with labels '' is not allowed for user " );
     }
 
     static void assertWriteFails( Driver driver, String errorMessage )

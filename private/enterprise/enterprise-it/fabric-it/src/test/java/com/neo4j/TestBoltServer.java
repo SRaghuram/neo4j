@@ -26,6 +26,7 @@ import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.internal.NullLogService;
+import org.neo4j.memory.MemoryPools;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
@@ -90,16 +91,18 @@ public class TestBoltServer
         when( dbIdRepository.getById( any() ) ).thenReturn( Optional.of( NAMED_SYSTEM_DATABASE_ID ) );
 
         boltServer = new BoltServer( boltGraphDatabaseManagementService,
-                jobScheduler,
-                connectorPortRegister,
-                networkConnectionTracker,
-                dbIdRepository,
-                config,
-                mock( SystemNanoClock.class ),
-                monitors,
-                NullLogService.getInstance(),
-                dependencies,
-                authManager
+                                     jobScheduler,
+                                     connectorPortRegister,
+                                     networkConnectionTracker,
+                                     dbIdRepository,
+                                     config,
+                                     mock( SystemNanoClock.class ),
+                                     monitors,
+                                     NullLogService.getInstance(),
+                                     dependencies,
+                                     authManager,
+                                     authManager,
+                                     new MemoryPools()
         );
 
         try

@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.catchup.storecopy;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.catchup.CatchupResult;
-import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpWriter;
+import com.neo4j.causalclustering.catchup.TransactionLogCatchUpWriter;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import org.junit.jupiter.api.BeforeEach;

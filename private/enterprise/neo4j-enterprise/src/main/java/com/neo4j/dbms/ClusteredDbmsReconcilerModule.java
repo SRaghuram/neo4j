@@ -6,7 +6,6 @@
 package com.neo4j.dbms;
 
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
-import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.dbms.database.ClusteredMultiDatabaseManager;
 
 import java.util.stream.Stream;
@@ -25,15 +24,17 @@ public final class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcile
 {
     private final ReplicatedDatabaseEventService databaseEventService;
     private final ClusterInternalDbmsOperator internalOperator;
+    private final SystemOperatingDatabaseEventListener operatorEventListener;
 
     public ClusteredDbmsReconcilerModule( GlobalModule globalModule, ClusteredMultiDatabaseManager databaseManager,
-            ReplicatedDatabaseEventService databaseEventService, ClusterStateStorageFactory stateStorageFactory,
-            ReconciledTransactionTracker reconciledTxTracker, PanicService panicService, ClusterSystemGraphDbmsModel dbmsModel )
+                                         ReplicatedDatabaseEventService databaseEventService, ClusterStateStorageFactory stateStorageFactory,
+                                         ReconciledTransactionTracker reconciledTxTracker, ClusterSystemGraphDbmsModel dbmsModel )
     {
         super( globalModule, databaseManager, reconciledTxTracker,
-                createReconciler( globalModule, databaseManager, stateStorageFactory, panicService ), dbmsModel );
+                createReconciler( globalModule, databaseManager, stateStorageFactory ), dbmsModel );
         this.databaseEventService = databaseEventService;
         this.internalOperator = databaseManager.internalDbmsOperator();
+        this.operatorEventListener = new SystemOperatingDatabaseEventListener( systemOperator );
     }
 
     @Override
@@ -43,9 +44,15 @@ public final class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcile
     }
 
     @Override
-    protected void registerWithListenerService( GlobalModule globalModule, SystemGraphDbmsOperator systemOperator )
+    protected void registerWithListenerService( GlobalModule globalModule )
     {
-        databaseEventService.registerListener( NAMED_SYSTEM_DATABASE_ID, new SystemOperatingDatabaseEventListener( systemOperator ) );
+        databaseEventService.registerListener( NAMED_SYSTEM_DATABASE_ID, operatorEventListener );
+    }
+
+    @Override
+    protected void unregisterWithListenerService( GlobalModule globalModule )
+    {
+        databaseEventService.unregisterListener( NAMED_SYSTEM_DATABASE_ID, operatorEventListener );
     }
 
     static TransitionsTable createTransitionsTable( ClusterReconcilerTransitions t )
@@ -68,13 +75,13 @@ public final class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcile
     }
 
     private static ClusteredDbmsReconciler createReconciler( GlobalModule globalModule, ClusteredMultiDatabaseManager databaseManager,
-            ClusterStateStorageFactory stateStorageFactory, PanicService panicService )
+                                                            ClusterStateStorageFactory stateStorageFactory )
     {
 
         var logProvider = globalModule.getLogService().getInternalLogProvider();
         var transitionsTable = createTransitionsTable( new ClusterReconcilerTransitions( databaseManager, logProvider ) );
 
         return new ClusteredDbmsReconciler( databaseManager, globalModule.getGlobalConfig(), logProvider, globalModule.getJobScheduler(),
-                stateStorageFactory, panicService, transitionsTable );
+                stateStorageFactory, transitionsTable );
     }
 }

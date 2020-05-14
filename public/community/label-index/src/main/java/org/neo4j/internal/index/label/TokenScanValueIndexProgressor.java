@@ -25,6 +25,7 @@ import java.io.UncheckedIOException;
 import org.neo4j.graphdb.Resource;
 import org.neo4j.index.internal.gbptree.Seeker;
 import org.neo4j.internal.kernel.api.AutoCloseablePlus;
+import org.neo4j.internal.schema.IndexOrder;
 import org.neo4j.kernel.api.index.IndexProgressor;
 
 /**
@@ -35,11 +36,13 @@ import org.neo4j.kernel.api.index.IndexProgressor;
 public class TokenScanValueIndexProgressor extends TokenScanValueIndexAccessor implements IndexProgressor, Resource
 {
     private final EntityTokenClient client;
+    private final IndexOrder indexOrder;
 
-    TokenScanValueIndexProgressor( Seeker<TokenScanKey,TokenScanValue> cursor, EntityTokenClient client )
+    TokenScanValueIndexProgressor( Seeker<TokenScanKey,TokenScanValue> cursor, EntityTokenClient client, IndexOrder indexOrder )
     {
         super( cursor );
         this.client = client;
+        this.indexOrder = indexOrder;
     }
 
     /**
@@ -56,9 +59,32 @@ public class TokenScanValueIndexProgressor extends TokenScanValueIndexAccessor i
         {
             while ( bits != 0 )
             {
-                int delta = Long.numberOfTrailingZeros( bits );
-                bits &= bits - 1;
-                if ( client.acceptEntity( baseEntityId + delta, null ) )
+                long idForClient;
+                if ( indexOrder != IndexOrder.DESCENDING )
+                {
+                    // The next idForClient can be found at the next 1-bit from the right.
+                    int delta = Long.numberOfTrailingZeros( bits );
+
+                    // We switch that bit to zero, so that we don't find it again the next time.
+                    // First, create a mask where that bit is zero (easiest by subtracting 1) and then &
+                    // it with bits.
+                    bits &= bits - 1;
+                    idForClient = baseEntityId + delta;
+                }
+                else
+                {
+                    // The next idForClient can be found at the next 1-bit from the left.
+                    int delta = Long.numberOfLeadingZeros( bits );
+
+                    // We switch that bit to zero, so that we don't find it again the next time.
+                    // First, create a mask where only set bit is set (easiest by bitshifting the number one),
+                    // and then invert the mask and then & it with bits.
+                    long bitToZeroe = 1L << (Long.SIZE - delta - 1);
+                    bits &= ~bitToZeroe;
+                    idForClient = (baseEntityId + Long.SIZE) - 1 - delta;
+                }
+
+                if ( client.acceptEntity( idForClient, null ) )
                 {
                     return true;
                 }
@@ -67,7 +93,6 @@ public class TokenScanValueIndexProgressor extends TokenScanValueIndexAccessor i
             {
                 if ( !cursor.next() )
                 {
-                    close();
                     return false;
                 }
             }
@@ -81,7 +106,7 @@ public class TokenScanValueIndexProgressor extends TokenScanValueIndexAccessor i
             bits = cursor.value().bits;
 
             //noinspection AssertWithSideEffects
-            assert keysInOrder( key );
+            assert keysInOrder( key, indexOrder );
         }
     }
 

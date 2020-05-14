@@ -24,16 +24,18 @@ import org.neo4j.cypher.internal.util.attribution.IdGen
 import org.neo4j.cypher.internal.util.attribution.SameId
 
 /**
-  * Produces one or zero rows containing the nodes with the given labels and property values.
-  *
-  * This operator is used on label/property combinations under uniqueness constraint, meaning that a single matching
-  * node is guaranteed per seek.
-  */
+ * Produces one or zero rows containing the nodes with the given labels and property values.
+ *
+ * This operator is used on label/property combinations under uniqueness constraint, meaning that a single matching
+ * node is guaranteed per seek.
+ */
 case class MultiNodeIndexSeek(nodeIndexSeeks: Seq[IndexSeekLeafPlan])
                              (implicit idGen: IdGen) extends MultiNodeIndexLeafPlan(idGen) {
 
   override val availableSymbols: Set[String] =
     nodeIndexSeeks.flatMap(_.availableSymbols).toSet
+
+  override def usedVariables: Set[String] = nodeIndexSeeks.flatMap(_.usedVariables).toSet
 
   override def argumentIds: Set[String] =
     nodeIndexSeeks.flatMap(_.argumentIds).toSet
@@ -43,6 +45,9 @@ case class MultiNodeIndexSeek(nodeIndexSeeks: Seq[IndexSeekLeafPlan])
 
   override def properties: Seq[IndexedProperty] =
     nodeIndexSeeks.flatMap(_.properties)
+
+  override def withoutArgumentIds(argsToExclude: Set[String]): MultiNodeIndexLeafPlan =
+    copy(nodeIndexSeeks.map(_.withoutArgumentIds(argsToExclude).asInstanceOf[IndexSeekLeafPlan]))(SameId(this.id))
 
   override def withMappedProperties(f: IndexedProperty => IndexedProperty): MultiNodeIndexLeafPlan =
     MultiNodeIndexSeek(nodeIndexSeeks.map(_.withMappedProperties(f)))(SameId(this.id))
@@ -54,19 +59,4 @@ case class MultiNodeIndexSeek(nodeIndexSeeks: Seq[IndexSeekLeafPlan])
 
   override def idNames: Set[String] =
     nodeIndexSeeks.map(_.idName).toSet
-}
-
-/**
- * This is only used in plan descriptions to visualize rewritten plan trees
- */
-case class ErasedTwoChildrenPlan()(implicit idGen: IdGen) extends LogicalPlan(idGen) with LazyLogicalPlan {
-  override val lhs: Option[LogicalPlan] = Some(ErasedLeaf())
-  override val rhs: Option[LogicalPlan] = Some(ErasedLeaf())
-  override val availableSymbols: Set[String] = Set.empty
-}
-
-case class ErasedLeaf()(implicit idGen: IdGen) extends LogicalPlan(idGen) with LazyLogicalPlan {
-  override val lhs: Option[LogicalPlan] = None
-  override val rhs: Option[LogicalPlan] = None
-  override val availableSymbols: Set[String] = Set.empty
 }

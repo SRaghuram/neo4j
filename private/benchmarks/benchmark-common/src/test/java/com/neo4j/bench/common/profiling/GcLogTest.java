@@ -5,9 +5,7 @@
  */
 package com.neo4j.bench.common.profiling;
 
-import com.neo4j.bench.common.profiling.GcLog.EventType;
-import com.neo4j.bench.common.profiling.GcLog.GcLogEvent;
-import com.neo4j.bench.common.util.JsonUtil;
+import com.neo4j.bench.model.util.JsonUtil;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;
 
@@ -96,8 +94,8 @@ public class GcLogTest
         // then
         assertEquals( 128, gcLog.countFor( GcLog.EventType.APPLICATION_STOPPED_TIME ) );
         Duration totalFor = gcLog.totalFor( GcLog.EventType.APPLICATION_STOPPED_TIME );
-        GcLogEvent lastGcEvent =
-                gcLog.events().stream().filter( e -> e.eventType().equals( EventType.APPLICATION_STOPPED_TIME ) ).reduce( ( f, s ) -> s ).get();
+        GcLog.GcLogEvent lastGcEvent =
+                gcLog.events().stream().filter( e -> e.eventType().equals( GcLog.EventType.APPLICATION_STOPPED_TIME ) ).reduce( ( f, s ) -> s ).get();
         assertEquals( Duration.ofMillis( 480 ), totalFor );
         assertEquals( lastGcEvent.cumulativeValue().toMillis(), totalFor.toMillis() );
         assertEquals( 0.10634295697944555, gcLog.percentageFor( GcLog.EventType.APPLICATION_STOPPED_TIME ), 0 );
@@ -122,8 +120,8 @@ public class GcLogTest
 
         assertEquals( 877, gcLog.countFor( GcLog.EventType.APPLICATION_STOPPED_TIME ) );
         Duration totalFor = gcLog.totalFor( GcLog.EventType.APPLICATION_STOPPED_TIME );
-        GcLogEvent lastGcEvent =
-                gcLog.events().stream().filter( e -> e.eventType().equals( EventType.APPLICATION_STOPPED_TIME ) ).reduce( ( f, s ) -> s ).get();
+        GcLog.GcLogEvent lastGcEvent =
+                gcLog.events().stream().filter( e -> e.eventType().equals( GcLog.EventType.APPLICATION_STOPPED_TIME ) ).reduce( ( f, s ) -> s ).get();
         assertEquals( Duration.ofMillis( 993 ), totalFor );
         assertEquals( lastGcEvent.cumulativeValue().toMillis(), totalFor.toMillis() );
         assertEquals( 0.025534611766541544, gcLog.percentageFor( GcLog.EventType.APPLICATION_STOPPED_TIME ), 0 );

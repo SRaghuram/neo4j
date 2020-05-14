@@ -10,8 +10,6 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import java.time.Duration;
 import java.util.Collection;
-import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @JsonSerialize
@@ -26,9 +24,11 @@ public class ClusterStatusResponse
     private final String leader;
     private final Long millisSinceLastLeaderMessage;
     private final Double raftCommandsPerSecond;
+    private final boolean isDiscoveryHealthy;
 
     ClusterStatusResponse( long lastAppliedRaftIndex, boolean isParticipatingInRaftGroup, Collection<MemberId> votingMembers, boolean isHealthy,
-            MemberId memberId, MemberId leader, Duration millisSinceLastLeaderMessage, Double raftCommandsPerSecond, boolean isCore )
+            MemberId memberId, MemberId leader, Duration millisSinceLastLeaderMessage, Double raftCommandsPerSecond, boolean isCore,
+            boolean isDiscoveryHealthy )
     {
         this.lastAppliedRaftIndex = lastAppliedRaftIndex;
         this.isParticipatingInRaftGroup = isParticipatingInRaftGroup;
@@ -39,6 +39,7 @@ public class ClusterStatusResponse
         this.millisSinceLastLeaderMessage = millisSinceLastLeaderMessage == null ? null : millisSinceLastLeaderMessage.toMillis();
         this.raftCommandsPerSecond = raftCommandsPerSecond;
         this.isCore = isCore;
+        this.isDiscoveryHealthy = isDiscoveryHealthy;
     }
 
     /**
@@ -78,6 +79,11 @@ public class ClusterStatusResponse
     public boolean isHealthy()
     {
         return isHealthy;
+    }
+
+    public boolean isDiscoveryHealthy()
+    {
+        return isDiscoveryHealthy;
     }
 
     public String getMemberId()

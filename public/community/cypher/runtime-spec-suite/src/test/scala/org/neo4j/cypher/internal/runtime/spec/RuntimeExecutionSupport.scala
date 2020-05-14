@@ -45,6 +45,13 @@ trait RuntimeExecutionSupport[CONTEXT <: RuntimeContext] extends InputDataStream
                 runtime: CypherRuntime[CONTEXT]): ExecutionPlan
 
   /**
+   * Compile a query
+   * @return the execution plan and the used runtime context
+   */
+  def buildPlanAndContext(logicalQuery: LogicalQuery,
+                          runtime: CypherRuntime[CONTEXT]): (ExecutionPlan, CONTEXT)
+
+  /**
    * Execute an pre-compiled query with an ExecutionPlan
    */
   def execute(executablePlan: ExecutionPlan): RecordingRuntimeResult
@@ -119,4 +126,11 @@ trait RuntimeExecutionSupport[CONTEXT <: RuntimeContext] extends InputDataStream
   def profile(logicalQuery: LogicalQuery,
               runtime: CypherRuntime[CONTEXT],
               inputDataStream: InputDataStream = NoInput): RecordingRuntimeResult
+
+  /**
+   * Profile a Logical query with some input stream without recording the result.
+   */
+  def profileNonRecording(logicalQuery: LogicalQuery,
+                          runtime: CypherRuntime[CONTEXT],
+                          inputDataStream: InputDataStream = NoInput): NonRecordingRuntimeResult
 }

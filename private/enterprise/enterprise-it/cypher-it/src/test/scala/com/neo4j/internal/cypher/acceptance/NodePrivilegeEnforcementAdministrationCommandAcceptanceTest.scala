@@ -485,6 +485,30 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
       }) should be(4)
   }
 
+  test("should be able to see multi-label nodes if one label is whitelisted and none blacklisted") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A:B), (:A), (:B)")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", "MATCH (n:A) RETURN n") should be(2)
+    executeOnDefault("joe", "soap", "MATCH (n:B) RETURN n") should be(1)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * NODES B TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", "MATCH (n:A) RETURN n") should be(1)
+    executeOnDefault("joe", "soap", "MATCH (n:B) RETURN n") should be(0)
+
+  }
+
   test("should see correct nodes and labels with grant and deny traversal on specific labels") {
     // GIVEN
     setupUserWithCustomRole()

@@ -128,6 +128,7 @@ org.neo4j.configuration.GraphDatabaseSettings::cypher_pipelined_batch_size_big o
 org.neo4j.configuration.GraphDatabaseSettings::cypher_pipelined_batch_size_small org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
 org.neo4j.configuration.GraphDatabaseSettings::cypher_pipelined_interpreted_pipes_fallback org.neo4j.graphdb.config.Setting<org.neo4j.configuration.GraphDatabaseSettings.CypherPipelinedInterpretedPipesFallback> public static final
 org.neo4j.configuration.GraphDatabaseSettings::cypher_planner org.neo4j.graphdb.config.Setting<org.neo4j.configuration.GraphDatabaseSettings.CypherPlanner> public static final
+org.neo4j.configuration.GraphDatabaseSettings::cypher_read_properties_from_cursor org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
 org.neo4j.configuration.GraphDatabaseSettings::cypher_replan_algorithm org.neo4j.graphdb.config.Setting<org.neo4j.configuration.GraphDatabaseSettings.CypherReplanAlgorithm> public static final
 org.neo4j.configuration.GraphDatabaseSettings::cypher_replan_interval_target org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
 org.neo4j.configuration.GraphDatabaseSettings::cypher_runtime org.neo4j.graphdb.config.Setting<org.neo4j.configuration.GraphDatabaseSettings.CypherRuntime> public static final
@@ -168,11 +169,13 @@ org.neo4j.configuration.GraphDatabaseSettings::label_block_size org.neo4j.graphd
 org.neo4j.configuration.GraphDatabaseSettings::load_csv_file_url_root org.neo4j.graphdb.config.Setting<java.nio.file.Path> public static final
 org.neo4j.configuration.GraphDatabaseSettings::lock_acquisition_timeout org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
 org.neo4j.configuration.GraphDatabaseSettings::lock_manager org.neo4j.graphdb.config.Setting<java.lang.String> public static final
+org.neo4j.configuration.GraphDatabaseSettings::log_format org.neo4j.graphdb.config.Setting<org.neo4j.logging.FormattedLogFormat> public static final
 org.neo4j.configuration.GraphDatabaseSettings::log_queries org.neo4j.graphdb.config.Setting<org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel> public static final
 org.neo4j.configuration.GraphDatabaseSettings::log_queries_allocation_logging_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
 org.neo4j.configuration.GraphDatabaseSettings::log_queries_detailed_time_logging_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
 org.neo4j.configuration.GraphDatabaseSettings::log_queries_early_raw_logging_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
 org.neo4j.configuration.GraphDatabaseSettings::log_queries_filename org.neo4j.graphdb.config.Setting<java.nio.file.Path> public static final
+org.neo4j.configuration.GraphDatabaseSettings::log_queries_heap_dump_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
 org.neo4j.configuration.GraphDatabaseSettings::log_queries_max_archives org.neo4j.graphdb.config.Setting<java.lang.Integer> public static final
 org.neo4j.configuration.GraphDatabaseSettings::log_queries_page_detail_logging_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
 org.neo4j.configuration.GraphDatabaseSettings::log_queries_parameter_full_entities org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
@@ -264,9 +267,15 @@ org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel::REQUIRED org.n
 org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel::valueOf(java.lang.String) org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel public static
 org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel::values() org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel[] public static
 org.neo4j.configuration.connectors.BoltConnector::BoltConnector() void public
+org.neo4j.configuration.connectors.BoltConnector::DEFAULT_CONNECTOR_PORT int public static final = 7688
 org.neo4j.configuration.connectors.BoltConnector::DEFAULT_PORT int public static final = 7687
+org.neo4j.configuration.connectors.BoltConnector::INTERNAL_NAME java.lang.String public static final = bolt-internal
 org.neo4j.configuration.connectors.BoltConnector::NAME java.lang.String public static final = bolt
 org.neo4j.configuration.connectors.BoltConnector::advertised_address org.neo4j.graphdb.config.Setting<org.neo4j.configuration.helpers.SocketAddress> public static final
+org.neo4j.configuration.connectors.BoltConnector::connection_keep_alive org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+org.neo4j.configuration.connectors.BoltConnector::connection_keep_alive_scheduling_interval org.neo4j.graphdb.config.Setting<java.time.Duration> public static final
+org.neo4j.configuration.connectors.BoltConnector::connector_routing_enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
+org.neo4j.configuration.connectors.BoltConnector::connector_routing_listen_address org.neo4j.graphdb.config.Setting<org.neo4j.configuration.helpers.SocketAddress> public static final
 org.neo4j.configuration.connectors.BoltConnector::enabled org.neo4j.graphdb.config.Setting<java.lang.Boolean> public static final
 org.neo4j.configuration.connectors.BoltConnector::encryption_level org.neo4j.graphdb.config.Setting<org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel> public static final
 org.neo4j.configuration.connectors.BoltConnector::listen_address org.neo4j.graphdb.config.Setting<org.neo4j.configuration.helpers.SocketAddress> public static final

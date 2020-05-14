@@ -19,6 +19,7 @@ import com.neo4j.bench.micro.data.Stores
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.expressions.LabelName
 import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.graphdb.Label
@@ -36,8 +37,8 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class RollUpApply extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(Interpreted.NAME, Slotted.NAME, Morsel.NAME),
-    base = Array(Slotted.NAME, Morsel.NAME))
+    allowed = Array(Interpreted.NAME, Slotted.NAME, Pipelined.NAME),
+    base = Array(Slotted.NAME, Pipelined.NAME))
   @Param(Array[String]())
   var runtime: String = _
 
@@ -85,8 +86,8 @@ class RollUpApply extends AbstractCypherBenchmark {
     val lhs = "lhs"
     val rhs = "rhs"
     val list = "list"
-    val lhsNodesScan = plans.NodeByLabelScan(lhs, LabelName("LHS")(InputPosition.NONE), Set.empty)(IdGen)
-    val rhsNodesScan = plans.NodeByLabelScan(rhs, LabelName("RHS")(InputPosition.NONE), Set(lhs))(IdGen)
+    val lhsNodesScan = plans.NodeByLabelScan(lhs, LabelName("LHS")(InputPosition.NONE), Set.empty, IndexOrderNone)(IdGen)
+    val rhsNodesScan = plans.NodeByLabelScan(rhs, LabelName("RHS")(InputPosition.NONE), Set(lhs), IndexOrderNone)(IdGen)
     val rollUpApply = plans.RollUpApply(lhsNodesScan, rhsNodesScan, list, rhs, Set.empty)(IdGen)
     val resultColumns = List(lhs, list)
     val produceResults = plans.ProduceResult(rollUpApply, columns = resultColumns)(IdGen)

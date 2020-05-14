@@ -28,6 +28,7 @@ import org.eclipse.collections.impl.iterator.ImmutableEmptyLongIterator;
 import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
 
 import org.neo4j.collection.PrimitiveLongCollections;
+import org.neo4j.graphdb.Direction;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
@@ -55,16 +56,18 @@ class DefaultNodeCursor extends TraceableCursor implements NodeCursor
     boolean hasChanges;
     private LongIterator addedNodes;
     StorageNodeCursor storeCursor;
+    private StorageNodeCursor securityStoreCursor;
     private long currentAddedInTx;
     private long single;
     private AccessMode accessMode;
 
     private final CursorPool<DefaultNodeCursor> pool;
 
-    DefaultNodeCursor( CursorPool<DefaultNodeCursor> pool, StorageNodeCursor storeCursor )
+    DefaultNodeCursor( CursorPool<DefaultNodeCursor> pool, StorageNodeCursor storeCursor, StorageNodeCursor securityStoreCursor )
     {
         this.pool = pool;
         this.storeCursor = storeCursor;
+        this.securityStoreCursor = securityStoreCursor;
     }
 
     void scan( Read read )
@@ -263,7 +266,14 @@ class DefaultNodeCursor extends TraceableCursor implements NodeCursor
         NodeState nodeTxState = hasChanges ? read.txState().getNodeState( nodeReference() ) : null;
         if ( currentAddedInTx == NO_ID )
         {
-            storeCursor.degrees( selection, degrees );
+            if ( accessMode.allowsTraverseAllRelTypes() && accessMode.allowsTraverseAllLabels() )
+            {
+                storeCursor.degrees( selection, degrees, true );
+            }
+            else
+            {
+                storeCursor.degrees( new SecureRelationshipSelection( selection ), degrees, false );
+            }
         }
         if ( nodeTxState != null )
         {
@@ -339,6 +349,7 @@ class DefaultNodeCursor extends TraceableCursor implements NodeCursor
             checkHasChanges = true;
             addedNodes = ImmutableEmptyLongIterator.INSTANCE;
             storeCursor.reset();
+            securityStoreCursor.reset();
             accessMode = null;
 
             pool.accept( this );
@@ -397,5 +408,77 @@ class DefaultNodeCursor extends TraceableCursor implements NodeCursor
     void release()
     {
         storeCursor.close();
+        securityStoreCursor.close();
+    }
+
+    private class SecureRelationshipSelection extends RelationshipSelection
+    {
+        private final RelationshipSelection inner;
+
+        SecureRelationshipSelection( RelationshipSelection selection )
+        {
+            inner = selection;
+        }
+
+        @Override
+        public boolean test( int type, long sourceReference, long targetReference )
+        {
+            if ( accessMode.allowsTraverseRelType( type ) )
+            {
+                if ( sourceReference == targetReference )
+                {
+                    return inner.test( type );
+                }
+                long otherReference = sourceReference == nodeReference() ? targetReference : sourceReference;
+                securityStoreCursor.single( otherReference );
+                return securityStoreCursor.next() && accessMode.allowsTraverseNode( securityStoreCursor.labels() ) && inner.test( type );
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        @Override
+        public boolean test( int type )
+        {
+            return inner.test( type );
+        }
+
+        @Override
+        public boolean test( RelationshipDirection direction )
+        {
+            return inner.test( direction );
+        }
+
+        @Override
+        public Direction direction()
+        {
+            return inner.direction();
+        }
+
+        @Override
+        public boolean test( int type, RelationshipDirection direction )
+        {
+            return inner.test( type, direction );
+        }
+
+        @Override
+        public int numberOfCriteria()
+        {
+           return inner.numberOfCriteria();
+        }
+
+        @Override
+        public Criterion criterion( int index )
+        {
+            return inner.criterion( index );
+        }
+
+        @Override
+        public LongIterator addedRelationship( NodeState transactionState )
+        {
+            return inner.addedRelationship( transactionState );
+        }
     }
 }

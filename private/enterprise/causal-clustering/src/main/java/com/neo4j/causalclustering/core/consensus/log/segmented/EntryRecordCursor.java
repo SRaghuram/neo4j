@@ -5,19 +5,20 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
 import com.neo4j.causalclustering.core.consensus.log.EntryRecord;
 import com.neo4j.causalclustering.core.consensus.log.LogPosition;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
+
+import java.io.IOException;
+
 import org.neo4j.cursor.CursorValue;
 import org.neo4j.cursor.IOCursor;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.StoreChannel;
-import org.neo4j.io.memory.ByteBuffers;
+import org.neo4j.io.memory.NativeScopedBuffer;
+import org.neo4j.memory.MemoryTracker;
 
 import static org.neo4j.io.fs.ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE;
 
@@ -27,23 +28,21 @@ import static org.neo4j.io.fs.ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE;
  */
 class EntryRecordCursor implements IOCursor<EntryRecord>
 {
-    private final ByteBuffer buffer;
     private ReadAheadChannel<StoreChannel> bufferedReader;
 
     private final LogPosition position;
     private final CursorValue<EntryRecord> currentRecord = new CursorValue<>();
     private final Reader reader;
-    private ChannelMarshal<ReplicatedContent> contentMarshal;
+    private final ChannelMarshal<ReplicatedContent> contentMarshal;
     private final SegmentFile segment;
 
     private boolean hadError;
     private boolean closed;
 
     EntryRecordCursor( Reader reader, ChannelMarshal<ReplicatedContent> contentMarshal,
-            long currentIndex, long wantedIndex, SegmentFile segment ) throws IOException, EndOfStreamException
+            long currentIndex, long wantedIndex, SegmentFile segment, MemoryTracker memoryTracker ) throws IOException, EndOfStreamException
     {
-        this.buffer = ByteBuffers.allocateDirect( DEFAULT_READ_AHEAD_SIZE );
-        this.bufferedReader = new ReadAheadChannel<>( reader.channel(), buffer );
+        this.bufferedReader = new ReadAheadChannel<>( reader.channel(), new NativeScopedBuffer( DEFAULT_READ_AHEAD_SIZE, memoryTracker ) );
         this.reader = reader;
         this.contentMarshal = contentMarshal;
         this.segment = segment;
@@ -93,7 +92,6 @@ class EntryRecordCursor implements IOCursor<EntryRecord>
         }
 
         bufferedReader = null;
-        ByteBuffers.releaseBuffer( buffer );
         closed = true;
         segment.refCount().decrease();
 

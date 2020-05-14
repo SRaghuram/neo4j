@@ -97,6 +97,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.keep_logical_logs;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.TRUE;
 
@@ -208,7 +209,7 @@ public final class CausalClusteringTestHelpers
             // trigger an election and await until a new leader is elected
             var follower = randomClusterMember( cluster, leader );
             follower.resolveDependency( databaseName, RaftMachine.class ).triggerElection();
-            assertEventually( "Leader re-election did not happen", cluster::awaitLeader,
+            assertEventually( "Leader re-election did not happen", () -> cluster.awaitLeader( databaseName ),
                     new HamcrestCondition<>( not( equalTo( leader ) ) ), 2, MINUTES );
             return disabledMemberAction.execute( leader, otherMembers );
         }
@@ -483,7 +484,7 @@ public final class CausalClusteringTestHelpers
     private static boolean removeCheckPointFromTxLog( LogFiles logFiles, FileSystemAbstraction fs,
             CommandReaderFactory commandReaderFactory ) throws IOException
     {
-        var logTailScanner = new LogTailScanner( logFiles, new VersionAwareLogEntryReader( commandReaderFactory ), new Monitors() );
+        var logTailScanner = new LogTailScanner( logFiles, new VersionAwareLogEntryReader( commandReaderFactory ), new Monitors(), INSTANCE );
         var logTailInformation = logTailScanner.getTailInformation();
 
         if ( logTailInformation.commitsAfterLastCheckpoint() )

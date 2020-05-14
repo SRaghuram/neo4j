@@ -23,8 +23,6 @@ import org.neo4j.cypher.internal.util.Ref
 import org.neo4j.cypher.internal.util.Rewriter
 import org.neo4j.cypher.internal.util.bottomUp
 
-import scala.collection.immutable.Stack
-
 object Expression {
   sealed trait SemanticContext
   object SemanticContext {
@@ -34,15 +32,15 @@ object Expression {
 
   val DefaultTypeMismatchMessageGenerator = (expected: String, existing: String) => s"expected $expected but was $existing"
 
-  final case class TreeAcc[A](data: A, stack: Stack[Set[LogicalVariable]] = Stack.empty) {
+  final case class TreeAcc[A](data: A, list: List[Set[LogicalVariable]] = List.empty) {
     def mapData(f: A => A): TreeAcc[A] = copy(data = f(data))
 
-    def inScope(variable: LogicalVariable) = stack.exists(_.contains(variable))
-    def variablesInScope: Set[LogicalVariable] = stack.toSet.flatten
+    def inScope(variable: LogicalVariable) = list.exists(_.contains(variable))
+    def variablesInScope: Set[LogicalVariable] = list.toSet.flatten
 
     def pushScope(newVariable: LogicalVariable): TreeAcc[A] = pushScope(Set(newVariable))
-    def pushScope(newVariables: Set[LogicalVariable]): TreeAcc[A] = copy(stack = stack.push(newVariables))
-    def popScope: TreeAcc[A] = copy(stack = stack.pop)
+    def pushScope(newVariables: Set[LogicalVariable]): TreeAcc[A] = copy(list = newVariables::list)
+    def popScope: TreeAcc[A] = copy(list = list.tail)
   }
 
   def mapExpressionHasPropertyReadDependency(mapEntityName: String, mapExpression: Expression): Boolean =
@@ -135,15 +133,15 @@ abstract class Expression extends ASTNode {
     }.data
 
   /**
-    * Return true is this expression contains an aggregating expression.
-    */
+   * Return true is this expression contains an aggregating expression.
+   */
   def containsAggregate: Boolean = this.treeExists {
     case IsAggregate(_) => true
   }
 
   /**
-    * Returns the first encountered aggregate expression, or None if none existed.
-    */
+   * Returns the first encountered aggregate expression, or None if none existed.
+   */
   def findAggregate:Option[Expression] = this.treeFind[Expression] {
     case IsAggregate(_) => true
   }

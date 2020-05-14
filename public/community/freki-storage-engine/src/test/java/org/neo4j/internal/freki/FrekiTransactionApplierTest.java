@@ -39,6 +39,10 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.LifeSupport;
+<<<<<<< HEAD
+=======
+import org.neo4j.memory.EmptyMemoryTracker;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 import org.neo4j.storageengine.api.StandardConstraintRuleAccessor;
 import org.neo4j.storageengine.util.IdGeneratorUpdatesWorkSync;
 import org.neo4j.test.extension.Inject;
@@ -70,7 +74,11 @@ class FrekiTransactionApplierTest
     void setUp() throws IOException
     {
         stores = life.add( new Stores( fs, DatabaseLayout.ofFlat( directory.directory( "store" ) ), pageCache, new DefaultIdGeneratorFactory( fs, immediate() ),
+<<<<<<< HEAD
                 PageCacheTracer.NULL, immediate(), true, new StandardConstraintRuleAccessor(), index -> index ) );
+=======
+                PageCacheTracer.NULL, immediate(), true, new StandardConstraintRuleAccessor(), index -> index, EmptyMemoryTracker.INSTANCE ) );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         life.start();
         idUpdates = new RecordingIdGeneratorWorkSync();
         stores.idGenerators( idUpdates::add );
@@ -92,7 +100,11 @@ class FrekiTransactionApplierTest
         // when
         try ( FrekiTransactionApplier applier = applier() )
         {
+<<<<<<< HEAD
             applier.handle( new FrekiCommand.SparseNode( nodeId, unusedRecord( sizeExp, nodeId ), usedRecord( sizeExp, nodeId ) ) );
+=======
+            apply( applier, nodeId, null, usedRecord( sizeExp, nodeId ) );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         }
 
         // then
@@ -109,7 +121,11 @@ class FrekiTransactionApplierTest
         // when
         try ( FrekiTransactionApplier applier = applier() )
         {
+<<<<<<< HEAD
             applier.handle( new FrekiCommand.SparseNode( nodeId, unusedRecord( sizeExp, nodeId ), usedRecord( sizeExp, nodeId ) ) );
+=======
+            apply( applier, nodeId, null, usedRecord( sizeExp, nodeId ) );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         }
 
         // then
@@ -122,15 +138,23 @@ class FrekiTransactionApplierTest
         // given
         int sizeExp = 0;
         long nodeId = 0;
+<<<<<<< HEAD
         preState( applier ->
         {
             applier.handle( new FrekiCommand.SparseNode( nodeId, unusedRecord( sizeExp, nodeId ), usedRecord( sizeExp, nodeId ) ) );
         } );
+=======
+        preState( applier -> apply( applier, nodeId, null, usedRecord( sizeExp, nodeId ) ) );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 
         // when
         try ( FrekiTransactionApplier applier = applier() )
         {
+<<<<<<< HEAD
             applier.handle( new FrekiCommand.SparseNode( nodeId, usedRecord( sizeExp, nodeId ), unusedRecord( sizeExp, nodeId ) ) );
+=======
+            apply( applier, nodeId, usedRecord( sizeExp, nodeId ), null );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         }
 
         // then
@@ -143,15 +167,23 @@ class FrekiTransactionApplierTest
         // given
         int sizeExp = 1;
         long nodeId = 0;
+<<<<<<< HEAD
         preState( applier ->
         {
             applier.handle( new FrekiCommand.SparseNode( nodeId, unusedRecord( sizeExp, nodeId ), usedRecord( sizeExp, nodeId ) ) );
         } );
+=======
+        preState( applier -> apply( applier, nodeId, null, usedRecord( sizeExp, nodeId ) ) );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 
         // when
         try ( FrekiTransactionApplier applier = applier() )
         {
+<<<<<<< HEAD
             applier.handle( new FrekiCommand.SparseNode( nodeId, usedRecord( sizeExp, nodeId ), unusedRecord( sizeExp, nodeId ) ) );
+=======
+            apply( applier, nodeId, usedRecord( sizeExp, nodeId ), null );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         }
 
         // then
@@ -164,15 +196,23 @@ class FrekiTransactionApplierTest
         // given
         int sizeExp = 1;
         long nodeId = 0;
+<<<<<<< HEAD
         preState( applier ->
         {
             applier.handle( new FrekiCommand.SparseNode( nodeId, unusedRecord( sizeExp, nodeId ), usedRecord( sizeExp, nodeId ) ) );
         } );
+=======
+        preState( applier -> apply( applier, nodeId, null, usedRecord( sizeExp, nodeId ) ) );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 
         // when
         try ( FrekiTransactionApplier applier = applier() )
         {
+<<<<<<< HEAD
             applier.handle( new FrekiCommand.SparseNode( nodeId, usedRecord( sizeExp, nodeId ), usedRecord( sizeExp, nodeId ) ) );
+=======
+            apply( applier, nodeId, usedRecord( sizeExp, nodeId ), usedRecord( sizeExp, nodeId ) );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         }
 
         // then
@@ -186,15 +226,23 @@ class FrekiTransactionApplierTest
         // given
         int sizeExp = 3;
         long nodeId = 0;
+<<<<<<< HEAD
         preState( applier ->
         {
             applier.handle( new FrekiCommand.SparseNode( nodeId, unusedRecord( sizeExp, nodeId ), usedRecord( sizeExp, nodeId ) ) );
         } );
+=======
+        preState( applier -> apply( applier, nodeId, null, usedRecord( sizeExp, nodeId ) ) );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 
         // when
         try ( FrekiTransactionApplier applier = applier() )
         {
+<<<<<<< HEAD
             applier.handle( new FrekiCommand.SparseNode( nodeId, usedRecord( sizeExp, nodeId ), usedRecord( sizeExp, nodeId ) ) );
+=======
+            apply( applier, nodeId, usedRecord( sizeExp, nodeId ), usedRecord( sizeExp, nodeId ) );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         }
 
         // then
@@ -202,6 +250,16 @@ class FrekiTransactionApplierTest
         assertThat( idUpdates.hasEvent( sizeExp, nodeId, false ) ).isFalse();
     }
 
+<<<<<<< HEAD
+=======
+    private void apply( FrekiTransactionApplier applier, long nodeId, Record before, Record after ) throws IOException
+    {
+        FrekiCommand.SparseNode command = new FrekiCommand.SparseNode( nodeId );
+        command.addChange( before, after );
+        applier.handle( command );
+    }
+
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     private void preState( ThrowingConsumer<FrekiTransactionApplier,IOException> state ) throws Exception
     {
         try ( FrekiTransactionApplier applier = applier() )
@@ -213,11 +271,16 @@ class FrekiTransactionApplierTest
 
     private Record usedRecord( int sizeExp, long id )
     {
+<<<<<<< HEAD
         Record record = unusedRecord( sizeExp, id );
+=======
+        Record record = new Record( sizeExp, id );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         record.setFlag( Record.FLAG_IN_USE, true );
         return record;
     }
 
+<<<<<<< HEAD
     private static Record unusedRecord( int sizeExp, long id )
     {
         return new Record( sizeExp, id );
@@ -227,6 +290,12 @@ class FrekiTransactionApplierTest
     {
         return new FrekiTransactionApplier( stores, new FrekiStorageReader( stores, NO_TRACING, null /*should not be required*/ ), null, null, EXTERNAL,
                 idUpdates, null, null, null, PageCacheTracer.NULL, PageCursorTracer.NULL );
+=======
+    private FrekiTransactionApplier applier()
+    {
+        return new FrekiTransactionApplier( stores, new FrekiStorageReader( stores, NO_TRACING, null /*should not be required*/ ), null, null, EXTERNAL,
+                idUpdates, null, null, null, PageCacheTracer.NULL, PageCursorTracer.NULL, EmptyMemoryTracker.INSTANCE );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 
     private static class RecordingIdGeneratorWorkSync extends IdGeneratorUpdatesWorkSync

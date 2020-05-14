@@ -17,8 +17,8 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.monitoring.DatabaseHealth;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.UNKNOWN;
@@ -26,8 +26,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
-import static org.neo4j.test.conditions.Conditions.FALSE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
@@ -55,7 +55,23 @@ class DbmsReconcilerIT
     }
 
     @Test
-    void shouldPanicDatabaseThatFailsToTransitionToDesiredState()
+    void shouldStopAndFailDatabaseOnUnderlyingPanic()
+    {
+        // given
+        var databaseHealth = db.getDependencyResolver().resolveDependency( DatabaseHealth.class );
+        var err = new Exception( "Panic cause" );
+
+        // when
+        databaseHealth.panic( err );
+
+        // then
+        assertEventually( "Reconciler should eventually stop",
+                () -> reconciler.stateOfDatabase( db.databaseId() ), equalityCondition( STOPPED ), 10, SECONDS );
+        assertEquals( err, reconciler.causeOfFailure( db.databaseId() ).orElse( null ) );
+    }
+
+    @Test
+    void shouldBeFailedDatabaseOnIncorrectTransition()
     {
         // given
         // a fake operator that desires a state invalid for a standalone database
@@ -69,8 +85,8 @@ class DbmsReconcilerIT
         // then
         var error = assertThrows( CompletionException.class, () -> reconcilerResult.await( db.databaseId() ) );
         assertThat( error.getCause().getMessage() ).contains( "unsupported state transition" );
-        var dbHealth = db.getDependencyResolver().resolveDependency( DatabaseHealth.class );
-        assertEventually( "Database is expected to panic", dbHealth::isHealthy, FALSE, 30, SECONDS );
+        assertEquals( EnterpriseOperatorState.STARTED, reconciler.stateOfDatabase( db.databaseId() ) );
+        assertTrue( reconciler.causeOfFailure( db.databaseId() ).isPresent() );
     }
 
     @Test

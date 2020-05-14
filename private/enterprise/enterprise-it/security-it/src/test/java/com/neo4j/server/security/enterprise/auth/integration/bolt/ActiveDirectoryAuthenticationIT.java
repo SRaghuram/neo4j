@@ -57,7 +57,7 @@ public class ActiveDirectoryAuthenticationIT
 
     private void restartNeo4jServerWithOverriddenSettings( Consumer<Map<Setting<?>,Object>> overrideSettingsFunction )
     {
-        server.shutdownManagementService();
+        server.shutdownDatabase();
         server.ensureDatabase( asSettings( overrideSettingsFunction ) );
     }
 
@@ -331,7 +331,7 @@ public class ActiveDirectoryAuthenticationIT
         // Then
         assertThat( client ).satisfies( util.eventuallyReceives(
                 msgFailure( Status.Security.Forbidden,
-                        String.format( "Write operations are not allowed for user %s.", username ) ) ) );
+                        String.format( "Create node with labels '' is not allowed for user %s.", username ) ) ) );
     }
 
 }

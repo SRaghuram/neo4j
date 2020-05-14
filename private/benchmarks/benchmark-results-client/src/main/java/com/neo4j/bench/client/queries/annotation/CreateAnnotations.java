@@ -6,8 +6,9 @@
 package com.neo4j.bench.client.queries.annotation;
 
 import com.neo4j.bench.client.queries.Query;
-import com.neo4j.bench.common.model.Repository;
 import com.neo4j.bench.common.util.Resources;
+import com.neo4j.bench.model.model.Repository;
+import com.neo4j.bench.model.util.MapPrinter;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -22,7 +23,6 @@ import org.neo4j.driver.summary.ResultSummary;
 
 import static com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget.METRICS;
 import static com.neo4j.bench.client.queries.annotation.CreateAnnotations.AnnotationTarget.TEST_RUN;
-import static com.neo4j.bench.common.util.BenchmarkUtil.prettyPrint;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 
@@ -121,7 +121,7 @@ public class CreateAnnotations implements Query<CreateAnnotationsResult>
     @Override
     public String toString()
     {
-        return "Params:\n" + prettyPrint( params() ) + ANNOTATE_TEST_RUNS;
+        return "Params:\n" + MapPrinter.prettyPrint( params() ) + ANNOTATE_TEST_RUNS;
     }
 
     @Override

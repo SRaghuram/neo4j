@@ -33,8 +33,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.bolt.BoltChannel;
-import org.neo4j.bolt.messaging.RequestMessage;
-import org.neo4j.bolt.packstream.PackOutput;
+import org.neo4j.bolt.messaging.BoltResponseMessageWriter;
 import org.neo4j.bolt.runtime.scheduling.BoltConnectionLifetimeListener;
 import org.neo4j.bolt.runtime.scheduling.BoltConnectionQueueMonitor;
 import org.neo4j.bolt.runtime.statemachine.BoltStateMachine;
@@ -62,6 +61,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.neo4j.bolt.testing.BoltTestUtil.newTestBoltChannel;
 import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
 import static org.neo4j.logging.AssertableLogProvider.Level.WARN;
@@ -75,7 +75,7 @@ class DefaultBoltConnectionTest
     private final BoltConnectionLifetimeListener connectionListener = mock( BoltConnectionLifetimeListener.class );
     private final BoltConnectionQueueMonitor queueMonitor = mock( BoltConnectionQueueMonitor.class );
     private final EmbeddedChannel channel = new EmbeddedChannel();
-    private final PackOutput output = mock( PackOutput.class );
+    private final BoltResponseMessageWriter writer = mock( BoltResponseMessageWriter.class );
 
     private BoltChannel boltChannel;
     private BoltStateMachine stateMachine;
@@ -88,6 +88,8 @@ class DefaultBoltConnectionTest
     {
         boltChannel = newTestBoltChannel( channel );
         stateMachine = mock( BoltStateMachine.class );
+        when( stateMachine.shouldStickOnThread() ).thenReturn( false );
+        when( stateMachine.hasOpenStatement() ).thenReturn( false );
     }
 
     @AfterEach
@@ -350,36 +352,53 @@ class DefaultBoltConnectionTest
     }
 
     @Test
-    void processNextBatchShouldReturnFalseIfConnectionIsStopped()
+    void processNextBatchShouldThrowAssertionErrorIfStatementOpen()
     {
         BoltConnection connection = newConnection( 1 );
-        connection.stop();
+        connection.enqueue( Jobs.noop() );
+        connection.enqueue( Jobs.noop() );
 
-        assertFalse( connection.processNextBatch() );
+        // force to a message waiting loop
+        when( stateMachine.hasOpenStatement() ).thenReturn( true );
+
+        connection.processNextBatch();
+
+        assertThat( logProvider ).forClass( DefaultBoltConnection.class ).forLevel( ERROR )
+                .assertExceptionForLogMessage( "Unexpected error" ).isInstanceOf( AssertionError.class );
     }
 
     @Test
-    void processNextBatchShouldReturnTrueIfConnectionIsOpen()
+    void processNextBatchShouldNotThrowAssertionErrorIfStatementOpenButStopping()
     {
         BoltConnection connection = newConnection( 1 );
         connection.enqueue( Jobs.noop() );
         connection.enqueue( Jobs.noop() );
 
-        assertTrue( connection.processNextBatch() );
+        // force to a message waiting loop
+        when( stateMachine.hasOpenStatement() ).thenReturn( true );
+
+        connection.stop();
+        connection.processNextBatch();
+
+        assertThat( logProvider ).doesNotHaveAnyLogs();
     }
 
     @Test
-    void processNextBatchShouldImmediatelyReturnWhenConnectionIsStopped() throws Exception
+    void processNextBatchShouldReturnWhenConnectionIsStopped() throws Exception
     {
         BoltConnection connection = newConnection( 1 );
-        connection.stop();
         connection.enqueue( Jobs.noop() );
         connection.enqueue( Jobs.noop() );
+
+        // force to a message waiting loop
+        when( stateMachine.shouldStickOnThread() ).thenReturn( true );
 
         Future<Boolean> future = otherThread.submit( connection::processNextBatch );
+
+        connection.stop();
+
         future.get( 1, TimeUnit.MINUTES );
 
-        verify( stateMachine, never() ).process( any( RequestMessage.class ), any( BoltResponseHandler.class ) );
         verify( stateMachine ).close();
     }
 
@@ -396,7 +415,7 @@ class DefaultBoltConnectionTest
         // Then
         verify( stateMachine ).markFailed( argThat( e -> e.status().equals( Status.Request.NoThreadsAvailable ) ) );
         verify( stateMachine ).close();
-        verify( output ).flush();
+        verify( writer ).flush();
     }
 
     private DefaultBoltConnection newConnection()
@@ -406,7 +425,7 @@ class DefaultBoltConnectionTest
 
     private DefaultBoltConnection newConnection( int maxBatchSize )
     {
-        return new DefaultBoltConnection( boltChannel, output, stateMachine, logService, connectionListener, queueMonitor, maxBatchSize,
+        return new DefaultBoltConnection( boltChannel, writer, stateMachine, logService, connectionListener, queueMonitor, maxBatchSize,
                 mock( BoltConnectionMetricsMonitor.class ), Clock.systemUTC() );
     }
 }

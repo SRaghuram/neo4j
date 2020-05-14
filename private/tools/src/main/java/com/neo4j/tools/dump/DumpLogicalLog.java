@@ -32,10 +32,13 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
 import org.neo4j.kernel.impl.transaction.log.entry.LogHeader;
 import org.neo4j.kernel.impl.transaction.log.entry.LogHeaderReader;
+import org.neo4j.storageengine.api.CommandReaderFactory;
 import org.neo4j.storageengine.api.StorageCommand;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 
 import static java.util.TimeZone.getTimeZone;
 import static org.neo4j.internal.helpers.Format.DEFAULT_TIME_ZONE;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 /**
  * Tool to represent logical logs in readable format for further analysis.
@@ -46,18 +49,21 @@ public class DumpLogicalLog
     private static final String TX_FILTER = "txfilter";
     private static final String CC_FILTER = "ccfilter";
     private static final String LENIENT = "lenient";
+    private static final String STORAGE_ENGINE = "storage_engine";
 
     private final FileSystemAbstraction fileSystem;
+    private CommandReaderFactory commandReaderFactory;
 
-    public DumpLogicalLog( FileSystemAbstraction fileSystem )
+    private DumpLogicalLog( FileSystemAbstraction fileSystem, CommandReaderFactory commandReaderFactory )
     {
         this.fileSystem = fileSystem;
+        this.commandReaderFactory = commandReaderFactory;
     }
 
     public void dump( String filenameOrDirectory, PrintStream out,
             Predicate<LogEntry[]> filter, Function<LogEntry,String> serializer ) throws IOException
     {
-        TransactionLogAnalyzer.analyze( fileSystem, new File( filenameOrDirectory ), new Monitor()
+        TransactionLogAnalyzer.analyze( fileSystem, new File( filenameOrDirectory ), commandReaderFactory, new Monitor()
         {
             private File file;
             private LogEntryCommit firstTx;
@@ -67,7 +73,7 @@ public class DumpLogicalLog
             public void logFile( File file, long logVersion ) throws IOException
             {
                 this.file = file;
-                LogHeader logHeader = LogHeaderReader.readLogHeader( fileSystem, file );
+                LogHeader logHeader = LogHeaderReader.readLogHeader( fileSystem, file, INSTANCE );
                 out.println( "=== " + file.getAbsolutePath() + "[" + logHeader + "] ===" );
             }
 
@@ -238,10 +244,13 @@ public class DumpLogicalLog
         try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
               Printer printer = getPrinter( arguments ) )
         {
+            String storageEngineNameish = arguments.get( STORAGE_ENGINE );
+            StorageEngineFactory storageEngineFactory = storageEngineNameish != null ? StorageEngineFactory.selectStorageEngine( storageEngineNameish )
+                                                                                     : StorageEngineFactory.selectStorageEngine();
             for ( String fileAsString : arguments.orphans() )
             {
                 PrintStream out = printer.getFor( fileAsString );
-                new DumpLogicalLog( fileSystem ).dump( fileAsString, out, filter, serializer );
+                new DumpLogicalLog( fileSystem, storageEngineFactory.commandReaderFactory() ).dump( fileAsString, out, filter, serializer );
             }
         }
     }

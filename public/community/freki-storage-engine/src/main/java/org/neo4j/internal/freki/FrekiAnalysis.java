@@ -39,6 +39,10 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.Life;
+<<<<<<< HEAD
+=======
+import org.neo4j.memory.EmptyMemoryTracker;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 import org.neo4j.storageengine.api.StandardConstraintRuleAccessor;
 import org.neo4j.token.api.NamedToken;
 
@@ -64,8 +68,14 @@ public class FrekiAnalysis extends Life implements AutoCloseable
 
     public FrekiAnalysis( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException
     {
+<<<<<<< HEAD
         this( new Stores( fs, databaseLayout, pageCache, new DefaultIdGeneratorFactory( fs, immediate() ), PageCacheTracer.NULL,
                 immediate(), false, new StandardConstraintRuleAccessor(), i -> i ), true, stores -> new FrekiCursorFactory( stores, NO_TRACING ) );
+=======
+        this( new Stores( fs, databaseLayout, pageCache, new DefaultIdGeneratorFactory( fs, immediate() ), PageCacheTracer.NULL, immediate(), false,
+                        new StandardConstraintRuleAccessor(), i -> i, EmptyMemoryTracker.INSTANCE ), true,
+                stores -> new FrekiCursorFactory( stores, NO_TRACING ) );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 
     public FrekiAnalysis( MainStores stores )
@@ -92,7 +102,11 @@ public class FrekiAnalysis extends Life implements AutoCloseable
     public void dumpRelationship( long relId )
     {
         try ( var cursor = cursorFactory.allocateRelationshipScanCursor( PageCursorTracer.NULL );
+<<<<<<< HEAD
               var propertyCursor = cursorFactory.allocatePropertyCursor( PageCursorTracer.NULL ) )
+=======
+              var propertyCursor = cursorFactory.allocatePropertyCursor( PageCursorTracer.NULL, EmptyMemoryTracker.INSTANCE ) )
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         {
             cursor.single( relId );
             if ( cursor.next() )
@@ -133,9 +147,15 @@ public class FrekiAnalysis extends Life implements AutoCloseable
 
     private void dumpAllNodes()
     {
+<<<<<<< HEAD
         try ( var nodeCursor = cursorFactory.allocateNodeCursor( PageCursorTracer.NULL );
               var propertyCursor = cursorFactory.allocatePropertyCursor( PageCursorTracer.NULL );
               var relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( PageCursorTracer.NULL ) )
+=======
+        try ( var nodeCursor = cursorFactory.allocateNodeCursor( PageCursorTracer.NULL  );
+              var propertyCursor = cursorFactory.allocatePropertyCursor( PageCursorTracer.NULL, EmptyMemoryTracker.INSTANCE );
+              var relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( PageCursorTracer.NULL  ) )
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         {
             nodeCursor.scan();
             while ( nodeCursor.next() )
@@ -147,9 +167,15 @@ public class FrekiAnalysis extends Life implements AutoCloseable
 
     public void dumpNodes( long... nodeIds )
     {
+<<<<<<< HEAD
         try ( var nodeCursor = cursorFactory.allocateNodeCursor( PageCursorTracer.NULL );
                 var propertyCursor = cursorFactory.allocatePropertyCursor( PageCursorTracer.NULL );
                 var relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( PageCursorTracer.NULL ) )
+=======
+        try ( var nodeCursor = cursorFactory.allocateNodeCursor( PageCursorTracer.NULL  );
+                var propertyCursor = cursorFactory.allocatePropertyCursor( PageCursorTracer.NULL, EmptyMemoryTracker.INSTANCE );
+                var relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( PageCursorTracer.NULL  ) )
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         {
             for ( long nodeId : nodeIds )
             {
@@ -160,9 +186,15 @@ public class FrekiAnalysis extends Life implements AutoCloseable
 
     public void dumpNodeRange( long fromNodeId, long toNodeId )
     {
+<<<<<<< HEAD
         try ( var nodeCursor = cursorFactory.allocateNodeCursor( PageCursorTracer.NULL );
               var propertyCursor = cursorFactory.allocatePropertyCursor( PageCursorTracer.NULL );
               var relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( PageCursorTracer.NULL ) )
+=======
+        try ( var nodeCursor = cursorFactory.allocateNodeCursor( PageCursorTracer.NULL  );
+              var propertyCursor = cursorFactory.allocatePropertyCursor( PageCursorTracer.NULL, EmptyMemoryTracker.INSTANCE );
+              var relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( PageCursorTracer.NULL  ) )
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         {
             for ( long nodeId = fromNodeId; nodeId < toNodeId; nodeId++ )
             {
@@ -189,17 +221,39 @@ public class FrekiAnalysis extends Life implements AutoCloseable
         // More physical
         System.out.println( nodeCursor.toString() );
         printRawRecordContents( nodeCursor.data.records[0], 0 );
+<<<<<<< HEAD
         if ( nodeCursor.data.forwardPointer != NULL )
         {
             int sizeExp = sizeExponentialFromRecordPointer( nodeCursor.data.forwardPointer );
             printRawRecordContents( nodeCursor.data.records[sizeExp], nodeCursor.entityReference() );
+=======
+        if ( nodeCursor.data.xLChainStartPointer != NULL )
+        {
+            long id = nodeCursor.data.nodeId;
+            //Force full reload, to step XLChain manually
+            nodeCursor.reset();
+            nodeCursor.single( id );
+            nodeCursor.next();
+            while ( nodeCursor.data.xLChainNextLinkPointer != NULL )
+            {
+                int sizeExp = sizeExponentialFromRecordPointer( nodeCursor.data.xLChainNextLinkPointer );
+                printRawRecordContents( nodeCursor.data.records[sizeExp], nodeCursor.entityReference() );
+                nodeCursor.loadNextChainLink();
+            }
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         }
     }
 
     private void printRawRecordContents( Record record, long nodeId )
     {
         System.out.println( record );
+<<<<<<< HEAD
         System.out.println( "  " + new MutableNodeData( nodeId, stores.bigPropertyValueStore, PageCursorTracer.NULL, record.data( 0 ) ) );
+=======
+        MutableNodeData data = new MutableNodeData( nodeId, stores.bigPropertyValueStore, PageCursorTracer.NULL );
+        data.deserialize( record );
+        System.out.println( "  " + data );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 
     public void dumpLogicalRepresentation( FrekiNodeCursor nodeCursor, FrekiPropertyCursor propertyCursor,
@@ -273,6 +327,7 @@ public class FrekiAnalysis extends Life implements AutoCloseable
 
     public void dumpRecord( Record record )
     {
+<<<<<<< HEAD
         try ( var nodeCursor = cursorFactory.allocateNodeCursor( PageCursorTracer.NULL );
               var propertyCursor = cursorFactory.allocatePropertyCursor( PageCursorTracer.NULL );
               var relationshipCursor = cursorFactory.allocateRelationshipTraversalCursor( PageCursorTracer.NULL ) )
@@ -286,6 +341,12 @@ public class FrekiAnalysis extends Life implements AutoCloseable
             dumpLogicalRepresentation( nodeCursor, propertyCursor, relationshipCursor );
             System.out.println( nodeCursor );
         }
+=======
+        System.out.println( record );
+        MutableNodeData data = new MutableNodeData( -1, stores.bigPropertyValueStore, PageCursorTracer.NULL );
+        data.deserialize( record );
+        System.out.println( data );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 
     public void dumpStats()
@@ -382,10 +443,16 @@ public class FrekiAnalysis extends Life implements AutoCloseable
                             {
                                 stats.usedRecords++;
                                 var data = new MutableNodeData( id, stores.bigPropertyValueStore, PageCursorTracer.NULL );
+<<<<<<< HEAD
                                 var buffer = record.data();
                                 try
                                 {
                                     data.deserialize( buffer );
+=======
+                                try
+                                {
+                                    data.deserialize( record );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
                                 }
                                 catch ( Exception e )
                                 {
@@ -393,6 +460,10 @@ public class FrekiAnalysis extends Life implements AutoCloseable
                                             recordXFactor( store.recordSizeExponential() ) );
                                     throw e;
                                 }
+<<<<<<< HEAD
+=======
+                                var buffer = record.data();
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
                                 stats.bytesOccupiedInUsedRecords += Record.HEADER_SIZE + buffer.position();
                                 stats.bytesVacantInUsedRecords += recordDataSize - buffer.position();
                                 if ( data.isDense() )

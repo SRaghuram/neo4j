@@ -28,8 +28,8 @@ import org.neo4j.cypher.internal.CacheTracer;
 import org.neo4j.cypher.internal.CompilerFactory;
 import org.neo4j.cypher.internal.CompilerLibrary;
 import org.neo4j.cypher.internal.CypherConfiguration;
+import org.neo4j.cypher.internal.ExecutionEngineQueryCacheMonitor;
 import org.neo4j.cypher.internal.FullyParsedQuery;
-import org.neo4j.cypher.internal.StringCacheMonitor;
 import org.neo4j.cypher.internal.runtime.InputDataStream;
 import org.neo4j.cypher.internal.tracing.CompilationTracer;
 import org.neo4j.cypher.internal.tracing.TimingCompilationTracer;
@@ -40,6 +40,7 @@ import org.neo4j.kernel.impl.query.FunctionInformation;
 import org.neo4j.kernel.impl.query.QueryExecution;
 import org.neo4j.kernel.impl.query.QueryExecutionEngine;
 import org.neo4j.kernel.impl.query.QueryExecutionKernelException;
+import org.neo4j.kernel.impl.query.QueryExecutionMonitor;
 import org.neo4j.kernel.impl.query.QuerySubscriber;
 import org.neo4j.kernel.impl.query.TransactionalContext;
 import org.neo4j.logging.LogProvider;
@@ -87,7 +88,7 @@ public class ExecutionEngine implements QueryExecutionEngine
     {
         DependencyResolver resolver = queryService.getDependencyResolver();
         Monitors monitors = resolver.resolveDependency( Monitors.class );
-        CacheTracer cacheTracer = new MonitoringCacheTracer( monitors.newMonitor( StringCacheMonitor.class ) );
+        CacheTracer cacheTracer = new MonitoringCacheTracer( monitors.newMonitor( ExecutionEngineQueryCacheMonitor.class ) );
         Config config = resolver.resolveDependency( Config.class );
         CypherConfiguration cypherConfiguration = CypherConfiguration.fromConfig( config );
         CompilationTracer tracer =
@@ -127,11 +128,11 @@ public class ExecutionEngine implements QueryExecutionEngine
     }
 
     public QueryExecution executeQuery( FullyParsedQuery query, MapValue parameters, TransactionalContext context,
-            boolean prePopulate, InputDataStream input, QuerySubscriber subscriber ) throws QueryExecutionKernelException
+            boolean prePopulate, InputDataStream input, QueryExecutionMonitor queryMonitor, QuerySubscriber subscriber ) throws QueryExecutionKernelException
     {
         try
         {
-            return cypherExecutionEngine.execute( query, parameters, context, prePopulate, input, subscriber );
+            return cypherExecutionEngine.execute( query, parameters, context, prePopulate, input, queryMonitor, subscriber );
         }
         catch ( Neo4jException e )
         {

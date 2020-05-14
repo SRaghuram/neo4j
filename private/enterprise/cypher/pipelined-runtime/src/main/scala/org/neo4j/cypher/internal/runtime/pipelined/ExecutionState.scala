@@ -37,7 +37,7 @@ trait ArgumentStateMapCreator {
    */
   def createArgumentStateMap[S <: ArgumentState](argumentStateMapId: ArgumentStateMapId,
                                                  factory: ArgumentStateFactory[S],
-                                                 ordered: Boolean): ArgumentStateMap[S]
+                                                 ordered: Boolean = false): ArgumentStateMap[S]
 
 }
 
@@ -62,7 +62,7 @@ trait ExecutionState extends ArgumentStateMapCreator {
   /**
    * Put a morsel into the buffer with id `bufferId`.
    */
-  def putMorsel(bufferId: BufferId, morsel: Morsel): Unit
+  def putMorsel(bufferId: BufferId, morsel: Morsel, resources: QueryResources): Unit
 
   /**
    * Take a morsel from the buffer with id `bufferId`.

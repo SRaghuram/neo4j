@@ -36,6 +36,7 @@ import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.logging.LogAssertions.assertThat;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @Neo4jLayoutExtension
 class BatchingNeoStoresIT
@@ -61,7 +62,7 @@ class BatchingNeoStoresIT
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler();
                 BatchingNeoStores batchingNeoStores = BatchingNeoStores
                 .batchingNeoStores( fileSystem, databaseLayout, RecordFormatSelector.defaultFormat(), Configuration.DEFAULT,
-                        logService, AdditionalInitialIds.EMPTY, config, jobScheduler, PageCacheTracer.NULL ) )
+                        logService, AdditionalInitialIds.EMPTY, config, jobScheduler, PageCacheTracer.NULL, INSTANCE ) )
         {
             batchingNeoStores.createNew();
         }
@@ -74,7 +75,7 @@ class BatchingNeoStoresIT
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler();
                 BatchingNeoStores batchingNeoStores = BatchingNeoStores
                 .batchingNeoStores( fileSystem, databaseLayout, RecordFormatSelector.defaultFormat(), Configuration.DEFAULT,
-                        logService, new TestAdditionalInitialIds(), Config.defaults(), jobScheduler, PageCacheTracer.NULL ) )
+                        logService, new TestAdditionalInitialIds(), Config.defaults(), jobScheduler, PageCacheTracer.NULL, INSTANCE ) )
         {
             batchingNeoStores.createNew();
         }
@@ -101,7 +102,7 @@ class BatchingNeoStoresIT
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler();
                 BatchingNeoStores batchingNeoStores = BatchingNeoStores
                         .batchingNeoStores( fileSystem, databaseLayout, RecordFormatSelector.defaultFormat(), Configuration.DEFAULT,
-                                logService, new TestAdditionalInitialIds(), Config.defaults(), jobScheduler, pageCacheTracer ) )
+                                logService, new TestAdditionalInitialIds(), Config.defaults(), jobScheduler, pageCacheTracer, INSTANCE ) )
         {
             batchingNeoStores.createNew();
         }

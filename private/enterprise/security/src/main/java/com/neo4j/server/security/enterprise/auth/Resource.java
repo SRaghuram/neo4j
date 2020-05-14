@@ -10,6 +10,9 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DATABASE_ACTIONS;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.GRAPH_ACTIONS;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.REMOVE_LABEL;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SET_LABEL;
 
 public interface Resource
 {
@@ -32,8 +35,7 @@ public interface Resource
         @Override
         public void assertValidCombination( PrivilegeAction action ) throws InvalidArgumentsException
         {
-            if ( !(action.equals( PrivilegeAction.WRITE ) || action.equals( PrivilegeAction.READ ) ||
-                   action.equals( PrivilegeAction.TRAVERSE ) || action.equals( PrivilegeAction.MATCH )) )
+            if ( SET_LABEL.satisfies( action ) || REMOVE_LABEL.satisfies( action ) || !(GRAPH_ACTIONS.satisfies( action )) )
             {
                 throw new InvalidArgumentsException( String.format( "Graph resource cannot be combined with action '%s'", action.toString() ) );
             }
@@ -109,7 +111,7 @@ public interface Resource
         @Override
         public void assertValidCombination( PrivilegeAction action ) throws InvalidArgumentsException
         {
-            if ( !(action.equals( PrivilegeAction.READ ) || action.equals( PrivilegeAction.MATCH )) )
+            if ( !(action.equals( PrivilegeAction.READ ) || action.equals( PrivilegeAction.MATCH ) || action.equals( PrivilegeAction.SET_PROPERTY )) )
             {
                 throw new InvalidArgumentsException( String.format( "Property resource cannot be combined with action `%s`", action.toString() ) );
             }
@@ -152,7 +154,7 @@ public interface Resource
         @Override
         public void assertValidCombination( PrivilegeAction action ) throws InvalidArgumentsException
         {
-            if ( !(action.equals( PrivilegeAction.READ ) || action.equals( PrivilegeAction.MATCH )) )
+            if ( !(action.equals( PrivilegeAction.READ ) || action.equals( PrivilegeAction.MATCH ) || action.equals( PrivilegeAction.SET_PROPERTY )) )
             {
                 throw new InvalidArgumentsException( String.format( "Property resource cannot be combined with action `%s`", action.toString() ) );
             }
@@ -194,6 +196,105 @@ public interface Resource
             {
                 PropertyResource other = (PropertyResource) obj;
                 return this.property == null && other.property == null || this.property != null && this.property.equals( other.property );
+            }
+            return false;
+        }
+    }
+
+    class AllLabelsResource implements Resource
+    {
+        public AllLabelsResource( )
+        {
+        }
+
+        @Override
+        public void assertValidCombination( PrivilegeAction action ) throws InvalidArgumentsException
+        {
+            if ( !(action.equals( PrivilegeAction.SET_LABEL ) || action.equals( PrivilegeAction.REMOVE_LABEL )) )
+            {
+                throw new InvalidArgumentsException( String.format( "Label resource cannot be combined with action `%s`", action.toString() ) );
+            }
+        }
+
+        @Override
+        public Type type()
+        {
+            return Type.ALL_LABELS;
+        }
+
+        @Override
+        public String toString()
+        {
+            return "all labels ";
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Type.ALL_LABELS.hashCode();
+        }
+
+        @Override
+        public boolean equals( Object obj )
+        {
+            return obj == this || obj instanceof AllLabelsResource;
+        }
+    }
+
+    class LabelResource implements Resource
+    {
+        private final String label;
+
+        public LabelResource( String label )
+        {
+            this.label = label;
+        }
+
+        @Override
+        public void assertValidCombination( PrivilegeAction action ) throws InvalidArgumentsException
+        {
+            if ( !(action.equals( PrivilegeAction.SET_LABEL ) || action.equals( PrivilegeAction.REMOVE_LABEL )) )
+            {
+                throw new InvalidArgumentsException( String.format( "Label resource cannot be combined with action `%s`", action.toString() ) );
+            }
+        }
+
+        @Override
+        public String getArg1()
+        {
+            return label == null ? "" : label;
+        }
+
+        @Override
+        public Type type()
+        {
+            return Type.LABEL;
+        }
+
+        @Override
+        public String toString()
+        {
+            return "label " + label;
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return label == null ? 0 : label.hashCode() + 31 * Type.LABEL.hashCode();
+        }
+
+        @Override
+        public boolean equals( Object obj )
+        {
+            if ( obj == this )
+            {
+                return true;
+            }
+
+            if ( obj instanceof LabelResource )
+            {
+                LabelResource other = (LabelResource) obj;
+                return this.label == null && other.label == null || this.label != null && this.label.equals( other.label );
             }
             return false;
         }
@@ -272,6 +373,8 @@ public interface Resource
     {
         ALL_PROPERTIES,
         PROPERTY,
+        ALL_LABELS,
+        LABEL,
         GRAPH,
         DATABASE,
         PROCEDURE;

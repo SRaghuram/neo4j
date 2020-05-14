@@ -9,10 +9,13 @@ import java.util
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
+import org.neo4j.cypher.internal.physicalplanning.ReadOnlyArray
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
@@ -32,7 +35,7 @@ import scala.collection.mutable.ArrayBuffer
  */
 class ArgumentStreamMorselBuffer(id: BufferId,
                                  tracker: QueryCompletionTracker,
-                                 downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
+                                 downstreamArgumentReducers: ReadOnlyArray[AccumulatingBuffer],
                                  argumentStateMaps: ArgumentStateMaps,
                                  argumentStateMapId: ArgumentStateMapId
                           )
@@ -40,7 +43,7 @@ class ArgumentStreamMorselBuffer(id: BufferId,
 
   override def canPut: Boolean = argumentStateMap.exists(_.canPut)
 
-  override def put(data: IndexedSeq[PerArgument[Morsel]]): Unit = {
+  override def put(data: IndexedSeq[PerArgument[Morsel]], resources: QueryResources): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
     }
@@ -52,7 +55,7 @@ class ArgumentStreamMorselBuffer(id: BufferId,
         // streamed out yet.
         // We have to do the increments in this lambda function, because it can happen that we try to update argument row IDs that are concurrently cancelled and taken
         tracker.increment()
-        acc.update(data(i).value)
+        acc.update(data(i).value, resources)
         forAllArgumentReducers(downstreamArgumentReducers, acc.argumentRowIdsForReducers, _.increment(_))
       })
       i += 1
@@ -201,9 +204,9 @@ object ArgumentStreamArgumentStateBuffer {
 class StandardArgumentStreamBuffer[T <: AnyRef](inner: Buffer[T]) extends Buffer[T] with BufferUsageHistory {
   private var _didReceiveData : Boolean = false
 
-  override def put(t: T): Unit = {
+  override def put(t: T, resources: QueryResources): Unit = {
     _didReceiveData = true
-    inner.put(t)
+    inner.put(t, resources)
   }
 
   def didReceiveData: Boolean = _didReceiveData
@@ -223,9 +226,9 @@ class ConcurrentArgumentStreamBuffer[T <: AnyRef](inner: Buffer[T]) extends Buff
   @volatile
   private var _didReceiveData : Boolean = false
 
-  override def put(t: T): Unit = {
+  override def put(t: T, resources: QueryResources): Unit = {
     _didReceiveData = true
-    inner.put(t)
+    inner.put(t, resources)
   }
 
   def didReceiveData: Boolean = _didReceiveData

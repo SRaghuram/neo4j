@@ -15,7 +15,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
-import org.neo4j.test.extension.EphemeralFileSystemExtension;
+import org.neo4j.test.extension.testdirectory.EphemeralTestDirectoryExtension;
 
 /**
  * See {@link EnterpriseDbmsExtension} for documentation.
@@ -26,7 +26,8 @@ import org.neo4j.test.extension.EphemeralFileSystemExtension;
 @Target( ElementType.TYPE )
 @Retention( RetentionPolicy.RUNTIME )
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
-@ExtendWith( {EphemeralFileSystemExtension.class, EnterpriseDbmsSupportExtension.class} )
+@EphemeralTestDirectoryExtension
+@ExtendWith( EnterpriseDbmsSupportExtension.class )
 public @interface ImpermanentEnterpriseDbmsExtension
 {
     String configurationCallback() default "";

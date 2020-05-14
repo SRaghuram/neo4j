@@ -35,7 +35,7 @@ import org.neo4j.cypher.internal.util.attribution.Identifiable
 import org.neo4j.cypher.internal.util.attribution.SameId
 import org.neo4j.exceptions.InternalException
 
-import scala.collection.mutable
+import scala.collection.mutable.ArrayStack
 import scala.util.hashing.MurmurHash3
 
 object LogicalPlan {
@@ -71,7 +71,7 @@ abstract class LogicalPlan(idGen: IdGen)
       val otherPlan = obj.asInstanceOf[LogicalPlan]
       if (this.eq(otherPlan)) return true
       if (this.getClass != otherPlan.getClass) return false
-      val stack = new mutable.Stack[(Iterator[Any], Iterator[Any])]()
+      val stack = new ArrayStack[(Iterator[Any], Iterator[Any])]()
       var p1 = this.productIterator
       var p2 = otherPlan.productIterator
       while (p1.hasNext && p2.hasNext) {
@@ -149,7 +149,7 @@ abstract class LogicalPlan(idGen: IdGen)
       case _ => System.lineSeparator() + "  " * level + in
     }
 
-    val childrenHeap = new scala.collection.mutable.Stack[(String, Int, Option[LogicalPlan])]
+    val childrenHeap = new ArrayStack[(String, Int, Option[LogicalPlan])]
     childrenHeap.push(("", 0, Some(this)))
     val sb = new StringBuilder()
 
@@ -194,8 +194,9 @@ abstract class LogicalPlan(idGen: IdGen)
         acc => acc :+ SchemaIndexSeekUsage(idName, label.nameId.id, label.name, properties.map(_.propertyKeyToken.name))
       case NodeIndexScan(idName, label, properties, _, _) =>
         acc => acc :+ SchemaIndexScanUsage(idName, label.nameId.id, label.name, properties.map(_.propertyKeyToken.name))
+      case MultiNodeIndexSeek(indexPlans) =>
+        acc => acc ++ indexPlans.flatMap(_.indexUsage)
       }
-    // TODO: FIXME Multi
   }
 }
 
@@ -209,6 +210,10 @@ abstract class LogicalLeafPlan(idGen: IdGen) extends LogicalPlan(idGen) with Laz
   final val lhs = None
   final val rhs = None
   def argumentIds: Set[String]
+
+  def usedVariables: Set[String]
+
+  def withoutArgumentIds(argsToExclude: Set[String]): LogicalLeafPlan
 }
 
 abstract class NodeLogicalLeafPlan(idGen: IdGen) extends LogicalLeafPlan(idGen) {

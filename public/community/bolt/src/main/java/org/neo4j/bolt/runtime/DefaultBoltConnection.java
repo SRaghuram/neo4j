@@ -21,6 +21,7 @@ package org.neo4j.bolt.runtime;
 
 import io.netty.channel.Channel;
 
+import java.io.IOException;
 import java.net.SocketAddress;
 import java.time.Clock;
 import java.util.ArrayList;
@@ -31,11 +32,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.bolt.BoltChannel;
 import org.neo4j.bolt.BoltServer;
-import org.neo4j.bolt.packstream.PackOutput;
+import org.neo4j.bolt.messaging.BoltResponseMessageWriter;
 import org.neo4j.bolt.runtime.scheduling.BoltConnectionLifetimeListener;
 import org.neo4j.bolt.runtime.scheduling.BoltConnectionQueueMonitor;
 import org.neo4j.bolt.runtime.statemachine.BoltStateMachine;
-import org.neo4j.exceptions.KernelException;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
@@ -54,7 +54,6 @@ public class DefaultBoltConnection implements BoltConnection
     private final BoltStateMachine machine;
     private final BoltConnectionLifetimeListener listener;
     private final BoltConnectionQueueMonitor queueMonitor;
-    private final PackOutput output;
 
     private final Log log;
     private final Log userLog;
@@ -69,13 +68,15 @@ public class DefaultBoltConnection implements BoltConnection
 
     private final BoltConnectionMetricsMonitor metricsMonitor;
     private final Clock clock;
+    private final BoltResponseMessageWriter messageWriter;
 
-    DefaultBoltConnection( BoltChannel channel, PackOutput output, BoltStateMachine machine, LogService logService, BoltConnectionLifetimeListener listener,
-            BoltConnectionQueueMonitor queueMonitor, int maxBatchSize, BoltConnectionMetricsMonitor metricsMonitor, Clock clock )
+    DefaultBoltConnection( BoltChannel channel, BoltResponseMessageWriter messageWriter, BoltStateMachine machine,
+            LogService logService, BoltConnectionLifetimeListener listener,
+            BoltConnectionQueueMonitor queueMonitor, int maxBatchSize, BoltConnectionMetricsMonitor metricsMonitor,
+            Clock clock )
     {
         this.id = channel.id();
         this.channel = channel;
-        this.output = output;
         this.machine = machine;
         this.listener = listener;
         this.queueMonitor = queueMonitor;
@@ -85,6 +86,7 @@ public class DefaultBoltConnection implements BoltConnection
         this.batch = new ArrayList<>( maxBatchSize );
         this.metricsMonitor = metricsMonitor;
         this.clock = clock;
+        this.messageWriter = messageWriter;
     }
 
     @Override
@@ -117,12 +119,6 @@ public class DefaultBoltConnection implements BoltConnection
     public Channel channel()
     {
         return channel.rawChannel();
-    }
-
-    @Override
-    public PackOutput output()
-    {
-        return output;
     }
 
     @Override
@@ -193,7 +189,9 @@ public class DefaultBoltConnection implements BoltConnection
     {
         try
         {
-            while ( hasPendingJobs() && batchCount > 0 )
+            boolean waitForMessage = false;
+            boolean loop = false;
+            do
             {
                 // exit loop if we'll close the connection
                 if ( willClose() )
@@ -201,25 +199,61 @@ public class DefaultBoltConnection implements BoltConnection
                     break;
                 }
 
-                queue.drainTo( batch, batchCount );
-                // if we expect one message but did not get any (because it was already
-                // processed), silently exit
-                if ( batch.isEmpty() && !exitIfNoJobsAvailable )
+                // do we have pending jobs or shall we wait for new jobs to
+                // arrive, which is required only for releasing stickiness
+                // condition to this thread
+                if ( waitForMessage || !queue.isEmpty() )
                 {
-                    waitForJobs();
-                }
-                notifyDrained( batch );
-                batchCount -= batch.size();
+                    queue.drainTo( batch, batchCount );
+                    // if we expect one message but did not get any (because it was already
+                    // processed), silently exit
+                    if ( batch.isEmpty() && !exitIfNoJobsAvailable )
+                    {
+                        // loop until we get a new job, if we cannot then validate
+                        // transaction to check for termination condition. We'll
+                        // break loop if we'll close the connection
+                        while ( !willClose() )
+                        {
+                            Job nextJob = queue.poll( 10, SECONDS );
+                            if ( nextJob != null )
+                            {
+                                batch.add( nextJob );
 
-                // execute each job that's in the batch
-                while ( !batch.isEmpty() )
+                                break;
+                            }
+                            else
+                            {
+                                machine.validateTransaction();
+                            }
+                        }
+                    }
+                    notifyDrained( batch );
+
+                    // execute each job that's in the batch
+                    while ( !batch.isEmpty() )
+                    {
+                        Job current = batch.remove( 0 );
+
+                        current.perform( machine );
+                    }
+
+                    // do we have any condition that require this connection to
+                    // stick to the current thread (i.e. is there an open statement
+                    // or an open transaction)?
+                    loop = machine.shouldStickOnThread();
+                    waitForMessage = loop;
+                }
+
+                // we processed all pending messages, let's flush underlying channel
+                if ( queue.isEmpty() )
                 {
-                    Job current = batch.remove( 0 );
-                    current.perform( machine );
+                    messageWriter.flush();
                 }
             }
-            // we processed all pending messages, let's flush underlying channel
-            output.flush();
+            while ( loop );
+
+            // assert only if we'll stay alive
+            assert willClose() || !machine.hasOpenStatement();
         }
         catch ( BoltConnectionAuthFatality ex )
         {
@@ -253,27 +287,6 @@ public class DefaultBoltConnection implements BoltConnection
         }
 
         return !closed.get();
-    }
-
-    private void waitForJobs() throws InterruptedException, KernelException
-    {
-        // loop until we get a new job, if we cannot then validate
-        // transaction to check for termination condition. We'll
-        // break loop if we'll close the connection
-        while ( !willClose() )
-        {
-            Job nextJob = queue.poll( 10, SECONDS );
-            if ( nextJob != null )
-            {
-                batch.add( nextJob );
-
-                break;
-            }
-            else
-            {
-                machine.validateTransaction();
-            }
-        }
     }
 
     @Override
@@ -332,6 +345,26 @@ public class DefaultBoltConnection implements BoltConnection
         }
     }
 
+    @Override
+    public void keepAlive()
+    {
+        try
+        {
+            messageWriter.keepAlive();
+        }
+        catch ( Throwable e )
+        {
+            log.error( "Failed to perform keep alive check.", e );
+            shouldClose.set( true );
+        }
+    }
+
+    @Override
+    public void initKeepAliveTimer()
+    {
+        messageWriter.initKeepAliveTimer();
+    }
+
     private boolean willClose()
     {
         return shouldClose.get();
@@ -343,7 +376,7 @@ public class DefaultBoltConnection implements BoltConnection
         {
             try
             {
-                output.close();
+                messageWriter.close();
             }
             catch ( Throwable t )
             {

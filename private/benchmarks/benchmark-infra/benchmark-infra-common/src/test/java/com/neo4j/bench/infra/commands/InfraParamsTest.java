@@ -6,7 +6,8 @@
 package com.neo4j.bench.infra.commands;
 
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
-import com.neo4j.bench.common.util.JsonUtil;
+import com.neo4j.bench.infra.AWSCredentials;
+import com.neo4j.bench.model.util.JsonUtil;
 import com.neo4j.bench.infra.InfraParams;
 import org.junit.jupiter.api.Test;
 import com.neo4j.bench.infra.Workspace;
@@ -27,9 +28,9 @@ public class InfraParamsTest
     @Test
     public void serializationTest() throws IOException
     {
-        InfraParams infraParams = new InfraParams( "awsSecret",
-                                                   "awsKey",
-                                                   "awsRegion",
+        InfraParams infraParams = new InfraParams( new AWSCredentials( "awsKey",
+                                                                       "awsSecret",
+                                                                       "awsRegion" ),
                                                    "resultStoreUsername",
                                                    "resultStorePasswordSecretName",
                                                    URI.create( "http://resultStoreUri" ),

@@ -24,6 +24,7 @@ import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor;
 import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
+import org.neo4j.internal.schema.IndexOrder;
 
 import static com.neo4j.bench.micro.Main.run;
 import static com.neo4j.bench.micro.benchmarks.core.ReadAll.LABEL;
@@ -111,7 +112,7 @@ public class ReadAll extends AbstractKernelBenchmark
     public void countNodesWithLabel( TxState txState, Blackhole bh )
     {
         NodeLabelIndexCursor node = txState.nodeByLabel;
-        txState.read.nodeLabelScan( txState.labelId, node );
+        txState.read.nodeLabelScan( txState.labelId, node, IndexOrder.NONE );
         assertCount( node, NODE_COUNT, bh );
     }
 

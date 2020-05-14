@@ -192,7 +192,7 @@ public class BuiltInProcedures
         SchemaReadCore schemaRead = kernelTransaction.schemaRead().snapshot();
         List<IndexDescriptor> indexes = asList( schemaRead.indexesGetAll() );
 
-        ArrayList<IndexResult> result = new ArrayList<>();
+        List<IndexResult> result = new ArrayList<>();
         for ( IndexDescriptor index : indexes )
         {
             IndexResult indexResult;
@@ -394,14 +394,7 @@ public class BuiltInProcedures
 
         //Resample indexes
         IndexProcedures indexProcedures = indexProcedures();
-        try
-        {
-            indexProcedures.resampleOutdatedIndexes( timeOutSeconds );
-        }
-        catch ( TimeoutException e )
-        {
-            throw new ProcedureException( Status.Procedure.ProcedureTimedOut, e, "Index resampling timed out" );
-        }
+        indexProcedures.resampleOutdatedIndexes( timeOutSeconds );
 
         //now that index-stats are up-to-date, clear caches so that we are ready to re-plan
         graphDatabaseAPI.getDependencyResolver()

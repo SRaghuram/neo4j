@@ -29,6 +29,7 @@ import static org.neo4j.internal.counts.CountsKey.relationshipKey;
 import static org.neo4j.internal.counts.GBPTreeCountsStore.NO_MONITOR;
 import static org.neo4j.io.pagecache.IOLimiter.UNLIMITED;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
 @PageCacheExtension
@@ -49,7 +50,7 @@ class DumpCountsStoreTest
         try ( GBPTreeCountsStore store = new GBPTreeCountsStore( pageCache, file, directory.getFileSystem(), immediate(), EMPTY, false, PageCacheTracer.NULL,
                 NO_MONITOR ) )
         {
-            store.start( NULL );
+            store.start( NULL, INSTANCE );
             try ( CountsAccessor.Updater updater = store.apply( BASE_TX_ID + 1, NULL ) )
             {
                 updater.incrementNodeCount( 0, 4 );

@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static com.google.common.collect.Maps.immutableEntry;
 import static java.lang.String.format;
@@ -182,7 +181,7 @@ public class ParameterizedProfiler
         {
             return profilerType.name();
         }
-        return String.format( "%s(%s)", profilerType.name(), parametersToArgs() );
+        return format( "%s(%s)", profilerType.name(), parametersToArgs() );
     }
 
     private String parametersToArgs()

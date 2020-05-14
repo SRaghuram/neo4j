@@ -29,7 +29,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 
-import org.neo4j.io.memory.ByteBuffers;
+import org.neo4j.io.memory.HeapScopedBuffer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.api.TestCommand;
 import org.neo4j.kernel.impl.api.TransactionToApply;
@@ -73,6 +73,7 @@ import static org.mockito.Mockito.when;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.transaction.log.TestLogEntryReader.logEntryReader;
 import static org.neo4j.kernel.impl.transaction.log.rotation.LogRotation.NO_ROTATION;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_COMMIT_TIMESTAMP;
 
@@ -208,7 +209,7 @@ class BatchingTransactionAppenderTest
 
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( latestCommittedTxWhenStarted );
 
-        LogEntryStart start = new LogEntryStart(  0L, latestCommittedTxWhenStarted, 0, null, LogPosition.UNSPECIFIED );
+        LogEntryStart start = new LogEntryStart( 0L, latestCommittedTxWhenStarted, 0, null, LogPosition.UNSPECIFIED );
         LogEntryCommit commit = new LogEntryCommit( latestCommittedTxWhenStarted + 2, 0L, BASE_TX_CHECKSUM );
         CommittedTransactionRepresentation transaction = new CommittedTransactionRepresentation( start, transactionRepresentation, commit );
 
@@ -225,7 +226,7 @@ class BatchingTransactionAppenderTest
         String failureMessage = "Forces a failure";
         FlushablePositionAwareChecksumChannel channel =
                 spy( new PositionAwarePhysicalFlushableChecksumChannel( mock( PhysicalLogVersionedStoreChannel.class ),
-                        ByteBuffers.allocate( Long.BYTES * 2 ) ) );
+                        new HeapScopedBuffer( Long.BYTES * 2, INSTANCE ) ) );
         IOException failure = new IOException( failureMessage );
         when( channel.putLong( anyLong() ) ).thenThrow( failure );
         when( logFile.getWriter() ).thenReturn( channel );

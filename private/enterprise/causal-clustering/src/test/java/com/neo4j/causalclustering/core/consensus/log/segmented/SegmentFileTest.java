@@ -33,6 +33,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 @EphemeralTestDirectoryExtension
 class SegmentFileTest
@@ -66,7 +67,7 @@ class SegmentFileTest
     void shouldReportCorrectInitialValues() throws Exception
     {
         try ( SegmentFile segment = create( fsa, fileNames.getForSegment( 0 ), readerPool, version,
-                contentMarshal, logProvider, segmentHeader ) )
+                contentMarshal, logProvider, segmentHeader, INSTANCE ) )
         {
             Assertions.assertEquals( 0, segment.header().segmentNumber() );
 
@@ -81,7 +82,7 @@ class SegmentFileTest
     void shouldBeAbleToWriteAndRead() throws Exception
     {
         try ( SegmentFile segment = create( fsa, fileNames.getForSegment( 0 ), readerPool, 0, contentMarshal,
-                logProvider, segmentHeader ) )
+                logProvider, segmentHeader, INSTANCE ) )
         {
             // given
             segment.write( 0, entry1 );
@@ -102,7 +103,7 @@ class SegmentFileTest
     void shouldBeAbleToReadFromOffset() throws Exception
     {
         try ( SegmentFile segment = create( fsa, fileNames.getForSegment( 0 ), readerPool, 0, contentMarshal,
-                logProvider, segmentHeader ) )
+                logProvider, segmentHeader, INSTANCE ) )
         {
             // given
             segment.write( 0, entry1 );
@@ -126,7 +127,7 @@ class SegmentFileTest
     void shouldBeAbleToRepeatedlyReadWrittenValues() throws Exception
     {
         try ( SegmentFile segment = create( fsa, fileNames.getForSegment( 0 ), readerPool, 0, contentMarshal,
-                logProvider, segmentHeader ) )
+                logProvider, segmentHeader, INSTANCE ) )
         {
             // given
             segment.write( 0, entry1 );
@@ -157,7 +158,7 @@ class SegmentFileTest
     void shouldBeAbleToCloseOnlyAfterWriterIsClosed() throws Exception
     {
         try ( SegmentFile segment = create( fsa, fileNames.getForSegment( 0 ), readerPool, 0, contentMarshal,
-                logProvider, segmentHeader ) )
+                logProvider, segmentHeader, INSTANCE ) )
         {
             // given
             Assertions.assertFalse( segment.tryClose() );
@@ -174,7 +175,7 @@ class SegmentFileTest
     void shouldCallDisposeHandlerAfterLastReaderIsClosed() throws Exception
     {
         try ( SegmentFile segment = create( fsa, fileNames.getForSegment( 0 ), readerPool, 0, contentMarshal,
-                logProvider, segmentHeader ) )
+                logProvider, segmentHeader, INSTANCE ) )
         {
             // given
             IOCursor<EntryRecord> cursor0 = segment.getCursor( 0 );
@@ -199,7 +200,7 @@ class SegmentFileTest
     void shouldHandleReaderPastEndCorrectly() throws Exception
     {
         try ( SegmentFile segment = create( fsa, fileNames.getForSegment( 0 ), readerPool, 0, contentMarshal,
-                logProvider, segmentHeader ) )
+                logProvider, segmentHeader, INSTANCE ) )
         {
             // given
             segment.write( 0, entry1 );
@@ -226,7 +227,7 @@ class SegmentFileTest
         // given
         SegmentFile segment =
                 create( fsa, fileNames.getForSegment( 0 ), readerPool, 0, contentMarshal, logProvider,
-                        segmentHeader );
+                        segmentHeader, INSTANCE );
         IOCursor<EntryRecord> cursor = segment.getCursor( 0 );
 
         // when
@@ -244,7 +245,7 @@ class SegmentFileTest
     void shouldCatchDoubleCloseReaderErrors() throws Exception
     {
         try ( SegmentFile segment = create( fsa, fileNames.getForSegment( 0 ), readerPool, 0, contentMarshal,
-                logProvider, segmentHeader ) )
+                logProvider, segmentHeader, INSTANCE ) )
         {
             // given
             IOCursor<EntryRecord> cursor = segment.getCursor( 0 );
@@ -272,7 +273,7 @@ class SegmentFileTest
         when( readerPool.acquire( anyLong(), anyLong() ) ).thenReturn( reader );
 
         try ( SegmentFile segment = create( fsa, fileNames.getForSegment( 0 ), readerPool, 0, contentMarshal,
-                logProvider, segmentHeader ) )
+                logProvider, segmentHeader, INSTANCE ) )
         {
             // given
             IOCursor<EntryRecord> cursor = segment.getCursor( 0 );
@@ -300,7 +301,7 @@ class SegmentFileTest
     void shouldPruneReaderPoolOnClose() throws Exception
     {
         try ( SegmentFile segment = create( fsa, fileNames.getForSegment( 0 ), readerPool, 0, contentMarshal,
-                logProvider, segmentHeader ) )
+                logProvider, segmentHeader, INSTANCE ) )
         {
             segment.write( 0, entry1 );
             segment.flush();

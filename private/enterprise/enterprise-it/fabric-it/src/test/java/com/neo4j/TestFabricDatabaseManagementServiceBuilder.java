@@ -18,6 +18,7 @@ import java.util.function.Function;
 import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
@@ -38,7 +39,7 @@ public class TestFabricDatabaseManagementServiceBuilder extends TestEnterpriseDa
     }
 
     @Override
-    protected Function<GlobalModule,AbstractEditionModule> getEditionFactory()
+    protected Function<GlobalModule,AbstractEditionModule> getEditionFactory( Config config )
     {
         return globalModule -> {
             dependencies = createDependencyResolver( globalModule.getGlobalDependencies() );

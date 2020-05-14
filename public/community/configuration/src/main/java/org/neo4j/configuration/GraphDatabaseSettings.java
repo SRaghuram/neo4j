@@ -34,6 +34,7 @@ import org.neo4j.configuration.connectors.HttpsConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.ByteUnit;
+import org.neo4j.logging.FormattedLogFormat;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogTimeZone;
 
@@ -147,7 +148,7 @@ public class GraphDatabaseSettings implements SettingsDeclaration
     public static final Setting<Boolean> strict_config_validation = newBuilder( "dbms.config.strict_validation", BOOL, false ).build();
 
     @Description( "Whether to allow an upgrade in case the current version of the database starts against an older version." )
-    public static final Setting<Boolean> allow_upgrade = newBuilder( "dbms.allow_upgrade", BOOL, false ).build();
+    public static final Setting<Boolean> allow_upgrade = newBuilder( "dbms.allow_upgrade", BOOL, false ).dynamic().build();
 
     @Description( "Max number of processors used when upgrading the store. Defaults to the number of processors available to the JVM. " +
             "There is a certain amount of minimum threads needed so for that reason there is no lower bound for this " +
@@ -235,8 +236,7 @@ public class GraphDatabaseSettings implements SettingsDeclaration
 
     public enum CypherRuntime
     {
-        DEFAULT, INTERPRETED, COMPILED, SLOTTED,
-        PIPELINED
+        DEFAULT, INTERPRETED, COMPILED, SLOTTED, PIPELINED
     }
     @Description( "Set this to specify the default runtime for the default language version." )
     @Internal
@@ -252,7 +252,7 @@ public class GraphDatabaseSettings implements SettingsDeclaration
             "never be compiled." )
     @Internal
     public static final Setting<CypherExpressionEngine> cypher_expression_engine =
-            newBuilder( "unsupported.cypher.expression_engine", ofEnum( CypherExpressionEngine.class ), CypherExpressionEngine.DEFAULT  ).build();
+            newBuilder( "unsupported.cypher.expression_engine", ofEnum( CypherExpressionEngine.class ), CypherExpressionEngine.DEFAULT ).build();
 
     @Description( "Number of uses before an expression is considered for compilation" )
     @Internal
@@ -381,7 +381,7 @@ public class GraphDatabaseSettings implements SettingsDeclaration
 
     @Description( "Enables or disables tracking of how much time a query spends actively executing on the CPU. " +
             "Calling `dbms.listQueries` will display the time. " +
-            "This can also be logged in the query log by using `log_queries_detailed_time_logging_enabled`." )
+            "This can also be logged in the query log by using `dbms.logs.query.time_logging_enabled`." )
     public static final Setting<Boolean> track_query_cpu_time =
             newBuilder( "dbms.track_query_cpu_time", BOOL, false ).dynamic().build();
 
@@ -389,7 +389,7 @@ public class GraphDatabaseSettings implements SettingsDeclaration
                   "If enabled, calling `dbms.listQueries` will display the allocated bytes. " +
                   "This can also be logged in the query log by using `dbms.logs.query.allocation_logging_enabled`." )
     public static final Setting<Boolean> track_query_allocation =
-            newBuilder( "dbms.track_query_allocation", BOOL, false ).dynamic().build();
+            newBuilder( "dbms.track_query_allocation", BOOL, true ).dynamic().build();
 
     @Description( "Enable tracing of pipelined runtime scheduler." )
     @Internal
@@ -445,6 +445,14 @@ public class GraphDatabaseSettings implements SettingsDeclaration
     {
         DISABLED, DEFAULT, ALL
     }
+
+    @Description( "When enabled property reads will - as much as possible - be pushed down to be read at the same time as we are " +
+                  "visiting a node or relationship. This means that in some cases we will read properties at a higher cardinality point" +
+                  " which will lead to worse performance. However depending on the store format and how expensive the property read will be " +
+                  "this can also be beneficial since it will lead to less work finding nodes and relationships from the store." )
+    @Internal
+    public static final Setting<Boolean> cypher_read_properties_from_cursor =
+            newBuilder( "unsupported.cypher.read_properties_from_cursor", BOOL, false).build();
 
     @Description( "Max number of recent queries to collect in the data collector module. Will round down to the" +
             " nearest power of two. The default number (8192 query invocations) " +
@@ -936,6 +944,11 @@ public class GraphDatabaseSettings implements SettingsDeclaration
             .immutable()
             .build();
 
+    @Description( "Log format to use." )
+    @Internal
+    public static final Setting<FormattedLogFormat> log_format =
+            newBuilder( "unsupported.dbms.logs.format", ofEnum( FormattedLogFormat.class ), FormattedLogFormat.STANDARD_FORMAT ).build();
+
     @Description( "Log parameters for the executed queries being logged." )
     public static final Setting<Boolean> log_queries_parameter_logging_enabled =
             newBuilder( "dbms.logs.query.parameter_logging_enabled", BOOL, true ).dynamic().build();
@@ -954,11 +967,11 @@ public class GraphDatabaseSettings implements SettingsDeclaration
             "i.e. for memory intense or long-running queries the value may be larger " +
             "than the current memory allocation. Requires `dbms.track_query_allocation=true`" )
     public static final Setting<Boolean> log_queries_allocation_logging_enabled =
-            newBuilder( "dbms.logs.query.allocation_logging_enabled", BOOL, false ).dynamic().build();
+            newBuilder( "dbms.logs.query.allocation_logging_enabled", BOOL, true ).dynamic().build();
 
     @Description( "Logs which runtime that was used to run the query" )
     public static final Setting<Boolean> log_queries_runtime_logging_enabled =
-            newBuilder( "dbms.logs.query.runtime_logging_enabled", BOOL, false ).dynamic().build();
+            newBuilder( "dbms.logs.query.runtime_logging_enabled", BOOL, true ).dynamic().build();
 
     @Description( "Log page hits and page faults for the executed queries being logged." )
     public static final Setting<Boolean> log_queries_page_detail_logging_enabled =
@@ -984,6 +997,13 @@ public class GraphDatabaseSettings implements SettingsDeclaration
     @Description( "Maximum number of history files for the query log." )
     public static final Setting<Integer> log_queries_max_archives =
             newBuilder( "dbms.logs.query.rotation.keep_number", INT, 7 ).addConstraint( min( 1 ) ).dynamic().build();
+
+    @Description( "Create a heap dump just before the end of each query execution. " +
+            "The heap dump will be placed in log directory and the file name will contain the query id, to be correlated with an entry in the query log. " +
+            "Only live objects will be included to minimize the file size. " )
+    @Internal
+    public static final Setting<Boolean> log_queries_heap_dump_enabled =
+            newBuilder( "unsupported.dbms.logs.query.heap_dump_enabled", BOOL, false ).dynamic().build();
 
     @Description( "Specifies number of operations that batch inserter will try to group into one batch before " +
             "flushing data into underlying storage." )
@@ -1073,7 +1093,7 @@ public class GraphDatabaseSettings implements SettingsDeclaration
             "related processing thread until it becomes writable again." )
     @Internal
     public static final Setting<Integer> bolt_outbound_buffer_throttle_high_water_mark =
-            newBuilder( "unsupported.dbms.bolt.outbound_buffer_throttle.high_watermark", INT, (int) kibiBytes( 512  ) )
+            newBuilder( "unsupported.dbms.bolt.outbound_buffer_throttle.high_watermark", INT, (int) kibiBytes( 512 ) )
                     .addConstraint( range( (int) kibiBytes( 64 ), Integer.MAX_VALUE ) )
                     .build();
 
@@ -1127,12 +1147,16 @@ public class GraphDatabaseSettings implements SettingsDeclaration
     @Description( "Limit the amount of memory that all of the running transactions can consume, in bytes (or kilobytes with the 'k' " +
             "suffix, megabytes with 'm' and gigabytes with 'g'). Zero means 'unlimited'." )
     public static final Setting<Long> memory_transaction_global_max_size =
-            newBuilder( "dbms.memory.transaction.global_max_size", BYTES, 0L ).build();
+            newBuilder( "dbms.memory.transaction.global_max_size", BYTES, 0L )
+                    .addConstraint( any( min( mebiBytes( 10 ) ), is( 0L) ) )
+                    .dynamic().build();
 
     @Description( "Limit the amount of memory that all transaction in one database can consume, in bytes (or kilobytes with the 'k' " +
             "suffix, megabytes with 'm' and gigabytes with 'g'). Zero means 'unlimited'." )
     public static final Setting<Long> memory_transaction_database_max_size =
-            newBuilder( "dbms.memory.transaction.datababase_max_size", BYTES, 0L ).build();
+            newBuilder( "dbms.memory.transaction.datababase_max_size", BYTES, 0L )
+                    .addConstraint( any( min( mebiBytes( 10 ) ), is( 0L) ) )
+                    .dynamic().build();
 
     @Description( "Limit the amount of memory that a single transaction can consume, in bytes (or kilobytes with the 'k' " +
             "suffix, megabytes with 'm' and gigabytes with 'g'). Zero means 'unlimited'." )

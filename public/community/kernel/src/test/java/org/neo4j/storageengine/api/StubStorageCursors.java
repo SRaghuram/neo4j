@@ -35,6 +35,7 @@ import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.constraints.IndexBackedConstraintDescriptor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.token.DelegatingTokenHolder;
 import org.neo4j.token.api.TokenHolder;
 import org.neo4j.values.storable.Value;
@@ -308,7 +309,7 @@ public class StubStorageCursors implements StorageReader
     }
 
     @Override
-    public StoragePropertyCursor allocatePropertyCursor( PageCursorTracer cursorTracer )
+    public StoragePropertyCursor allocatePropertyCursor( PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
         return new StubStoragePropertyCursor();
     }
@@ -442,7 +443,7 @@ public class StubStorageCursors implements StorageReader
         @Override
         public boolean scanBatch( AllNodeScan scan, int sizeHint )
         {
-            throw new UnsupportedOperationException(  );
+            throw new UnsupportedOperationException();
         }
 
         @Override
@@ -482,7 +483,7 @@ public class StubStorageCursors implements StorageReader
         }
 
         @Override
-        public void degrees( RelationshipSelection selection, Degrees.Mutator mutator )
+        public void degrees( RelationshipSelection selection, Degrees.Mutator mutator, boolean allowFastDegreeLookup )
         {
             throw new UnsupportedOperationException( "Not implemented yet" );
         }
@@ -588,7 +589,7 @@ public class StubStorageCursors implements StorageReader
         @Override
         public boolean scanBatch( AllRelationshipsScan scan, int sizeHint )
         {
-            throw new UnsupportedOperationException(  );
+            throw new UnsupportedOperationException();
         }
 
         @Override

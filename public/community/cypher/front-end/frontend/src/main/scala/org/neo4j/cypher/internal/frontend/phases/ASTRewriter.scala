@@ -16,6 +16,7 @@
  */
 package org.neo4j.cypher.internal.frontend.phases
 
+import org.neo4j.cypher.internal.ast.AdministrationCommand
 import org.neo4j.cypher.internal.ast.Statement
 import org.neo4j.cypher.internal.ast.UnaliasedReturnItem
 import org.neo4j.cypher.internal.ast.semantics.SemanticState
@@ -39,6 +40,7 @@ import org.neo4j.cypher.internal.rewriting.rewriters.expandStar
 import org.neo4j.cypher.internal.rewriting.rewriters.foldConstants
 import org.neo4j.cypher.internal.rewriting.rewriters.inlineNamedPathsInPatternComprehensions
 import org.neo4j.cypher.internal.rewriting.rewriters.literalReplacement
+import org.neo4j.cypher.internal.rewriting.rewriters.moveWithPastMatch
 import org.neo4j.cypher.internal.rewriting.rewriters.nameMatchPatternElements
 import org.neo4j.cypher.internal.rewriting.rewriters.namePatternComprehensionPatternElements
 import org.neo4j.cypher.internal.rewriting.rewriters.nameUpdatingClauses
@@ -50,6 +52,7 @@ import org.neo4j.cypher.internal.rewriting.rewriters.normalizeSargablePredicates
 import org.neo4j.cypher.internal.rewriting.rewriters.parameterValueTypeReplacement
 import org.neo4j.cypher.internal.rewriting.rewriters.recordScopes
 import org.neo4j.cypher.internal.rewriting.rewriters.replaceLiteralDynamicPropertyLookups
+import org.neo4j.cypher.internal.rewriting.rewriters.sensitiveLiteralReplacement
 import org.neo4j.cypher.internal.util.CypherExceptionFactory
 import org.neo4j.cypher.internal.util.symbols.CypherType
 
@@ -58,8 +61,7 @@ class ASTRewriter(rewriterSequencer: String => RewriterStepSequencer,
                   getDegreeRewriting: Boolean,
                   innerVariableNamer: InnerVariableNamer) {
 
-  def rewrite(queryText: String,
-              statement: Statement,
+  def rewrite(statement: Statement,
               semanticState: SemanticState,
               parameterTypeMapping: Map[String, CypherType],
               cypherExceptionFactory: CypherExceptionFactory): (Statement, Map[String, Any], Set[RewriterCondition]) = {
@@ -67,6 +69,7 @@ class ASTRewriter(rewriterSequencer: String => RewriterStepSequencer,
     val contract = rewriterSequencer("ASTRewriter")(
       recordScopes(semanticState),
       desugarMapProjection(semanticState),
+      moveWithPastMatch,
       normalizeComparisons,
       enableCondition(noReferenceEqualityAmongVariables),
       enableCondition(containsNoNodesOfType[UnaliasedReturnItem]),
@@ -95,7 +98,10 @@ class ASTRewriter(rewriterSequencer: String => RewriterStepSequencer,
 
     val replaceParameterValueTypes = parameterValueTypeReplacement(rewrittenStatement, parameterTypeMapping)
     val rewrittenStatementWithParameterTypes = rewrittenStatement.endoRewrite(replaceParameterValueTypes)
-    val (extractParameters, extractedParameters) = literalReplacement(rewrittenStatementWithParameterTypes, literalExtraction)
+    val (extractParameters, extractedParameters) = statement match {
+      case _ : AdministrationCommand => sensitiveLiteralReplacement(rewrittenStatementWithParameterTypes)
+      case _ => literalReplacement(rewrittenStatementWithParameterTypes, literalExtraction)
+    }
 
     (rewrittenStatementWithParameterTypes.endoRewrite(extractParameters), extractedParameters, contract.postConditions)
   }

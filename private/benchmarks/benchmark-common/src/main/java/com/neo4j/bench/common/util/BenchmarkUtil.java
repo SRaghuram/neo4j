@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.common.util;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.CharStreams;
 
@@ -29,7 +28,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
@@ -431,47 +429,6 @@ public class BenchmarkUtil
         catch ( IOException e )
         {
             throw new UncheckedIOException( e );
-        }
-    }
-
-    public static <K, V> String prettyPrint( Map<K,V> map )
-    {
-        return prettyPrint( map, "" );
-    }
-
-    private static <K, V> String prettyPrint( Map<K,V> map, String prefix )
-    {
-        List<Entry<K,V>> mapEntries = sortedEntrySet( map );
-        StringBuilder sb = new StringBuilder();
-        for ( Entry<K,V> entry : mapEntries )
-        {
-            String keyString = (null == entry.getKey()) ? "null" : entry.getKey().toString();
-            String valueString = (null == entry.getValue()) ? "null" : entry.getValue().toString();
-            sb.append( prefix ).append( keyString ).append( " = " ).append( valueString ).append( "\n" );
-        }
-        return sb.toString();
-    }
-
-    private static <K, V> List<Entry<K,V>> sortedEntrySet( Map<K,V> map )
-    {
-        List<Entry<K,V>> sortedEntries = Lists.newArrayList( map.entrySet() );
-        sortedEntries.sort( new EntriesComparator<>() );
-        return sortedEntries;
-    }
-
-    private static class EntriesComparator<K> implements Comparator<Entry<K,?>>
-    {
-        @Override
-        public int compare( Entry<K,?> o1, Entry<K,?> o2 )
-        {
-            if ( o1.getKey() instanceof Comparable )
-            {
-                return ((Comparable) o1.getKey()).compareTo( o2.getKey() );
-            }
-            else
-            {
-                return o1.toString().compareTo( o2.toString() );
-            }
         }
     }
 }

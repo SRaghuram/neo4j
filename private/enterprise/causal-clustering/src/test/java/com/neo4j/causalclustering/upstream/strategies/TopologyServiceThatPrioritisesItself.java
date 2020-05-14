@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.upstream.strategies;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
@@ -34,12 +35,12 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     private static final DatabaseId DATABASE_ID = new TestDatabaseIdRepository().defaultDatabase().databaseId();
 
     private final MemberId memberId;
-    private final String matchingGroupName;
+    private final ServerGroupName matchingGroupName;
 
     private final MemberId coreNotSelf = new MemberId( new UUID( 321, 654 ) );
     private final MemberId readReplicaNotSelf = new MemberId( new UUID( 432, 543 ) );
 
-    TopologyServiceThatPrioritisesItself( MemberId memberId, String matchingGroupName )
+    TopologyServiceThatPrioritisesItself( MemberId memberId, ServerGroupName matchingGroupName )
     {
         this.memberId = memberId;
         this.matchingGroupName = matchingGroupName;
@@ -56,7 +57,7 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public void stateChange( DatabaseState newState )
+    public void stateChange( DatabaseState previousState, DatabaseState newState )
     {
     }
 
@@ -129,21 +130,27 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
         return Map.of();
     }
 
-    private static CoreServerInfo coreServerInfo( String... groupNames )
+    @Override
+    public boolean isHealthy()
+    {
+        return true;
+    }
+
+    private static CoreServerInfo coreServerInfo( ServerGroupName... groupNames )
     {
         SocketAddress anyRaftAddress = new SocketAddress( "hostname", 1234 );
         SocketAddress anyCatchupServer = new SocketAddress( "hostname", 5678 );
         ClientConnectorAddresses clientConnectorAddress = new ClientConnectorAddresses( Collections.emptyList() );
-        Set<String> groups = Set.of( groupNames );
+        Set<ServerGroupName> groups = Set.of( groupNames );
         Set<DatabaseId> databaseIds = Set.of( DATABASE_ID );
         return new CoreServerInfo( anyRaftAddress, anyCatchupServer, clientConnectorAddress, groups, databaseIds, false );
     }
 
-    private static ReadReplicaInfo readReplicaInfo( String... groupNames )
+    private static ReadReplicaInfo readReplicaInfo( ServerGroupName... groupNames )
     {
         ClientConnectorAddresses clientConnectorAddresses = new ClientConnectorAddresses( Collections.emptyList() );
         SocketAddress catchupServerAddress = new SocketAddress( "hostname", 2468 );
-        Set<String> groups = Set.of( groupNames );
+        Set<ServerGroupName> groups = Set.of( groupNames );
         Set<DatabaseId> databaseIds = Set.of( DATABASE_ID );
         return new ReadReplicaInfo( clientConnectorAddresses, catchupServerAddress, groups, databaseIds );
     }

@@ -15,6 +15,7 @@ import org.neo4j.logging.LogProvider;
 import static com.neo4j.dbms.EnterpriseOperatorState.DIRTY;
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
 import static com.neo4j.dbms.EnterpriseOperatorState.UNKNOWN;
 import static java.lang.String.format;
@@ -43,7 +44,7 @@ final class ClusterReconcilerTransitions extends ReconcilerTransitions
         return Transition.from( STORE_COPYING )
                          .doTransition( databaseManager::startDatabaseAfterStoreCopy )
                          .ifSucceeded( STARTED )
-                         .ifFailed( STORE_COPYING );
+                         .ifFailedThenDo( databaseManager::stopDatabase, STOPPED );
     }
 
     private static Transition stopBeforeStoreCopyFactory( ClusteredMultiDatabaseManager databaseManager )
@@ -51,7 +52,7 @@ final class ClusterReconcilerTransitions extends ReconcilerTransitions
         return Transition.from( STARTED )
                          .doTransition( databaseManager::stopDatabaseBeforeStoreCopy )
                          .ifSucceeded( STORE_COPYING )
-                         .ifFailed( STORE_COPYING );
+                         .ifFailedThenDo( databaseManager::stopDatabase, STOPPED );
     }
 
     private static Transition logCleanupAndDropFactory( ClusteredMultiDatabaseManager databaseManager, LogProvider logProvider )
@@ -68,7 +69,7 @@ final class ClusterReconcilerTransitions extends ReconcilerTransitions
         return Transition.from( UNKNOWN, DIRTY )
                          .doTransition( transition )
                          .ifSucceeded( DROPPED )
-                         .ifFailed( DIRTY );
+                         .ifFailedThenDo( nothing, DIRTY );
     }
 
     Transition startAfterStoreCopy()

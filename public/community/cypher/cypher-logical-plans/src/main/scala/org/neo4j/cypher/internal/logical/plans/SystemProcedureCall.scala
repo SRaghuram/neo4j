@@ -23,10 +23,10 @@ import org.neo4j.cypher.internal.util.attribution.IdGen
 import org.neo4j.values.virtual.MapValue
 
 /**
-  * This class should only be used to transport a system procedure query to the ManagementCommandRuntime.
-  * Check that the query is an allowed system-only query BEFORE creating a SystemProcedureCall
-  */
-case class SystemProcedureCall(procedureName: String, queryString: String, params: MapValue, checkCredentialsExpired: Boolean)(implicit idGen: IdGen)
+ * This class should only be used to transport a system procedure query to the ManagementCommandRuntime.
+ * Check that the query is an allowed system-only query BEFORE creating a SystemProcedureCall
+ */
+case class SystemProcedureCall(procedureName: String, call: ResolvedCall, params: MapValue, checkCredentialsExpired: Boolean)(implicit idGen: IdGen)
   extends LogicalPlan(idGen) with LazyLogicalPlan {
 
   override def lhs: Option[LogicalPlan] = None

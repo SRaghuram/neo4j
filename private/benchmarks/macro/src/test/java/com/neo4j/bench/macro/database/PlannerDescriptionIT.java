@@ -9,8 +9,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
-import com.neo4j.bench.common.model.PlanOperator;
-import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.util.Resources;
@@ -19,6 +17,8 @@ import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.execution.database.PlannerDescription;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
+import com.neo4j.bench.model.model.PlanOperator;
+import com.neo4j.bench.model.options.Edition;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;

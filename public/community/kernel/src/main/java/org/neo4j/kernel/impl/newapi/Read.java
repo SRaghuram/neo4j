@@ -43,6 +43,7 @@ import org.neo4j.internal.kernel.api.Scan;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotApplicableKernelException;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
 import org.neo4j.internal.schema.IndexDescriptor;
+import org.neo4j.internal.schema.IndexOrder;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptorSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
@@ -110,7 +111,7 @@ abstract class Read implements TxStateHolder,
         EntityIndexSeekClient client = (EntityIndexSeekClient) cursor;
         client.setRead( this );
         IndexProgressor.EntityValueClient withFullPrecision = injectFullValuePrecision( client, query, indexSession.reader );
-        indexSession.reader.query( this, withFullPrecision, constraints, cursorTracer, query );
+        indexSession.reader.query( this, withFullPrecision, constraints, query );
     }
 
     @Override
@@ -127,7 +128,7 @@ abstract class Read implements TxStateHolder,
         IndexReader reader = indexReader( index, false );
         client.setRead( this );
         IndexProgressor.EntityValueClient withFullPrecision = injectFullValuePrecision( client, query, reader );
-        reader.query( this, withFullPrecision, constraints, cursorTracer, query );
+        reader.query( this, withFullPrecision, constraints, query );
     }
 
     private IndexProgressor.EntityValueClient injectFullValuePrecision( IndexProgressor.EntityValueClient cursor,
@@ -171,7 +172,7 @@ abstract class Read implements TxStateHolder,
                 // filters[] can contain null elements. The non-null elements are the filters and each sit in the designated slot
                 // matching the values from the index.
                 target = new NodeValueClientFilter( target, cursors.allocateNodeCursor( cursorTracer ),
-                        cursors.allocatePropertyCursor( cursorTracer ), this, filters );
+                        cursors.allocatePropertyCursor( cursorTracer, memoryTracker() ), this, filters );
             }
         }
         return target;
@@ -219,7 +220,7 @@ abstract class Read implements TxStateHolder,
         cursor.setRead( this );
         IndexProgressor.EntityValueClient target = injectFullValuePrecision( cursor, query, indexReader );
         // we never need values for exact predicates
-        indexReader.query( this, target, unconstrained(), cursorTracer, query );
+        indexReader.query( this, target, unconstrained(), query );
     }
 
     @Override
@@ -240,18 +241,18 @@ abstract class Read implements TxStateHolder,
 
         DefaultNodeValueIndexCursor cursorImpl = (DefaultNodeValueIndexCursor) cursor;
         cursorImpl.setRead( this );
-        indexSession.reader.query( this, cursorImpl, constraints, cursorTracer, IndexQuery.exists( firstProperty ) );
+        indexSession.reader.query( this, cursorImpl, constraints, IndexQuery.exists( firstProperty ) );
     }
 
     @Override
-    public final void nodeLabelScan( int label, NodeLabelIndexCursor cursor )
+    public final void nodeLabelScan( int label, NodeLabelIndexCursor cursor, IndexOrder order )
     {
         ktx.assertOpen();
 
         DefaultNodeLabelIndexCursor indexCursor = (DefaultNodeLabelIndexCursor) cursor;
         indexCursor.setRead( this );
         TokenScan labelScan = labelScanReader().entityTokenScan( label, cursorTracer );
-        indexCursor.scan( labelScan.initialize( indexCursor.nodeLabelClient(), cursorTracer ), label );
+        indexCursor.scan( labelScan.initialize( indexCursor.nodeLabelClient(), order, cursorTracer ), label, order );
     }
 
     @Override
@@ -328,7 +329,7 @@ abstract class Read implements TxStateHolder,
 
             TokenScanReader relationshipTypeScanReader = relationshipTypeScanReader();
             TokenScan relationshipTypeScan = relationshipTypeScanReader.entityTokenScan( type, cursorTracer );
-            IndexProgressor progressor = relationshipTypeScan.initialize( cursor.relationshipTypeClient(), cursorTracer );
+            IndexProgressor progressor = relationshipTypeScan.initialize( cursor.relationshipTypeClient(), IndexOrder.NONE, cursorTracer );
 
             cursor.scan( progressor, type );
         }

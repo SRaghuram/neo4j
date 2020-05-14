@@ -56,7 +56,11 @@ class HeaderTest
         // when/then
         assertReadAndWrite( header, MARKERS_SIZE );
 
+<<<<<<< HEAD
         List<Integer> offsets = new ArrayList<>( List.of( 0, 1, 2, 3, 4, 5 ) );
+=======
+        List<Integer> offsets = new ArrayList<>( List.of( 0, 1, 2, 3, 4, 5, 6 ) );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         Collections.shuffle( offsets, random.random() );
 
         assertAddOffsetAndReadAndWrite( header, offsets.get( 0 ), MARKERS_SIZE + 2 );
@@ -65,6 +69,12 @@ class HeaderTest
         assertAddOffsetAndReadAndWrite( header, offsets.get( 3 ), MARKERS_SIZE + 5 );
         assertAddOffsetAndReadAndWrite( header, offsets.get( 4 ), MARKERS_SIZE + 7 );
         assertAddOffsetAndReadAndWrite( header, offsets.get( 5 ), MARKERS_SIZE + 8 );
+<<<<<<< HEAD
+=======
+        // The header currently only supports 6 active offsets, so to set this last one first unset another
+        header.mark( offsets.get( random.nextInt( 6 ) ), false );
+        assertAddOffsetAndReadAndWrite( header, offsets.get( 6 ), MARKERS_SIZE + 8 );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 
     @Test
@@ -82,7 +92,12 @@ class HeaderTest
 
         // when
         ByteBuffer buffer = ByteBuffer.allocate( header.spaceNeeded() );
+<<<<<<< HEAD
         header.serialize( buffer, referenceHeader );
+=======
+        header.setReference( referenceHeader );
+        header.serialize( buffer );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         Header readHeader = new Header();
         readHeader.deserialize( buffer.position( 0 ) );
 
@@ -101,7 +116,11 @@ class HeaderTest
         header.allocateSpace( buffer );
         assertThat( buffer.position() ).isEqualTo( expectedSize );
         buffer.clear();
+<<<<<<< HEAD
         header.serialize( buffer, null );
+=======
+        header.serialize( buffer );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         buffer.flip();
         Header readHeader = new Header();
         readHeader.deserialize( buffer );

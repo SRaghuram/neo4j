@@ -5,13 +5,14 @@
  */
 package com.neo4j.bench.common.util;
 
-import com.neo4j.bench.common.model.AuxiliaryMetrics;
-import com.neo4j.bench.common.model.Benchmark;
-import com.neo4j.bench.common.model.BenchmarkGroup;
-import com.neo4j.bench.common.model.BenchmarkGroupBenchmark;
-import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
-import com.neo4j.bench.common.model.Metrics;
-import com.neo4j.bench.common.model.TestRunError;
+import com.neo4j.bench.model.model.AuxiliaryMetrics;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkGroup;
+import com.neo4j.bench.model.model.BenchmarkGroupBenchmark;
+import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
+import com.neo4j.bench.model.model.Metrics;
+import com.neo4j.bench.model.model.TestRunError;
+import com.neo4j.bench.model.util.UnitConverter;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -213,7 +214,7 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
 
         String[] registerDataRow( BenchmarkGroup group, Benchmark benchmark, Metrics metrics )
         {
-            TimeUnit unit = Units.toTimeUnit( (String) metrics.toMap().get( Metrics.UNIT ) );
+            TimeUnit unit = UnitConverter.toTimeUnit( (String) metrics.toMap().get( Metrics.UNIT ) );
 
             // compute unit at which mean is in range [1,1000]
             double mean = (double) metrics.toMap().get( Metrics.MEAN );

@@ -276,7 +276,9 @@ class ConsistencyReporterTest
             }
             if ( type == RelationshipRecord.class )
             {
-                return new RelationshipRecord( 0, 1, 2, 3 );
+                RelationshipRecord relationship = new RelationshipRecord( 0 );
+                relationship.setLinks( 1, 2, 3 );
+                return relationship;
             }
             if ( type == PropertyRecord.class )
             {
@@ -419,7 +421,7 @@ class ConsistencyReporterTest
 
     public static List<ReportMethods> methods()
     {
-        ArrayList<ReportMethods> methods = new ArrayList<>();
+        List<ReportMethods> methods = new ArrayList<>();
         for ( Method reporterMethod : ConsistencyReport.Reporter.class.getMethods() )
         {
             if ( reporterMethod.getReturnType() == Void.TYPE )

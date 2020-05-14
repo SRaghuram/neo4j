@@ -43,9 +43,7 @@ case class NodeIndexSeekSlottedPipe(ident: String,
     val index = state.queryIndexes(queryIndexId)
     val context = SlottedRow(slots)
     state.copyArgumentStateTo(context, argumentSize.nLongs, argumentSize.nReferences)
-    indexSeek(state, index, needsValues, indexOrder, context).flatMap(
-      cursor => new SlottedIndexIterator(state, slots, cursor)
-    )
+    new SlottedIndexIterator(state, slots, indexSeek(state, index, needsValues, indexOrder, context))
   }
 
   def canEqual(other: Any): Boolean = other.isInstanceOf[NodeIndexSeekSlottedPipe]

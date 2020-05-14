@@ -30,12 +30,14 @@ import java.util.stream.Collectors;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.internal.batchimport.BatchImporterFactory;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdController;
 import org.neo4j.internal.id.IdGeneratorFactory;
+import org.neo4j.internal.id.ScanOnOpenReadOnlyIdGeneratorFactory;
 import org.neo4j.internal.schema.IndexConfigCompleter;
 import org.neo4j.internal.schema.SchemaState;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -64,6 +66,7 @@ import org.neo4j.lock.LockService;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.LogService;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.CommandReaderFactory;
@@ -108,11 +111,11 @@ public class RecordStorageEngineFactory implements StorageEngineFactory
 
     @Override
     public List<StoreMigrationParticipant> migrationParticipants( FileSystemAbstraction fs, Config config, PageCache pageCache,
-            JobScheduler jobScheduler, LogService logService, PageCacheTracer cacheTracer )
+            JobScheduler jobScheduler, LogService logService, PageCacheTracer cacheTracer, MemoryTracker memoryTracker )
     {
         BatchImporterFactory batchImporterFactory = BatchImporterFactory.withHighestPriority();
         RecordStorageMigrator recordStorageMigrator = new RecordStorageMigrator( fs, pageCache, config, logService, jobScheduler, cacheTracer,
-                batchImporterFactory );
+                batchImporterFactory, memoryTracker );
         IdGeneratorMigrator idGeneratorMigrator = new IdGeneratorMigrator( fs, pageCache, config, cacheTracer );
         return List.of( recordStorageMigrator, idGeneratorMigrator );
     }
@@ -121,11 +124,12 @@ public class RecordStorageEngineFactory implements StorageEngineFactory
     public StorageEngine instantiate( FileSystemAbstraction fs, DatabaseLayout databaseLayout, Config config, PageCache pageCache, TokenHolders tokenHolders,
             SchemaState schemaState, ConstraintRuleAccessor constraintSemantics, IndexConfigCompleter indexConfigCompleter, LockService lockService,
             IdGeneratorFactory idGeneratorFactory, IdController idController, DatabaseHealth databaseHealth, LogProvider logProvider,
-            RecoveryCleanupWorkCollector recoveryCleanupWorkCollector, PageCacheTracer cacheTracer, boolean createStoreIfNotExists )
+            RecoveryCleanupWorkCollector recoveryCleanupWorkCollector, PageCacheTracer cacheTracer, boolean createStoreIfNotExists,
+            MemoryTracker memoryTracker )
     {
         return new RecordStorageEngine( databaseLayout, config, pageCache, fs, logProvider, tokenHolders, schemaState, constraintSemantics,
                 indexConfigCompleter, lockService, databaseHealth, idGeneratorFactory, idController, recoveryCleanupWorkCollector, cacheTracer,
-                createStoreIfNotExists );
+                createStoreIfNotExists, memoryTracker );
     }
 
     @Override
@@ -166,8 +170,16 @@ public class RecordStorageEngineFactory implements StorageEngineFactory
             PageCacheTracer cacheTracer )
     {
         RecordFormats recordFormats = selectForStoreOrConfig( Config.defaults(), databaseLayout, fs, pageCache, NullLogProvider.getInstance(), cacheTracer );
-        return new StoreFactory( databaseLayout, config, new DefaultIdGeneratorFactory( fs, immediate() ), pageCache, fs, recordFormats,
-                NullLogProvider.getInstance(), cacheTracer, immutable.empty() )
+        IdGeneratorFactory factory;
+        if ( config.get( GraphDatabaseSettings.read_only ) )
+        {
+            factory = new ScanOnOpenReadOnlyIdGeneratorFactory();
+        }
+        else
+        {
+            factory = new DefaultIdGeneratorFactory( fs, immediate() );
+        }
+        return new StoreFactory( databaseLayout, config, factory, pageCache, fs, recordFormats, NullLogProvider.getInstance(), cacheTracer, immutable.empty() )
                 .openNeoStores( META_DATA ).getMetaDataStore();
     }
 
@@ -180,7 +192,7 @@ public class RecordStorageEngineFactory implements StorageEngineFactory
 
     @Override
     public SchemaRuleMigrationAccess schemaRuleMigrationAccess( FileSystemAbstraction fs, PageCache pageCache, Config config, DatabaseLayout databaseLayout,
-            LogService logService, String recordFormats, PageCacheTracer cacheTracer, PageCursorTracer cursorTracer )
+            LogService logService, String recordFormats, PageCacheTracer cacheTracer, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
         RecordFormats formats = selectForVersion( recordFormats );
         StoreFactory factory = new StoreFactory( databaseLayout, config, new DefaultIdGeneratorFactory( fs, immediate() ), pageCache, fs, formats,
@@ -194,7 +206,7 @@ public class RecordStorageEngineFactory implements StorageEngineFactory
         {
             throw new UncheckedIOException( e );
         }
-        return createMigrationTargetSchemaRuleAccess( stores, cursorTracer );
+        return createMigrationTargetSchemaRuleAccess( stores, cursorTracer, memoryTracker );
     }
 
     @Override
@@ -227,7 +239,8 @@ public class RecordStorageEngineFactory implements StorageEngineFactory
         return StorageFilesState.recoveredState();
     }
 
-    public static SchemaRuleMigrationAccess createMigrationTargetSchemaRuleAccess( NeoStores stores, PageCursorTracer cursorTracer )
+    public static SchemaRuleMigrationAccess createMigrationTargetSchemaRuleAccess( NeoStores stores, PageCursorTracer cursorTracer,
+            MemoryTracker memoryTracker )
     {
         SchemaStore dstSchema = stores.getSchemaStore();
         TokenCreator propertyKeyTokenCreator = ( name, internal ) ->
@@ -256,6 +269,6 @@ public class RecordStorageEngineFactory implements StorageEngineFactory
         TokenHolders dstTokenHolders = new TokenHolders( propertyKeyTokens, StoreTokens.createReadOnlyTokenHolder( TokenHolder.TYPE_LABEL ),
                 StoreTokens.createReadOnlyTokenHolder( TokenHolder.TYPE_RELATIONSHIP_TYPE ) );
         dstTokenHolders.propertyKeyTokens().setInitialTokens( stores.getPropertyKeyTokenStore().getTokens( cursorTracer ) );
-        return new SchemaRuleMigrationAccessImpl( stores, new SchemaStorage( dstSchema, dstTokenHolders ), cursorTracer );
+        return new SchemaRuleMigrationAccessImpl( stores, new SchemaStorage( dstSchema, dstTokenHolders ), cursorTracer, memoryTracker );
     }
 }

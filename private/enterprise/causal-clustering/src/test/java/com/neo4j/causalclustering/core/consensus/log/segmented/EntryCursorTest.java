@@ -20,16 +20,16 @@ import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.logging.NullLogProvider.getInstance;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 class EntryCursorTest
 {
     private final FileSystemAbstraction fsa = new EphemeralFileSystemAbstraction();
     private final File bam = new File( "bam" );
     private final FileNames fileNames = new FileNames( bam );
-    private ReaderPool readerPool = new ReaderPool( 0, getInstance(), fileNames, fsa,
-            Clocks.fakeClock() );
+    private final ReaderPool readerPool = new ReaderPool( 0, getInstance(), fileNames, fsa, Clocks.fakeClock() );
     private final Segments segments =
-            new Segments( fsa, fileNames, readerPool, emptyList(), ignored -> mock( ChannelMarshal.class ), NullLogProvider.getInstance(), -1 );
+            new Segments( fsa, fileNames, readerPool, emptyList(), ignored -> mock( ChannelMarshal.class ), NullLogProvider.getInstance(), -1, INSTANCE );
 
     {
         fsa.mkdir( bam );

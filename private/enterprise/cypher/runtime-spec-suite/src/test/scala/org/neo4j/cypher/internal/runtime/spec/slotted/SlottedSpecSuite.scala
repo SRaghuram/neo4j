@@ -18,9 +18,11 @@ import org.neo4j.cypher.internal.runtime.spec.tests.AntiSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArgumentTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ArrayIndexSupport
+import org.neo4j.cypher.internal.runtime.spec.tests.CacheFromCursorTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CachePropertiesTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductProvidedOrderTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ConditionalApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DistinctTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllTestBase
@@ -78,6 +80,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipCountFromCountStoreTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RightOuterHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RollupApplyTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.SelectOrSemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ShortestPathTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SkipTestBase
@@ -175,7 +178,11 @@ class SlottedShortestPathTest extends ShortestPathTestBase(ENTERPRISE.DEFAULT, S
 class SlottedUnionTest extends UnionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedSemiApplyTest extends SemiApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedAntiSemiApplyTest extends AntiSemiApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
-class SlottedCompiledExpressionsTest extends CompiledExpressionsTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedSelectOrSemiApplyTest extends SelectOrSemiApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedConditionalApplyTest extends ConditionalApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedCompiledExpressionsTest extends CompiledExpressionsTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
 
 class SlottedNestedPlanExpressionTest extends NestedPlanExpressionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedRollupApplyTest extends RollupApplyTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedCacheFromCursorTest extends CacheFromCursorTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+

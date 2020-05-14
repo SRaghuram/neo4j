@@ -20,6 +20,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.internal.index.label.RelationshipTypeScanStoreSettings;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.time.Stopwatch;
@@ -74,7 +75,7 @@ public class ConsistencyCheckTool implements Callable<Object>
                 !skipIndexes,
                 true, // feature unimplemented
                 true, // feature-toggle unimplemented
-                true,
+                config.get( RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store ),
                 false ); // feature unimplemented
         Stopwatch stopwatch = Stopwatch.start();
         ConsistencyCheckService.Result result =
@@ -99,7 +100,7 @@ public class ConsistencyCheckTool implements Callable<Object>
                 if ( lines == sampleSize && reader.readLine() != null )
                 {
                     System.err.println();
-                    System.err.println( "... see report file for more inconsistencies, printing summary ...");
+                    System.err.println( "... see report file for more inconsistencies, printing summary ..." );
                     System.err.println();
                     System.err.println( result.summary().toString() );
                 }

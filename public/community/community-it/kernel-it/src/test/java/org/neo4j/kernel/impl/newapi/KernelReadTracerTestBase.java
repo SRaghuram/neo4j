@@ -48,14 +48,15 @@ import org.neo4j.kernel.impl.newapi.TestKernelReadTracer.TraceEvent;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.graphdb.Label.label;
-import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.internal.kernel.api.IndexQueryConstraints.constrained;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.newapi.TestKernelReadTracer.ON_ALL_NODES_SCAN;
 import static org.neo4j.kernel.impl.newapi.TestKernelReadTracer.OnIndexSeek;
 import static org.neo4j.kernel.impl.newapi.TestKernelReadTracer.OnLabelScan;
 import static org.neo4j.kernel.impl.newapi.TestKernelReadTracer.OnNode;
 import static org.neo4j.kernel.impl.newapi.TestKernelReadTracer.OnProperty;
 import static org.neo4j.kernel.impl.newapi.TestKernelReadTracer.OnRelationship;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 import static org.neo4j.storageengine.api.RelationshipSelection.ALL_RELATIONSHIPS;
 import static org.neo4j.storageengine.api.RelationshipSelection.selection;
 
@@ -211,7 +212,7 @@ public abstract class KernelReadTracerTestBase<G extends KernelAPIReadTestSuppor
         {
             // when
             cursor.setTracer( tracer );
-            read.nodeLabelScan( barId, cursor );
+            read.nodeLabelScan( barId, cursor, IndexOrder.NONE );
             while ( cursor.next() )
             {
                 expectedEvents.add( OnNode( cursor.nodeReference() ) );
@@ -366,7 +367,7 @@ public abstract class KernelReadTracerTestBase<G extends KernelAPIReadTestSuppor
         TestKernelReadTracer tracer = new TestKernelReadTracer();
 
         try ( NodeCursor nodeCursor = cursors.allocateNodeCursor( NULL );
-              PropertyCursor propertyCursor = cursors.allocatePropertyCursor( NULL ) )
+              PropertyCursor propertyCursor = cursors.allocatePropertyCursor( NULL, INSTANCE ) )
         {
             // when
             propertyCursor.setTracer( tracer );

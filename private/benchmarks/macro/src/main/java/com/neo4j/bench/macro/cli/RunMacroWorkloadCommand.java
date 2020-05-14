@@ -10,34 +10,32 @@ import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
-import com.neo4j.bench.common.model.BenchmarkConfig;
-import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
-import com.neo4j.bench.common.model.BenchmarkPlan;
-import com.neo4j.bench.common.model.BenchmarkTool;
-import com.neo4j.bench.common.model.Environment;
-import com.neo4j.bench.common.model.Java;
-import com.neo4j.bench.common.model.Neo4j;
-import com.neo4j.bench.common.model.Neo4jConfig;
-import com.neo4j.bench.common.model.Plan;
-import com.neo4j.bench.common.model.Repository;
-import com.neo4j.bench.common.model.TestRun;
-import com.neo4j.bench.common.model.TestRunReport;
+import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
+import com.neo4j.bench.common.util.Resources;
+import com.neo4j.bench.model.model.BenchmarkConfig;
+import com.neo4j.bench.model.model.BenchmarkGroupBenchmarkMetrics;
+import com.neo4j.bench.model.model.BenchmarkPlan;
+import com.neo4j.bench.model.model.BenchmarkTool;
+import com.neo4j.bench.model.model.Environment;
+import com.neo4j.bench.model.model.Java;
+import com.neo4j.bench.model.model.Neo4j;
+import com.neo4j.bench.model.model.Neo4jConfig;
+import com.neo4j.bench.model.model.Plan;
+import com.neo4j.bench.model.model.Repository;
+import com.neo4j.bench.model.model.TestRun;
+import com.neo4j.bench.model.model.TestRunReport;
 import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
-import com.neo4j.bench.common.tool.macro.BaseRunWorkloadCommand;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
-import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.ErrorReporter;
-import com.neo4j.bench.common.util.JsonUtil;
+import com.neo4j.bench.model.util.JsonUtil;
 import com.neo4j.bench.common.util.Jvm;
-import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.Neo4jDeployment;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.execution.measurement.Results;
@@ -62,6 +60,7 @@ import java.util.Optional;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileUtils;
 
+import static com.google.common.collect.Sets.newHashSet;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_BATCH_JOB_ID;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_DB_PATH;
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_ERROR_POLICY;
@@ -145,6 +144,8 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
             BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( workDir.toPath(), workload.benchmarkGroup() );
 
             System.out.println( params );
+
+            assertQueryNames( params, workload );
 
             BenchmarkUtil.assertFileNotEmpty( neo4jConfigFile.toPath() );
             Neo4jConfigBuilder neo4jConfigBuilder = Neo4jConfigBuilder.withDefaults()
@@ -232,9 +233,15 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
             List<BenchmarkPlan> resultPlans = new ArrayList<>();
             BenchmarkGroupBenchmarkMetricsPrinter conciseMetricsPrinter = new BenchmarkGroupBenchmarkMetricsPrinter( false );
             Instant start = Instant.now();
-            for ( Query query : workload.queries().stream().map( query -> query.copyWith( params.runtime() )
-                                                                               .copyWith( params.planner() )
-                                                                               .copyWith( params.executionMode() ) ).collect( toList() ) )
+
+            for ( Query query : workload.queries()
+                                        .stream()
+                                        .filter( query -> params.queryNames().isEmpty()
+                                                          || params.queryNames().contains( query.name() ) )
+                                        .map( query -> query.copyWith( params.runtime() )
+                                                            .copyWith( params.planner() )
+                                                            .copyWith( params.executionMode() ) )
+                                        .collect( toList() ) )
             {
                 try
                 {
@@ -314,11 +321,11 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
             TestRunReport testRunReport = new TestRunReport(
                     testRun,
                     benchmarkConfig,
-                    Sets.newHashSet( new Neo4j( params.neo4jCommit(),
-                                                params.neo4jVersion().patchVersion(),
-                                                params.neo4jEdition(),
-                                                params.neo4jBranch(),
-                                                params.neo4jBranchOwner() ) ),
+                    newHashSet( new Neo4j( params.neo4jCommit(),
+                                           params.neo4jVersion().patchVersion(),
+                                           params.neo4jEdition(),
+                                           params.neo4jBranch(),
+                                           params.neo4jBranchOwner() ) ),
                     neo4jConfig,
                     Environment.current(),
                     allResults,
@@ -372,5 +379,16 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                 profilerRecordingsDir.toAbsolutePath().toString() );
         args.addAll( params.asArgs() );
         return args;
+    }
+
+    private void assertQueryNames( RunMacroWorkloadParams params, Workload workload )
+    {
+        List<String> allQueryNames = workload.queries().stream().map( Query::name ).collect( toList() );
+        List<String> matchedQueries = new ArrayList<>( params.queryNames() );
+        matchedQueries.removeAll( allQueryNames );
+        if ( !matchedQueries.isEmpty() )
+        {
+            throw new IllegalArgumentException( format( "%s queries not found in workload %s", matchedQueries, workload.name() ) );
+        }
     }
 }

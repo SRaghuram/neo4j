@@ -36,8 +36,8 @@ class CartesianProductOperator(val workIdentity: WorkIdentity,
                            stateFactory: StateFactory,
                            state: PipelinedQueryState,
                            resources: QueryResources): OperatorState = {
-    argumentStateCreator.createArgumentStateMap(lhsArgumentStateMapId, new LHSMorsel.Factory(stateFactory), ordered = false)
-    argumentStateCreator.createArgumentStateMap(rhsArgumentStateMapId, new ArgumentStateBuffer.Factory(stateFactory, id), ordered = false)
+    argumentStateCreator.createArgumentStateMap(lhsArgumentStateMapId, new LHSMorsel.Factory(stateFactory))
+    argumentStateCreator.createArgumentStateMap(rhsArgumentStateMapId, new ArgumentStateBuffer.Factory(stateFactory, id))
     this
   }
 
@@ -99,7 +99,7 @@ object CartesianProductOperator {
                   override val argumentRowIdsForReducers: Array[Long])
     extends MorselAccumulator[Morsel] {
 
-    override def update(morsel: Morsel): Unit =
+    override def update(morsel: Morsel, resources: QueryResources): Unit =
       throw new IllegalStateException("LHSMorsel is complete on construction, and cannot be further updated.")
 
     override def toString: String = {

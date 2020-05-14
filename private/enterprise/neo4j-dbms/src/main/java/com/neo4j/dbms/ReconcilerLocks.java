@@ -38,7 +38,7 @@ final class ReconcilerLocks
 
     public void acquireLockOn( ReconcilerRequest request, String databaseName ) throws InterruptedException
     {
-        if ( request.isPriorityRequestForDatabase( databaseName ) )
+        if ( request.shouldBeExecutedAsPriorityFor( databaseName ) )
         {
             acquirePriority( databaseName );
         }

@@ -8,7 +8,9 @@ package com.neo4j.causalclustering.upstream;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 
+import java.util.Collection;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.neo4j.annotations.service.Service;
 import org.neo4j.configuration.Config;
@@ -52,7 +54,23 @@ public abstract class UpstreamDatabaseSelectionStrategy implements NamedService
     {
     }
 
+    /**
+     * @deprecated Callers of this method should use {@link UpstreamDatabaseSelectionStrategy#firstUpstreamMemberForDatabase(NamedDatabaseId)}.
+     *   Implementers should override {@link UpstreamDatabaseSelectionStrategy#upstreamMembersForDatabase(NamedDatabaseId)} instead.
+     *   In future versions this method will first be provided with no-op default implementation, then eventually removed.
+     */
+    @Deprecated( since = "4.0.3" )
     public abstract Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException;
+
+    public final Optional<MemberId> firstUpstreamMemberForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
+    {
+        return upstreamMembersForDatabase( namedDatabaseId ).stream().findFirst();
+    }
+
+    public Collection<MemberId> upstreamMembersForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
+    {
+        return upstreamMemberForDatabase( namedDatabaseId ).stream().collect( Collectors.toList() );
+    }
 
     @Override
     public String toString()

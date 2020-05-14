@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies;
 
+import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.routing.load_balancing.filters.Filter;
 import com.neo4j.causalclustering.routing.load_balancing.filters.FilterChain;
 import com.neo4j.causalclustering.routing.load_balancing.filters.FirstValidRule;
@@ -43,7 +44,7 @@ public class FilterConfigParser
                             format( "Invalid group for filter '%s': '%s'", filterName, group ) );
                 }
             }
-            return new AnyGroupFilter( args );
+            return new AnyGroupFilter( ServerGroupName.setOf( args ) );
         case "min":
             if ( args.length != 1 )
             {

@@ -7,9 +7,9 @@ package com.neo4j.bench.common.tool.micro;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.neo4j.bench.common.options.Edition;
+import com.neo4j.bench.model.options.Edition;
 import com.neo4j.bench.common.options.Version;
-import com.neo4j.bench.common.process.JvmArgs;
+import com.neo4j.bench.model.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.util.ErrorReporter;
 import org.apache.commons.lang3.builder.EqualsBuilder;

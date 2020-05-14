@@ -24,6 +24,7 @@ public enum MemoryGroup
     TRANSACTION( "Transaction" ),
     NETTY( "Netty" ),
     PAGE_CACHE( "Page Cache" ),
+    OTHER( "Other" ),
     REPLICATION_BUFFERS( "Replication Buffers" ),
     QUERY_CACHE( "Query Cache" ),
     NO_TRACKING( "No Tracking" );

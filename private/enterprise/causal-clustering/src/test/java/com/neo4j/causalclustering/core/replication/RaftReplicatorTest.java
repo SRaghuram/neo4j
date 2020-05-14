@@ -38,7 +38,7 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.DatabaseHealth;
-import org.neo4j.monitoring.DatabasePanicEventGenerator;
+import org.neo4j.kernel.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.monitoring.Health;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.extension.Inject;
@@ -209,7 +209,14 @@ class RaftReplicatorTest
         assertThat( replicationResult.outcome(), either( equalTo( NOT_REPLICATED ) ).or( equalTo( MAYBE_REPLICATED ) ) );
         assertThat( replicationResult.failure(), Matchers.instanceOf( UnavailableException.class ) );
 
-        verify( replicationMonitor ).notReplicated();
+        if ( replicationResult.outcome() == NOT_REPLICATED )
+        {
+            verify( replicationMonitor ).notReplicated();
+        }
+        else
+        {
+            verify( replicationMonitor ).maybeReplicated();
+        }
     }
 
     @Test
@@ -267,7 +274,7 @@ class RaftReplicatorTest
 
         // when
         ReplicationResult replicationResult = replicator.replicate( content );
-        assertEquals( NOT_REPLICATED , replicationResult.outcome() );
+        assertEquals( NOT_REPLICATED, replicationResult.outcome() );
     }
 
     @Test
@@ -424,6 +431,5 @@ class RaftReplicatorTest
             this.lastTo = to;
             this.count++;
         }
-
     }
 }

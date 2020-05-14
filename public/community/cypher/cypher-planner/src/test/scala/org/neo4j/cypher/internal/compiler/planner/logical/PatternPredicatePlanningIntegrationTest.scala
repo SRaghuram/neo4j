@@ -61,6 +61,7 @@ import org.neo4j.cypher.internal.logical.plans.Expand
 import org.neo4j.cypher.internal.logical.plans.ExpandAll
 import org.neo4j.cypher.internal.logical.plans.FindShortestPaths
 import org.neo4j.cypher.internal.logical.plans.ForeachApply
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.logical.plans.LetSelectOrAntiSemiApply
 import org.neo4j.cypher.internal.logical.plans.LetSelectOrSemiApply
 import org.neo4j.cypher.internal.logical.plans.LoadCSV
@@ -136,7 +137,7 @@ class PatternPredicatePlanningIntegrationTest extends CypherFunSuite with Logica
         Sort(
           Projection(
             RollUpApply(
-              NodeByLabelScan("u", LabelName("User")(pos), Set.empty),
+              NodeByLabelScan("u", LabelName("User")(pos), Set.empty, IndexOrderNone),
               Projection(
                 Selection(
                   Seq(hasLabels("u2", "User")),
@@ -746,7 +747,7 @@ class PatternPredicatePlanningIntegrationTest extends CypherFunSuite with Logica
                Selection(_,
                     CacheProperties(
                          RollUpApply(
-                                     Expand(AllNodesScan(_, SetExtractor()), _, _, _, _, _, _), _/* <- This is the subQuery */, _, _, _) // Match part
+                                     Expand(AllNodesScan(_, SetExtractor()), _, _, _, _, _, _, _), _/* <- This is the subQuery */, _, _, _) // Match part
                     , _)
                ), _
               ),
@@ -840,7 +841,7 @@ class PatternPredicatePlanningIntegrationTest extends CypherFunSuite with Logica
 
     planFor(q)._2 should beLike {
       case SetRelationshipProperty(
-      RollUpApply(Expand(AllNodesScan(_, SetExtractor()), _, _, _, _, _, _), _/* <- This is the subQuery */, _, _, _),
+      RollUpApply(Expand(AllNodesScan(_, SetExtractor()), _, _, _, _, _, _, _), _/* <- This is the subQuery */, _, _, _),
       _, _, _
       ) => ()
     }
@@ -854,7 +855,7 @@ class PatternPredicatePlanningIntegrationTest extends CypherFunSuite with Logica
 
     planFor(q)._2 should beLike {
       case SetRelationshipPropertiesFromMap(
-      RollUpApply(Expand(AllNodesScan(_, SetExtractor()), _, _, _, _, _, _), _/* <- This is the subQuery */, _, _, _),
+      RollUpApply(Expand(AllNodesScan(_, SetExtractor()), _, _, _, _, _, _, _), _/* <- This is the subQuery */, _, _, _),
       _, _, _
       ) => ()
     }

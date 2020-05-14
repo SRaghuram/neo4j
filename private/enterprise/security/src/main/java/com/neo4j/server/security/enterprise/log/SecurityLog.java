@@ -44,6 +44,7 @@ public class SecurityLog extends LifecycleAdapter implements Log
                 config.get( SecuritySettings.store_security_log_rotation_delay ).toMillis(),
                 config.get( SecuritySettings.store_security_log_max_archives ), executor );
 
+        builder.withFormat( config.get( GraphDatabaseSettings.log_format) );
         FormattedLog formattedLog = builder.toOutputStream( rotatingSupplier );
         formattedLog.setLevel( config.get( SecuritySettings.security_log_level ) );
 

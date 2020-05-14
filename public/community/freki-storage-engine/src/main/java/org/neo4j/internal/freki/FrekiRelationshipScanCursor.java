@@ -23,6 +23,10 @@ import java.util.Iterator;
 
 import org.neo4j.graphdb.Direction;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+<<<<<<< HEAD
+=======
+import org.neo4j.memory.MemoryTracker;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 import org.neo4j.storageengine.api.AllRelationshipsScan;
 import org.neo4j.storageengine.api.Reference;
 import org.neo4j.storageengine.api.RelationshipSelection;
@@ -43,11 +47,20 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     private final FrekiRelationshipTraversalCursor traversalCursor;
     private final FrekiNodeCursor nodeCursor;
 
+<<<<<<< HEAD
     FrekiRelationshipScanCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer )
     {
         super( stores, cursorAccessPatternTracer, cursorTracer );
         traversalCursor = new FrekiRelationshipTraversalCursor( stores, cursorAccessPatternTracer, cursorTracer );
         nodeCursor = new FrekiNodeCursor( stores, cursorAccessPatternTracer, cursorTracer );
+=======
+    FrekiRelationshipScanCursor( MainStores stores, CursorAccessPatternTracer cursorAccessPatternTracer, PageCursorTracer cursorTracer,
+            MemoryTracker memoryTracker )
+    {
+        super( stores, cursorAccessPatternTracer, cursorTracer, memoryTracker );
+        traversalCursor = new FrekiRelationshipTraversalCursor( stores, cursorAccessPatternTracer, cursorTracer, memoryTracker );
+        nodeCursor = new FrekiNodeCursor( stores, cursorAccessPatternTracer, cursorTracer, memoryTracker );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 
     @Override

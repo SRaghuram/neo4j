@@ -5,26 +5,21 @@
  */
 package com.neo4j.batchinsert;
 
-import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import com.neo4j.test.TestWithRecordFormats;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.neo4j.batchinsert.BatchInserter;
 import org.neo4j.batchinsert.BatchInserters;
+import org.neo4j.collection.PrimitiveLongResourceIterator;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
+import org.neo4j.counts.CountsStore;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -32,51 +27,54 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterables;
+import org.neo4j.internal.index.label.LabelScanStore;
+import org.neo4j.internal.index.label.RelationshipTypeScanStore;
+import org.neo4j.internal.index.label.RelationshipTypeScanStoreSettings;
+import org.neo4j.internal.index.label.TokenScanStore;
+import org.neo4j.internal.kernel.api.TokenRead;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.MyRelTypes;
-import org.neo4j.kernel.impl.store.format.aligned.PageAlignedV4_1;
-import org.neo4j.kernel.impl.store.format.standard.Standard;
+import org.neo4j.kernel.impl.coreapi.InternalTransaction;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.collection.PrimitiveLongCollections.count;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
+import static org.neo4j.token.api.TokenConstants.ANY_LABEL;
+import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 
 /**
  * Just testing the {@link BatchInserter} in an enterprise setting, i.e. with all packages and extensions
  * that exist in enterprise edition.
  */
-@RunWith( Parameterized.class )
-public class BatchInsertEnterpriseIT
+@TestDirectoryExtension
+class BatchInsertEnterpriseIT
 {
-    @Rule
-    public final TestDirectory directory = TestDirectory.testDirectory();
-    @Rule
-    public final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
+    @Inject
+    private TestDirectory directory;
+    @Inject
+    private FileSystemAbstraction fs;
 
-    @Parameter
-    public String recordFormat;
     private DatabaseManagementService managementService;
 
-    @Parameters( name = "{0}" )
-    public static List<String> recordFormats()
-    {
-        return Arrays.asList( Standard.LATEST_NAME, HighLimit.NAME, PageAlignedV4_1.NAME );
-    }
-
-    @Test
-    public void shouldInsertDifferentTypesOfThings() throws Exception
+    @TestWithRecordFormats
+    void shouldInsertDifferentTypesOfThings( String recordFormat ) throws Exception
     {
         DatabaseLayout layout = Neo4jLayout.of( directory.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
         // GIVEN
-        BatchInserter inserter = BatchInserters.inserter( layout, fileSystemRule.get(),
-                Config.newBuilder()
-                        .set( GraphDatabaseSettings.log_queries, LogQueryLevel.INFO )
-                        .set( GraphDatabaseSettings.record_format, recordFormat )
-                        .set( GraphDatabaseSettings.log_queries_filename, directory.file( "query.log" ).toPath().toAbsolutePath() ).build() );
+        Config config = Config.newBuilder()
+                .set( GraphDatabaseSettings.log_queries, LogQueryLevel.INFO )
+                .set( GraphDatabaseSettings.record_format, recordFormat )
+                .set( GraphDatabaseSettings.log_queries_filename, directory.file( "query.log" ).toPath().toAbsolutePath() ).build();
+        BatchInserter inserter = BatchInserters.inserter( layout, fs, config );
         long node1Id;
         long node2Id;
         long relationshipId;
@@ -96,8 +94,7 @@ public class BatchInsertEnterpriseIT
         }
 
         // THEN
-        DatabaseManagementService managementService = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() ).build();
-        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
+        GraphDatabaseService db = newDb( directory.homeDir(), config );
 
         try ( Transaction tx = db.beginTx() )
         {
@@ -116,15 +113,18 @@ public class BatchInsertEnterpriseIT
         }
     }
 
-    @Test
-    public void insertIntoExistingDatabase() throws IOException
+    @TestWithRecordFormats
+    void insertIntoExistingDatabase( String recordFormat ) throws IOException
     {
         File storeDir = directory.homeDir();
+        Config config = Config.defaults();
+        config.set( GraphDatabaseSettings.record_format, recordFormat );
+        config.set( RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store, true );
 
-        GraphDatabaseService db = newDb( storeDir, recordFormat );
+        GraphDatabaseService db = newDb( storeDir, config );
         try
         {
-            createThreeNodes( db );
+            createTwoNodesWithRelationship( db );
         }
         finally
         {
@@ -133,7 +133,7 @@ public class BatchInsertEnterpriseIT
 
         DatabaseLayout layout = Neo4jLayout.of( directory.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
 
-        BatchInserter inserter = BatchInserters.inserter( layout, fileSystemRule.get() );
+        BatchInserter inserter = BatchInserters.inserter( layout, fs, config );
         try
         {
             long start = inserter.createNode( someProperties( 5 ), Labels.One );
@@ -145,10 +145,74 @@ public class BatchInsertEnterpriseIT
             inserter.shutdown();
         }
 
-        db = newDb( storeDir, recordFormat );
+        db = newDb( storeDir, config );
         try
         {
             verifyNodeCount( db, 4 );
+            verifyRelationshipCount( db, 2 );
+        }
+        finally
+        {
+            managementService.shutdown();
+        }
+    }
+
+    @TestWithRecordFormats
+    void shouldCorrectlyUpdateCountsAndScanStores( String recordFormat ) throws IOException
+    {
+        File storeDir = directory.homeDir();
+        Config config = Config.defaults();
+        config.set( GraphDatabaseSettings.record_format, recordFormat );
+        config.set( RelationshipTypeScanStoreSettings.enable_relationship_type_scan_store, true );
+
+        GraphDatabaseService db = newDb( storeDir, config );
+        try
+        {
+            createTwoNodesWithRelationship( db );
+        }
+        finally
+        {
+            managementService.shutdown();
+        }
+
+        DatabaseLayout layout = Neo4jLayout.of( directory.homeDir() ).databaseLayout( DEFAULT_DATABASE_NAME );
+
+        BatchInserter inserter = BatchInserters.inserter( layout, fs, config );
+        try
+        {
+            long start = inserter.createNode( someProperties( 5 ), Labels.One );
+            long end = inserter.createNode( someProperties( 5 ), Labels.One );
+            inserter.createRelationship( start, end, MyRelTypes.TEST, someProperties( 5 ) );
+        }
+        finally
+        {
+            inserter.shutdown();
+        }
+
+        db = newDb( storeDir, config );
+        try
+        {
+            verifyCountsStore( db, 4, 2 );
+
+            int labelOneId;
+            int labelTwoId;
+            int testTypeId;
+            try ( Transaction tx = db.beginTx() )
+            {
+                TokenRead tokenRead = ((InternalTransaction) tx).kernelTransaction().tokenRead();
+                labelOneId = tokenRead.nodeLabel( Labels.One.name() );
+                labelTwoId = tokenRead.nodeLabel( Labels.Two.name() );
+                testTypeId = tokenRead.relationshipType( MyRelTypes.TEST.name() );
+                tx.commit();
+            }
+            Map<Integer,Integer> nodeCountPerLabel = new HashMap<>();
+            Map<Integer,Integer> relationshipCountPerType = new HashMap<>();
+            nodeCountPerLabel.put( labelOneId, 3 );
+            nodeCountPerLabel.put( labelTwoId, 1 );
+            relationshipCountPerType.put( testTypeId, 2 );
+
+            verifyScanStore( db, nodeCountPerLabel, LabelScanStore.class );
+            verifyScanStore( db, relationshipCountPerType, RelationshipTypeScanStore.class );
         }
         finally
         {
@@ -165,7 +229,44 @@ public class BatchInsertEnterpriseIT
         }
     }
 
-    private static void createThreeNodes( GraphDatabaseService db )
+    private static void verifyRelationshipCount( GraphDatabaseService db, int expectedRelationshipCount )
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            CountsStore countsStore = ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( CountsStore.class );
+            assertEquals( expectedRelationshipCount, Iterables.count( tx.getAllRelationships() ) );
+            tx.commit();
+        }
+    }
+
+    private static void verifyCountsStore( GraphDatabaseService db, int expectedNodeCount, int expectedRelationshipCount )
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            CountsStore countsStore = ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( CountsStore.class );
+            long actualNodeCount = countsStore.nodeCount( ANY_LABEL, PageCursorTracer.NULL );
+            long actualRelationshipCount = countsStore.relationshipCount( ANY_LABEL, ANY_RELATIONSHIP_TYPE, ANY_LABEL, PageCursorTracer.NULL );
+            assertEquals( expectedNodeCount, actualNodeCount );
+            assertEquals( expectedRelationshipCount, actualRelationshipCount );
+            tx.commit();
+        }
+    }
+
+    private static void verifyScanStore( GraphDatabaseService db, Map<Integer,Integer> entryCountPerToken, Class<? extends TokenScanStore> clazz )
+    {
+        TokenScanStore labelScanStore = ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( clazz );
+
+        for ( Map.Entry<Integer,Integer> countForToken : entryCountPerToken.entrySet() )
+        {
+            try ( PrimitiveLongResourceIterator entries = labelScanStore.newReader().entitiesWithToken( countForToken.getKey(), PageCursorTracer.NULL ) )
+            {
+                int actualCount = count( entries );
+                assertEquals( countForToken.getValue(), actualCount );
+            }
+        }
+    }
+
+    private static void createTwoNodesWithRelationship( GraphDatabaseService db )
     {
         try ( Transaction tx = db.beginTx() )
         {
@@ -187,10 +288,10 @@ public class BatchInsertEnterpriseIT
         return map( "key", "value" + id, "number", 10 + id );
     }
 
-    private GraphDatabaseService newDb( File storeDir, String recordFormat )
+    private GraphDatabaseService newDb( File storeDir, Config config )
     {
         managementService = new TestEnterpriseDatabaseManagementServiceBuilder( storeDir )
-                .setConfig( GraphDatabaseSettings.record_format, recordFormat )
+                .setConfig( config )
                 .build();
         return managementService.database( DEFAULT_DATABASE_NAME );
     }

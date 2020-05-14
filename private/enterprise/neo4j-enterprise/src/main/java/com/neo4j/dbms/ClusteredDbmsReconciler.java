@@ -6,7 +6,6 @@
 package com.neo4j.dbms;
 
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
-import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.dbms.database.ClusteredMultiDatabaseManager;
 
@@ -29,15 +28,13 @@ public class ClusteredDbmsReconciler extends DbmsReconciler
 {
     private final LogProvider logProvider;
     private final ClusterStateStorageFactory stateStorageFactory;
-    private final PanicService panicService;
 
     ClusteredDbmsReconciler( ClusteredMultiDatabaseManager databaseManager, Config config, LogProvider logProvider, JobScheduler scheduler,
-            ClusterStateStorageFactory stateStorageFactory, PanicService panicService, TransitionsTable transitionsTable )
+                            ClusterStateStorageFactory stateStorageFactory, TransitionsTable transitionsTable )
     {
         super( databaseManager, config, logProvider, scheduler, transitionsTable );
         this.logProvider = logProvider;
         this.stateStorageFactory = stateStorageFactory;
-        this.panicService = panicService;
     }
 
     @Override
@@ -74,13 +71,6 @@ public class ClusteredDbmsReconciler extends DbmsReconciler
         {
             throw new DatabaseManagementException( format( "Unable to read potentially dirty cluster state while starting %s.", databaseName ) );
         }
-    }
-
-    @Override
-    protected void panicDatabase( NamedDatabaseId namedDatabaseId, Throwable error )
-    {
-        var databasePanicker = panicService.panickerFor( namedDatabaseId );
-        databasePanicker.panic( error );
     }
 
     private DatabaseLogProvider databaseLogProvider( NamedDatabaseId namedDatabaseId )

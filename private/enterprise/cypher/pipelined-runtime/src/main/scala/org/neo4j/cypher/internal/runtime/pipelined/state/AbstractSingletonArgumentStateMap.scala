@@ -76,7 +76,7 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
       val completedState = controller.state
       hasController = false
       DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, completedState.argumentRowId)
-      return IndexedSeq(completedState)
+      return Collections.singletonIndexedSeq(completedState)
     }
     null
   }

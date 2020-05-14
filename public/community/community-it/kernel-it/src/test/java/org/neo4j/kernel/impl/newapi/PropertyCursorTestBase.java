@@ -44,6 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 public abstract class PropertyCursorTestBase<G extends KernelAPIReadTestSupport> extends KernelAPIReadTestBase<G>
 {
@@ -253,7 +254,7 @@ public abstract class PropertyCursorTestBase<G extends KernelAPIReadTestSupport>
     {
         // given
         try ( NodeCursor node = cursors.allocateNodeCursor( NULL );
-              PropertyCursor props = cursors.allocatePropertyCursor( NULL ) )
+              PropertyCursor props = cursors.allocatePropertyCursor( NULL, INSTANCE ) )
         {
             // when
             read.singleNode(bareNodeId, node );
@@ -274,7 +275,7 @@ public abstract class PropertyCursorTestBase<G extends KernelAPIReadTestSupport>
     void shouldNotAccessNonExistentRelationshipProperties()
     {
         try ( RelationshipScanCursor relationship = cursors.allocateRelationshipScanCursor( NULL );
-              PropertyCursor props = cursors.allocatePropertyCursor( NULL ) )
+              PropertyCursor props = cursors.allocatePropertyCursor( NULL, INSTANCE ) )
         {
             // when
             read.singleRelationship(bareRelId, relationship );
@@ -355,7 +356,7 @@ public abstract class PropertyCursorTestBase<G extends KernelAPIReadTestSupport>
     {
         // given
         try ( NodeCursor node = cursors.allocateNodeCursor( NULL );
-              PropertyCursor props = cursors.allocatePropertyCursor( NULL ) )
+              PropertyCursor props = cursors.allocatePropertyCursor( NULL, INSTANCE ) )
         {
             // when
             read.singleNode( allPropsNodeId, node );
@@ -392,7 +393,7 @@ public abstract class PropertyCursorTestBase<G extends KernelAPIReadTestSupport>
             assertTrue( values.contains( dateValue.asObject() ), DATE_PROP );
 
             int expected = supportsBigProperties() ? 18 : 15;
-            assertEquals(  expected, values.size(), "number of values" );
+            assertEquals( expected, values.size(), "number of values" );
         }
     }
 
@@ -401,7 +402,7 @@ public abstract class PropertyCursorTestBase<G extends KernelAPIReadTestSupport>
     {
         // given
         try ( RelationshipScanCursor relationship = cursors.allocateRelationshipScanCursor( NULL );
-              PropertyCursor props = cursors.allocatePropertyCursor( NULL ) )
+              PropertyCursor props = cursors.allocatePropertyCursor( NULL, INSTANCE ) )
         {
             // when
             read.singleRelationship( allPropsRelId, relationship );
@@ -438,7 +439,7 @@ public abstract class PropertyCursorTestBase<G extends KernelAPIReadTestSupport>
             assertTrue( values.contains( dateValue.asObject() ), DATE_PROP );
 
             int expected = supportsBigProperties() ? 18 : 15;
-            assertEquals(  expected, values.size(), "number of values" );
+            assertEquals( expected, values.size(), "number of values" );
         }
     }
 
@@ -446,7 +447,7 @@ public abstract class PropertyCursorTestBase<G extends KernelAPIReadTestSupport>
     {
         // given
         try ( NodeCursor node = cursors.allocateNodeCursor( NULL );
-              PropertyCursor props = cursors.allocatePropertyCursor( NULL ) )
+              PropertyCursor props = cursors.allocatePropertyCursor( NULL, INSTANCE ) )
         {
             // when
             read.singleNode( nodeId, node );
@@ -461,7 +462,7 @@ public abstract class PropertyCursorTestBase<G extends KernelAPIReadTestSupport>
 
             read.nodeProperties( node.nodeReference(), node.propertiesReference(), props );
             assertTrue( props.next(), "has properties via property ref" );
-            assertEquals(  expectedValue, props.propertyValue(), "correct value" );
+            assertEquals( expectedValue, props.propertyValue(), "correct value" );
             assertFalse( props.next(), "single property" );
         }
     }
@@ -470,7 +471,7 @@ public abstract class PropertyCursorTestBase<G extends KernelAPIReadTestSupport>
     {
         // given
         try ( RelationshipScanCursor relationship = cursors.allocateRelationshipScanCursor( NULL );
-              PropertyCursor props = cursors.allocatePropertyCursor( NULL ) )
+              PropertyCursor props = cursors.allocatePropertyCursor( NULL, INSTANCE ) )
         {
             // when
             read.singleRelationship( relationshipId, relationship );
@@ -486,7 +487,7 @@ public abstract class PropertyCursorTestBase<G extends KernelAPIReadTestSupport>
 
             read.relationshipProperties( relationship.relationshipReference(), relationship.propertiesReference(), props );
             assertTrue( props.next(), "has properties via property ref" );
-            assertEquals(  expectedValue, props.propertyValue(), "correct value" );
+            assertEquals( expectedValue, props.propertyValue(), "correct value" );
             assertFalse( props.next(), "single property" );
         }
     }

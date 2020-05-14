@@ -87,6 +87,7 @@ class InitMagicMessageHandlingIT
         };
 
         var clientChannel = startServerAndClient( serverInitializer, clientInitializer );
+        assertTrue( clientChannel.isOpen() );
 
         clientChannel.writeAndFlush( magicValueBuf() );
 
@@ -101,6 +102,7 @@ class InitMagicMessageHandlingIT
         var clientInitializer = new NoOpChannelInitializer();
 
         var clientChannel = startServerAndClient( serverInitializer, clientInitializer );
+        assertTrue( clientChannel.isOpen() );
 
         clientChannel.writeAndFlush( wrongMagicMessage() );
 
@@ -154,6 +156,7 @@ class InitMagicMessageHandlingIT
         var clientInitializer = newClientChannelInitializer( LONG_TIMEOUT, new NoOpChannelInitializer() );
 
         var clientChannel = startServerAndClient( serverInitializer, clientInitializer );
+        assertTrue( clientChannel.isOpen() );
 
         assertCorrectInitMessageReceived( "Server", recordingServerHandler );
         assertTrue( clientChannel.isActive() );
@@ -171,8 +174,6 @@ class InitMagicMessageHandlingIT
 
         var serverAddress = server.start();
         var clientChannel = client.connect( serverAddress );
-
-        assertTrue( clientChannel.isOpen() );
 
         return clientChannel;
     }

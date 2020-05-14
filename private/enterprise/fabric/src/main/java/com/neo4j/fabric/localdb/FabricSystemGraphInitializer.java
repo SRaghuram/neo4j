@@ -9,6 +9,7 @@ import com.neo4j.dbms.EnterpriseSystemGraphInitializer;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.fabric.FabricDatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 
 public class FabricSystemGraphInitializer extends EnterpriseSystemGraphInitializer

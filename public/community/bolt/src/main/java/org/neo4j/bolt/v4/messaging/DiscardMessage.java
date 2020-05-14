@@ -27,7 +27,7 @@ public class DiscardMessage extends AbstractStreamingMessage
     public static final byte SIGNATURE = 0x2F;
     private static final String NAME = "DISCARD";
 
-    DiscardMessage( MapValue meta ) throws BoltIOException
+    public DiscardMessage( MapValue meta ) throws BoltIOException
     {
         super( meta, NAME );
     }

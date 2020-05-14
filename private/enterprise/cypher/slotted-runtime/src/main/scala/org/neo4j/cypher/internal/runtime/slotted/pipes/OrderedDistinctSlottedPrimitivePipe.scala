@@ -5,9 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
-import java.util.function.Consumer
-
-import org.eclipse.collections.impl.factory.Sets
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.PrefetchingIterator
@@ -17,6 +14,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.slotted.pipes.DistinctSlottedPrimitivePipe.buildGroupingValue
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.kernel.impl.util.collection.DistinctSet
 import org.neo4j.values.storable.LongArray
 
 case class OrderedDistinctSlottedPrimitivePipe(source: Pipe,
@@ -33,7 +31,8 @@ case class OrderedDistinctSlottedPrimitivePipe(source: Pipe,
   protected def internalCreateResults(input: Iterator[CypherRow],
                                       state: QueryState): Iterator[CypherRow] = {
     new PrefetchingIterator[CypherRow] {
-      private var seen = Sets.mutable.empty[LongArray]()
+      private val memoryTracker = state.memoryTracker.memoryTrackerForOperator(id.x)
+      private var seen: DistinctSet[LongArray] = DistinctSet.createDistinctSet[LongArray](memoryTracker)
       private var currentOrderedGroupingValue: LongArray = _
 
       override def produceNext(): Option[CypherRow] = {
@@ -45,17 +44,18 @@ case class OrderedDistinctSlottedPrimitivePipe(source: Pipe,
 
           if (currentOrderedGroupingValue == null || currentOrderedGroupingValue != orderedGroupingValue) {
             currentOrderedGroupingValue = orderedGroupingValue
-            seen.forEach((x => state.memoryTracker.deallocated(x, id.x)) : Consumer[LongArray])
-            seen = Sets.mutable.empty[LongArray]()
+            seen.close()
+            seen = DistinctSet.createDistinctSet[LongArray](memoryTracker)
           }
 
           if (seen.add(unorderedGroupingValue)) {
-            state.memoryTracker.allocated(unorderedGroupingValue, id.x)
             // Found unseen key! Set it as the next element to yield, and exit
             groupingExpression.project(next, groupingExpression.computeGroupingKey(next, state))
             return Some(next)
           }
         }
+        seen.close()
+        seen = null
         None
       }
     }

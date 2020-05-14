@@ -10,7 +10,9 @@ import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.MockCatchupClient;
 import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV3;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV3;
+import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreFileRequest;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
+import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocol;
 import com.neo4j.causalclustering.protocol.application.ApplicationProtocols;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.lang.annotation.ElementType;
@@ -31,8 +34,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.helpers.SocketAddress;
@@ -61,10 +68,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.atMostOnce;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -118,6 +129,60 @@ class StoreCopyClientTest
     {
         catchupClient = new MockCatchupClient( protocol, v3Client );
         when( catchupClientFactory.getClient( any( SocketAddress.class ), any( Log.class ) ) ).thenReturn( catchupClient );
+    }
+
+    @TestWithCatchupProtocols
+    void shouldNotAwaitTillAllAddressesAttempted( ApplicationProtocol protocol ) throws Exception
+    {
+        // given
+        mockClient( protocol );
+        TimeoutStrategy.Timeout mockedTimeout = mock( TimeoutStrategy.Timeout.class );
+        TimeoutStrategy backoffStrategy = mock( TimeoutStrategy.class );
+        when( backoffStrategy.newTimeout() ).thenReturn( mockedTimeout );
+
+        subject = new StoreCopyClient(
+                catchupClientFactory,
+                databaseIdRepository.getRaw( DEFAULT_DATABASE_NAME ),
+                () -> monitors,
+                logProvider,
+                backoffStrategy );
+
+        var files = new File[] { new File( "fileA.txt" ) };
+        PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( files, LAST_CHECKPOINTED_TX );
+        StoreCopyFinishedResponse success = expectedStoreCopyFinishedResponse( SUCCESS );
+
+        var counter = new AtomicInteger( 0 );
+        Function<GetStoreFileRequest,StoreCopyFinishedResponse> generateResponses = request ->
+        {
+            var first3 = counter.getAndIncrement() < 3;
+            if ( first3 )
+            {
+                throw new RuntimeException( "getStoreFile failed" );
+            }
+            return success;
+        };
+
+        clientResponses
+                .withPrepareStoreCopyResponse( prepareStoreCopyResponse )
+                .withStoreFilesResponse( generateResponses );
+
+        CatchupAddressProvider catchupAddressProvider = mock( CatchupAddressProvider.class );
+        var addresses = IntStream.range( 1, 4 )
+                .mapToObj( port -> new SocketAddress( "foo", port ) )
+                .collect( Collectors.toList() );
+        when( catchupAddressProvider.primary( any( NamedDatabaseId.class ) ) ).thenReturn( new SocketAddress( "foo", 0 ) );
+        when( catchupAddressProvider.allSecondaries( any( NamedDatabaseId.class ) ) ).thenReturn( addresses );
+
+        var inOrder = Mockito.inOrder( catchupAddressProvider, mockedTimeout );
+
+        // when
+        subject.copyStoreFiles( catchupAddressProvider, expectedStoreId, expectedStoreFileStream, continueIndefinitely(), targetLocation );
+
+        // then
+        Mockito.verify( catchupClientFactory, atLeast( 3 ) ).getClient( any( SocketAddress.class ), any( Log.class ) );
+        inOrder.verify( catchupAddressProvider, times( 1 ) ).allSecondaries( any( NamedDatabaseId.class ) );
+        inOrder.verify( mockedTimeout, times( 1 ) ).increment();
+        inOrder.verify( catchupAddressProvider, times( 1 ) ).allSecondaries( any( NamedDatabaseId.class ) );
     }
 
     @TestWithCatchupProtocols
@@ -258,14 +323,18 @@ class StoreCopyClientTest
         // given store listing fails
         PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.error( PrepareStoreCopyResponse.Status.E_STORE_ID_MISMATCH );
 
-        Queue<Supplier<PrepareStoreCopyResponse>> responses = new LinkedList<>();
-        responses.add( () -> prepareStoreCopyResponse );
-        responses.add( () ->
+        var firstRequest = new AtomicBoolean( true );
+        Function<PrepareStoreCopyRequest,PrepareStoreCopyResponse> generateResponses = request ->
         {
+            var wasFirst = firstRequest.compareAndSet( true, false );
+            if ( wasFirst )
+            {
+                return prepareStoreCopyResponse;
+            }
             throw new RuntimeException( "Should not be accessible" );
-        } );
+        };
 
-        clientResponses.withPrepareStoreCopyResponse( ignored -> responses.poll().get() );
+        clientResponses.withPrepareStoreCopyResponse( generateResponses );
 
         // when
         StoreCopyFailedException exception = assertThrows( StoreCopyFailedException.class,

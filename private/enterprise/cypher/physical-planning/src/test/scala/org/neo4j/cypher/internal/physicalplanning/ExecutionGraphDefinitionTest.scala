@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
 import org.neo4j.cypher.internal.logical.plans.Distinct
 import org.neo4j.cypher.internal.logical.plans.Expand
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
 import org.neo4j.cypher.internal.logical.plans.Limit
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NodeByLabelScan
@@ -122,7 +123,7 @@ class ExecutionGraphDefinitionTest extends CypherFunSuite {
     new ExecutionGraphDefinitionBuilder()
       .produceResults("n")
       .nodeHashJoin("n").withBreak()
-      .|.nodeByLabelScan("n", "N").withBreak()
+      .|.nodeByLabelScan("n", "N", IndexOrderNone).withBreak()
       .allNodeScan("n").withBreak()
       .build() should plan {
       val graph = newGraph
@@ -151,7 +152,7 @@ class ExecutionGraphDefinitionTest extends CypherFunSuite {
     new ExecutionGraphDefinitionBuilder()
       .produceResults("n")
       .apply().withBreak()
-      .|.nodeByLabelScan("m", "M").withBreak()
+      .|.nodeByLabelScan("m", "M", IndexOrderNone).withBreak()
       .allNodeScan("n").withBreak()
       .build() should plan {
       val graph = newGraph
@@ -239,7 +240,7 @@ class ExecutionGraphDefinitionTest extends CypherFunSuite {
     new ExecutionGraphDefinitionBuilder()
       .produceResults("n", "m")
       .cartesianProduct().withBreak()
-      .|.nodeByLabelScan("m", "M").withBreak()
+      .|.nodeByLabelScan("m", "M", IndexOrderNone).withBreak()
       .allNodeScan("n").withBreak()
       .build() should plan {
       val graph = newGraph
@@ -269,7 +270,7 @@ class ExecutionGraphDefinitionTest extends CypherFunSuite {
     new ExecutionGraphDefinitionBuilder()
       .produceResults("n")
       .union().withBreak()
-      .|.nodeByLabelScan("n", "N").withBreak()
+      .|.nodeByLabelScan("n", "N", IndexOrderNone).withBreak()
       .allNodeScan("n").withBreak()
       .build() should plan {
       val graph = newGraph
@@ -297,7 +298,7 @@ class ExecutionGraphDefinitionTest extends CypherFunSuite {
       .|.limit(1)
       .|.distinct("n AS n")
       .|.union().withBreak()
-      .|.|.nodeByLabelScan("n", "N").withBreak()
+      .|.|.nodeByLabelScan("n", "N", IndexOrderNone).withBreak()
       .|.argument("n").withBreak()
       .allNodeScan("n").withBreak()
       .build() should plan {

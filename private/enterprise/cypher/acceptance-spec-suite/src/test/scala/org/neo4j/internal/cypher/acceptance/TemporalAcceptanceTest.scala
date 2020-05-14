@@ -1062,5 +1062,5 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
   }
 
   //noinspection ScalaUnnecessaryParentheses
-  private def cached(key: String, value: String) = (s"\\{$key : (cache\\[)?$value\\]?\\}").r
+  private def cached(key: String, value: String) = (s"(cache\\[)?$value\\]? AS $key").r
 }

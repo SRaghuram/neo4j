@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.micro.data;
 
-import com.neo4j.bench.common.model.Benchmark;
-import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.profiling.FullBenchmarkName;
+import com.neo4j.bench.model.model.Benchmark;
+import com.neo4j.bench.model.model.BenchmarkGroup;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;

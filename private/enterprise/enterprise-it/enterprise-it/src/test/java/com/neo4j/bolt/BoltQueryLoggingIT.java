@@ -58,7 +58,7 @@ public class BoltQueryLoggingIT
             assertThat( line ).contains( "neo4j-java" );
             assertThat( line ).contains( "client/127.0.0.1:" );
             assertThat( line ).contains( "server/127.0.0.1:" + neo4j.boltURI().getPort() );
-            assertThat( line ).contains( " - RETURN 1 AS num - {} - {}" );
+            assertThat( line ).contains( " - RETURN 1 AS num - {} - runtime=interpreted - {}" );
         }
     }
 }

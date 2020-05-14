@@ -9,17 +9,14 @@ import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 
 import java.io.File;
 
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.impl.newapi.WriteTestSupport;
-
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 public class EnterpriseWriteTestSupport extends WriteTestSupport
 {
     @Override
-    protected GraphDatabaseService newDb( File storeDir )
+    protected TestDatabaseManagementServiceBuilder newManagementServiceBuilder( File storeDir )
     {
-        managementService = new TestEnterpriseDatabaseManagementServiceBuilder( storeDir ).impermanent().build();
-        return managementService.database( DEFAULT_DATABASE_NAME );
+        return new TestEnterpriseDatabaseManagementServiceBuilder( storeDir ).impermanent();
     }
 }

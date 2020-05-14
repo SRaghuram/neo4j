@@ -5,17 +5,15 @@
  */
 package com.neo4j.dbms;
 
-import java.util.Collection;
+import java.util.HashSet;
 import java.util.Map;
 
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.graphdb.event.TransactionData;
-import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
-import static java.util.Collections.emptySet;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 /**
@@ -27,8 +25,7 @@ class SystemGraphDbmsOperator extends DbmsOperator
     private final ReconciledTransactionTracker reconciledTxTracker;
     private final Log log;
 
-    SystemGraphDbmsOperator( EnterpriseSystemGraphDbmsModel dbmsModel,
-                             ReconciledTransactionTracker reconciledTxTracker, LogProvider logProvider )
+    SystemGraphDbmsOperator( EnterpriseSystemGraphDbmsModel dbmsModel, ReconciledTransactionTracker reconciledTxTracker, LogProvider logProvider )
     {
         this.dbmsModel = dbmsModel;
         this.reconciledTxTracker = reconciledTxTracker;
@@ -48,14 +45,18 @@ class SystemGraphDbmsOperator extends DbmsOperator
 
     private void reconcile( long txId, TransactionData transactionData, boolean asPartOfStoreCopy )
     {
-        var databasesToAwait = extractUpdatedDatabases( transactionData );
+        var databasesToHandle = extractUpdatedDatabases( transactionData );
         updateDesiredStates(); // TODO: Handle exceptions from this!
         if ( asPartOfStoreCopy )
         {
             reconciledTxTracker.disable();
         }
-        ReconcilerResult reconcilerResult = trigger( ReconcilerRequest.simple() );
+        var databasesForExplicit = databasesToHandle.touched();
+        var reconcilerResult = trigger( databasesForExplicit.isEmpty() ? ReconcilerRequest.simple() : ReconcilerRequest.explicit( databasesForExplicit ) );
         reconcilerResult.whenComplete( () -> offerReconciledTransactionId( txId, asPartOfStoreCopy ) );
+
+        var databasesToAwait = new HashSet<>( databasesToHandle.changed() );
+        databasesToAwait.addAll( databasesForExplicit );
 
         // Note: only blocks for completed reconciliation on this machine. Global reconciliation (e.g. including other cluster members) is still asynchronous
         reconcilerResult.await( databasesToAwait );
@@ -73,11 +74,11 @@ class SystemGraphDbmsOperator extends DbmsOperator
         systemStates.forEach( desired::put );
     }
 
-    private Collection<NamedDatabaseId> extractUpdatedDatabases( TransactionData transactionData )
+    private DatabaseUpdates extractUpdatedDatabases( TransactionData transactionData )
     {
         if ( transactionData == null )
         {
-            return emptySet();
+            return DatabaseUpdates.EMPTY;
         }
         return dbmsModel.updatedDatabases( transactionData );
     }

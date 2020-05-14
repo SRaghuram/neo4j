@@ -790,7 +790,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
 
         assertFail( noneSubject, "CALL test.numNodes", ACCESS_DENIED );
         assertFail( readSubject, "CALL test.allowedWriteProcedure",
-                "Write operations are not allowed for user 'readSubject' with roles [PUBLIC, reader] restricted to TOKEN_WRITE." );
+                "Create node with labels 'VeryUniqueLabel' is not allowed for user 'readSubject' with roles [PUBLIC, reader] restricted to TOKEN_WRITE." );
         assertFail( writeSubject, "CALL test.allowedSchemaProcedure",
                 "Schema operations are not allowed for user 'writeSubject' with roles [PUBLIC, publisher]." );
         assertFail( mats, "CALL test.numNodes",
@@ -845,7 +845,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
                 }
                 throw exception;
             }
-            assertThat( support.exceptionsInProcedure.get( 0 ).getMessage() ).contains( WRITE_OPS_NOT_ALLOWED );
+            assertThat( support.exceptionsInProcedure.get( 0 ).getMessage() ).contains( "Create node with labels 'VeryUniqueLabel' is not allowed" );
             assertSuccess( adminSubject, "MATCH (:VeryUniqueLabel) RETURN toString(count(*)) as n",
                     r -> assertKeyIs( r, "n", "0" ) );
         }

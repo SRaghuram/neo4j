@@ -19,7 +19,6 @@
     <properties>
         <moduleName>com.neo4j.bench</moduleName>
         <license-text.header>build/license-header.txt</license-text.header>
-        <jackson2.version>2.9.9</jackson2.version>
         <neo4j-java-driver.version>4.0.0</neo4j-java-driver.version>
         <!-- this required since LDBC code uses underscore as identifier and javadocs fail -->
         <maven.javadoc.skip>true</maven.javadoc.skip>
@@ -64,12 +63,12 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
-                <version>${jackson2.version}</version>
+                <version>${jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-annotations</artifactId>
-                <version>${jackson2.version}</version>
+                <version>${jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
@@ -123,6 +122,7 @@
         <module>benchmark-neo4j-common</module>
         <module>benchmark-neo4j-common-test</module>
         <module>benchmark-results-client-tests</module>
+        <module>benchmark-model</module>
         <module>quick</module>
     </modules>
 

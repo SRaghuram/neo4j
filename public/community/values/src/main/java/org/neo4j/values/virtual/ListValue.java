@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 import org.neo4j.internal.helpers.ArrayUtil;
 import org.neo4j.internal.helpers.collection.Iterators;
@@ -41,6 +42,7 @@ import org.neo4j.values.storable.ArrayValue;
 import org.neo4j.values.storable.Values;
 
 import static org.neo4j.memory.HeapEstimator.shallowSizeOfInstance;
+import static org.neo4j.memory.HeapEstimator.shallowSizeOfObjectArray;
 import static org.neo4j.values.SequenceValue.IterationPreference.RANDOM_ACCESS;
 import static org.neo4j.values.virtual.ArrayHelpers.containsNull;
 import static org.neo4j.values.virtual.VirtualValues.EMPTY_LIST;
@@ -119,7 +121,7 @@ public abstract class ListValue extends VirtualValue implements SequenceValue, I
 
         ArrayListValue( AnyValue[] values, long payloadSize )
         {
-            this.payloadSize = payloadSize;
+            this.payloadSize = shallowSizeOfObjectArray( values.length ) + payloadSize;
             assert values != null;
             assert !containsNull( values );
 
@@ -366,20 +368,16 @@ public abstract class ListValue extends VirtualValue implements SequenceValue, I
         @Override
         public int size()
         {
-            if ( length != -1 )
-            {
-                return length;
-            }
-            else
+            if ( length == -1 )
             {
                 long l = ((end - start) / step) + 1;
                 if ( l > ArrayUtil.MAX_ARRAY_SIZE )
                 {
                     throw new OutOfMemoryError( "Cannot index an collection of size " + l );
                 }
-                length = (int) l;
-                return Math.max( length, 0 );
+                length = Math.max( (int) l, 0 );
             }
+            return length;
         }
 
         @Override
@@ -618,7 +616,7 @@ public abstract class ListValue extends VirtualValue implements SequenceValue, I
     @Override
     public String toString()
     {
-        StringBuilder sb = new StringBuilder( getTypeName() + "{" );
+        StringBuilder sb = new StringBuilder().append( getTypeName() ).append( '{' );
         int i = 0;
         for ( ; i < size() - 1; i++ )
         {
@@ -820,8 +818,8 @@ public abstract class ListValue extends VirtualValue implements SequenceValue, I
     public ListValue distinct()
     {
         long keptValuesHeapSize = 0;
-        HashSet<AnyValue> seen = new HashSet<>();
-        ArrayList<AnyValue> kept = new ArrayList<>();
+        Set<AnyValue> seen = new HashSet<>();
+        List<AnyValue> kept = new ArrayList<>();
         for ( AnyValue value : this )
         {
             if ( seen.add( value ) )
@@ -835,7 +833,7 @@ public abstract class ListValue extends VirtualValue implements SequenceValue, I
 
     private AnyValue[] iterationAsArray()
     {
-        ArrayList<AnyValue> values = new ArrayList<>();
+        List<AnyValue> values = new ArrayList<>();
         int size = 0;
         for ( AnyValue value : this )
         {

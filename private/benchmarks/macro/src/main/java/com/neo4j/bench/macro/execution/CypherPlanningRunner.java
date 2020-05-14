@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.macro.execution;
 
-import com.neo4j.bench.common.model.Parameters;
+import com.neo4j.bench.model.model.Parameters;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.profiling.InternalProfiler;
 import com.neo4j.bench.common.results.ForkDirectory;

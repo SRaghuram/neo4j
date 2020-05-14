@@ -41,7 +41,7 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.DatabaseHealth;
-import org.neo4j.monitoring.DatabasePanicEventGenerator;
+import org.neo4j.kernel.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.monitoring.Health;
 import org.neo4j.server.rest.repr.OutputFormat;
 import org.neo4j.server.rest.repr.formats.JsonFormat;
@@ -187,7 +187,7 @@ class CoreStatusTest
     {
         // given ideal normal conditions
         commandIndexTracker.setAppliedCommandIndex( 123 );
-        when( raftMachine.getLeaderInfo() ).thenReturn( new LeaderInfo( core2, 1 ) );
+        when( raftMachine.getLeaderInfo() ).thenReturn( Optional.of( new LeaderInfo( core2, 1 ) ) );
         raftMessageTimerResetMonitor.timerReset();
         when( throughputMonitor.throughput() ).thenReturn( Optional.of( 423.0 ) );
         clock.forward( Duration.ofSeconds( 1 ) );
@@ -213,6 +213,7 @@ class CoreStatusTest
         assertThat( response, containsAndEquals( "leader", core2.getUuid().toString() ) );
         assertThat( response, containsAndEquals( "raftCommandsPerSecond", 423.0 ) );
         assertThat( response.toString(), Long.parseLong( response.get( "millisSinceLastLeaderMessage" ).toString() ), greaterThan( 0L ) );
+        assertThat( response, containsAndEquals( "discoveryHealthy", true ) );
     }
 
     @Test

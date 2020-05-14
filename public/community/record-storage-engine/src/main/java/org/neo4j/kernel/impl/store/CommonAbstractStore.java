@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.OpenOption;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.function.LongPredicate;
 
@@ -826,12 +825,13 @@ public abstract class CommonAbstractStore<RECORD extends AbstractBaseRecord,HEAD
 
     void logVersions( Logger logger )
     {
-        logger.log( getTypeDescriptor() + " " + storeVersion );
+        logger.log( String.format( "%s[%s] %s", getTypeDescriptor(), getStorageFile().getName(), storeVersion ) );
     }
 
     void logIdUsage( Logger logger, PageCursorTracer cursorTracer )
     {
-        logger.log( format( "%s: used=%s high=%s", getTypeDescriptor(), getNumberOfIdsInUse(), getHighestPossibleIdInUse( cursorTracer ) ) );
+        logger.log( format( "%s[%s]: used=%s high=%s", getTypeDescriptor(), getStorageFile().getName(), getNumberOfIdsInUse(),
+                getHighestPossibleIdInUse( cursorTracer ) ) );
     }
 
     @Override
@@ -1025,13 +1025,19 @@ public abstract class CommonAbstractStore<RECORD extends AbstractBaseRecord,HEAD
     @Override
     public List<RECORD> getRecords( long firstId, RecordLoad mode, boolean guardForCycles, PageCursorTracer cursorTracer )
     {
+        ArrayList<RECORD> list = new ArrayList<>();
+        streamRecords( firstId, mode, guardForCycles, cursorTracer, list::add );
+        return list;
+    }
+
+    public void streamRecords( long firstId, RecordLoad mode, boolean guardForCycles, PageCursorTracer cursorTracer, RecordSubscriber<RECORD> subscriber )
+    {
         if ( Record.NULL_REFERENCE.is( firstId ) )
         {
-            return Collections.emptyList();
+            return;
         }
         LongPredicate cycleGuard = guardForCycles ? createRecordCycleGuard() : Predicates.ALWAYS_FALSE_LONG;
 
-        List<RECORD> records = new ArrayList<>();
         long id = firstId;
         try ( PageCursor cursor = openPageCursorForReading( firstId, cursorTracer ) )
         {
@@ -1045,12 +1051,14 @@ public abstract class CommonAbstractStore<RECORD extends AbstractBaseRecord,HEAD
                 }
                 getRecordByCursor( id, record, mode, cursor );
                 // Even unused records gets added and returned
-                records.add( record );
+                if ( !subscriber.onRecord( record ) )
+                {
+                    return;
+                }
                 id = getNextRecordReference( record );
             }
             while ( !Record.NULL_REFERENCE.is( id ) );
         }
-        return records;
     }
 
     private LongPredicate createRecordCycleGuard()

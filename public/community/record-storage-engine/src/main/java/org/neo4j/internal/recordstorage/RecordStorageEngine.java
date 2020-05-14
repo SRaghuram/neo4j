@@ -69,6 +69,7 @@ import org.neo4j.lock.LockService;
 import org.neo4j.lock.ResourceLocker;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.memory.MemoryTracker;
 import org.neo4j.monitoring.Health;
 import org.neo4j.storageengine.api.CommandCreationContext;
 import org.neo4j.storageengine.api.CommandsToApply;
@@ -123,6 +124,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     private IndexUpdatesWorkSync indexUpdatesSync;
     private final IdController idController;
     private final PageCacheTracer cacheTracer;
+    private final MemoryTracker otherMemoryTracker;
     private final GBPTreeCountsStore countsStore;
     private final int denseNodeThreshold;
     private final IdGeneratorUpdatesWorkSync idGeneratorWorkSyncs = new IdGeneratorUpdatesWorkSync();
@@ -148,7 +150,8 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
             IdController idController,
             RecoveryCleanupWorkCollector recoveryCleanupWorkCollector,
             PageCacheTracer cacheTracer,
-            boolean createStoreIfNotExists )
+            boolean createStoreIfNotExists,
+            MemoryTracker otherMemoryTracker )
     {
         this.databaseLayout = databaseLayout;
         this.tokenHolders = tokenHolders;
@@ -158,6 +161,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
         this.constraintSemantics = constraintSemantics;
         this.idController = idController;
         this.cacheTracer = cacheTracer;
+        this.otherMemoryTracker = otherMemoryTracker;
 
         StoreFactory factory = new StoreFactory( databaseLayout, config, idGeneratorFactory, pageCache, fs, logProvider, cacheTracer );
         neoStores = factory.openAllNeoStores( createStoreIfNotExists );
@@ -194,7 +198,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
 
     private TransactionApplierFactoryChain buildApplierFacadeChain( TransactionApplicationMode mode )
     {
-        ArrayList<TransactionApplierFactory> appliers = new ArrayList<>();
+        List<TransactionApplierFactory> appliers = new ArrayList<>();
         // Graph store application. The order of the decorated store appliers is irrelevant
         if ( consistencyCheckApply && mode.needsAuxiliaryStores() )
         {
@@ -231,10 +235,10 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
                 private final Log log = logProvider.getLog( MetaDataStore.class );
 
                 @Override
-                public void initialize( CountsAccessor.Updater updater, PageCursorTracer cursorTracer )
+                public void initialize( CountsAccessor.Updater updater, PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
                 {
                     log.warn( "Missing counts store, rebuilding it." );
-                    new CountsComputer( neoStores, pageCache, pageCacheTracer, layout ).initialize( updater, cursorTracer );
+                    new CountsComputer( neoStores, pageCache, pageCacheTracer, layout, memoryTracker ).initialize( updater, cursorTracer, memoryTracker );
                     log.warn( "Counts store rebuild completed." );
                 }
 
@@ -258,9 +262,9 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     }
 
     @Override
-    public RecordStorageCommandCreationContext newCommandCreationContext( PageCursorTracer cursorTracer )
+    public RecordStorageCommandCreationContext newCommandCreationContext( PageCursorTracer cursorTracer, MemoryTracker memoryTracker )
     {
-        return new RecordStorageCommandCreationContext( neoStores, denseNodeThreshold, cursorTracer );
+        return new RecordStorageCommandCreationContext( neoStores, denseNodeThreshold, cursorTracer, memoryTracker );
     }
 
     @Override
@@ -341,7 +345,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
         TransactionApplierFactoryChain batchApplier = applierChain( mode );
         CommandsToApply initialBatch = batch;
         try ( BatchContext context = new BatchContext( indexUpdateListener, labelScanStoreSync, relationshipTypeScanStoreSync, indexUpdatesSync,
-                neoStores.getNodeStore(), neoStores.getPropertyStore(), this, schemaCache, initialBatch.cursorTracer(),
+                neoStores.getNodeStore(), neoStores.getPropertyStore(), this, schemaCache, initialBatch.cursorTracer(), otherMemoryTracker,
                 idGeneratorWorkSyncs.newBatch( cacheTracer ) ) )
         {
             while ( batch != null )
@@ -389,7 +393,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
         try ( var cursor = cacheTracer.createPageCursorTracer( STORAGE_ENGINE_START_TAG ) )
         {
             neoStores.start( cursor );
-            countsStore.start( cursor );
+            countsStore.start( cursor, otherMemoryTracker );
             idController.start();
         }
     }

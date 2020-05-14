@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.state;
 
+import com.neo4j.causalclustering.core.consensus.leader_transfer.ExpiringSet;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.cache.ConsecutiveInFlightCache;
@@ -18,9 +19,12 @@ import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.util.HashSet;
 import java.util.Set;
 
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.time.FakeClock;
 
 import static java.util.Collections.emptySet;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
@@ -43,6 +47,7 @@ public class RaftStateBuilder
     private RaftLog entryLog = new InMemoryRaftLog();
     private boolean supportPreVoting;
     private boolean refusesToBeLeader;
+    private ExpiringSet<MemberId> leadershipTransfers = new ExpiringSet<>( Duration.ofSeconds( 1 ), new FakeClock() );
 
     public RaftStateBuilder myself( MemberId myself )
     {
@@ -68,7 +73,7 @@ public class RaftStateBuilder
         return this;
     }
 
-    private RaftStateBuilder replicationMembers( Set<MemberId> replicationMembers )
+    private RaftStateBuilder additionalReplicationMembers( Set<MemberId> replicationMembers )
     {
         this.replicationMembers = replicationMembers;
         return this;
@@ -89,11 +94,12 @@ public class RaftStateBuilder
     public RaftState build() throws IOException
     {
         StateStorage<TermState> termStore = new InMemoryStateStorage<>( new TermState() );
-        StateStorage<VoteState> voteStore = new InMemoryStateStorage<>( new VoteState( ) );
+        StateStorage<VoteState> voteStore = new InMemoryStateStorage<>( new VoteState() );
         StubMembership membership = new StubMembership( votingMembers, replicationMembers );
 
         RaftState state = new RaftState( myself, termStore, membership, entryLog,
-                voteStore, new ConsecutiveInFlightCache(), NullLogProvider.getInstance(), supportPreVoting, refusesToBeLeader );
+                voteStore, new ConsecutiveInFlightCache(), NullLogProvider.getInstance(), supportPreVoting, refusesToBeLeader,
+                Set::of, leadershipTransfers );
 
         state.update( outcome );
 
@@ -105,9 +111,9 @@ public class RaftStateBuilder
         return votingMembers( asSet( members ) );
     }
 
-    public RaftStateBuilder replicationMembers( MemberId... members )
+    public RaftStateBuilder additionalReplicationMembers( MemberId... members )
     {
-        return replicationMembers( asSet( members ) );
+        return additionalReplicationMembers( asSet( members ) );
     }
 
     public RaftStateBuilder messagesSentToFollower( MemberId member, long nextIndex )
@@ -120,10 +126,11 @@ public class RaftStateBuilder
         private Set<MemberId> votingMembers;
         private final Set<MemberId> replicationMembers;
 
-        private StubMembership( Set<MemberId> votingMembers, Set<MemberId> replicationMembers )
+        private StubMembership( Set<MemberId> votingMembers, Set<MemberId> additionalReplicationMembers )
         {
             this.votingMembers = votingMembers;
-            this.replicationMembers = replicationMembers;
+            this.replicationMembers = new HashSet<>( votingMembers );
+            this.replicationMembers.addAll( additionalReplicationMembers );
         }
 
         @Override

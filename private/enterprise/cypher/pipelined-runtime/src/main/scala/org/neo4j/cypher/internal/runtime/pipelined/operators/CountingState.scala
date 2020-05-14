@@ -41,12 +41,15 @@ import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.FloatingPointValue
 
 object CountingState {
+  // Only a single empty row instance needed, no need to allocate a new one for every count evaluation.
+  private val EMPTY_ROW = CypherRow.empty
+
   def evaluateCountValue(state: PipelinedQueryState,
                          resources: QueryResources,
                          countExpression: Expression): Long = {
     val queryState = state.queryStateForExpressionEvaluation(resources)
 
-    val countValue = countExpression(CypherRow.empty, queryState)
+    val countValue = countExpression(EMPTY_ROW, queryState)
     evaluateCountValue(countValue)
   }
 

@@ -137,17 +137,18 @@ import org.neo4j.cypher.operations.CursorUtils
 import org.neo4j.exceptions.ParameterNotFoundException
 import org.neo4j.graphdb.Direction
 import org.neo4j.internal.kernel.api.CursorFactory
-import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
 import org.neo4j.internal.kernel.api.PropertyCursor
 import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
+import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.internal.kernel.api.SchemaRead
 import org.neo4j.internal.kernel.api.TokenRead
 import org.neo4j.internal.kernel.api.helpers.CachingExpandInto
 import org.neo4j.internal.schema.IndexDescriptor
+import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.AnyValue
@@ -248,12 +249,12 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
     generator.expression(invoke(dataRead, method[Read, Unit]("allNodesScan", typeRef[NodeCursor]), generator.load(cursorName) ))
   }
 
-  override def labelScan(cursorName: String, labelIdVar: String): Unit = {
+  override def labelScan(cursorName: String, labelIdVar: String, indexOrder: IndexOrder): Unit = {
     generator.assign(typeRef[NodeLabelIndexCursor], cursorName, invoke(cursors, method[CursorFactory, NodeLabelIndexCursor]("allocateNodeLabelIndexCursor",
       typeRef[PageCursorTracer]), get(generator.self(), fields.cursorTracer)))
     generator.expression(pop(invoke(get(generator.self(), fields.closeables), Methods.listAdd, generator.load(cursorName))))
-    generator.expression(invoke(dataRead, method[Read, Unit]("nodeLabelScan", typeRef[Int], typeRef[NodeLabelIndexCursor]),
-      generator.load(labelIdVar), generator.load(cursorName) ))
+    generator.expression(invoke(dataRead, method[Read, Unit]("nodeLabelScan", typeRef[Int], typeRef[NodeLabelIndexCursor], typeRef[IndexOrder]),
+      generator.load(labelIdVar), generator.load(cursorName), Templates.indexOrder(indexOrder)))
   }
 
   override def lookupLabelId(labelIdVar: String, labelName: String): Unit =

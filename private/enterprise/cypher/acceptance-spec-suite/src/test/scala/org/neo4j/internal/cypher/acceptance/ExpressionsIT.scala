@@ -82,6 +82,7 @@ import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.ast.ParameterFromSlot
 import org.neo4j.cypher.internal.runtime.ast.RuntimeExpression
 import org.neo4j.cypher.internal.runtime.ast.RuntimeProperty
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CachingExpressionCompilerTracer
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledExpression
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledGroupingExpression
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledProjection
@@ -120,6 +121,7 @@ import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory
 import org.neo4j.kernel.impl.query.QuerySubscriber.DO_NOTHING_SUBSCRIBER
 import org.neo4j.kernel.impl.query.TransactionalContext
 import org.neo4j.kernel.impl.util.ValueUtils
+import org.neo4j.memory.EmptyMemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.AnyValues
 import org.neo4j.values.VirtualValue
@@ -198,7 +200,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     beginTransaction(Type.EXPLICIT, LoginContext.AUTH_DISABLED)
     context = Neo4jTransactionalContextFactory.create(graph).newContext(tx, "X", EMPTY_MAP)
     query = new TransactionBoundQueryContext(TransactionalContextWrapper(context))(mock[IndexSearchMonitor])
-    cursors = new ExpressionCursors(TransactionalContextWrapper(context).cursors, PageCursorTracer.NULL)
+    cursors = new ExpressionCursors(TransactionalContextWrapper(context).cursors, PageCursorTracer.NULL, EmptyMemoryTracker.INSTANCE)
   }
 
   override protected def stopTest(): Unit = {
@@ -2761,6 +2763,21 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       parameters("a" -> intValue(-1))) should equal(NO_VALUE)
     evaluate(compile(simpleCase(parameter(0), alts, Some(literalString("THIS IS THE DEFAULT")))),
       parameters("a" -> intValue(-1))) should equal(stringValue("THIS IS THE DEFAULT"))
+
+    // check that null are handled correctly
+    val slots = SlotConfiguration.empty.newReference("n", nullable = true, symbols.CTNode)
+    val context = SlottedRow(slots)
+    context.setRefAt(0, NO_VALUE)
+
+    evaluate(
+      compile(simpleCase(hasLabels(ReferenceFromSlot(0, "n"), "L1"), List(trueLiteral -> literalString("true")), Some(literalString("default"))), slots),
+      context) should equal(stringValue("default"))
+    evaluate(
+      compile(simpleCase(trueLiteral, List(trueLiteral -> hasLabels(ReferenceFromSlot(0, "n"), "L1")), Some(literalString("default"))), slots),
+      context) should equal(NO_VALUE)
+    evaluate(
+      compile(simpleCase(falseLiteral, List(trueLiteral -> literalString("true")), Some(hasLabels(ReferenceFromSlot(0, "n"), "L1"))), slots),
+      context) should equal(NO_VALUE)
   }
 
   test("generic case expressions") {
@@ -2772,6 +2789,21 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     ) should equal(NO_VALUE)
     evaluate(compile(genericCase(List(falseLiteral -> literalString("no"), falseLiteral -> literalString("yes")), Some(literalString("default"))))
     ) should equal(stringValue("default"))
+
+    // check that null are handled correctly
+    val slots = SlotConfiguration.empty.newReference("n", nullable = true, symbols.CTNode)
+    val context = SlottedRow(slots)
+    context.setRefAt(0, NO_VALUE)
+
+    evaluate(
+      compile(genericCase(List(hasLabels(ReferenceFromSlot(0, "n"), "L1") -> literalString("has-label")), Some(literalString("default"))), slots),
+      context) should equal(stringValue("default"))
+    evaluate(
+      compile(genericCase(List(trueLiteral -> hasLabels(ReferenceFromSlot(0, "n"), "L1")), Some(literalString("default"))), slots),
+      context) should equal(NO_VALUE)
+    evaluate(
+      compile(genericCase(List(falseLiteral -> literalString("false")), Some(hasLabels(ReferenceFromSlot(0, "n"), "L1"))), slots),
+      context) should equal(NO_VALUE)
   }
 
   test("map projection node with map context") {
@@ -4284,13 +4316,16 @@ class CompiledExpressionsIT extends ExpressionsIT {
   private val codeGenerationMode = ByteCodeGeneration(new CodeSaver(false, false))
 
   override def compile(e: Expression, slots: SlotConfiguration = SlotConfiguration.empty): CompiledExpression =
-    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode).compileExpression(e).getOrElse(fail(s"Failed to compile expression $e"))
+    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode, CachingExpressionCompilerTracer.NONE)
+      .compileExpression(e).getOrElse(fail(s"Failed to compile expression $e"))
 
   override def compileProjection(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledProjection =
-    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode).compileProjection(projections).getOrElse(fail(s"Failed to compile projection $projections"))
+    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode, CachingExpressionCompilerTracer.NONE)
+      .compileProjection(projections).getOrElse(fail(s"Failed to compile projection $projections"))
 
   override def compileGroupingExpression(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledGroupingExpression =
-    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode).compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage = Seq.empty))
+    StandaloneExpressionCompiler.default(slots, readOnly = false, codeGenerationMode, CachingExpressionCompilerTracer.NONE)
+      .compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage = Seq.empty))
       .getOrElse(fail(s"Failed to compile grouping $projections"))
 }
 

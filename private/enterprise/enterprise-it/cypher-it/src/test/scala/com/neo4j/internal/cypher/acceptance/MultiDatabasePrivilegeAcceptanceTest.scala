@@ -959,7 +959,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     // write
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("Alice", "secret", "CREATE (n:Label {prop: 'value'})")
-    } should have message s"Write operations are not allowed for user 'Alice' with roles [PUBLIC, $role]."
+    } should have message s"Create node with labels 'Label' is not allowed for user 'Alice' with roles [PUBLIC, $role]."
 
     // read/traverse
     execute("CREATE (n:Label {prop: 'value'})")
@@ -1001,7 +1001,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     // write
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("Alice", "secret", "CREATE (n:Label {prop: 'value'})")
-    } should have message s"Write operations are not allowed for user 'Alice' with roles [PUBLIC, $role]."
+    } should have message s"Create node with labels 'Label' is not allowed for user 'Alice' with roles [PUBLIC, $role]."
 
     // read/traverse
     execute("CREATE (n:Label {prop: 'value'})")

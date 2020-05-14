@@ -24,6 +24,7 @@ import java.nio.ByteOrder;
 
 import org.neo4j.internal.unsafe.UnsafeUtil;
 import org.neo4j.io.ByteUnit;
+import org.neo4j.memory.MemoryTracker;
 
 import static java.lang.Math.toIntExact;
 
@@ -36,10 +37,12 @@ public final class ByteBuffers
     /**
      * Allocate on heap byte buffer with default byte order
      * @param capacity byte buffer capacity
+     * @param memoryTracker underlying buffers allocation memory tracker
      * @return byte buffer with requested size
      */
-    public static ByteBuffer allocate( int capacity )
+    public static ByteBuffer allocate( int capacity, MemoryTracker memoryTracker )
     {
+        memoryTracker.allocateHeap( capacity );
         return ByteBuffer.allocate( capacity );
     }
 
@@ -47,10 +50,12 @@ public final class ByteBuffers
      * Allocate on heap byte buffer with requested byte order
      * @param capacity byte buffer capacity
      * @param order byte buffer order
+     * @param memoryTracker underlying buffers allocation memory tracker
      * @return byte buffer with requested size
      */
-    public static ByteBuffer allocate( int capacity, ByteOrder order )
+    public static ByteBuffer allocate( int capacity, ByteOrder order, MemoryTracker memoryTracker )
     {
+        memoryTracker.allocateHeap( capacity );
         return ByteBuffer.allocate( capacity ).order( order );
     }
 
@@ -58,11 +63,14 @@ public final class ByteBuffers
      * Allocate on heap byte buffer with default byte order
      * @param capacity byte buffer capacity
      * @param capacityUnit byte buffer capacity unit
+     * @param memoryTracker underlying buffers allocation memory tracker
      * @return byte buffer with requested size
      */
-    public static ByteBuffer allocate( int capacity, ByteUnit capacityUnit )
+    public static ByteBuffer allocate( int capacity, ByteUnit capacityUnit, MemoryTracker memoryTracker )
     {
-        return ByteBuffer.allocate( toIntExact( capacityUnit.toBytes( capacity ) ) );
+        int bufferCapacity = toIntExact( capacityUnit.toBytes( capacity ) );
+        memoryTracker.allocateHeap( bufferCapacity );
+        return ByteBuffer.allocate( bufferCapacity );
     }
 
     /**
@@ -72,9 +80,9 @@ public final class ByteBuffers
      * @param capacity byte buffer capacity
      * @return byte buffer with requested size
      */
-    public static ByteBuffer allocateDirect( int capacity )
+    public static ByteBuffer allocateDirect( int capacity, MemoryTracker memoryTracker )
     {
-        return UnsafeUtil.allocateByteBuffer( capacity );
+        return UnsafeUtil.allocateByteBuffer( capacity, memoryTracker );
     }
 
     /**
@@ -82,12 +90,13 @@ public final class ByteBuffers
      * Noop for on heap buffers
      * @param byteBuffer byte buffer to release
      */
-    public static void releaseBuffer( ByteBuffer byteBuffer )
+    public static void releaseBuffer( ByteBuffer byteBuffer, MemoryTracker memoryTracker )
     {
         if ( !byteBuffer.isDirect() )
         {
+            memoryTracker.releaseHeap( byteBuffer.capacity() );
             return;
         }
-        UnsafeUtil.freeByteBuffer( byteBuffer );
+        UnsafeUtil.freeByteBuffer( byteBuffer, memoryTracker );
     }
 }

@@ -29,8 +29,14 @@ import static org.neo4j.internal.freki.Header.OFFSET_PROPERTIES;
 import static org.neo4j.internal.freki.Header.OFFSET_RECORD_POINTER;
 import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIPS;
 import static org.neo4j.internal.freki.Header.OFFSET_RELATIONSHIPS_TYPE_OFFSETS;
+<<<<<<< HEAD
 import static org.neo4j.internal.freki.MutableNodeData.recordPointerToString;
 import static org.neo4j.internal.freki.StreamVByte.readLongs;
+=======
+import static org.neo4j.internal.freki.MutableNodeData.backwardPointer;
+import static org.neo4j.internal.freki.MutableNodeData.forwardPointer;
+import static org.neo4j.internal.freki.MutableNodeData.recordPointerToString;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 
 /**
  * Data that cursors need to read data. This is a minimal parsed version of data loaded to a {@link Record} from a {@link Store}.
@@ -44,6 +50,7 @@ class FrekiCursorData
 
     long nodeId = NULL;
     boolean x1Loaded;
+<<<<<<< HEAD
     long forwardPointer = NULL;
     long backwardPointer = NULL;
     boolean isDense;
@@ -56,6 +63,24 @@ class FrekiCursorData
     int relationshipOffset;
     int relationshipTypeOffsetsOffset;
     private ByteBuffer relationshipBuffer;
+=======
+    long xLChainStartPointer = NULL;
+    long xLChainNextLinkPointer = NULL;
+    long x1Pointer = NULL;
+    boolean isDense;
+    boolean xLChainLoaded;
+
+    int labelOffset;
+    private ByteBuffer labelBuffer;
+    boolean labelIsSplit;
+    int propertyOffset;
+    private ByteBuffer propertyBuffer;
+    boolean propertyIsSplit;
+    int relationshipOffset;
+    int relationshipTypeOffsetsOffset;
+    private ByteBuffer relationshipBuffer;
+    boolean degreesIsSplit;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 
     int refCount = 1;
 
@@ -72,23 +97,43 @@ class FrekiCursorData
         assignDataOffsets( buffer );
         if ( header.hasMark( OFFSET_RECORD_POINTER ) )
         {
+<<<<<<< HEAD
             forwardPointer = readRecordPointer( buffer );
+=======
+            xLChainStartPointer = forwardPointer( readRecordPointers( buffer ), false );
+            xLChainNextLinkPointer = xLChainStartPointer;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
             // xL can be loaded lazily when/if needed
         }
         else
         {
+<<<<<<< HEAD
             xLLoaded = true;
+=======
+            //We have no chain
+            xLChainLoaded = true;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         }
     }
 
     void gatherDataFromXL( Record record )
     {
+<<<<<<< HEAD
         xLLoaded = true;
+=======
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         ByteBuffer buffer = record.data( 0 );
         header.deserialize( buffer );
         assignDataOffsets( buffer );
         assert header.hasMark( OFFSET_RECORD_POINTER );
+<<<<<<< HEAD
         backwardPointer = readRecordPointer( buffer );
+=======
+        long[] pointers = readRecordPointers( buffer );
+        x1Pointer = backwardPointer( pointers, true );
+        xLChainNextLinkPointer = forwardPointer( pointers, true );
+        xLChainLoaded = xLChainNextLinkPointer == NULL;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 
     private void assignDataOffsets( ByteBuffer buffer )
@@ -97,6 +142,7 @@ class FrekiCursorData
         {
             isDense = true;
         }
+<<<<<<< HEAD
         if ( header.hasMark( FLAG_LABELS ) )
         {
             labelOffset = buffer.position();
@@ -106,6 +152,19 @@ class FrekiCursorData
         {
             propertyOffset = header.getOffset( OFFSET_PROPERTIES );
             propertyBuffer = buffer;
+=======
+        if ( labelOffset == 0 && header.hasMark( FLAG_LABELS ) )
+        {
+            labelOffset = buffer.position();
+            labelBuffer = buffer;
+            labelIsSplit = header.hasReferenceMark( FLAG_LABELS );
+        }
+        if ( propertyOffset == 0 && header.hasMark( OFFSET_PROPERTIES ) )
+        {
+            propertyOffset = header.getOffset( OFFSET_PROPERTIES );
+            propertyBuffer = buffer;
+            propertyIsSplit = header.hasReferenceMark( OFFSET_PROPERTIES );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
         }
         if ( header.hasMark( OFFSET_RELATIONSHIPS ) )
         {
@@ -113,6 +172,7 @@ class FrekiCursorData
             relationshipBuffer = buffer;
             relationshipTypeOffsetsOffset = header.getOffset( OFFSET_RELATIONSHIPS_TYPE_OFFSETS );
         }
+<<<<<<< HEAD
         if ( header.hasMark( OFFSET_DEGREES ) )
         {
             relationshipOffset = header.getOffset( OFFSET_DEGREES );
@@ -123,6 +183,19 @@ class FrekiCursorData
     private long readRecordPointer( ByteBuffer xLBuffer )
     {
         return readLongs( xLBuffer.position( header.getOffset( OFFSET_RECORD_POINTER ) ) )[0];
+=======
+        if ( relationshipOffset == 0 && header.hasMark( OFFSET_DEGREES ) )
+        {
+            relationshipOffset = header.getOffset( OFFSET_DEGREES );
+            relationshipBuffer = buffer;
+            degreesIsSplit = header.hasReferenceMark( OFFSET_DEGREES );
+        }
+    }
+
+    private long[] readRecordPointers( ByteBuffer buffer )
+    {
+        return MutableNodeData.readRecordPointers( buffer.position( header.getOffset( OFFSET_RECORD_POINTER ) ) );
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 
     ByteBuffer labelBuffer()
@@ -145,6 +218,7 @@ class FrekiCursorData
         return relationshipBuffer.position( offset );
     }
 
+<<<<<<< HEAD
     ByteBuffer degreesBuffer()
     {
         return relationshipBuffer();
@@ -153,6 +227,11 @@ class FrekiCursorData
     boolean isLoaded()
     {
         return x1Loaded || xLLoaded;
+=======
+    boolean isLoaded()
+    {
+        return x1Loaded | xLChainLoaded;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 
     void reset()
@@ -160,6 +239,7 @@ class FrekiCursorData
         assert refCount == 1;
         nodeId = NULL;
         x1Loaded = false;
+<<<<<<< HEAD
         forwardPointer = NULL;
         backwardPointer = NULL;
         isDense = false;
@@ -168,12 +248,30 @@ class FrekiCursorData
         propertyOffset = 0;
         relationshipOffset = 0;
         relationshipTypeOffsetsOffset = 0;
+=======
+        xLChainStartPointer = NULL;
+        xLChainNextLinkPointer = NULL;
+        x1Pointer = NULL;
+        isDense = false;
+        xLChainLoaded = false;
+        labelOffset = 0;
+        labelIsSplit = false;
+        propertyOffset = 0;
+        propertyIsSplit = false;
+        relationshipOffset = 0;
+        relationshipTypeOffsetsOffset = 0;
+        degreesIsSplit = false;
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
     }
 
     @Override
     public String toString()
     {
+<<<<<<< HEAD
         return isLoaded() ? String.format( "NodeData[%d,fw:%s%s,lo:%d,po:%d,ro:%d]", nodeId, recordPointerToString( forwardPointer ),
+=======
+        return isLoaded() ? String.format( "NodeData[%d,fw:%s%s,lo:%d,po:%d,ro:%d]", nodeId, recordPointerToString( xLChainStartPointer ),
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
                 isDense ? "->DENSE" : "", labelOffset, propertyOffset, relationshipOffset )
                           : "<not loaded>";
     }

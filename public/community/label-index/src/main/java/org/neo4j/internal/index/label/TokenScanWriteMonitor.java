@@ -42,7 +42,8 @@ import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.ReadPastEndException;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.io.memory.BufferScope;
+import org.neo4j.io.memory.NativeScopedBuffer;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.util.FeatureToggles;
 
 import static java.lang.String.format;
@@ -50,6 +51,8 @@ import static java.lang.System.currentTimeMillis;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.DAYS;
 import static org.neo4j.io.ByteUnit.mebiBytes;
+import static org.neo4j.io.fs.ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE;
+import static org.neo4j.memory.EmptyMemoryTracker.INSTANCE;
 
 /**
  * A {@link NativeTokenScanWriter.WriteMonitor} which writes all interactions to a .writelog file, which has configurable rotation and pruning.
@@ -77,10 +80,10 @@ public class TokenScanWriteMonitor implements NativeTokenScanWriter.WriteMonitor
     private final File storeDir;
     private final File file;
     private FlushableChannel channel;
-    private Lock lock = new ReentrantLock();
-    private LongAdder position = new LongAdder();
-    private long rotationThreshold;
-    private long pruneThreshold;
+    private final Lock lock = new ReentrantLock();
+    private final LongAdder position = new LongAdder();
+    private final long rotationThreshold;
+    private final long pruneThreshold;
 
     TokenScanWriteMonitor( FileSystemAbstraction fs, DatabaseLayout databaseLayout, EntityType entityType )
     {
@@ -118,7 +121,7 @@ public class TokenScanWriteMonitor implements NativeTokenScanWriter.WriteMonitor
 
     private PhysicalFlushableChannel instantiateChannel() throws IOException
     {
-        return new PhysicalFlushableChannel( fs.write( file ) );
+        return new PhysicalFlushableChannel( fs.write( file ), INSTANCE );
     }
 
     @Override
@@ -356,7 +359,7 @@ public class TokenScanWriteMonitor implements NativeTokenScanWriter.WriteMonitor
      *  │ │ │   └─────────────────── id of transaction making this particular change
      *  │ │ └─────────────────────── addition, a minus means removal
      *  │ └───────────────────────── flush, local to each write session, incremented when a batch of changes is flushed internally in a writer session
-     *  └─────────────────────────── write session, incremented for each {@link TokenScanStore#newWriter()}
+     *  └─────────────────────────── write session, incremented for each {@link TokenScanStore#newWriter(PageCursorTracer)}
      * </pre>
      * How to interpret a message like:
      * <pre>
@@ -428,8 +431,7 @@ public class TokenScanWriteMonitor implements NativeTokenScanWriter.WriteMonitor
 
     private static long dumpFile( FileSystemAbstraction fs, File file, Dumper dumper, TxFilter txFilter, long session ) throws IOException
     {
-        try ( BufferScope bufferScope = new BufferScope( ReadAheadChannel.DEFAULT_READ_AHEAD_SIZE );
-              ReadableChannel channel = new ReadAheadChannel<>( fs.read( file ), bufferScope.buffer ) )
+        try ( ReadableChannel channel = new ReadAheadChannel<>( fs.read( file ), new NativeScopedBuffer( DEFAULT_READ_AHEAD_SIZE, INSTANCE ) ) )
         {
             long range = -1;
             int tokenId = -1;

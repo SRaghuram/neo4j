@@ -58,7 +58,7 @@ import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.logging.Log;
 import org.neo4j.memory.MemoryPools;
-import org.neo4j.memory.NamedMemoryPool;
+import org.neo4j.memory.ScopedMemoryPool;
 import org.neo4j.procedure.Admin;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
@@ -213,6 +213,7 @@ public class EnterpriseBuiltInDbmsProcedures
         securityContext.assertCredentialsNotExpired();
         GlobalProcedures globalProcedures = resolver.resolveDependency( GlobalProcedures.class );
         return globalProcedures.getAllProcedures().stream()
+                .filter( proc -> !proc.internal() )
                 .sorted( Comparator.comparing( a -> a.name().toString() ) )
                 .map( ProcedureResult::new );
     }
@@ -340,14 +341,20 @@ public class EnterpriseBuiltInDbmsProcedures
     }
 
     @SystemProcedure
-    @Description( "List all memory pools currently registered at this instance that are visible to the user." )
+    @Description( "List all memory pools, including sub pools, currently registered at this instance that are visible to the user." )
     @Procedure( name = "dbms.listPools", mode = DBMS )
-    public Stream<MemoryPoolResult> listMemoryPools()
+    public Stream<MemoryPoolResult> listMemoryPoolsExt()
     {
         var memoryPools = resolver.resolveDependency( MemoryPools.class );
         var registeredPools = memoryPools.getPools();
-        registeredPools.sort( Comparator.comparing( NamedMemoryPool::name ) );
-        return registeredPools.stream().map( MemoryPoolResult::new );
+        List<ScopedMemoryPool> allPools = new ArrayList<>( registeredPools );
+        for ( var pool : registeredPools )
+        {
+            allPools.addAll( pool.getDatabasePools() );
+        }
+        allPools.sort( Comparator.comparing( ScopedMemoryPool::group )
+                .thenComparing( ScopedMemoryPool::databaseName ) );
+        return allPools.stream().map( MemoryPoolResult::new );
     }
 
     @SystemProcedure
@@ -747,11 +754,12 @@ public class EnterpriseBuiltInDbmsProcedures
         }
     }
 
+    @SuppressWarnings( "WeakerAccess" )
     public static class MemoryPoolResult
     {
         private static final String UNBOUNDED = "Unbounded";
-        public final String poolName;
         public final String group;
+        public final String databaseName;
         public final String heapMemoryUsed;
         public final String heapMemoryUsedBytes;
         public final String nativeMemoryUsed;
@@ -761,10 +769,10 @@ public class EnterpriseBuiltInDbmsProcedures
         public final String totalPoolMemory;
         public final String totalPoolMemoryBytes;
 
-        public MemoryPoolResult( NamedMemoryPool memoryPool )
+        public MemoryPoolResult( ScopedMemoryPool memoryPool )
         {
-            this.poolName = memoryPool.name();
             this.group = memoryPool.group().getName();
+            this.databaseName = memoryPool.databaseName();
             this.heapMemoryUsed = bytesToString( memoryPool.usedHeap() );
             this.heapMemoryUsedBytes = valueOf( memoryPool.usedHeap() );
             this.nativeMemoryUsed = bytesToString( memoryPool.usedNative() );

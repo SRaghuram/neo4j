@@ -100,6 +100,14 @@
             <artifactId>neo4j-meta-data-store</artifactId>
             <version>${project.version}</version>
         </dependency>
+<<<<<<< HEAD
+=======
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-codec</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+>>>>>>> 3547c9f99be18ee92915375142e39440b935bcec
 
         <dependency>
             <groupId>org.neo4j</groupId>
