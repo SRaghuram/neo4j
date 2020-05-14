@@ -1339,7 +1339,7 @@ class StandardAccessModeTest
     void shouldAllowWrites() throws Exception
     {
         // WHEN
-        // GRANT WRITE ON GRAPH neo4j ELEMENTS *
+        // GRANT WRITE ON GRAPH neo4j
         var privilege1 = new ResourcePrivilege( GRANT, WRITE, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
         var privilege2 = new ResourcePrivilege( GRANT, WRITE, new Resource.GraphResource(), RelTypeSegment.ALL, DEFAULT_DATABASE_NAME );
         var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();

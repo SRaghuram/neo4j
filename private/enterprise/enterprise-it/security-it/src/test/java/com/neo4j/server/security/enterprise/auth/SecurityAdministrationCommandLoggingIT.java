@@ -285,7 +285,7 @@ class SecurityAdministrationCommandLoggingIT
 
         // THEN
         List<String> logLines = readLinesInSecurityLog( 2 );
-        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "GRANT WRITE ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
+        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "GRANT WRITE ON GRAPH * TO foo" ) ) );
     }
 
     @Test
@@ -341,7 +341,7 @@ class SecurityAdministrationCommandLoggingIT
 
         // THEN
         List<String> logLines = readLinesInSecurityLog( 2 );
-        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "DENY WRITE ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
+        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "DENY WRITE ON GRAPH * TO foo" ) ) );
     }
 
     @Test
@@ -419,7 +419,7 @@ class SecurityAdministrationCommandLoggingIT
 
         // THEN
         List<String> logLines = readLinesInSecurityLog( 3 );
-        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "REVOKE WRITE ON GRAPH * ELEMENTS * (*) FROM foo" ) ) );
+        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "REVOKE WRITE ON GRAPH * FROM foo" ) ) );
     }
 
     /**
