@@ -94,6 +94,40 @@ class LoadCsvAcceptanceTest
     }
   }
 
+  test("should PROFILE LOAD CSV queries with") {
+    // Given
+    val urls: Seq[String] = csvUrls({
+      writer =>
+        // 7 unique nodes and 6 relationships
+        writer.println("user1,user2")
+        writer.println("Sangreal,tbaum")
+        writer.println("adilfulara,emileifrem")
+        writer.println("maheshksp,emileifrem")
+        writer.println("Sangreal,pigmon")
+        writer.println("adilfulara,maheshksp")
+        writer.println("Sangreal,lucascaton")
+    })
+
+    for (url <- urls) {
+      val query =
+        s"""PROFILE
+           |LOAD CSV WITH HEADERS FROM '$url' AS line
+           |MERGE (u1:User {login: line.user1})
+           |MERGE (u2:User {login: line.user2})
+           |CREATE (u1)-[:FRIEND]->(u2)
+           |""".stripMargin
+
+      val result = executeWith(Configs.InterpretedAndSlotted, query)
+      result.queryStatistics().nodesCreated should be(7)
+      result.queryStatistics().relationshipsCreated should be(6)
+      val list = result.toList
+      list should be(empty)
+
+      // Clean up for next loop iteration
+      executeSingle("MATCH (n) DETACH DELETE n")
+    }
+  }
+
   test("should be able to use multiple index hints with load csv") {
     val startNodes = (0 to 9 map (i => createLabeledNode(Map("loginId" -> i.toString), "Login"))).toArray
     val endNodes = (0 to 9 map (i => createLabeledNode(Map("platformId" -> i.toString), "Permission"))).toArray
