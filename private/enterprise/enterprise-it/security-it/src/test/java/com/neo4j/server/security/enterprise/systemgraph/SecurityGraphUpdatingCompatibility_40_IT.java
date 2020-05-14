@@ -104,6 +104,9 @@ class SecurityGraphUpdatingCompatibility_40_IT extends SecurityGraphCompatibilit
             "DELETE ON GRAPH *",
             "SET LABEL * ON GRAPH *",
             "REMOVE LABEL * ON GRAPH *",
+            "SET PROPERTY {*} ON GRAPH *",
+
+            "ALL PRIVILEGES ON GRAPH *",
 
             // default database
             "ACCESS ON DEFAULT DATABASE"

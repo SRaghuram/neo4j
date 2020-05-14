@@ -108,7 +108,9 @@ class SecurityGraphUpdatingCompatibility_41D1_IT extends SecurityGraphCompatibil
             "DELETE ON GRAPH * RELATIONSHIPS *",
             "DELETE ON GRAPH *",
             "SET LABEL * ON GRAPH *",
-            "REMOVE LABEL * ON GRAPH *"
+            "REMOVE LABEL * ON GRAPH *",
+            "SET PROPERTY {*} ON GRAPH *",
+            "ALL PRIVILEGES ON GRAPH *"
     } )
     void shouldFailOnNewCommandsOnOldGraph( String privilege )
     {

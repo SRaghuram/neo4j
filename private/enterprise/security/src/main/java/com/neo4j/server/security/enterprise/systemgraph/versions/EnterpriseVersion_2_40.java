@@ -300,6 +300,9 @@ public class EnterpriseVersion_2_40 extends SupportedEnterpriseVersion
         case DELETE_ELEMENT:
         case SET_LABEL:
         case REMOVE_LABEL:
+        case SET_PROPERTY:
+
+        case GRAPH_ACTIONS:
             throw unsupportedAction();
 
         default:
