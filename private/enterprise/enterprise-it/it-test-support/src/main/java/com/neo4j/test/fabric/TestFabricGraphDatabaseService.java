@@ -63,7 +63,7 @@ public class TestFabricGraphDatabaseService extends GraphDatabaseFacade
                                                                           Map.of( TAG_NAME, fabricTxId ),
                                                                           new RoutingContext( false, Map.of() ) );
         var internalTransaction = forceKernelTxCreation( boltTransaction );
-        return new TestFabricTransaction( contextFactory, boltTransaction, internalTransaction );
+        return new TestFabricTransaction( boltTransaction, internalTransaction );
     }
 
     private InternalTransaction forceKernelTxCreation( BoltTransaction boltTransaction )

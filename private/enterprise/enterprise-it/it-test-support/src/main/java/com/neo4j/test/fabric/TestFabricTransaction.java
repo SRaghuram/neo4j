@@ -43,13 +43,11 @@ import static org.neo4j.kernel.api.exceptions.Status.Transaction.Terminated;
 public class TestFabricTransaction implements InternalTransaction
 {
 
-    private final TransactionalContextFactory contextFactory;
     private final BoltTransaction fabricTransaction;
     private final InternalTransaction kernelInternalTransaction;
 
-    TestFabricTransaction( TransactionalContextFactory contextFactory, BoltTransaction transaction, InternalTransaction kernelInternalTransaction )
+    TestFabricTransaction( BoltTransaction transaction, InternalTransaction kernelInternalTransaction )
     {
-        this.contextFactory = contextFactory;
         this.fabricTransaction = transaction;
         this.kernelInternalTransaction = kernelInternalTransaction;
     }
@@ -63,14 +61,13 @@ public class TestFabricTransaction implements InternalTransaction
     @Override
     public Result execute( String query, Map<String,Object> parameters ) throws QueryExecutionException
     {
-
         var ctx = new TestFabricTransactionalContext( kernelInternalTransaction );
         var params = ValueUtils.asParameterMapValue( parameters );
         var result = new ResultSubscriber( ctx, ctx.valueMapper() );
         try
         {
             BoltQueryExecution boltQueryExecution = fabricTransaction.executeQuery( query, params, false, result );
-            result.materialize( boltQueryExecution.getQueryExecution() );
+            result.init( boltQueryExecution.getQueryExecution() );
         }
         catch ( QueryExecutionKernelException | Neo4jException | FabricException e )
         {
