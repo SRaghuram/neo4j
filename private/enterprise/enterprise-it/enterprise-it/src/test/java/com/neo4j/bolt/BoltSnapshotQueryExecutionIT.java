@@ -40,6 +40,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -121,11 +122,13 @@ class BoltSnapshotQueryExecutionIT
         {
             try ( Session session = driver.session() )
             {
-                session.readTransaction( tx -> tx.run( "MATCH (n:toRetry) CREATE () RETURN n.c" ) );
+                session.writeTransaction( tx -> tx.run( "MATCH (n:toRetry) CREATE () RETURN n.c" ) );
             }
         } );
-        assertEquals( "Unable to get clean data snapshot for query " +
-                      "'MATCH (n:toRetry) CREATE () RETURN n.c' that performs updates.", e.getMessage() );
+        assertThat(e.getMessage())
+                .containsSubsequence( "Unable to get clean data snapshot for query",
+                                      "MATCH (n:toRetry)", "CREATE ()", "RETURN n.c",
+                                      "that performs updates." );
     }
 
     private void connectDriver() throws IOException
