@@ -83,6 +83,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipCountFr
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SeekExpression
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialLimitOnRhsOfApplyOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDistinctOperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDistinctPrimitiveOperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelDistinctSinglePrimitiveOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate.SerialLimitStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelSkipOperatorTaskTemplate
@@ -99,6 +101,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.VarExpandOperatorTa
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.DistinctAllPrimitive
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.DistinctWithReferences
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.findDistinctPhysicalOp
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
 import org.neo4j.cypher.internal.util.Many
 import org.neo4j.cypher.internal.util.One
@@ -519,17 +524,40 @@ abstract class TemplateOperators(readOnly: Boolean, parallelExecution: Boolean, 
         // Special case for limit when not nested under an apply and with serial execution
         case plan@Distinct(_, grouping) if hasNoNestedArguments && serialExecutionOnly =>
           ctx: TemplateContext =>
+            val physicalDistinctOp = findDistinctPhysicalOp(grouping, Seq.empty)
+
             val argumentStateMapId = ctx.executionGraphDefinition.findArgumentStateMapForPlan(plan.id)
             val groupMapping = SlottedExpressionConverters.orderGroupingKeyExpressions(grouping, Seq.empty)(ctx.slots).map {
               case (k, e, _) => ctx.slots(k) -> e
             }
-            TemplateAndArgumentStateFactory(
-              new SerialTopLevelDistinctOperatorTaskTemplate(ctx.inner,
-                plan.id,
-                argumentStateMapId,
-                groupMapping)(ctx.expressionCompiler),
-              Some(argumentStateMapId -> SerialTopLevelDistinctOperatorTaskTemplate.DistinctStateFactory)
-            )
+            physicalDistinctOp match {
+              case DistinctAllPrimitive(offsets, _) if offsets.size == 1 =>
+                val (toSlot, expression) = groupMapping.head
+                TemplateAndArgumentStateFactory(
+                  new SerialTopLevelDistinctSinglePrimitiveOperatorTaskTemplate(ctx.inner,
+                    plan.id,
+                    argumentStateMapId,
+                    toSlot,
+                    offsets.head,
+                    ctx.compileExpression(expression))(ctx.expressionCompiler),
+                  Some(argumentStateMapId -> SerialTopLevelDistinctSinglePrimitiveOperatorTaskTemplate.DistinctStateFactory))
+              case DistinctAllPrimitive(offsets, _) =>
+                TemplateAndArgumentStateFactory(
+                  new SerialTopLevelDistinctPrimitiveOperatorTaskTemplate(ctx.inner,
+                    plan.id,
+                    argumentStateMapId,
+                    offsets.sorted.toArray,
+                    groupMapping)(ctx.expressionCompiler),
+                  Some(argumentStateMapId -> SerialTopLevelDistinctOperatorTaskTemplate.DistinctStateFactory))
+
+              case DistinctWithReferences =>
+                TemplateAndArgumentStateFactory(
+                  new SerialTopLevelDistinctOperatorTaskTemplate(ctx.inner,
+                    plan.id,
+                    argumentStateMapId,
+                    groupMapping)(ctx.expressionCompiler),
+                  Some(argumentStateMapId -> SerialTopLevelDistinctOperatorTaskTemplate.DistinctStateFactory))
+            }
 
         // Special case for limit with serial execution
         case plan@Limit(_, countExpression, DoNotIncludeTies) if serialExecutionOnly =>

@@ -119,6 +119,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityMutableDescripti
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityMutableDescriptionImpl
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.DistinctAllPrimitive
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.DistinctWithReferences
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionsForResult
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.findDistinctPhysicalOp
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.partitionGroupingExpressions
@@ -688,9 +689,9 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             val (toSlot, expression) = groupingExpressions.head
             val runtimeExpression = converters.toCommandExpression(id, expression)
             Some(new DistinctSinglePrimitiveOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), slots(toSlot), offsets.head, runtimeExpression)(id))
-          case SlottedPipeMapper.DistinctAllPrimitive(offsets, _) =>
+          case DistinctAllPrimitive(offsets, _) =>
             Some(new DistinctPrimitiveOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), offsets.sorted.toArray, groupings)(id))
-          case SlottedPipeMapper.DistinctWithReferences =>
+          case DistinctWithReferences =>
             Some(new DistinctOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), groupings)(id))
         }
 

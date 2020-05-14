@@ -7,29 +7,58 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import java.util.concurrent.ConcurrentHashMap
 
+import org.neo4j.codegen.api.Field
+import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.cast
+import org.neo4j.codegen.api.IntermediateRepresentation.condition
+import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
+import org.neo4j.codegen.api.IntermediateRepresentation.field
+import org.neo4j.codegen.api.IntermediateRepresentation.invoke
+import org.neo4j.codegen.api.IntermediateRepresentation.load
+import org.neo4j.codegen.api.IntermediateRepresentation.loadField
+import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.or
+import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
+import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.collection.trackable.HeapTrackingCollections
 import org.neo4j.collection.trackable.HeapTrackingLongHashSet
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.LongSlot
+import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeSetValueInSlotFunctionFor
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.WritableRow
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompilation.nullCheckIfRequired
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
+import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedQueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctSinglePrimitiveOperator.ConcurrentDistinctSinglePrimitiveState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctSinglePrimitiveOperator.DistinctSinglePrimitiveState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctSinglePrimitiveOperator.DistinctSinglePrimitiveStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctSinglePrimitiveOperator.StandardDistinctSinglePrimitiveState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.peekState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.setMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.cypher.internal.util.symbols.CTNode
+import org.neo4j.cypher.internal.util.symbols.CTRelationship
+import org.neo4j.exceptions.InternalException
 import org.neo4j.memory.MemoryTracker
 import org.neo4j.values.AnyValue
+import org.neo4j.values.virtual.VirtualNodeValue
+import org.neo4j.values.virtual.VirtualRelationshipValue
 
 class DistinctSinglePrimitiveOperatorTask[S <: DistinctSinglePrimitiveState](argumentStateMap: ArgumentStateMap[S],
                                                                              val workIdentity: WorkIdentity,
@@ -138,5 +167,96 @@ object DistinctSinglePrimitiveOperator {
       seenSet.add(key)
 
     override def toString: String = s"ConcurrentDistinctSinglePrimitiveState($argumentRowId)"
+  }
+}
+
+class SerialTopLevelDistinctSinglePrimitiveOperatorTaskTemplate(val inner: OperatorTaskTemplate,
+                                                                override val id: Id,
+                                                                argumentStateMapId: ArgumentStateMapId,
+                                                                toSlot: Slot,
+                                                                offset: Int,
+                                                                generateExpression: () => IntermediateExpression)
+                                                               (protected val codeGen: OperatorExpressionCompiler)
+  extends OperatorTaskTemplate {
+
+  private var expression: IntermediateExpression = _
+  private val distinctStateField = field[DistinctSinglePrimitiveState](codeGen.namer.nextVariableName("distinctState"),
+    peekState[DistinctSinglePrimitiveState](argumentStateMapId))
+  private val memoryTrackerField = field[MemoryTracker](codeGen.namer.nextVariableName("memoryTracker"))
+
+  override def genInit: IntermediateRepresentation = inner.genInit
+
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
+
+  override protected def genOperate: IntermediateRepresentation = {
+    if (expression == null) {
+      expression = generateExpression()
+    }
+    val keyVar = codeGen.namer.nextVariableName("groupingKey")
+    val project = toSlot match {
+      case LongSlot(offset, _, CTNode) =>
+        codeGen.setLongAt(offset, invoke(cast[VirtualNodeValue](nullCheckIfRequired(expression)),
+          method[VirtualNodeValue, Long]("id")))
+      case LongSlot(offset, _, CTRelationship) =>
+        codeGen.setLongAt(offset, invoke(cast[VirtualRelationshipValue](nullCheckIfRequired(expression)),
+          method[VirtualRelationshipValue, Long]("id")))
+      case RefSlot(offset, _, _) =>
+        codeGen.setRefAt(offset, nullCheckIfRequired(expression))
+      case slot =>
+        throw new InternalException(s"Do not know how to make setter for slot $slot")
+    }
+    /**
+     * val key = context.getLongAt(offset)
+     * if (innerCanContinue || distinctState.seen(key)) {
+     *    context.setLongAt(outOffset, ((VirtualNodeValue) expression).id());
+     *   <<inner.generate>>
+     * }
+     */
+    block(
+      declareAndAssign(typeRefOf[Long], keyVar, codeGen.getLongAt(offset)),
+      condition(or(innerCanContinue,
+        invoke(loadField(distinctStateField),
+          method[DistinctSinglePrimitiveState, Boolean, Long]("seen"), load(keyVar)))) {
+        block(
+          profileRow(id),
+          project,
+          inner.genOperateWithExpressions
+        )
+      })
+  }
+
+  override def genCreateState: IntermediateRepresentation = block(
+    setMemoryTracker(memoryTrackerField, id.x),
+    invoke(loadField(distinctStateField),
+      method[DistinctSinglePrimitiveState, Unit, MemoryTracker]("setMemoryTracker"),
+      loadField(memoryTrackerField)),
+    inner.genCreateState)
+
+  override def genExpressions: Seq[IntermediateExpression] = Seq(expression)
+
+  override def genFields: Seq[Field] = Seq(distinctStateField, memoryTrackerField)
+
+  override def genLocalVariables: Seq[LocalVariable] = Seq.empty
+
+  override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
+
+  override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
+}
+
+object SerialTopLevelDistinctSinglePrimitiveOperatorTaskTemplate {
+
+  object DistinctStateFactory extends ArgumentStateFactory[DistinctSinglePrimitiveState] {
+    override def newStandardArgumentState(argumentRowId: Long,
+                                          argumentMorsel: MorselReadCursor,
+                                          argumentRowIdsForReducers: Array[Long]): DistinctSinglePrimitiveState = {
+      new StandardDistinctSinglePrimitiveState(argumentRowId, argumentRowIdsForReducers)
+    }
+
+    override def newConcurrentArgumentState(argumentRowId: Long,
+                                            argumentMorsel: MorselReadCursor,
+                                            argumentRowIdsForReducers: Array[Long]): DistinctSinglePrimitiveState = {
+      new ConcurrentDistinctSinglePrimitiveState(argumentRowId, argumentRowIdsForReducers)
+
+    }
   }
 }
