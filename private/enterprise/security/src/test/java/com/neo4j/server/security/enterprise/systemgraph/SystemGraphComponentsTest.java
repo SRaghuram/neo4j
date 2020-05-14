@@ -164,7 +164,7 @@ class SystemGraphComponentsTest
         assertThat( "Overall status", statuses.get( "dbms-status" ), is( requiresUpgrade ) );
 
         // When running dbms.upgrade
-        inTx( systemGraphComponents::upgradeToCurrent );
+        systemGraphComponents.upgradeToCurrent( system );
 
         // Then when looking at component statuses
         statuses.clear();
@@ -209,16 +209,15 @@ class SystemGraphComponentsTest
         KnownEnterpriseSecurityComponentVersion builder = enterpriseComponent.findSecurityGraphComponentVersion( version );
 
         // Versions older than 41 drop 01 should not have PUBLIC role
-//        List<String> roles = version.equals( VERSION_41D1 ) ? PredefinedRoles.roles : List.of( ADMIN, ARCHITECT, PUBLISHER, EDITOR, READER );
-        List<String> roles = PredefinedRoles.roles;
+        List<String> roles = version.equals( VERSION_41D1 ) ? PredefinedRoles.roles : List.of( ADMIN, ARCHITECT, PUBLISHER, EDITOR, READER );
         inTx( tx -> enterpriseComponent.initializeSystemGraphConstraints( tx ) );
-        inTx( tx -> builder.initializePrivileges( tx, roles, Map.of( PredefinedRoles.ADMIN, Set.of( INITIAL_USER_NAME ) ) ) );
+        inTx( tx -> builder.initializePrivileges( tx, roles, Map.of( ADMIN, Set.of( INITIAL_USER_NAME ) ) ) );
     }
 
     private void initEnterpriseFutureUnknown() throws Exception
     {
         KnownEnterpriseSecurityComponentVersion builder = new EnterpriseVersionFake( mock( Log.class ) );
-        inTx( tx -> builder.initializePrivileges( tx, PredefinedRoles.roles, Map.of( PredefinedRoles.ADMIN, Set.of( INITIAL_USER_NAME ) ) ) );
+        inTx( tx -> builder.initializePrivileges( tx, PredefinedRoles.roles, Map.of( ADMIN, Set.of( INITIAL_USER_NAME ) ) ) );
     }
 
     private void initializeLatestSystemAndUsers()

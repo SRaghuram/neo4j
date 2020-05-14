@@ -34,6 +34,8 @@ import java.util.stream.Collectors;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.AbstractSystemGraphComponent;
+import org.neo4j.dbms.database.SystemGraphComponent;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
@@ -92,39 +94,27 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
     }
 
     @Override
-    public Optional<Exception> upgradeToCurrent( Transaction tx )
+    public Optional<Exception> upgradeToCurrent( GraphDatabaseService system )
     {
-        KnownEnterpriseSecurityComponentVersion component = knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx );
-        if ( component.version == NoEnterpriseComponentVersion.VERSION )
+        return SystemGraphComponent.executeWithFullAccess( system, tx ->
         {
-            try
+            KnownEnterpriseSecurityComponentVersion currentVersion = knownSecurityComponentVersions.detectCurrentSecurityGraphVersion( tx );
+            if ( currentVersion.version == NoEnterpriseComponentVersion.VERSION )
             {
                 initializeLatestSystemGraph( tx );
             }
-            catch ( Exception e )
-            {
-                return Optional.of( e );
-            }
-        }
-        else
-        {
-            if ( component.migrationSupported() )
-            {
-                try
-                {
-                    component.upgradeSecurityGraph( tx, knownSecurityComponentVersions.latestSecurityGraphVersion() );
-                }
-                catch ( Exception e )
-                {
-                    return Optional.of( e );
-                }
-            }
             else
             {
-                return Optional.of( component.unsupported() );
+                if ( currentVersion.migrationSupported() )
+                {
+                    currentVersion.upgradeSecurityGraph( tx, knownSecurityComponentVersions.latestSecurityGraphVersion() );
+                }
+                else
+                {
+                    throw currentVersion.unsupported();
+                }
             }
-        }
-        return Optional.empty();
+        } );
     }
 
     public void assertUpdateWithAction( Transaction tx, PrivilegeAction action, SpecialDatabase specialDatabase )

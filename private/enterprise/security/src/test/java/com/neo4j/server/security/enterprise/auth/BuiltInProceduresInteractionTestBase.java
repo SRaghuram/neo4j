@@ -2195,7 +2195,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
             String result = resultAsString( row, "upgradeResult" );
             assertThat( "Expected only one result", r.hasNext(), equalTo( false ) );
             assertThat( status, containsString( SystemGraphComponent.Status.REQUIRES_UPGRADE.name() ) );
-            assertThat( result, containsString( "Failed: component_D" ) );
+            assertThat( result, containsString( "Failed: [component_D] Upgrade failed because this is a test" ) );
             r.close();
         }  );
     }
@@ -2249,7 +2249,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         }
 
         @Override
-        public Optional<Exception> upgradeToCurrent( Transaction tx )
+        public Optional<Exception> upgradeToCurrent( GraphDatabaseService system )
         {
             if ( status == Status.REQUIRES_UPGRADE )
             {

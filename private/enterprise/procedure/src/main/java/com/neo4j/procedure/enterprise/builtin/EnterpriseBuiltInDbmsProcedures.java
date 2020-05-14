@@ -31,9 +31,11 @@ import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphComponent;
 import org.neo4j.dbms.database.SystemGraphComponents;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.helpers.TimeUtil;
+import org.neo4j.internal.kernel.api.procs.ProcedureCallContext;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.kernel.api.procs.UserFunctionSignature;
 import org.neo4j.internal.kernel.api.security.AdminActionOnResource;
@@ -83,7 +85,7 @@ import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISS
 import static org.neo4j.io.ByteUnit.bytesToString;
 import static org.neo4j.procedure.Mode.DBMS;
 
-@SuppressWarnings( "unused" )
+@SuppressWarnings( {"unused", "WeakerAccess"} )
 public class EnterpriseBuiltInDbmsProcedures
 {
     @Context
@@ -100,6 +102,9 @@ public class EnterpriseBuiltInDbmsProcedures
 
     @Context
     public KernelTransaction kernelTransaction;
+
+    @Context
+    public GraphDatabaseService graph;
 
     @Context
     public SystemGraphComponents systemGraphComponents;
@@ -696,7 +701,7 @@ public class EnterpriseBuiltInDbmsProcedures
                 SystemGraphComponent.Status initialStatus = component.detect( transaction );
                 if ( initialStatus == REQUIRES_UPGRADE )
                 {
-                    Optional<Exception> error = component.upgradeToCurrent( transaction );
+                    Optional<Exception> error = component.upgradeToCurrent( graph );
                     if ( error.isPresent() )
                     {
                         failed.add( component );
@@ -738,21 +743,17 @@ public class EnterpriseBuiltInDbmsProcedures
         SystemGraphComponent.Status status = versions.detect( transaction );
         if ( status == REQUIRES_UPGRADE )
         {
-            ArrayList<SystemGraphComponent> failed = new ArrayList<>();
+            ArrayList<String> failed = new ArrayList<>();
             versions.forEach( component ->
             {
                 SystemGraphComponent.Status initialStatus = component.detect( transaction );
                 if ( initialStatus == REQUIRES_UPGRADE )
                 {
-                    Optional<Exception> error = component.upgradeToCurrent( transaction );
-                    if ( error.isPresent() )
-                    {
-                        failed.add( component );
-                    }
+                    Optional<Exception> error = component.upgradeToCurrent( graph );
+                    error.ifPresent( e -> failed.add( String.format( "[%s] %s", component.component(), e.getMessage() ) ) );
                 }
             } );
-            String upgradeResult =
-                    failed.isEmpty() ? "Success" : "Failed: " + failed.stream().map( SystemGraphComponent::component ).collect( Collectors.joining( ", " ) );
+            String upgradeResult = failed.isEmpty() ? "Success" : "Failed: " + String.join( ", ", failed );
             return Stream.of( new SystemGraphComponentUpgradeResult( versions.detect( transaction ).name(), upgradeResult ) );
         }
         else

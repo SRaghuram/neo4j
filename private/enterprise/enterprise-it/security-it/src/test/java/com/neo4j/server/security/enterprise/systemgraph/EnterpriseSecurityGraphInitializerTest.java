@@ -163,11 +163,7 @@ class EnterpriseSecurityGraphInitializerTest
         assertThat( "Overall status", dbmsStatus, is( requiresUpgrade ) );
 
         // When running dbms.upgrade
-        try ( Transaction tx = system.beginTx() )
-        {
-            systemGraphComponents.upgradeToCurrent( tx );
-            tx.commit();
-        }
+        systemGraphComponents.upgradeToCurrent( system );
 
         // Then when looking at component statuses
         try ( Transaction tx = system.beginTx() )
