@@ -18,11 +18,16 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -49,14 +54,21 @@ import org.neo4j.test.rule.TestDirectory;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.dbms.database.SystemGraphComponent.Status.CURRENT;
+import static org.neo4j.dbms.database.SystemGraphComponent.Status.REQUIRES_UPGRADE;
+import static org.neo4j.dbms.database.SystemGraphComponent.Status.UNSUPPORTED_BUT_CAN_UPGRADE;
+import static org.neo4j.dbms.database.SystemGraphComponent.Status.UNSUPPORTED_FUTURE;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
 
 @TestDirectoryExtension
@@ -118,10 +130,10 @@ class SystemGraphComponentsTest
             statuses.put( "dbms-status", systemGraphComponents.detect( tx ) );
         } );
         assertThat( "Expecting four components", statuses.size(), is( 4 ) );
-        assertThat( "System graph status", statuses.get( "multi-database" ), is( SystemGraphComponent.Status.CURRENT ) );
-        assertThat( "Users status", statuses.get( "security-users" ), is( SystemGraphComponent.Status.CURRENT ) );
-        assertThat( "Privileges status", statuses.get( "security-privileges" ), is( SystemGraphComponent.Status.CURRENT ) );
-        assertThat( "Overall status", statuses.get( "dbms-status" ), is( SystemGraphComponent.Status.CURRENT ) );
+        assertThat( "System graph status", statuses.get( "multi-database" ), is( CURRENT ) );
+        assertThat( "Users status", statuses.get( "security-users" ), is( CURRENT ) );
+        assertThat( "Privileges status", statuses.get( "security-privileges" ), is( CURRENT ) );
+        assertThat( "Overall status", statuses.get( "dbms-status" ), is( CURRENT ) );
     }
 
     @Test
@@ -129,87 +141,114 @@ class SystemGraphComponentsTest
     {
         initializeLatestSystemAndUsers();
         initEnterprise( VERSION_41D1 );
-        assertCanUpgradeThisVersionAndThenUpgradeIt( SystemGraphComponent.Status.REQUIRES_UPGRADE );
+        assertCanUpgradeThisVersionAndThenUpgradeIt( REQUIRES_UPGRADE );
     }
 
-    @Test
-    void shouldInitializeAndUpgradeWith40_systemGraph() throws Exception
+    @ParameterizedTest
+    @MethodSource( "versionAndStatusProvider" )
+    void shouldInitializeAndUpgradeSystemGraph( String version, SystemGraphComponent.Status initialStatus ) throws Exception
     {
         initializeLatestSystemAndUsers();
-        initEnterprise( VERSION_40 );
-        assertCanUpgradeThisVersionAndThenUpgradeIt( SystemGraphComponent.Status.REQUIRES_UPGRADE );
+        initEnterprise( version );
+        assertCanUpgradeThisVersionAndThenUpgradeIt( initialStatus );
     }
 
-    @Test
-    void shouldInitializeAndUpgradeWith36_systemGraph() throws Exception
+    @ParameterizedTest
+    @MethodSource( "versionAndStatusProvider" )
+    void shouldFailUpgradeWhen_PUBLIC_RoleExists( String version, SystemGraphComponent.Status initialStatus ) throws Exception
     {
         initializeLatestSystemAndUsers();
-        initEnterprise( VERSION_36 );
-        assertCanUpgradeThisVersionAndThenUpgradeIt( SystemGraphComponent.Status.UNSUPPORTED_BUT_CAN_UPGRADE );
-    }
+        initEnterprise( version, List.of( ADMIN, PUBLIC ) );
 
-    private void assertCanUpgradeThisVersionAndThenUpgradeIt( SystemGraphComponent.Status requiresUpgrade ) throws Exception
-    {
-        var systemGraphComponents = system.getDependencyResolver().resolveDependency( SystemGraphComponents.class );
-        HashMap<String,SystemGraphComponent.Status> statuses = new HashMap<>();
-        inTx( tx ->
-        {
-            systemGraphComponents.forEach( component -> statuses.put( component.component(), component.detect( tx ) ) );
-            statuses.put( "dbms-status", systemGraphComponents.detect( tx ) );
-        } );
-        assertThat( "Expecting four components", statuses.size(), is( 4 ) );
-        assertThat( "System graph status", statuses.get( "multi-database" ), is( SystemGraphComponent.Status.CURRENT ) );
-        assertThat( "Users status", statuses.get( "security-users" ), is( SystemGraphComponent.Status.CURRENT ) );
-        assertThat( "Privileges status", statuses.get( "security-privileges" ), is( requiresUpgrade ) );
-        assertThat( "Overall status", statuses.get( "dbms-status" ), is( requiresUpgrade ) );
+        Optional<Exception> exception = systemGraphComponents.upgradeToCurrent( system );
+        exception.ifPresentOrElse(
+                e -> assertThat( "Should not be able to upgrade with PUBLIC role", e.getMessage(),
+                        containsString( "'PUBLIC' is a reserved role and must be dropped before upgrade can proceed" ) ),
+                () -> fail( "Should have gotten an exception when upgrading" )
+        );
 
-        // When running dbms.upgrade
-        systemGraphComponents.upgradeToCurrent( system );
-
-        // Then when looking at component statuses
-        statuses.clear();
-        inTx( tx ->
-        {
-            systemGraphComponents.forEach( component -> statuses.put( component.component(), component.detect( tx ) ) );
-            statuses.put( "dbms-status", systemGraphComponents.detect( tx ) );
-        } );
-        assertThat( "Expecting four components", statuses.size(), is( 4 ) );
-        assertThat( "System graph status", statuses.get( "multi-database" ), is( SystemGraphComponent.Status.CURRENT ) );
-        assertThat( "Users status", statuses.get( "security-users" ), is( SystemGraphComponent.Status.CURRENT ) );
-        assertThat( "Privileges status", statuses.get( "security-privileges" ), is( SystemGraphComponent.Status.CURRENT ) );
-        assertThat( "Overall status", statuses.get( "dbms-status" ), is( SystemGraphComponent.Status.CURRENT ) );
-
-        inTx( tx -> {
-            Node schemaNode = tx.findNode( Label.label( "Privilege" ), "action", "schema" );
-            assertNull( schemaNode );
-        } );
+        assertStatus( Map.of(
+                "multi-database", CURRENT,
+                "security-users", CURRENT,
+                "security-privileges", initialStatus,
+                "dbms-status", initialStatus
+        ) );
     }
 
     @Test
     void shouldNotSupportFutureVersions() throws Exception
     {
-        var systemGraphComponents = system.getDependencyResolver().resolveDependency( SystemGraphComponents.class );
         initializeLatestSystemAndUsers();
         initEnterpriseFutureUnknown();
+
+        assertStatus( Map.of(
+                "multi-database", CURRENT,
+                "security-users", CURRENT,
+                "security-privileges", UNSUPPORTED_FUTURE,
+                "dbms-status", UNSUPPORTED_FUTURE
+        ) );
+    }
+
+    static Stream<Arguments> versionAndStatusProvider()
+    {
+        return Stream.of(
+                Arguments.arguments( VERSION_36, UNSUPPORTED_BUT_CAN_UPGRADE ),
+                Arguments.arguments( VERSION_40, REQUIRES_UPGRADE )
+        );
+    }
+
+    private void assertCanUpgradeThisVersionAndThenUpgradeIt( SystemGraphComponent.Status initialState ) throws Exception
+    {
+        var systemGraphComponents = system.getDependencyResolver().resolveDependency( SystemGraphComponents.class );
+        assertStatus( Map.of(
+                "multi-database", CURRENT,
+                "security-users", CURRENT,
+                "security-privileges", initialState,
+                "dbms-status", initialState
+        ) );
+
+        // When running dbms.upgrade
+        systemGraphComponents.upgradeToCurrent( system );
+
+        // Then when looking at component statuses
+        assertStatus( Map.of(
+                "multi-database", CURRENT,
+                "security-users", CURRENT,
+                "security-privileges", CURRENT,
+                "dbms-status", CURRENT
+        ) );
+
+        inTx( tx ->
+        {
+            Node schemaNode = tx.findNode( Label.label( "Privilege" ), "action", "schema" );
+            assertNull( schemaNode );
+        } );
+    }
+
+    private void assertStatus( Map<String,SystemGraphComponent.Status> expected ) throws Exception
+    {
         HashMap<String,SystemGraphComponent.Status> statuses = new HashMap<>();
         inTx( tx ->
         {
             systemGraphComponents.forEach( component -> statuses.put( component.component(), component.detect( tx ) ) );
             statuses.put( "dbms-status", systemGraphComponents.detect( tx ) );
         } );
-        assertThat( "Expecting four components", statuses.size(), is( 4 ) );
-        assertThat( "System graph status", statuses.get( "multi-database" ), is( SystemGraphComponent.Status.CURRENT ) );
-        assertThat( "Users status", statuses.get( "security-users" ), is( SystemGraphComponent.Status.CURRENT ) );
-        assertThat( "Privileges status", statuses.get( "security-privileges" ), is( SystemGraphComponent.Status.UNSUPPORTED_FUTURE ) );
-        assertThat( "Overall status", statuses.get( "dbms-status" ), is( SystemGraphComponent.Status.UNSUPPORTED_FUTURE ) );
+        for ( var entry : expected.entrySet() )
+        {
+            assertThat( entry.getKey(), statuses.get( entry.getKey() ), is( entry.getValue() ) );
+        }
     }
 
     private void initEnterprise( String version ) throws Exception
     {
-        KnownEnterpriseSecurityComponentVersion builder = enterpriseComponent.findSecurityGraphComponentVersion( version );
-
         // Versions older than 41 drop 01 should not have PUBLIC role
         List<String> roles = version.equals( VERSION_41D1 ) ? PredefinedRoles.roles : List.of( ADMIN, ARCHITECT, PUBLISHER, EDITOR, READER );
+        initEnterprise( version, roles );
+    }
+
+    private void initEnterprise( String version, List<String> roles ) throws Exception
+    {
+        KnownEnterpriseSecurityComponentVersion builder = enterpriseComponent.findSecurityGraphComponentVersion( version );
         inTx( tx -> enterpriseComponent.initializeSystemGraphConstraints( tx ) );
         inTx( tx -> builder.initializePrivileges( tx, roles, Map.of( ADMIN, Set.of( INITIAL_USER_NAME ) ) ) );
     }

@@ -98,6 +98,7 @@ public class EnterpriseVersion_1_36 extends KnownEnterpriseSecurityComponentVers
     public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest ) throws Exception
     {
         assert latest.version == LATEST_VERSION;
+        createPublicRoleFromUpgrade( tx );
         setVersionProperty( tx, latest.version );
         List<Node> roles = tx.findNodes( ROLE_LABEL ).stream().collect( Collectors.toList() );
         latest.setUpDefaultPrivileges( tx );

@@ -6,6 +6,8 @@
 package com.neo4j.server.security.enterprise.systemgraph;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
@@ -21,10 +23,11 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 
 class SecurityGraphCompatibilityIT extends SecurityGraphCompatibilityTestBase
 {
-    @Test
-    void shouldAuthenticateOn36() throws Exception
+    @ParameterizedTest
+    @ValueSource( strings = {VERSION_36, VERSION_40, VERSION_41D1, VERSION_41D2} )
+    void shouldAuthenticate( String version ) throws Exception
     {
-        initEnterprise( VERSION_36 );
+        initEnterprise( version );
         LoginContext loginContext = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
         assertThat( loginContext.subject().getAuthenticationResult() ).isEqualTo( AuthenticationResult.PASSWORD_CHANGE_REQUIRED );
     }
@@ -48,62 +51,15 @@ class SecurityGraphCompatibilityIT extends SecurityGraphCompatibilityTestBase
         assertThrows( AuthorizationViolationException.class, () -> loginContext.authorize( LoginContext.IdLookup.EMPTY, DEFAULT_DATABASE_NAME ) );
     }
 
-    @Test
-    void shouldAuthenticateOn40() throws Exception
+    @ParameterizedTest
+    @ValueSource( strings = {VERSION_40, VERSION_41D1, VERSION_41D2} )
+    void shouldAuthorize( String version ) throws Exception
     {
-        initEnterprise( VERSION_40 );
-        LoginContext loginContext = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
-        assertThat( loginContext.subject().getAuthenticationResult() ).isEqualTo( AuthenticationResult.PASSWORD_CHANGE_REQUIRED );
-    }
-
-    @Test
-    void shouldAuthorizeOn40() throws Exception
-    {
-        initEnterprise( VERSION_40 );
+        initEnterprise( version );
         LoginContext loginContext = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
         loginContext.subject().setPasswordChangeNoLongerRequired();
 
-        assertReadWritePrivileges( loginContext.authorize( LoginContext.IdLookup.EMPTY, DEFAULT_DATABASE_NAME ) );
-    }
-
-    @Test
-    void shouldAuthenticateOn41d01() throws Exception
-    {
-        initEnterprise( VERSION_41D1 );
-        LoginContext loginContext = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
-        assertThat( loginContext.subject().getAuthenticationResult() ).isEqualTo( AuthenticationResult.PASSWORD_CHANGE_REQUIRED );
-    }
-
-    @Test
-    void shouldAuthorizeOn41d01() throws Exception
-    {
-        initEnterprise( VERSION_41D1 );
-        LoginContext loginContext = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
-        loginContext.subject().setPasswordChangeNoLongerRequired();
-
-        assertReadWritePrivileges( loginContext.authorize( LoginContext.IdLookup.EMPTY, DEFAULT_DATABASE_NAME ) );
-    }
-
-    @Test
-    void shouldAuthenticateOn41d02() throws Exception
-    {
-        initEnterprise( VERSION_41D2 );
-        LoginContext loginContext = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
-        assertThat( loginContext.subject().getAuthenticationResult() ).isEqualTo( AuthenticationResult.PASSWORD_CHANGE_REQUIRED );
-    }
-
-    @Test
-    void shouldAuthorizeOn41d02() throws Exception
-    {
-        initEnterprise( VERSION_41D2 );
-        LoginContext loginContext = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
-        loginContext.subject().setPasswordChangeNoLongerRequired();
-
-        assertReadWritePrivileges( loginContext.authorize( LoginContext.IdLookup.EMPTY, DEFAULT_DATABASE_NAME ) );
-    }
-
-    private void assertReadWritePrivileges( SecurityContext securityContext )
-    {
+        SecurityContext securityContext = loginContext.authorize( LoginContext.IdLookup.EMPTY, DEFAULT_DATABASE_NAME );
         assertThat( securityContext.mode().allowsReadPropertyAllLabels( -1 ) ).isTrue();
         assertThat( securityContext.mode().allowsTraverseAllLabels() ).isTrue();
         assertThat( securityContext.mode().allowsWrites() ).isTrue();

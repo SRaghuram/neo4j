@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
@@ -25,6 +26,8 @@ import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.systemgraph.KnownSystemComponentVersion;
+
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 
 public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSystemComponentVersion
 {
@@ -139,11 +142,23 @@ public abstract class KnownEnterpriseSecurityComponentVersion extends KnownSyste
         return new InvalidArgumentsException( message );
     }
 
-    Node newRole( Transaction tx, String roleName )
+    private Node newRole( Transaction tx, String roleName )
     {
         Node node = tx.createNode( ROLE_LABEL );
         node.setProperty( "name", roleName );
         roleNodes.add( node );
         return node;
+    }
+
+    void createPublicRoleFromUpgrade( Transaction tx )
+    {
+        try
+        {
+            newRole( tx, PUBLIC );
+        }
+        catch ( ConstraintViolationException e )
+        {
+            throw new IllegalStateException( "'PUBLIC' is a reserved role and must be dropped before upgrade can proceed", e );
+        }
     }
 }

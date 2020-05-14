@@ -13,6 +13,7 @@ import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDataba
 import java.util.List;
 import java.util.Set;
 
+import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -200,7 +201,7 @@ public class EnterpriseVersion_2_40 extends SupportedEnterpriseVersion
         setVersionProperty( tx, latest.version );
         upgradeWriteFromAllPropertiesToGraphResource( tx );
         upgradeFromSchemaPrivilegeToIndexAndContraintPrivileges( tx );
-        newRole( tx, PUBLIC );
+        createPublicRoleFromUpgrade( tx );
     }
 
     private void upgradeWriteFromAllPropertiesToGraphResource( Transaction tx )
