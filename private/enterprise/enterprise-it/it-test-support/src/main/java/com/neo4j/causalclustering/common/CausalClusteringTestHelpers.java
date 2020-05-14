@@ -294,11 +294,11 @@ public final class CausalClusteringTestHelpers
         dropDatabase( databaseName, cluster, false );
     }
 
-    private static void dropDatabase( String databaseName, Cluster cluster, boolean keepData ) throws Exception
+    private static void dropDatabase( String databaseName, Cluster cluster, boolean dumpData ) throws Exception
     {
         cluster.systemTx( ( sys, tx ) ->
         {
-            var dataClause = keepData ? "KEEP DATA" : "DESTROY DATA";
+            var dataClause = dumpData ? "DUMP DATA" : "DESTROY DATA";
             tx.execute( String.format( "DROP DATABASE `%s` %s", databaseName, dataClause ) );
             tx.commit();
         } );

@@ -12,19 +12,40 @@ import java.util.UUID;
 
 import org.neo4j.kernel.database.DatabaseIdFactory;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ReconcilerRequestTest
 {
+
+    @Test
+    void shouldCorrectlyHandleRequestsWithMixedTargetPriority()
+    {
+        // given
+        var foo = DatabaseIdFactory.from( "foo", UUID.randomUUID() );
+        var bar = DatabaseIdFactory.from( "bar", UUID.randomUUID() );
+        var baz = DatabaseIdFactory.from( "baz", UUID.randomUUID() );
+        var mixed = ReconcilerRequest.targets( Set.of( foo, baz ) )
+                                     .priorityTargets( Set.of( foo ) )
+                                     .build();
+
+        // when/then
+        assertFalse( mixed.isSimple() );
+        assertTrue( mixed.shouldBeExecutedAsPriorityFor( foo.name() ) );
+        assertFalse( mixed.shouldBeExecutedAsPriorityFor( baz.name() ) );
+        assertThat( mixed.explicitTargets() ).contains( foo.name(), baz.name() );
+        assertThat( mixed.explicitTargets() ).doesNotContain( bar.name() );
+    }
+
     @Test
     void shouldCorrectlyIdentifySimpleRequests()
     {
         // given
         var simple = ReconcilerRequest.simple();
-        var priority = ReconcilerRequest.priority( DatabaseIdFactory.from( "foo", UUID.randomUUID() ) );
-        var explicit = ReconcilerRequest.explicit( Set.of( DatabaseIdFactory.from( "foo", UUID.randomUUID() ) ) );
-        var panicked = ReconcilerRequest.forPanickedDatabase( DatabaseIdFactory.from( "bar", UUID.randomUUID() ), new RuntimeException() );
+        var priority = ReconcilerRequest.priorityTarget( DatabaseIdFactory.from( "foo", UUID.randomUUID() ) ).build();
+        var explicit = ReconcilerRequest.targets( Set.of( DatabaseIdFactory.from( "foo", UUID.randomUUID() ) ) ).build();
+        var panicked = ReconcilerRequest.panickedTarget( DatabaseIdFactory.from( "bar", UUID.randomUUID() ), new RuntimeException() ).build();
 
         // when/then
         assertTrue( simple.isSimple() );
@@ -39,20 +60,20 @@ class ReconcilerRequestTest
         // given
         var foo = DatabaseIdFactory.from( "foo", UUID.randomUUID() );
         var bar = DatabaseIdFactory.from( "bar", UUID.randomUUID() );
-        var priorityA = ReconcilerRequest.priority( Set.of( foo, bar ) );
-        var priorityB = ReconcilerRequest.priority( bar );
+        var priorityA = ReconcilerRequest.priorityTargets( Set.of( foo, bar ) ).build();
+        var priorityB = ReconcilerRequest.priorityTarget( bar ).build();
 
         // when/then
-        assertTrue( priorityA.specifiedDatabaseNames().contains( "foo" ) );
-        assertTrue( priorityA.specifiedDatabaseNames().contains( "bar" ) );
-        assertFalse( priorityB.specifiedDatabaseNames().contains(  "foo" ) );
+        assertTrue( priorityA.explicitTargets().contains( "foo" ) );
+        assertTrue( priorityA.explicitTargets().contains( "bar" ) );
+        assertFalse( priorityB.explicitTargets().contains( "foo" ) );
     }
 
     @Test
     void panicRequestDoNotUseCacheButHealAndUsePriority()
     {
         // given
-        var panicked = ReconcilerRequest.forPanickedDatabase( DatabaseIdFactory.from( "foo", UUID.randomUUID() ), new RuntimeException() );
+        var panicked = ReconcilerRequest.panickedTarget( DatabaseIdFactory.from( "foo", UUID.randomUUID() ), new RuntimeException() ).build();
 
         // when/then
         assertTrue( panicked.shouldBeExecutedAsPriorityFor( "foo" ) );
@@ -68,7 +89,7 @@ class ReconcilerRequestTest
     void priorityRequestDoNotUseCacheButHealAndUsePriority()
     {
         // given
-        var priority = ReconcilerRequest.priority( DatabaseIdFactory.from( "foo", UUID.randomUUID() ) );
+        var priority = ReconcilerRequest.priorityTarget( DatabaseIdFactory.from( "foo", UUID.randomUUID() ) ).build();
 
         // when/then
         assertTrue( priority.shouldBeExecutedAsPriorityFor( "foo" ) );
@@ -84,7 +105,7 @@ class ReconcilerRequestTest
     void explicitRequestDoNotUseCacheAndPriorityButHeal()
     {
         // given
-        var explicit = ReconcilerRequest.explicit( Set.of( DatabaseIdFactory.from( "foo", UUID.randomUUID() ) ) );
+        var explicit = ReconcilerRequest.targets( Set.of( DatabaseIdFactory.from( "foo", UUID.randomUUID() ) ) ).build();
 
         // when/then
         assertFalse( explicit.shouldBeExecutedAsPriorityFor( "foo" ) );

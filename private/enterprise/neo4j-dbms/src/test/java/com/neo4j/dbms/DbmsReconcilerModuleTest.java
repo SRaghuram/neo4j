@@ -262,7 +262,7 @@ class DbmsReconcilerModuleTest
         // then
         // A third reconciliation attempts would return the cached job, but its forced, so it won't
         operator.stopDatabase( foo.name() );
-        var stopFooB = reconciler.reconcile( singletonList( operator ), ReconcilerRequest.priority( foo ) );
+        var stopFooB = reconciler.reconcile( singletonList( operator ), ReconcilerRequest.priorityTarget( foo ).build() );
 
         // then
         assertNotEquals( stopFooA, stopFooB, "The reconciler results should not be equal as forced jobs should not be cached!" );
@@ -375,7 +375,7 @@ class DbmsReconcilerModuleTest
         verify( databaseManager, atMostOnce() ).startDatabase( foo );
 
         // when
-        reconciler.reconcile( List.of( operator ), ReconcilerRequest.priority( foo ) ).join( foo );
+        reconciler.reconcile( List.of( operator ), ReconcilerRequest.priorityTarget( foo ).build() ).join( foo );
 
         // then
         startFailure = databaseStateService.causeOfFailure( foo );

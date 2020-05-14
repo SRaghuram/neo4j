@@ -76,7 +76,7 @@ class CausalClusterDatabaseOperationCountMetricIT
         assertDatabaseCount( cluster, 4, 4, 1, 0 );
 
         // when drop
-        dropDatabase( "bar", cluster, false );
+        dropDatabase( "bar", cluster );
         // then
         assertDatabaseEventuallyDoesNotExist( "bar", cluster );
         assertDatabaseCount( cluster, 4, 4,2, 1 );

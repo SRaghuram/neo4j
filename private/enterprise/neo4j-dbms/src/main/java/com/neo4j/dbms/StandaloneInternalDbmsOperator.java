@@ -55,7 +55,7 @@ public class StandaloneInternalDbmsOperator extends DbmsOperator implements Inte
         }
 
         shouldStop.add( databaseId );
-        var reconcilerResult = trigger( ReconcilerRequest.forPanickedDatabase( databaseId, causeOfPanic ) );
+        var reconcilerResult = trigger( ReconcilerRequest.panickedTarget( databaseId, causeOfPanic ).build() );
         reconcilerResult.whenComplete( () -> shouldStop.remove( databaseId ) );
     }
 

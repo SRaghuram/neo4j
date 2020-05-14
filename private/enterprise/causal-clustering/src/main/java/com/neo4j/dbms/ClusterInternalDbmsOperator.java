@@ -112,7 +112,7 @@ public class ClusterInternalDbmsOperator extends DbmsOperator
         }
 
         shouldStop.add( namedDatabaseId );
-        var reconcilerResult = trigger( ReconcilerRequest.forPanickedDatabase( namedDatabaseId, causeOfPanic ) );
+        var reconcilerResult = trigger( ReconcilerRequest.panickedTarget( namedDatabaseId, causeOfPanic ).build() );
         reconcilerResult.whenComplete( () -> shouldStop.remove( namedDatabaseId ) );
     }
 

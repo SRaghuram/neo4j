@@ -20,37 +20,38 @@ import org.neo4j.kernel.database.NamedDatabaseId;
  * This model is chosen for simplicity, and is relatively low cost as redundant reconciliations (where a database is already in its desired state)
  * are no-ops.
  *
- * A reconciler request may specify a subset of databases as being high priority. This has a couple of effects:
+ * A request may specify a subset of databases as normal or high prioirity "targets". This has a few effects:
  *   - Even if those databases have failed a previous transition, reconciliation will be re-attempted to bring them to their desired states.
- *   - High priority reconciliation jobs are handled by a different, unbounded thread pool, and therefore ignore the reconciler's parallelism limit.
+ *   - If high priority, reconciliation jobs are handled by a different, unbounded thread pool, and therefore ignore the reconciler's parallelism limit.
+ *   - Databases not specified as targets are *still* reconciled, following the same rules as {@code ReconcilerRequest.simple()}
  *
- *  Note that internally the reconciler tracks databases as Strings because a single reconciliation job may operate on databases with two different ids
- *  but the same name ( i.e. STOPPED->DROPPED->INITIAL->STARTED ). The job as a whole should still be priority.
- *                          |----(foo,1)----|  |----(foo,2)----|
+ * Note that internally the reconciler tracks databases as Strings because a single reconciliation job may operate on databases with two different ids
+ * but the same name ( i.e. STOPPED->DROPPED->INITIAL->STARTED ). The job as a whole should still be priority.
+ *                         |----(foo,1)----|  |----(foo,2)----|
  */
 public final class ReconcilerRequest
 {
-    private enum RequestType
+    private enum RequestPriority
     {
-        PRIORITY, EXPLICIT
+        HIGH, NORMAL
     }
+
     private static final ReconcilerRequest SIMPLE = new ReconcilerRequest( Map.of(), null, null );
 
-    private final Map<String,RequestType> specifiedDatabases;
-    private final boolean isSimple;
+    private final Map<String,RequestPriority> targetDatabases;
     private final NamedDatabaseId panickedDatabaseId;
     private final Throwable causeOfPanic;
 
-    private ReconcilerRequest( Map<String,RequestType> specifiedDatabases, NamedDatabaseId panickedDatabaseId, Throwable causeOfPanic )
+    private ReconcilerRequest( Map<String,RequestPriority> targetDatabases, NamedDatabaseId panickedDatabaseId, Throwable causeOfPanic )
     {
-        this.specifiedDatabases = Map.copyOf( specifiedDatabases );
-        this.isSimple = specifiedDatabases.isEmpty();
+        this.targetDatabases = Map.copyOf( targetDatabases );
         this.panickedDatabaseId = panickedDatabaseId;
         this.causeOfPanic = causeOfPanic;
     }
 
     /**
-     * A request that does not specify any database reconciliations as high priority and does not specify any databases as failed.
+     * A request that does not target any database in particular. When triggered with such a request, a reconciler
+     * merely attempts to reconcile those databases which have not failed, and are not in their desired state.
      *
      * @return a reconciler request.
      */
@@ -60,50 +61,60 @@ public final class ReconcilerRequest
     }
 
     /**
-     * A request that forces state transitions and does not specify any databases as failed.
+     * Builds a request that may ignore previous reconciliation failures for the target databases.
+     * Databases may be the targets of reconciler requests when they are explicitly updated by a user
+     * (e.g. via the system graph and accompanying {@link SystemGraphDbmsOperator}).
      *
-     * @return a reconciler request.
-     * @param priorityDatabase the database to be treated as priority next reconciliation
+     * @return a populated reconciler request builder.
+     * @param databases the subset of databases to be treated as explicit targets of the next reconciliation
      */
-    public static ReconcilerRequest priority( NamedDatabaseId priorityDatabase )
+    public static HasExplicitTargets targets( Set<NamedDatabaseId> databases )
     {
-        return priority( Set.of( priorityDatabase ) );
+        return new Builder( databases, Set.of() );
     }
 
     /**
-     * A request that forces state transitions and ignores previous failures and executes out of order.
+     * Builds a request that may ignore previous reconciliation failures for the target databases.
+     * These requests will also be given priority when waiting to acquire locks, and are not subject
+     * to the normal parallelism limits of the reconciler, so are less likely to spend time waiting.
      *
-     * @return a reconciler request.
-     * @param priorityDatabases the subset of databases to be treated as priority next reconciliation
+     * Databases may be priority targets of reconciler requests when they are updated by a privileged
+     * user, or internal operator (e.g. via {@link ShutdownOperator}).
+     *
+     * @return a populated reconciler request builder.
+     * @param priorityDatabase the database to be treated as priority targets of the next reconciliation
      */
-    public static ReconcilerRequest priority( Set<NamedDatabaseId> priorityDatabases )
+    public static HasPriorityTargets priorityTarget( NamedDatabaseId priorityDatabase )
     {
-        var priorityDbNames = priorityDatabases.stream()
-                .collect( Collectors.toMap( NamedDatabaseId::name, ignored -> RequestType.PRIORITY ) );
-        return new ReconcilerRequest( priorityDbNames, null, null );
+        return priorityTargets( Set.of( priorityDatabase ) );
     }
 
     /**
-     * A request that forces state transitions and ignores previous failures.
+     * Builds a request that may ignore previous reconciliation failures for the target databases.
+     * These requests will also be given priority when waiting to acquire locks, and are not subject
+     * to the normal parallelism limits of the reconciler, so are less likely to spend time waiting.
      *
-     * @return a reconciler request.
-     * @param explicitDatabases the subset of databases to be treated as explicit next reconciliation
+     * Databases may be priority targets of reconciler requests when they are updated by a privileged
+     * user, or internal operator (e.g. via {@link ShutdownOperator}).
+     *
+     * @return a populated reconciler request builder.
+     * @param priorityDatabases the subset of databases to be treated as priority targets of the next reconciliation
      */
-    public static ReconcilerRequest explicit( Set<NamedDatabaseId> explicitDatabases )
+    public static HasPriorityTargets priorityTargets( Set<NamedDatabaseId> priorityDatabases )
     {
-        var explicitDbNames = explicitDatabases.stream()
-                .collect( Collectors.toMap( NamedDatabaseId::name, ignored -> RequestType.EXPLICIT ) );
-        return new ReconcilerRequest( explicitDbNames, null, null );
+        return new Builder( Set.of(), priorityDatabases );
     }
 
     /**
-     * A request that does not force state transitions and marks the specified database as failed.
+     * Builds a special reconciler request that marks the specified database as failed with the provided cause.
+     * The request considers the provided database as a high priority target, allowing the reconciler to force
+     * an attempt at transitioning it to a STOPPED state.
      *
-     * @return a reconciler request.
+     * @return a populated reconciler request builder.
      */
-    public static ReconcilerRequest forPanickedDatabase( NamedDatabaseId namedDatabaseId, Throwable causeOfPanic )
+    public static NeedsBuild panickedTarget( NamedDatabaseId namedDatabaseId, Throwable causeOfPanic )
     {
-        return new ReconcilerRequest( Map.of( namedDatabaseId.name(), RequestType.PRIORITY ), namedDatabaseId, causeOfPanic );
+        return new Builder( namedDatabaseId, causeOfPanic );
     }
 
     /**
@@ -111,9 +122,9 @@ public final class ReconcilerRequest
      *
      * @return Set of the databases names
      */
-    Set<String> specifiedDatabaseNames()
+    Set<String> explicitTargets()
     {
-        return specifiedDatabases.keySet();
+        return targetDatabases.keySet();
     }
 
     /**
@@ -123,7 +134,7 @@ public final class ReconcilerRequest
      */
     boolean shouldBeExecutedAsPriorityFor( String databaseName )
     {
-        return specifiedDatabases.get( databaseName ) == RequestType.PRIORITY;
+        return targetDatabases.get( databaseName ) == RequestPriority.HIGH;
     }
 
     /**
@@ -133,17 +144,18 @@ public final class ReconcilerRequest
      */
     boolean overridesPreviousFailuresFor( String databaseName )
     {
-        return specifiedDatabases.containsKey( databaseName );
+        return targetDatabases.containsKey( databaseName );
     }
 
     /**
-     * Whether or not this request allows the use the result of an already ongoing or queued reconciliation of the given database Id
+     * Whether or not this request allows will accept the result of an already waiting reconciliation for the given database
+     * Returns true if the given database was *not* an explicit target of this request.
      *
      * @return {@code true} if cache may be used, {@code false} otherwise.
      */
     boolean canUseCacheFor( String databaseName )
     {
-        return !specifiedDatabases.containsKey( databaseName );
+        return !targetDatabases.containsKey( databaseName );
     }
 
     /**
@@ -159,11 +171,11 @@ public final class ReconcilerRequest
     }
 
     /**
-     * @return Whether this reconciler request is simple (i.e. isn't high priority  or explicit for any databases and has no panic cause associated).
+     * @return Whether this reconciler request is simple (i.e. doesn't specify any particular databases as targets).
      */
     boolean isSimple()
     {
-        return isSimple;
+        return targetDatabases.isEmpty();
     }
 
     @Override
@@ -178,20 +190,84 @@ public final class ReconcilerRequest
             return false;
         }
         ReconcilerRequest that = (ReconcilerRequest) o;
-        return isSimple == that.isSimple && Objects.equals( specifiedDatabases, that.specifiedDatabases ) &&
-               Objects.equals( panickedDatabaseId, that.panickedDatabaseId ) && Objects.equals( causeOfPanic, that.causeOfPanic );
+        return Objects.equals( targetDatabases, that.targetDatabases ) &&
+               Objects.equals( panickedDatabaseId, that.panickedDatabaseId ) &&
+               Objects.equals( causeOfPanic, that.causeOfPanic );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( specifiedDatabases, isSimple, panickedDatabaseId, causeOfPanic );
+        return Objects.hash( targetDatabases, panickedDatabaseId, causeOfPanic );
     }
 
     @Override
     public String toString()
     {
-        return "ReconcilerRequest{" + "specifiedDatabases=" + specifiedDatabases + ", isSimple=" + isSimple + ", panickedDatabaseId=" + panickedDatabaseId +
+        return "ReconcilerRequest{" + "targetDatabases=" + targetDatabases + ", isSimple=" + isSimple() + ", panickedDatabaseId=" + panickedDatabaseId +
                ", causeOfPanic=" + causeOfPanic + '}';
+    }
+
+    static class Builder implements HasPriorityTargets, HasExplicitTargets, NeedsBuild
+    {
+        private Set<NamedDatabaseId> normalTargets;
+        private Set<NamedDatabaseId> priorityTargets;
+        private NamedDatabaseId panickedDatabase;
+        private Throwable causeOfPanic;
+
+        private Builder( NamedDatabaseId panickedDatabase, Throwable causeOfPanic )
+        {
+            this.causeOfPanic = causeOfPanic;
+            this.panickedDatabase = panickedDatabase;
+            this.normalTargets = Set.of();
+            this.priorityTargets = Set.of( panickedDatabase );
+        }
+
+        private Builder( Set<NamedDatabaseId> normalTargets, Set<NamedDatabaseId> priorityTargets )
+        {
+            this.normalTargets = normalTargets;
+            this.priorityTargets = priorityTargets;
+        }
+
+        @Override
+        public NeedsBuild targets( Set<NamedDatabaseId> databases )
+        {
+            normalTargets = databases;
+            return this;
+        }
+
+        @Override
+        public NeedsBuild priorityTargets( Set<NamedDatabaseId> databases )
+        {
+            priorityTargets = databases;
+            return this;
+        }
+
+        @Override
+        public ReconcilerRequest build()
+        {
+            var targets = normalTargets.stream()
+                                       .collect( Collectors.toMap( NamedDatabaseId::name, ignored -> RequestPriority.NORMAL ) );
+            var prioTargets = priorityTargets.stream()
+                                             .collect( Collectors.toMap( NamedDatabaseId::name, ignored -> RequestPriority.HIGH ) );
+
+            targets.putAll( prioTargets );
+            return new ReconcilerRequest( targets, panickedDatabase, causeOfPanic );
+        }
+    }
+
+    interface NeedsBuild
+    {
+        ReconcilerRequest build();
+    }
+
+    interface HasPriorityTargets extends NeedsBuild
+    {
+        NeedsBuild targets( Set<NamedDatabaseId> databases );
+    }
+
+    interface HasExplicitTargets extends NeedsBuild
+    {
+        NeedsBuild priorityTargets( Set<NamedDatabaseId> databases );
     }
 }

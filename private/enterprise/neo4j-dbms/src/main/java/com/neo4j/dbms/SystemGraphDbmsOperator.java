@@ -45,26 +45,31 @@ class SystemGraphDbmsOperator extends DbmsOperator
 
     private void reconcile( long txId, TransactionData transactionData, boolean asPartOfStoreCopy )
     {
-        var databasesToHandle = extractUpdatedDatabases( transactionData );
+        var updatedDatabases = extractUpdatedDatabases( transactionData );
         updateDesiredStates(); // TODO: Handle exceptions from this!
         if ( asPartOfStoreCopy )
         {
             reconciledTxTracker.disable();
         }
 
-        //TODO
-//        var databasesForPriority = databasesToHandle.dropped();
-//        var reconcilerResult = trigger( databasesForPriority.isEmpty() ? ReconcilerRequest.simple() : ReconcilerRequest.priority( databasesForPriority ) );
+        ReconcilerRequest request;
+        var allUpdatedDatabases = updatedDatabases.all();
+        if ( allUpdatedDatabases.isEmpty() )
+        {
+            request = ReconcilerRequest.simple();
+        }
+        else
+        {
+            request = ReconcilerRequest.targets( updatedDatabases.touched() )
+                                       .priorityTargets( updatedDatabases.dropped() )
+                                       .build();
+        }
 
-        var databasesForExplicit = databasesToHandle.touched();
-        var reconcilerResult = trigger( databasesForExplicit.isEmpty() ? ReconcilerRequest.simple() : ReconcilerRequest.explicit( databasesForExplicit ) );
+        var reconcilerResult = trigger( request );
         reconcilerResult.whenComplete( () -> offerReconciledTransactionId( txId, asPartOfStoreCopy ) );
 
-        var databasesToAwait = new HashSet<>( databasesToHandle.changed() );
-        databasesToAwait.addAll( databasesForExplicit );
-
         // Note: only blocks for completed reconciliation on this machine. Global reconciliation (e.g. including other cluster members) is still asynchronous
-        reconcilerResult.await( databasesToAwait );
+        reconcilerResult.await( allUpdatedDatabases );
     }
 
     /**

@@ -148,7 +148,7 @@ class ReconcilerLocksTest
             try
             {
                 acquiring.countDown();
-                locks.acquireLockOn( ReconcilerRequest.priority( foo ), foo.name() );
+                locks.acquireLockOn( ReconcilerRequest.priorityTarget( foo ).build(), foo.name() );
                 markerA.acquired();
                 locks.releaseLockOn( foo.name() );
             }

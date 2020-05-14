@@ -22,7 +22,6 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.event.PropertyEntry;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.internal.helpers.collection.Iterables;
-import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
@@ -49,9 +48,10 @@ public class EnterpriseSystemGraphDbmsModel extends SystemGraphDbmsModel
         Set<NamedDatabaseId> touchedDatabases;
         Set<NamedDatabaseId> droppedDatabases;
 
-        var changedAndTouchedNodes = extractChangedAndTouchedNodes( transactionData );
-        var changedNodes = changedAndTouchedNodes.first();
-        var touchedNodes = changedAndTouchedNodes.other();
+        var updatedNodeIds  = extractChangedAndTouchedNodes( transactionData );
+        var changedNodes = updatedNodeIds.changedNodes;
+        var touchedNodes = updatedNodeIds.onlyTouchedNodes;
+        var droppedNodes = updatedNodeIds.deletedDatabaseNodes;
 
         try ( var tx = systemDatabase.get().beginTx() )
         {
@@ -67,7 +67,7 @@ public class EnterpriseSystemGraphDbmsModel extends SystemGraphDbmsModel
                                                .map( this::getDatabaseId )
                                                .collect( Collectors.toSet() );
 
-            droppedDatabases = changedNodes.stream()
+            droppedDatabases = droppedNodes.stream()
                                         .map( tx::getNodeById )
                                         .filter( n -> n.hasLabel( DELETED_DATABASE_LABEL ) )
                                         .map( this::getDatabaseId )
@@ -79,7 +79,7 @@ public class EnterpriseSystemGraphDbmsModel extends SystemGraphDbmsModel
         return new DatabaseUpdates( changedDatabases, droppedDatabases, touchedDatabases );
     }
 
-    private Pair<Set<Long>,Set<Long>> extractChangedAndTouchedNodes( TransactionData transactionData )
+    private UpdatedNodeIds extractChangedAndTouchedNodes( TransactionData transactionData )
     {
         var propertiesByNode = Iterables.stream( transactionData.assignedNodeProperties() )
                                         .collect( Collectors.groupingBy( PropertyEntry::entity ) );
@@ -95,7 +95,7 @@ public class EnterpriseSystemGraphDbmsModel extends SystemGraphDbmsModel
         {
             var id = entry.getKey().getId();
 
-            if ( nodeOnlyTouched( entry ) && !newDeletedDatabaseNodes.contains( id ) )
+            if ( onlyUpdateTimestampTouched( entry ) && !newDeletedDatabaseNodes.contains( id ) )
             {
                 touchedNodes.add( id );
             }
@@ -106,10 +106,10 @@ public class EnterpriseSystemGraphDbmsModel extends SystemGraphDbmsModel
         }
 
         changedNodes.addAll( newDeletedDatabaseNodes );
-        return Pair.of( changedNodes, touchedNodes );
+        return new UpdatedNodeIds( touchedNodes, newDeletedDatabaseNodes, changedNodes );
     }
 
-    private boolean nodeOnlyTouched( Map.Entry<Node,List<PropertyEntry<Node>>> txDataEntry )
+    private boolean onlyUpdateTimestampTouched( Map.Entry<Node,List<PropertyEntry<Node>>> txDataEntry )
     {
         var properties = txDataEntry.getValue();
         return properties.size() == 1 && properties.get( 0 ).key().equals( UPDATED_AT_PROPERTY );
@@ -201,5 +201,19 @@ public class EnterpriseSystemGraphDbmsModel extends SystemGraphDbmsModel
     private String getDatabaseName( Node node )
     {
         return (String) node.getProperty( DATABASE_NAME_PROPERTY );
+    }
+
+    private static class UpdatedNodeIds
+    {
+        private final Set<Long> onlyTouchedNodes;
+        private final Set<Long> deletedDatabaseNodes;
+        private final Set<Long> changedNodes;
+
+        private UpdatedNodeIds( Set<Long> onlyTouchedNodes, Set<Long> deletedDatabaseNodes, Set<Long> changedNodes )
+        {
+            this.onlyTouchedNodes = onlyTouchedNodes;
+            this.deletedDatabaseNodes = deletedDatabaseNodes;
+            this.changedNodes = changedNodes;
+        }
     }
 }

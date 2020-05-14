@@ -265,38 +265,6 @@ class MultiDatabaseManagerIT
     }
 
     @Test
-    void dropWithKeepDataDoesNotRemoveDatabaseFiles() throws DatabaseExistsException, DatabaseNotFoundException
-    {
-        String databaseToDrop = "databaseToDrop";
-        managementService.createDatabase( databaseToDrop );
-        GraphDatabaseFacade database = (GraphDatabaseFacade) managementService.database( databaseToDrop );
-
-        DatabaseLayout databaseLayout = database.databaseLayout();
-        assertNotEquals( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory() );
-        assertTrue( databaseLayout.databaseDirectory().exists() );
-        assertTrue( databaseLayout.getTransactionLogsDirectory().exists() );
-
-        managementService.dropDatabase( databaseToDrop, true );
-        assertTrue( databaseLayout.databaseDirectory().exists() );
-        assertTrue( databaseLayout.getTransactionLogsDirectory().exists() );
-        assertThrows( DatabaseNotFoundException.class, () -> managementService.database( databaseToDrop ) );
-    }
-
-    @Test
-    void dropKeepDataAndRecreateDatabaseWithSameNameAndData() throws DatabaseExistsException, DatabaseNotFoundException
-    {
-        String databaseToRecreate = "databaseToRecreate";
-
-        managementService.createDatabase( databaseToRecreate );
-
-        managementService.dropDatabase( databaseToRecreate, true );
-        assertThrows( DatabaseNotFoundException.class, () -> managementService.database( databaseToRecreate ) );
-
-        assertDoesNotThrow( () -> managementService.createDatabase( databaseToRecreate ) );
-        assertNotNull( managementService.database( databaseToRecreate ) );
-    }
-
-    @Test
     void stopDoesNotRemovesDatabaseFiles() throws DatabaseExistsException, DatabaseNotFoundException
     {
         String databaseToStop = "databaseToStop";

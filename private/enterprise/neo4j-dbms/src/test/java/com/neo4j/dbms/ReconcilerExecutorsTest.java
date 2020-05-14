@@ -24,7 +24,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
-import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 public class ReconcilerExecutorsTest
@@ -74,7 +73,7 @@ public class ReconcilerExecutorsTest
         var unknownDb = DatabaseIdFactory.from( "unknown", UUID.randomUUID() );
 
         // when/then
-        var shouldBePriority = executors.executor( ReconcilerRequest.priority( fooDb ), fooDb );
+        var shouldBePriority = executors.executor( ReconcilerRequest.priorityTarget( fooDb ).build(), fooDb );
         shouldBePriority.execute( this::job );
 
         var activeGroups = jobScheduler.activeGroups().map( g -> g.group ).collect( Collectors.toSet() );
@@ -82,7 +81,7 @@ public class ReconcilerExecutorsTest
         assertThat( "Normal group shouldn't be active", activeGroups, not( hasItem( Group.DATABASE_RECONCILER ) ) );
 
         // when/then
-        var shouldNotBePriority = executors.executor( ReconcilerRequest.priority( fooDb ), unknownDb );
+        var shouldNotBePriority = executors.executor( ReconcilerRequest.priorityTarget( fooDb ).build(), unknownDb );
         shouldNotBePriority.execute( this::job );
 
         activeGroups = jobScheduler.activeGroups().map( g -> g.group ).collect( Collectors.toSet() );

@@ -38,7 +38,7 @@ class LocalDbmsOperatorTest
     @BeforeEach
     void setup()
     {
-        when( connector.trigger( ReconcilerRequest.priority( databaseId ) ) ).thenReturn( ReconcilerResult.EMPTY );
+        when( connector.trigger( ReconcilerRequest.priorityTarget( databaseId ).build() ) ).thenReturn( ReconcilerResult.EMPTY );
         operator.connect( connector );
     }
 
@@ -46,7 +46,7 @@ class LocalDbmsOperatorTest
     void shouldBeAbleToDropDatabase()
     {
         operator.dropDatabase( databaseName );
-        verify( connector, times( 1 ) ).trigger( ReconcilerRequest.priority( databaseId ) );
+        verify( connector, times( 1 ) ).trigger( ReconcilerRequest.priorityTarget( databaseId ).build() );
 
         assertEquals( DROPPED, operatorState( databaseIdRepository.getByName( databaseName ) ) );
     }
@@ -55,7 +55,7 @@ class LocalDbmsOperatorTest
     void shouldBeAbleToStartDatabase()
     {
         operator.startDatabase( databaseName );
-        verify( connector, times( 1 ) ).trigger( ReconcilerRequest.priority( databaseId ) );
+        verify( connector, times( 1 ) ).trigger( ReconcilerRequest.priorityTarget( databaseId ).build() );
 
         assertEquals( STARTED, operatorState( databaseIdRepository.getByName( databaseName ) ) );
     }
@@ -64,7 +64,7 @@ class LocalDbmsOperatorTest
     void shouldBeAbleToStopDatabase()
     {
         operator.stopDatabase( databaseName );
-        verify( connector, times( 1 ) ).trigger( ReconcilerRequest.priority( databaseId ) );
+        verify( connector, times( 1 ) ).trigger( ReconcilerRequest.priorityTarget( databaseId ).build() );
 
         assertEquals( STOPPED, operatorState( databaseIdRepository.getByName( databaseName ) ) );
     }

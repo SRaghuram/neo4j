@@ -12,7 +12,6 @@ import java.util.UUID;
 
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.DatabaseIdFactory;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
@@ -40,7 +39,7 @@ public class StandaloneInternalDbmsOperatorTest
         var err = new Exception( "Cause of panic" );
 
         var expectedDesired = Map.of( "foo", new EnterpriseDatabaseState( fooDb, STOPPED ) );
-        var expectedRequest = ReconcilerRequest.forPanickedDatabase( fooDb, err );
+        var expectedRequest = ReconcilerRequest.panickedTarget( fooDb, err ).build();
         var expectedTriggerCall = Pair.of( expectedDesired, expectedRequest );
 
         // when

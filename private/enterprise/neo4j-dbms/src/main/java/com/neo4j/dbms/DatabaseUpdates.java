@@ -6,6 +6,8 @@
 package com.neo4j.dbms;
 
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.neo4j.kernel.database.NamedDatabaseId;
 
@@ -37,5 +39,11 @@ class DatabaseUpdates
     Set<NamedDatabaseId> dropped()
     {
         return dropped;
+    }
+
+    Set<NamedDatabaseId> all()
+    {
+        return Stream.concat( Stream.concat( dropped.stream(), touched.stream() ), changed.stream() )
+                     .collect( Collectors.toSet() );
     }
 }

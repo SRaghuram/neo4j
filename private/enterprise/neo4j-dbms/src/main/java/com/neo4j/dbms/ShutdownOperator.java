@@ -54,11 +54,11 @@ class ShutdownOperator extends DbmsOperator
         {
             var desiredUpdate = databaseBatch.stream().collect( Collectors.toMap( NamedDatabaseId::name, this::stoppedState ) );
             desired.putAll( desiredUpdate );
-            trigger( ReconcilerRequest.priority( databaseBatch ) ).await( databaseBatch );
+            trigger( ReconcilerRequest.priorityTargets( databaseBatch ).build() ).await( databaseBatch );
         } );
 
         desired.put( NAMED_SYSTEM_DATABASE_ID.name(), stoppedState( NAMED_SYSTEM_DATABASE_ID ) );
-        trigger( ReconcilerRequest.priority( NAMED_SYSTEM_DATABASE_ID ) ).await( NAMED_SYSTEM_DATABASE_ID );
+        trigger( ReconcilerRequest.priorityTarget( NAMED_SYSTEM_DATABASE_ID ).build() ).await( NAMED_SYSTEM_DATABASE_ID );
     }
 
     Stream<Set<NamedDatabaseId>> batchDatabasesToStop( Stream<NamedDatabaseId> databases )

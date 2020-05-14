@@ -143,7 +143,7 @@ public class DbmsReconciler
     {
         if ( !request.isSimple() )
         {
-            var requestedDbs = new HashSet<>( request.specifiedDatabaseNames() );
+            var requestedDbs = new HashSet<>( request.explicitTargets() );
             requestedDbs.removeAll( namesOfDbsToReconcile );
 
             if ( !requestedDbs.isEmpty() )
