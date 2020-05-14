@@ -44,15 +44,13 @@ import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.LHSAccumul
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.MorselBufferDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.PipelineDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.UnionBufferDefiner
-import org.neo4j.cypher.internal.physicalplanning.ast.NodeFromSlot
+import org.neo4j.cypher.internal.physicalplanning.ast.IsPrimitiveNull
 import org.neo4j.cypher.internal.physicalplanning.ast.ReferenceFromSlot
-import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipFromSlot
 import org.neo4j.cypher.internal.runtime.interpreted.commands
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.attribution.SameId
-import org.neo4j.cypher.internal.util.symbols
 
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -192,12 +190,13 @@ object PipelineTreeBuilder {
     override protected def variant: BufferVariant = RegularBufferVariant
   }
 
-  class ConditionalBufferDefiner(val onTrueBuffer: BufferDefiner,
-                                 val onFalseBuffer: BufferDefiner,
+  class ConditionalBufferDefiner(val onFalseBuffer: BufferDefiner,
                                  predicate: commands.expressions.Expression,
                                  id: BufferId,
                                  memoryTrackingOperatorId: Id,
                                  bufferSlotConfiguration: SlotConfiguration) extends  BufferDefiner(id, memoryTrackingOperatorId, bufferSlotConfiguration) {
+    var onTrueBuffer: BufferDefiner = _
+
     override protected def variant: BufferVariant = ConditionalBufferVariant(onTrueBuffer.result, onFalseBuffer.result, predicate)
   }
 
@@ -359,20 +358,17 @@ object PipelineTreeBuilder {
       buffer
     }
 
-    def newConditionalSink(onTrueBuffer: MorselBufferDefiner,
-                           onFalseBuffer: MorselBufferDefiner,
+    def newConditionalSink(onFalseBuffer: MorselBufferDefiner,
                            expression: commands.expressions.Expression,
-                           producingPipelineId: PipelineId,
                            memoryTrackingOperatorId: Id,
                            bufferSlotConfiguration: SlotConfiguration): ConditionalBufferDefiner = {
       val x = buffers.size
-      val buffer = new ConditionalBufferDefiner(onTrueBuffer, onFalseBuffer, expression, BufferId(x), memoryTrackingOperatorId, bufferSlotConfiguration)
+      val buffer = new ConditionalBufferDefiner(onFalseBuffer, expression, BufferId(x), memoryTrackingOperatorId, bufferSlotConfiguration)
       buffers += buffer
       buffer
     }
 
-    def newAttachBuffer(producingPipelineId: PipelineId,
-                        memoryTrackingOperatorId: Id,
+    def newAttachBuffer(memoryTrackingOperatorId: Id,
                         inputSlotConfiguration: SlotConfiguration,
                         postAttachSlotConfiguration: SlotConfiguration,
                         outerArgumentSlotOffset: Int,
@@ -478,10 +474,10 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     output
   }
 
-  private def outputToConditionalBuffer(predicate: Expression,
-                                        pipeline: PipelineDefiner,
-                                        applyBuffer: ApplyBufferDefiner,
-                                        currentPlan: LogicalPlan): ApplyBufferDefiner = {
+  private def outputToConditionalSink(predicate: Expression,
+                                      pipeline: PipelineDefiner,
+                                      argumentSlotOffset: Int,
+                                      currentPlan: LogicalPlan): ApplyBufferDefiner = {
     /*
      * The buffers will be set up as follows:
      *   - when the predicate is `true` we will write directly to output
@@ -494,11 +490,12 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
      *                         `-onFalse-> ApplyBuffer ->  ...    --RHS-----`
      *
      */
-    val output = stateDefiner.newBuffer(pipeline.id, currentPlan.id, slotConfigurations(pipeline.headPlan.id))
-    val conditionalSink = stateDefiner.newConditionalSink(output,
-                                                          applyBuffer,
+    val applyBuffer: ApplyBufferDefiner = stateDefiner.newApplyBuffer(pipeline.id,
+                                                                      currentPlan.id,
+                                                                      argumentSlotOffset,
+                                                                      slotConfigurations(pipeline.headPlan.id))
+    val conditionalSink = stateDefiner.newConditionalSink(applyBuffer,
                                                           expressionConverters.toCommandExpression(currentPlan.id, predicate),
-                                                          pipeline.id,
                                                           currentPlan.id,
                                                           slotConfigurations(pipeline.headPlan.id))
     pipeline.fuseOrInterpret(MorselBufferOutput(conditionalSink.id, currentPlan.id))
@@ -513,7 +510,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
                                         outerArgumentSlotOffset: Int,
                                         outerArgumentSize: SlotConfiguration.Size): AttachBufferDefiner = {
 
-    val output = stateDefiner.newAttachBuffer(pipeline.id,
+    val output = stateDefiner.newAttachBuffer(
       attachingPlanId,
       slotConfigurations(pipeline.headPlan.id),
       postAttachSlotConfiguration,
@@ -714,22 +711,13 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
         val argumentSlotOffset = slotConfigurations(plan.id).getArgumentLongOffsetFor(plan.id)
         val slots = slotConfigurations.get(plan.id)
         val vars = items.collect {
-          case i if slots(i).nullable => slots(i) match {
-              case LongSlot(offset, _, symbols.CTNode) => NodeFromSlot(offset, i)
-              case LongSlot(offset, _, symbols.CTRelationship) => RelationshipFromSlot(offset, i)
-              case RefSlot(offset, _, _) => ReferenceFromSlot(offset, i)
+          case i => slots(i) match {
+              case LongSlot(offset, _, _) => IsPrimitiveNull(offset)
+              case RefSlot(offset, _, _) => IsNull(ReferenceFromSlot(offset, i))(InputPosition.NONE)
             }
-        }.map(IsNull(_)(InputPosition.NONE))
-        val applyBuffer: ApplyBufferDefiner = stateDefiner.newApplyBuffer(lhs.id, plan.id, argumentSlotOffset, slotConfigurations(lhs.headPlan.id))
-        if (vars.isEmpty) {
-          //we don't have any nullable identifiers so condition will always be false, so we
-          //only need an apply buffer
-          lhs.fuseOrInterpret(MorselBufferOutput(applyBuffer.id, plan.id))
-          applyBuffer
-        } else {
-          val expression = if (vars.size == 1) vars.head else Ors(vars.toSet)(InputPosition.NONE)
-          outputToConditionalBuffer(expression, lhs, applyBuffer, plan)
         }
+        val expression = if (vars.size == 1) vars.head else Ors(vars.toSet)(InputPosition.NONE)
+        outputToConditionalSink(expression, lhs, argumentSlotOffset, plan)
 
       case _: plans.CartesianProduct =>
         val rhsSlots = slotConfigurations(plan.rhs.get.id)
@@ -774,19 +762,14 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
          *                         `-onFalse-> ApplyBuffer ->  ...    --RHS-----`
          *
          */
-        argument.conditionalApplySink match {
-          case Some(sink) =>
-            val onTrue = sink.onTrueBuffer
-            rhs.fuseOrInterpret(MorselBufferOutput(onTrue.id, plan.id))
-            val pipeline = newPipeline(Argument()(SameId(plan.id)), onTrue )
-            pipeline.lhs = lhs.id
-            pipeline.rhs = rhs.id
-            pipeline
-          case None =>
-            //no nullable identifiers, basically a normal apply
-            //Dear reviewer: Can we really conditionally choose not to create a new pipeline?
-            rhs
-        }
+        val sink = argument.conditionalApplySink.getOrElse(throw new IllegalStateException("must have a conditional sink at this point"))
+        val output = stateDefiner.newBuffer(rhs.id, plan.id, slotConfigurations(rhs.headPlan.id))
+        sink.onTrueBuffer = output
+        rhs.fuseOrInterpret(MorselBufferOutput(output.id, plan.id))
+        val pipeline = newPipeline(Argument()(SameId(plan.id)), output)
+        //this is weird, but used for getting the scheduler to do the right thing
+        pipeline.lhs = rhs.id
+        pipeline
 
       case _: CartesianProduct =>
         if (breakingPolicy.breakOn(plan, applyPlans(plan.id))) {
