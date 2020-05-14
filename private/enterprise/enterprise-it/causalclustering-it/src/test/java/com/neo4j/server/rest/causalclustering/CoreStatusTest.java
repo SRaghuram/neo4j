@@ -187,7 +187,7 @@ class CoreStatusTest
     {
         // given ideal normal conditions
         commandIndexTracker.setAppliedCommandIndex( 123 );
-        when( raftMachine.getLeaderInfo() ).thenReturn( new LeaderInfo( core2, 1 ) );
+        when( raftMachine.getLeaderInfo() ).thenReturn( Optional.of( new LeaderInfo( core2, 1 ) ) );
         raftMessageTimerResetMonitor.timerReset();
         when( throughputMonitor.throughput() ).thenReturn( Optional.of( 423.0 ) );
         clock.forward( Duration.ofSeconds( 1 ) );

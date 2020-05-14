@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.neo4j.kernel.database.DatabaseIdFactory;
@@ -47,9 +47,48 @@ class RaftLeadershipsResolverTest
         assertThat( otherLeaderships ).containsOnly( db3 );
     }
 
+    @Test
+    void shouldHandleNoLeaderSituation()
+    {
+        // given
+        var myself = new MemberId( UUID.randomUUID() );
+
+        var databaseManager = new StubClusteredDatabaseManager();
+
+        var db1 = databaseWithoutLeader( databaseManager, "foo" );
+
+        var leadershipsResolver = new RaftLeadershipsResolver( databaseManager, myself );
+
+        // when
+        var leaderships = leadershipsResolver.myLeaderships();
+
+        // then
+        assertThat( leaderships ).isEmpty();
+        assertThat( databaseManager.registeredDatabases().keySet() ).contains( db1 );
+
+        // when
+        var db2 = databaseWithLeader( databaseManager, myself, "bar" );
+
+        leadershipsResolver = new RaftLeadershipsResolver( databaseManager, myself );
+
+        leaderships = leadershipsResolver.myLeaderships();
+
+        // then
+        assertThat( leaderships ).doesNotContain( db1 ).containsExactly( db2 );
+        assertThat( databaseManager.registeredDatabases().keySet() ).contains( db1 );
+    }
+
     private NamedDatabaseId databaseWithLeader( StubClusteredDatabaseManager databaseManager, MemberId member, String databaseName )
     {
         var leaderLocator = new StubLeaderLocator( new LeaderInfo( member, 0 ) );
+        NamedDatabaseId dbId = DatabaseIdFactory.from( databaseName, UUID.randomUUID() );
+        databaseManager.givenDatabaseWithConfig().withDatabaseId( dbId ).withLeaderLocator( leaderLocator ).register();
+        return dbId;
+    }
+
+    private NamedDatabaseId databaseWithoutLeader( StubClusteredDatabaseManager databaseManager, String databaseName )
+    {
+        var leaderLocator = new StubLeaderLocator( null );
         NamedDatabaseId dbId = DatabaseIdFactory.from( databaseName, UUID.randomUUID() );
         databaseManager.givenDatabaseWithConfig()
                        .withDatabaseId( dbId )
@@ -60,7 +99,7 @@ class RaftLeadershipsResolverTest
 
     private static class StubLeaderLocator implements LeaderLocator
     {
-        private LeaderInfo leaderInfo;
+        private final LeaderInfo leaderInfo;
 
         StubLeaderLocator( LeaderInfo leaderInfo )
         {
@@ -68,9 +107,9 @@ class RaftLeadershipsResolverTest
         }
 
         @Override
-        public LeaderInfo getLeaderInfo()
+        public Optional<LeaderInfo> getLeaderInfo()
         {
-            return leaderInfo;
+            return leaderInfo == null ? Optional.empty() : Optional.of( leaderInfo );
         }
 
         @Override

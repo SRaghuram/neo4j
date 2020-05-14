@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus.leader_transfer;
 
+import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
 
@@ -44,11 +45,9 @@ class RaftLeadershipsResolver implements Supplier<List<NamedDatabaseId>>
     private boolean amLeader( ClusteredDatabaseContext context )
     {
         return context.leaderLocator()
-                      .map( leaderLocator ->
-                            {
-                                var leader = leaderLocator.getLeaderInfo().memberId();
-                                return leader != null && leader.equals( myself );
-                            } )
+                      .flatMap( leaderLocator -> leaderLocator.getLeaderInfo()
+                              .map( LeaderInfo::memberId )
+                              .map( myself::equals ) )
                       .orElse( false );
     }
 }

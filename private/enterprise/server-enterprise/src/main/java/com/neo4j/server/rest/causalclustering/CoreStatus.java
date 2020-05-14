@@ -101,10 +101,10 @@ class CoreStatus extends ClusterMemberStatus
     private MemberId getLeader()
     {
         var leaderInfo = raftMachine.getLeaderInfo();
-        if ( leaderInfo == null )
+        if ( leaderInfo.isEmpty() )
         {
             return null;
         }
-        return leaderInfo.memberId();
+        return leaderInfo.get().memberId();
     }
 }

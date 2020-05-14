@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.consensus;
 
+import co.unruly.matchers.OptionalMatchers;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
@@ -18,6 +19,7 @@ import com.neo4j.causalclustering.core.consensus.schedule.OnDemandTimerService;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftTestMemberSetBuilder;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -349,7 +351,7 @@ class RaftMachineTest
         // When
         // There is no leader
         // Then
-        Assertions.assertNull( raft.getLeaderInfo() );
+        MatcherAssert.assertThat( raft.getLeaderInfo(), OptionalMatchers.empty() );
     }
 
     @Test
@@ -426,7 +428,7 @@ class RaftMachineTest
         // When
         // There is no leader
         // Then
-        Assertions.assertNull( raft.getLeaderInfo() );
+        MatcherAssert.assertThat( raft.getLeaderInfo(), OptionalMatchers.empty() );
     }
 
     @Test

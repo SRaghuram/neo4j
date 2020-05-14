@@ -13,6 +13,8 @@ import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
+
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.LeaseClient;
@@ -56,7 +58,7 @@ class ClusterLeaseCoordinatorTest
     void shouldAcquireLeaseAsLeader() throws Exception
     {
         // given
-        when( leaderLocator.getLeaderInfo() ).thenReturn( myselfAsLeader );
+        when( leaderLocator.getLeaderInfo() ).thenReturn( Optional.of( myselfAsLeader ) );
         LeaseClient client = coordinator.newClient();
 
         // when
@@ -70,7 +72,7 @@ class ClusterLeaseCoordinatorTest
     void shouldNotAcquireLeaseWhenNotLeader() throws Exception
     {
         // given
-        when( leaderLocator.getLeaderInfo() ).thenReturn( otherAsLeader );
+        when( leaderLocator.getLeaderInfo() ).thenReturn( Optional.of( otherAsLeader ) );
 
         LeaseClient client = coordinator.newClient();
 
@@ -82,7 +84,7 @@ class ClusterLeaseCoordinatorTest
     void shouldConsiderInvalidatedLeaseInvalid() throws Exception
     {
         // given
-        when( leaderLocator.getLeaderInfo() ).thenReturn( myselfAsLeader );
+        when( leaderLocator.getLeaderInfo() ).thenReturn( Optional.of( myselfAsLeader ) );
         LeaseClient client = coordinator.newClient();
 
         client.ensureValid();
@@ -99,7 +101,7 @@ class ClusterLeaseCoordinatorTest
     void shouldReturnValidLeaseToNewClient() throws Exception
     {
         // given
-        when( leaderLocator.getLeaderInfo() ).thenReturn( myselfAsLeader );
+        when( leaderLocator.getLeaderInfo() ).thenReturn( Optional.of( myselfAsLeader ) );
         LeaseClient clientA = coordinator.newClient();
         clientA.ensureValid();
 
@@ -117,7 +119,7 @@ class ClusterLeaseCoordinatorTest
     void shouldNotReturnInvalidatedLeaseToNewClient() throws Exception
     {
         // given
-        when( leaderLocator.getLeaderInfo() ).thenReturn( myselfAsLeader );
+        when( leaderLocator.getLeaderInfo() ).thenReturn( Optional.of( myselfAsLeader ) );
         LeaseClient clientA = coordinator.newClient();
         clientA.ensureValid();
         assertEquals( 0, clientA.leaseId() );
@@ -150,7 +152,7 @@ class ClusterLeaseCoordinatorTest
     void shouldConsiderLeaseFromPreviousLifeInvalid() throws Exception
     {
         // given
-        when( leaderLocator.getLeaderInfo() ).thenReturn( myselfAsLeader );
+        when( leaderLocator.getLeaderInfo() ).thenReturn( Optional.of( myselfAsLeader ) );
         ReplicatedLeaseRequest oldLease = new ReplicatedLeaseRequest( myself, 0, namedDatabaseId.databaseId() );
         ReplicationResult result = replicator.replicate( oldLease );
         assertEquals( true, result.stateMachineResult().consume() );
@@ -168,7 +170,7 @@ class ClusterLeaseCoordinatorTest
     void shouldAllocateAfterSwitch() throws Exception
     {
         // when
-        when( leaderLocator.getLeaderInfo() ).thenReturn( myselfAsLeader );
+        when( leaderLocator.getLeaderInfo() ).thenReturn( Optional.of( myselfAsLeader ) );
         LeaseClient clientA = coordinator.newClient();
         clientA.ensureValid();
         assertEquals( 0, clientA.leaseId() );

@@ -10,6 +10,8 @@ import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 
+import java.util.Optional;
+
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 public class LeaderProvider
@@ -26,25 +28,12 @@ public class LeaderProvider
     public MemberId getLeader( NamedDatabaseId databaseId )
     {
         LeaderInfo leadMemberFromDiscovery = topologyService.getLeader( databaseId );
-        LeaderInfo leadMember = leaderLocator.getLeaderInfo();
-        if ( leadMember != null )
-        {
-
-            if ( leadMemberFromDiscovery != null &&
-                 leadMemberFromDiscovery.term() > leadMember.term() )
-            {
-                leadMember = leadMemberFromDiscovery;
-            }
-        }
-        else
-        {
-            if ( leadMemberFromDiscovery == null ||
-                 leadMemberFromDiscovery.memberId() == null )
-            {
-                return null;
-            }
-            leadMember = leadMemberFromDiscovery;
-        }
-        return leadMember.memberId();
+        Optional<LeaderInfo> leadMemberFromLocator = leaderLocator.getLeaderInfo();
+        return leadMemberFromLocator
+                .filter( leadMember -> leadMemberFromDiscovery == null || leadMember.term() >= leadMemberFromDiscovery.term() )
+                .map( LeaderInfo::memberId )
+                .orElseGet( () ->
+                        leadMemberFromDiscovery == null || leadMemberFromDiscovery.memberId() == null ? null : leadMemberFromDiscovery.memberId()
+                );
     }
 }
