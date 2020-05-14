@@ -17,6 +17,7 @@ import com.neo4j.bench.infra.BenchmarkingEnvironment;
 import com.neo4j.bench.infra.BenchmarkingTool;
 import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.JobParams;
+import com.neo4j.bench.infra.URIHelper;
 import com.neo4j.bench.infra.Workspace;
 import com.neo4j.bench.infra.micro.MicroToolRunner;
 import com.neo4j.bench.infra.scheduler.BenchmarkJobScheduler;
@@ -27,6 +28,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.UUID;
 
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_ERROR_POLICY;
 import static java.lang.String.format;
@@ -54,12 +56,6 @@ public class ScheduleMicroCommand extends BaseRunWorkloadCommand
              title = "AWS Batch Stack Name",
              description = "name of stack in CloudFormation" )
     private String batchStack = "benchmarking";
-
-    @Option( type = OptionType.COMMAND,
-             name = InfraParams.CMD_ARTIFACT_WORKER_URI,
-             description = "Location of worker jar(e.g., s3://benchmarking.neo4j.com/artifacts/<build_id>/worker.jar) in S3",
-             title = "Worker Artifact URI" )
-    private URI artifactWorkerUri;
 
     @Option( type = OptionType.COMMAND,
              name = InfraParams.CMD_WORKSPACE_DIR,
@@ -110,7 +106,8 @@ public class ScheduleMicroCommand extends BaseRunWorkloadCommand
 
     @Option( type = OptionType.COMMAND,
              name = InfraParams.CMD_ARTIFACT_BASE_URI,
-             description = "Location of worker jar and other artifacts needed (e.g., s3://benchmarking.neo4j.com/artifacts/<build_id>/) in S3",
+             description = "Location of worker jar and other artifacts needed " +
+                           "(e.g., s3://benchmarking.neo4j.com/artifacts/micro/<triggered_by>/<build_id>/<uuid>) in S3",
              title = "Location of worker jar" )
     @Required
     private URI artifactBaseUri;
@@ -130,13 +127,18 @@ public class ScheduleMicroCommand extends BaseRunWorkloadCommand
             jobParameterJson.createNewFile();
             Workspace workspace = Workspace.defaultMicroWorkspace( workspacePath );
             workspace.assertArtifactsExist();
-            // first store job params as JSON
+
             AWSCredentials awsCredentials = new AWSCredentials( awsKey, awsSecret, awsRegion );
+            UUID uuid = UUID.randomUUID();
+            URI artifactBaseWorkloadURI = artifactBaseUri.resolve( URIHelper.toURIPart( runMicroWorkloadParams.triggeredBy() ) )
+                                                         .resolve( URIHelper.toURIPart( Long.toString( runMicroWorkloadParams.build() ) ) )
+                                                         .resolve( URIHelper.toURIPart( uuid.toString() ) );
+            URI artifactWorkerUri = artifactBaseWorkloadURI.resolve( "benchmark-infra-worker.jar" );
             InfraParams infraParams = new InfraParams( awsCredentials,
                                                        resultsStoreUsername,
                                                        resultsStorePasswordSecretName,
                                                        resultsStoreUri,
-                                                       artifactBaseUri,
+                                                       artifactBaseWorkloadURI,
                                                        errorReportingPolicy,
                                                        workspace );
             JobParams jobParams = new JobParams( infraParams,

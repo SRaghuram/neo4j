@@ -80,15 +80,12 @@ neo4j_commit=$(git rev-parse HEAD)
 triggered_by=$(whoami)
 parent_teamcity_build="-1"
 teamcity_build="$RANDOM"
-artifact_base_uri=s3://benchmarking.neo4j.com/artifacts/micro/$triggered_by/$teamcity_build/
-worker_artifact_uri="$artifact_base_uri"benchmark-infra-worker.jar
+artifact_base_uri=s3://benchmarking.neo4j.com/artifacts/micro/
 
 $java_cmd -jar $benchmark_infra_scheduler_jar \
     schedule \
     --workspace-dir \
     "$workspace_dir" \
-    --worker-artifact-uri \
-    "$worker_artifact_uri" \
     --artifact-base-uri \
     "$artifact_base_uri" \
     --neo4j_commit \

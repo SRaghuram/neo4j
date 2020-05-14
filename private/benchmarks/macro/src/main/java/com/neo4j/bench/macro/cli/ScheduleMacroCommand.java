@@ -21,6 +21,7 @@ import com.neo4j.bench.infra.BenchmarkingEnvironment;
 import com.neo4j.bench.infra.BenchmarkingTool;
 import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.JobParams;
+import com.neo4j.bench.infra.URIHelper;
 import com.neo4j.bench.infra.Workspace;
 import com.neo4j.bench.infra.macro.MacroToolRunner;
 import com.neo4j.bench.infra.scheduler.BenchmarkJobScheduler;
@@ -38,10 +39,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.UUID;
 
 import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_ERROR_POLICY;
 import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.appendIfMissing;
 
 @Command( name = "schedule" )
 public class ScheduleMacroCommand extends BaseRunWorkloadCommand
@@ -67,12 +68,6 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
              title = "AWS Batch Stack Name",
              description = "name of stack in CloudFormation" )
     private String batchStack = "benchmarking";
-
-    @Option( type = OptionType.COMMAND,
-             name = InfraParams.CMD_ARTIFACT_WORKER_URI,
-             description = "Location of worker jar(e.g., s3://benchmarking.neo4j.com/artifacts/<build_id>/worker.jar) in S3",
-             title = "Worker Artifact URI" )
-    private URI artifactWorkerUri;
 
     @Option( type = OptionType.COMMAND,
              name = InfraParams.CMD_WORKSPACE_DIR,
@@ -130,7 +125,8 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
 
     @Option( type = OptionType.COMMAND,
              name = InfraParams.CMD_ARTIFACT_BASE_URI,
-             description = "Location of worker jar and other artifacts needed (e.g., s3://benchmarking.neo4j.com/artifacts/<build_id>/) in S3",
+             description = "Location of worker jar and other artifacts needed " +
+                           "(e.g., s3://benchmarking.neo4j.com/artifacts/macro/<triggered_by>/<build_id>/<workload>/<query>/<uuid>) in S3",
              title = "Location of worker jar" )
     @Required
     private URI artifactBaseUri;
@@ -164,6 +160,11 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
 
             AWSCredentials awsCredentials = new AWSCredentials( awsKey, awsSecret, awsRegion );
             BenchmarkJobScheduler benchmarkJobScheduler = BenchmarkJobScheduler.create( jobQueue, jobDefinition, batchStack, awsCredentials );
+            UUID uuid = UUID.randomUUID();
+            URI artifactBaseWorkloadURI = artifactBaseUri.resolve( URIHelper.toURIPart( runMacroWorkloadParams.triggeredBy() ) )
+                                                         .resolve( URIHelper.toURIPart( runMacroWorkloadParams.teamcityBuild().toString() ) )
+                                                         .resolve( URIHelper.toURIPart( runMacroWorkloadParams.workloadName() ) );
+
             try ( Resources resources = new Resources( Paths.get( "." ) ) )
             {
                 Workload workload = Workload.fromName( runMacroWorkloadParams.workloadName(), resources, runMacroWorkloadParams.deployment() );
@@ -171,8 +172,8 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                 for ( Query query : workload.queries() )
                 {
 
-                    String sanitizedQueryName = query.name().replaceAll( "[^\\p{Alnum}]", "_" );
-                    URI artifactBaseQueryRunURI = artifactBaseUri.resolve( appendIfMissing( sanitizedQueryName, "/" ) );
+                    URI artifactBaseQueryRunURI = artifactBaseWorkloadURI.resolve( URIHelper.toURIPart( query.name() ) )
+                                                                         .resolve( URIHelper.toURIPart( uuid.toString() ) );
                     URI artifactWorkerQueryRunURI = artifactBaseQueryRunURI.resolve( "benchmark-infra-worker.jar" );
                     // then store job params as JSON
                     InfraParams infraParams = new InfraParams( awsCredentials,
