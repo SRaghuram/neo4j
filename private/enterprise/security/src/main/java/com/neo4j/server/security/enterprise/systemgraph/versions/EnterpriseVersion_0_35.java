@@ -23,6 +23,8 @@ import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.auth.ListSnapshot;
 
+import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent.LATEST_VERSION;
+
 public class EnterpriseVersion_0_35 extends KnownEnterpriseSecurityComponentVersion
 {
     private final RoleRepository roleRepository;
@@ -82,7 +84,7 @@ public class EnterpriseVersion_0_35 extends KnownEnterpriseSecurityComponentVers
     @Override
     public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest ) throws Exception
     {
-        assert latest.version == 4;
+        assert latest.version == LATEST_VERSION;
         roleRepository.start();
         if ( roleRepository.getRoleByName( PredefinedRoles.PUBLIC ) != null )
         {

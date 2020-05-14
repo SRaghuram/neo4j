@@ -17,6 +17,8 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.logging.Log;
 
+import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent.LATEST_VERSION;
+
 public class EnterpriseVersion_3_41d1 extends SupportedEnterpriseVersion
 {
     public EnterpriseVersion_3_41d1( Log log )
@@ -63,10 +65,9 @@ public class EnterpriseVersion_3_41d1 extends SupportedEnterpriseVersion
     @Override
     public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest )
     {
-        assert latest.version == 4;
+        assert latest.version == LATEST_VERSION;
         // Upgrade from 4.1.0-Drop01 to 4.1.0-Drop02, which means add the Version node
         setVersionProperty( tx, latest.version );
-        // TODO should add upgrade ACCESS on system to PUBLIC, since it is supposed to be explicit in 4.1d2
     }
 
     // RUNTIME
@@ -92,7 +93,6 @@ public class EnterpriseVersion_3_41d1 extends SupportedEnterpriseVersion
     @Override
     public Set<ResourcePrivilege> getPrivilegeForRoles( Transaction tx, List<String> roleNames, Cache<String,Set<ResourcePrivilege>> privilegeCache )
     {
-        // TODO should add runtime ACCESS on system to PUBLIC, since it is supposed to be explicit in 4.1d2
         return super.currentGetPrivilegeForRoles( tx, roleNames, privilegeCache );
     }
 

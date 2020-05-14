@@ -27,6 +27,8 @@ import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.logging.Log;
 
+import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent.LATEST_VERSION;
+
 public class EnterpriseVersion_1_36 extends KnownEnterpriseSecurityComponentVersion
 {
     private final Label databaseLabel = Label.label( "Database" );
@@ -95,7 +97,7 @@ public class EnterpriseVersion_1_36 extends KnownEnterpriseSecurityComponentVers
     @Override
     public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest ) throws Exception
     {
-        assert latest.version == 4;
+        assert latest.version == LATEST_VERSION;
         setVersionProperty( tx, latest.version );
         List<Node> roles = tx.findNodes( ROLE_LABEL ).stream().collect( Collectors.toList() );
         latest.setUpDefaultPrivileges( tx );

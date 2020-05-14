@@ -17,6 +17,8 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.logging.Log;
 
+import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent.LATEST_VERSION;
+
 /**
  * Version 4 of the security model is identical to version 3, but with the Version node now existing and containing the correct version information.
  */
@@ -24,7 +26,7 @@ public class EnterpriseVersion_4_41d2 extends SupportedEnterpriseVersion
 {
     public EnterpriseVersion_4_41d2( Log log )
     {
-        super( 4, "Neo4j 4.1.0-Drop02", log, true );
+        super( LATEST_VERSION, "Neo4j 4.1.0-Drop02", log, true );
     }
 
     @Override

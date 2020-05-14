@@ -51,6 +51,7 @@ public class EnterpriseSecurityGraphComponent extends AbstractSystemGraphCompone
     private final UserRepository defaultAdminRepository;
     private final KnownSystemComponentVersions<KnownEnterpriseSecurityComponentVersion> knownSecurityComponentVersions =
             new KnownSystemComponentVersions<>( new NoEnterpriseComponentVersion() );
+    public static final int LATEST_VERSION = 4;
     public static final String COMPONENT = "security-privileges";
 
     public EnterpriseSecurityGraphComponent( Log log, RoleRepository migrationRoleRepository, UserRepository defaultAdminRepository, Config config )

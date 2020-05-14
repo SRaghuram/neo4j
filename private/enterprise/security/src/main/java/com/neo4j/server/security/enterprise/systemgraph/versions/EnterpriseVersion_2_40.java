@@ -28,6 +28,7 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
+import static com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphComponent.LATEST_VERSION;
 
 public class EnterpriseVersion_2_40 extends SupportedEnterpriseVersion
 {
@@ -194,7 +195,7 @@ public class EnterpriseVersion_2_40 extends SupportedEnterpriseVersion
     @Override
     public void upgradeSecurityGraph( Transaction tx, KnownEnterpriseSecurityComponentVersion latest )
     {
-        assert latest.version == 4;
+        assert latest.version == LATEST_VERSION;
         // Upgrade from 4.0.x to 4.1.0-Drop02, which means add the Version node, change global writes and split schema into index and constraint
         setVersionProperty( tx, latest.version );
         upgradeWriteFromAllPropertiesToGraphResource( tx );
