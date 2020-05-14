@@ -16,7 +16,7 @@ object ExecutionGraphDefiner {
   def defineFrom(breakingPolicy: PipelineBreakingPolicy,
                  operatorFuserFactory: OperatorFuserFactory,
                  physicalPlan: PhysicalPlan,
-                 converters: ExpressionConverters): ExecutionGraphDefinition = {
+                 expressionConverters: ExpressionConverters): ExecutionGraphDefinition = {
 
     val executionStateDefiner = new ExecutionStateDefiner(physicalPlan)
     val pipelineTreeBuilder = new PipelineTreeBuilder(breakingPolicy,
@@ -25,7 +25,7 @@ object ExecutionGraphDefiner {
                                                       physicalPlan.slotConfigurations,
                                                       physicalPlan.argumentSizes,
                                                       physicalPlan.applyPlans,
-                                                      converters)
+                                                      expressionConverters)
 
     pipelineTreeBuilder.build(physicalPlan.logicalPlan)
     ExecutionGraphDefinition(physicalPlan,

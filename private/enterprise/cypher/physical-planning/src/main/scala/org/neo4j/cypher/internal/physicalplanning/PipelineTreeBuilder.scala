@@ -446,7 +446,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
                           slotConfigurations: SlotConfigurations,
                           argumentSizes: ArgumentSizes,
                           applyPlans: ApplyPlans,
-                          converters: ExpressionConverters)
+                          expressionConverters: ExpressionConverters)
   extends TreeBuilder[PipelineDefiner, ApplyBufferDefiner] {
 
   private[physicalplanning] val pipelines = new ArrayBuffer[PipelineDefiner]
@@ -493,7 +493,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     val output = stateDefiner.newBuffer(pipeline.id, currentPlan.id, slotConfigurations(pipeline.headPlan.id))
     val conditionalSink = stateDefiner.newConditionalSink(output,
                                                           applyBuffer,
-                                                          converters.toCommandExpression(currentPlan.id, predicate),
+                                                          expressionConverters.toCommandExpression(currentPlan.id, predicate),
                                                           pipeline.id,
                                                           currentPlan.id,
                                                           slotConfigurations(pipeline.headPlan.id))
