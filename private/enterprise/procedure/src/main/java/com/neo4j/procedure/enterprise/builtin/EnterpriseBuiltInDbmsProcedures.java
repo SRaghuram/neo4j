@@ -441,23 +441,23 @@ public class EnterpriseBuiltInDbmsProcedures
         DatabaseManager<DatabaseContext> databaseManager = getDatabaseManager();
         DatabaseIdRepository databaseIdRepository = databaseManager.databaseIdRepository();
 
-        Map<NamedDatabaseId,Set<DbmsTransactionId>> byDatabase = new HashMap<>();
+        Map<NamedDatabaseId,Set<TransactionId>> byDatabase = new HashMap<>();
         for ( String idText : transactionIds )
         {
-            DbmsTransactionId id = new DbmsTransactionId( idText );
+            TransactionId id = TransactionId.parse( idText );
             Optional<NamedDatabaseId> namedDatabaseId = databaseIdRepository.getByName( id.database() );
             namedDatabaseId.ifPresent( databaseId -> byDatabase.computeIfAbsent( databaseId, ignore -> new HashSet<>() ).add( id ) );
         }
 
         Map<String,KernelTransactionHandle> handles = new HashMap<>( transactionIds.size() );
-        for ( Map.Entry<NamedDatabaseId,Set<DbmsTransactionId>> entry : byDatabase.entrySet() )
+        for ( Map.Entry<NamedDatabaseId,Set<TransactionId>> entry : byDatabase.entrySet() )
         {
             NamedDatabaseId databaseId = entry.getKey();
             var dbScope = new DatabaseScope( databaseId.name() );
             Optional<DatabaseContext> maybeDatabaseContext = databaseManager.getDatabaseContext( databaseId );
             if ( maybeDatabaseContext.isPresent() )
             {
-                Set<DbmsTransactionId> txIds = entry.getValue();
+                Set<TransactionId> txIds = entry.getValue();
                 DatabaseContext databaseContext = maybeDatabaseContext.get();
                 for ( KernelTransactionHandle tx : getExecutingTransactions( databaseContext ) )
                 {
@@ -467,7 +467,7 @@ public class EnterpriseBuiltInDbmsProcedures
                     {
                         continue;
                     }
-                    DbmsTransactionId txIdRepresentation = new DbmsTransactionId( databaseId.name(), tx.getUserTransactionId() );
+                    TransactionId txIdRepresentation = new TransactionId( databaseId.name(), tx.getUserTransactionId() );
                     if ( txIds.contains( txIdRepresentation ) )
                     {
                         handles.put( txIdRepresentation.toString(), tx );

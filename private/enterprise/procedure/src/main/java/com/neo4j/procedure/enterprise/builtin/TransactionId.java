@@ -13,49 +13,44 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
 import static java.util.Objects.requireNonNull;
 
-class DbmsId
+class TransactionId
 {
-    private final String separator;
+    public static final String SEPARATOR = "-transaction-";
+    private static final String EXPECTED_FORMAT_MSG = "(expected format: <databasename>" + SEPARATOR + "<id>)";
     private final NormalizedDatabaseName database;
     private final long internalId;
 
-    DbmsId( String queryIdText, String separator ) throws InvalidArgumentsException
+    TransactionId( String database, long internalId ) throws InvalidArgumentsException
     {
-        this.separator = separator;
+        this.database = new NormalizedDatabaseName( requireNonNull( database ) );
+        if ( internalId <= 0 )
+        {
+            throw new InvalidArgumentsException( "Negative ids are not supported " + EXPECTED_FORMAT_MSG );
+        }
+        this.internalId = internalId;
+    }
+
+    static TransactionId parse( String queryIdText ) throws InvalidArgumentsException
+    {
         try
         {
-            int i = queryIdText.lastIndexOf( separator );
+            int i = queryIdText.lastIndexOf( SEPARATOR );
             if ( i != -1 )
             {
-                database = normalizeAndValidateDatabaseName( queryIdText.substring( 0, i ) );
+                var database = normalizeAndValidateDatabaseName( queryIdText.substring( 0, i ) );
                 if ( database.name().length() > 0 )
                 {
-                    String qid = queryIdText.substring( i + separator.length() );
-                    internalId = Long.parseLong( qid );
-                    if ( internalId <= 0 )
-                    {
-                        throw new InvalidArgumentsException( "Negative ids are not supported (expected format: <databasename>" + separator + "<id>)" );
-                    }
-                    return;
+                    String qid = queryIdText.substring( i + SEPARATOR.length() );
+                    var internalId = Long.parseLong( qid );
+                    return new TransactionId( database.name(), internalId );
                 }
             }
         }
         catch ( NumberFormatException e )
         {
-            throw new InvalidArgumentsException( "Could not parse id (expected format: <databasename>" + separator + "<id>)", e );
+            throw new InvalidArgumentsException( "Could not parse id " + EXPECTED_FORMAT_MSG, e );
         }
-        throw new InvalidArgumentsException( "Could not parse id (expected format: <databasename>" + separator + "<id>)" );
-    }
-
-    DbmsId( String database, long internalId, String separator ) throws InvalidArgumentsException
-    {
-        this.separator = separator;
-        this.database = new NormalizedDatabaseName( requireNonNull( database ) );
-        if ( internalId <= 0 )
-        {
-            throw new InvalidArgumentsException( "Negative ids are not supported (expected format: <databasename>" + separator + "<id>)" );
-        }
-        this.internalId = internalId;
+        throw new InvalidArgumentsException( "Could not parse id " + EXPECTED_FORMAT_MSG );
     }
 
     long internalId()
@@ -79,7 +74,7 @@ class DbmsId
         {
             return false;
         }
-        DbmsId other = (DbmsId) o;
+        TransactionId other = (TransactionId) o;
         return internalId == other.internalId && database.equals( other.database );
     }
 
@@ -92,7 +87,7 @@ class DbmsId
     @Override
     public String toString()
     {
-        return database.name() + separator + internalId;
+        return database.name() + SEPARATOR + internalId;
     }
 
     private static NormalizedDatabaseName normalizeAndValidateDatabaseName( String databaseName )
