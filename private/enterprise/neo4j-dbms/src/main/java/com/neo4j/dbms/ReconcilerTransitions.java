@@ -11,13 +11,12 @@ import java.util.function.Consumer;
 
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.DIRTY;
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
-import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED_DUMPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
@@ -38,7 +37,15 @@ class ReconcilerTransitions
         this.databaseManager = databaseManager;
     }
 
-    private Transition createFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager )
+    private static Transition validateFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager )
+    {
+        return Transition.from( INITIAL )
+                .doTransition( databaseManager::validateDatabaseCreation )
+                .ifSucceeded( INITIAL )
+                .ifFailedThenDo( nothing, INITIAL );
+    }
+
+    private static Transition createFactory( MultiDatabaseManager<? extends DatabaseContext> databaseManager )
     {
         return Transition.from( INITIAL )
                          .doTransition( databaseManager::createDatabase )
@@ -112,5 +119,10 @@ class ReconcilerTransitions
     final Transition create()
     {
         return createFactory( databaseManager );
+    }
+
+    final Transition validate()
+    {
+        return validateFactory( databaseManager );
     }
 }

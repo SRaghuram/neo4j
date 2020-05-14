@@ -443,7 +443,7 @@ public class DbmsReconciler
     {
         if ( throwable != null )
         {
-            return handleReconciliationException( throwable, result, databaseName, previousState );
+            return handleUnexpectedException( throwable, result, databaseName, previousState );
         }
         else if ( result.error() != null && Exceptions.contains( result.error(), e -> e instanceof DatabaseStartAbortedException ) )
         {
@@ -471,7 +471,7 @@ public class DbmsReconciler
         }
     }
 
-    private Optional<EnterpriseDatabaseState> handleReconciliationException( Throwable throwable, ReconcilerStepResult result, String databaseName,
+    private Optional<EnterpriseDatabaseState> handleUnexpectedException( Throwable throwable, ReconcilerStepResult result, String databaseName,
             EnterpriseDatabaseState previousState )
     {
         // An exception which was not wrapped in a DatabaseManagementException has occurred. E.g. we looked up an unknown state transition or there was

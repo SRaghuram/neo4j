@@ -44,8 +44,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
         runtimeDatabaseDumper = new RuntimeDatabaseDumper( globalModule.getGlobalClock(), globalModule.getGlobalConfig(), globalModule.getFileSystem() );
     }
 
-    @Override
-    public DB createDatabase( NamedDatabaseId namedDatabaseId ) throws DatabaseManagementException
+    public void validateDatabaseCreation( NamedDatabaseId namedDatabaseId ) throws DatabaseManagementException
     {
         if ( databaseMap.get( namedDatabaseId ) != null )
         {
@@ -56,7 +55,11 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
             throw new DatabaseLimitReachedException(
                     format( "Reached maximum number of active databases. Unable to create new database `%s`.", namedDatabaseId.name() ) );
         }
+    }
 
+    @Override
+    public DB createDatabase( NamedDatabaseId namedDatabaseId ) throws DatabaseManagementException
+    {
         DB databaseContext;
         try
         {
