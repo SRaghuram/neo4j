@@ -98,12 +98,12 @@ public class BoltQueryLoggingMemoryIT
             assertThat( line ).contains( "neo4j-java" );
             assertThat( line ).contains( "client/127.0.0.1:" );
             assertThat( line ).contains( "server/127.0.0.1:" + neo4j.boltURI().getPort() );
-            if ( lineNumber < numberOfDumpedQueries * 2 )
-            {
-                assertThat( line ).contains( " - RETURN 1 AS num - {} - runtime=pipelined - {}" );
-            }
             if ( (lineNumber & 1) == 1 )
             {
+                if ( lineNumber < numberOfDumpedQueries * 2 )
+                {
+                    assertThat( line ).contains( " - RETURN 1 AS num - {} - runtime=pipelined - {}" );
+                }
                 assertThat( line ).contains( String.format( ": %s B -", estimatedHeapUsage ) ); // Estimated memory usage
                 // Extract the query id
                 int queryIdIndex = line.indexOf( "id:" );
