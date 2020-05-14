@@ -34,6 +34,7 @@ import org.neo4j.fabric.FabricDatabaseManager;
 import org.neo4j.fabric.bootstrap.FabricServicesBootstrap;
 import org.neo4j.fabric.config.FabricConfig;
 import org.neo4j.fabric.eval.CatalogManager;
+import org.neo4j.fabric.eval.CommunityCatalogManager;
 import org.neo4j.fabric.executor.FabricDatabaseAccess;
 import org.neo4j.fabric.executor.FabricRemoteExecutor;
 import org.neo4j.graphdb.config.Setting;
@@ -181,9 +182,15 @@ public abstract class EnterpriseFabricServicesBootstrap extends FabricServicesBo
         @Override
         protected CatalogManager createCatalogManger()
         {
-            var databaseManagementService = resolve( DatabaseManagementService.class);
+            var fabricConfig = resolve( FabricEnterpriseConfig.class );
+            if ( !fabricConfig.isRoutingEnabled() )
+            {
+                var databaseManagementService = resolve( DatabaseManagementService.class );
+                return new CommunityCatalogManager( createDatabaseLookup(), databaseManagementService );
+            }
+
+            var databaseManagementService = resolve( DatabaseManagementService.class );
             var topologyService = resolve( TopologyService.class );
-            var fabricConfig = getFabricConfig();
             var leaderLookup = leaderLookup( topologyService );
 
             return new ClusterCatalogManager( createDatabaseLookup(), databaseManagementService, leaderLookup, fabricConfig );

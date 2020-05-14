@@ -41,7 +41,8 @@ class ClusterCatalogManagerTest extends FabricTest {
     new FabricEnterpriseConfig.Database(new NormalizedDatabaseName("mega"), util.Set.of(mega0, mega1, mega2)),
     util.List.of(), Duration.ZERO, Duration.ZERO,
     new GlobalDriverConfig(Duration.ZERO, Duration.ZERO, 0, null),
-    new FabricConfig.DataStream(300, 1000, 50, 10)
+    new FabricConfig.DataStream(300, 1000, 50, 10),
+    true
   )
 
   private val intAUuid = UUID.randomUUID()

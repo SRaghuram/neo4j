@@ -41,7 +41,8 @@ class SingleCatalogManagerTest extends FabricTest {
     new FabricEnterpriseConfig.Database(new NormalizedDatabaseName("mega"), util.Set.of(mega0, mega1, mega2)),
     util.List.of(), Duration.ZERO, Duration.ZERO,
     new GlobalDriverConfig(Duration.ZERO, Duration.ZERO, 0, null),
-    new FabricConfig.DataStream(300, 1000, 50, 10)
+    new FabricConfig.DataStream(300, 1000, 50, 10),
+    false
   )
 
   private val internalDbs = Set(
@@ -69,7 +70,7 @@ class SingleCatalogManagerTest extends FabricTest {
   private val managerWithoutFabricDatabase = new EnterpriseSingleCatalogManager(
     databaseLookup,
     databaseManagementService,
-    fabricConfig = new FabricEnterpriseConfig(null, util.List.of(), null, null, null, null),
+    fabricConfig = new FabricEnterpriseConfig(null, util.List.of(), null, null, null, null, false),
   )
 
   "catalog resolution" in {

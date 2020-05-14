@@ -31,6 +31,7 @@ import org.neo4j.logging.Level;
 
 import static org.apache.commons.lang3.builder.EqualsBuilder.reflectionEquals;
 import static org.apache.commons.lang3.builder.HashCodeBuilder.reflectionHashCode;
+import static org.neo4j.configuration.connectors.BoltConnector.connector_routing_enabled;
 
 public class FabricEnterpriseConfig extends FabricConfig
 {
@@ -47,9 +48,10 @@ public class FabricEnterpriseConfig extends FabricConfig
             Duration routingTtl,
             Duration transactionTimeout,
             GlobalDriverConfig globalDriverConfig,
-            DataStream dataStream )
+            DataStream dataStream,
+            boolean routingEnabled )
     {
-        super( transactionTimeout, dataStream );
+        super( transactionTimeout, dataStream, routingEnabled );
         this.database = database;
         this.fabricServers = fabricServers;
         this.routingTtl = routingTtl;
@@ -146,17 +148,19 @@ public class FabricEnterpriseConfig extends FabricConfig
 
         var dataStream = new DataStream( bufferLowWatermark, bufferSize, syncBatchSize, concurrency );
 
+        boolean routingEnabled = config.get( connector_routing_enabled );
         if ( database.isPresent() )
         {
             var serverAddresses = config.get( FabricEnterpriseSettings.fabricServersSetting );
             var routingTtl = config.get( FabricEnterpriseSettings.routingTtlSetting );
-            var fabricConfig = new FabricEnterpriseConfig( database.get(), serverAddresses, routingTtl, transactionTimeout, remoteGraphDriver, dataStream );
+            var fabricConfig = new FabricEnterpriseConfig( database.get(), serverAddresses, routingTtl, transactionTimeout, remoteGraphDriver, dataStream,
+                    routingEnabled );
             config.addListener( FabricEnterpriseSettings.fabricServersSetting, ( oldValue, newValue ) -> fabricConfig.setFabricServers( newValue ) );
             return fabricConfig;
         }
         else
         {
-            return new FabricEnterpriseConfig( null, List.of(), null, transactionTimeout, remoteGraphDriver, dataStream );
+            return new FabricEnterpriseConfig( null, List.of(), null, transactionTimeout, remoteGraphDriver, dataStream, routingEnabled );
         }
     }
 

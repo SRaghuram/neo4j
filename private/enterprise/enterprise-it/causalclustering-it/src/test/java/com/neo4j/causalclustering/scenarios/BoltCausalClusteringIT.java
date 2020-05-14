@@ -42,6 +42,7 @@ import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.SessionExpiredException;
 import org.neo4j.driver.exceptions.TransientException;
 import org.neo4j.internal.helpers.collection.Iterators;
+import org.neo4j.test.extension.DisabledWithQueryRouting;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.clusterResolver;
@@ -145,6 +146,7 @@ class BoltCausalClusteringIT
             } );
         }
 
+        @DisabledWithQueryRouting
         @Test
         void shouldNotBeAbleToWriteOnAReadSession() throws Exception
         {
@@ -551,7 +553,7 @@ class BoltCausalClusteringIT
                 }
                 try ( Session session = driver.session( builder().withBookmarks( lastBookmark ).withDefaultAccessMode( READ ).build() ) )
                 {
-                    var transientException = assertThrows( TransientException.class, session::beginTransaction );
+                    var transientException = assertThrows( TransientException.class, () -> session.run( "RETURN 1" ).consume() );
                     assertThat( transientException.getMessage(), containsString( "not up to the requested version:" ) );
                 }
 
