@@ -258,7 +258,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
           allocateExpressions(current, nullable, sourceSlots, semanticTable)
 
           val slots = breakingPolicy.invoke(current, sourceSlots, argument.slotConfiguration, applyPlans(current.id))
-          allocateOneChild(current, nullable, sourceSlots, slots, recordArgument(_, argument), semanticTable)
+          allocateOneChild(current, nullable, sourceSlots, slots, recordArgument(_, argument))
           allocations.set(current.id, slots)
           resultStack.push(slots)
 
@@ -478,8 +478,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
                                nullable: Boolean,
                                source: SlotConfiguration,
                                slots: SlotConfiguration,
-                               recordArgument: LogicalPlan => Unit,
-                               semanticTable: SemanticTable): Unit =
+                               recordArgument: LogicalPlan => Unit): Unit =
     lp match {
 
       case Aggregation(_, groupingExpressions, aggregationExpressions) =>
@@ -539,7 +538,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         }
 
       case OptionalExpand(_, _, _, _, to, rel, ExpandAll, _, expandProperties) =>
-        // Note that OptionExpand only is optional on the expand and not on incoming rows, so
+        // Note that OptionalExpand only is optional on the expand and not on incoming rows, so
         // we do not need to record the argument here.
         slots.newLong(rel, nullable = true, CTRelationship)
         slots.newLong(to, nullable = true, CTNode)
@@ -549,7 +548,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         }
 
       case OptionalExpand(_, _, _, _, _, rel, ExpandInto, _, _) =>
-        // Note that OptionExpand only is optional on the expand and not on incoming rows, so
+        // Note that OptionalExpand only is optional on the expand and not on incoming rows, so
         // we do not need to record the argument here.
         slots.newLong(rel, nullable = true, CTRelationship)
 
