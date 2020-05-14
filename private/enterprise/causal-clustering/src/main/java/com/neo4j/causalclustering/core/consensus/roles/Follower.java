@@ -75,7 +75,10 @@ class Follower implements RaftMessageHandler
         var upToDate = ctx.commitIndex() >= request.previousIndex();
         var myGroups = ctx.serverGroups();
 
-        if ( sameOrEarlierTerm && upToDate && (noRequestedPriority( request ) || iAmInPriority( myGroups, request )) )
+        if (
+                ( !ctx.refusesToBeLeader() )
+                && ( sameOrEarlierTerm && upToDate && (noRequestedPriority( request ) || iAmInPriority( myGroups, request )) )
+        )
         {
             if ( Election.startRealElection( ctx, outcomeBuilder, log, ctx.term() ) )
             {
